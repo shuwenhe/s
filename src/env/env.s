@@ -1,6 +1,8 @@
 package std.env
-use std.option.option
-use std.slices
+import (
+    "std"
+    "std.option"
+)
 func args() string[] {
     __host_args()
 }

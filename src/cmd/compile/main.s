@@ -1,10 +1,7 @@
 package cmd
-use compile.internal.arch.dispatch_init as arch_dispatch_init
-use compile.internal.build.main as build_main
-use internal.buildcfg.check as buildcfg_check
-use internal.buildcfg.goarch as buildcfg_goarch
-use std.env.args as host_args
-use std.io.eprintln
+import (
+    "std.io"
+)
 
 func main() int {
     args := host_args()
@@ -23,6 +20,6 @@ func main() int {
 }
 
 func report_compile_error(string message) int {
-    eprintln("compile: " + message)
+    std.io.eprintln("compile: " + message)
     0
 }

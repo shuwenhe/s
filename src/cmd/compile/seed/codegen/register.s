@@ -1,5 +1,7 @@
 package seed.codegen
-use std.vec.vec
+import (
+    "std.vec"
+)
 struct register_info {
     name: string
     id: int

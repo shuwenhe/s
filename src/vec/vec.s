@@ -1,7 +1,8 @@
 package std.vec
-use std.option.option
-use std.prelude.box
-use std.prelude.box
+import (
+    "std.option"
+    "std.prelude"
+)
 struct raw_t[] {
     box[array[t]] storage
     int capacity
@@ -25,7 +26,7 @@ func with_capacity[t](int capacity) t[] {
         }
     t[] {
         raw: raw_t[] {
-            storage: box(new_array[t](initial)), capacity initial,
+            storage: std.prelude.box(new_array[t](initial)), capacity initial,
         }, length 0,
     }
 }
@@ -86,7 +87,7 @@ func ensure_capacity[t](t[] vec, int wanted) () {
         array_set(next_storage, i, array_get(vec.raw.storage.value, i))
         i = i + 1
     }
-    vec.raw.storage = box(next_storage)
+    vec.raw.storage = std.prelude.box(next_storage)
     vec.raw.capacity = next
 }
 

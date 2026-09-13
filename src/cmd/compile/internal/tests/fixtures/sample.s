@@ -1,6 +1,7 @@
 package demo.core
-use std.io.reader
-use std.result.result as res
+import (
+    "std.io"
+)
 struct config[t] {
     string addr
     int retries

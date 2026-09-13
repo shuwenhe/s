@@ -1,7 +1,9 @@
 package cmd.compile.internal.ssa
 
-use std.vec.vec
-use std.string
+import (
+    "std"
+    "std.vec"
+)
 
 struct ssa_rule {
     string name
@@ -29,7 +31,7 @@ enum optimization_category {
 }
 
 func load_generic_rules() ssa_rule[] {
-    rules := vec()
+    rules := std.vec.vec()
 
     rules.push_all(get_const_fold_rules())
     rules.push_all(get_algebraic_simp_rules())
@@ -40,7 +42,7 @@ func load_generic_rules() ssa_rule[] {
 }
 
 func get_const_fold_rules() ssa_rule[] {
-    rules := vec()
+    rules := std.vec.vec()
 
     rules.push(ssa_rule{
         name: "const_fold_add",
@@ -163,7 +165,7 @@ func get_const_fold_rules() ssa_rule[] {
 }
 
 func get_algebraic_simp_rules() ssa_rule[] {
-    rules := vec()
+    rules := std.vec.vec()
 
     rules.push(ssa_rule{
         name: "add_zero_left",
@@ -349,7 +351,7 @@ func get_algebraic_simp_rules() ssa_rule[] {
 }
 
 func get_condition_opt_rules() ssa_rule[] {
-    rules := vec()
+    rules := std.vec.vec()
 
     rules.push(ssa_rule{
         name: "cond_branch_true",
@@ -391,7 +393,7 @@ func get_condition_opt_rules() ssa_rule[] {
 }
 
 func get_cse_rules() ssa_rule[] {
-    rules := vec()
+    rules := std.vec.vec()
 
     rules.push(ssa_rule{
         name: "cse_redundant_load",
@@ -415,7 +417,7 @@ func get_cse_rules() ssa_rule[] {
 }
 
 func get_licm_rules() ssa_rule[] {
-    rules := vec()
+    rules := std.vec.vec()
 
     rules.push(ssa_rule{
         name: "licm_loop_invariant",
@@ -430,7 +432,7 @@ func get_licm_rules() ssa_rule[] {
 }
 
 func get_gvn_rules() ssa_rule[] {
-    rules := vec()
+    rules := std.vec.vec()
 
     rules.push(ssa_rule{
         name: "gvn_redundant_expr",
@@ -445,7 +447,7 @@ func get_gvn_rules() ssa_rule[] {
 }
 
 func get_dce_rules() ssa_rule[] {
-    rules := vec()
+    rules := std.vec.vec()
 
     rules.push(ssa_rule{
         name: "dce_unused_instr",

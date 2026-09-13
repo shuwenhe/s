@@ -1,10 +1,11 @@
 package compile.internal.build.report
-use std.io.eprintln
-use std.io.println
+import (
+    "std.io"
+)
 func error(string message) () {
-    eprintln("error: " + message)
+    std.io.eprintln("error: " + message)
 }
 
 func usage(string text) () {
-    println(text)
+    std.io.println(text)
 }

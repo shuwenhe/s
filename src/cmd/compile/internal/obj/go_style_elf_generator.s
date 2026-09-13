@@ -1,5 +1,7 @@
 package compile.internal.obj
-use compile.internal.link
+import (
+    "compile.internal"
+)
 struct go_style_elf_generator {
     elf_writer* writer
     symbol_table* symtab

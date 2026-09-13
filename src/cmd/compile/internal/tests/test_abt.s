@@ -1,82 +1,71 @@
 package compile.internal.tests.test_abt
-use compile.internal.abt.new_tree
-use compile.internal.abt.insert
-use compile.internal.abt.find
-use compile.internal.abt.size
-use compile.internal.abt.min
-use compile.internal.abt.max
-use compile.internal.abt.glb
-use compile.internal.abt.lub
-use compile.internal.abt.delete_min
-use compile.internal.abt.delete_max
-use compile.internal.abt.union
-use compile.internal.abt.intersection
-use compile.internal.abt.difference
-use compile.internal.abt.equals
+import (
+    "compile.internal.abt"
+)
 func run_abt_suite() int {
-    t1 := new_tree()
-    ignored := insert(t1, 4, "4")
-    ignored = insert(t1, 2, "2")
-    ignored = insert(t1, 6, "6")
-    ignored = insert(t1, 5, "5")
-    if size(t1) != 4 {
+    t1 := compile.internal.abt.new_tree()
+    ignored := compile.internal.abt.insert(t1, 4, "4")
+    ignored = compile.internal.abt.insert(t1, 2, "2")
+    ignored = compile.internal.abt.insert(t1, 6, "6")
+    ignored = compile.internal.abt.insert(t1, 5, "5")
+    if compile.internal.abt.size(t1) != 4 {
         return 1
     }
-    if find(t1, 2) != "2" {
+    if compile.internal.abt.find(t1, 2) != "2" {
         return 1
     }
-    if find(t1, 99) != "" {
+    if compile.internal.abt.find(t1, 99) != "" {
         return 1
     }
-    mi := min(t1)
+    mi := compile.internal.abt.min(t1)
     if !mi.ok || mi.key != 2 {
         return 1
     }
-    ma := max(t1)
+    ma := compile.internal.abt.max(t1)
     if !ma.ok || ma.key != 6 {
         return 1
     }
-    g := glb(t1, 5)
+    g := compile.internal.abt.glb(t1, 5)
     if !g.ok || g.key != 4 {
         return 1
     }
-    l := lub(t1, 5)
+    l := compile.internal.abt.lub(t1, 5)
     if !l.ok || l.key != 6 {
         return 1
     }
-    dmin := delete_min(t1)
+    dmin := compile.internal.abt.delete_min(t1)
     if !dmin.ok || dmin.key != 2 {
         return 1
     }
-    dmax := delete_max(t1)
+    dmax := compile.internal.abt.delete_max(t1)
     if !dmax.ok || dmax.key != 6 {
         return 1
     }
-    if size(t1) != 2 {
+    if compile.internal.abt.size(t1) != 2 {
         return 1
     }
-    a := new_tree()
-    ignored = insert(a, 1, "a1")
-    ignored = insert(a, 2, "a2")
-    b := new_tree()
-    ignored = insert(b, 2, "b2")
-    ignored = insert(b, 3, "b3")
-    u := union(a, b)
-    if size(u) != 3 {
+    a := compile.internal.abt.new_tree()
+    ignored = compile.internal.abt.insert(a, 1, "a1")
+    ignored = compile.internal.abt.insert(a, 2, "a2")
+    b := compile.internal.abt.new_tree()
+    ignored = compile.internal.abt.insert(b, 2, "b2")
+    ignored = compile.internal.abt.insert(b, 3, "b3")
+    u := compile.internal.abt.union(a, b)
+    if compile.internal.abt.size(u) != 3 {
         return 1
     }
-    i := intersection(a, b)
-    if size(i) != 1 || find(i, 2) == "" {
+    i := compile.internal.abt.intersection(a, b)
+    if compile.internal.abt.size(i) != 1 || compile.internal.abt.find(i, 2) == "" {
         return 1
     }
-    df := difference(a, b)
-    if size(df) != 1 || find(df, 1) == "" || find(df, 2) != "" {
+    df := compile.internal.abt.difference(a, b)
+    if compile.internal.abt.size(df) != 1 || compile.internal.abt.find(df, 1) == "" || compile.internal.abt.find(df, 2) != "" {
         return 1
     }
-    c := new_tree()
-    ignored = insert(c, 1, "a1")
-    ignored = insert(c, 2, "a2")
-    if !equals(a, c) {
+    c := compile.internal.abt.new_tree()
+    ignored = compile.internal.abt.insert(c, 1, "a1")
+    ignored = compile.internal.abt.insert(c, 2, "a2")
+    if !compile.internal.abt.equals(a, c) {
         return 1
     }
     0

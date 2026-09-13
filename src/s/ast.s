@@ -1,8 +1,9 @@
 package s
-use std.option.option
-use std.prelude.box
-use std.prelude.to_string
-use std.slices
+import (
+    "std"
+    "std.option"
+    "std.prelude"
+)
 struct use_decl {
     string path
     option[string] alias

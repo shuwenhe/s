@@ -1,8 +1,9 @@
 package src.net
-use src.syscall as sc
-use std.result.result
-use std.slices
-use std.option.option
+import (
+    "std"
+    "std.option"
+    "std.result"
+)
 const af_inet = sc.af_inet
 const af_inet6 = sc.af_inet6
 const sock_stream = sc.sock_stream

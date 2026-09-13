@@ -1,7 +1,8 @@
 package compile.internal.safety
 
-use compile.internal.semantic.check_detailed
-use compile.internal.semantic.semantic_error
+import (
+    "compile.internal.semantic"
+)
 
 struct safety_proof {
     bool proven
@@ -30,7 +31,7 @@ func classify_safety_error(semantic_error diagnostic, safety_proof* proof) () {
 }
 
 func prove_safety(string source) safety_proof {
-    diagnostics := check_detailed(source)
+    diagnostics := compile.internal.semantic.check_detailed(source)
     proof := safety_proof {
         proven: len(diagnostics) == 0,
         diagnostic_count: len(diagnostics),

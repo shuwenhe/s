@@ -1,12 +1,10 @@
 package seed
-use seed.codegen.codegen
-use seed.codegen.register
-use seed.codegen.stackframe
-use seed.codegen.instruction_select
-use seed.codegen.linker
-use std.vec.vec
-use std.string.string
-use std.file.file
+import (
+    "seed.codegen"
+    "std.file"
+    "std.string"
+    "std.vec"
+)
 struct compiler_native {
     source_file: string
     output_file: string

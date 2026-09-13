@@ -1,6 +1,8 @@
 package src.runtime
-use std.slices
-use std.result.result
+import (
+    "std"
+    "std.result"
+)
 struct obj_header {
     int size
     int type_id

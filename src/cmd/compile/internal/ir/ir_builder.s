@@ -1,13 +1,9 @@
 package compile.internal.ir.builder
 
-use compile.internal.ir.mir
-use compile.internal.ir.cfg
-use compile.internal.ir.ssa
-use compile.internal.ir.escape
-use compile.internal.ir.liveness
-use compile.internal.ir.writebarrier
-use compile.internal.ir.debug_loc
-use compile.internal.typesys.is_heap_reference_type
+import (
+    "compile.internal.ir"
+    "compile.internal.typesys"
+)
 
 struct ir_builder {
     current_function* mir.ir_function
@@ -113,7 +109,7 @@ func (ir_builder* b) analyze_optimizations() {
         local := f.locals[i]
         is_pointer := false
         if local.type_name != option::none {
-            is_pointer = is_heap_reference_type(local.type_name.unwrap())
+            is_pointer = compile.internal.typesys.is_heap_reference_type(local.type_name.unwrap())
         }
         escape_level := f.escape_analysis.analyze_variable(local.id, is_pointer, false, false, false)
 

@@ -1,30 +1,10 @@
 package compile.internal.bloop
-use s.block_expr
-use s.borrow_expr
-use s.call_expr
-use s.c_for_stmt
-use s.expr
-use s.expr_stmt
-use s.for_expr
-use s.function_decl
-use s.if_expr
-use s.increment_stmt
-use s.index_expr
-use s.item
-use s.member_expr
-use s.name_expr
-use s.param
-use s.source_file
-use s.stmt
-use s.switch_arm
-use s.switch_expr
-use s.var_stmt
-use s.while_expr
-use std.option.option
-use std.prelude.box
-use std.prelude.len
-use std.prelude.slice
-use std.slices
+import (
+    "s"
+    "std"
+    "std.option"
+    "std.prelude"
+)
 func get_name_from_expr(expr value) option[string] {
     switch value {
         expr.name(name_value) : option::some(name_value.name),
@@ -40,7 +20,7 @@ func append_unique(string[] names, string value) () {
         return
     }
     i := 0
-    for i < len(names) {
+    for i < std.prelude.len(names) {
         if names[i] == value {
             return
         }
@@ -52,7 +32,7 @@ func append_unique(string[] names, string value) () {
 func collect_call_arg_names(call_expr call_value) string[] {
     out := string[]()
     i := 0
-    for i < len(call_value.args) {
+    for i < std.prelude.len(call_value.args) {
         switch get_name_from_expr(call_value.args[i]) {
             option::some(name_value) : append_unique(out, name_value),
             option::none : (),
@@ -73,7 +53,7 @@ func collect_keep_alive_names(stmt value) string[] {
                 expr.call(call_value) : {
                     names := collect_call_arg_names(call_value)
                     i := 0
-                    for i < len(names) {
+                    for i < std.prelude.len(names) {
                         append_unique(out, names[i])
                         i = i + 1
                     }
@@ -94,9 +74,9 @@ func keep_alive_stmt(string name_value) stmt {
     callee := expr::name(name_expr {
         name: "keep_alive", inferred_type option::none,
     })
-    stmt::expr(expr_stmt {
+    stmt::s.expr(expr_stmt {
         expr: expr::call(call_expr {
-            callee: box(callee), args args, inferred_type option::none, resolved_callee option::none, type_args string[](),
+            callee: std.prelude.box(callee), args args, inferred_type option::none, resolved_callee option::none, type_args string[](),
         }),
     })
 }
@@ -105,7 +85,7 @@ func preserve_stmt(stmt value) stmt[] {
     out := stmt[]()
     names := collect_keep_alive_names(value)
     i := 0
-    for i < len(names) {
+    for i < std.prelude.len(names) {
         out = append(out, keep_alive_stmt(names[i]))
         i = i + 1
     }
@@ -135,23 +115,23 @@ func is_testing_bloop_expr(expr value) bool {
 func edit_expr(expr value, bool in_bloop) expr {
     switch value {
         expr.borrow(borrow_value) : expr::borrow(borrow_expr {
-            target: box(edit_expr(borrow_value.target.value, in_bloop)), mutable borrow_value.mutable, inferred_type borrow_value.inferred_type,
+            target: std.prelude.box(edit_expr(borrow_value.target.value, in_bloop)), mutable borrow_value.mutable, inferred_type borrow_value.inferred_type,
         }),
         expr.member(member_value) : expr::member(member_expr {
-            target: box(edit_expr(member_value.target.value, in_bloop)), member member_value.member, inferred_type member_value.inferred_type,
+            target: std.prelude.box(edit_expr(member_value.target.value, in_bloop)), member member_value.member, inferred_type member_value.inferred_type,
         }),
         expr.index(index_value) : expr::index(index_expr {
-            target: box(edit_expr(index_value.target.value, in_bloop)), index box(edit_expr(index_value.index.value, in_bloop)), inferred_type index_value.inferred_type,
+            target: std.prelude.box(edit_expr(index_value.target.value, in_bloop)), index std.prelude.box(edit_expr(index_value.index.value, in_bloop)), inferred_type index_value.inferred_type,
         }),
         expr.call(call_value) : {
             out_args := expr[]()
             i := 0
-            for i < len(call_value.args) {
+            for i < std.prelude.len(call_value.args) {
                 out_args = append(out_args, edit_expr(call_value.args[i], in_bloop))
                 i = i + 1
             }
             expr::call(call_expr {
-                callee: box(edit_expr(call_value.callee.value, in_bloop)), args out_args, inferred_type call_value.inferred_type, resolved_callee call_value.resolved_callee, type_args call_value.type_args,
+                callee: std.prelude.box(edit_expr(call_value.callee.value, in_bloop)), args out_args, inferred_type call_value.inferred_type, resolved_callee call_value.resolved_callee, type_args call_value.type_args,
             })
         }
         expr.if(if_value) : {
@@ -159,35 +139,35 @@ func edit_expr(expr value, bool in_bloop) expr {
             else_expr := option::none
             switch if_value.else_branch {
                 option::some(else_value) : {
-                    else_expr = option::some(box(edit_expr(else_value.value, in_bloop)))
+                    else_expr = option::some(std.prelude.box(edit_expr(else_value.value, in_bloop)))
                 }
                 option::none : (),
             }
             expr::if(if_expr {
-                condition: box(edit_expr(if_value.condition.value, in_bloop)), then_branch then_block, else_branch else_expr, inferred_type if_value.inferred_type,
+                condition: std.prelude.box(edit_expr(if_value.condition.value, in_bloop)), then_branch then_block, else_branch else_expr, inferred_type if_value.inferred_type,
             })
         }
         expr.while(while_value) : {
             loop_flag := in_bloop || is_testing_bloop_expr(while_value.condition.value)
             expr::while(while_expr {
-                condition: box(edit_expr(while_value.condition.value, in_bloop)), body edit_block(while_value.body, loop_flag), inferred_type while_value.inferred_type,
+                condition: std.prelude.box(edit_expr(while_value.condition.value, in_bloop)), body edit_block(while_value.body, loop_flag), inferred_type while_value.inferred_type,
             })
         }
         expr.for(for_value) : expr::for(for_expr {
-            names: for_value.names, declare for_value.declare, iterable box(edit_expr(for_value.iterable.value, in_bloop)), body edit_block(for_value.body, in_bloop), inferred_type for_value.inferred_type,
+            names: for_value.names, declare for_value.declare, iterable std.prelude.box(edit_expr(for_value.iterable.value, in_bloop)), body edit_block(for_value.body, in_bloop), inferred_type for_value.inferred_type,
         }),
         expr.block(block_value) : expr::block(edit_block(block_value, in_bloop)),
         expr.switch(switch_value) : {
             arms := switch_arm[]()
             i := 0
-            for i < len(switch_value.arms) {
+            for i < std.prelude.len(switch_value.arms) {
                 arms.push(switch_arm {
                     pattern: switch_value.arms[i].pattern, expr edit_expr(switch_value.arms[i].expr, in_bloop),
                 })
                 i = i + 1
             }
             expr::switch(switch_expr {
-                subject: box(edit_expr(switch_value.subject.value, in_bloop)), arms arms, inferred_type switch_value.inferred_type,
+                subject: std.prelude.box(edit_expr(switch_value.subject.value, in_bloop)), arms arms, inferred_type switch_value.inferred_type,
             })
         }
         _ : value,
@@ -199,13 +179,13 @@ func edit_stmt(stmt value, bool in_bloop) stmt {
         stmt.c_for(loop_value) : {
             loop_flag := in_bloop || is_testing_bloop_expr(loop_value.condition)
             stmt::c_for(c_for_stmt {
-                init: box(edit_stmt(loop_value.init.value, in_bloop)), condition edit_expr(loop_value.condition, in_bloop), step box(edit_stmt(loop_value.step.value, in_bloop)), body edit_block(loop_value.body, loop_flag),
+                init: std.prelude.box(edit_stmt(loop_value.init.value, in_bloop)), condition edit_expr(loop_value.condition, in_bloop), step std.prelude.box(edit_stmt(loop_value.step.value, in_bloop)), body edit_block(loop_value.body, loop_flag),
             })
         }
         stmt.let(var_value) : stmt::let(var_stmt {
             name: var_value.name, type_name var_value.type_name, value edit_expr(var_value.value, in_bloop),
         }),
-        stmt.expr(expr_value) : stmt::expr(expr_stmt {
+        stmt.expr(expr_value) : stmt::s.expr(expr_stmt {
             expr: edit_expr(expr_value.expr, in_bloop),
         }),
         _ : value,
@@ -215,13 +195,13 @@ func edit_stmt(stmt value, bool in_bloop) stmt {
 func edit_block(block_expr block_value, bool in_bloop) block_expr {
     out_stmts := stmt[]()
     i := 0
-    for i < len(block_value.statements) {
+    for i < std.prelude.len(block_value.statements) {
         current := edit_stmt(block_value.statements[i], in_bloop)
         out_stmts = append(out_stmts, current)
         if in_bloop {
             extra := preserve_stmt(current)
             j := 0
-            for j < len(extra) {
+            for j < std.prelude.len(extra) {
                 out_stmts = append(out_stmts, extra[j])
                 j = j + 1
             }
@@ -240,7 +220,7 @@ func edit_block(block_expr block_value, bool in_bloop) block_expr {
 
 func has_testing_import(source_file pkg) bool {
     i := 0
-    for i < len(pkg.uses) {
+    for i < std.prelude.len(pkg.uses) {
         if pkg.uses[i].path == "testing" || starts_with(pkg.uses[i].path, "testing.") {
             return true
         }
@@ -255,7 +235,7 @@ func walk(source_file pkg) source_file {
     }
     out_items := item[]()
     i := 0
-    for i < len(pkg.items) {
+    for i < std.prelude.len(pkg.items) {
         switch pkg.items[i] {
             item.function(fn_value) : {
                 out_fn := fn_value
@@ -277,8 +257,8 @@ func walk(source_file pkg) source_file {
 }
 
 func starts_with(string text, string prefix) bool {
-    if len(text) < len(prefix) {
+    if std.prelude.len(text) < std.prelude.len(prefix) {
         return false
     }
-    slice(text, 0, len(prefix)) == prefix
+    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
 }

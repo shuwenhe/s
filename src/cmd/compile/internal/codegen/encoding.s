@@ -1,5 +1,7 @@
 package compile.internal.codegen
-use compile.internal.link
+import (
+    "compile.internal"
+)
 enum amd64_opcode {
     op_nop,
     op_mov,

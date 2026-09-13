@@ -1,5 +1,7 @@
 package std.binary
-use std.encoding.normalize_byte
+import (
+    "std.encoding"
+)
 func u64_le_bytes(int[] bytes, int offset) int {
     if offset < 0 || offset + 8 > len(bytes) {
         return 0
@@ -8,7 +10,7 @@ func u64_le_bytes(int[] bytes, int offset) int {
     int multiplier = 1
     int i = 0
     for i < 8 {
-        value = value + normalize_byte(bytes[offset + i]) * multiplier
+        value = value + std.encoding.normalize_byte(bytes[offset + i]) * multiplier
         multiplier = multiplier * 256
         i = i + 1
     }
@@ -23,7 +25,7 @@ func u64_le_string(string data, int offset) int {
     int multiplier = 1
     int i = 0
     for i < 8 {
-        value = value + normalize_byte(int(byte(data[offset + i]))) * multiplier
+        value = value + std.encoding.normalize_byte(int(byte(data[offset + i]))) * multiplier
         multiplier = multiplier * 256
         i = i + 1
     }
@@ -38,7 +40,7 @@ func i32_le_string(string data, int offset) int {
     int multiplier = 1
     int i = 0
     for i < 4 {
-        value = value + normalize_byte(int(byte(data[offset + i]))) * multiplier
+        value = value + std.encoding.normalize_byte(int(byte(data[offset + i]))) * multiplier
         multiplier = multiplier * 256
         i = i + 1
     }

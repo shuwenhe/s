@@ -1,9 +1,8 @@
 package runtime
-use compile.internal.compiler.main as compiler_main
-use std.env as env
-use std.io  as io
-use std.slices
-use std.result.result
+import (
+    "std"
+    "std.result"
+)
 const bootstrap_version = "0.2.0"
 const bootstrap_stage   = "stage1"
 const cmd_unknown = 0

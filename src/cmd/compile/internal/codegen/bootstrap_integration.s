@@ -1,10 +1,8 @@
 package compile.internal.codegen
-use compile.internal.link
-use compile.internal.obj
-use compile.internal.backend_elf64.build as backend_build
-use compile.internal.backend_elf64.build_object as backend_build_object
-use std.training_io._read_file as read_file
-use std.training_io.find_substr
+import (
+    "compile.internal"
+    "std.training_io"
+)
 struct s_compiler {
     machine_code_gen* mcg
     symbol_table* symtab
@@ -189,5 +187,5 @@ func contains_text(string haystack, string needle) bool {
     if needle == "" {
         return true
     }
-    return find_substr(haystack, needle) >= 0
+    return std.training_io.find_substr(haystack, needle) >= 0
 }

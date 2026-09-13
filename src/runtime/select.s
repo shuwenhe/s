@@ -1,5 +1,7 @@
 package src.runtime
-use std.option.option
+import (
+    "std.option"
+)
 
 struct runtime_select_result {
     int index

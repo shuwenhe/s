@@ -1,62 +1,23 @@
 package compile.internal.backend_elf64
-use compile.internal.ir.lower.lower_main_to_mir
-use compile.internal.abi.new_abi_config
-use compile.internal.abi.abi_analyze_types
-use compile.internal.abi.in_registers_used as abiutils_in_registers_used
-use compile.internal.abi.out_registers_used as abiutils_out_registers_used
-use compile.internal.abi.spill_area_size as abiutils_spill_area_size
-use compile.internal.abi.arg_width as abiutils_arg_width
-use compile.internal.abi.info_string as abiutils_info_string
-use compile.internal.mir.mir_graph
-use compile.internal.mir.mir_basic_block
-use compile.internal.mir.mir_statement
-use compile.internal.mir.mir_control_edge
-use compile.internal.mir.dump_graph
-use compile.internal.inline.estimate_inline_sites_graph
-use compile.internal.escape.estimate_escape_sites_graph
-use compile.internal.dispatch.devirtualize.estimate_devirtualized_sites_graph
-use compile.internal.ssa_core.build_pipeline_with_graph_hints_and_margin as build_ssa_pipeline_with_graph_hints_and_margin
-use compile.internal.ssa_core.dump_pipeline as dump_ssa_pipeline
-use compile.internal.ssa_core.dump_debug_map as dump_ssa_debug_map
-use internal.buildcfg.goarch as buildcfg_goarch
-use compile.internal.safety.prove_safety
-use compile.internal.semantic.check_source_file
-use compile.internal.syntax.parse_source
-use compile.internal.mono.monomorphize_file
-use s.assign_stmt
-use s.binary_expr
-use s.block_expr
-use s.bool_expr
-use s.c_for_stmt
-use s.call_expr
-use s.expr
-use s.expr_stmt
-use s.function_decl
-use s.if_expr
-use s.increment_stmt
-use s.int_expr
-use s.item
-use s.name_expr
-use s.member_expr
-use s.source_file
-use s.stmt
-use s.string_expr
-use s.sroutine_stmt
-use s.use_decl
-use s.var_stmt
-use s.while_expr
-use std.fs.make_temp_dir
-use std.fs.read_to_string
-use std.fs.write_text_file
-use std.env.get as env_get
-use std.io.eprintln
-use std.option.option
-use std.process.run_process
-use std.prelude.char_at
-use std.prelude.len
-use std.prelude.slice
-use std.prelude.to_string
-use std.slices
+import (
+    "compile.internal.abi"
+    "compile.internal.dispatch.devirtualize"
+    "compile.internal.escape"
+    "compile.internal.inline"
+    "compile.internal.ir.lower"
+    "compile.internal.mir"
+    "compile.internal.mono"
+    "compile.internal.safety"
+    "compile.internal.semantic"
+    "compile.internal.syntax"
+    "s"
+    "std"
+    "std.fs"
+    "std.io"
+    "std.option"
+    "std.prelude"
+    "std.process"
+)
 struct backend_error {
     string message
 }
@@ -236,7 +197,7 @@ struct abi_behavior_entry {
 }
 
 func build_object(string path, string output, string ssa_margin_override) int {
-    source_result := read_to_string(path)
+    source_result := std.fs.read_to_string(path)
     if source_result.is_err() {
         return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message)
     }
@@ -247,12 +208,12 @@ func build_object(string path, string output, string ssa_margin_override) int {
     }
     parsed := parsed_result.unwrap()
     if !should_skip_semantic_check(path) {
-        safety := prove_safety(source)
+        safety := compile.internal.safety.prove_safety(source)
         if !safety.proven {
             return report_failure("safety proof failed: " + safety.summary)
         }
     }
-    mir_result := lower_main_to_mir(parsed)
+    mir_result := compile.internal.ir.lower.lower_main_to_mir(parsed)
     if mir_result.is_err() {
         return report_failure("mir lowering failed: " + mir_result.unwrap_err())
     }
@@ -289,14 +250,14 @@ func build_object(string path, string output, string ssa_margin_override) int {
     if exit_code_result.is_err() {
         return report_failure(exit_code_result.unwrap_err().message)
     }
-    temp_dir_result := make_temp_dir("s-object-")
+    temp_dir_result := std.fs.make_temp_dir("s-object-")
     if temp_dir_result.is_err() {
         return report_failure("could not create temporary output directory: " + temp_dir_result.unwrap_err().message)
     }
     temp_dir := temp_dir_result.unwrap()
     asm_path := temp_dir + "/out.s"
     asm_text := emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
-    write_result := write_text_file(asm_path, asm_text)
+    write_result := std.fs.write_text_file(asm_path, asm_text)
     if write_result.is_err() {
         return report_failure("failed to write assembly: " + write_result.unwrap_err().message)
     }
@@ -305,7 +266,7 @@ func build_object(string path, string output, string ssa_margin_override) int {
     as_argv = append(as_argv, "-o")
     as_argv = append(as_argv, output)
     as_argv = append(as_argv, asm_path)
-    as_result := run_process(as_argv)
+    as_result := std.process.run_process(as_argv)
     if as_result.is_err() {
         return report_failure("toolchain failed: " + as_result.unwrap_err().message)
     }
@@ -313,7 +274,7 @@ func build_object(string path, string output, string ssa_margin_override) int {
 }
 
 func build(string path, string output, string ssa_margin_override, bool nostdlib) int {
-    source_result := read_to_string(path)
+    source_result := std.fs.read_to_string(path)
     if source_result.is_err() {
         return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message
     }
@@ -327,12 +288,12 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     }
     parsed := parsed_result.unwrap()
     if !should_skip_semantic_check(path) {
-        safety := prove_safety(source)
+        safety := compile.internal.safety.prove_safety(source)
         if !safety.proven {
             return report_failure("safety proof failed: " + safety.summary
         }
     }
-    mir_result := lower_main_to_mir(parsed)
+    mir_result := compile.internal.ir.lower.lower_main_to_mir(parsed)
     if mir_result.is_err() {
         return report_failure("mir lowering failed: " + mir_result.unwrap_err())
     }
@@ -373,7 +334,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     if runtime_metrics_result.is_err() {
         return report_failure(runtime_metrics_result.unwrap_err().message
     }
-    temp_dir_result := make_temp_dir("s-build-")
+    temp_dir_result := std.fs.make_temp_dir("s-build-")
     if temp_dir_result.is_err() {
         return report_failure("could not create temporary output directory: " + temp_dir_result.unwrap_err().message
     }
@@ -391,7 +352,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         asm_text := emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
         asm_path := temp_dir + "/out.s"
         obj_path := temp_dir + "/out.o"
-        write_result := write_text_file(asm_path, asm_text)
+        write_result := std.fs.write_text_file(asm_path, asm_text)
         if write_result.is_err() {
             return report_failure("failed to write assembly: " + write_result.unwrap_err().message
         }
@@ -400,7 +361,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         as_argv = append(as_argv, "-o");
         as_argv = append(as_argv, obj_path);
         as_argv = append(as_argv, asm_path);
-        as_result := run_process(as_argv)
+        as_result := std.process.run_process(as_argv)
         if as_result.is_err() {
             return report_failure("toolchain failed: " + as_result.unwrap_err().message
         }
@@ -415,32 +376,32 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         ld_argv = append(ld_argv, "-o")
         ld_argv = append(ld_argv, output)
         ld_argv = append(ld_argv, obj_path)
-        ld_result := run_process(ld_argv)
+        ld_result := std.process.run_process(ld_argv)
         if ld_result.is_err() {
             return report_failure("toolchain failed: " + ld_result.unwrap_err().message
         }
     }
     dbg_path := output + ".dbg"
     dbg_payload := "ssa\n" + ssa_text + "\n\ndebug\n" + debug_map
-    dbg_write := write_text_file(dbg_path, dbg_payload)
+    dbg_write := std.fs.write_text_file(dbg_path, dbg_payload)
     if dbg_write.is_err() {
         return report_failure("failed to write debug artifact: " + dbg_write.unwrap_err().message
     }
     stackmap_path := output + ".stackmap"
     stackmap_payload := build_stackmap_artifact(arch, parsed, ssa_text, debug_map)
-    stackmap_write := write_text_file(stackmap_path, stackmap_payload)
+    stackmap_write := std.fs.write_text_file(stackmap_path, stackmap_payload)
     if stackmap_write.is_err() {
         return report_failure("failed to write stack map artifact: " + stackmap_write.unwrap_err().message
     }
     abi_path := output + ".abi"
     abi_payload := build_abi_behavior_artifact(arch, parsed)
-    abi_write := write_text_file(abi_path, abi_payload)
+    abi_write := std.fs.write_text_file(abi_path, abi_payload)
     if abi_write.is_err() {
         return report_failure("failed to write ABI behavior artifact: " + abi_write.unwrap_err().message
     }
     abi_emit_path := output + ".abi.emit"
     abi_emit_payload := build_abi_emit_plan(arch, parsed)
-    abi_emit_write := write_text_file(abi_emit_path, abi_emit_payload)
+    abi_emit_write := std.fs.write_text_file(abi_emit_path, abi_emit_payload)
     if abi_emit_write.is_err() {
         return report_failure("failed to write ABI emission artifact: " + abi_emit_write.unwrap_err().message
     }
@@ -450,7 +411,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         return report_failure(abi_matrix_check.unwrap_err().message
     }
     abi_matrix_path := output + ".abi.matrix"
-    abi_matrix_write := write_text_file(abi_matrix_path, abi_matrix_payload)
+    abi_matrix_write := std.fs.write_text_file(abi_matrix_path, abi_matrix_payload)
     if abi_matrix_write.is_err() {
         return report_failure("failed to write ABI matrix artifact: " + abi_matrix_write.unwrap_err().message
     }
@@ -460,7 +421,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     if dwarf_check.is_err() {
         return report_failure(dwarf_check.unwrap_err().message
     }
-    dwarf_write := write_text_file(dwarf_path, dwarf_payload)
+    dwarf_write := std.fs.write_text_file(dwarf_path, dwarf_payload)
     if dwarf_write.is_err() {
         return report_failure("failed to write DWARF-like artifact: " + dwarf_write.unwrap_err().message
     }
@@ -470,7 +431,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     if cfi_check.is_err() {
         return report_failure(cfi_check.unwrap_err().message
     }
-    cfi_write := write_text_file(cfi_path, cfi_payload)
+    cfi_write := std.fs.write_text_file(cfi_path, cfi_payload)
     if cfi_write.is_err() {
         return report_failure("failed to write CFI artifact: " + cfi_write.unwrap_err().message
     }
@@ -480,13 +441,13 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     if drop_check.is_err() {
         return report_failure(drop_check.unwrap_err().message
     }
-    drop_write := write_text_file(drop_path, drop_payload)
+    drop_write := std.fs.write_text_file(drop_path, drop_payload)
     if drop_write.is_err() {
         return report_failure("failed to write drop metadata artifact: " + drop_write.unwrap_err().message
     }
     export_path := output + ".export"
     export_payload := build_export_data_artifact(parsed, arch)
-    export_write := write_text_file(export_path, export_payload)
+    export_write := std.fs.write_text_file(export_path, export_payload)
     if export_write.is_err() {
         return report_failure("failed to write export data artifact: " + export_write.unwrap_err().message
     }
@@ -496,7 +457,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     if toolchain_check.is_err() {
         return report_failure(toolchain_check.unwrap_err().message
     }
-    toolchain_write := write_text_file(toolchain_path, toolchain_payload)
+    toolchain_write := std.fs.write_text_file(toolchain_path, toolchain_payload)
     if toolchain_write.is_err() {
         return report_failure("failed to write toolchain compatibility artifact: " + toolchain_write.unwrap_err().message
     }
@@ -506,7 +467,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     if perf_check.is_err() {
         return report_failure(perf_check.unwrap_err().message
     }
-    perf_write := write_text_file(perf_path, perf_payload)
+    perf_write := std.fs.write_text_file(perf_path, perf_payload)
     if perf_write.is_err() {
         return report_failure("failed to write backend perf baseline artifact: " + perf_write.unwrap_err().message
     }
@@ -516,7 +477,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     if opt_check.is_err() {
         return report_failure(opt_check.unwrap_err().message
     }
-    opt_write := write_text_file(opt_path, opt_payload)
+    opt_write := std.fs.write_text_file(opt_path, opt_payload)
     if opt_write.is_err() {
         return report_failure("failed to write optimization report: " + opt_write.unwrap_err().message
     }
@@ -526,9 +487,9 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
 func run_midend_pipeline(mir_graph graph) midend_result {
     pass := apply_midend_pass_pipeline(graph)
     rewritten_graph := pass.graph
-    inlined := estimate_inline_sites_graph(rewritten_graph)
-    escaped := estimate_escape_sites_graph(rewritten_graph)
-    devirt := estimate_devirtualized_sites_graph(rewritten_graph)
+    inlined := compile.internal.inline.estimate_inline_sites_graph(rewritten_graph)
+    escaped := compile.internal.escape.estimate_escape_sites_graph(rewritten_graph)
+    devirt := compile.internal.dispatch.devirtualize.estimate_devirtualized_sites_graph(rewritten_graph)
     cross_pkg_inline := estimate_cross_pkg_inline_sites_graph(rewritten_graph, inlined)
     const_prop := estimate_const_prop_sites_graph(rewritten_graph)
     sroutine_sites := estimate_sroutine_sites_graph(rewritten_graph)
@@ -552,59 +513,59 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         }
         iter = iter + 1
     }
-    rewritten := dump_graph(rewritten_graph)
+    rewritten := compile.internal.mir.dump_graph(rewritten_graph)
     if inlined > 0 {
-        rewritten = rewritten + " inline=" + to_string(inlined)
+        rewritten = rewritten + " inline=" + std.prelude.to_string(inlined)
     }
     if escaped > 0 {
-        rewritten = rewritten + " escape=" + to_string(escaped)
+        rewritten = rewritten + " escape=" + std.prelude.to_string(escaped)
     }
     if devirt > 0 {
-        rewritten = rewritten + " devirt=" + to_string(devirt)
+        rewritten = rewritten + " devirt=" + std.prelude.to_string(devirt)
     }
     if cross_pkg_inline > 0 {
-        rewritten = rewritten + " xinline=" + to_string(cross_pkg_inline)
+        rewritten = rewritten + " xinline=" + std.prelude.to_string(cross_pkg_inline)
     }
     if const_prop > 0 {
-        rewritten = rewritten + " constprop=" + to_string(const_prop)
+        rewritten = rewritten + " constprop=" + std.prelude.to_string(const_prop)
     }
     if sroutine_sites > 0 {
-        rewritten = rewritten + " sroutine=" + to_string(sroutine_sites)
+        rewritten = rewritten + " sroutine=" + std.prelude.to_string(sroutine_sites)
     }
     if select_weighted_sites > 0 {
-        rewritten = rewritten + " selectw=" + to_string(select_weighted_sites)
+        rewritten = rewritten + " selectw=" + std.prelude.to_string(select_weighted_sites)
     }
     if select_timeout_sites > 0 {
-        rewritten = rewritten + " selectt=" + to_string(select_timeout_sites)
+        rewritten = rewritten + " selectt=" + std.prelude.to_string(select_timeout_sites)
     }
     if select_send_sites > 0 {
-        rewritten = rewritten + " selects=" + to_string(select_send_sites)
+        rewritten = rewritten + " selects=" + std.prelude.to_string(select_send_sites)
     }
     const_fold_hits := estimate_const_fold_hits_graph(graph)
-    rewritten = rewritten + " constfold=" + to_string(const_fold_hits)
-    rewritten = rewritten + " ipo=" + to_string(ipo_synergy)
-    rewritten = rewritten + " pass.rm_unreachable=" + to_string(pass.removed_unreachable_blocks)
-    rewritten = rewritten + " pass.fold_branch=" + to_string(pass.folded_redundant_branches)
-    rewritten = rewritten + " pass.simplify_j2r=" + to_string(pass.simplified_jump_to_return)
-    rewritten = rewritten + " pass.trim_unit=" + to_string(pass.removed_unit_lines)
-    rewritten = rewritten + " pass.dedup=" + to_string(pass.dedup_lines)
+    rewritten = rewritten + " constfold=" + std.prelude.to_string(const_fold_hits)
+    rewritten = rewritten + " ipo=" + std.prelude.to_string(ipo_synergy)
+    rewritten = rewritten + " pass.rm_unreachable=" + std.prelude.to_string(pass.removed_unreachable_blocks)
+    rewritten = rewritten + " pass.fold_branch=" + std.prelude.to_string(pass.folded_redundant_branches)
+    rewritten = rewritten + " pass.simplify_j2r=" + std.prelude.to_string(pass.simplified_jump_to_return)
+    rewritten = rewritten + " pass.trim_unit=" + std.prelude.to_string(pass.removed_unit_lines)
+    rewritten = rewritten + " pass.dedup=" + std.prelude.to_string(pass.dedup_lines)
     report := "midend"
-        + " inline_sites=" + to_string(inlined)
-        + " escape_sites=" + to_string(escaped)
-        + " devirtualized=" + to_string(devirt)
-        + " cross_pkg_inline=" + to_string(cross_pkg_inline)
-        + " const_prop=" + to_string(const_prop)
-        + " sroutine_sites=" + to_string(sroutine_sites)
-        + " select_weighted_sites=" + to_string(select_weighted_sites)
-        + " select_timeout_sites=" + to_string(select_timeout_sites)
-        + " select_send_sites=" + to_string(select_send_sites)
-        + " const_fold_hits=" + to_string(const_fold_hits)
-        + " ipo_synergy=" + to_string(ipo_synergy)
-        + " pass_rm_unreachable=" + to_string(pass.removed_unreachable_blocks)
-        + " pass_fold_branch=" + to_string(pass.folded_redundant_branches)
-        + " pass_simplify_j2r=" + to_string(pass.simplified_jump_to_return)
-        + " pass_trim_unit=" + to_string(pass.removed_unit_lines)
-        + " pass_dedup=" + to_string(pass.dedup_lines)
+        + " inline_sites=" + std.prelude.to_string(inlined)
+        + " escape_sites=" + std.prelude.to_string(escaped)
+        + " devirtualized=" + std.prelude.to_string(devirt)
+        + " cross_pkg_inline=" + std.prelude.to_string(cross_pkg_inline)
+        + " const_prop=" + std.prelude.to_string(const_prop)
+        + " sroutine_sites=" + std.prelude.to_string(sroutine_sites)
+        + " select_weighted_sites=" + std.prelude.to_string(select_weighted_sites)
+        + " select_timeout_sites=" + std.prelude.to_string(select_timeout_sites)
+        + " select_send_sites=" + std.prelude.to_string(select_send_sites)
+        + " const_fold_hits=" + std.prelude.to_string(const_fold_hits)
+        + " ipo_synergy=" + std.prelude.to_string(ipo_synergy)
+        + " pass_rm_unreachable=" + std.prelude.to_string(pass.removed_unreachable_blocks)
+        + " pass_fold_branch=" + std.prelude.to_string(pass.folded_redundant_branches)
+        + " pass_simplify_j2r=" + std.prelude.to_string(pass.simplified_jump_to_return)
+        + " pass_trim_unit=" + std.prelude.to_string(pass.removed_unit_lines)
+        + " pass_dedup=" + std.prelude.to_string(pass.dedup_lines)
     midend_result {
         optimized_mir_text: rewritten, report report,
     }
@@ -613,7 +574,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
 func estimate_sroutine_sites_graph(mir_graph graph) int {
     total := 0
     i := 0
-    for i < len(graph.trace) {
+    for i < std.prelude.len(graph.trace) {
         if has_substring(graph.trace[i], "stmt sroutine ") {
             total = total + 1
         }
@@ -625,7 +586,7 @@ func estimate_sroutine_sites_graph(mir_graph graph) int {
 func estimate_trace_call_sites_graph(mir_graph graph, string marker) int {
     total := 0
     i := 0
-    for i < len(graph.trace) {
+    for i < std.prelude.len(graph.trace) {
         if has_substring(graph.trace[i], marker) {
             total = total + 1
         }
@@ -637,10 +598,10 @@ func estimate_trace_call_sites_graph(mir_graph graph, string marker) int {
 func estimate_const_fold_hits_graph(mir_graph graph) int {
     prefix := "constfold.hits="
     i := 0
-    for i < len(graph.trace) {
+    for i < std.prelude.len(graph.trace) {
         line := trim_spaces(graph.trace[i])
         if starts_with_local(line, prefix) {
-            return parse_non_negative_int(slice(line, len(prefix), len(line)))
+            return parse_non_negative_int(std.prelude.slice(line, std.prelude.len(prefix), std.prelude.len(line)))
         }
         i = i + 1
     }
@@ -654,8 +615,8 @@ func parse_non_negative_int(string raw) int {
     }
     value := 0
     i := 0
-    for i < len(text) {
-        ch := char_at(text, i)
+    for i < std.prelude.len(text) {
+        ch := std.prelude.char_at(text, i)
         digit := digit_value(ch)
         if digit < 0 {
             return 0
@@ -697,8 +658,8 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     reachable := int[]()
     work := int[]()
     work = append(work, rewritten.entry)
-    for len(work) > 0 {
-        id := work[len(work) - 1]
+    for std.prelude.len(work) > 0 {
+        id := work[std.prelude.len(work) - 1]
         work.pop()
         if contains_int32(reachable, id) {
             continue
@@ -709,7 +670,7 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
             continue
         }
         ei := 0
-        for ei < rewritten.blocks[bi]len(.terminator.edges) {
+        for ei < rewritten.blocks[bi]std.prelude.len(.terminator.edges) {
             next := rewritten.blocks[bi].terminator.edges[ei].target
             if !contains_int32(reachable, next) {
                 work = append(work, next)
@@ -719,19 +680,19 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     }
     filtered_blocks := mir_basic_block[]()
     i := 0
-    for i < len(rewritten.blocks) {
+    for i < std.prelude.len(rewritten.blocks) {
         if contains_int32(reachable, rewritten.blocks[i].id) {
             filtered_blocks = append(filtered_blocks, rewritten.blocks[i])
         }
         i = i + 1
     }
-    removed := len(rewritten.blocks) - len(filtered_blocks)
+    removed := std.prelude.len(rewritten.blocks) - std.prelude.len(filtered_blocks)
     rewritten.blocks = filtered_blocks
     i = 0
-    for i < len(rewritten.blocks) {
+    for i < std.prelude.len(rewritten.blocks) {
         kept_edges := mir_control_edge[]()
         j := 0
-        for j < rewritten.blocks[i]len(.terminator.edges) {
+        for j < rewritten.blocks[i]std.prelude.len(.terminator.edges) {
             edge := rewritten.blocks[i].terminator.edges[j]
             if contains_int32(reachable, edge.target) {
                 kept_edges = append(kept_edges, edge)
@@ -751,13 +712,13 @@ func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     changed := 0
     i := 0
-    for i < len(rewritten.blocks) {
+    for i < std.prelude.len(rewritten.blocks) {
         block := rewritten.blocks[i]
-        if block.terminator.kind == "branch" && len(block.terminator.edges) > 1 {
+        if block.terminator.kind == "branch" && std.prelude.len(block.terminator.edges) > 1 {
             target := block.terminator.edges[0].target
             same_target := true
             j := 1
-            for j < len(block.terminator.edges) {
+            for j < std.prelude.len(block.terminator.edges) {
                 if block.terminator.edges[j].target != target {
                     same_target = false
                 }
@@ -780,7 +741,7 @@ func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
 
 func contains_int32(int[] values, int needle) bool {
     i := 0
-    for i < len(values) {
+    for i < std.prelude.len(values) {
         if values[i] == needle {
             return true
         }
@@ -798,14 +759,14 @@ func simplify_jump_to_return_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     changed := 0
     i := 0
-    for i < len(rewritten.blocks) {
+    for i < std.prelude.len(rewritten.blocks) {
         block := rewritten.blocks[i]
-        if block.terminator.kind == "jump" && len(block.terminator.edges) == 1 {
+        if block.terminator.kind == "jump" && std.prelude.len(block.terminator.edges) == 1 {
             target_id := block.terminator.edges[0].target
             ti := find_block_index_by_id(rewritten, target_id)
             if ti >= 0 {
                 target := rewritten.blocks[ti]
-                if target.terminator.kind == "return" && len(target.statements) == 0 {
+                if target.terminator.kind == "return" && std.prelude.len(target.statements) == 0 {
                     rewritten.blocks[i].terminator.kind = "return"
                     rewritten.blocks[i].terminator.edges = mir_control_edge[]()
                     changed = changed + 1
@@ -821,15 +782,15 @@ func trim_unit_line_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     changed := 0
     i := 0
-    for i < len(rewritten.blocks) {
+    for i < std.prelude.len(rewritten.blocks) {
         if rewritten.blocks[i].terminator.kind == "return" {
             filtered := mir_statement[]()
             j := 0
-            for j < rewritten.blocks[i]len(.statements) {
+            for j < rewritten.blocks[i]std.prelude.len(.statements) {
                 keep := true
                 switch rewritten.blocks[i].statements[j] {
                     mir_statement::eval(eval_stmt) : {
-                        if eval_stmt.op == "line" && len(eval_stmt.args) > 0 && eval_stmt.args[0] == "yield unit" {
+                        if eval_stmt.op == "line" && std.prelude.len(eval_stmt.args) > 0 && eval_stmt.args[0] == "yield unit" {
                             keep = false
                             changed = changed + 1
                         }
@@ -852,15 +813,15 @@ func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     changed := 0
     i := 0
-    for i < len(rewritten.blocks) {
+    for i < std.prelude.len(rewritten.blocks) {
         filtered := mir_statement[]()
         last_line := ""
         j := 0
-        for j < rewritten.blocks[i]len(.statements) {
+        for j < rewritten.blocks[i]std.prelude.len(.statements) {
             push_stmt := true
             switch rewritten.blocks[i].statements[j] {
                 mir_statement::eval(eval_stmt) : {
-                    if eval_stmt.op == "line" && len(eval_stmt.args) > 0 {
+                    if eval_stmt.op == "line" && std.prelude.len(eval_stmt.args) > 0 {
                         current := eval_stmt.args[0]
                         if current == last_line {
                             push_stmt = false
@@ -888,7 +849,7 @@ func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
 
 func find_block_index_by_id(mir_graph graph, int id) int {
     i := 0
-    for i < len(graph.blocks) {
+    for i < std.prelude.len(graph.blocks) {
         if graph.blocks[i].id == id {
             return i
         }
@@ -944,7 +905,7 @@ func build_cfi_artifact(string arch, string ssa_text, string debug_map) string {
     lines := string[]()
     lines = append(lines, "cfi version=1 arch=" + arch)
     lines = append(lines, ".cfi_startproc")
-    lines = append(lines, ".cfi_def_cfa sp, " + to_string(abi_stack_alignment(arch)))
+    lines = append(lines, ".cfi_def_cfa sp, " + std.prelude.to_string(abi_stack_alignment(arch)))
     lines = append(lines, ".cfi_offset ra, -8")
     lines = append(lines, "ssa " + ssa_text)
     lines = append(lines, "debug " + debug_map)
@@ -968,7 +929,7 @@ func validate_cfi_artifact(string payload) ((), backend_error) {
 func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int inlined) int {
     imports := 0
     i := 0
-    for i < len(graph.trace) {
+    for i < std.prelude.len(graph.trace) {
         if has_substring(graph.trace[i], "package.fn ") {
             imports = imports + 1
         }
@@ -984,10 +945,10 @@ func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int inlined) int {
 func estimate_const_prop_sites_graph(mir_graph graph) int {
     constants := 0
     i := 0
-    for i < len(graph.blocks) {
+    for i < std.prelude.len(graph.blocks) {
         block := graph.blocks[i]
         j := 0
-        for j < len(block.statements) {
+        for j < std.prelude.len(block.statements) {
             switch block.statements[j] {
                 mir_statement::assign(assign_stmt) : {
                     if assign_stmt.op == "const" || assign_stmt.op == "literal" {
@@ -995,7 +956,7 @@ func estimate_const_prop_sites_graph(mir_graph graph) int {
                     }
                 }
                 mir_statement::eval(eval_stmt) : {
-                    if len(eval_stmt.args) > 0 {
+                    if std.prelude.len(eval_stmt.args) > 0 {
                         constants = constants + count_occurrences(eval_stmt.args[0], "const")
                         constants = constants + count_occurrences(eval_stmt.args[0], "literal")
                     }
@@ -1031,7 +992,7 @@ func validate_wasi_binary_artifact(string output) ((), backend_error) {
     probe = append(probe, "sh")
     probe = append(probe, "-c")
     probe = append(probe, build_wasm_binary_probe_plan(output))
-    run := run_process(probe)
+    run := std.process.run_process(probe)
     if run.is_err() {
         return backend_error {
             message: "backend error: wasi binary probe failed (requires wasm-objdump and expected imports/exports): " + run.unwrap_err().message,
@@ -1048,7 +1009,7 @@ func build_wasm_object_chain(string temp_dir, string output, write_op[] writes, 
     if wasi_check.is_err() {
         return wasi_check
     }
-    write_result := write_text_file(c_path, c_source)
+    write_result := std.fs.write_text_file(c_path, c_source)
     if write_result.is_err() {
         return backend_error { message: "failed to write wasm c source: " + write_result.unwrap_err().message }
     }
@@ -1059,7 +1020,7 @@ func build_wasm_object_chain(string temp_dir, string output, write_op[] writes, 
     cc_argv = append(cc_argv, c_path)
     cc_argv = append(cc_argv, "-o")
     cc_argv = append(cc_argv, obj_path)
-    cc_result := run_process(cc_argv)
+    cc_result := std.process.run_process(cc_argv)
     if cc_result.is_err() {
         return backend_error {
             message: "wasm object compile failed: " + cc_result.unwrap_err().message + " | plan: " + build_wasm_toolchain_plan(c_path, obj_path, output),
@@ -1073,7 +1034,7 @@ func build_wasm_object_chain(string temp_dir, string output, write_op[] writes, 
     ld_argv = append(ld_argv, obj_path)
     ld_argv = append(ld_argv, "-o")
     ld_argv = append(ld_argv, output)
-    ld_result := run_process(ld_argv)
+    ld_result := std.process.run_process(ld_argv)
     if ld_result.is_err() {
         return backend_error {
             message: "wasm link failed: " + ld_result.unwrap_err().message + " | plan: " + build_wasm_toolchain_plan(c_path, obj_path, output),
@@ -1113,15 +1074,15 @@ func emit_wasm_c_source(write_op[] writes, int exit_code) string {
     lines = append(lines, "")
     lines = append(lines, "int s_main(void) {")
     i := 0
-    for i < len(writes) {
-        label := "message_" + to_string(i)
+    for i < std.prelude.len(writes) {
+        label := "message_" + std.prelude.to_string(i)
         lines = append(lines, "  static const char " + label + "[] = \"" + escape_asm_string(writes[i].text) + "\";")
-        lines = append(lines, "  struct ciovec iov_" + to_string(i) + " = { " + label + ", " + to_string(len(writes[i].text)) + "u };")
-        lines = append(lines, "  u32 nw_" + to_string(i) + " = 0;")
-        lines = append(lines, "  fd_write(" + to_string(writes[i].fd) + ", *iov_" + to_string(i) + ", 1, *nw_" + to_string(i) + ");")
+        lines = append(lines, "  struct ciovec iov_" + std.prelude.to_string(i) + " = { " + label + ", " + std.prelude.to_string(std.prelude.len(writes[i].text)) + "u };")
+        lines = append(lines, "  u32 nw_" + std.prelude.to_string(i) + " = 0;")
+        lines = append(lines, "  fd_write(" + std.prelude.to_string(writes[i].fd) + ", *iov_" + std.prelude.to_string(i) + ", 1, *nw_" + std.prelude.to_string(i) + ");")
         i = i + 1
     }
-    lines = append(lines, "  return " + to_string(exit_code) + ";"
+    lines = append(lines, "  return " + std.prelude.to_string(exit_code) + ";"
     lines = append(lines, "}")
     lines = append(lines, "")
     lines = append(lines, "void _start(void) {")
@@ -1144,14 +1105,14 @@ func estimate_ipo_synergy(int inlined, int escaped, int devirt, int cross_pkg_in
 func build_abi_machine_matrix_artifact(string arch, source_file source, string ssa_text) string {
     lines := string[]()
     lines = append(lines, "abi-matrix version=1 arch=" + arch)
-    lines = append(lines, "axis caller_saved=" + to_string(abi_caller_saved_count(arch)) + " callee_saved=" + to_string(abi_callee_saved_count(arch)))
-    lines = append(lines, "axis stack_align=" + to_string(abi_stack_alignment(arch)) + " variadic_gp=" + to_string(abi_variadic_gp_limit(arch)))
+    lines = append(lines, "axis caller_saved=" + std.prelude.to_string(abi_caller_saved_count(arch)) + " callee_saved=" + std.prelude.to_string(abi_callee_saved_count(arch)))
+    lines = append(lines, "axis stack_align=" + std.prelude.to_string(abi_stack_alignment(arch)) + " variadic_gp=" + std.prelude.to_string(abi_variadic_gp_limit(arch)))
     functions := function_item_count(source)
     spills := parse_number_after(ssa_text, "spills=")
     if spills < 0 {
         spills = 0
     }
-    lines = append(lines, "coverage functions=" + to_string(functions) + " spills=" + to_string(spills))
+    lines = append(lines, "coverage functions=" + std.prelude.to_string(functions) + " spills=" + std.prelude.to_string(spills))
     lines = append(lines, "matrix callseq=normal,variadic-home,normal+multi-ret,variadic-home+multi-ret")
     lines = append(lines, "matrix ret=reg,sret,tuple2,tupleN")
     lines = append(lines, "cross_arch_consistency=" + abi_cross_arch_consistency_status(arch, spills, functions))
@@ -1196,7 +1157,7 @@ func build_toolchain_compat_artifact(source_file source, string arch) string {
     lines = append(lines, "toolchain-compat version=1 arch=" + arch)
     lines = append(lines, "module=partial build_tags=partial test=integrated cover=partial profile=partial go_cmd_equiv=partial")
     lines = append(lines, "cgo=unsupported asm=go-plan9-min linker=elf64 archive=partial relocation=partial")
-    lines = append(lines, "functions=" + to_string(function_item_count(source)) + " interoperability=baseline build_cache=phase-aware")
+    lines = append(lines, "functions=" + std.prelude.to_string(function_item_count(source)) + " interoperability=baseline build_cache=phase-aware")
     lines = append(lines, "matrix module,build_tags,test,cover,profile,cgo,asm,linker,archive,relocation")
     lines = append(lines, "gate coverage=min profile=min fuzz=planned stability=rolling")
     lines = append(lines, "interop cgo=roadmap asm=go-plan9-min linker=elf64-only")
@@ -1272,7 +1233,7 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
     output_lines := string[]()
     saw_text_directive := false
     i := 0
-    for i < len(input_lines) {
+    for i < std.prelude.len(input_lines) {
         cleaned := trim_spaces(strip_go_asm_comment(input_lines[i]))
         if cleaned == "" {
             i = i + 1
@@ -1293,7 +1254,7 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
             continue
         }
         if ends_with_local(cleaned, ":") {
-            label := trim_spaces(slice(cleaned, 0, len(cleaned) - 1))
+            label := trim_spaces(std.prelude.slice(cleaned, 0, std.prelude.len(cleaned) - 1))
             if label == "" {
                 return backend_error { message: "go asm translation error: empty label" }
             }
@@ -1323,16 +1284,16 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
 }
 
 func parse_go_text_symbol(string line) (string, backend_error) {
-    after := trim_spaces(slice(line, len("TEXT "), len(line)))
+    after := trim_spaces(std.prelude.slice(line, std.prelude.len("TEXT "), std.prelude.len(line)))
     comma := index_of(after, ",")
     if comma < 0 {
         return backend_error { message: "go asm translation error: malformed TEXT directive" }
     }
-    symbol_ref := trim_spaces(slice(after, 0, comma))
+    symbol_ref := trim_spaces(std.prelude.slice(after, 0, comma))
     if !ends_with_local(symbol_ref, "(SB)") {
         return backend_error { message: "go asm translation error: TEXT symbol must use (SB)" }
     }
-    symbol := normalize_go_symbol(slice(symbol_ref, 0, len(symbol_ref) - len("(SB)")))
+    symbol := normalize_go_symbol(std.prelude.slice(symbol_ref, 0, std.prelude.len(symbol_ref) - std.prelude.len("(SB)")))
     if symbol == "" {
         return backend_error { message: "go asm translation error: empty TEXT symbol" }
     }
@@ -1344,8 +1305,8 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
     op := line
     args_text := ""
     if first_space >= 0 {
-        op = trim_spaces(slice(line, 0, first_space))
-        args_text = trim_spaces(slice(line, first_space + 1, len(line)))
+        op = trim_spaces(std.prelude.slice(line, 0, first_space))
+        args_text = trim_spaces(std.prelude.slice(line, first_space + 1, std.prelude.len(line)))
     }
     gas_op := map_go_opcode(op)
     if gas_op == "" {
@@ -1362,8 +1323,8 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
         }
         return "    " + gas_op + " " + one.unwrap())
     }
-    left_raw := trim_spaces(slice(args_text, 0, comma))
-    right_raw := trim_spaces(slice(args_text, comma + 1, len(args_text)))
+    left_raw := trim_spaces(std.prelude.slice(args_text, 0, comma))
+    right_raw := trim_spaces(std.prelude.slice(args_text, comma + 1, std.prelude.len(args_text)))
     left := convert_go_operand_to_gas(left_raw, arch)
     if left.is_err() {
         return left.unwrap_err()
@@ -1454,14 +1415,14 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
         return backend_error { message: "go asm translation error: empty operand" }
     }
     if starts_with_local(operand, "$") {
-        imm := slice(operand, 1, len(operand))
+        imm := std.prelude.slice(operand, 1, std.prelude.len(operand))
         if ends_with_local(imm, "(SB)") {
-            return "$" + normalize_go_symbol(slice(imm, 0, len(imm) - len("(SB)")))
+            return "$" + normalize_go_symbol(std.prelude.slice(imm, 0, std.prelude.len(imm) - std.prelude.len("(SB)")))
         }
         return "$" + normalize_go_symbol(imm))
     }
     if ends_with_local(operand, "(SB)") {
-        sym := normalize_go_symbol(slice(operand, 0, len(operand) - len("(SB)")))
+        sym := normalize_go_symbol(std.prelude.slice(operand, 0, std.prelude.len(operand) - std.prelude.len("(SB)")))
         if sym == "" {
             return backend_error { message: "go asm translation error: empty symbol operand" }
         }
@@ -1469,15 +1430,15 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
     }
     paren := index_of(operand, "(")
     if paren >= 0 && ends_with_local(operand, ")") {
-        base := slice(operand, paren + 1, len(operand) - 1)
+        base := std.prelude.slice(operand, paren + 1, std.prelude.len(operand) - 1)
         if base == "SB" {
-            return normalize_go_symbol(slice(operand, 0, paren)))
+            return normalize_go_symbol(std.prelude.slice(operand, 0, paren)))
         }
         mapped_base := map_go_register(base, arch)
         if mapped_base == "" {
             return backend_error { message: "go asm translation error: unsupported base register " + base }
         }
-        disp := parse_go_disp(slice(operand, 0, paren))
+        disp := parse_go_disp(std.prelude.slice(operand, 0, paren))
         return disp + "(" + mapped_base + ")"
     }
     mapped_reg := map_go_register(operand, arch)
@@ -1555,7 +1516,7 @@ func parse_go_disp(string text) string {
     }
     plus := index_of(disp, "+")
     if plus >= 0 {
-        tail := trim_spaces(slice(disp, plus + 1, len(disp)))
+        tail := trim_spaces(std.prelude.slice(disp, plus + 1, std.prelude.len(disp)))
         if tail == "" {
             return "0"
         }
@@ -1567,7 +1528,7 @@ func parse_go_disp(string text) string {
 func normalize_go_symbol(string text) string {
     out := trim_spaces(text)
     if starts_with_local(out, "*") {
-        out = trim_spaces(slice(out, 1, len(out)))
+        out = trim_spaces(std.prelude.slice(out, 1, std.prelude.len(out)))
     }
     out
 }
@@ -1576,11 +1537,11 @@ func strip_go_asm_comment(string line) string {
     out := line
     slash := index_of(out, "//")
     if slash >= 0 {
-        out = slice(out, 0, slash)
+        out = std.prelude.slice(out, 0, slash)
     }
     hash := index_of(out, "#")
     if hash >= 0 {
-        out = slice(out, 0, hash)
+        out = std.prelude.slice(out, 0, hash)
     }
     out
 }
@@ -1589,15 +1550,15 @@ func split_lines_local(string text) string[] {
     lines := string[]()
     start := 0
     i := 0
-    for i < len(text) {
-        if char_at(text, i) == "\n" {
-            lines = append(lines, slice(text, start, i))
+    for i < std.prelude.len(text) {
+        if std.prelude.char_at(text, i) == "\n" {
+            lines = append(lines, std.prelude.slice(text, start, i))
             start = i + 1
         }
         i = i + 1
     }
-    if start <= len(text) {
-        lines = append(lines, slice(text, start, len(text)))
+    if start <= std.prelude.len(text) {
+        lines = append(lines, std.prelude.slice(text, start, std.prelude.len(text)))
     }
     lines
 }
@@ -1606,7 +1567,7 @@ func flatten_multiline(string text) string {
     lines := split_lines_local(text)
     out := string[]()
     i := 0
-    for i < len(lines) {
+    for i < std.prelude.len(lines) {
         line := trim_spaces(lines[i])
         if line != "" {
             out = append(out, line)
@@ -1618,17 +1579,17 @@ func flatten_multiline(string text) string {
 
 func build_stackmap_artifact(string arch, source_file source, string ssa_text, string debug_map) string {
     entries := collect_function_stackmaps(arch, source, ssa_text)
-    header := "stackmap version=2 arch=" + arch + " functions=" + to_string(len(entries))
+    header := "stackmap version=2 arch=" + arch + " functions=" + std.prelude.to_string(std.prelude.len(entries))
     lines := string[]()
     lines = append(lines, header)
     i := 0
-    for i < len(entries) {
+    for i < std.prelude.len(entries) {
         entry := entries[i]
         lines.push(
             "fn " + entry.name
-                + " slots=" + to_string(entry.slots)
+                + " slots=" + std.prelude.to_string(entry.slots)
                 + " bitmap=" + entry.bitmap
-                + " callee_saved=" + to_string(entry.callee_saved)
+                + " callee_saved=" + std.prelude.to_string(entry.callee_saved)
         )
         i = i + 1
     }
@@ -1647,7 +1608,7 @@ func estimate_stack_slots(string ssa_text) int {
 func collect_function_stackmaps(string arch, source_file source, string ssa_text) stackmap_function_entry[] {
     out := stackmap_function_entry[]()
     i := 0
-    for i < len(source.items) {
+    for i < std.prelude.len(source.items) {
         switch source.items[i] {
             item.function(fn_decl) : {
                 if fn_decl.body.is_some() {
@@ -1661,7 +1622,7 @@ func collect_function_stackmaps(string arch, source_file source, string ssa_text
         }
         i = i + 1
     }
-    if len(out) == 0 {
+    if std.prelude.len(out) == 0 {
         out.push(stackmap_function_entry {
             name: "main", slots estimate_stack_slots(ssa_text), bitmap build_slot_bitmap("main", estimate_stack_slots(ssa_text)), callee_saved abi_callee_saved_count(arch),
         })
@@ -1679,7 +1640,7 @@ func estimate_function_stack_slots(function_decl fn_decl, string ssa_text) int {
     if fn_decl.body.is_none() {
         return 0
     }
-    stmt_count := fn_decl.body.unwrap()len(.statements)
+    stmt_count := fn_decl.body.unwrap()std.prelude.len(.statements)
     slots := (stmt_count + 1) / 2
     if slots < 1 {
         return 1
@@ -1694,7 +1655,7 @@ func build_slot_bitmap(string function_name, int slots) string {
     out := ""
     i := 0
     for i < slots {
-        if ((i + len(function_name)) % 2) == 0 {
+        if ((i + std.prelude.len(function_name)) % 2) == 0 {
             out = out + "1"
         } else {
             out = out + "0"
@@ -1707,20 +1668,20 @@ func build_slot_bitmap(string function_name, int slots) string {
 func build_abi_behavior_artifact(string arch, source_file source) string {
     entries := collect_abi_behavior(arch, source)
     lines := string[]()
-    lines = append(lines, "abi version=1 arch=" + arch + " functions=" + to_string(len(entries)))
+    lines = append(lines, "abi version=1 arch=" + arch + " functions=" + std.prelude.to_string(std.prelude.len(entries)))
     i := 0
-    for i < len(entries) {
+    for i < std.prelude.len(entries) {
         entry := entries[i]
         lines.push(
             "fn " + entry.name
-                + " params=" + to_string(entry.param_count)
+                + " params=" + std.prelude.to_string(entry.param_count)
                 + " variadic=" + bool_string(entry.variadic)
                 + " pass=" + entry.pass_mode
                 + " ret=" + entry.return_mode
-                + " abi_in_regs=" + to_string(entry.abi_in_regs)
-                + " abi_out_regs=" + to_string(entry.abi_out_regs)
-                + " abi_spill=" + to_string(entry.abi_spill_size)
-                + " abi_argw=" + to_string(entry.abi_arg_width)
+                + " abi_in_regs=" + std.prelude.to_string(entry.abi_in_regs)
+                + " abi_out_regs=" + std.prelude.to_string(entry.abi_out_regs)
+                + " abi_spill=" + std.prelude.to_string(entry.abi_spill_size)
+                + " abi_argw=" + std.prelude.to_string(entry.abi_arg_width)
                 + " abi_summary=" + flatten_multiline(entry.abi_summary)
         )
         i = i + 1
@@ -1732,22 +1693,22 @@ func build_abi_emit_plan(string arch, source_file source) string {
     lines := string[]()
     lines = append(lines, "abi-emit version=1 arch=" + arch)
     i := 0
-    for i < len(source.items) {
+    for i < std.prelude.len(source.items) {
         switch source.items[i] {
             item.function(fn_decl) : {
                 line := "fn " + fn_decl.sig.name
-                abi_info := abi_analyze_types(
-                    new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
+                abi_info := compile.internal.abi.abi_analyze_types(
+                    compile.internal.abi.new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
                     collect_fn_param_types(fn_decl),
                     collect_fn_result_types(fn_decl)
                 )
                 p := 0
-                for p < len(fn_decl.sig.params) {
-                    line = line + " | a" + to_string(p) + "->" + abi_param_location(arch, p)
-                    line = line + " | f" + to_string(p) + "->" + abi_float_param_location(arch, p)
+                for p < std.prelude.len(fn_decl.sig.params) {
+                    line = line + " | a" + std.prelude.to_string(p) + "->" + abi_param_location(arch, p)
+                    line = line + " | f" + std.prelude.to_string(p) + "->" + abi_float_param_location(arch, p)
                     p = p + 1
                 }
-                variadic := len(fn_decl.sig.params) > abi_variadic_gp_limit(arch)
+                variadic := std.prelude.len(fn_decl.sig.params) > abi_variadic_gp_limit(arch)
                 line = line + " | variadic=" + bool_string(variadic)
                 ret_type :=
                     switch fn_decl.sig.return_type {
@@ -1755,17 +1716,17 @@ func build_abi_emit_plan(string arch, source_file source) string {
                         option.none : "",
                     }
                 ret_parts := count_top_level_type_parts(ret_type)
-                aggregate_size := abi_emit_aggregate_size_hint(len(fn_decl.sig.params), ret_type)
-                line = line + " | ret_arity=" + to_string(ret_parts)
+                aggregate_size := abi_emit_aggregate_size_hint(std.prelude.len(fn_decl.sig.params), ret_type)
+                line = line + " | ret_arity=" + std.prelude.to_string(ret_parts)
                 line = line + " | agg_mode=" + abi_emit_aggregate_mode(ret_type, ret_parts, aggregate_size)
-                line = line + " | stack_align=" + to_string(abi_stack_alignment(arch))
-                line = line + " | caller_saved=" + to_string(abi_caller_saved_count(arch))
-                line = line + " | callee_saved=" + to_string(abi_callee_saved_count(arch))
+                line = line + " | stack_align=" + std.prelude.to_string(abi_stack_alignment(arch))
+                line = line + " | caller_saved=" + std.prelude.to_string(abi_caller_saved_count(arch))
+                line = line + " | callee_saved=" + std.prelude.to_string(abi_callee_saved_count(arch))
                 line = line + " | callseq=" + abi_call_sequence_mode(arch, variadic, ret_parts, aggregate_size)
                 line = line + " | " + abi_emit_ret_plan(arch, ret_type, ret_parts, aggregate_size)
-                line = line + " | abi_in_regs=" + to_string(abiutils_in_registers_used(abi_info))
-                line = line + " | abi_out_regs=" + to_string(abiutils_out_registers_used(abi_info))
-                line = line + " | abi_spill=" + to_string(abiutils_spill_area_size(abi_info))
+                line = line + " | abi_in_regs=" + std.prelude.to_string(abiutils_in_registers_used(abi_info))
+                line = line + " | abi_out_regs=" + std.prelude.to_string(abiutils_out_registers_used(abi_info))
+                line = line + " | abi_spill=" + std.prelude.to_string(abiutils_spill_area_size(abi_info))
                 lines = append(lines, line)
             }
             _ : (),
@@ -1778,7 +1739,7 @@ func build_abi_emit_plan(string arch, source_file source) string {
 func abi_param_location(string arch, int index) string {
     reg := abi_int_arg_reg(arch, index)
     if reg == "" {
-        return "stack+" + to_string((index - abi_variadic_gp_limit(arch)) * 8
+        return "stack+" + std.prelude.to_string((index - abi_variadic_gp_limit(arch)) * 8
     }
     reg
 }
@@ -1786,7 +1747,7 @@ func abi_param_location(string arch, int index) string {
 func abi_float_param_location(string arch, int index) string {
     reg := abi_float_arg_reg(arch, index)
     if reg == "" {
-        return "stackf+" + to_string(index * 8
+        return "stackf+" + std.prelude.to_string(index * 8
     }
     reg
 }
@@ -1843,7 +1804,7 @@ func abi_emit_ret_plan(string arch, string ret_type, int ret_parts, int aggregat
         return "ret0->" + abi_int_ret_reg(arch) + " | ret1->" + abi_second_int_ret_reg(arch
     }
     if aggregate_size > 16 || ret_parts > 2 {
-        return "ret->sret:" + abi_sret_reg(arch) + " | tuple_parts=" + to_string(ret_parts
+        return "ret->sret:" + abi_sret_reg(arch) + " | tuple_parts=" + std.prelude.to_string(ret_parts
     }
     "ret->" + abi_int_ret_reg(arch)
 }
@@ -1913,8 +1874,8 @@ func count_top_level_type_parts(string type_text) int {
     bracket := 0
     count := 1
     i := 0
-    for i < len(t) {
-        ch := char_at(t, i)
+    for i < std.prelude.len(t) {
+        ch := std.prelude.char_at(t, i)
         if ch == "(" {
             paren = paren + 1
         } else if ch == ")" {
@@ -1938,15 +1899,15 @@ func count_top_level_type_parts(string type_text) int {
 func collect_abi_behavior(string arch, source_file source) abi_behavior_entry[] {
     out := abi_behavior_entry[]()
     i := 0
-    for i < len(source.items) {
+    for i < std.prelude.len(source.items) {
         switch source.items[i] {
             item.function(fn_decl) : {
-                abi_info := abi_analyze_types(
-                    new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
+                abi_info := compile.internal.abi.abi_analyze_types(
+                    compile.internal.abi.new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
                     collect_fn_param_types(fn_decl),
                     collect_fn_result_types(fn_decl)
                 )
-                param_count := len(fn_decl.sig.params)
+                param_count := std.prelude.len(fn_decl.sig.params)
                 variadic := param_count > abi_variadic_gp_limit(arch)
                 aggregate_size := param_count * 8
                 out.push(abi_behavior_entry {
@@ -1963,7 +1924,7 @@ func collect_abi_behavior(string arch, source_file source) abi_behavior_entry[] 
 func collect_fn_param_types(function_decl fn_decl) string[] {
     out := string[]()
     i := 0
-    for i < len(fn_decl.sig.params) {
+    for i < std.prelude.len(fn_decl.sig.params) {
         out = append(out, trim_spaces(fn_decl.sig.params[i].type_name))
         i = i + 1
     }
@@ -1983,7 +1944,7 @@ func split_signature_types(string type_text) string[] {
         return string[](
     }
     if abi_text_starts_with(t, "(") && abi_text_ends_with(t, ")") {
-        t = trim_spaces(slice(t, 1, len(t) - 1))
+        t = trim_spaces(std.prelude.slice(t, 1, std.prelude.len(t) - 1))
     }
     if t == "" {
         return string[](
@@ -1993,8 +1954,8 @@ func split_signature_types(string type_text) string[] {
     paren := 0
     bracket := 0
     i := 0
-    for i < len(t) {
-        ch := char_at(t, i)
+    for i < std.prelude.len(t) {
+        ch := std.prelude.char_at(t, i)
         if ch == "(" {
             paren = paren + 1
         } else if ch == ")" {
@@ -2008,27 +1969,27 @@ func split_signature_types(string type_text) string[] {
                 bracket = bracket - 1
             }
         } else if ch == "," && paren == 0 && bracket == 0 {
-            out = append(out, trim_spaces(slice(t, start, i)))
+            out = append(out, trim_spaces(std.prelude.slice(t, start, i)))
             start = i + 1
         }
         i = i + 1
     }
-    out = append(out, trim_spaces(slice(t, start, len(t))))
+    out = append(out, trim_spaces(std.prelude.slice(t, start, std.prelude.len(t))))
     out
 }
 
 func abi_text_starts_with(string text, string prefix) bool {
-    if len(text) < len(prefix) {
+    if std.prelude.len(text) < std.prelude.len(prefix) {
         return false
     }
-    return slice(text, 0, len(prefix)) == prefix
+    return std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
 }
 
 func abi_text_ends_with(string text, string suffix) bool {
-    if len(text) < len(suffix) {
+    if std.prelude.len(text) < std.prelude.len(suffix) {
         return false
     }
-    return slice(text, len(text) - len(suffix), len(text)) == suffix
+    return std.prelude.slice(text, std.prelude.len(text) - std.prelude.len(suffix), std.prelude.len(text)) == suffix
 }
 
 func abi_float_param_reg_limit(string arch) int {
@@ -2066,9 +2027,9 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
     append_debug_ranges_section(lines, source, ssa_text)
     lines = append(lines, "section .debug_inlining")
     i := 0
-    for i < len(source.items) {
+    for i < std.prelude.len(source.items) {
         switch source.items[i] {
-            item.function(fn_decl) : lines = append(lines, "  fn=" + fn_decl.sig.name + " inline_depth=" + to_string(dwarf_inline_depth_hint(fn_decl.sig.name, ssa_text))),
+            item.function(fn_decl) : lines = append(lines, "  fn=" + fn_decl.sig.name + " inline_depth=" + std.prelude.to_string(dwarf_inline_depth_hint(fn_decl.sig.name, ssa_text))),
             _ : (),
         }
         i = i + 1
@@ -2092,7 +2053,7 @@ func build_dwarf_continuity_metric(string ssa_text, string debug_map) string {
     if continuity > 100 {
         continuity = 100
     }
-    "metric location_continuity=" + to_string(continuity)
+    "metric location_continuity=" + std.prelude.to_string(continuity)
 }
 
 func build_dwarf_budget_policy(string ssa_text) string {
@@ -2124,8 +2085,8 @@ func build_dwarf_regression_gate(string ssa_text, string debug_map) string {
         status = "fail"
     }
     "gate dwarf_consumable=" + status
-        + " budget=" + to_string(budget)
-        + " locs=" + to_string(locs)
+        + " budget=" + std.prelude.to_string(budget)
+        + " locs=" + std.prelude.to_string(locs)
 }
 
 func append_debug_loc_section(string[] lines, string debug_map) () {
@@ -2139,12 +2100,12 @@ func append_debug_loc_section(string[] lines, string debug_map) () {
         }
         end := index_of_from(debug_map, " | ", at)
         if end < 0 {
-            end = len(debug_map)
+            end = std.prelude.len(debug_map)
         }
-        entry := trim_spaces(slice(debug_map, at, end))
+        entry := trim_spaces(std.prelude.slice(debug_map, at, end))
         lo := 100 + loc_id * 8
         hi := lo + 8
-        lines = append(lines, "  loc#" + to_string(loc_id) + " pc=[" + to_string(lo) + "," + to_string(hi) + ") " + entry)
+        lines = append(lines, "  loc#" + std.prelude.to_string(loc_id) + " pc=[" + std.prelude.to_string(lo) + "," + std.prelude.to_string(hi) + ") " + entry)
         loc_id = loc_id + 1
         cursor = end + 3
     }
@@ -2168,19 +2129,19 @@ func append_debug_ranges_section(string[] lines, source_file source, string ssa_
     }
     fn_idx := 0
     i := 0
-    for i < len(source.items) {
+    for i < std.prelude.len(source.items) {
         switch source.items[i] {
             item.function(fn_decl) : {
                 lo := 0x1000 + fn_idx * range_span
                 hi := lo + range_span
-                lines = append(lines, "  fn=" + fn_decl.sig.name + " range=[" + to_string(lo) + "," + to_string(hi) + ")")
+                lines = append(lines, "  fn=" + fn_decl.sig.name + " range=[" + std.prelude.to_string(lo) + "," + std.prelude.to_string(hi) + ")")
                 if loops > 0 {
                     inline_lo := lo + 4
                     inline_hi := inline_lo + loops * 4
                     if inline_hi > hi {
                         inline_hi = hi
                     }
-                    lines = append(lines, "  fn=" + fn_decl.sig.name + " inline_range=[" + to_string(inline_lo) + "," + to_string(inline_hi) + ")")
+                    lines = append(lines, "  fn=" + fn_decl.sig.name + " inline_range=[" + std.prelude.to_string(inline_lo) + "," + std.prelude.to_string(inline_hi) + ")")
                 }
                 fn_idx = fn_idx + 1
             }
@@ -2210,16 +2171,16 @@ func dwarf_inline_depth_hint(string fn_name, string ssa_text) int {
 func build_drop_metadata_artifact(string arch, source_file source, string ssa_text) string {
     lines := string[]()
     spills := estimate_stack_slots(ssa_text)
-    lines = append(lines, "dropmap version=1 arch=" + arch + " spills=" + to_string(spills))
+    lines = append(lines, "dropmap version=1 arch=" + arch + " spills=" + std.prelude.to_string(spills))
     lines = append(lines, "ownership strategy=move-copy-clone resource_release=scope-exit")
     i := 0
-    for i < len(source.items) {
+    for i < std.prelude.len(source.items) {
         switch source.items[i] {
             item.function(fn_decl) : {
                 slots := estimate_function_stack_slots(fn_decl, ssa_text)
                 lines.push(
                     "fn " + fn_decl.sig.name
-                        + " slots=" + to_string(slots)
+                        + " slots=" + std.prelude.to_string(slots)
                         + " drops=scope-exit"
                 )
             }
@@ -2228,7 +2189,7 @@ func build_drop_metadata_artifact(string arch, source_file source, string ssa_te
         i = i + 1
     }
     lines = append(lines, "contract ownership=checked drop=deterministic")
-    lines = append(lines, "proof rollback=" + to_string(parse_number_after(ssa_text, "rollback=")) + " proof_fail=" + to_string(parse_number_after(ssa_text, "proof_fail=")))
+    lines = append(lines, "proof rollback=" + std.prelude.to_string(parse_number_after(ssa_text, "rollback=")) + " proof_fail=" + std.prelude.to_string(parse_number_after(ssa_text, "proof_fail=")))
     join_lines(lines)
 }
 
@@ -2292,22 +2253,22 @@ func validate_drop_contract_chain(string drop_payload, source_file source, strin
 func build_backend_perf_baseline_artifact(string arch, string ssa_text, string midend_report, string runtime_report) string {
     lines := string[]()
     lines = append(lines, "perf-baseline version=1 arch=" + arch)
-    lines = append(lines, "ssa spills=" + to_string(parse_number_after(ssa_text, "spills="))
-        + " splits=" + to_string(parse_number_after(ssa_text, "splits="))
-        + " remat=" + to_string(parse_number_after(ssa_text, "remat="))
-        + " sched_tp=" + to_string(parse_number_after(ssa_text, "sched_tp="))
-        + " sched_lat=" + to_string(parse_number_after(ssa_text, "sched_lat=")))
+    lines = append(lines, "ssa spills=" + std.prelude.to_string(parse_number_after(ssa_text, "spills="))
+        + " splits=" + std.prelude.to_string(parse_number_after(ssa_text, "splits="))
+        + " remat=" + std.prelude.to_string(parse_number_after(ssa_text, "remat="))
+        + " sched_tp=" + std.prelude.to_string(parse_number_after(ssa_text, "sched_tp="))
+        + " sched_lat=" + std.prelude.to_string(parse_number_after(ssa_text, "sched_lat=")))
     lines = append(lines, "midend " + midend_report)
     lines.push("scheduler queue_policy=priority-rr select_policy=multi-chan-priority-rr"
-        + " sroutine_sites=" + to_string(parse_number_after(midend_report, "sroutine_sites="))
-        + " select_weighted_sites=" + to_string(parse_number_after(midend_report, "select_weighted_sites="))
-        + " select_timeout_sites=" + to_string(parse_number_after(midend_report, "select_timeout_sites="))
-        + " select_send_sites=" + to_string(parse_number_after(midend_report, "select_send_sites="))
-        + " sched_tp=" + to_string(parse_number_after(ssa_text, "sched_tp="))
-        + " sched_lat=" + to_string(parse_number_after(ssa_text, "sched_lat=")))
+        + " sroutine_sites=" + std.prelude.to_string(parse_number_after(midend_report, "sroutine_sites="))
+        + " select_weighted_sites=" + std.prelude.to_string(parse_number_after(midend_report, "select_weighted_sites="))
+        + " select_timeout_sites=" + std.prelude.to_string(parse_number_after(midend_report, "select_timeout_sites="))
+        + " select_send_sites=" + std.prelude.to_string(parse_number_after(midend_report, "select_send_sites="))
+        + " sched_tp=" + std.prelude.to_string(parse_number_after(ssa_text, "sched_tp="))
+        + " sched_lat=" + std.prelude.to_string(parse_number_after(ssa_text, "sched_lat=")))
     lines.push("scheduler_counters"
-        + " select_default_fallbacks=" + to_string(parse_number_after(runtime_report, "select_default_fallbacks="))
-        + " select_timeouts=" + to_string(parse_number_after(runtime_report, "select_timeouts=")))
+        + " select_default_fallbacks=" + std.prelude.to_string(parse_number_after(runtime_report, "select_default_fallbacks="))
+        + " select_timeouts=" + std.prelude.to_string(parse_number_after(runtime_report, "select_timeouts=")))
     lines.push("runtime_memory strategy=ownership+explicit-drop")
     lines = append(lines, runtime_report)
     lines = append(lines, "regression_gate p95_latency=stable throughput=stable")
@@ -2352,24 +2313,24 @@ func build_midend_opt_artifact(string midend_report) string {
     lines = append(lines, "midend-opt version=1")
     lines = append(lines, "report " + midend_report)
     lines.push("summary"
-        + " inline_sites=" + to_string(parse_number_after(midend_report, "inline_sites="))
-        + " escape_sites=" + to_string(parse_number_after(midend_report, "escape_sites="))
-        + " devirtualized=" + to_string(parse_number_after(midend_report, "devirtualized="))
-        + " cross_pkg_inline=" + to_string(parse_number_after(midend_report, "cross_pkg_inline="))
-        + " const_prop=" + to_string(parse_number_after(midend_report, "const_prop="))
-        + " const_fold_hits=" + to_string(parse_number_after(midend_report, "const_fold_hits=")))
+        + " inline_sites=" + std.prelude.to_string(parse_number_after(midend_report, "inline_sites="))
+        + " escape_sites=" + std.prelude.to_string(parse_number_after(midend_report, "escape_sites="))
+        + " devirtualized=" + std.prelude.to_string(parse_number_after(midend_report, "devirtualized="))
+        + " cross_pkg_inline=" + std.prelude.to_string(parse_number_after(midend_report, "cross_pkg_inline="))
+        + " const_prop=" + std.prelude.to_string(parse_number_after(midend_report, "const_prop="))
+        + " const_fold_hits=" + std.prelude.to_string(parse_number_after(midend_report, "const_fold_hits=")))
     lines.push("scheduler_opt"
-        + " sroutine_sites=" + to_string(parse_number_after(midend_report, "sroutine_sites="))
-        + " select_weighted_sites=" + to_string(parse_number_after(midend_report, "select_weighted_sites="))
-        + " select_timeout_sites=" + to_string(parse_number_after(midend_report, "select_timeout_sites="))
-        + " select_send_sites=" + to_string(parse_number_after(midend_report, "select_send_sites=")))
+        + " sroutine_sites=" + std.prelude.to_string(parse_number_after(midend_report, "sroutine_sites="))
+        + " select_weighted_sites=" + std.prelude.to_string(parse_number_after(midend_report, "select_weighted_sites="))
+        + " select_timeout_sites=" + std.prelude.to_string(parse_number_after(midend_report, "select_timeout_sites="))
+        + " select_send_sites=" + std.prelude.to_string(parse_number_after(midend_report, "select_send_sites=")))
     lines.push("passes"
-        + " rm_unreachable=" + to_string(parse_number_after(midend_report, "pass_rm_unreachable="))
-        + " fold_branch=" + to_string(parse_number_after(midend_report, "pass_fold_branch="))
-        + " simplify_j2r=" + to_string(parse_number_after(midend_report, "pass_simplify_j2r="))
-        + " trim_unit=" + to_string(parse_number_after(midend_report, "pass_trim_unit="))
-        + " dedup=" + to_string(parse_number_after(midend_report, "pass_dedup="))
-        + " ipo_synergy=" + to_string(parse_number_after(midend_report, "ipo_synergy=")))
+        + " rm_unreachable=" + std.prelude.to_string(parse_number_after(midend_report, "pass_rm_unreachable="))
+        + " fold_branch=" + std.prelude.to_string(parse_number_after(midend_report, "pass_fold_branch="))
+        + " simplify_j2r=" + std.prelude.to_string(parse_number_after(midend_report, "pass_simplify_j2r="))
+        + " trim_unit=" + std.prelude.to_string(parse_number_after(midend_report, "pass_trim_unit="))
+        + " dedup=" + std.prelude.to_string(parse_number_after(midend_report, "pass_dedup="))
+        + " ipo_synergy=" + std.prelude.to_string(parse_number_after(midend_report, "ipo_synergy=")))
     join_lines(lines)
 }
 
@@ -2404,7 +2365,7 @@ func validate_midend_opt_artifact(string payload) ((), backend_error) {
 func function_item_count(source_file source) int {
     out := 0
     i := 0
-    for i < len(source.items) {
+    for i < std.prelude.len(source.items) {
         switch source.items[i] {
             item.function(_) : out = out + 1,
             _ : (),
@@ -2417,9 +2378,9 @@ func function_item_count(source_file source) int {
 func build_export_data_artifact(source_file source, string arch) string {
     lines := string[]()
     lines = append(lines, "export-data version=2 arch=" + arch + " package=" + source.pkg)
-    lines = append(lines, "imports=" + to_string(len(source.uses)))
+    lines = append(lines, "imports=" + std.prelude.to_string(std.prelude.len(source.uses)))
     u := 0
-    for u < len(source.uses) {
+    for u < std.prelude.len(source.uses) {
         alias := ""
         switch source.uses[u].alias {
             option.some(value) : alias = value,
@@ -2429,12 +2390,12 @@ func build_export_data_artifact(source_file source, string arch) string {
         u = u + 1
     }
     i := 0
-    for i < len(source.items) {
+    for i < std.prelude.len(source.items) {
         switch source.items[i] {
             item.function(fn_decl) : {
                 signature := ""
                 p := 0
-                for p < len(fn_decl.sig.params) {
+                for p < std.prelude.len(fn_decl.sig.params) {
                     if p > 0 { signature = signature + "," }
                     signature = signature + fn_decl.sig.params[p].name + ":" + fn_decl.sig.params[p].type_name
                     p = p + 1
@@ -2446,7 +2407,7 @@ func build_export_data_artifact(source_file source, string arch) string {
                 }
                 lines.push(
                     "fn " + fn_decl.sig.name
-                        + " public=" + to_string(fn_decl.is_public as int)
+                        + " public=" + std.prelude.to_string(fn_decl.is_public as int)
                         + " params=" + signature
                         + " generics=" + join_with(fn_decl.sig.generics, ",")
                         + " returns=" + result_type
@@ -2455,18 +2416,18 @@ func build_export_data_artifact(source_file source, string arch) string {
             item.struct(st) : {
                 fields := ""
                 f := 0
-                for f < len(st.fields) {
+                for f < std.prelude.len(st.fields) {
                     if f > 0 { fields = fields + "," }
                     fields = fields + st.fields[f].name + ":" + st.fields[f].type_name
                     f = f + 1
                 }
-                lines.push("struct " + st.name + " public=" + to_string(st.is_public as int)
+                lines.push("struct " + st.name + " public=" + std.prelude.to_string(st.is_public as int)
                     + " generics=" + join_with(st.generics, ",") + " fields=" + fields)
             }
             item.enum(en) : {
                 variants := ""
                 v := 0
-                for v < len(en.variants) {
+                for v < std.prelude.len(en.variants) {
                     if v > 0 { variants = variants + "," }
                     variants = variants + en.variants[v].name
                     switch en.variants[v].payload {
@@ -2475,28 +2436,28 @@ func build_export_data_artifact(source_file source, string arch) string {
                     }
                     v = v + 1
                 }
-                lines.push("enum " + en.name + " public=" + to_string(en.is_public as int)
+                lines.push("enum " + en.name + " public=" + std.prelude.to_string(en.is_public as int)
                     + " generics=" + join_with(en.generics, ",") + " variants=" + variants)
             }
             item.trait(tr) : {
                 methods := ""
                 m := 0
-                for m < len(tr.methods) {
+                for m < std.prelude.len(tr.methods) {
                     if m > 0 { methods = methods + "," }
                     methods = methods + tr.methods[m].name
                     m = m + 1
                 }
-                lines.push("trait " + tr.name + " public=" + to_string(tr.is_public as int)
+                lines.push("trait " + tr.name + " public=" + std.prelude.to_string(tr.is_public as int)
                     + " generics=" + join_with(tr.generics, ",") + " methods=" + methods)
             }
             item.method(method) : {
                 fn_decl := method.method
                 lines.push("method " + method.receiver_type + "." + fn_decl.sig.name
-                    + " public=" + to_string(fn_decl.is_public as int)
-                    + " params=" + to_string(len(fn_decl.sig.params))
+                    + " public=" + std.prelude.to_string(fn_decl.is_public as int)
+                    + " params=" + std.prelude.to_string(std.prelude.len(fn_decl.sig.params))
                     + " generics=" + join_with(fn_decl.sig.generics, ","))
             }
-            item.const(cn) : lines.push("const " + cn.name + " iota=" + to_string(cn.iota_index)),
+            item.const(cn) : lines.push("const " + cn.name + " iota=" + std.prelude.to_string(cn.iota_index)),
             item.var(vr) : {
                 type_name := ""
                 switch vr.type_name {
@@ -2513,21 +2474,21 @@ func build_export_data_artifact(source_file source, string arch) string {
 }
 
 func starts_with_local(string text, string prefix) bool {
-    if len(prefix) > len(text) {
+    if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
-    slice(text, 0, len(prefix)) == prefix
+    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
 }
 
 func ends_with_local(string text, string suffix) bool {
-    if len(suffix) > len(text) {
+    if std.prelude.len(suffix) > std.prelude.len(text) {
         return false
     }
-    slice(text, len(text) - len(suffix), len(text)) == suffix
+    std.prelude.slice(text, std.prelude.len(text) - std.prelude.len(suffix), std.prelude.len(text)) == suffix
 }
 
 func load_source_graph(string path, string source) (source_file, backend_error) {
-    parsed_result := parse_source(source)
+    parsed_result := compile.internal.syntax.parse_source(source)
     if parsed_result.is_err() {
         return backend_error { message: "parse failed: " + parsed_result.unwrap_err().message }
     }
@@ -2539,11 +2500,11 @@ func load_source_graph(string path, string source) (source_file, backend_error) 
         return deps_result.unwrap_err()
     }
     if !should_skip_semantic_check(path) {
-        diagnostics := check_source_file(combined, source)
-        if len(diagnostics) > 0 {
+        diagnostics := compile.internal.semantic.check_source_file(combined, source)
+        if std.prelude.len(diagnostics) > 0 {
             return backend_error { message: "semantic check failed before monomorphization" }
         }
-        mono_result := monomorphize_file(combined)
+        mono_result := compile.internal.mono.monomorphize_file(combined)
         if mono_result.invariant_errors != 0 {
             return backend_error { message: "monomorphization failed: unresolved generic residue" }
         }
@@ -2554,7 +2515,7 @@ func load_source_graph(string path, string source) (source_file, backend_error) 
 
 func append_dependency_items(source_file combined, use_decl[] uses, string[] visited) ((), backend_error) {
     i := 0
-    for i < len(uses) {
+    for i < std.prelude.len(uses) {
         module_result := resolve_module_source_path(uses[i].path)
         if module_result.is_none() {
             return backend_error { message: "module resolver failed: " + uses[i].path }
@@ -2562,11 +2523,11 @@ func append_dependency_items(source_file combined, use_decl[] uses, string[] vis
         dep_path := module_result.unwrap()
         if !string_vec_contains(visited, dep_path) {
             visited = append(visited, dep_path)
-            dep_source_result := read_to_string(dep_path)
+            dep_source_result := std.fs.read_to_string(dep_path)
             if dep_source_result.is_err() {
                 return backend_error { message: "failed to read module " + uses[i].path + " at " + dep_path + ": " + dep_source_result.unwrap_err().message }
             }
-            dep_parsed_result := parse_source(dep_source_result.unwrap())
+            dep_parsed_result := compile.internal.syntax.parse_source(dep_source_result.unwrap())
             if dep_parsed_result.is_err() {
                 return backend_error { message: "parse failed in module " + uses[i].path + ": " + dep_parsed_result.unwrap_err().message }
             }
@@ -2584,7 +2545,7 @@ func append_dependency_items(source_file combined, use_decl[] uses, string[] vis
 
 func append_source_items(source_file combined, source_file dep) () {
     i := 0
-    for i < len(dep.items) {
+    for i < std.prelude.len(dep.items) {
         combined.items = append(combined.items, dep.items[i])
         i = i + 1
     }
@@ -2592,7 +2553,7 @@ func append_source_items(source_file combined, source_file dep) () {
 
 func string_vec_contains(string[] values, string value) bool {
     i := 0
-    for i < len(values) {
+    for i < std.prelude.len(values) {
         if values[i] == value {
             return true
         }
@@ -2616,8 +2577,8 @@ func resolve_module_source_path(string module) option[string] {
     candidates := string[]()
     add_module_candidates(candidates, module)
     i := 0
-    for i < len(candidates) {
-        probe := read_to_string(candidates[i])
+    for i < std.prelude.len(candidates) {
+        probe := std.fs.read_to_string(candidates[i])
         if probe.is_ok() {
             return option::some(candidates[i]
         }
@@ -2629,13 +2590,13 @@ func resolve_module_source_path(string module) option[string] {
 func lookup_package_index(string module) option[string] {
     paths := package_index_candidate_paths()
     pi := 0
-    for pi < len(paths) {
-        read_result := read_to_string(paths[pi])
+    for pi < std.prelude.len(paths) {
+        read_result := std.fs.read_to_string(paths[pi])
         if read_result.is_ok() {
             found := lookup_module_in_package_index_text(read_result.unwrap(), module)
             if found.is_some() {
                 path := found.unwrap()
-                probe := read_to_string(path)
+                probe := std.fs.read_to_string(path)
                 if probe.is_ok() {
                     return option::some(path
                 }
@@ -2669,7 +2630,7 @@ func lookup_module_in_package_index_text(string text, string module) option[stri
     lines := split_lines_local(text)
     project := resolve_project_root()
     i := 0
-    for i < len(lines) {
+    for i < std.prelude.len(lines) {
         line := trim_spaces(lines[i])
         if line == "" || starts_with_local(line, "#") {
             i = i + 1
@@ -2677,8 +2638,8 @@ func lookup_module_in_package_index_text(string text, string module) option[stri
         }
         tab := find_tab_index(line)
         if tab > 0 {
-            name := trim_spaces(slice(line, 0, tab))
-            path := trim_spaces(slice(line, tab + 1, len(line)))
+            name := trim_spaces(std.prelude.slice(line, 0, tab))
+            path := trim_spaces(std.prelude.slice(line, tab + 1, std.prelude.len(line)))
             if name == module && path != "" {
                 return option::some(normalize_package_index_path(project, path))
             }
@@ -2703,8 +2664,8 @@ func normalize_package_index_path(string project, string path) string {
 
 func find_tab_index(string text) int {
     i := 0
-    for i < len(text) {
-        if char_at(text, i) == "\t" {
+    for i < std.prelude.len(text) {
+        if std.prelude.char_at(text, i) == "\t" {
             return i
         }
         i = i + 1
@@ -2715,7 +2676,7 @@ func find_tab_index(string text) int {
 func add_module_candidates(string[] candidates, string module) () {
     roots := module_search_roots()
     i := 0
-    for i < len(roots) {
+    for i < std.prelude.len(roots) {
         add_module_candidates_in_root(candidates, roots[i], module)
         i = i + 1
     }
@@ -2726,23 +2687,23 @@ func add_module_candidates_in_root(string[] candidates, string root, string modu
         return
     }
     if starts_with_local(module, "compile.") {
-        add_compile_module_candidates(candidates, root, slice(module, len("compile."), len(module)))
+        add_compile_module_candidates(candidates, root, std.prelude.slice(module, std.prelude.len("compile."), std.prelude.len(module)))
         return
     }
     if starts_with_local(module, "internal.") {
-        add_std_layout_candidates(candidates, root + "/src/internal", slice(module, len("internal."), len(module)))
+        add_std_layout_candidates(candidates, root + "/src/internal", std.prelude.slice(module, std.prelude.len("internal."), std.prelude.len(module)))
         return
     }
     if starts_with_local(module, "std.") {
-        add_std_module_candidates(candidates, root, slice(module, len("std."), len(module)))
+        add_std_module_candidates(candidates, root, std.prelude.slice(module, std.prelude.len("std."), std.prelude.len(module)))
         return
     }
     if starts_with_local(module, "s.") {
-        add_s_module_candidates(candidates, root, slice(module, len("s."), len(module)))
+        add_s_module_candidates(candidates, root, std.prelude.slice(module, std.prelude.len("s."), std.prelude.len(module)))
         return
     }
     if starts_with_local(module, "neurx.") {
-        add_neurx_module_candidates(candidates, root, slice(module, len("neurx."), len(module)))
+        add_neurx_module_candidates(candidates, root, std.prelude.slice(module, std.prelude.len("neurx."), std.prelude.len(module)))
         return
     }
     candidates = append(candidates, root + "/" + dot_to_slash(module) + ".s")
@@ -2762,8 +2723,8 @@ func add_neurx_module_candidates(string[] candidates, string root, string tail) 
 
 func has_dot_local(string text) bool {
     i := 0
-    for i < len(text) {
-        if char_at(text, i) == "." {
+    for i < std.prelude.len(text) {
+        if std.prelude.char_at(text, i) == "." {
             return true
         }
         i = i + 1
@@ -2838,7 +2799,7 @@ func push_workspace_roots(string[] roots) () {
     switch env_get("s_work_file") {
         option.some(path) : {
             if path != "" {
-                work := read_to_string(path)
+                work := std.fs.read_to_string(path)
                 if work.is_ok() {
                     append_workspace_roots(roots, work.unwrap())
                 }
@@ -2851,13 +2812,13 @@ func push_workspace_roots(string[] roots) () {
 func append_workspace_roots(string[] roots, string text) () {
     lines := split_lines_local(text)
     i := 0
-    for i < len(lines) {
+    for i < std.prelude.len(lines) {
         line := trim_spaces(lines[i])
         if starts_with_local(line, "use = \"") {
-            start := len("use = \"")
+            start := std.prelude.len("use = \"")
             end := find_quote_from(line, start)
             if end > start {
-                push_module_search_root(roots, slice(line, start, end))
+                push_module_search_root(roots, std.prelude.slice(line, start, end))
             }
         }
         i = i + 1
@@ -2900,8 +2861,8 @@ func push_module_search_root(string[] roots, string root) () {
 
 func find_quote_from(string text, int start) int {
     i := start
-    for i < len(text) {
-        if char_at(text, i) == "\"" {
+    for i < std.prelude.len(text) {
+        if std.prelude.char_at(text, i) == "\"" {
             return i
         }
         i = i + 1
@@ -2912,8 +2873,8 @@ func find_quote_from(string text, int start) int {
 func dot_to_slash(string text) string {
     out := ""
     i := 0
-    for i < len(text) {
-        ch := char_at(text, i)
+    for i < std.prelude.len(text) {
+        ch := std.prelude.char_at(text, i)
         if ch == "." {
             out = out + "/"
         } else {
@@ -2929,7 +2890,7 @@ func drop_last_segment(string text) string {
     if last < 0 {
         return ""
     }
-    slice(text, 0, last)
+    std.prelude.slice(text, 0, last)
 }
 
 func last_segment(string text) string {
@@ -2937,14 +2898,14 @@ func last_segment(string text) string {
     if last < 0 {
         return text
     }
-    slice(text, last + 1, len(text))
+    std.prelude.slice(text, last + 1, std.prelude.len(text))
 }
 
 func last_dot_index(string text) int {
-    i := len(text)
+    i := std.prelude.len(text)
     for i > 0 {
         i = i - 1
-        if char_at(text, i) == "." {
+        if std.prelude.char_at(text, i) == "." {
             return i
         }
     }
@@ -2967,7 +2928,7 @@ func build_compiler_runtime_launcher(string output) int {
     if output == base_compiler {
         return report_failure("refusing to generate a launcher that execs itself; set s_bootstrap_base_compiler to a different binary"
     }
-    temp_dir_result := make_temp_dir("s-launcher-")
+    temp_dir_result := std.fs.make_temp_dir("s-launcher-")
     if temp_dir_result.is_err() {
         return report_failure("could not create temporary launcher directory: " + temp_dir_result.unwrap_err().message
     }
@@ -2978,7 +2939,7 @@ func build_compiler_runtime_launcher(string output) int {
     if asm_text_result.is_err() {
         return report_failure(asm_text_result.unwrap_err().message
     }
-    write_result := write_text_file(asm_path, asm_text_result.unwrap())
+    write_result := std.fs.write_text_file(asm_path, asm_text_result.unwrap())
     if write_result.is_err() {
         return report_failure("failed to write launcher assembly: " + write_result.unwrap_err().message
     }
@@ -2987,7 +2948,7 @@ func build_compiler_runtime_launcher(string output) int {
     as_argv = append(as_argv, "-o")
     as_argv = append(as_argv, obj_path)
     as_argv = append(as_argv, asm_path)
-    as_result := run_process(as_argv)
+    as_result := std.process.run_process(as_argv)
     if as_result.is_err() {
         return report_failure("launcher assembler failed: " + as_result.unwrap_err().message
     }
@@ -2996,7 +2957,7 @@ func build_compiler_runtime_launcher(string output) int {
     ld_argv = append(ld_argv, "-o")
     ld_argv = append(ld_argv, output)
     ld_argv = append(ld_argv, obj_path)
-    ld_result := run_process(ld_argv)
+    ld_result := std.process.run_process(ld_argv)
     if ld_result.is_err() {
         return report_failure("launcher linker failed: " + ld_result.unwrap_err().message
     }
@@ -3080,12 +3041,12 @@ func parse_name_after(string text, string marker) string {
     if at < 0 {
         return "main"
     }
-    start := at + len(marker)
+    start := at + std.prelude.len(marker)
     end := index_of_from(text, " ", start)
     if end < 0 {
-        return slice(text, start, len(text))
+        return std.prelude.slice(text, start, std.prelude.len(text))
     }
-    slice(text, start, end)
+    std.prelude.slice(text, start, end)
 }
 
 func bool_string(bool value) string {
@@ -3106,7 +3067,7 @@ func collect_runtime_metrics(runtime_state runtime) runtime_metrics {
     recvs := 0
     closed := 0
     i := 0
-    for i < len(runtime.channels) {
+    for i < std.prelude.len(runtime.channels) {
         sends = sends + runtime.channels[i].sends
         recvs = recvs + runtime.channels[i].recvs
         if runtime.channels[i].closed {
@@ -3115,31 +3076,31 @@ func collect_runtime_metrics(runtime_state runtime) runtime_metrics {
         i = i + 1
     }
     runtime_metrics {
-        sroutine_scheduled: runtime.sroutine_scheduled, sroutine_completed runtime.sroutine_completed, sroutine_panics runtime.sroutine_panics, sroutine_recovered runtime.sroutine_recovered, sroutine_yields runtime.sroutine_yields, select_attempts runtime.select_attempts, select_default_fallbacks runtime.select_default_fallbacks, select_timeouts runtime.select_timeouts, channels len(runtime.channels), channel_sends sends, channel_recvs recvs, channel_closed closed,
+        sroutine_scheduled: runtime.sroutine_scheduled, sroutine_completed runtime.sroutine_completed, sroutine_panics runtime.sroutine_panics, sroutine_recovered runtime.sroutine_recovered, sroutine_yields runtime.sroutine_yields, select_attempts runtime.select_attempts, select_default_fallbacks runtime.select_default_fallbacks, select_timeouts runtime.select_timeouts, channels std.prelude.len(runtime.channels), channel_sends sends, channel_recvs recvs, channel_closed closed,
     }
 }
 
 func runtime_metrics_text(runtime_metrics metrics) string {
     "runtime_sched"
-        + " sroutine_scheduled=" + to_string(metrics.sroutine_scheduled)
-        + " sroutine_completed=" + to_string(metrics.sroutine_completed)
-        + " sroutine_panics=" + to_string(metrics.sroutine_panics)
-        + " sroutine_recovered=" + to_string(metrics.sroutine_recovered)
-        + " sroutine_yields=" + to_string(metrics.sroutine_yields)
-        + " select_attempts=" + to_string(metrics.select_attempts)
-        + " select_default_fallbacks=" + to_string(metrics.select_default_fallbacks)
-        + " select_timeouts=" + to_string(metrics.select_timeouts)
-        + " channels=" + to_string(metrics.channels)
-        + " channel_sends=" + to_string(metrics.channel_sends)
-        + " channel_recvs=" + to_string(metrics.channel_recvs)
-        + " channel_closed=" + to_string(metrics.channel_closed)
+        + " sroutine_scheduled=" + std.prelude.to_string(metrics.sroutine_scheduled)
+        + " sroutine_completed=" + std.prelude.to_string(metrics.sroutine_completed)
+        + " sroutine_panics=" + std.prelude.to_string(metrics.sroutine_panics)
+        + " sroutine_recovered=" + std.prelude.to_string(metrics.sroutine_recovered)
+        + " sroutine_yields=" + std.prelude.to_string(metrics.sroutine_yields)
+        + " select_attempts=" + std.prelude.to_string(metrics.select_attempts)
+        + " select_default_fallbacks=" + std.prelude.to_string(metrics.select_default_fallbacks)
+        + " select_timeouts=" + std.prelude.to_string(metrics.select_timeouts)
+        + " channels=" + std.prelude.to_string(metrics.channels)
+        + " channel_sends=" + std.prelude.to_string(metrics.channel_sends)
+        + " channel_recvs=" + std.prelude.to_string(metrics.channel_recvs)
+        + " channel_closed=" + std.prelude.to_string(metrics.channel_closed)
         + " memory_strategy=ownership+explicit-drop"
 }
 
 func snapshot_captured_bindings(binding[] env) captured_binding[] {
     out := captured_binding[]()
     i := 0
-    for i < len(env) {
+    for i < std.prelude.len(env) {
         out = append(out, captured_binding { name: env[i].name, value env[i].value })
         i = i + 1
     }
@@ -3149,7 +3110,7 @@ func snapshot_captured_bindings(binding[] env) captured_binding[] {
 func restore_captured_bindings(captured_binding[] captured) binding[] {
     out := binding[]()
     i := 0
-    for i < len(captured) {
+    for i < std.prelude.len(captured) {
         out = append(out, binding { name: captured[i].name, value captured[i].value })
         i = i + 1
     }
@@ -3157,7 +3118,7 @@ func restore_captured_bindings(captured_binding[] captured) binding[] {
 }
 
 func compile_writes(source_file source, mir_graph graph) (write_op[], backend_error) {
-    if len(graph.blocks) == 0 {
+    if std.prelude.len(graph.blocks) == 0 {
         return fail_write_ops("backend error: mir graph has no blocks"
     }
     source_exec := execute_source_main(source)
@@ -3172,7 +3133,7 @@ func compile_writes(source_file source, mir_graph graph) (write_op[], backend_er
 }
 
 func compile_exit_code(source_file source, mir_graph graph) (int, backend_error) {
-    if len(graph.blocks) == 0 {
+    if std.prelude.len(graph.blocks) == 0 {
         return fail_int("backend error: mir graph has no blocks"
     }
     source_exec := execute_source_main(source)
@@ -3187,7 +3148,7 @@ func compile_exit_code(source_file source, mir_graph graph) (int, backend_error)
 }
 
 func compile_runtime_metrics(source_file source, mir_graph graph) (runtime_metrics, backend_error) {
-    if len(graph.blocks) == 0 {
+    if std.prelude.len(graph.blocks) == 0 {
         return backend_error { message: "backend error: mir graph has no blocks" }
     }
     source_exec := execute_source_main(source)
@@ -3242,7 +3203,7 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
         }
         block := block_result.unwrap()
         si := 0
-        for si < len(block.statements) {
+        for si < std.prelude.len(block.statements) {
             stmt_result := execute_mir_statement(block.statements[si], writes)
             if stmt_result.is_err() {
                 return stmt_result.unwrap_err()
@@ -3257,7 +3218,7 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
             })
         }
         if block.terminator.kind == "jump" {
-            if len(block.terminator.edges) == 0 {
+            if std.prelude.len(block.terminator.edges) == 0 {
                 return backend_error { message: "backend error: jump terminator has no target" }
             }
             current = block.terminator.edges[0].target
@@ -3280,19 +3241,19 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
 
 func find_mir_block(mir_graph graph, int id) (mir_basic_block, backend_error) {
     i := 0
-    for i < len(graph.blocks) {
+    for i < std.prelude.len(graph.blocks) {
         if graph.blocks[i].id == id {
             return graph.blocks[i]
         }
         i = i + 1
     }
-    backend_error { message: "backend error: missing mir block id " + to_string(id) }
+    backend_error { message: "backend error: missing mir block id " + std.prelude.to_string(id) }
 }
 
 func execute_mir_statement(mir_statement statement, write_op[] writes) ((), backend_error) {
     switch statement {
         mir_statement.eval(eval_stmt) : {
-            if len(eval_stmt.args) > 0 {
+            if std.prelude.len(eval_stmt.args) > 0 {
                 emit_print_from_line(eval_stmt.args[0], writes)
             }
             ()
@@ -3302,8 +3263,8 @@ func execute_mir_statement(mir_statement statement, write_op[] writes) ((), back
 }
 
 func emit_print_from_line(string line, write_op[] writes) () {
-    if has_substring(line, "eprintln(") {
-        emit_call_line_to_write(line, "eprintln(", 2, writes)
+    if has_substring(line, "std.io.eprintln(") {
+        emit_call_line_to_write(line, "std.io.eprintln(", 2, writes)
         return
     }
     if has_substring(line, "println(") {
@@ -3331,7 +3292,7 @@ func render_literal_text(string raw_arg) string {
     if arg == "true" || arg == "false" {
         return arg
     }
-    return to_string(parse_int_literal(arg))
+    return std.prelude.to_string(parse_int_literal(arg))
 }
 
 func extract_call_arg(string line, string callee) option[string] {
@@ -3339,31 +3300,31 @@ func extract_call_arg(string line, string callee) option[string] {
     if call_index < 0 {
         return option.none
     }
-    start := call_index + len(callee)
+    start := call_index + std.prelude.len(callee)
     end := index_of_from(line, ")", start)
     if end < 0 || end < start {
         return option.none
     }
-    option.some(slice(line, start, end))
+    option.some(std.prelude.slice(line, start, end))
 }
 
 func is_quoted_literal(string text) bool {
-    if len(text) < 2 {
+    if std.prelude.len(text) < 2 {
         return false
     }
-    char_at(text, 0) == "\"" && char_at(text, len(text) - 1) == "\""
+    std.prelude.char_at(text, 0) == "\"" && std.prelude.char_at(text, std.prelude.len(text) - 1) == "\""
 }
 
 func trim_spaces(string text) string {
     start := 0
-    end := len(text)
-    for start < end && is_space(char_at(text, start)) {
+    end := std.prelude.len(text)
+    for start < end && is_space(std.prelude.char_at(text, start)) {
         start = start + 1
     }
-    for end > start && is_space(char_at(text, end - 1)) {
+    for end > start && is_space(std.prelude.char_at(text, end - 1)) {
         end = end - 1
     }
-    slice(text, start, end)
+    std.prelude.slice(text, start, end)
 }
 
 func is_space(string ch) bool {
@@ -3379,16 +3340,16 @@ func index_of(string text, string needle) int {
 }
 
 func index_of_from(string text, string needle, int start) int {
-    if len(needle) == 0 {
+    if std.prelude.len(needle) == 0 {
         return start
     }
-    if len(text) < len(needle) || start >= len(text) {
+    if std.prelude.len(text) < std.prelude.len(needle) || start >= std.prelude.len(text) {
         return -1
     }
     i := start
-    limit := len(text) - len(needle)
+    limit := std.prelude.len(text) - std.prelude.len(needle)
     for i <= limit {
-        if slice(text, i, i + len(needle)) == needle {
+        if std.prelude.slice(text, i, i + std.prelude.len(needle)) == needle {
             return i
         }
         i = i + 1
@@ -3401,11 +3362,11 @@ func parse_number_after(string text, string marker) int {
     if start < 0 {
         return -1
     }
-    start = start + len(marker)
+    start = start + std.prelude.len(marker)
     value := 0
     found := false
-    for start < len(text) {
-        ch := char_at(text, start)
+    for start < std.prelude.len(text) {
+        ch := std.prelude.char_at(text, start)
         if ch < "0" || ch > "9" {
             break
         }
@@ -3420,11 +3381,11 @@ func parse_number_after(string text, string marker) int {
 }
 
 func select_branch_target(mir_control_edge[] edges) int {
-    if len(edges) == 0 {
+    if std.prelude.len(edges) == 0 {
         return -1
     }
     i := 0
-    for i < len(edges) {
+    for i < std.prelude.len(edges) {
         if edges[i].label == "false" || edges[i].label == "exit" || edges[i].label == "default" {
             return edges[i].target
         }
@@ -3435,7 +3396,7 @@ func select_branch_target(mir_control_edge[] edges) int {
 
 func find_main(source_file source) (function_decl, backend_error) {
     i := 0
-    for i < len(source.items) {
+    for i < std.prelude.len(source.items) {
         switch source.items[i] {
             item.function(value) : {
                 if value.body.is_some() && (value.sig.name == "main" || value.sig.name == "main") {
@@ -3471,14 +3432,14 @@ func call_function_with_capture(
     if function.body.is_none() {
         return fail_value("backend error: function " + name + " has no body"
     }
-    if len(function.sig.params) != len(args) {
+    if std.prelude.len(function.sig.params) != std.prelude.len(args) {
         return fail_value(
             "backend error: function "
                 + name
                 + " expects "
-                + to_string(len(function.sig.params))
+                + std.prelude.to_string(std.prelude.len(function.sig.params))
                 + " args, got "
-                + to_string(len(args))
+                + std.prelude.to_string(std.prelude.len(args))
         )
     }
     env := binding[]()
@@ -3492,7 +3453,7 @@ func call_function_with_capture(
     propagate_bindings(captured, env)
     copy_control_bindings(caller_env, env)
     pi := 0
-    for pi < len(function.sig.params) {
+    for pi < std.prelude.len(function.sig.params) {
         env.push(binding {
             name: function.sig.params[pi].name, value args[pi],
         })
@@ -3517,7 +3478,7 @@ func find_function_in_source_graph(source_file source, string name, string[] vis
     }
     visited = append(visited, source.pkg)
     i := 0
-    for i < len(source.items) {
+    for i < std.prelude.len(source.items) {
         switch source.items[i] {
             item.function(value) : {
                 if value.sig.name == name {
@@ -3529,7 +3490,7 @@ func find_function_in_source_graph(source_file source, string name, string[] vis
         i = i + 1
     }
     ui := 0
-    for ui < len(source.uses) {
+    for ui < std.prelude.len(source.uses) {
         dep_result := load_source_graph_for_use(source.uses[ui].path)
         if dep_result.is_err() {
             return dep_result.unwrap_err()
@@ -3553,10 +3514,10 @@ func execute_block(block_expr block, source_file source, binding[] env, write_op
 }
 
 func execute_block_in_place(block_expr block, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    local_start := len(env)
+    local_start := std.prelude.len(env)
     deferred := expr[]()
     si := 0
-    for si < len(block.statements) {
+    for si < std.prelude.len(block.statements) {
         switch block.statements[si] {
             stmt.defer(value) : {
                 deferred = append(deferred, value.expr);
@@ -3722,7 +3683,7 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] en
             }
             arg_values := value[]()
             ai := 0
-            for ai < len(call_expr.args) {
+            for ai < std.prelude.len(call_expr.args) {
                 arg_result := eval_expr(call_expr.args[ai], source, env, writes, runtime)
                 if arg_result.is_err() {
                     return arg_result.unwrap_err()
@@ -3887,7 +3848,7 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
     }
     arg_values := value[]()
     ai := 0
-    for ai < len(value.args) {
+    for ai < std.prelude.len(value.args) {
         arg_result := eval_expr(value.args[ai], source, env, writes, runtime)
         if arg_result.is_err() {
             return arg_result.unwrap_err()
@@ -3902,7 +3863,7 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
 }
 
 func eval_box_new_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) != 1 {
+    if std.prelude.len(args) != 1 {
         return fail_value("backend error: box expects exactly one value")
     }
     payload_result := eval_expr(args[0], source, env, writes, runtime)
@@ -3917,14 +3878,14 @@ func eval_box_new_call(expr[] args, source_file source, binding[] env, write_op[
 }
 
 func eval_copy_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) != 1 {
+    if std.prelude.len(args) != 1 {
         return fail_value("backend error: copy expects exactly one value")
     }
     eval_expr(args[0], source, env, writes, runtime)
 }
 
 func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) != 1 {
+    if std.prelude.len(args) != 1 {
         return fail_value("backend error: box_free expects exactly one value")
     }
     owned_result := eval_expr(args[0], source, env, writes, runtime)
@@ -3934,7 +3895,7 @@ func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op
     switch owned_result.unwrap() {
         value.owned_box(handle) : {
             i := 0
-            for i < len(runtime.owned_boxes) {
+            for i < std.prelude.len(runtime.owned_boxes) {
                 if runtime.owned_boxes[i].id == handle.id {
                     if !runtime.owned_boxes[i].live {
                         return fail_value("backend error: box_free on released box")
@@ -3956,7 +3917,7 @@ func cleanup_scope_owned_values(binding[] env, int local_start, value keep, runt
         value.owned_box(handle) : keep_id = handle.id
         _ : { }
     }
-    i := len(env) - 1
+    i := std.prelude.len(env) - 1
     for i >= local_start {
         release_owned_value(env[i].value, runtime, keep_id)
         i = i - 1
@@ -3970,7 +3931,7 @@ func release_owned_value(value candidate, runtime_state runtime, int keep_id) ()
                 return
             }
             j := 0
-            for j < len(runtime.owned_boxes) {
+            for j < std.prelude.len(runtime.owned_boxes) {
                 if runtime.owned_boxes[j].id == handle.id {
                     if runtime.owned_boxes[j].live {
                         runtime.owned_boxes[j].live = false
@@ -3998,7 +3959,7 @@ func eval_member_expr(member member_expr, source_file source, binding[] env, wri
                 return fail_value("backend error: use of released box")
             }
             i := 0
-            for i < len(runtime.owned_boxes) {
+            for i < std.prelude.len(runtime.owned_boxes) {
                 if runtime.owned_boxes[i].id == handle.id {
                     if !runtime.owned_boxes[i].live {
                         return fail_value("backend error: use of released box")
@@ -4014,7 +3975,7 @@ func eval_member_expr(member member_expr, source_file source, binding[] env, wri
 }
 
 func eval_panic_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) != 1 {
+    if std.prelude.len(args) != 1 {
         return backend_error { message: "backend error: panic expects exactly one argument" }
     }
     arg_result := eval_expr(args[0], source, env, writes, runtime)
@@ -4039,7 +4000,7 @@ func eval_recover_call(binding[] env, runtime_state runtime) (value, backend_err
 }
 
 func eval_chan_make_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) != 1 {
+    if std.prelude.len(args) != 1 {
         return backend_error { message: "backend error: chan_make expects one capacity argument" }
     }
     cap_value := eval_expr(args[0], source, env, writes, runtime)
@@ -4064,7 +4025,7 @@ func eval_chan_make_call(expr[] args, source_file source, binding[] env, write_o
 }
 
 func eval_chan_send_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) != 2 {
+    if std.prelude.len(args) != 2 {
         return backend_error { message: "backend error: chan_send expects channel and value" }
     }
     ch := eval_expr(args[0], source, env, writes, runtime)
@@ -4082,7 +4043,7 @@ func eval_chan_send_call(expr[] args, source_file source, binding[] env, write_o
     if runtime.channels[idx].closed {
         return backend_error { message: "backend error: chan_send on closed channel" }
     }
-    if runtime.channels[idx]len(.buffer) >= runtime.channels[idx].capacity {
+    if runtime.channels[idx]std.prelude.len(.buffer) >= runtime.channels[idx].capacity {
         return backend_error { message: "backend error: chan_send would block" }
     }
     ch_state := runtime.channels[idx]
@@ -4093,15 +4054,15 @@ func eval_chan_send_call(expr[] args, source_file source, binding[] env, write_o
 }
 
 func eval_chan_recv_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime, bool is_select) (value, backend_error) {
-    if len(args) == 0 {
+    if std.prelude.len(args) == 0 {
         return backend_error { message: "backend error: chan_recv/select_recv expects at least one channel argument" }
     }
-    if !is_select && len(args) != 1 {
+    if !is_select && std.prelude.len(args) != 1 {
         return backend_error { message: "backend error: chan_recv expects exactly one channel argument" }
     }
     channels := value[]()
     ai := 0
-    for ai < len(args) {
+    for ai < std.prelude.len(args) {
         ch := eval_expr(args[ai], source, env, writes, runtime)
         if ch.is_err() {
             return ch
@@ -4118,8 +4079,8 @@ func eval_chan_recv_call(expr[] args, source_file source, binding[] env, write_o
     }
     closed_pick := choose_closed_channel(runtime, channels)
     if closed_pick.is_some() {
-        if is_select && len(channels) > 0 {
-            runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % len(channels)
+        if is_select && std.prelude.len(channels) > 0 {
+            runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % std.prelude.len(channels)
         }
         return value.unit(unit_value {}))
     }
@@ -4130,13 +4091,13 @@ func eval_chan_recv_call(expr[] args, source_file source, binding[] env, write_o
 }
 
 func eval_select_recv_weighted_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) < 2 || (len(args) % 2) != 0 {
+    if std.prelude.len(args) < 2 || (std.prelude.len(args) % 2) != 0 {
         return backend_error { message: "backend error: select_recv_weighted expects channel/weight pairs" }
     }
     runtime.select_attempts = runtime.select_attempts + 1
     weighted := value[]()
     ai := 0
-    for ai < len(args) {
+    for ai < std.prelude.len(args) {
         ch := eval_expr(args[ai], source, env, writes, runtime)
         if ch.is_err() {
             return ch
@@ -4167,8 +4128,8 @@ func eval_select_recv_weighted_call(expr[] args, source_file source, binding[] e
     }
     closed_pick := choose_closed_channel(runtime, weighted)
     if closed_pick.is_some() {
-        if len(weighted) > 0 {
-            runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % len(weighted)
+        if std.prelude.len(weighted) > 0 {
+            runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % std.prelude.len(weighted)
         }
         return value.unit(unit_value {}))
     }
@@ -4176,10 +4137,10 @@ func eval_select_recv_weighted_call(expr[] args, source_file source, binding[] e
 }
 
 func eval_select_recv_timeout_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) < 2 {
+    if std.prelude.len(args) < 2 {
         return backend_error { message: "backend error: select_recv_timeout expects channels followed by timeout ticks" }
     }
-    timeout := eval_expr(args[len(args) - 1], source, env, writes, runtime)
+    timeout := eval_expr(args[std.prelude.len(args) - 1], source, env, writes, runtime)
     if timeout.is_err() {
         return timeout
     }
@@ -4189,7 +4150,7 @@ func eval_select_recv_timeout_call(expr[] args, source_file source, binding[] en
     }
     ch_args := expr[]()
     i := 0
-    for i < len(args) - 1 {
+    for i < std.prelude.len(args) - 1 {
         ch_args = append(ch_args, args[i])
         i = i + 1
     }
@@ -4202,14 +4163,14 @@ func eval_select_recv_timeout_call(expr[] args, source_file source, binding[] en
 }
 
 func eval_select_send_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) < 2 || (len(args) % 2) != 0 {
+    if std.prelude.len(args) < 2 || (std.prelude.len(args) % 2) != 0 {
         return backend_error { message: "backend error: select_send expects channel/value pairs" }
     }
     runtime.select_attempts = runtime.select_attempts + 1
     channels := value[]()
     payloads := value[]()
     ai := 0
-    for ai < len(args) {
+    for ai < std.prelude.len(args) {
         ch := eval_expr(args[ai], source, env, writes, runtime)
         if ch.is_err() {
             return ch
@@ -4248,10 +4209,10 @@ func eval_select_send_default_call(expr[] args, source_file source, binding[] en
 }
 
 func eval_select_send_timeout_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) < 3 || ((len(args) - 1) % 2) != 0 {
+    if std.prelude.len(args) < 3 || ((std.prelude.len(args) - 1) % 2) != 0 {
         return backend_error { message: "backend error: select_send_timeout expects channel/value pairs followed by timeout ticks" }
     }
-    timeout := eval_expr(args[len(args) - 1], source, env, writes, runtime)
+    timeout := eval_expr(args[std.prelude.len(args) - 1], source, env, writes, runtime)
     if timeout.is_err() {
         return timeout
     }
@@ -4261,7 +4222,7 @@ func eval_select_send_timeout_call(expr[] args, source_file source, binding[] en
     }
     send_args := expr[]()
     i := 0
-    for i < len(args) - 1 {
+    for i < std.prelude.len(args) - 1 {
         send_args = append(send_args, args[i])
         i = i + 1
     }
@@ -4274,19 +4235,19 @@ func eval_select_send_timeout_call(expr[] args, source_file source, binding[] en
 }
 
 func choose_ready_channel(runtime_state runtime, value[] channels) option[int] {
-    if len(channels) == 0 {
+    if std.prelude.len(channels) == 0 {
         return option.none
     }
-    start := runtime.select_rr_cursor % len(channels)
+    start := runtime.select_rr_cursor % std.prelude.len(channels)
     offset := 0
-    for offset < len(channels) {
-        pick := (start + offset) % len(channels)
+    for offset < std.prelude.len(channels) {
+        pick := (start + offset) % std.prelude.len(channels)
         idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
             return option.some(-1
         }
-        if runtime.channels[idx]len(.buffer) > 0 {
-            runtime.select_rr_cursor = (pick + 1) % len(channels)
+        if runtime.channels[idx]std.prelude.len(.buffer) > 0 {
+            runtime.select_rr_cursor = (pick + 1) % std.prelude.len(channels)
             return option.some(idx
         }
         offset = offset + 1
@@ -4295,13 +4256,13 @@ func choose_ready_channel(runtime_state runtime, value[] channels) option[int] {
 }
 
 func choose_closed_channel(runtime_state runtime, value[] channels) option[int] {
-    if len(channels) == 0 {
+    if std.prelude.len(channels) == 0 {
         return option.none
     }
-    start := runtime.select_rr_cursor % len(channels)
+    start := runtime.select_rr_cursor % std.prelude.len(channels)
     offset := 0
-    for offset < len(channels) {
-        pick := (start + offset) % len(channels)
+    for offset < std.prelude.len(channels) {
+        pick := (start + offset) % std.prelude.len(channels)
         idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
             return option.some(-1
@@ -4315,20 +4276,20 @@ func choose_closed_channel(runtime_state runtime, value[] channels) option[int] 
 }
 
 func choose_sendable_channel(runtime_state runtime, value[] channels) option[int] {
-    if len(channels) == 0 {
+    if std.prelude.len(channels) == 0 {
         return option.none
     }
-    start := runtime.select_rr_cursor % len(channels)
+    start := runtime.select_rr_cursor % std.prelude.len(channels)
     offset := 0
-    for offset < len(channels) {
-        pick := (start + offset) % len(channels)
+    for offset < std.prelude.len(channels) {
+        pick := (start + offset) % std.prelude.len(channels)
         idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
             return option.some(-1
         }
         ch_state := runtime.channels[idx]
-        if !ch_state.closed && len(ch_state.buffer) < ch_state.capacity {
-            runtime.select_rr_cursor = (pick + 1) % len(channels)
+        if !ch_state.closed && std.prelude.len(ch_state.buffer) < ch_state.capacity {
+            runtime.select_rr_cursor = (pick + 1) % std.prelude.len(channels)
             return option.some(pick
         }
         offset = offset + 1
@@ -4341,13 +4302,13 @@ func drain_selected_channel(runtime_state runtime, int idx) (value, backend_erro
         return backend_error { message: "backend error: recv target is not channel" }
     }
     ch_state := runtime.channels[idx]
-    if len(ch_state.buffer) == 0 {
+    if std.prelude.len(ch_state.buffer) == 0 {
         return value.unit(unit_value {}))
     }
     first := ch_state.buffer[0]
     rest := value[]()
     i := 1
-    for i < len(ch_state.buffer) {
+    for i < std.prelude.len(ch_state.buffer) {
         rest = append(rest, ch_state.buffer[i])
         i = i + 1
     }
@@ -4367,7 +4328,7 @@ func eval_select_recv_default_call(expr[] args, source_file source, binding[] en
 }
 
 func eval_chan_close_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) != 1 {
+    if std.prelude.len(args) != 1 {
         return backend_error { message: "backend error: chan_close expects one channel argument" }
     }
     ch := eval_expr(args[0], source, env, writes, runtime)
@@ -4394,7 +4355,7 @@ func find_channel_index(runtime_state runtime, value v) int {
         _ : return -1,
     }
     i := 0
-    for i < len(runtime.channels) {
+    for i < std.prelude.len(runtime.channels) {
         if runtime.channels[i].id == id {
             return i
         }
@@ -4409,7 +4370,7 @@ func execute_deferred(expr[] deferred, source_file source, binding[] env, write_
         set_control(env, control_panic_payload, value.string(panic_payload_text))
     }
     set_control(env, control_in_defer, value.bool(true))
-    i := len(deferred)
+    i := std.prelude.len(deferred)
     for i > 0 {
         i = i - 1
         call_result := eval_expr(deferred[i], source, env, writes, runtime)
@@ -4429,13 +4390,13 @@ func execute_deferred(expr[] deferred, source_file source, binding[] env, write_
 }
 
 func run_sroutine_scheduler_step(source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
-    if len(runtime.runq) == 0 {
+    if std.prelude.len(runtime.runq) == 0 {
         return
     }
     task := runtime.runq[0]
     rest := sroutine_task[]()
     i := 1
-    for i < len(runtime.runq) {
+    for i < std.prelude.len(runtime.runq) {
         rest = append(rest, runtime.runq[i])
         i = i + 1
     }
@@ -4457,7 +4418,7 @@ func run_sroutine_scheduler_step(source_file source, binding[] env, write_op[] w
 }
 
 func run_sroutine_scheduler_flush(source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
-    for len(runtime.runq) > 0 {
+    for std.prelude.len(runtime.runq) > 0 {
         step := run_sroutine_scheduler_step(source, env, writes, runtime)
         if step.is_err() {
             return step
@@ -4478,7 +4439,7 @@ func panic_payload(backend_error err) string {
     if !is_panic_error(err) {
         return ""
     }
-    slice(err.message, 6, len(err.message))
+    std.prelude.slice(err.message, 6, std.prelude.len(err.message))
 }
 
 func copy_control_bindings(binding[] from_env, binding[] to_env) () {
@@ -4533,7 +4494,7 @@ func control_panic_payload_text(binding[] env) string {
     }
     switch env[index].value {
         value.string(text) : text,
-        value.int(number) : to_string(number),
+        value.int(number) : std.prelude.to_string(number),
         value.bool(flag) : if flag { "true" } else { "false" },
         _ : "",
     }
@@ -4556,7 +4517,7 @@ func collect_const_bindings_in_source(source_file source, binding[] out, string[
     visited = append(visited, source.pkg)
     last_expr := option::none
     i := 0
-    for i < len(source.items) {
+    for i < std.prelude.len(source.items) {
         switch source.items[i] {
             item.const(const_decl) : {
                 if find_binding_index(out, const_decl.name) >= 0 {
@@ -4587,7 +4548,7 @@ func collect_const_bindings_in_source(source_file source, binding[] out, string[
         i = i + 1
     }
     ui := 0
-    for ui < len(source.uses) {
+    for ui < std.prelude.len(source.uses) {
         dep_result := load_source_graph_for_use(source.uses[ui].path)
         if dep_result.is_err() {
             return dep_result.unwrap_err()
@@ -4606,11 +4567,11 @@ func load_source_graph_for_use(string module_path) (source_file, backend_error) 
     if module_result.is_none() {
         return backend_error { message: "backend error: module resolver failed: " + module_path }
     }
-    dep_source_result := read_to_string(module_result.unwrap())
+    dep_source_result := std.fs.read_to_string(module_result.unwrap())
     if dep_source_result.is_err() {
         return backend_error { message: "backend error: failed to read module " + module_path + ": " + dep_source_result.unwrap_err().message }
     }
-    dep_parsed_result := parse_source(dep_source_result.unwrap())
+    dep_parsed_result := compile.internal.syntax.parse_source(dep_source_result.unwrap())
     if dep_parsed_result.is_err() {
         return backend_error { message: "backend error: parse failed in module " + module_path + ": " + dep_parsed_result.unwrap_err().message }
     }
@@ -4680,7 +4641,7 @@ func lookup_name_or_function(binding[] env, source_file source, string name) (va
 func eval_map_literal(map_literal value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     entries := fn_map_entry_value[]()
     i := 0
-    for i < len(value.entries) {
+    for i < std.prelude.len(value.entries) {
         key_result := eval_expr(value.entries[i].key, source, env, writes, runtime)
         if key_result.is_err() {
             return key_result.unwrap_err()
@@ -4715,7 +4676,7 @@ func eval_index_expr(index_expr value, source_file source, binding[] env, write_
     switch target_result.unwrap() {
         value.fn_map(entries) : {
             i := 0
-            for i < len(entries) {
+            for i < std.prelude.len(entries) {
                 if entries[i].key == key {
                     return value.fn_ref(entries[i].func_name))
                 }
@@ -4728,11 +4689,11 @@ func eval_index_expr(index_expr value, source_file source, binding[] env, write_
 }
 
 func eval_print_call(string name, expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    if len(args) > 1 {
+    if std.prelude.len(args) > 1 {
         backend_error { message: "backend error: " + name + " expects at most one argument" }
     }
     text := ""
-    if len(args) == 1 {
+    if std.prelude.len(args) == 1 {
         arg_result := eval_expr(args[0], source, env, writes, runtime)
         if arg_result.is_err() {
             arg_result.unwrap_err()
@@ -4954,13 +4915,13 @@ func value_to_exit_code(value value) (int, backend_error) {
 
 func stringify_value(value value) string {
     switch value {
-        value.int(number) : to_string(number),
+        value.int(number) : std.prelude.to_string(number),
         value.string(text) : text,
         value.bool(flag) : if flag { "true" } else { "false" },
         value.unit(_) : "()",
-        value.channel(handle) : "<chan:" + to_string(handle.id) + ">",
+        value.channel(handle) : "<chan:" + std.prelude.to_string(handle.id) + ">",
         value.fn_ref(name) : "<func:" + name + ">",
-        value.fn_map(entries) : "<func-map:" + to_string(len(entries)) + ">",
+        value.fn_map(entries) : "<func-map:" + std.prelude.to_string(std.prelude.len(entries)) + ">",
     }
 }
 
@@ -4968,13 +4929,13 @@ func parse_int_literal(string literal) int {
     value := literal
     sign := 1
     index := 0
-    if len(value) > 0 && char_at(value, 0) == "-" {
+    if std.prelude.len(value) > 0 && std.prelude.char_at(value, 0) == "-" {
         sign = -1
         index = 1
     }
     out := 0
-    for index < len(value) {
-        ch := char_at(value, index)
+    for index < std.prelude.len(value) {
+        ch := std.prelude.char_at(value, index)
         if ch != "_" {
             digit := digit_value(ch)
             if digit < 0 {
@@ -4992,8 +4953,8 @@ func parse_ssa_margin_override(string text) (int, backend_error) {
         return ok_int(-1
     }
     i := 0
-    for i < len(text) {
-        ch := char_at(text, i)
+    for i < std.prelude.len(text) {
+        ch := std.prelude.char_at(text, i)
         if digit_value(ch) < 0 {
             return fail_int("invalid --ssa-dominant-margin value: " + text
         }
@@ -5038,23 +4999,23 @@ func digit_value(string ch) int {
 
 func decode_string_literal(string literal) string {
     text := literal
-    if len(text) < 2 {
+    if std.prelude.len(text) < 2 {
         return text
     }
     out := ""
     index := 1
-    for index < len(text) - 1 {
-        ch := char_at(text, index)
+    for index < std.prelude.len(text) - 1 {
+        ch := std.prelude.char_at(text, index)
         if ch != "\\" {
             out = out + ch
             index = index + 1
             continue
         }
-        if index + 1 >= len(text) - 1 {
+        if index + 1 >= std.prelude.len(text) - 1 {
             out = out + "\\"
             break
         }
-        esc := char_at(text, index + 1)
+        esc := std.prelude.char_at(text, index + 1)
         if esc == "n" {
             out = out + "\n"
         } else if esc == "t" {
@@ -5094,10 +5055,10 @@ func validate_abi_coverage(string arch) ((), backend_error) {
     i := 0
     for i < 8 {
         if abi_int_arg_reg(arch, i) == "" {
-            return backend_error { message: "backend error: missing integer argument ABI mapping for arg " + to_string(i) + " on " + arch }
+            return backend_error { message: "backend error: missing integer argument ABI mapping for arg " + std.prelude.to_string(i) + " on " + arch }
         }
         if abi_float_arg_reg(arch, i) == "" {
-            return backend_error { message: "backend error: missing float argument ABI mapping for arg " + to_string(i) + " on " + arch }
+            return backend_error { message: "backend error: missing float argument ABI mapping for arg " + std.prelude.to_string(i) + " on " + arch }
         }
         i = i + 1
     }
@@ -5397,12 +5358,12 @@ func emit_asm_amd64(write_op[] writes, int exit_code) string {
     text_lines = append(text_lines, "    sub $16, %rsp")
     message_index := 0
     i := 0
-    for i < len(writes) {
+    for i < std.prelude.len(writes) {
         append_write_op(data_lines, text_lines, writes[i], message_index)
         message_index = message_index + 1
         i = i + 1
     }
-    text_lines = append(text_lines, "    mov $" + to_string(exit_code) + ", %eax")
+    text_lines = append(text_lines, "    mov $" + std.prelude.to_string(exit_code) + ", %eax")
     text_lines = append(text_lines, "    leave")
     text_lines = append(text_lines, "    ret")
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
@@ -5425,12 +5386,12 @@ func emit_asm_arm64(write_op[] writes, int exit_code) string {
     text_lines = append(text_lines, "    mov x29, sp")
     message_index := 0
     i := 0
-    for i < len(writes) {
+    for i < std.prelude.len(writes) {
         append_write_op_arm64(data_lines, text_lines, writes[i], message_index)
         message_index = message_index + 1
         i = i + 1
     }
-    text_lines = append(text_lines, "    mov x0, #" + to_string(exit_code))
+    text_lines = append(text_lines, "    mov x0, #" + std.prelude.to_string(exit_code))
     text_lines = append(text_lines, "    ldp x29, x30, [sp], #16")
     text_lines = append(text_lines, "    ret")
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
@@ -5453,12 +5414,12 @@ func emit_asm_riscv64(write_op[] writes, int exit_code) string {
     text_lines = append(text_lines, "    sd ra, 8(sp)")
     message_index := 0
     i := 0
-    for i < len(writes) {
+    for i < std.prelude.len(writes) {
         append_write_op_riscv64(data_lines, text_lines, writes[i], message_index)
         message_index = message_index + 1
         i = i + 1
     }
-    text_lines = append(text_lines, "    li a0, " + to_string(exit_code))
+    text_lines = append(text_lines, "    li a0, " + std.prelude.to_string(exit_code))
     text_lines = append(text_lines, "    ld ra, 8(sp)")
     text_lines = append(text_lines, "    addi sp, sp, 16")
     text_lines = append(text_lines, "    ret")
@@ -5480,66 +5441,66 @@ func emit_asm_s390x(write_op[] writes, int exit_code) string {
     text_lines = append(text_lines, "s_main:")
     message_index := 0
     i := 0
-    for i < len(writes) {
+    for i < std.prelude.len(writes) {
         append_write_op_s390x(data_lines, text_lines, writes[i], message_index)
         message_index = message_index + 1
         i = i + 1
     }
-    text_lines = append(text_lines, "    lghi %r2, " + to_string(exit_code))
+    text_lines = append(text_lines, "    lghi %r2, " + std.prelude.to_string(exit_code))
     text_lines = append(text_lines, "    br %r14")
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
 
 func append_write_op(string[] data_lines, string[] text_lines, write_op op, int index) () {
-    label := "message_" + to_string(index)
+    label := "message_" + std.prelude.to_string(index)
     data_lines = append(data_lines, label + ":")
     data_lines = append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
     text_lines = append(text_lines, "    mov $1, %rax")
-    text_lines = append(text_lines, "    mov $" + to_string(op.fd) + ", %rdi")
+    text_lines = append(text_lines, "    mov $" + std.prelude.to_string(op.fd) + ", %rdi")
     text_lines = append(text_lines, "    lea " + label + "(%rip), %rsi")
-    text_lines = append(text_lines, "    mov $" + to_string(len(op.text)) + ", %rdx")
+    text_lines = append(text_lines, "    mov $" + std.prelude.to_string(std.prelude.len(op.text)) + ", %rdx")
     text_lines = append(text_lines, "    syscall")
 }
 
 func append_write_op_arm64(string[] data_lines, string[] text_lines, write_op op, int index) () {
-    label := "message_" + to_string(index)
+    label := "message_" + std.prelude.to_string(index)
     data_lines = append(data_lines, label + ":")
     data_lines = append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
     text_lines = append(text_lines, "    mov x8, #64")
-    text_lines = append(text_lines, "    mov x0, #" + to_string(op.fd))
+    text_lines = append(text_lines, "    mov x0, #" + std.prelude.to_string(op.fd))
     text_lines = append(text_lines, "    adrp x1, " + label)
     text_lines = append(text_lines, "    add x1, x1, :lo12:" + label)
-    text_lines = append(text_lines, "    ldr x2, =" + to_string(len(op.text)))
+    text_lines = append(text_lines, "    ldr x2, =" + std.prelude.to_string(std.prelude.len(op.text)))
     text_lines = append(text_lines, "    svc #0")
 }
 
 func append_write_op_riscv64(string[] data_lines, string[] text_lines, write_op op, int index) () {
-    label := "message_" + to_string(index)
+    label := "message_" + std.prelude.to_string(index)
     data_lines = append(data_lines, label + ":")
     data_lines = append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
     text_lines = append(text_lines, "    li a7, 64")
-    text_lines = append(text_lines, "    li a0, " + to_string(op.fd))
+    text_lines = append(text_lines, "    li a0, " + std.prelude.to_string(op.fd))
     text_lines = append(text_lines, "    la a1, " + label)
-    text_lines = append(text_lines, "    li a2, " + to_string(len(op.text)))
+    text_lines = append(text_lines, "    li a2, " + std.prelude.to_string(std.prelude.len(op.text)))
     text_lines = append(text_lines, "    ecall")
 }
 
 func append_write_op_s390x(string[] data_lines, string[] text_lines, write_op op, int index) () {
-    label := "message_" + to_string(index)
+    label := "message_" + std.prelude.to_string(index)
     data_lines = append(data_lines, label + ":")
     data_lines = append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
     text_lines = append(text_lines, "    lghi %r1, 4")
-    text_lines = append(text_lines, "    lghi %r2, " + to_string(op.fd))
+    text_lines = append(text_lines, "    lghi %r2, " + std.prelude.to_string(op.fd))
     text_lines = append(text_lines, "    larl %r3, " + label)
-    text_lines = append(text_lines, "    lghi %r4, " + to_string(len(op.text)))
+    text_lines = append(text_lines, "    lghi %r4, " + std.prelude.to_string(std.prelude.len(op.text)))
     text_lines = append(text_lines, "    svc 0")
 }
 
 func escape_asm_string(string text) string {
     out := ""
     i := 0
-    for i < len(text) {
-        ch := char_at(text, i)
+    for i < std.prelude.len(text) {
+        ch := std.prelude.char_at(text, i)
         if ch == "\\" {
             out = out + "\\\\"
         } else if ch == "\"" {
@@ -5561,7 +5522,7 @@ func escape_asm_string(string text) string {
 func copy_bindings(binding[] source) binding[] {
     out := binding[]()
     i := 0
-    for i < len(source) {
+    for i < std.prelude.len(source) {
         out = append(out, source[i])
         i = i + 1
     }
@@ -5569,7 +5530,7 @@ func copy_bindings(binding[] source) binding[] {
 }
 
 func find_binding_index(binding[] env, string name) int {
-    i := len(env)
+    i := std.prelude.len(env)
     for i > 0 {
         i = i - 1
         if env[i].name == name {
@@ -5581,7 +5542,7 @@ func find_binding_index(binding[] env, string name) int {
 
 func propagate_bindings(binding[] outer, binding[] inner) () {
     i := 0
-    for i < len(inner) {
+    for i < std.prelude.len(inner) {
         index := find_binding_index(outer, inner[i].name)
         if index >= 0 {
             outer.set(index, inner[i])
@@ -5606,7 +5567,7 @@ func count_occurrences(string text, string token) int {
             break
         }
         total = total + 1
-        cursor = at + len(token)
+        cursor = at + std.prelude.len(token)
     }
     total
 }
@@ -5615,7 +5576,7 @@ func join_with(string[] values, string sep) string {
     out := ""
     first := true
     i := 0
-    for i < len(values) {
+    for i < std.prelude.len(values) {
         if !first {
             out = out + sep
         }
@@ -5627,6 +5588,6 @@ func join_with(string[] values, string sep) string {
 }
 
 func report_failure(string message) int {
-    eprintln("backend error: " + message)
+    std.io.eprintln("backend error: " + message)
     1
 }

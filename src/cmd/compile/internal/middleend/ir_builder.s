@@ -1,6 +1,8 @@
 package middleend
 
-use cmd.compile.internal.frontend
+import (
+    "cmd.compile.internal"
+)
 
 struct ir_builder_context {
     ir_module module

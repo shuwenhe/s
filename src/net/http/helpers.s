@@ -1,5 +1,7 @@
 package src.net.http
-use std.conv.int_to_string
+import (
+    "std.conv"
+)
 struct http_request {
     string method
     string path
@@ -68,9 +70,9 @@ func parse_http_request(string raw_request) http_request {
 }
 
 func format_http_response(http_response resp) string {
-    response := "HTTP/1.1 " + int_to_string(resp.status_code) + " OK\r\n"
+    response := "HTTP/1.1 " + std.conv.int_to_string(resp.status_code) + " OK\r\n"
     response = response + "Content-Type: application/json\r\n"
-    response = response + "Content-Length: " + int_to_string(len(resp.body)) + "\r\n"
+    response = response + "Content-Length: " + std.conv.int_to_string(len(resp.body)) + "\r\n"
     response = response + "Connection: close\r\n"
     for i := 0; i < len(resp.headers); i++ {
         response = response + resp.headers[i] + "\r\n"

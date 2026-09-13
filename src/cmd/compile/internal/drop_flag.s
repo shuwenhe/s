@@ -1,8 +1,8 @@
 package compile.internal.drop_flag
 
-use compile.internal.drop_system.dtor_registry
-use compile.internal.drop_system.dtor_registry_needs_drop
-use compile.internal.drop_system.emit_drop_call
+import (
+    "compile.internal.drop_system"
+)
 
 func drop_state_unknown() int { 0 }
 
@@ -111,8 +111,8 @@ func drop_flag_exit_scope(dflag_map flags, dtor_registry registry) dflag_result 
     for i >= 0 {
         entry := flags.entries[i]
         if entry.scope_depth == flags.scope_depth && entry.state == drop_state_present() {
-            if dtor_registry_needs_drop(registry, entry.type_name) {
-                cleanup = append(cleanup, emit_drop_call(registry, entry.name, entry.type_name))
+            if compile.internal.drop_system.dtor_registry_needs_drop(registry, entry.type_name) {
+                cleanup = append(cleanup, compile.internal.drop_system.emit_drop_call(registry, entry.name, entry.type_name))
             }
             flags.entries[i].state = drop_state_absent()
         }
@@ -132,7 +132,7 @@ func drop_flag_cleanup_names(dflag_map flags, dtor_registry registry) string[] {
     i := len(flags.entries) - 1
     for i >= 0 {
         entry := flags.entries[i]
-        if entry.state == drop_state_present() && dtor_registry_needs_drop(registry, entry.type_name) {
+        if entry.state == drop_state_present() && compile.internal.drop_system.dtor_registry_needs_drop(registry, entry.type_name) {
             cleanup = append(cleanup, entry.name)
         }
         i = i - 1

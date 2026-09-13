@@ -1,9 +1,7 @@
 package codegen.test
-use codegen.codegen
-use codegen.register
-use codegen.stackframe
-use codegen.instruction_select
-use codegen.linker
+import (
+    "codegen"
+)
 struct test_result {
     string name
     bool passed

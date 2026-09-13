@@ -1,5 +1,7 @@
 package src.runtime
-use std.slices
+import (
+    "std"
+)
 const gc_phase_off   = 0
 const gc_phase_mark  = 1
 const gc_phase_sweep = 2

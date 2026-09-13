@@ -1,5 +1,7 @@
 package std.io_syscall
-use std.syscall
+import (
+    "std"
+)
 struct file_handle {
     fd: int
     path: string

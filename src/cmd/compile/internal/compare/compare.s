@@ -1,5 +1,7 @@
 package compile.internal.compare
-use std.slices
+import (
+    "std"
+)
 struct compare_field {
     string name
     int offset

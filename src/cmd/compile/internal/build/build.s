@@ -1,18 +1,13 @@
 package compile.internal.build
-use compile.internal.build.exec.run as exec_run
-use compile.internal.build.utils.parse_options
-use compile.internal.build.utils.usage as parse_usage
-use compile.internal.build.utils.report_error as report_error
-use compile.internal.build.utils.report_usage
-use internal.buildcfg.goarch as buildcfg_goarch
-use internal.buildcfg.goos as buildcfg_goos
-use std.io.println
-use std.slices
-use backend
+import (
+    "compile.internal.build.utils"
+    "std"
+    "std.io"
+)
 func main(string[] args)  int {
-    options := parse_options(args)
+    options := compile.internal.build.utils.parse_options(args)
     if options[0] == "help" {
-        report_usage(parse_usage())
+        compile.internal.build.utils.report_usage(parse_usage())
         return 0
     }
     emit_target_log(options[0])
@@ -42,7 +37,7 @@ func report_error_local(string message)  () {
 
 func emit_target_log(string command) () {
     if command == "check" || command == "build" {
-        println("buildcfg: target=" + buildcfg_goos() + "/" + buildcfg_goarch())
+        std.io.println("buildcfg: target=" + buildcfg_goos() + "/" + buildcfg_goarch())
     }
 }
 
@@ -75,7 +70,7 @@ func make_build_options(string path, string output, string ssa_margin) string[] 
 }
 
 func exec_run_native(string path, string output) int {
-    println("Native compilation: " + path + " -> " + output)
+    std.io.println("Native compilation: " + path + " -> " + output)
     driver := new_native_compilation_driver(path, output)
     result := driver.compile_simple_program()
     if result != 0 {
@@ -103,6 +98,6 @@ func exec_run_native(string path, string output) int {
         report_error_local("linking phase failed")
         return 1
     }
-    println("✓ Native compilation successful: " + output)
+    std.io.println("✓ Native compilation successful: " + output)
     0
 }

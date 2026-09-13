@@ -1,7 +1,8 @@
 package src.net
-use src.syscall as sc
-use std.result.result
-use std.slices
+import (
+    "std"
+    "std.result"
+)
 func interface_addresses() (string[], net_error) {
     switch sc.interface_addresses() {
         addresses : addresses,

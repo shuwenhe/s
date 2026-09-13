@@ -1,8 +1,7 @@
 package compile.internal.codegen
-use compile.internal.ast
-use compile.internal.link
-use compile.internal.obj
-use compile.internal.types
+import (
+    "compile.internal"
+)
 const reg_rax = 0
 const reg_rcx = 1
 const reg_rdx = 2

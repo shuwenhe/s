@@ -1,5 +1,7 @@
 package compile.internal.build.frontend
-use compile.internal.check.load_frontend
+import (
+    "compile.internal.check"
+)
 func load(string path) string {
-    return load_frontend(path
+    return compile.internal.check.load_frontend(path
 }

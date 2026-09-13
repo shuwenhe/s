@@ -1,5 +1,7 @@
 package compile.internal.obj
-use compile.internal.link
+import (
+    "compile.internal"
+)
 enum elf_class {
     elf_class_32,
     elf_class_64,

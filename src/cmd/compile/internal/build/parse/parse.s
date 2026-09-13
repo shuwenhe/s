@@ -1,7 +1,8 @@
 package compile.internal.build.parse
-use std.prelude.char_at
-use std.prelude.slice
-use std.slices
+import (
+    "std"
+    "std.prelude"
+)
 func parse_options(string[] args)  string[] {
     if len(args) < 2 {
         return make_options("help", "", "", "", false
@@ -156,11 +157,11 @@ func starts_with(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
     }
-    slice(text, 0, len(prefix)) == prefix
+    std.prelude.slice(text, 0, len(prefix)) == prefix
 }
 
 func slice_after(string text, string prefix) string {
-    slice(text, len(prefix), len(text))
+    std.prelude.slice(text, len(prefix), len(text))
 }
 
 func is_non_negative_integer(string text) bool {
@@ -169,7 +170,7 @@ func is_non_negative_integer(string text) bool {
     }
     i := 0
     for i < len(text) {
-        ch := char_at(text, i)
+        ch := std.prelude.char_at(text, i)
         if !is_digit_char(ch) {
             return false
         }

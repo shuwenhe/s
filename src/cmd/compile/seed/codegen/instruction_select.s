@@ -1,6 +1,8 @@
 package seed.codegen
-use std.vec.vec
-use std.string.string
+import (
+    "std.string"
+    "std.vec"
+)
 func instruction_select_mov(ctx* codegen_context, ra* register_allocator, string op1, string result) {
     dst_reg, _ := ra.allocate(result)
     if is_numeric(op1) {

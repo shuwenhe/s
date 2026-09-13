@@ -1,6 +1,8 @@
 package src.syscall
-use std.result.result
-use std.slices
+import (
+    "std"
+    "std.result"
+)
 struct net_error {
     string message
     int errno_code

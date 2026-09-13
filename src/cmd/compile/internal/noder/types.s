@@ -1,8 +1,10 @@
 package compile.internal.noder
-use s.source_file
-use std.option.option
-use std.result.result
-use std.slices
+import (
+    "s"
+    "std"
+    "std.option"
+    "std.result"
+)
 struct noder_error {
     string code
     string message

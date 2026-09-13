@@ -1,18 +1,18 @@
 package cmd
-use compile.internal.tests.test_golden.run_golden_suite
-use compile.internal.tests.test_backend_abi.run_backend_abi_suite
-use compile.internal.tests.test_mir.run_mir_suite
-use compile.internal.tests.test_ssa.run_ssa_suite
-use compile.internal.tests.test_pipeline_regression.run_pipeline_regression_suite
-use compile.internal.tests.test_typesys.run_typesys_suite
-use compile.internal.tests.test_semantic.run_semantic_suite
-use compile.internal.mono_test.run_monomorphization_test
-use std.env.args as host_args
-use std.env.get
-use std.io.eprintln
-use std.io.println
+import (
+    "compile.internal.mono_test"
+    "compile.internal.tests.test_backend_abi"
+    "compile.internal.tests.test_golden"
+    "compile.internal.tests.test_mir"
+    "compile.internal.tests.test_pipeline_regression"
+    "compile.internal.tests.test_semantic"
+    "compile.internal.tests.test_ssa"
+    "compile.internal.tests.test_typesys"
+    "std.env"
+    "std.io"
+)
 func default_fixtures_root() string {
-    env_root := get("s_test_fixtures_root")
+    env_root := std.env.get("s_test_fixtures_root")
     if env_root.is_some() {
         return env_root.unwrap(
     }
@@ -24,7 +24,7 @@ func main() {
     if len(args) >= 2 {
         command := args[1]
         if command == "-h" || command == "--help" {
-            println("usage: test_compiler [fixtures_root]");
+            std.io.println("usage: test_compiler [fixtures_root]");
             return 0
         }
     }
@@ -32,46 +32,46 @@ func main() {
     if len(args) >= 2 {
         fixtures_root = args[1]
     }
-    semantic_result := run_semantic_suite(fixtures_root)
+    semantic_result := compile.internal.tests.test_semantic.run_semantic_suite(fixtures_root)
     if semantic_result != 0 {
-        eprintln("semantic suite failed");
+        std.io.eprintln("semantic suite failed");
         return semantic_result
     }
-    golden_result := run_golden_suite(fixtures_root)
+    golden_result := compile.internal.tests.test_golden.run_golden_suite(fixtures_root)
     if golden_result != 0 {
-        eprintln("golden suite failed");
+        std.io.eprintln("golden suite failed");
         return golden_result
     }
-    backend_abi_result := run_backend_abi_suite()
+    backend_abi_result := compile.internal.tests.test_backend_abi.run_backend_abi_suite()
     if backend_abi_result != 0 {
-        eprintln("backend abi suite failed");
+        std.io.eprintln("backend abi suite failed");
         return backend_abi_result
     }
-    mir_result := run_mir_suite()
+    mir_result := compile.internal.tests.test_mir.run_mir_suite()
     if mir_result != 0 {
-        eprintln("mir suite failed");
+        std.io.eprintln("mir suite failed");
         return mir_result
     }
-    ssa_result := run_ssa_suite()
+    ssa_result := compile.internal.tests.test_ssa.run_ssa_suite()
     if ssa_result != 0 {
-        eprintln("ssa suite failed");
+        std.io.eprintln("ssa suite failed");
         return ssa_result
     }
-    pipeline_result := run_pipeline_regression_suite()
+    pipeline_result := compile.internal.tests.test_pipeline_regression.run_pipeline_regression_suite()
     if pipeline_result != 0 {
-        eprintln("pipeline regression suite failed");
+        std.io.eprintln("pipeline regression suite failed");
         return pipeline_result
     }
-    typesys_result := run_typesys_suite()
+    typesys_result := compile.internal.tests.test_typesys.run_typesys_suite()
     if typesys_result != 0 {
-        eprintln("typesys suite failed");
+        std.io.eprintln("typesys suite failed");
         return typesys_result
     }
-    mono_result := run_monomorphization_test()
+    mono_result := compile.internal.mono_test.run_monomorphization_test()
     if mono_result != 0 {
-        eprintln("monomorphization suite failed");
+        std.io.eprintln("monomorphization suite failed");
         return mono_result
     }
-    println("test_compiler: ok");
+    std.io.println("test_compiler: ok");
     0
 }

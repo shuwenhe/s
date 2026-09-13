@@ -1,8 +1,8 @@
 package compile.internal.typesys
-use std.prelude.char_at
-use std.prelude.len
-use std.prelude.slice
-use std.slices
+import (
+    "std"
+    "std.prelude"
+)
 struct type_ref {
     string canonical
     string base
@@ -23,18 +23,18 @@ func parse_type(string text) string {
         return clean
     }
     if starts_with(clean, "&mut") {
-        return "&mut" + parse_type(slice(clean, 4, len(clean)))
+        return "&mut" + parse_type(std.prelude.slice(clean, 4, std.prelude.len(clean)))
     }
     if starts_with(clean, "&") {
-        return "&" + parse_type(slice(clean, 1, len(clean)))
+        return "&" + parse_type(std.prelude.slice(clean, 1, std.prelude.len(clean)))
     }
     if starts_with(clean, "[]") {
-        return "[]" + parse_type(slice(clean, 2, len(clean)))
+        return "[]" + parse_type(std.prelude.slice(clean, 2, std.prelude.len(clean)))
     }
     if starts_with(clean, "[") {
         close := find_char(clean, "]")
         if close > 0 {
-            return slice(clean, 0, close + 1) + parse_type(slice(clean, close + 1, len(clean)))
+            return std.prelude.slice(clean, 0, close + 1) + parse_type(std.prelude.slice(clean, close + 1, std.prelude.len(clean)))
         }
     }
     return clean
@@ -51,20 +51,20 @@ func parse_type_ref(string text) type_ref {
     if starts_with(rest, "&mut") {
         is_ref = true
         is_mut_ref = true
-        rest = parse_type(slice(rest, 4, len(rest)))
+        rest = parse_type(std.prelude.slice(rest, 4, std.prelude.len(rest)))
     } else if starts_with(rest, "&") {
         is_ref = true
-        rest = parse_type(slice(rest, 1, len(rest)))
+        rest = parse_type(std.prelude.slice(rest, 1, std.prelude.len(rest)))
     }
     if starts_with(rest, "[]") {
         is_slice = true
-        rest = parse_type(slice(rest, 2, len(rest)))
+        rest = parse_type(std.prelude.slice(rest, 2, std.prelude.len(rest)))
     } else if starts_with(rest, "[") {
         close := find_char(rest, "]")
         if close > 0 {
             is_array = true
-            array_len = trim_text(slice(rest, 1, close))
-            rest = parse_type(slice(rest, close + 1, len(rest)))
+            array_len = trim_text(std.prelude.slice(rest, 1, close))
+            rest = parse_type(std.prelude.slice(rest, close + 1, std.prelude.len(rest)))
         }
     }
     type_ref {
@@ -81,7 +81,7 @@ func same_type_ref(type_ref left, type_ref right) bool {
 }
 
 func type_arg(type_ref ty, int index) string {
-    if index < 0 || index >= len(ty.args) {
+    if index < 0 || index >= std.prelude.len(ty.args) {
         return "unknown"
     }
     parse_type(ty.args[index])
@@ -89,7 +89,7 @@ func type_arg(type_ref ty, int index) string {
 
 func generic_arity(string ty) int {
     args := extract_type_args(ty)
-    len(args)
+    std.prelude.len(args)
 }
 
 func has_unknown_component(string ty) bool {
@@ -99,7 +99,7 @@ func has_unknown_component(string ty) bool {
     }
     args := extract_type_args(clean)
     i := 0
-    for i < len(args) {
+    for i < std.prelude.len(args) {
         if parse_type(args[i]) == "unknown" {
             return true
         }
@@ -156,31 +156,31 @@ func dump_type(string ty) string {
 func base_type_name(string ty) string {
     clean := parse_type(ty)
     if starts_with(clean, "&mut") {
-        return base_type_name(slice(clean, 4, len(clean)))
+        return base_type_name(std.prelude.slice(clean, 4, std.prelude.len(clean)))
     }
     if starts_with(clean, "&") {
-        return base_type_name(slice(clean, 1, len(clean)))
+        return base_type_name(std.prelude.slice(clean, 1, std.prelude.len(clean)))
     }
     if starts_with(clean, "[]") {
-        return base_type_name(slice(clean, 2, len(clean)))
+        return base_type_name(std.prelude.slice(clean, 2, std.prelude.len(clean)))
     }
     if starts_with(clean, "[") {
         close := find_char(clean, "]")
         if close > 0 {
-            return base_type_name(slice(clean, close + 1, len(clean)))
+            return base_type_name(std.prelude.slice(clean, close + 1, std.prelude.len(clean)))
         }
     }
     bracket := find_char(clean, "[")
     if bracket >= 0 {
-        return trim_text(slice(clean, 0, bracket))
+        return trim_text(std.prelude.slice(clean, 0, bracket))
     }
     angle := find_char(clean, "<")
     if angle >= 0 {
-        return trim_text(slice(clean, 0, angle))
+        return trim_text(std.prelude.slice(clean, 0, angle))
     }
     paren := find_char(clean, "(")
     if paren >= 0 {
-        return trim_text(slice(clean, 0, paren))
+        return trim_text(std.prelude.slice(clean, 0, paren))
     }
     return clean
 }
@@ -191,7 +191,7 @@ func extract_type_args(string type_name) string[] {
     if starts_with(clean, "[") && !starts_with(clean, "[]") {
         close := find_char(clean, "]")
         if close > 0 {
-            return extract_type_args(slice(clean, close + 1, len(clean)))
+            return extract_type_args(std.prelude.slice(clean, close + 1, std.prelude.len(clean)))
         }
     }
     open := find_char(clean, "[")
@@ -199,24 +199,24 @@ func extract_type_args(string type_name) string[] {
     if open < 0 || close <= open + 1 {
         return out
     }
-    inner := slice(clean, open + 1, close)
+    inner := std.prelude.slice(clean, open + 1, close)
     depth := 0
     start := 0
     i := 0
-    for i < len(inner) {
-        ch := char_at(inner, i)
+    for i < std.prelude.len(inner) {
+        ch := std.prelude.char_at(inner, i)
         if ch == "[" {
             depth = depth + 1
         } else if ch == "]" {
             depth = depth - 1
         } else if ch == "," && depth == 0 {
-            out = append(out, trim_text(slice(inner, start, i)))
+            out = append(out, trim_text(std.prelude.slice(inner, start, i)))
             start = i + 1
         }
         i = i + 1
     }
-    if start < len(inner) {
-        out = append(out, trim_text(slice(inner, start, len(inner))))
+    if start < std.prelude.len(inner) {
+        out = append(out, trim_text(std.prelude.slice(inner, start, std.prelude.len(inner))))
     }
     out
 }
@@ -251,11 +251,11 @@ func compatible_type(string left, string right) bool {
     if lt.base != rt.base {
         return false
     }
-    if len(lt.args) != len(rt.args) {
+    if std.prelude.len(lt.args) != std.prelude.len(rt.args) {
         return false
     }
     i := 0
-    for i < len(lt.args) {
+    for i < std.prelude.len(lt.args) {
         if !compatible_type(lt.args[i], rt.args[i]) {
             return false
         }
@@ -272,7 +272,7 @@ func comparable_type(string ty) bool {
     if is_builtin_primitive(clean) {
         return true
     }
-    if starts_with(clean, "&") || (len(clean) > 0 && char_at(clean, len(clean) - 1) == "*") {
+    if starts_with(clean, "&") || (std.prelude.len(clean) > 0 && std.prelude.char_at(clean, std.prelude.len(clean) - 1) == "*") {
         return true
     }
     if starts_with(clean, "[]") {
@@ -284,7 +284,7 @@ func comparable_type(string ty) bool {
     if is_tuple_type(clean) {
         items := extract_tuple_args(clean)
         i := 0
-        for i < len(items) {
+        for i < std.prelude.len(items) {
             if !comparable_type(items[i]) {
                 return false
             }
@@ -296,7 +296,7 @@ func comparable_type(string ty) bool {
     if base == "option" || base == "result" {
         args := extract_type_args(clean)
         i := 0
-        for i < len(args) {
+        for i < std.prelude.len(args) {
             if !comparable_type(args[i]) {
                 return false
             }
@@ -354,11 +354,11 @@ func compatible_tuple_type(string left, string right) bool {
     }
     la := extract_tuple_args(l)
     ra := extract_tuple_args(r)
-    if len(la) != len(ra) {
+    if std.prelude.len(la) != std.prelude.len(ra) {
         return false
     }
     i := 0
-    for i < len(la) {
+    for i < std.prelude.len(la) {
         if !compatible_type(la[i], ra[i]) {
             return false
         }
@@ -375,11 +375,11 @@ func assignable_tuple_type(string target, string source) bool {
     }
     ta := extract_tuple_args(t)
     sa := extract_tuple_args(s)
-    if len(ta) != len(sa) {
+    if std.prelude.len(ta) != std.prelude.len(sa) {
         return false
     }
     i := 0
-    for i < len(ta) {
+    for i < std.prelude.len(ta) {
         if !assignable_type(ta[i], sa[i]) {
             return false
         }
@@ -390,7 +390,7 @@ func assignable_tuple_type(string target, string source) bool {
 
 func is_tuple_type(string ty) bool {
     clean := parse_type(ty)
-    if len(clean) < 2 {
+    if std.prelude.len(clean) < 2 {
         return false
     }
     return starts_with(clean, "(") && ends_with(clean, ")"
@@ -402,24 +402,24 @@ func extract_tuple_args(string type_name) string[] {
     if !is_tuple_type(clean) {
         return out
     }
-    inner := slice(clean, 1, len(clean) - 1)
+    inner := std.prelude.slice(clean, 1, std.prelude.len(clean) - 1)
     depth := 0
     start := 0
     i := 0
-    for i < len(inner) {
-        ch := char_at(inner, i)
+    for i < std.prelude.len(inner) {
+        ch := std.prelude.char_at(inner, i)
         if ch == "(" || ch == "[" {
             depth = depth + 1
         } else if ch == ")" || ch == "]" {
             depth = depth - 1
         } else if ch == "," && depth == 0 {
-            out = append(out, trim_text(slice(inner, start, i)))
+            out = append(out, trim_text(std.prelude.slice(inner, start, i)))
             start = i + 1
         }
         i = i + 1
     }
-    if start < len(inner) {
-        out = append(out, trim_text(slice(inner, start, len(inner))))
+    if start < std.prelude.len(inner) {
+        out = append(out, trim_text(std.prelude.slice(inner, start, std.prelude.len(inner))))
     }
     out
 }
@@ -504,8 +504,8 @@ func is_copy_type(string ty) bool {
     }
     open := find_char(clean, "[")
     close := find_char(clean, "]")
-    if open > 0 && close == len(clean) - 1 && is_array_length(slice(clean, open + 1, close)) {
-        return is_copy_type(slice(clean, 0, open))
+    if open > 0 && close == std.prelude.len(clean) - 1 && is_array_length(std.prelude.slice(clean, open + 1, close)) {
+        return is_copy_type(std.prelude.slice(clean, 0, open))
     }
     return false
 }
@@ -515,8 +515,8 @@ func is_array_length(string text) bool {
         return false
     }
     i := 0
-    for i < len(text) {
-        ch := slice(text, i, i + 1)
+    for i < std.prelude.len(text) {
+        ch := std.prelude.slice(text, i, i + 1)
         if ch < "0" || ch > "9" {
             return false
         }
@@ -578,31 +578,31 @@ func normalize_type_text(string text) string {
 
 func trim_text(string text) string {
     start := 0
-    end := len(text)
-    for start < end && is_space(char_at(text, start)) {
+    end := std.prelude.len(text)
+    for start < end && is_space(std.prelude.char_at(text, start)) {
         start = start + 1
     }
-    for end > start && is_space(char_at(text, end - 1)) {
+    for end > start && is_space(std.prelude.char_at(text, end - 1)) {
         end = end - 1
     }
-    return slice(text, start, end
+    return std.prelude.slice(text, start, end
 }
 
 func starts_with(string text, string prefix) bool {
-    prefix_len := len(prefix)
-    if prefix_len > len(text) {
+    prefix_len := std.prelude.len(prefix)
+    if prefix_len > std.prelude.len(text) {
         return false
     }
-    return slice(text, 0, prefix_len) == prefix
+    return std.prelude.slice(text, 0, prefix_len) == prefix
 }
 
 func ends_with(string text, string suffix) bool {
-    suffix_len := len(suffix)
-    text_len := len(text)
+    suffix_len := std.prelude.len(suffix)
+    text_len := std.prelude.len(text)
     if suffix_len > text_len {
         return false
     }
-    return slice(text, text_len - suffix_len, text_len) == suffix
+    return std.prelude.slice(text, text_len - suffix_len, text_len) == suffix
 }
 
 func is_space(string ch) bool {
@@ -611,8 +611,8 @@ func is_space(string ch) bool {
 
 func find_char(string text, string needle) int {
     i := 0
-    for i < len(text) {
-        if slice(text, i, i + 1) == needle {
+    for i < std.prelude.len(text) {
+        if std.prelude.slice(text, i, i + 1) == needle {
             return i
         }
         i = i + 1
@@ -621,10 +621,10 @@ func find_char(string text, string needle) int {
 }
 
 func find_last_char(string text, string needle) int {
-    i := len(text)
+    i := std.prelude.len(text)
     for i > 0 {
         i = i - 1
-        if slice(text, i, i + 1) == needle {
+        if std.prelude.slice(text, i, i + 1) == needle {
             return i
         }
     }
@@ -638,14 +638,14 @@ func extract_section(string text, string open, string close) string {
     }
     depth := 0
     i := start
-    for i < len(text) {
-        ch := slice(text, i, i + 1)
+    for i < std.prelude.len(text) {
+        ch := std.prelude.slice(text, i, i + 1)
         if ch == open {
             depth = depth + 1
         } else if ch == close {
             depth = depth - 1
             if depth == 0 {
-                return slice(text, start + 1, i
+                return std.prelude.slice(text, start + 1, i
             }
         }
         i = i + 1

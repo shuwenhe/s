@@ -1,5 +1,7 @@
 package compile.internal.ssa
-use std.slices
+import (
+    "std"
+)
 struct dom_tree {
     int[] block_ids
     int[] idom

@@ -1,13 +1,11 @@
 package compile.internal.ssa_core
 
-use compile.internal.mir.mir_graph
-use compile.internal.mir.dump_graph
-use compile.internal.bounds.bounds_prove_constant_index
-use std.prelude.char_at
-use std.prelude.len
-use std.prelude.slice
-use std.prelude.to_string
-use std.slices
+import (
+    "compile.internal.bounds"
+    "compile.internal.mir"
+    "std"
+    "std.prelude"
+)
 
 struct ssa_pipeline_options {
     bool enable_dce
@@ -258,15 +256,15 @@ func build_pipeline_with_margin(string mir_text, string goarch, int dominant_mar
 
 func build_pipeline_with_graph_hints(mir_graph graph, string mir_text, string goarch) ssa_program {
     program := build_pipeline(mir_text, goarch)
-    graph_blocks := len(graph.blocks)
+    graph_blocks := std.prelude.len(graph.blocks)
     graph_values := 0
     graph_branches := 0
     graph_edges := 0
     i := 0
-    for i < len(graph.blocks) {
+    for i < std.prelude.len(graph.blocks) {
         block := graph.blocks[i]
-        graph_values = graph_values + len(block.statements)
-        graph_edges = graph_edges + len(block.terminator.edges)
+        graph_values = graph_values + std.prelude.len(block.statements)
+        graph_edges = graph_edges + std.prelude.len(block.terminator.edges)
         if block.terminator.kind == "branch" {
             graph_branches = graph_branches + 1
         }
@@ -287,22 +285,22 @@ func build_pipeline_with_graph_hints(mir_graph graph, string mir_text, string go
     if program.block_count > 0 && program.value_count > 0 {
         program.def_use_edge_count = program.value_count + program.block_count
     }
-    program.debug_lines = build_debug_lines(dump_graph(graph), program.allocated_regs)
-    program.debug_line_count = len(program.debug_lines)
+    program.debug_lines = build_debug_lines(compile.internal.mir.dump_graph(graph), program.allocated_regs)
+    program.debug_line_count = std.prelude.len(program.debug_lines)
     program
 }
 
 func build_pipeline_with_graph_hints_and_margin(mir_graph graph, string mir_text, string goarch, int dominant_margin_override) ssa_program {
     program := build_pipeline_with_margin(mir_text, goarch, dominant_margin_override)
-    graph_blocks := len(graph.blocks)
+    graph_blocks := std.prelude.len(graph.blocks)
     graph_values := 0
     graph_branches := 0
     graph_edges := 0
     i := 0
-    for i < len(graph.blocks) {
+    for i < std.prelude.len(graph.blocks) {
         block := graph.blocks[i]
-        graph_values = graph_values + len(block.statements)
-        graph_edges = graph_edges + len(block.terminator.edges)
+        graph_values = graph_values + std.prelude.len(block.statements)
+        graph_edges = graph_edges + std.prelude.len(block.terminator.edges)
         if block.terminator.kind == "branch" {
             graph_branches = graph_branches + 1
         }
@@ -323,8 +321,8 @@ func build_pipeline_with_graph_hints_and_margin(mir_graph graph, string mir_text
     if program.block_count > 0 && program.value_count > 0 {
         program.def_use_edge_count = program.value_count + program.block_count
     }
-    program.debug_lines = build_debug_lines(dump_graph(graph), program.allocated_regs)
-    program.debug_line_count = len(program.debug_lines)
+    program.debug_lines = build_debug_lines(compile.internal.mir.dump_graph(graph), program.allocated_regs)
+    program.debug_line_count = std.prelude.len(program.debug_lines)
     program
 }
 
@@ -466,7 +464,7 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         rematerialized_value_count allocation.rematerialized_values,
         regalloc_reuse_count allocation.reuse_count,
         regalloc_max_live allocation.max_live,
-        debug_line_count len(debug_lines),
+        debug_line_count std.prelude.len(debug_lines),
         allocated_regs allocation.allocated_regs,
         debug_lines debug_lines,
         debug_var_locations debug_var_locations
@@ -527,13 +525,13 @@ func choose_instruction_verify_stage(string primary, string pass_delta_summary) 
         return "none"
     }
     candidates := stage_candidates_for_verify_primary(primary)
-    if len(candidates) == 0 {
+    if std.prelude.len(candidates) == 0 {
         return "unknown"
     }
     best := candidates[0]
     best_count := stage_delta_count(pass_delta_summary, best)
     i := 1
-    for i < len(candidates) {
+    for i < std.prelude.len(candidates) {
         stage := candidates[i]
         count := stage_delta_count(pass_delta_summary, stage)
         if count > best_count {
@@ -550,7 +548,7 @@ func build_instruction_verify_stage_evidence(string primary, string pass_delta_s
         return "none"
     }
     candidates := stage_candidates_for_verify_primary(primary)
-    if len(candidates) == 0 {
+    if std.prelude.len(candidates) == 0 {
         return "unknown"
     }
     top_stage := candidates[0]
@@ -558,7 +556,7 @@ func build_instruction_verify_stage_evidence(string primary, string pass_delta_s
     second_stage := "none"
     second_count := 0
     i := 1
-    for i < len(candidates) {
+    for i < std.prelude.len(candidates) {
         stage := candidates[i]
         count := stage_delta_count(pass_delta_summary, stage)
         if count > top_count {
@@ -574,8 +572,8 @@ func build_instruction_verify_stage_evidence(string primary, string pass_delta_s
     }
     "primary=" + primary
         + ",picked=" + picked
-        + ",top=" + top_stage + ":" + to_string(top_count)
-        + ",second=" + second_stage + ":" + to_string(second_count)
+        + ",top=" + top_stage + ":" + std.prelude.to_string(top_count)
+        + ",second=" + second_stage + ":" + std.prelude.to_string(second_count)
 }
 
 func instruction_verify_pick_matches_top(string primary, string pass_delta_summary, string picked) bool {
@@ -583,13 +581,13 @@ func instruction_verify_pick_matches_top(string primary, string pass_delta_summa
         return picked == "none"
     }
     candidates := stage_candidates_for_verify_primary(primary)
-    if len(candidates) == 0 {
+    if std.prelude.len(candidates) == 0 {
         return picked == "unknown"
     }
     top_stage := candidates[0]
     top_count := stage_delta_count(pass_delta_summary, top_stage)
     i := 1
-    for i < len(candidates) {
+    for i < std.prelude.len(candidates) {
         stage := candidates[i]
         count := stage_delta_count(pass_delta_summary, stage)
         if count > top_count {
@@ -606,14 +604,14 @@ func instruction_verify_pick_reason(string primary, string pass_delta_summary, s
         return "ok"
     }
     candidates := stage_candidates_for_verify_primary(primary)
-    if len(candidates) == 0 {
+    if std.prelude.len(candidates) == 0 {
         return "unknown"
     }
     top_stage := candidates[0]
     top_count := stage_delta_count(pass_delta_summary, top_stage)
     tie_count := 1
     i := 1
-    for i < len(candidates) {
+    for i < std.prelude.len(candidates) {
         stage := candidates[i]
         count := stage_delta_count(pass_delta_summary, stage)
         if count > top_count {
@@ -683,21 +681,21 @@ func stage_delta_count(string summary, string stage) int {
         return 0
     }
     cursor := 0
-    for cursor < len(summary) {
+    for cursor < std.prelude.len(summary) {
         sep := find_token_from(summary, ",", cursor)
-        if sep > len(summary) {
-            sep = len(summary)
+        if sep > std.prelude.len(summary) {
+            sep = std.prelude.len(summary)
         }
-        entry := slice(summary, cursor, sep)
+        entry := std.prelude.slice(summary, cursor, sep)
         eq := find_token(entry, "=")
-        if eq <= len(entry) {
-            entry_stage := slice(entry, 0, eq)
+        if eq <= std.prelude.len(entry) {
+            entry_stage := std.prelude.slice(entry, 0, eq)
             if entry_stage == stage {
-                count_text := slice(entry, eq + 1, len(entry))
-                return parse_delta_count(count_text, 0, len(count_text))
+                count_text := std.prelude.slice(entry, eq + 1, std.prelude.len(entry))
+                return parse_delta_count(count_text, 0, std.prelude.len(count_text))
             }
         }
-        if sep >= len(summary) {
+        if sep >= std.prelude.len(summary) {
             break
         }
         cursor = sep + 1
@@ -713,10 +711,10 @@ func build_instruction_block_graph(int blocks, int edges, int branches, int jump
     if blocks >= 3 {
         sample = sample + "|bb1->bb2"
     }
-    "bbg(nodes=" + to_string(blocks)
-        + ",edges=" + to_string(edges)
-        + ",br=" + to_string(branches)
-        + ",jmp=" + to_string(jumps)
+    "bbg(nodes=" + std.prelude.to_string(blocks)
+        + ",edges=" + std.prelude.to_string(edges)
+        + ",br=" + std.prelude.to_string(branches)
+        + ",jmp=" + std.prelude.to_string(jumps)
         + ",sample=" + sample
         + ")"
 }
@@ -729,10 +727,10 @@ func build_instruction_value_graph(int values, int def_use_edges, int phi_nodes,
     if values >= 3 {
         sample = sample + "|v1->v2"
     }
-    "vgraph(values=" + to_string(values)
-        + ",defuse=" + to_string(def_use_edges)
-        + ",phi=" + to_string(phi_nodes)
-        + ",memphi=" + to_string(memphi_nodes)
+    "vgraph(values=" + std.prelude.to_string(values)
+        + ",defuse=" + std.prelude.to_string(def_use_edges)
+        + ",phi=" + std.prelude.to_string(phi_nodes)
+        + ",memphi=" + std.prelude.to_string(memphi_nodes)
         + ",sample=" + sample
         + ")"
 }
@@ -749,16 +747,16 @@ func build_instruction_dominator_tree(int blocks, int depth, int backedges) stri
     if blocks >= 3 {
         sample = sample + "|bb1>bb2"
     }
-    "dom(root=bb0,depth=" + to_string(depth)
-        + ",edges=" + to_string(dom_edges)
-        + ",backedges=" + to_string(backedges)
+    "dom(root=bb0,depth=" + std.prelude.to_string(depth)
+        + ",edges=" + std.prelude.to_string(dom_edges)
+        + ",backedges=" + std.prelude.to_string(backedges)
         + ",sample=" + sample
         + ")"
 }
 
 func build_instruction_loop_forest(int headers, int backedges) string {
-    "loops(headers=" + to_string(headers)
-        + ",backedges=" + to_string(backedges)
+    "loops(headers=" + std.prelude.to_string(headers)
+        + ",backedges=" + std.prelude.to_string(backedges)
         + ")"
 }
 
@@ -769,10 +767,10 @@ func build_instruction_memory_dep_graph(int loads, int stores, int memphi, int p
     } else if memphi > 0 {
         sample = "memphi0->load0"
     }
-    "mdep(load=" + to_string(loads)
-        + ",store=" + to_string(stores)
-        + ",memphi=" + to_string(memphi)
-        + ",proofs=" + to_string(proofs)
+    "mdep(load=" + std.prelude.to_string(loads)
+        + ",store=" + std.prelude.to_string(stores)
+        + ",memphi=" + std.prelude.to_string(memphi)
+        + ",proofs=" + std.prelude.to_string(proofs)
         + ",sample=" + sample
         + ")"
 }
@@ -784,10 +782,10 @@ func build_instruction_regalloc_plan(int spill_pairs, int parallel_copies, int s
     } else if spill_pairs > 0 {
         sample = "spill0<->reload0"
     }
-    "rplan(spill_pairs=" + to_string(spill_pairs)
-        + ",pcopy=" + to_string(parallel_copies)
-        + ",splits=" + to_string(splits)
-        + ",remat=" + to_string(remat)
+    "rplan(spill_pairs=" + std.prelude.to_string(spill_pairs)
+        + ",pcopy=" + std.prelude.to_string(parallel_copies)
+        + ",splits=" + std.prelude.to_string(splits)
+        + ",remat=" + std.prelude.to_string(remat)
         + ",sample=" + sample
         + ")"
 }
@@ -1120,13 +1118,13 @@ struct replace_result {
 
 func replace_first_token(string text, string needle, string replacement) replace_result {
     pos := find_token(text, needle)
-    if pos > len(text) {
+    if pos > std.prelude.len(text) {
         return replace_result {
             text text, changed false
         }
     }
     replace_result {
-        text slice(text, 0, pos) + replacement + slice(text, pos + len(needle), len(text)), changed true
+        text std.prelude.slice(text, 0, pos) + replacement + std.prelude.slice(text, pos + std.prelude.len(needle), std.prelude.len(text)), changed true
     }
 }
 
@@ -1161,14 +1159,14 @@ func linear_scan_regalloc_with_spill(string mir_text, int value_count, string go
     if blocks < 1 {
         blocks = 1
     }
-    if len(regs) == 0 {
+    if std.prelude.len(regs) == 0 {
         return regalloc_result{
             allocated_regs string[](), spill_count value_count, spill_reload_count value_count, call_pressure_events call_sites, live_range_splits 0, rematerialized_values 0, reuse_count 0, max_live 0
         }
     }
     active_until := int[]()
     ri := 0
-    for ri < len(regs) {
+    for ri < std.prelude.len(regs) {
         active_until = append(active_until, 0)
         ri = ri + 1
     }
@@ -1187,7 +1185,7 @@ func linear_scan_regalloc_with_spill(string mir_text, int value_count, string go
     for i < value_count {
         chosen := -1
         ri = 0
-        for ri < len(regs) {
+        for ri < std.prelude.len(regs) {
             if i >= active_until[ri] {
                 chosen = ri
                 break
@@ -1195,7 +1193,7 @@ func linear_scan_regalloc_with_spill(string mir_text, int value_count, string go
             ri = ri + 1
         }
         if chosen >= 0 {
-            if i >= len(regs) {
+            if i >= std.prelude.len(regs) {
                 reuse = reuse + 1
             }
             hold := choose_live_width(i, value_count, live_width, call_sites)
@@ -1211,15 +1209,15 @@ func linear_scan_regalloc_with_spill(string mir_text, int value_count, string go
             remat_candidate := should_rematerialize_value(i, remat_sites, call_sites, value_count)
             split_candidate := should_split_live_range(i, victim_live_until, value_count, call_sites, blocks)
             if remat_candidate {
-                out = append(out, "remat(v" + to_string(i) + ")")
+                out = append(out, "remat(v" + std.prelude.to_string(i) + ")")
                 remat = remat + 1
             } else if split_candidate {
                 active_until[victim] = i + choose_live_width(i, value_count, live_width, call_sites)
-                out = append(out, "split(v" + to_string(i) + "->" + regs[victim] + ")")
+                out = append(out, "split(v" + std.prelude.to_string(i) + "->" + regs[victim] + ")")
                 splits = splits + 1
                 spill_reloads = spill_reloads + 1
             } else {
-                out = append(out, "spill(" + to_string(i - len(regs)) + ")")
+                out = append(out, "spill(" + std.prelude.to_string(i - std.prelude.len(regs)) + ")")
                 spills = spills + 1
                 spill_reloads = spill_reloads + 1
             }
@@ -1246,7 +1244,7 @@ func pick_split_victim(int[] active_until) int {
     victim := 0
     max_until := active_until[0]
     i := 1
-    for i < len(active_until) {
+    for i < std.prelude.len(active_until) {
         if active_until[i] > max_until {
             max_until = active_until[i]
             victim = i
@@ -1282,7 +1280,7 @@ func should_split_live_range(int index, int victim_live_until, int value_count, 
 func count_live_regs(int[] active_until, int cursor) int {
     count := 0
     i := 0
-    for i < len(active_until) {
+    for i < std.prelude.len(active_until) {
         if active_until[i] > cursor {
             count = count + 1
         }
@@ -1403,23 +1401,23 @@ func build_pass_delta_summary(string delta_trace) string {
     }
     out := ""
     cursor := 0
-    for cursor < len(delta_trace) {
+    for cursor < std.prelude.len(delta_trace) {
         sep := find_token_from(delta_trace, ";", cursor)
-        if sep > len(delta_trace) {
-            sep = len(delta_trace)
+        if sep > std.prelude.len(delta_trace) {
+            sep = std.prelude.len(delta_trace)
         }
-        entry := slice(delta_trace, cursor, sep)
+        entry := std.prelude.slice(delta_trace, cursor, sep)
         lb := find_token(entry, "[")
         rb := find_token(entry, "]:")
-        if lb <= len(entry) && rb <= len(entry) && rb > lb {
-            stage := slice(entry, 0, lb)
+        if lb <= std.prelude.len(entry) && rb <= std.prelude.len(entry) && rb > lb {
+            stage := std.prelude.slice(entry, 0, lb)
             count := parse_delta_count(entry, lb + 1, rb)
             if out != "" {
                 out = out + ","
             }
-            out = out + stage + "=" + to_string(count)
+            out = out + stage + "=" + std.prelude.to_string(count)
         }
-        if sep >= len(delta_trace) {
+        if sep >= std.prelude.len(delta_trace) {
             break
         }
         cursor = sep + 1
@@ -1433,28 +1431,28 @@ func build_pass_delta_category_summary(string delta_trace, bool structural) stri
     }
     out := ""
     cursor := 0
-    for cursor < len(delta_trace) {
+    for cursor < std.prelude.len(delta_trace) {
         sep := find_token_from(delta_trace, ";", cursor)
-        if sep > len(delta_trace) {
-            sep = len(delta_trace)
+        if sep > std.prelude.len(delta_trace) {
+            sep = std.prelude.len(delta_trace)
         }
-        entry := slice(delta_trace, cursor, sep)
+        entry := std.prelude.slice(delta_trace, cursor, sep)
         lb := find_token(entry, "[")
         rb := find_token(entry, "]:")
-        if lb <= len(entry) && rb <= len(entry) && rb > lb {
-            stage := slice(entry, 0, lb)
+        if lb <= std.prelude.len(entry) && rb <= std.prelude.len(entry) && rb > lb {
+            stage := std.prelude.slice(entry, 0, lb)
             detail_start := rb + 2
             details := ""
-            if detail_start <= len(entry) {
-                details = slice(entry, detail_start, len(entry))
+            if detail_start <= std.prelude.len(entry) {
+                details = std.prelude.slice(entry, detail_start, std.prelude.len(entry))
             }
             changed := count_delta_category_changes(details, structural)
             if out != "" {
                 out = out + ","
             }
-            out = out + stage + "=" + to_string(changed)
+            out = out + stage + "=" + std.prelude.to_string(changed)
         }
-        if sep >= len(delta_trace) {
+        if sep >= std.prelude.len(delta_trace) {
             break
         }
         cursor = sep + 1
@@ -1503,11 +1501,11 @@ func build_pass_delta_hot_summary(string structural_summary, string value_summar
     } else if diff > dominant_margin && value_total_changes > structural_total_changes {
         dominant = "value"
     }
-    "struct=" + to_string(structural_active) + "/" + to_string(structural_total_passes)
-        + "(" + to_string(structural_total_changes) + ")"
-        + ",value=" + to_string(value_active) + "/" + to_string(value_total_passes)
-        + "(" + to_string(value_total_changes) + ")"
-        + ",margin=" + to_string(dominant_margin)
+    "struct=" + std.prelude.to_string(structural_active) + "/" + std.prelude.to_string(structural_total_passes)
+        + "(" + std.prelude.to_string(structural_total_changes) + ")"
+        + ",value=" + std.prelude.to_string(value_active) + "/" + std.prelude.to_string(value_total_passes)
+        + "(" + std.prelude.to_string(value_total_changes) + ")"
+        + ",margin=" + std.prelude.to_string(dominant_margin)
         + ",dominant=" + dominant
 }
 
@@ -1530,13 +1528,13 @@ func count_delta_summary_entries(string summary) int {
     }
     count := 0
     cursor := 0
-    for cursor < len(summary) {
+    for cursor < std.prelude.len(summary) {
         sep := find_token_from(summary, ",", cursor)
-        if sep > len(summary) {
-            sep = len(summary)
+        if sep > std.prelude.len(summary) {
+            sep = std.prelude.len(summary)
         }
         count = count + 1
-        if sep >= len(summary) {
+        if sep >= std.prelude.len(summary) {
             break
         }
         cursor = sep + 1
@@ -1550,20 +1548,20 @@ func count_delta_summary_active_entries(string summary) int {
     }
     count := 0
     cursor := 0
-    for cursor < len(summary) {
+    for cursor < std.prelude.len(summary) {
         sep := find_token_from(summary, ",", cursor)
-        if sep > len(summary) {
-            sep = len(summary)
+        if sep > std.prelude.len(summary) {
+            sep = std.prelude.len(summary)
         }
-        entry := slice(summary, cursor, sep)
+        entry := std.prelude.slice(summary, cursor, sep)
         eq := find_token(entry, "=")
-        if eq <= len(entry) {
-            count_text := slice(entry, eq + 1, len(entry))
-            if parse_delta_count(count_text, 0, len(count_text)) > 0 {
+        if eq <= std.prelude.len(entry) {
+            count_text := std.prelude.slice(entry, eq + 1, std.prelude.len(entry))
+            if parse_delta_count(count_text, 0, std.prelude.len(count_text)) > 0 {
                 count = count + 1
             }
         }
-        if sep >= len(summary) {
+        if sep >= std.prelude.len(summary) {
             break
         }
         cursor = sep + 1
@@ -1577,18 +1575,18 @@ func sum_delta_summary_counts(string summary) int {
     }
     total := 0
     cursor := 0
-    for cursor < len(summary) {
+    for cursor < std.prelude.len(summary) {
         sep := find_token_from(summary, ",", cursor)
-        if sep > len(summary) {
-            sep = len(summary)
+        if sep > std.prelude.len(summary) {
+            sep = std.prelude.len(summary)
         }
-        entry := slice(summary, cursor, sep)
+        entry := std.prelude.slice(summary, cursor, sep)
         eq := find_token(entry, "=")
-        if eq <= len(entry) {
-            count_text := slice(entry, eq + 1, len(entry))
-            total = total + parse_delta_count(count_text, 0, len(count_text))
+        if eq <= std.prelude.len(entry) {
+            count_text := std.prelude.slice(entry, eq + 1, std.prelude.len(entry))
+            total = total + parse_delta_count(count_text, 0, std.prelude.len(count_text))
         }
-        if sep >= len(summary) {
+        if sep >= std.prelude.len(summary) {
             break
         }
         cursor = sep + 1
@@ -1599,8 +1597,8 @@ func sum_delta_summary_counts(string summary) int {
 func parse_delta_count(string text, int start, int end) int {
     value := 0
     i := start
-    for i < end && i < len(text) {
-        ch := char_at(text, i)
+    for i < end && i < std.prelude.len(text) {
+        ch := std.prelude.char_at(text, i)
         if is_digit(ch) {
             value = value * 10 + parse_digit(ch)
         }
@@ -1653,7 +1651,7 @@ func append_delta(string trace, string stage, string before_text, string after_t
     if changed == 0 {
         details = "nochange"
     }
-    entry := stage + "[" + to_string(changed) + "]:" + details
+    entry := stage + "[" + std.prelude.to_string(changed) + "]:" + details
     if trace == "" {
         return entry
     }
@@ -1689,7 +1687,7 @@ func collect_mir_metrics(string mir_text) mir_metrics {
 }
 
 func format_metric_delta(string label, int before, int after) string {
-    label + "(" + to_string(before) + "->" + to_string(after) + ")"
+    label + "(" + std.prelude.to_string(before) + "->" + std.prelude.to_string(after) + ")"
 }
 
 func apply_constfold_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
@@ -1727,7 +1725,7 @@ func apply_bce_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
     if count_token(mir_text, " index_const=") > 0 && count_token(mir_text, " len=") > 0 {
         index := parse_int_after(mir_text, " index_const=")
         length := parse_int_after(mir_text, " len=")
-        proof := bounds_prove_constant_index(index, length)
+        proof := compile.internal.bounds.bounds_prove_constant_index(index, length)
         if proof.safe {
             return replace_first_n_tokens(mir_text, " bounds_check", "", 1)
         }
@@ -1768,18 +1766,18 @@ func remove_empty_jump_blocks(string mir_text, int budget) string {
     out := ""
     cursor := 0
     removed := 0
-    for cursor < len(mir_text) {
+    for cursor < std.prelude.len(mir_text) {
         block_pos := find_token_from(mir_text, " | bb", cursor)
-        if block_pos > len(mir_text) - 5 {
-            out = out + slice(mir_text, cursor, len(mir_text))
+        if block_pos > std.prelude.len(mir_text) - 5 {
+            out = out + std.prelude.slice(mir_text, cursor, std.prelude.len(mir_text))
             break
         }
-        out = out + slice(mir_text, cursor, block_pos)
+        out = out + std.prelude.slice(mir_text, cursor, block_pos)
         next_block := find_token_from(mir_text, " | bb", block_pos + 1)
-        if next_block > len(mir_text) {
-            next_block = len(mir_text)
+        if next_block > std.prelude.len(mir_text) {
+            next_block = std.prelude.len(mir_text)
         }
-        block_text := slice(mir_text, block_pos, next_block)
+        block_text := std.prelude.slice(mir_text, block_pos, next_block)
         if removed < budget && contains_token_text(block_text, " stmts=0 term=jump") {
             removed = removed + 1
         } else {
@@ -1794,7 +1792,7 @@ func remove_empty_jump_blocks(string mir_text, int budget) string {
 }
 
 func contains_token_text(string text, string needle) bool {
-    find_token(text, needle) <= len(text)
+    find_token(text, needle) <= std.prelude.len(text)
 }
 
 func normalize_stmt_counts(string mir_text, int target_total) string {
@@ -1812,17 +1810,17 @@ func reduce_numeric_marker_budget(string text, string marker, int budget) string
     out := ""
     cursor := 0
     remaining := budget
-    for cursor < len(text) {
+    for cursor < std.prelude.len(text) {
         pos := find_token_from(text, marker, cursor)
-        if pos > len(text) - len(marker) {
-            return out + slice(text, cursor, len(text))
+        if pos > std.prelude.len(text) - std.prelude.len(marker) {
+            return out + std.prelude.slice(text, cursor, std.prelude.len(text))
         }
-        out = out + slice(text, cursor, pos) + marker
-        digits_start := pos + len(marker)
+        out = out + std.prelude.slice(text, cursor, pos) + marker
+        digits_start := pos + std.prelude.len(marker)
         digits_end := digits_start
         value := 0
-        for digits_end < len(text) && is_digit(char_at(text, digits_end)) {
-            value = value * 10 + parse_digit(char_at(text, digits_end))
+        for digits_end < std.prelude.len(text) && is_digit(std.prelude.char_at(text, digits_end)) {
+            value = value * 10 + parse_digit(std.prelude.char_at(text, digits_end))
             digits_end = digits_end + 1
         }
         reduce := 0
@@ -1832,7 +1830,7 @@ func reduce_numeric_marker_budget(string text, string marker, int budget) string
                 reduce = value
             }
         }
-        out = out + to_string(value - reduce)
+        out = out + std.prelude.to_string(value - reduce)
         remaining = remaining - reduce
         cursor = digits_end
     }
@@ -1858,13 +1856,13 @@ func replace_first_n_tokens(string text, string needle, string replacement, int 
 
 func find_token_from(string text, string needle, int start) int {
     i := start
-    for i <= len(text) - len(needle) {
-        if slice(text, i, i + len(needle)) == needle {
+    for i <= std.prelude.len(text) - std.prelude.len(needle) {
+        if std.prelude.slice(text, i, i + std.prelude.len(needle)) == needle {
             return i
         }
         i = i + 1
     }
-    len(text) + 1
+    std.prelude.len(text) + 1
 }
 
 func build_dataflow_model(string mir_text, int block_count, int value_count) ssa_dataflow_model {
@@ -1942,7 +1940,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         if topology_log != "" {
             topology_log = topology_log + ";"
         }
-        topology_log = topology_log + "iter" + to_string(fixed_iters) + "=" + iter_topology
+        topology_log = topology_log + "iter" + std.prelude.to_string(fixed_iters) + "=" + iter_topology
         raw_gvn := run_gvn_pass(model)
         raw_sccp := run_sccp_pass(model, current)
         raw_pre := run_pre_pass(model)
@@ -2027,7 +2025,7 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         if replay_log != "" {
             replay_log = replay_log + ";"
         }
-        replay_log = replay_log + "iter" + to_string(fixed_iters) + "=" + iter_replay
+        replay_log = replay_log + "iter" + std.prelude.to_string(fixed_iters) + "=" + iter_replay
         replay_steps = replay_steps + replay_step_count_from_iter(iter_replay)
         gvn_rewrites = gvn_rewrites + gvn_i
         sccp_rewrites = sccp_rewrites + sccp_i
@@ -2153,8 +2151,8 @@ func has_scheduler_conflict(int pre_i, int cse_i, ssa_dataflow_model model) bool
 func hash_text(string text) int {
     h := 17
     i := 0
-    for i < len(text) {
-        h = (h * 31 + parse_digit_safe(char_at(text, i))) % 1000003
+    for i < std.prelude.len(text) {
+        h = (h * 31 + parse_digit_safe(std.prelude.char_at(text, i))) % 1000003
         i = i + 1
     }
     h
@@ -2253,7 +2251,7 @@ func build_pass_dsl(ssa_dataflow_model model) string {
     dsl = dsl + "pass pre requires(edges|defuse);"
     dsl = dsl + "pass licm requires(loop|memory);"
     dsl = dsl + "pass bce requires(load|branch);"
-    dsl = dsl + "graph loops=" + to_string(model.loop_headers) + " alias=" + to_string(model.alias_set_count)
+    dsl = dsl + "graph loops=" + std.prelude.to_string(model.loop_headers) + " alias=" + std.prelude.to_string(model.alias_set_count)
     dsl
 }
 
@@ -2279,7 +2277,7 @@ func should_auto_invalidate_pass(string pass_name, ssa_dataflow_model model, int
 func execute_pass_node(string name, bool ready, int raw_rewrites) pass_node_result {
     if ready {
         return pass_node_result {
-            rewrites: raw_rewrites, blocked 0, replay_token name + ":ok(" + to_string(raw_rewrites) + ")",
+            rewrites: raw_rewrites, blocked 0, replay_token name + ":ok(" + std.prelude.to_string(raw_rewrites) + ")",
         }
     }
     if raw_rewrites > 0 {
@@ -2471,15 +2469,15 @@ func estimate_phi_nodes(string mir_text) int {
 func count_numeric_marker_total(string text, string marker) int {
     total := 0
     cursor := 0
-    for cursor < len(text) {
+    for cursor < std.prelude.len(text) {
         pos := find_token_from(text, marker, cursor)
-        if pos > len(text) - len(marker) {
+        if pos > std.prelude.len(text) - std.prelude.len(marker) {
             return total
         }
-        digits := pos + len(marker)
+        digits := pos + std.prelude.len(marker)
         value := 0
-        for digits < len(text) && is_digit(char_at(text, digits)) {
-            value = value * 10 + parse_digit(char_at(text, digits))
+        for digits < std.prelude.len(text) && is_digit(std.prelude.char_at(text, digits)) {
+            value = value * 10 + parse_digit(std.prelude.char_at(text, digits))
             digits = digits + 1
         }
         total = total + value
@@ -2583,19 +2581,19 @@ func parse_function_name(string mir_text) string {
     if end <= begin {
         return "main"
     }
-    slice(mir_text, begin, end)
+    std.prelude.slice(mir_text, begin, end)
 }
 
 func parse_int_after(string text, string marker) int {
     start := find_token(text, marker)
-    if start > len(text) {
+    if start > std.prelude.len(text) {
         return 0
     }
-    start = start + len(marker)
+    start = start + std.prelude.len(marker)
     value := 0
     i := start
-    for i < len(text) && is_digit(char_at(text, i)) {
-        ch := char_at(text, i)
+    for i < std.prelude.len(text) && is_digit(std.prelude.char_at(text, i)) {
+        ch := std.prelude.char_at(text, i)
         value = value * 10 + parse_digit(ch)
         i = i + 1
     }
@@ -2605,10 +2603,10 @@ func parse_int_after(string text, string marker) int {
 func count_token(string text, string token) int {
     total := 0
     i := 0
-    for i <= len(text) - len(token) {
-        if slice(text, i, i + len(token)) == token {
+    for i <= std.prelude.len(text) - std.prelude.len(token) {
+        if std.prelude.slice(text, i, i + std.prelude.len(token)) == token {
             total = total + 1
-            i = i + len(token)
+            i = i + std.prelude.len(token)
         } else {
             i = i + 1
         }
@@ -2620,12 +2618,12 @@ func parse_total_stmt_count(string mir_text) int {
     total := 0
     marker := " stmts="
     i := 0
-    for i <= len(mir_text) - len(marker) {
-        if slice(mir_text, i, i + len(marker)) == marker {
-            cursor := i + len(marker)
+    for i <= std.prelude.len(mir_text) - std.prelude.len(marker) {
+        if std.prelude.slice(mir_text, i, i + std.prelude.len(marker)) == marker {
+            cursor := i + std.prelude.len(marker)
             value := 0
-            for cursor < len(mir_text) && is_digit(char_at(mir_text, cursor)) {
-                value = value * 10 + parse_digit(char_at(mir_text, cursor))
+            for cursor < std.prelude.len(mir_text) && is_digit(std.prelude.char_at(mir_text, cursor)) {
+                value = value * 10 + parse_digit(std.prelude.char_at(mir_text, cursor))
                 cursor = cursor + 1
             }
             total = total + value
@@ -2651,12 +2649,12 @@ func build_debug_lines(string mir_text, string[] allocated_regs) string[] {
         blocks = 1
     }
     i := 0
-    for i < len(allocated_regs) {
+    for i < std.prelude.len(allocated_regs) {
         block := i
         for block >= blocks {
             block = block - blocks
         }
-        out = append(out, "line " + to_string(100 + i) + " -> bb" + to_string(block) + " -> " + allocated_regs[i])
+        out = append(out, "line " + std.prelude.to_string(100 + i) + " -> bb" + std.prelude.to_string(block) + " -> " + allocated_regs[i])
         i = i + 1
     }
     out
@@ -2665,8 +2663,8 @@ func build_debug_lines(string mir_text, string[] allocated_regs) string[] {
 func build_var_locations(string[] allocated_regs) string[] {
     out := string[]()
     i := 0
-    for i < len(allocated_regs) {
-        out = append(out, "let v" + to_string(i) + " -> " + allocated_regs[i])
+    for i < std.prelude.len(allocated_regs) {
+        out = append(out, "let v" + std.prelude.to_string(i) + " -> " + allocated_regs[i])
         i = i + 1
     }
     out
@@ -2681,100 +2679,100 @@ func dump_pipeline(ssa_program program) string {
         + " delta_struct=" + program.pass_delta_structural_summary
         + " delta_value=" + program.pass_delta_value_summary
         + " delta_hot=" + program.pass_delta_hot_summary
-        + " issa_blocks=" + to_string(program.instruction_block_count)
-        + " issa_values=" + to_string(program.instruction_value_count)
-        + " dom_depth=" + to_string(program.dominator_tree_depth)
-        + " backedges=" + to_string(program.loop_backedge_count)
-        + " issa_verify=" + to_string(program.instruction_verifier_error_count)
-        + " issa_verify_code=" + to_string(program.instruction_verifier_error_code)
+        + " issa_blocks=" + std.prelude.to_string(program.instruction_block_count)
+        + " issa_values=" + std.prelude.to_string(program.instruction_value_count)
+        + " dom_depth=" + std.prelude.to_string(program.dominator_tree_depth)
+        + " backedges=" + std.prelude.to_string(program.loop_backedge_count)
+        + " issa_verify=" + std.prelude.to_string(program.instruction_verifier_error_count)
+        + " issa_verify_code=" + std.prelude.to_string(program.instruction_verifier_error_code)
         + " issa_verify_flags=" + program.instruction_verifier_flags
         + " issa_verify_primary=" + program.instruction_verifier_primary
         + " issa_verify_stage=" + program.instruction_verifier_stage_hint
         + " issa_verify_evidence=" + program.instruction_verifier_stage_evidence
         + " issa_verify_pick_top=" + if program.instruction_verifier_pick_matches_top { "true" } else { "false" }
         + " issa_verify_pick_reason=" + program.instruction_verifier_pick_reason
-        + " memssa_nodes=" + to_string(program.memory_ssa_node_count)
-        + " pts_sets=" + to_string(program.points_to_set_count)
-        + " ls_proofs=" + to_string(program.load_store_proof_count)
-        + " spill_pairs=" + to_string(program.spill_reload_pair_count)
-        + " pcopy_resolved=" + to_string(program.parallel_copy_resolution_count)
-        + " esc_stack=" + to_string(program.escape_stack_alloc_count)
-        + " esc_heap=" + to_string(program.escape_heap_alloc_count)
-        + " inl_budget=" + to_string(program.inline_budget_score)
-        + " devirt_gain=" + to_string(program.devirtualization_gain_score)
+        + " memssa_nodes=" + std.prelude.to_string(program.memory_ssa_node_count)
+        + " pts_sets=" + std.prelude.to_string(program.points_to_set_count)
+        + " ls_proofs=" + std.prelude.to_string(program.load_store_proof_count)
+        + " spill_pairs=" + std.prelude.to_string(program.spill_reload_pair_count)
+        + " pcopy_resolved=" + std.prelude.to_string(program.parallel_copy_resolution_count)
+        + " esc_stack=" + std.prelude.to_string(program.escape_stack_alloc_count)
+        + " esc_heap=" + std.prelude.to_string(program.escape_heap_alloc_count)
+        + " inl_budget=" + std.prelude.to_string(program.inline_budget_score)
+        + " devirt_gain=" + std.prelude.to_string(program.devirtualization_gain_score)
         + " issa_bbg=" + program.instruction_block_graph
         + " issa_vgraph=" + program.instruction_value_graph
         + " issa_dom=" + program.instruction_dominator_tree
         + " issa_loops=" + program.instruction_loop_forest
         + " issa_mdep=" + program.instruction_memory_dep_graph
         + " issa_rplan=" + program.instruction_regalloc_plan
-        + " blocks=" + to_string(program.block_count)
-        + " values=" + to_string(program.value_count)
-        + " opt_values=" + to_string(program.optimized_value_count)
-        + " folded=" + to_string(program.folded_constant_count)
-        + " dce=" + to_string(program.dce_removed_count)
-        + " coalesced=" + to_string(program.coalesced_move_count)
-        + " simplified=" + to_string(program.simplified_branch_count)
-        + " gvn=" + to_string(program.gvn_rewrite_count)
-        + " sccp=" + to_string(program.sccp_rewrite_count)
-        + " pre=" + to_string(program.pre_eliminated_count)
-        + " cse=" + to_string(program.cse_eliminated_count)
-        + " licm=" + to_string(program.licm_hoisted_count)
-        + " bce=" + to_string(program.bce_removed_count)
-        + " phi=" + to_string(program.phi_node_count)
-        + " defuse=" + to_string(program.def_use_edge_count)
-        + " alias=" + to_string(program.alias_set_count)
-        + " memv=" + to_string(program.memory_version_count)
-        + " livein=" + to_string(program.live_in_fact_count)
-        + " loops=" + to_string(program.loop_header_count)
-        + " rewrites=" + to_string(program.semantic_rewrite_count)
-        + " fix_iters=" + to_string(program.fixed_point_iterations)
-        + " verify_errs=" + to_string(program.verification_error_count)
-        + " rollback=" + to_string(program.rollback_count)
-        + " proofs=" + to_string(program.proof_obligation_count)
-        + " proof_fail=" + to_string(program.proof_failed_count)
-        + " passes_sched=" + to_string(program.scheduled_pass_count)
-        + " passes_blocked=" + to_string(program.blocked_pass_count)
-        + " dag_levels=" + to_string(program.dag_level_count)
-        + " reruns=" + to_string(program.rerun_count)
-        + " rollback_pts=" + to_string(program.rollback_checkpoint_count)
-        + " invalid_reruns=" + to_string(program.invalidation_rerun_count)
-        + " replay_steps=" + to_string(program.replay_step_count)
-        + " dbg_budget=" + to_string(program.debug_budget_score)
-        + " sched_prio=" + to_string(program.scheduler_priority_score)
-        + " sched_conflicts=" + to_string(program.scheduler_conflict_count)
-        + " replay_hash=" + to_string(program.replay_stability_hash)
-        + " alias_level=" + to_string(program.alias_precision_level)
-        + " memssa_chain=" + to_string(program.memory_ssa_chain_count)
-        + " gvn_total=" + to_string(program.global_value_number_count)
-        + " loop_proofs=" + to_string(program.loop_proof_chain_count)
-        + " spill_cost=" + to_string(program.spill_cost_score)
-        + " split_quality=" + to_string(program.split_quality_score)
-        + " cross_block_gain=" + to_string(program.cross_block_gain_score)
-        + " sched_tp=" + to_string(program.sched_throughput_score)
-        + " sched_lat=" + to_string(program.sched_latency_balance_score)
-        + " microarch=" + to_string(program.microarch_specialization_score)
-        + " cost_model=" + to_string(program.cost_model_score)
-        + " solver_conv=" + to_string(program.solver_convergence_score)
-        + " replay_det=" + to_string(program.replay_determinism_score)
+        + " blocks=" + std.prelude.to_string(program.block_count)
+        + " values=" + std.prelude.to_string(program.value_count)
+        + " opt_values=" + std.prelude.to_string(program.optimized_value_count)
+        + " folded=" + std.prelude.to_string(program.folded_constant_count)
+        + " dce=" + std.prelude.to_string(program.dce_removed_count)
+        + " coalesced=" + std.prelude.to_string(program.coalesced_move_count)
+        + " simplified=" + std.prelude.to_string(program.simplified_branch_count)
+        + " gvn=" + std.prelude.to_string(program.gvn_rewrite_count)
+        + " sccp=" + std.prelude.to_string(program.sccp_rewrite_count)
+        + " pre=" + std.prelude.to_string(program.pre_eliminated_count)
+        + " cse=" + std.prelude.to_string(program.cse_eliminated_count)
+        + " licm=" + std.prelude.to_string(program.licm_hoisted_count)
+        + " bce=" + std.prelude.to_string(program.bce_removed_count)
+        + " phi=" + std.prelude.to_string(program.phi_node_count)
+        + " defuse=" + std.prelude.to_string(program.def_use_edge_count)
+        + " alias=" + std.prelude.to_string(program.alias_set_count)
+        + " memv=" + std.prelude.to_string(program.memory_version_count)
+        + " livein=" + std.prelude.to_string(program.live_in_fact_count)
+        + " loops=" + std.prelude.to_string(program.loop_header_count)
+        + " rewrites=" + std.prelude.to_string(program.semantic_rewrite_count)
+        + " fix_iters=" + std.prelude.to_string(program.fixed_point_iterations)
+        + " verify_errs=" + std.prelude.to_string(program.verification_error_count)
+        + " rollback=" + std.prelude.to_string(program.rollback_count)
+        + " proofs=" + std.prelude.to_string(program.proof_obligation_count)
+        + " proof_fail=" + std.prelude.to_string(program.proof_failed_count)
+        + " passes_sched=" + std.prelude.to_string(program.scheduled_pass_count)
+        + " passes_blocked=" + std.prelude.to_string(program.blocked_pass_count)
+        + " dag_levels=" + std.prelude.to_string(program.dag_level_count)
+        + " reruns=" + std.prelude.to_string(program.rerun_count)
+        + " rollback_pts=" + std.prelude.to_string(program.rollback_checkpoint_count)
+        + " invalid_reruns=" + std.prelude.to_string(program.invalidation_rerun_count)
+        + " replay_steps=" + std.prelude.to_string(program.replay_step_count)
+        + " dbg_budget=" + std.prelude.to_string(program.debug_budget_score)
+        + " sched_prio=" + std.prelude.to_string(program.scheduler_priority_score)
+        + " sched_conflicts=" + std.prelude.to_string(program.scheduler_conflict_count)
+        + " replay_hash=" + std.prelude.to_string(program.replay_stability_hash)
+        + " alias_level=" + std.prelude.to_string(program.alias_precision_level)
+        + " memssa_chain=" + std.prelude.to_string(program.memory_ssa_chain_count)
+        + " gvn_total=" + std.prelude.to_string(program.global_value_number_count)
+        + " loop_proofs=" + std.prelude.to_string(program.loop_proof_chain_count)
+        + " spill_cost=" + std.prelude.to_string(program.spill_cost_score)
+        + " split_quality=" + std.prelude.to_string(program.split_quality_score)
+        + " cross_block_gain=" + std.prelude.to_string(program.cross_block_gain_score)
+        + " sched_tp=" + std.prelude.to_string(program.sched_throughput_score)
+        + " sched_lat=" + std.prelude.to_string(program.sched_latency_balance_score)
+        + " microarch=" + std.prelude.to_string(program.microarch_specialization_score)
+        + " cost_model=" + std.prelude.to_string(program.cost_model_score)
+        + " solver_conv=" + std.prelude.to_string(program.solver_convergence_score)
+        + " replay_det=" + std.prelude.to_string(program.replay_determinism_score)
         + " pass_dsl=" + program.pass_dsl
         + " inv_policy=" + program.invalidation_policy
         + " rollback_node=" + program.rollback_node
         + " pass_topo=" + program.pass_topology_log
         + " pass_replay=" + program.pass_replay_log
-        + " cfg_edges=" + to_string(program.cfg_edge_count)
-        + " branches=" + to_string(program.branch_block_count)
-        + " spills=" + to_string(program.spill_count)
-        + " reloads=" + to_string(program.spill_reload_count)
-        + " call_pressure=" + to_string(program.call_pressure_event_count)
-        + " splits=" + to_string(program.live_range_split_count)
-        + " remat=" + to_string(program.rematerialized_value_count)
-        + " reuse=" + to_string(program.regalloc_reuse_count)
-        + " max_live=" + to_string(program.regalloc_max_live)
-        + " dbg_lines=" + to_string(program.debug_line_count)
+        + " cfg_edges=" + std.prelude.to_string(program.cfg_edge_count)
+        + " branches=" + std.prelude.to_string(program.branch_block_count)
+        + " spills=" + std.prelude.to_string(program.spill_count)
+        + " reloads=" + std.prelude.to_string(program.spill_reload_count)
+        + " call_pressure=" + std.prelude.to_string(program.call_pressure_event_count)
+        + " splits=" + std.prelude.to_string(program.live_range_split_count)
+        + " remat=" + std.prelude.to_string(program.rematerialized_value_count)
+        + " reuse=" + std.prelude.to_string(program.regalloc_reuse_count)
+        + " max_live=" + std.prelude.to_string(program.regalloc_max_live)
+        + " dbg_lines=" + std.prelude.to_string(program.debug_line_count)
     i := 0
-    for i < len(program.allocated_regs) {
-        out = out + " | v" + to_string(i) + "->" + program.allocated_regs[i]
+    for i < std.prelude.len(program.allocated_regs) {
+        out = out + " | v" + std.prelude.to_string(i) + "->" + program.allocated_regs[i]
         i = i + 1
     }
     out
@@ -2782,20 +2780,20 @@ func dump_pipeline(ssa_program program) string {
 
 func dump_debug_map(ssa_program program) string {
     out := "ssa.debug " + program.function_name
-        + " values=" + to_string(program.optimized_value_count)
-        + " spills=" + to_string(program.spill_count)
+        + " values=" + std.prelude.to_string(program.optimized_value_count)
+        + " spills=" + std.prelude.to_string(program.spill_count)
     i := 0
-    for i < len(program.allocated_regs) {
-        out = out + " | value#" + to_string(i) + " reg=" + program.allocated_regs[i]
+    for i < std.prelude.len(program.allocated_regs) {
+        out = out + " | value#" + std.prelude.to_string(i) + " reg=" + program.allocated_regs[i]
         i = i + 1
     }
     i = 0
-    for i < len(program.debug_lines) {
+    for i < std.prelude.len(program.debug_lines) {
         out = out + " | " + program.debug_lines[i]
         i = i + 1
     }
     i = 0
-    for i < len(program.debug_var_locations) {
+    for i < std.prelude.len(program.debug_var_locations) {
         out = out + " | " + program.debug_var_locations[i]
         i = i + 1
     }
@@ -2824,22 +2822,22 @@ func find_token(string text, string token) int {
     if token == "" {
         return 0
     }
-    if len(text) < len(token) {
-        return len(text) + 1
+    if std.prelude.len(text) < std.prelude.len(token) {
+        return std.prelude.len(text) + 1
     }
     i := 0
-    for i <= len(text) - len(token) {
-        if slice(text, i, i + len(token)) == token {
+    for i <= std.prelude.len(text) - std.prelude.len(token) {
+        if std.prelude.slice(text, i, i + std.prelude.len(token)) == token {
             return i
         }
         i = i + 1
     }
-    len(text) + 1
+    std.prelude.len(text) + 1
 }
 
 func starts_with(string text, string prefix) bool {
-    if len(text) < len(prefix) {
+    if std.prelude.len(text) < std.prelude.len(prefix) {
         return false
     }
-    slice(text, 0, len(prefix)) == prefix
+    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
 }

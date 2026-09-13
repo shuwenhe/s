@@ -1,5 +1,7 @@
 package compile.internal.ssagen
-use std.slices
+import (
+    "std"
+)
 struct abi_location {
     bool in_reg
     string place

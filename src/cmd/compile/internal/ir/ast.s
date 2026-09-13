@@ -1,6 +1,8 @@
 package compile.internal.ir.ast
-use std.slices
-use compile.internal.ir.types
+import (
+    "compile.internal.ir"
+    "std"
+)
 struct program_ir {
     string package_name
     package_ir[] packages

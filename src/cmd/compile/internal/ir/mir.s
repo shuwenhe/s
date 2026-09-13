@@ -1,14 +1,10 @@
 package compile.internal.ir.mir
 
-use std.slices
-use compile.internal.ir.cfg
-use compile.internal.ir.ssa
-use compile.internal.ir.escape
-use compile.internal.ir.liveness
-use compile.internal.ir.writebarrier
-use compile.internal.ir.debug_loc
-use compile.internal.typesys.is_heap_reference_type
-use compile.internal.typesys.is_explicit_owned_type
+import (
+    "compile.internal.ir"
+    "compile.internal.typesys"
+    "std"
+)
 
 struct mir_operand {
     string kind
@@ -201,7 +197,7 @@ func (ir_function* f) analyze_escapes() {
         local := f.locals[i]
         is_pointer := false
         if local.type_name != option::none {
-            is_pointer = is_heap_reference_type(local.type_name.unwrap())
+            is_pointer = compile.internal.typesys.is_heap_reference_type(local.type_name.unwrap())
         }
 
         _ = f.escape_analysis.analyze_variable(local.id, is_pointer, false, false, false)
@@ -255,7 +251,7 @@ func (ir_function* f) analyze_write_barriers() {
                     if a.op == "store" && a.args.len() > 0 {
                         target_type := "value"
                         if a.target >= 0 && a.target < len(f.locals) && f.locals[a.target].type_name != option::none {
-                            if is_explicit_owned_type(f.locals[a.target].type_name.unwrap()) {
+                            if compile.internal.typesys.is_explicit_owned_type(f.locals[a.target].type_name.unwrap()) {
                                 target_type = "pointer"
                             }
                         }

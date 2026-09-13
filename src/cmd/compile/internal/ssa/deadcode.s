@@ -1,5 +1,7 @@
 package compile.internal.ssa
-use std.slices
+import (
+    "std"
+)
 func run_deadcode(ssa_func f) int {
     recompute_uses(f)
     changed := 0

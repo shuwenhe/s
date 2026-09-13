@@ -1,6 +1,7 @@
 package compile.internal.codegen
-use compile.internal.link
-use compile.internal.obj
+import (
+    "compile.internal"
+)
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
 extern "intrinsic" func __host_make_executable(string path) int;
 struct codegen_config {

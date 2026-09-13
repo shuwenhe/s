@@ -1,6 +1,8 @@
 package s
-use std.prelude.to_string
-use std.slices
+import (
+    "std"
+    "std.prelude"
+)
 enum token_kind {
     ident,
     int,
@@ -37,9 +39,9 @@ func dump_tokens(token[] tokens) string {
         }
         out =
             out
-            + to_string(token.line)
+            + std.prelude.to_string(token.line)
             + ":"
-            + to_string(token.column)
+            + std.prelude.to_string(token.column)
             + " "
             + token_kind_name(token.kind)
             + " "

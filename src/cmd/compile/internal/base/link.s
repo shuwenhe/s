@@ -1,5 +1,7 @@
 package compile.internal.base
-use std.slices
+import (
+    "std"
+)
 struct link_symbol {
     string pkg
     string name

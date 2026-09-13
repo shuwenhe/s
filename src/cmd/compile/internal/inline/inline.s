@@ -1,7 +1,8 @@
 package compile.internal.inline
-use compile.internal.mir.mir_graph
-use compile.internal.mir.dump_graph
-use std.prelude.slice
+import (
+    "compile.internal.mir"
+    "std.prelude"
+)
 func estimate_inline_sites(string mir_text) int {
     calls := count_token(mir_text, " call=")
     if calls <= 0 {
@@ -11,7 +12,7 @@ func estimate_inline_sites(string mir_text) int {
 }
 
 func estimate_inline_sites_graph(mir_graph graph) int {
-    call_sites := count_token(dump_graph(graph), "call")
+    call_sites := count_token(compile.internal.mir.dump_graph(graph), "call")
     if call_sites <= 0 {
         return 0
     }
@@ -25,7 +26,7 @@ func count_token(string text, string token) int {
     total := 0
     i := 0
     for i <= len(text) - len(token) {
-        if slice(text, i, i + len(token)) == token {
+        if std.prelude.slice(text, i, i + len(token)) == token {
             total = total + 1
             i = i + len(token)
         } else {
@@ -60,7 +61,7 @@ func inline_leaf_calls(mir_graph caller, mir_graph callee) inline_result {
         block := result.graph.blocks[block_index]
         mir_statement[] rewritten
         statement_index := 0
-        has_call := count_token(dump_graph(caller), callee.function_name) > 0
+        has_call := count_token(compile.internal.mir.dump_graph(caller), callee.function_name) > 0
         for statement_index < len(block.statements) {
             rewritten = append(rewritten, block.statements[statement_index])
             statement_index = statement_index + 1

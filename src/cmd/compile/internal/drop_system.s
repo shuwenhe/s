@@ -1,6 +1,8 @@
 package compile.internal.drop_system
 
-use compile.internal.typesys.is_copy_type
+import (
+    "compile.internal.typesys"
+)
 
 struct dtor_field {
     string name
@@ -64,7 +66,7 @@ func dtor_registry_needs_drop(dtor_registry registry, string type_name) bool {
 
 func type_needs_drop(string type_name) bool {
     if type_name == "" { return false }
-    if is_copy_type(type_name) { return false }
+    if compile.internal.typesys.is_copy_type(type_name) { return false }
     if starts_with(type_name, "&") { return false }
     if ends_with(type_name, "*") { return false }
     if type_name == "ref" || type_name == "mutref" { return false }

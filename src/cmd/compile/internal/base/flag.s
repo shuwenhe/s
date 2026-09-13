@@ -1,5 +1,7 @@
 package compile.internal.base
-use std.slices
+import (
+    "std"
+)
 struct cmd_cfg {
     string[] import_dirs
     string[] import_map

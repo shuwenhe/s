@@ -1,81 +1,78 @@
 package compile.internal.tests.test_typesys
-use compile.internal.typesys.assignable_type
-use compile.internal.typesys.comparable_type
-use compile.internal.typesys.compatible_type
-use compile.internal.typesys.is_copy_type
-use compile.internal.typesys.ownership_mode
-use compile.internal.typesys.requires_drop
+import (
+    "compile.internal.typesys"
+)
 func run_typesys_suite() int {
-    if !assignable_type("int", "u8") {
+    if !compile.internal.typesys.assignable_type("int", "u8") {
         return 1
     }
-    if assignable_type("u8", "int") {
+    if compile.internal.typesys.assignable_type("u8", "int") {
         return 1
     }
-    if !compatible_type("(int, string)", "(int, string)") {
+    if !compile.internal.typesys.compatible_type("(int, string)", "(int, string)") {
         return 1
     }
-    if compatible_type("(int, string)", "(int)") {
+    if compile.internal.typesys.compatible_type("(int, string)", "(int)") {
         return 1
     }
-    if !assignable_type("(int, u64)", "(u8, u32)") {
+    if !compile.internal.typesys.assignable_type("(int, u64)", "(u8, u32)") {
         return 1
     }
-    if assignable_type("(u8, u16)", "(int, u64)") {
+    if compile.internal.typesys.assignable_type("(u8, u16)", "(int, u64)") {
         return 1
     }
-    if !assignable_type("int[]", "nil") {
+    if !compile.internal.typesys.assignable_type("int[]", "nil") {
         return 1
     }
-    if assignable_type("int[4]", "nil") {
+    if compile.internal.typesys.assignable_type("int[4]", "nil") {
         return 1
     }
-    if !assignable_type("*int", "nil") {
+    if !compile.internal.typesys.assignable_type("*int", "nil") {
         return 1
     }
-    if !assignable_type("fn", "nil") {
+    if !compile.internal.typesys.assignable_type("fn", "nil") {
         return 1
     }
-    if assignable_type("int", "nil") {
+    if compile.internal.typesys.assignable_type("int", "nil") {
         return 1
     }
-    if !comparable_type("int") {
+    if !compile.internal.typesys.comparable_type("int") {
         return 1
     }
-    if comparable_type("int[]") {
+    if compile.internal.typesys.comparable_type("int[]") {
         return 1
     }
-    if comparable_type("int[4]") {
+    if compile.internal.typesys.comparable_type("int[4]") {
         return 1
     }
-    if comparable_type("map") {
+    if compile.internal.typesys.comparable_type("map") {
         return 1
     }
-    if comparable_type("fn") {
+    if compile.internal.typesys.comparable_type("fn") {
         return 1
     }
-    if !comparable_type("(int, bool)") {
+    if !compile.internal.typesys.comparable_type("(int, bool)") {
         return 1
     }
-    if comparable_type("(int, int[])") {
+    if compile.internal.typesys.comparable_type("(int, int[])") {
         return 1
     }
-    if !is_copy_type("int") || !is_copy_type("&int") {
+    if !compile.internal.typesys.is_copy_type("int") || !compile.internal.typesys.is_copy_type("&int") {
         return 1
     }
-    if !is_copy_type("int[4]") {
+    if !compile.internal.typesys.is_copy_type("int[4]") {
         return 1
     }
-    if is_copy_type("string") || is_copy_type("box[int]") || is_copy_type("int[]") {
+    if compile.internal.typesys.is_copy_type("string") || compile.internal.typesys.is_copy_type("box[int]") || compile.internal.typesys.is_copy_type("int[]") {
         return 1
     }
-    if ownership_mode("int") != "copy" || ownership_mode("&int") != "borrow" {
+    if compile.internal.typesys.ownership_mode("int") != "copy" || compile.internal.typesys.ownership_mode("&int") != "borrow" {
         return 1
     }
-    if ownership_mode("box[int]") != "owned" || ownership_mode("string") != "move" {
+    if compile.internal.typesys.ownership_mode("box[int]") != "owned" || compile.internal.typesys.ownership_mode("string") != "move" {
         return 1
     }
-    if !requires_drop("box[int]") || !requires_drop("string") || requires_drop("int") {
+    if !compile.internal.typesys.requires_drop("box[int]") || !compile.internal.typesys.requires_drop("string") || compile.internal.typesys.requires_drop("int") {
         return 1
     }
     0

@@ -1,6 +1,7 @@
 package compile.internal.codegen
-use compile.internal.link
-use compile.internal.obj
+import (
+    "compile.internal"
+)
 struct go_style_code_generator {
     machine_code_gen* mcg
     symbol_table* symtab

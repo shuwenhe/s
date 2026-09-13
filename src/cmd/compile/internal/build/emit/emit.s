@@ -1,22 +1,21 @@
 package compile.internal.build.emit
-use s.source_file
-use s.token
-use s.dump_source_file
-use s.dump_tokens
-use std.io.println
-use std.slices
+import (
+    "s"
+    "std"
+    "std.io"
+)
 func check_ok(string path) () {
-    println("ok: " + path)
+    std.io.println("ok: " + path)
 }
 
 func tokens(token[] tokens) () {
-    println(dump_tokens(tokens))
+    std.io.println(s.dump_tokens(tokens))
 }
 
 func ast(source_file ast) () {
-    println(dump_source_file(ast))
+    std.io.println(s.dump_source_file(ast))
 }
 
 func built(string output) () {
-    println("built: " + output)
+    std.io.println("built: " + output)
 }

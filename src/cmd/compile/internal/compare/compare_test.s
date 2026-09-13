@@ -1,5 +1,7 @@
 package compile.internal.compare
-use std.slices
+import (
+    "std"
+)
 func make_field(string name, int offset, int size, bool regular_memory, string type_kind) compare_field {
     compare_field {
         name: name, offset offset, size size, alignment 1, padded false, regular_memory regular_memory, can_panic type_kind == "interface", type_kind type_kind, num_elem 0, elem_cost 1, elem_can_panic false,

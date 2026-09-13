@@ -63,7 +63,9 @@ func test_frontend_struct_with_fields() int {
 
 func test_frontend_package_and_import() int {
     source := "package main
-use std.io.println
+import (
+    "std.io"
+)
 func test() {
 }"
     lex := lexer_new(source)
