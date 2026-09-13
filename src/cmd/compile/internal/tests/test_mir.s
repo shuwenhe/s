@@ -24,6 +24,7 @@ use compile.internal.mir.mir_point_id
 use compile.internal.mir.mir_point_count
 use compile.internal.mir.mir_point_text
 use compile.internal.mir.dump_ownership_analysis_input_from_mir
+use compile.internal.mir.dump_ownership_shadow_from_mir
 use std.slices
 func run_mir_suite() int {
     if trace_branch("flag", "then", "else") != "branch flag |   then then |   else else" {
@@ -174,6 +175,10 @@ func run_mir_suite() int {
     }
     expected_facts := "PointCount = 4 | Ref(_2) = R0 | Ref(_3) = R1 | Loan0 issued = {P0} place=_1 | RefLoan(R0) = L0 | RefLoan(R1) = L0 | Outlives(R0,R1) | RegionPoint(R0) = {P0} | RegionPoint(R1) = {P2}"
     if dump_ownership_analysis_input_from_mir(fact_graph) != expected_facts {
+        return 1
+    }
+    expected_shadow := "RealMIROwnershipShadow\nRealMIRFacts(point_count=4, refs=2, loans=1, outlives=1)\nLoanLivePoints(L0) = {P0,P2}\nSharedSolverShadow(iterations=2, converged=true)\n"
+    if dump_ownership_shadow_from_mir(fact_graph) != expected_shadow {
         return 1
     }
     0
