@@ -1,48 +1,23 @@
 package compile.internal.tests.test_mir
-use compile.internal.mir.trace_branch
-use compile.internal.mir.dump_graph
-use compile.internal.mir.block_count
-use compile.internal.mir.trace_loop
-use compile.internal.mir.trace_switch
-use compile.internal.mir.mir_graph
-use compile.internal.mir.mir_basic_block
-use compile.internal.mir.mir_control_edge
-use compile.internal.mir.mir_local_slot
-use compile.internal.mir.mir_terminator
-use compile.internal.mir.mir_statement
-use compile.internal.mir.mir_operand
-use compile.internal.mir.mir_eval_stmt
-use compile.internal.mir.mir_move_stmt
-use compile.internal.mir.mir_drop_stmt
-use compile.internal.mir.mir_place
-use compile.internal.mir.mir_place_projection
-use compile.internal.mir.mir_borrow_stmt
-use compile.internal.mir.mir_ref_assign_stmt
-use compile.internal.mir.mir_ref_use_stmt
-use compile.internal.mir.build_mir_point_map
-use compile.internal.mir.mir_point_id
-use compile.internal.mir.mir_point_count
-use compile.internal.mir.mir_point_text
-use compile.internal.mir.dump_ownership_analysis_input_from_mir
-use compile.internal.mir.dump_ownership_shadow_from_mir
-use compile.internal.mir.build_ownership_facts_from_mir
-use compile.internal.syntax.read_source
-use compile.internal.syntax.parse_source
-use compile.internal.ir.lower.lower_main_to_mir
-use std.slices
-use std.io.read_to_string
+import (
+    "compile.internal.mir"
+    "compile.internal.syntax"
+    "compile.internal.ir.lower"
+    "std.slices"
+    "std.io"
+)
 
 func run_mir_suite() int {
-    if trace_branch("flag", "then", "else") != "branch flag |   then then |   else else" {
+    if mir.trace_branch("flag", "then", "else") != "branch flag |   then then |   else else" {
         return 1
     }
-    if trace_loop("while", "cond", "body") != "while cond |   body body" {
+    if mir.trace_loop("while", "cond", "body") != "while cond |   body body" {
         return 1
     }
-    if trace_switch("value", "arms") != "switch value | arms" {
+    if mir.trace_switch("value", "arms") != "switch value | arms" {
         return 1
     }
-    if trace_switch("value", "") != "switch value" {
+    if mir.trace_switch("value", "") != "switch value" {
         return 1
     }
     blocks := mir_basic_block[]()
@@ -56,10 +31,10 @@ func run_mir_suite() int {
         function_name: "main", blocks blocks, locals mir_local_slot[](), string trace[](), entry 0, exit 0,
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
-    if block_count(graph) != 1 {
+    if mir.block_count(graph) != 1 {
         return 1
     }
-    if dump_graph(graph) != "mir main blocks=1 entry=0 exit=0 | bb0(entry) stmts=0 term=return" {
+    if mir.dump_graph(graph) != "mir main blocks=1 entry=0 exit=0 | bb0(entry) stmts=0 term=return" {
         return 1
     }
     gate_statements := mir_statement[]()
@@ -140,24 +115,24 @@ func run_mir_suite() int {
         function_name: "diamond", blocks diamond_blocks, locals mir_local_slot[](), string trace[](), entry 0, exit 3,
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
-    point_map := build_mir_point_map(diamond)
-    if mir_point_count(diamond) != 8 {
+    point_map := mir.build_mir_point_map(diamond)
+    if mir.mir_point_count(diamond) != 8 {
         return 1
     }
-    if len(point_map.points) != mir_point_count(diamond) {
+    if len(point_map.points) != mir.mir_point_count(diamond) {
         return 1
     }
-    if mir_point_text(diamond, point_map.points[0]) != "BB0(entry):stmt0" { return 1 }
-    if mir_point_text(diamond, point_map.points[1]) != "BB0(entry):stmt1" { return 1 }
-    if mir_point_text(diamond, point_map.points[2]) != "BB0(entry):term" { return 1 }
-    if mir_point_text(diamond, point_map.points[3]) != "BB1(then):stmt0" { return 1 }
-    if mir_point_text(diamond, point_map.points[4]) != "BB1(then):term" { return 1 }
-    if mir_point_text(diamond, point_map.points[5]) != "BB2(else):stmt0" { return 1 }
-    if mir_point_text(diamond, point_map.points[6]) != "BB2(else):term" { return 1 }
-    if mir_point_text(diamond, point_map.points[7]) != "BB3(merge):term" { return 1 }
-    if mir_point_id(point_map, 0, 2) != 2 { return 1 }
-    if mir_point_id(point_map, 1, 1) != 4 { return 1 }
-    if mir_point_id(point_map, 3, 0) != 7 { return 1 }
+    if mir.mir_point_text(diamond, point_map.points[0]) != "BB0(entry):stmt0" { return 1 }
+    if mir.mir_point_text(diamond, point_map.points[1]) != "BB0(entry):stmt1" { return 1 }
+    if mir.mir_point_text(diamond, point_map.points[2]) != "BB0(entry):term" { return 1 }
+    if mir.mir_point_text(diamond, point_map.points[3]) != "BB1(then):stmt0" { return 1 }
+    if mir.mir_point_text(diamond, point_map.points[4]) != "BB1(then):term" { return 1 }
+    if mir.mir_point_text(diamond, point_map.points[5]) != "BB2(else):stmt0" { return 1 }
+    if mir.mir_point_text(diamond, point_map.points[6]) != "BB2(else):term" { return 1 }
+    if mir.mir_point_text(diamond, point_map.points[7]) != "BB3(merge):term" { return 1 }
+    if mir.mir_point_id(point_map, 0, 2) != 2 { return 1 }
+    if mir.mir_point_id(point_map, 1, 1) != 4 { return 1 }
+    if mir.mir_point_id(point_map, 3, 0) != 7 { return 1 }
     fact_statements := mir_statement[]()
     fact_statements.push(mir_statement::borrow(mir_borrow_stmt {
         ref_name: "_2", place mir_place { root: "_1", projections: mir_place_projection[]() }, mutable false,
@@ -180,11 +155,11 @@ func run_mir_suite() int {
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
     expected_facts := "PointCount = 4 | Ref(_2) = R0 | Ref(_3) = R1 | Loan0 issued = {P0} place=_1 | RefLoan(R0) = L0 | RefLoan(R1) = L0 | Outlives(R0,R1) | RegionPoint(R0) = {P0} | RegionPoint(R1) = {P2}"
-    if dump_ownership_analysis_input_from_mir(fact_graph) != expected_facts {
+    if mir.dump_ownership_analysis_input_from_mir(fact_graph) != expected_facts {
         return 1
     }
     expected_shadow := "RealMIROwnershipShadow\nRealMIRFacts(point_count=4, refs=2, loans=1, outlives=1)\nLoanLivePoints(L0) = {P0,P2}\nSharedSolverShadow(iterations=2, converged=true)\n"
-    if dump_ownership_shadow_from_mir(fact_graph) != expected_shadow {
+    if mir.dump_ownership_shadow_from_mir(fact_graph) != expected_shadow {
         return 1
     }
     if test_real_mir_source_ownership_facts() != 0 {
@@ -239,32 +214,32 @@ func test_real_mir_source_ownership_facts() int {
     fixture_path := "src/cmd/compile/internal/tests/fixtures/real_mir_ref_flow.s"
     
     // Read and parse real source
-    source_result := read_source(fixture_path)
+    source_result := syntax.read_source(fixture_path)
     if source_result.is_err() {
         return 1
     }
     source := source_result.unwrap()
     
-    parsed, parse_err := parse_source(source)
+    parsed, parse_err := syntax.parse_source(source)
     if parse_err.message != "" {
         return 1
     }
     
     // Lower to real MIR with ownership semantics
-    mir_result := lower_main_to_mir(parsed)
+    mir_result := lower.lower_main_to_mir(parsed)
     if mir_result.is_err() {
         return 1
     }
     graph := mir_result.unwrap()
     
     // Build canonical point map
-    point_map := build_mir_point_map(graph)
+    point_map := mir.build_mir_point_map(graph)
     if len(point_map.points) == 0 {
         return 1
     }
     
     // Extract ownership facts from real MIR
-    facts := build_ownership_facts_from_mir(graph, point_map)
+    facts := mir.build_ownership_facts_from_mir(graph, point_map)
     
     // Verify facts structure exists
     if facts.input.point_count == 0 {
@@ -297,7 +272,7 @@ func test_real_mir_source_ownership_facts() int {
     }
     
     // Verify facts dump format contains expected keys (no solver output)
-    facts_dump := dump_ownership_analysis_input_from_mir(graph)
+    facts_dump := mir.dump_ownership_analysis_input_from_mir(graph)
     if facts_dump == "" {
         return 1
     }
@@ -349,25 +324,25 @@ func test_real_mir_semantic_order() int {
     fixture_path := "src/cmd/compile/internal/tests/fixtures/real_mir_ref_flow.s"
     
     // Read and lower real source
-    source_result := read_source(fixture_path)
+    source_result := syntax.read_source(fixture_path)
     if source_result.is_err() {
         return 1
     }
     source := source_result.unwrap()
     
-    parsed, parse_err := parse_source(source)
+    parsed, parse_err := syntax.parse_source(source)
     if parse_err.message != "" {
         return 1
     }
     
-    mir_result := lower_main_to_mir(parsed)
+    mir_result := lower.lower_main_to_mir(parsed)
     if mir_result.is_err() {
         return 1
     }
     graph := mir_result.unwrap()
     
     // Build point map for canonical ID mapping
-    point_map := build_mir_point_map(graph)
+    point_map := mir.build_mir_point_map(graph)
     if len(point_map.points) == 0 {
         return 1
     }
@@ -421,9 +396,9 @@ func test_real_mir_semantic_order() int {
     }
     
     // Additional: Verify points exist and are in order too
-    borrow_point := mir_point_id(point_map, graph.blocks[borrow_block].id, borrow_stmt)
-    ref_assign_point := mir_point_id(point_map, graph.blocks[ref_assign_block].id, ref_assign_stmt)
-    ref_use_point := mir_point_id(point_map, graph.blocks[ref_use_block].id, ref_use_stmt)
+    borrow_point := mir.mir_point_id(point_map, graph.blocks[borrow_block].id, borrow_stmt)
+    ref_assign_point := mir.mir_point_id(point_map, graph.blocks[ref_assign_block].id, ref_assign_stmt)
+    ref_use_point := mir.mir_point_id(point_map, graph.blocks[ref_use_block].id, ref_use_stmt)
     
     // Same-block canonical ordering should match statement ordering
     if !(borrow_point < ref_assign_point && ref_assign_point < ref_use_point) {
