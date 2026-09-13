@@ -30,7 +30,6 @@ struct race_detector {
 	i32 race_count
 	bool stop_on_race
 }
-
 var global_race_detector race_detector
 
 func race_detector_init() error {
@@ -145,7 +144,6 @@ struct profile_sample {
 	u64 mem_used
 	i64 cpu_time
 }
-
 var global_profiler profiler
 
 func profiler_init(rate i32) error {
@@ -201,7 +199,6 @@ struct trace_event {
 	i64 duration
 	string extra
 }
-
 var global_tracer tracer
 
 func tracer_init() error {

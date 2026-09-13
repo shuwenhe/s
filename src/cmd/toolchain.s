@@ -24,7 +24,6 @@ struct build_system {
     string build_dir
     string output_dir
 }
-
 toolchain_config global_toolchain
 global_build_system global_build
 

@@ -171,7 +171,6 @@ func run_monomorphization_test() int {
 
 func run_e2e_transitive_monomorphization_test() int {
 
-
     baz_return := expr::name(name_expr { name: "x", inferred_type option::some("T") })
     baz := function_decl {
         sig: function_sig {
@@ -187,7 +186,6 @@ func run_e2e_transitive_monomorphization_test() int {
         }),
         is_public: false,
     }
-
 
     baz_call := expr::call(call_expr {
         callee: box(expr::name(name_expr { name: "baz", inferred_type: option::none })),
@@ -211,7 +209,6 @@ func run_e2e_transitive_monomorphization_test() int {
         is_public: false,
     }
 
-
     bar_call := expr::call(call_expr {
         callee: box(expr::name(name_expr { name: "bar", inferred_type: option::none })),
         args: expr[] { expr::name(name_expr { name: "x", inferred_type: option::some("T") }) },
@@ -233,7 +230,6 @@ func run_e2e_transitive_monomorphization_test() int {
         }),
         is_public: false,
     }
-
 
     foo_call := expr::call(call_expr {
         callee: box(expr::name(name_expr { name: "foo", inferred_type: option::none })),
@@ -257,7 +253,6 @@ func run_e2e_transitive_monomorphization_test() int {
         is_public: true,
     }
 
-
     file := source_file {
         pkg: "e2e.mono.test",
         uses: use_decl[] {},
@@ -269,9 +264,7 @@ func run_e2e_transitive_monomorphization_test() int {
         },
     }
 
-
     mono_file := monomorphize_file(file)
-
 
     if mono_cache_count(mono_file.cache) != 3 {
 
@@ -283,16 +276,13 @@ func run_e2e_transitive_monomorphization_test() int {
         return 1
     }
 
-
     if mono_file.invariant_errors != 0 {
         return 1
     }
 
-
     if verify_monomorphized_file_with_details(mono_file.file) != 0 {
         return 1
     }
-
 
     0
 }

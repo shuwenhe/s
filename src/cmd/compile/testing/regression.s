@@ -19,7 +19,6 @@ struct regression_suite {
     int total_tests
     int total_passed
 }
-
 regression_suite regression_data
 
 func test_suite_new(string name) test_suite {

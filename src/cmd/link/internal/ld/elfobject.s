@@ -301,7 +301,6 @@ func (elf_object* eo) write_to_file(string filename) error {
 
 	nil
 }
-
 const (
 	sht_null = 0
 	sht_progbits = 1

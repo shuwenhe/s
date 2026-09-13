@@ -38,7 +38,6 @@ struct exception_context {
 	u64 recovery_sp
 	sync.mutex lock
 }
-
 exception_context global_exception_context
 
 func init_exception_context() error {

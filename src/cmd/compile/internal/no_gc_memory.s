@@ -21,6 +21,7 @@ use compile.internal.lifetime_check.lifetime_finish
 use compile.internal.lifetime_check.lifetime_result
 
 func alloc_stack() int { 1 }
+
 func alloc_heap() int { 2 }
 
 struct allocation_decision {

@@ -5,8 +5,11 @@ use compile.internal.drop_system.dtor_registry_needs_drop
 use compile.internal.drop_system.emit_drop_call
 
 func drop_state_unknown() int { 0 }
+
 func drop_state_present() int { 1 }
+
 func drop_state_absent() int { 2 }
+
 func drop_state_partial() int { 3 }
 
 struct dflag_entry {
