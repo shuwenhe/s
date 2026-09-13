@@ -1,30 +1,29 @@
 package cmd
-use std.env.args as host_args
-use std.result.result
-use std.io.println
-use compile.internal.syntax.read_source
-use compile.internal.syntax.dump_tokens_text
-use compile.internal.syntax.tokenize
+import (
+    "compile.internal.syntax"
+    "std.io"
+    "std.result"
+)
 func main() {
     args := host_args()
     if len(args) < 2 {
-        println("usage: lex_dump <path>");
+        std.io.println("usage: lex_dump <path>");
         return 1
     }
     path := args[1]
-    switch read_source(path) {
+    switch compile.internal.syntax.read_source(path) {
         result.err(err) : {
-            println("error: " + err.message);
+            std.io.println("error: " + err.message);
             return 1
         },
         result.ok(source) : {
-            switch tokenize(source) {
+            switch compile.internal.syntax.tokenize(source) {
                 result.err(err2) : {
-                    println("error: " + err2.message);
+                    std.io.println("error: " + err2.message);
                     return 1
                 },
                 result.ok(tokens) : {
-                    println(dump_tokens_text(tokens));
+                    std.io.println(compile.internal.syntax.dump_tokens_text(tokens));
                     return 0
                 },
             }

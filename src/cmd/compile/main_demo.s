@@ -1,6 +1,7 @@
 package main
-use fmt
-use compile.internal.codegen
+import (
+    "compile.internal"
+)
 func main() {
     report := generate_complete_demo_report()
     fmt.println(report)

@@ -1,5 +1,7 @@
 package compile.internal.obj
-use compile.internal.link
+import (
+    "compile.internal"
+)
 enum symbol_bind {
     symbol_bind_local,
     symbol_bind_global,

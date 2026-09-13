@@ -1,5 +1,7 @@
 package compile.internal.arm
-use std.slices
+import (
+    "std"
+)
 struct prog {
     string op
     string from

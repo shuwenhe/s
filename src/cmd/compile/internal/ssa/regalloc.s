@@ -1,5 +1,7 @@
 package compile.internal.ssa
-use std.slices
+import (
+    "std"
+)
 struct reg_assign {
     int value_id
     string reg

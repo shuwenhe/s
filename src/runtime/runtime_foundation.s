@@ -1,5 +1,7 @@
 package src.runtime
-use std.option.option
+import (
+    "std.option"
+)
 
 const runtime_feature_gc = 1
 const runtime_feature_scheduler = 2

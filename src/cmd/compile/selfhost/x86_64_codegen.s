@@ -1,9 +1,8 @@
 package cmd
-use std.strings.split as split_string
-use std.strings.contains as contains_string
-use std.strings.trim as trim_string
-use std.fmt.sprintf
-use std.io.eprintln
+import (
+    "std.fmt"
+    "std.io"
+)
 struct x86_64_gen {
     asm_lines: string[]
     register_stack: string[]
@@ -53,7 +52,7 @@ func (x86_64_gen* gen) get_location(string variable) string {
         return reg
     }
     stack_offset := (len(gen.temp_allocations) + 1) * 8
-    stack_loc := sprintf("-%d(%%rbp)", stack_offset)
+    stack_loc := std.fmt.sprintf("-%d(%%rbp)", stack_offset)
     gen.temp_allocations[variable] = stack_loc
     return stack_loc
 }

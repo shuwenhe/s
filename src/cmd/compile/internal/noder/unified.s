@@ -1,13 +1,15 @@
 package compile.internal.noder
-use s.parse_source
-use std.result.result
-use std.slices
+import (
+    "s"
+    "std"
+    "std.result"
+)
 func run_unified(string path, string[] quirks) (noder_output, noder_error) {
     unit := read_unit(path)?
     apply_quirks(quirks, unit)?
     tokens := lex_source(unit)?
     imports := parse_imports(unit)
-    ast_result := parse_source(unit.text)
+    ast_result := s.parse_source(unit.text)
     if ast_result.is_err() {
         err := ast_result.unwrap_err()
         return make_error(code_parse_failed(), err.message, unit.path, err.line, err.column)

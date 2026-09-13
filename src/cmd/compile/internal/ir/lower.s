@@ -1,23 +1,9 @@
 package compile.internal.ir.lower
-use s.source_file
-use s.expr
-use s.stmt
-use s.block_expr
-use s.function_decl
-use s.item
-use s.dump_expr
-use compile.internal.ir.ast as ir_ast
-use compile.internal.mir.mir_graph
-use compile.internal.mir.mir_basic_block
-use compile.internal.mir.mir_statement
-use compile.internal.mir.mir_eval_stmt
-use compile.internal.mir.mir_append_ownership_semantics_from_stmt
-use compile.internal.mir.mir_terminator
-use compile.internal.mir.mir_control_edge
-use compile.internal.mir.mir_local_slot
-use compile.internal.mir.mir_operand
-use compile.internal.backend_elf64.parse_int_literal as parse_int_literal
-use std.slices
+import (
+    "compile.internal.mir"
+    "s"
+    "std"
+)
 struct const_rewrite_entry {
     string name
     string expr_text
@@ -108,7 +94,7 @@ func validate_block_contract(ir_ast.block_ir block) ((), string) {
                     return checked
                 }
             }
-            ir_ast.stmt_ir::expr(expr_stmt) : {
+            ir_ast.stmt_ir::s.expr(expr_stmt) : {
                 checked := validate_expr_contract(expr_stmt.expr)
                 if checked.is_err() {
                     return checked
@@ -286,13 +272,13 @@ func convert_stmt(stmt s, const_rewrite_entry[] const_entries) ir_ast.stmt_ir {
             }
         }
         stmt.expr(expr_stmt) : {
-            ir_ast.stmt_ir::expr(ir_ast.expr_stmt { expr: convert_expr(expr_stmt.expr, const_entries) })
+            ir_ast.stmt_ir::s.expr(ir_ast.expr_stmt { expr: convert_expr(expr_stmt.expr, const_entries) })
         }
         stmt.defer(defer_stmt) : {
-            ir_ast.stmt_ir::expr(ir_ast.expr_stmt { expr: convert_expr(defer_stmt.expr, const_entries) })
+            ir_ast.stmt_ir::s.expr(ir_ast.expr_stmt { expr: convert_expr(defer_stmt.expr, const_entries) })
         }
         stmt.sroutine(sroutine_stmt) : {
-            ir_ast.stmt_ir::expr(ir_ast.expr_stmt { expr: convert_expr(sroutine_stmt.expr, const_entries) })
+            ir_ast.stmt_ir::s.expr(ir_ast.expr_stmt { expr: convert_expr(sroutine_stmt.expr, const_entries) })
         }
     }
 }
@@ -625,7 +611,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 else_lines = append(else_lines, "if.else")
                 blocks = append(blocks, make_block(2, "if.else", else_lines, "jump", vec1_edge("merge", 3)))
                 merge_lines := string[]()
-                merge_lines = append(merge_lines, "yield " + dump_expr(tail))
+                merge_lines = append(merge_lines, "yield " + s.dump_expr(tail))
                 blocks = append(blocks, make_block(3, "if.merge", merge_lines, "return", mir_control_edge[]()))
                 trace = append(trace, "control if -> blocks(entry, if.then, if.else, if.merge)")
                 return make_graph(function_name, blocks, trace, 0, 3
@@ -633,7 +619,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
             expr.while(while_expr) : {
                 blocks = append(blocks, make_entry_block(0, "entry", stmt_texts, block.statements, "jump", vec1_edge("cond", 1)))
                 cond_lines := string[]()
-                cond_lines = append(cond_lines, "while.cond " + substitute_const_text(dump_expr(while_expr.condition.value), const_entries))
+                cond_lines = append(cond_lines, "while.cond " + substitute_const_text(s.dump_expr(while_expr.condition.value), const_entries))
                 cond_edges := mir_control_edge[]()
                 cond_edges = append(cond_edges, make_edge("true", 2))
                 cond_edges = append(cond_edges, make_edge("false", 3))
@@ -656,7 +642,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 blocks = append(blocks, make_block(1, "switch.case0", vec1("switch.case0"), "jump", vec1_edge("merge", 4)))
                 blocks = append(blocks, make_block(2, "switch.case1", vec1("switch.case1"), "jump", vec1_edge("merge", 4)))
                 blocks = append(blocks, make_block(3, "switch.default", vec1("switch.default"), "jump", vec1_edge("merge", 4)))
-                blocks = append(blocks, make_block(4, "switch.merge", vec1("yield " + substitute_const_text(dump_expr(tail), const_entries)), "return", mir_control_edge[]()))
+                blocks = append(blocks, make_block(4, "switch.merge", vec1("yield " + substitute_const_text(s.dump_expr(tail), const_entries)), "return", mir_control_edge[]()))
                 trace = append(trace, "control switch -> blocks(entry, switch.case0, switch.case1, switch.default, switch.merge)")
                 return make_graph(function_name, blocks, trace, 0, 4
             }
@@ -676,7 +662,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
     }
     final_lines := clone_lines(stmt_texts)
     if block.final_expr.is_some() {
-        final_lines = append(final_lines, "yield " + substitute_const_text(dump_expr(block.final_expr.unwrap()), const_entries))
+        final_lines = append(final_lines, "yield " + substitute_const_text(s.dump_expr(block.final_expr.unwrap()), const_entries))
     } else {
         final_lines = append(final_lines, "yield unit")
     }
@@ -690,9 +676,9 @@ func dump_expr_stmt(stmt s, const_rewrite_entry[] const_entries) string {
         stmt.assign(assign_stmt) : "assign " + assign_stmt.name,
         stmt.increment(increment_stmt) : "increment " + increment_stmt.name,
         stmt.return(return_stmt) : "return",
-        stmt.expr(expr_stmt) : "expr " + substitute_const_text(dump_expr(expr_stmt.expr), const_entries),
-        stmt.defer(defer_stmt) : "defer " + substitute_const_text(dump_expr(defer_stmt.expr), const_entries),
-        stmt.sroutine(sroutine_stmt) : "sroutine " + substitute_const_text(dump_expr(sroutine_stmt.expr), const_entries),
+        stmt.expr(expr_stmt) : "expr " + substitute_const_text(s.dump_expr(expr_stmt.expr), const_entries),
+        stmt.defer(defer_stmt) : "defer " + substitute_const_text(s.dump_expr(defer_stmt.expr), const_entries),
+        stmt.sroutine(sroutine_stmt) : "sroutine " + substitute_const_text(s.dump_expr(sroutine_stmt.expr), const_entries),
         stmt.c_for(c_for_stmt) : "c_for",
     }
 }
@@ -743,7 +729,7 @@ func render_const_folded_entry(string name, expr value, const_rewrite_entry[] ou
         }
     }
     const_rewrite_entry {
-        name: name, expr_text substitute_const_text(dump_expr(value), out),
+        name: name, expr_text substitute_const_text(s.dump_expr(value), out),
         value_kind: "unknown", int_value 0,
         string_value: "", bool_value false,
     }
@@ -1009,7 +995,7 @@ func make_entry_block(int id, string label, string[] lines, stmt[] source_statem
             op: "line", args args,
         }))
         if i < len(source_statements) {
-            mir_append_ownership_semantics_from_stmt(statements, source_statements[i])
+            compile.internal.mir.mir_append_ownership_semantics_from_stmt(statements, source_statements[i])
         }
         i = i + 1
     }

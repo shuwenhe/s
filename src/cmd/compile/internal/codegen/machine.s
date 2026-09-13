@@ -1,6 +1,7 @@
 package compile.internal.codegen
-use compile.internal.link
-use compile.internal.obj
+import (
+    "compile.internal"
+)
 enum amd64_register {
     reg_rax = 0,
     reg_rcx = 1,

@@ -1,5 +1,7 @@
 package src.runtime
-use std.slices
+import (
+    "std"
+)
 extern "intrinsic" func __sema_sleep(int sema_id) ()
 extern "intrinsic" func __sema_wakeup(int sema_id) ()
 extern "intrinsic" func __atomic_cas(int target, int expected, int desired) bool

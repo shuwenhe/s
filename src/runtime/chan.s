@@ -1,7 +1,9 @@
 package src.runtime
-use std.slices
-use std.result.result
-use std.option.option
+import (
+    "std"
+    "std.option"
+    "std.result"
+)
 const chan_open   = 0
 const chan_closed = 1
 struct waiter {

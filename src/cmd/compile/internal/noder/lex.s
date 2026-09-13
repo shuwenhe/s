@@ -1,6 +1,8 @@
 package compile.internal.noder
-use std.result.result
-use std.slices
+import (
+    "std"
+    "std.result"
+)
 func classify_token(string token) string {
     if token == "package" || token == "use" || token == "func" || token == "struct" || token == "enum" || token == "trait" || token == "const" {
         return "keyword"

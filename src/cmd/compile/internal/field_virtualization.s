@@ -1,13 +1,9 @@
 package compile.internal.field_virtualization
 
-use compile.internal.path.path
-use compile.internal.path.path_new
-use compile.internal.path.path_field
-use compile.internal.field_level_drop_flag.field_level_drop_flag
-use compile.internal.field_level_drop_flag.fldf_new
-use compile.internal.field_level_drop_flag.fldf_declare
-use compile.internal.field_level_drop_flag.fldf_move
-use compile.internal.field_level_drop_flag.fldf_use
+import (
+    "compile.internal.field_level_drop_flag"
+    "compile.internal.path"
+)
 
 func field_encode_virtual_name(string base_var, string field_name) string {
     "__field_" + base_var + "_" + field_name
@@ -58,7 +54,7 @@ struct field_virtualization_context {
 func field_virt_new() field_virtualization_context {
     field_virtualization_context {
         records: make(field_access_record[], 0),
-        drop_flag: fldf_new(),
+        drop_flag: compile.internal.field_level_drop_flag.fldf_new(),
         error_count: 0,
         error_messages: make(string[], 0)
     }
@@ -66,10 +62,10 @@ func field_virt_new() field_virtualization_context {
 
 func field_virt_declare_field(field_virtualization_context ctx, string base_var, string field_name, string field_type, int line, int col) field_virtualization_context {
     virt_name := field_encode_virtual_name(base_var, field_name)
-    p := path_new(base_var)
-    p = path_field(p, field_name)
+    p := compile.internal.path.path_new(base_var)
+    p = compile.internal.path.path_field(p, field_name)
 
-    ctx.drop_flag = fldf_declare(ctx.drop_flag, p, field_type)
+    ctx.drop_flag = compile.internal.field_level_drop_flag.fldf_declare(ctx.drop_flag, p, field_type)
 
     record := field_access_record {
         virtual_name: virt_name,
@@ -85,20 +81,20 @@ func field_virt_declare_field(field_virtualization_context ctx, string base_var,
 }
 
 func field_virt_move(field_virtualization_context ctx, string from_base, string from_field, string to_var, int line, int col) field_virtualization_context {
-    from_path := path_new(from_base)
-    from_path = path_field(from_path, from_field)
+    from_path := compile.internal.path.path_new(from_base)
+    from_path = compile.internal.path.path_field(from_path, from_field)
 
-    to_path := path_new(to_var)
+    to_path := compile.internal.path.path_new(to_var)
 
-    ctx.drop_flag = fldf_move(ctx.drop_flag, from_path, to_path, line, col)
+    ctx.drop_flag = compile.internal.field_level_drop_flag.fldf_move(ctx.drop_flag, from_path, to_path, line, col)
     ctx
 }
 
 func field_virt_use(field_virtualization_context ctx, string base_var, string field_name, int line, int col) field_virtualization_context {
-    p := path_new(base_var)
-    p = path_field(p, field_name)
+    p := compile.internal.path.path_new(base_var)
+    p = compile.internal.path.path_field(p, field_name)
 
-    ctx.drop_flag = fldf_use(ctx.drop_flag, p)
+    ctx.drop_flag = compile.internal.field_level_drop_flag.fldf_use(ctx.drop_flag, p)
     ctx
 }
 
