@@ -1,13 +1,10 @@
 package compile.internal.syntax
-use std.fs.read_to_string
-use std.result.result
-use std.slices
-use s.source_file
-use s.token
-use s.dump_source_file
-use s.dump_tokens
-use s.new_lexer
-use s.parse_tokens as parse_s_tokens
+import (
+    "s"
+    "std"
+    "std.fs"
+    "std.result"
+)
 struct syntax_error {
     string message
     int line
@@ -15,7 +12,7 @@ struct syntax_error {
 }
 
 func read_source(string path) (string, syntax_error) {
-    switch read_to_string(path) {
+    switch std.fs.read_to_string(path) {
         source : source,
         err : syntax_error {
             message: "failed to read source file: " + path + ": " + err.message, line 0, column 0,
@@ -24,7 +21,7 @@ func read_source(string path) (string, syntax_error) {
 }
 
 func tokenize(string source) (token[], syntax_error) {
-    switch new_lexer(source).tokenize() {
+    switch s.new_lexer(source).tokenize() {
         tokens : tokens,
         err : syntax_error {
             message: err.message, line err.line, column err.column,
@@ -51,9 +48,9 @@ func parse_tokens(token[] tokens) (source_file, syntax_error) {
 }
 
 func dump_tokens_text(token[] tokens) string {
-    dump_tokens(tokens)
+    s.dump_tokens(tokens)
 }
 
 func dump_source_text(source_file source) string {
-    dump_source_file(source)
+    s.dump_source_file(source)
 }

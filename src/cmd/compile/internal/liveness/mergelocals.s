@@ -1,5 +1,7 @@
 package compile.internal.liveness
-use std.slices
+import (
+    "std"
+)
 struct local_slot {
     string name
     int size

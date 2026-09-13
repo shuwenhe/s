@@ -1,7 +1,9 @@
 package seed.codegen
-use std.vec.vec
-use std.string.string
-use std.file.file
+import (
+    "std.file"
+    "std.string"
+    "std.vec"
+)
 struct codegen_context {
     program_name: string
     functions: code_function[]

@@ -1,6 +1,7 @@
 package compile.internal.bitvec
-use compile.internal.base.fatalf as base_fatalf
-use std.slices
+import (
+    "std"
+)
 word_bits := 32
 word_mask := 31
 word_shift := 5

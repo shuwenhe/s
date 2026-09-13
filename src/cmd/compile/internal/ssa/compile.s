@@ -1,5 +1,7 @@
 package compile.internal.ssa
-use std.slices
+import (
+    "std"
+)
 struct pass_stat {
     string name
     int changed

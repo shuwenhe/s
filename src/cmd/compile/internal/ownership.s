@@ -1,8 +1,10 @@
 package compile.internal.ownership
-use compile.internal.typesys.is_copy_type
-use std.slices
+import (
+    "compile.internal.typesys"
+    "std"
+)
 func make_decision(string ty) string {
-    if is_copy_type(ty) {
+    if compile.internal.typesys.is_copy_type(ty) {
         return "copy:" + ty
     }
     "drop:" + ty
@@ -76,7 +78,7 @@ func ownership_check_events(string[] events) ownership_result {
             for j >= 0 {
                 slot := slots[j]
                 available := !ownership_contains(moved, slot.name) && !ownership_contains(dropped, slot.name)
-                if available && !is_copy_type(slot.type_name) {
+                if available && !compile.internal.typesys.is_copy_type(slot.type_name) {
                     drops = append(drops, slot.name)
                     dropped = append(dropped, slot.name)
                 }
@@ -112,7 +114,7 @@ func ownership_check_events(string[] events) ownership_result {
             if ownership_contains(moved, payload) || ownership_contains(dropped, payload) {
                 errors = errors + 1
                 message = message + "move-after-move:" + payload + ";"
-            } else if is_copy_type(slots[slot_id].type_name) {
+            } else if compile.internal.typesys.is_copy_type(slots[slot_id].type_name) {
 
             } else {
                 moved = append(moved, payload)

@@ -1,5 +1,7 @@
 package compile.internal.liveness
-use std.slices
+import (
+    "std"
+)
 func intervals_test_case_name() string {
     "liveness/intervals_test.s"
 }

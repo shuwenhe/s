@@ -1,8 +1,10 @@
 package compile.internal.noder
-use std.fs.read_to_string
-use std.result.result
+import (
+    "std.fs"
+    "std.result"
+)
 func read_unit(string path) (source_unit, noder_error) {
-    switch read_to_string(path) {
+    switch std.fs.read_to_string(path) {
         text : ok_unit(path, text),
         err : err_unit(code_read_failed(), "failed to read source file: " + err.message, path, 0, 0),
     }

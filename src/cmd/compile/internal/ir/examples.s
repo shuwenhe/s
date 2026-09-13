@@ -1,13 +1,8 @@
 package compile.internal.ir.examples
 
-use compile.internal.ir.builder
-use compile.internal.ir.mir
-use compile.internal.ir.cfg
-use compile.internal.ir.ssa
-use compile.internal.ir.escape
-use compile.internal.ir.liveness
-use compile.internal.ir.writebarrier
-use compile.internal.ir.debug_loc
+import (
+    "compile.internal.ir"
+)
 
 func example_simple_function() mir.ir_function {
     b := builder.new_ir_builder("simple_add")

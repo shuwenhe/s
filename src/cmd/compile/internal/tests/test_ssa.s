@@ -1,12 +1,11 @@
 package compile.internal.tests.test_ssa
-use compile.internal.ssa_core.build_pipeline
-use compile.internal.ssa_core.build_pipeline_with_margin
-use compile.internal.ssa_core.dump_pipeline
-use compile.internal.ssa_core.dump_debug_map
-use std.prelude.slice
+import (
+    "compile.internal.ssa_core"
+    "std.prelude"
+)
 func run_ssa_suite() int {
     mir_text := "mir main blocks=2 entry=0 exit=1 | bb0(entry) stmts=1 term=jump | bb1(exit) stmts=0 term=return"
-    arm64_dump := dump_pipeline(build_pipeline(mir_text, "arm64"))
+    arm64_dump := compile.internal.ssa_core.dump_pipeline(compile.internal.ssa_core.build_pipeline(mir_text, "arm64"))
     if !contains(arm64_dump, "blocks=2") {
         return 1
     }
@@ -337,7 +336,7 @@ func run_ssa_suite() int {
     if !contains(arm64_dump, "sample=pcopy(v0->v1)") {
         return 1
     }
-    margin_override_dump := dump_pipeline(build_pipeline_with_margin(mir_text, "arm64", 99))
+    margin_override_dump := compile.internal.ssa_core.dump_pipeline(compile.internal.ssa_core.build_pipeline_with_margin(mir_text, "arm64", 99))
     if !contains(margin_override_dump, "delta_hot=") {
         return 1
     }
@@ -368,7 +367,7 @@ func run_ssa_suite() int {
     if fallback_reason != "fallback" {
         return 1
     }
-    invalid_dump := dump_pipeline(build_pipeline("broken", "amd64"))
+    invalid_dump := compile.internal.ssa_core.dump_pipeline(compile.internal.ssa_core.build_pipeline("broken", "amd64"))
     if !contains(invalid_dump, "issa_verify=") {
         return 1
     }
@@ -426,12 +425,12 @@ func run_ssa_suite() int {
     if contains(invalid_dump, "issa_verify_pick_reason=ok") {
         return 1
     }
-    amd64_program := build_pipeline(mir_text, "amd64")
-    amd64_dump := dump_pipeline(amd64_program)
+    amd64_program := compile.internal.ssa_core.build_pipeline(mir_text, "amd64")
+    amd64_dump := compile.internal.ssa_core.dump_pipeline(amd64_program)
     if !contains(amd64_dump, "v0->r10") {
         return 1
     }
-    debug_map := dump_debug_map(amd64_program)
+    debug_map := compile.internal.ssa_core.dump_debug_map(amd64_program)
     if !contains(debug_map, "ssa.debug") {
         return 1
     }
@@ -445,7 +444,7 @@ func run_ssa_suite() int {
         return 1
     }
     heavy_mir := "mir heavy blocks=3 entry=0 exit=2 call=hot | bb0(entry) stmts=12 const=3 term=branch | bb1(mid) stmts=8 imm=2 term=jump | bb2(exit) stmts=0 literal=1 term=return"
-    heavy_dump := dump_pipeline(build_pipeline(heavy_mir, "amd64"))
+    heavy_dump := compile.internal.ssa_core.dump_pipeline(compile.internal.ssa_core.build_pipeline(heavy_mir, "amd64"))
     if !contains(heavy_dump, "spills=") {
         return 1
     }
@@ -492,7 +491,7 @@ func run_ssa_suite() int {
         return 1
     }
     coalesce_mir := "mir coalesce blocks=3 entry=0 exit=2 | bb0(entry) stmts=1 term=jump | bb1(dead) stmts=0 term=jump | bb2(exit) stmts=0 term=return"
-    coalesce_dump := dump_pipeline(build_pipeline(coalesce_mir, "amd64"))
+    coalesce_dump := compile.internal.ssa_core.dump_pipeline(compile.internal.ssa_core.build_pipeline(coalesce_mir, "amd64"))
     if !contains(coalesce_dump, "mir_opt=mir coalesce blocks=2") {
         return 1
     }
@@ -503,7 +502,7 @@ func run_ssa_suite() int {
         return 1
     }
     rerun_mir := "mir rerun blocks=3 entry=0 exit=2 | bb0(entry) stmts=0 term=branch | bb1(mid) stmts=0 term=jump | bb2(exit) stmts=0 term=return"
-    rerun_dump := dump_pipeline(build_pipeline(rerun_mir, "amd64"))
+    rerun_dump := compile.internal.ssa_core.dump_pipeline(compile.internal.ssa_core.build_pipeline(rerun_mir, "amd64"))
     if !contains(rerun_dump, "invalid_reruns=") {
         return 1
     }
@@ -514,7 +513,7 @@ func run_ssa_suite() int {
         return 1
     }
     value_mir := "mir value blocks=5 entry=0 exit=4 | bb0(entry) stmts=4 phi=3 copy=4 term=branch | bb1(left) stmts=2 term=jump | bb2(right) stmts=2 term=jump | bb3(join) stmts=1 copy=1 term=branch | bb4(exit) stmts=1 term=return"
-    value_dump := dump_pipeline(build_pipeline(value_mir, "amd64"))
+    value_dump := compile.internal.ssa_core.dump_pipeline(compile.internal.ssa_core.build_pipeline(value_mir, "amd64"))
     if !contains(value_dump, "mir_opt=mir value") {
         return 1
     }
@@ -525,7 +524,7 @@ func run_ssa_suite() int {
         return 1
     }
     memory_mir := "mir memory blocks=4 entry=0 exit=3 | bb0(entry) stmts=5 load=4 store=2 term=branch | bb1(loop) stmts=1 term=branch | bb2(latch) stmts=0 term=jump | bb3(exit) stmts=1 term=return"
-    memory_dump := dump_pipeline(build_pipeline(memory_mir, "amd64"))
+    memory_dump := compile.internal.ssa_core.dump_pipeline(compile.internal.ssa_core.build_pipeline(memory_mir, "amd64"))
     if !contains(memory_dump, "mir_opt=mir memory") {
         return 1
     }
@@ -536,7 +535,7 @@ func run_ssa_suite() int {
         return 1
     }
     memphi_mir := "mir memphi blocks=4 entry=0 exit=3 | bb0(entry) stmts=4 memphi=3 load=2 store=1 term=branch | bb1(left) stmts=1 term=jump | bb2(join) stmts=1 phi=1 term=jump | bb3(exit) stmts=1 term=return"
-    memphi_dump := dump_pipeline(build_pipeline(memphi_mir, "amd64"))
+    memphi_dump := compile.internal.ssa_core.dump_pipeline(compile.internal.ssa_core.build_pipeline(memphi_mir, "amd64"))
     if !contains(memphi_dump, "mir_opt=mir memphi") {
         return 1
     }
@@ -603,7 +602,7 @@ func contains(string text, string needle) bool {
     }
     i := 0
     for i <= len(text) - len(needle) {
-        if slice(text, i, i + len(needle)) == needle {
+        if std.prelude.slice(text, i, i + len(needle)) == needle {
             return true
         }
         i = i + 1

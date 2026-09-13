@@ -1,48 +1,30 @@
 package compile.internal.mono_test
-use compile.internal.mono.new_cache
-use compile.internal.mono.make_instance_name
-use compile.internal.mono.make_instance_key
-use compile.internal.mono.mono_cache_count
-use compile.internal.mono.mono_cache_get_or_create_key
-use compile.internal.mono.specialize_function
-use compile.internal.mono.substitute_type
-use compile.internal.mono.monomorphize_file
-use compile.internal.mono.summarize_instance
-use compile.internal.mono.verify_monomorphized_file_with_details
-use s.function_decl
-use s.function_sig
-use s.param
-use s.source_file
-use s.use_decl
-use s.item
-use s.block_expr
-use s.expr
-use s.int_expr
-use s.name_expr
-use s.call_expr
-use s.stmt
-use std.option.option
-use std.prelude.box
+import (
+    "compile.internal.mono"
+    "s"
+    "std.option"
+    "std.prelude"
+)
 
 func run_monomorphization_test() int {
     int_args := string[] { "int" }
     box_args := string[] { "box[int]" }
-    first := make_instance_name("identity", int_args)
-    second := make_instance_name("identity", int_args)
-    other := make_instance_name("identity", box_args)
+    first := compile.internal.mono.make_instance_name("identity", int_args)
+    second := compile.internal.mono.make_instance_name("identity", int_args)
+    other := compile.internal.mono.make_instance_name("identity", box_args)
     if first == "" || first != second || first == other {
         return 1
     }
-    cache := new_cache()
-    int_key := make_instance_key("identity", int_args)
-    box_key := make_instance_key("identity", box_args)
-    first_result := mono_cache_get_or_create_key(cache, int_key)
+    cache := compile.internal.mono.new_cache()
+    int_key := compile.internal.mono.make_instance_key("identity", int_args)
+    box_key := compile.internal.mono.make_instance_key("identity", box_args)
+    first_result := compile.internal.mono.mono_cache_get_or_create_key(cache, int_key)
     cache = first_result.cache
-    second_result := mono_cache_get_or_create_key(cache, int_key)
+    second_result := compile.internal.mono.mono_cache_get_or_create_key(cache, int_key)
     cache = second_result.cache
-    box_result := mono_cache_get_or_create_key(cache, box_key)
+    box_result := compile.internal.mono.mono_cache_get_or_create_key(cache, box_key)
     cache = box_result.cache
-    if first_result.instance_name != second_result.instance_name || first_result.instance_name == box_result.instance_name || mono_cache_count(cache) != 2 {
+    if first_result.instance_name != second_result.instance_name || first_result.instance_name == box_result.instance_name || compile.internal.mono.mono_cache_count(cache) != 2 {
         return 1
     }
     generic := function_decl {
@@ -55,8 +37,8 @@ func run_monomorphization_test() int {
         body: option.none,
         is_public: false,
     }
-    int_instance := specialize_function(generic, int_args)
-    box_instance := specialize_function(generic, box_args)
+    int_instance := compile.internal.mono.specialize_function(generic, int_args)
+    box_instance := compile.internal.mono.specialize_function(generic, box_args)
     if int_instance.sig.name == box_instance.sig.name {
         return 1
     }
@@ -67,16 +49,16 @@ func run_monomorphization_test() int {
         return 1
     }
     nested_args := string[] { "string[]" }
-    nested := specialize_function(generic, nested_args)
+    nested := compile.internal.mono.specialize_function(generic, nested_args)
     if nested.sig.params[0].type_name != "string[]" || nested.sig.return_type.unwrap() != "string[]" {
         return 1
     }
-    if substitute_type("box[T[]]", string[] { "T" }, string[] { "int" }) != "box[int[]]" {
+    if compile.internal.mono.substitute_type("box[T[]]", string[] { "T" }, string[] { "int" }) != "box[int[]]" {
         return 1
     }
     call_args := expr[] { expr::int(int_expr { value: "1", inferred_type option::some("int") }) }
     mono_call := expr::call(call_expr {
-        callee: box(expr::name(name_expr { name: "identity", inferred_type option::none })),
+        callee: std.prelude.box(expr::name(name_expr { name: "identity", inferred_type option::none })),
         args: call_args,
         inferred_type: option::some("int"),
         resolved_callee: option::some("identity__mono_int"),
@@ -93,7 +75,7 @@ func run_monomorphization_test() int {
         is_public: false,
     }
     bar_call := expr::call(call_expr {
-        callee: box(expr::name(name_expr { name: "bar", inferred_type option::none })),
+        callee: std.prelude.box(expr::name(name_expr { name: "bar", inferred_type option::none })),
         args: expr[] { expr::name(name_expr { name: "value", inferred_type option::some("T") }) },
         inferred_type: option::some("T"),
         resolved_callee: option::some("bar__mono_T"),
@@ -110,7 +92,7 @@ func run_monomorphization_test() int {
         is_public: false,
     }
     baz_call := expr::call(call_expr {
-        callee: box(expr::name(name_expr { name: "baz", inferred_type option::none })),
+        callee: std.prelude.box(expr::name(name_expr { name: "baz", inferred_type option::none })),
         args: expr[] { expr::name(name_expr { name: "value", inferred_type option::some("T") }) },
         inferred_type: option::some("T"),
         resolved_callee: option::some("baz__mono_T"),
@@ -137,7 +119,7 @@ func run_monomorphization_test() int {
         is_public: false,
     }
     foo_seed := expr::call(call_expr {
-        callee: box(expr::name(name_expr { name: "foo", inferred_type option::none })),
+        callee: std.prelude.box(expr::name(name_expr { name: "foo", inferred_type option::none })),
         args: call_args,
         inferred_type: option::some("int"),
         resolved_callee: option::some("foo__mono_int"),
@@ -154,12 +136,12 @@ func run_monomorphization_test() int {
         is_public: false,
     }
     file := source_file { pkg: "mono.test", uses: use_decl[](), items item[] { item::function(generic), item::function(caller), item::function(foo), item::function(bar), item::function(baz), item::function(chain_caller) } }
-    mono_file := monomorphize_file(file)
-    if mono_cache_count(mono_file.cache) != 4 || len(mono_file.file.items) != 6 || mono_file.invariant_errors != 0 {
+    mono_file := compile.internal.mono.monomorphize_file(file)
+    if compile.internal.mono.mono_cache_count(mono_file.cache) != 4 || len(mono_file.file.items) != 6 || mono_file.invariant_errors != 0 {
         return 1
     }
-    int_summary := summarize_instance(int_instance)
-    box_summary := summarize_instance(box_instance)
+    int_summary := compile.internal.mono.summarize_instance(int_instance)
+    box_summary := compile.internal.mono.summarize_instance(box_instance)
     if !int_summary.params[0].copy || int_summary.params[0].drop {
         return 1
     }
@@ -188,7 +170,7 @@ func run_e2e_transitive_monomorphization_test() int {
     }
 
     baz_call := expr::call(call_expr {
-        callee: box(expr::name(name_expr { name: "baz", inferred_type: option::none })),
+        callee: std.prelude.box(expr::name(name_expr { name: "baz", inferred_type: option::none })),
         args: expr[] { expr::name(name_expr { name: "x", inferred_type: option::some("T") }) },
         inferred_type: option::some("T"),
         resolved_callee: option::some("baz__mono_T"),
@@ -210,7 +192,7 @@ func run_e2e_transitive_monomorphization_test() int {
     }
 
     bar_call := expr::call(call_expr {
-        callee: box(expr::name(name_expr { name: "bar", inferred_type: option::none })),
+        callee: std.prelude.box(expr::name(name_expr { name: "bar", inferred_type: option::none })),
         args: expr[] { expr::name(name_expr { name: "x", inferred_type: option::some("T") }) },
         inferred_type: option::some("T"),
         resolved_callee: option::some("bar__mono_T"),
@@ -232,7 +214,7 @@ func run_e2e_transitive_monomorphization_test() int {
     }
 
     foo_call := expr::call(call_expr {
-        callee: box(expr::name(name_expr { name: "foo", inferred_type: option::none })),
+        callee: std.prelude.box(expr::name(name_expr { name: "foo", inferred_type: option::none })),
         args: expr[] { expr::int(int_expr { value: "42", inferred_type: option::some("int") }) },
         inferred_type: option::some("int"),
         resolved_callee: option::some("foo__mono_int"),
@@ -264,9 +246,9 @@ func run_e2e_transitive_monomorphization_test() int {
         },
     }
 
-    mono_file := monomorphize_file(file)
+    mono_file := compile.internal.mono.monomorphize_file(file)
 
-    if mono_cache_count(mono_file.cache) != 3 {
+    if compile.internal.mono.mono_cache_count(mono_file.cache) != 3 {
 
         return 1
     }
@@ -280,7 +262,7 @@ func run_e2e_transitive_monomorphization_test() int {
         return 1
     }
 
-    if verify_monomorphized_file_with_details(mono_file.file) != 0 {
+    if compile.internal.mono.verify_monomorphized_file_with_details(mono_file.file) != 0 {
         return 1
     }
 

@@ -1,36 +1,12 @@
 package compile.internal.semantic
-use compile.internal.prelude.lookup_builtin_field_type
-use compile.internal.prelude.lookup_builtin_method_arity
-use compile.internal.prelude.lookup_builtin_method_type
-use compile.internal.typesys.assignable_type
-use compile.internal.typesys.base_type_name
-use compile.internal.typesys.comparable_type
-use compile.internal.typesys.compatible_type
-use compile.internal.typesys.extract_type_args
-use compile.internal.typesys.parse_type
-use compile.internal.typesys.parse_type_ref
-use compile.internal.typesys.rules_consistent
-use compile.internal.typesys.same_type
-use compile.internal.typesys.same_type_ref
-use compile.internal.typesys.type_arg
-use compile.internal.typesys.type_ref
-use compile.internal.typesys.has_unknown_component
-use compile.internal.typesys.is_copy_type
-use s.block_expr
-use s.expr
-use s.function_decl
-use s.receiver_method_decl
-use s.item
-use s.pattern
-use s.stmt
-use s.parse_source
-use s.param_decl
-use s.source_file
-use std.option.option
-use std.prelude.char_at
-use std.prelude.len
-use std.prelude.slice
-use std.slices
+import (
+    "compile.internal.prelude"
+    "compile.internal.typesys"
+    "s"
+    "std"
+    "std.option"
+    "std.prelude"
+)
 struct type_binding {
     string name
     string type_name
@@ -120,7 +96,7 @@ struct semantic_error {
 
 func check_text(string source) int {
     diagnostics := check_detailed(source);
-    if len(diagnostics) > 0 {
+    if std.prelude.len(diagnostics) > 0 {
         return 1;
     }
     0
@@ -133,7 +109,7 @@ func borrow_state_new() borrow_record[] {
 func borrow_state_clone(borrow_record[] state) borrow_record[] {
     copied := borrow_record[]()
     i := 0
-    for i < len(state) {
+    for i < std.prelude.len(state) {
         copied.push(state[i])
         i = i + 1
     }
@@ -142,7 +118,7 @@ func borrow_state_clone(borrow_record[] state) borrow_record[] {
 
 func borrow_state_merge_moves(borrow_record[] target, borrow_record[] source) {
     i := 0
-    for i < len(source) {
+    for i < std.prelude.len(source) {
         if source[i].moved {
             index := borrow_state_find(target, source[i].name)
             if index < 0 {
@@ -164,7 +140,7 @@ func borrow_state_push(borrow_record[] state, string name, bool mutable) {
 func borrow_state_clear(borrow_record[] state) {
     kept := borrow_record[]()
     i := 0
-    for i < len(state) {
+    for i < std.prelude.len(state) {
         if state[i].moved {
             kept.push(state[i])
         }
@@ -172,7 +148,7 @@ func borrow_state_clear(borrow_record[] state) {
     }
     state.clear()
     i = 0
-    for i < len(kept) {
+    for i < std.prelude.len(kept) {
         state.push(kept[i])
         i = i + 1
     }
@@ -180,7 +156,7 @@ func borrow_state_clear(borrow_record[] state) {
 
 func borrow_state_has_conflict(borrow_record[] state, string name, bool mutable) bool {
     i := 0
-    for i < len(state) {
+    for i < std.prelude.len(state) {
         if borrow_places_overlap(state[i].name, name) {
             if mutable || state[i].mutable {
                 return true
@@ -195,17 +171,17 @@ func borrow_places_overlap(string left, string right) bool {
     if left == right { return true }
     if left == "" || right == "" { return false }
     if starts_with(left, right) {
-        return len(left) > len(right) && string(left[len(right)]) == "."
+        return std.prelude.len(left) > std.prelude.len(right) && string(left[std.prelude.len(right)]) == "."
     }
     if starts_with(right, left) {
-        return len(right) > len(left) && string(right[len(left)]) == "."
+        return std.prelude.len(right) > std.prelude.len(left) && string(right[std.prelude.len(left)]) == "."
     }
     false
 }
 
 func borrow_state_find(borrow_record[] state, string name) int {
     i := 0
-    for i < len(state) {
+    for i < std.prelude.len(state) {
         if state[i].name == name { return i }
         i = i + 1
     }
@@ -213,7 +189,7 @@ func borrow_state_find(borrow_record[] state, string name) int {
 }
 
 func borrow_type_is_copy(string type_name) bool {
-    is_copy_type(type_name)
+    compile.internal.typesys.is_copy_type(type_name)
 }
 
 func borrow_state_mark_move(borrow_record[] state, string name, string type_name) {
@@ -255,12 +231,12 @@ func borrow_place_name(expr value) string {
 
 func check_detailed(string source) semantic_error[] {
     diagnostics := semantic_error[]()
-    if !rules_consistent() {
+    if !compile.internal.typesys.rules_consistent() {
         add_error(source, diagnostics, "e0002", "type rules consistency check failed", "package")
         return finalize_diagnostics(diagnostics)
     }
     run_preparse_semantic_completeness_checks(source, diagnostics)
-    parsed := parse_source(source)
+    parsed := s.parse_source(source)
     if parsed.is_err() {
         add_error(source, diagnostics, "e0001", "parse failed", "package");
         return finalize_diagnostics(diagnostics)
@@ -271,7 +247,7 @@ func check_detailed(string source) semantic_error[] {
     consts := collect_consts(file.items, functions, traits, source, diagnostics)
     validate_function_set(functions, source, diagnostics)
     i := 0
-    for i < len(file.items) {
+    for i < std.prelude.len(file.items) {
         ignored := check_item(file.items[i], functions, traits, consts, source, diagnostics)
         i = i + 1
     }
@@ -280,7 +256,7 @@ func check_detailed(string source) semantic_error[] {
 
 func check_source_file(source_file file, string source) semantic_error[] {
     diagnostics := semantic_error[]()
-    if !rules_consistent() {
+    if !compile.internal.typesys.rules_consistent() {
         add_error(source, diagnostics, "e0002", "type rules consistency check failed", "package")
         return finalize_diagnostics(diagnostics)
     }
@@ -289,7 +265,7 @@ func check_source_file(source_file file, string source) semantic_error[] {
     consts := collect_consts(file.items, functions, traits, source, diagnostics)
     validate_function_set(functions, source, diagnostics)
     i := 0
-    for i < len(file.items) {
+    for i < std.prelude.len(file.items) {
         ignored := check_item(file.items[i], functions, traits, consts, source, diagnostics)
         i = i + 1
     }
@@ -441,10 +417,10 @@ func count_token_text(string text, string token) int {
     }
     count := 0
     i := 0
-    for i <= len(text) - len(token) {
-        if slice(text, i, i + len(token)) == token {
+    for i <= std.prelude.len(text) - std.prelude.len(token) {
+        if std.prelude.slice(text, i, i + std.prelude.len(token)) == token {
             count = count + 1
-            i = i + len(token)
+            i = i + std.prelude.len(token)
         } else {
             i = i + 1
         }
@@ -462,13 +438,13 @@ func finalize_diagnostics(semantic_error[] diagnostics) semantic_error[] {
 func append_anchor_summaries(semantic_error[] diagnostics) semantic_error[] {
     out := semantic_error[]()
     i := 0
-    for i < len(diagnostics) {
+    for i < std.prelude.len(diagnostics) {
         out = append(out, diagnostics[i])
         i = i + 1
     }
     summaries := semantic_error[]()
     i = 0
-    for i < len(diagnostics) {
+    for i < std.prelude.len(diagnostics) {
         d := diagnostics[i]
         if d.anchor != "" {
             at := find_anchor_summary_index(summaries, d.anchor)
@@ -487,7 +463,7 @@ func append_anchor_summaries(semantic_error[] diagnostics) semantic_error[] {
         i = i + 1
     }
     i = 0
-    for i < len(summaries) {
+    for i < std.prelude.len(summaries) {
         if summaries[i].repeat_count > 1 {
             out = append(out, summaries[i])
         }
@@ -498,7 +474,7 @@ func append_anchor_summaries(semantic_error[] diagnostics) semantic_error[] {
 
 func find_anchor_summary_index(semantic_error[] diagnostics, string anchor) int {
     i := 0
-    for i < len(diagnostics) {
+    for i < std.prelude.len(diagnostics) {
         if diagnostics[i].anchor == anchor {
             return i
         }
@@ -510,7 +486,7 @@ func find_anchor_summary_index(semantic_error[] diagnostics, string anchor) int 
 func dedupe_diagnostics(semantic_error[] diagnostics) semantic_error[] {
     out := semantic_error[]()
     i := 0
-    for i < len(diagnostics) {
+    for i < std.prelude.len(diagnostics) {
         d := diagnostics[i]
         idx := find_diagnostic_index(out, d)
         if idx < 0 {
@@ -528,7 +504,7 @@ func dedupe_diagnostics(semantic_error[] diagnostics) semantic_error[] {
 
 func find_diagnostic_index(semantic_error[] diagnostics, semantic_error candidate) int {
     i := 0
-    for i < len(diagnostics) {
+    for i < std.prelude.len(diagnostics) {
         if diagnostics[i].code == candidate.code
             && diagnostics[i].message == candidate.message
             && diagnostics[i].line == candidate.line
@@ -543,14 +519,14 @@ func find_diagnostic_index(semantic_error[] diagnostics, semantic_error candidat
 func sort_diagnostics(semantic_error[] diagnostics) semantic_error[] {
     out := semantic_error[]()
     i := 0
-    for i < len(diagnostics) {
+    for i < std.prelude.len(diagnostics) {
         item := diagnostics[i]
-        insert := len(out)
+        insert := std.prelude.len(out)
         j := 0
-        for j < len(out) {
+        for j < std.prelude.len(out) {
             if diagnostic_before(item, out[j]) {
                 insert = j
-                j = len(out)
+                j = std.prelude.len(out)
             } else {
                 j = j + 1
             }
@@ -563,7 +539,7 @@ func sort_diagnostics(semantic_error[] diagnostics) semantic_error[] {
 
 func insert_diagnostic(semantic_error[] diagnostics, int at, semantic_error item) {
     diagnostics = append(diagnostics, item)
-    i := len(diagnostics) - 1
+    i := std.prelude.len(diagnostics) - 1
     for i > at {
         diagnostics[i] = diagnostics[i - 1]
         i = i - 1
@@ -605,13 +581,13 @@ func severity_rank(string severity) int {
 func apply_diagnostic_budget(semantic_error[] diagnostics) semantic_error[] {
     max_total := 128
     max_warnings := 24
-    if len(diagnostics) <= max_total {
+    if std.prelude.len(diagnostics) <= max_total {
         return diagnostics
     }
     out := semantic_error[]()
     warnings := 0
     i := 0
-    for i < len(diagnostics) && len(out) < max_total {
+    for i < std.prelude.len(diagnostics) && std.prelude.len(out) < max_total {
         d := diagnostics[i]
         if d.severity == "warning" {
             if warnings >= max_warnings {
@@ -630,12 +606,12 @@ func validate_function_set(function_binding[] functions, string source, semantic
     errors := 0
     i := 0
     has_main := false
-    for i < len(functions) {
+    for i < std.prelude.len(functions) {
         if !functions[i].has_receiver && functions[i].name == "main" {
             has_main = true
         }
         j := i + 1
-        for j < len(functions) {
+        for j < std.prelude.len(functions) {
             if !functions[i].has_receiver && !functions[j].has_receiver && functions[i].name == functions[j].name {
                 errors = errors + add_error(source, diagnostics, "e3010", "duplicate function declaration", functions[i].name)
             }
@@ -657,12 +633,12 @@ func validate_function_set(function_binding[] functions, string source, semantic
 }
 
 func same_param_types(string[] left, string[] right) bool {
-    if len(left) != len(right) {
+    if std.prelude.len(left) != std.prelude.len(right) {
         return false
     }
     i := 0
-    for i < len(left) {
-        if !same_type(left[i], right[i]) {
+    for i < std.prelude.len(left) {
+        if !compile.internal.typesys.same_type(left[i], right[i]) {
             return false
         }
         i = i + 1
@@ -677,7 +653,7 @@ func is_main_package(string source) bool {
 func collect_functions(item[] items) function_binding[] {
     out := function_binding[]()
     i := 0
-    for i < len(items) {
+    for i < std.prelude.len(items) {
         switch items[i] {
             item.function(function_decl) : out = append(out, make_function_binding(function_decl)),
             item.method(method_decl) : out = append(out, make_receiver_method_binding(method_decl)),
@@ -691,19 +667,19 @@ func collect_functions(item[] items) function_binding[] {
 func make_function_binding(function_decl function_decl) function_binding {
     generic_names := string[]()
     i := 0
-    for i < len(function_decl.sig.generics) {
+    for i < std.prelude.len(function_decl.sig.generics) {
         generic_names = append(generic_names, generic_name(function_decl.sig.generics[i]));
         i = i + 1
     }
     params := string[]()
     i = 0
-    for i < len(function_decl.sig.params) {
-        params = append(params, parse_type(function_decl.sig.params[i].type_name));
+    for i < std.prelude.len(function_decl.sig.params) {
+        params = append(params, compile.internal.typesys.parse_type(function_decl.sig.params[i].type_name));
         i = i + 1
     }
     return_type :=
         switch function_decl.sig.return_type {
-            option.some(type_name) : parse_type(type_name),
+            option.some(type_name) : compile.internal.typesys.parse_type(type_name),
             option.none : "()",
         }
     return function_binding {
@@ -716,13 +692,13 @@ func make_function_binding(function_decl function_decl) function_binding {
 func make_receiver_method_binding(receiver_method_decl method_decl) function_binding {
     binding := make_function_binding(method_decl.method)
     params := string[]()
-    params = append(params, parse_type(method_decl.receiver_type))
+    params = append(params, compile.internal.typesys.parse_type(method_decl.receiver_type))
     i := 0
-    for i < len(binding.param_types) {
+    for i < std.prelude.len(binding.param_types) {
         params = append(params, binding.param_types[i])
         i = i + 1
     }
-    binding.owner_type = method_owner_type(parse_type(method_decl.receiver_type))
+    binding.owner_type = method_owner_type(compile.internal.typesys.parse_type(method_decl.receiver_type))
     binding.has_receiver = true
     binding.receiver_mode = receiver_mode_from_type(method_decl.receiver_type)
     binding.param_types = params
@@ -742,7 +718,7 @@ func collect_consts(item[] items, function_binding[] functions, trait_binding[] 
     type_env := type_binding[]()
     last_const_expr := option::none
     i := 0
-    for i < len(items) {
+    for i < std.prelude.len(items) {
         switch items[i] {
             item.const(const_decl) : {
                 if lookup_name_type(type_env, const_decl.name) != "unknown" {
@@ -772,7 +748,7 @@ func collect_consts(item[] items, function_binding[] functions, trait_binding[] 
                     ty = inferred.type_name
                     if is_unknown(ty) {
                         ty = "unknown"
-                    } else if same_type(ty, "int") {
+                    } else if compile.internal.typesys.same_type(ty, "int") {
                         eval_result := eval_const_int_expr(expr_to_check.unwrap(), out, const_decl.iota_index)
                         if eval_result.ok {
                             has_int_value = true
@@ -811,7 +787,7 @@ func eval_const_int_expr(expr value, const_binding[] known_consts, int iota_valu
                     error: "",
                 }
             }
-            i := len(known_consts)
+            i := std.prelude.len(known_consts)
             for i > 0 {
                 i = i - 1
                 if known_consts[i].name == name_expr.name {
@@ -878,13 +854,13 @@ func parse_const_int_literal(string literal) int {
     text := literal
     sign := 1
     i := 0
-    if len(text) > 0 && char_at(text, 0) == "-" {
+    if std.prelude.len(text) > 0 && std.prelude.char_at(text, 0) == "-" {
         sign = -1
         i = 1
     }
     out := 0
-    for i < len(text) {
-        ch := char_at(text, i)
+    for i < std.prelude.len(text) {
+        ch := std.prelude.char_at(text, i)
         if ch != "_" {
             out = out * 10 + const_digit_value(ch)
         }
@@ -930,21 +906,21 @@ func const_digit_value(string ch) int {
 func collect_traits(item[] items) trait_binding[] {
     out := trait_binding[]()
     i := 0
-    for i < len(items) {
+    for i < std.prelude.len(items) {
         switch items[i] {
             item.trait(trait_decl) : {
                 methods := method_binding[]()
                 mi := 0
-                for mi < len(trait_decl.methods) {
+                for mi < std.prelude.len(trait_decl.methods) {
                     params := string[]()
                     pi := 0
-                    for pi < trait_decl.methods[mi]len(.params) {
-                        params = append(params, parse_type(trait_decl.methods[mi].params[pi].type_name));
+                    for pi < trait_decl.methods[mi]std.prelude.len(.params) {
+                        params = append(params, compile.internal.typesys.parse_type(trait_decl.methods[mi].params[pi].type_name));
                         pi = pi + 1
                     }
                     return_type :=
                         switch trait_decl.methods[mi].return_type {
-                            option.some(type_name) : parse_type(type_name),
+                            option.some(type_name) : compile.internal.typesys.parse_type(type_name),
                             option.none : "()",
                         }
                     methods.push(method_binding {
@@ -967,8 +943,8 @@ func collect_traits(item[] items) trait_binding[] {
 
 func find_trait_binding(trait_binding[] traits, string name) option[trait_binding] {
     i := 0
-    for i < len(traits) {
-        if traits[i].name == name || traits[i].name == base_type_name(name) {
+    for i < std.prelude.len(traits) {
+        if traits[i].name == name || traits[i].name == compile.internal.typesys.base_type_name(name) {
             return option.some(traits[i]
         }
         i = i + 1
@@ -978,7 +954,7 @@ func find_trait_binding(trait_binding[] traits, string name) option[trait_bindin
 
 func find_trait_method(trait_binding trait_info, string name) option[method_binding] {
     i := 0
-    for i < len(trait_info.methods) {
+    for i < std.prelude.len(trait_info.methods) {
         if trait_info.methods[i].name == name {
             return option.some(trait_info.methods[i]
         }
@@ -989,12 +965,12 @@ func find_trait_method(trait_binding trait_info, string name) option[method_bind
 
 func receiver_type_implements_trait(string receiver_type, trait_binding trait_info, function_binding[] functions) bool {
     mi := 0
-    for mi < len(trait_info.methods) {
+    for mi < std.prelude.len(trait_info.methods) {
         matched := false
         fi := 0
-        for fi < len(functions) {
+        for fi < std.prelude.len(functions) {
             if functions[fi].has_receiver
-                && functions[fi].owner_type == method_owner_type(parse_type(receiver_type))
+                && functions[fi].owner_type == method_owner_type(compile.internal.typesys.parse_type(receiver_type))
                 && method_binding_matches_trait(functions[fi], trait_info.methods[mi]) {
                 matched = true
             }
@@ -1012,17 +988,17 @@ func method_binding_matches_trait(function_binding method, method_binding requir
     if method.name != requirement.name {
         return false
     }
-    if len(method.param_types) != len(requirement.param_types) + 1 {
+    if std.prelude.len(method.param_types) != std.prelude.len(requirement.param_types) + 1 {
         return false
     }
     i := 0
-    for i < len(requirement.param_types) {
-        if !same_type(method.param_types[i + 1], requirement.param_types[i]) {
+    for i < std.prelude.len(requirement.param_types) {
+        if !compile.internal.typesys.same_type(method.param_types[i + 1], requirement.param_types[i]) {
             return false
         }
         i = i + 1
     }
-    same_type(method.return_type, requirement.return_type)
+    compile.internal.typesys.same_type(method.return_type, requirement.return_type)
 }
 
 func receiver_mode_from_type(string receiver_type) string {
@@ -1044,7 +1020,7 @@ func receiver_mode_from_param_name(param_decl[] params) string {
 }
 
 func receiver_mode_from_params(param_decl[] params) string {
-    if len(params) == 0 {
+    if std.prelude.len(params) == 0 {
         return "value"
     }
     if params[0].name != "self" {
@@ -1067,31 +1043,31 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
     pre_errors := validate_function_signature(method, source, diagnostics)
     expected_return :=
         switch method.sig.return_type {
-            option.some(type_name) : parse_type(type_name),
+            option.some(type_name) : compile.internal.typesys.parse_type(type_name),
             option.none : "()",
         }
     env := type_binding[]()
     i := 0
-    for i < len(consts) {
+    for i < std.prelude.len(consts) {
         env.push(type_binding {
             name: consts[i].name, type_name consts[i].type_name,
         })
         i = i + 1
     }
     env.push(type_binding {
-        name: method_decl.receiver_name, type_name parse_type(method_decl.receiver_type),
+        name: method_decl.receiver_name, type_name compile.internal.typesys.parse_type(method_decl.receiver_type),
     })
     i = 0
-    for i < len(method.sig.params) {
+    for i < std.prelude.len(method.sig.params) {
         param := method.sig.params[i]
         env.push(type_binding {
-            name: param.name, type_name parse_type(param.type_name),
+            name: param.name, type_name compile.internal.typesys.parse_type(param.type_name),
         })
         i = i + 1
     }
     result := infer_block_expr(method.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
-        if !same_type(expected_return, result.type_name) {
+        if !compile.internal.typesys.same_type(expected_return, result.type_name) {
             return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "method return type mismatch", method.sig.name
         }
     }
@@ -1105,12 +1081,12 @@ func check_function(function_decl function_decl, function_binding[] functions, t
     pre_errors := validate_function_signature(function_decl, source, diagnostics)
     expected_return :=
         switch function_decl.sig.return_type {
-            option.some(type_name) : parse_type(type_name),
+            option.some(type_name) : compile.internal.typesys.parse_type(type_name),
             option.none : "()",
         }
     env := type_binding[]()
     i := 0
-    for i < len(consts) {
+    for i < std.prelude.len(consts) {
         env.push(type_binding {
             name: consts[i].name, type_name consts[i].type_name,
         })
@@ -1118,17 +1094,17 @@ func check_function(function_decl function_decl, function_binding[] functions, t
         i = i + 1
     }
     i = 0
-    for i < len(function_decl.sig.params) {
+    for i < std.prelude.len(function_decl.sig.params) {
         param := function_decl.sig.params[i]
         env.push(type_binding {
-            name: param.name, type_name parse_type(param.type_name),
+            name: param.name, type_name compile.internal.typesys.parse_type(param.type_name),
         })
         ;
         i = i + 1
     }
     result := infer_block_expr(function_decl.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
-        if !same_type(expected_return, result.type_name) {
+        if !compile.internal.typesys.same_type(expected_return, result.type_name) {
             return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "function return type mismatch", function_decl.sig.name
         }
     }
@@ -1139,17 +1115,17 @@ func validate_function_signature(function_decl function_decl, string source, sem
     errors := 0
     switch function_decl.sig.return_type {
         option.some(type_name) : {
-            if starts_with(parse_type(type_name), "&") {
+            if starts_with(compile.internal.typesys.parse_type(type_name), "&") {
                 errors = errors + add_error(source, diagnostics, "e3069", "reference return requires an explicit lifetime proof", function_decl.sig.name)
             }
         }
         option.none : (),
     }
     i := 0
-    for i < len(function_decl.sig.generics) {
+    for i < std.prelude.len(function_decl.sig.generics) {
         gi := generic_name(function_decl.sig.generics[i])
         j := i + 1
-        for j < len(function_decl.sig.generics) {
+        for j < std.prelude.len(function_decl.sig.generics) {
             if gi == generic_name(function_decl.sig.generics[j]) {
                 errors = errors + add_error(source, diagnostics, "e3012", "duplicate generic parameter", gi)
             }
@@ -1158,10 +1134,10 @@ func validate_function_signature(function_decl function_decl, string source, sem
         i = i + 1
     }
     i = 0
-    for i < len(function_decl.sig.params) {
+    for i < std.prelude.len(function_decl.sig.params) {
         pi := function_decl.sig.params[i].name
         pj := i + 1
-        for pj < len(function_decl.sig.params) {
+        for pj < std.prelude.len(function_decl.sig.params) {
             if pi == function_decl.sig.params[pj].name {
                 errors = errors + add_error(source, diagnostics, "e3013", "duplicate parameter name", pi)
             }
@@ -1171,7 +1147,7 @@ func validate_function_signature(function_decl function_decl, string source, sem
     }
     switch function_decl.sig.return_type {
         option.some(rt) : {
-            if has_unknown_component(rt) {
+            if compile.internal.typesys.has_unknown_component(rt) {
                 errors = errors + add_error(source, diagnostics, "e3014", "return type has unknown component", function_decl.sig.name
             }
             if !declared_type_is_safe(rt) {
@@ -1181,7 +1157,7 @@ func validate_function_signature(function_decl function_decl, string source, sem
         option.none : (),
     }
     i = 0
-    for i < len(function_decl.sig.params) {
+    for i < std.prelude.len(function_decl.sig.params) {
         if !declared_type_is_safe(function_decl.sig.params[i].type_name) {
             errors = errors + add_error(source, diagnostics, "e3063", "parameter type cannot be resolved at compile time", function_decl.sig.params[i].name)
         }
@@ -1195,7 +1171,7 @@ func infer_block_expr(block_expr block, type_binding[] outer_env, borrow_record[
     borrow_state := borrow_state_clone(incoming_borrows)
     errors := 0
     i := 0
-    for i < len(block.statements) {
+    for i < std.prelude.len(block.statements) {
         errors = errors + check_stmt(block.statements[i], local_env, borrow_state, expected_return, functions, traits, source, diagnostics)
         borrow_state_clear(borrow_state)
         i = i + 1
@@ -1225,7 +1201,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
             }
             binding_type := rhs.type_name
             if value.type_name.is_some() {
-                declared := parse_type(value.type_name.unwrap())
+                declared := compile.internal.typesys.parse_type(value.type_name.unwrap())
                 if !declared_type_is_safe(declared) {
                     errors = errors + add_error(source, diagnostics, "e3063", "declared type cannot be resolved at compile time", value.name)
                 }
@@ -1345,7 +1321,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
             if is_unknown(ty) {
                 fn_candidates := lookup_functions(functions, value.name)
-                if len(fn_candidates) > 0 {
+                if std.prelude.len(fn_candidates) > 0 {
                     return ok_type("fn"
                 }
                 return check_result {
@@ -1363,9 +1339,9 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
             root_name := target_name
             dot := 0
-            for dot < len(root_name) {
+            for dot < std.prelude.len(root_name) {
                 if string(root_name[dot]) == "." {
-                    root_name = slice(root_name, 0, dot)
+                    root_name = std.prelude.slice(root_name, 0, dot)
                     break
                 }
                 dot = dot + 1
@@ -1403,14 +1379,14 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
         }
         expr::member(value) : {
             target := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
-            field_type := lookup_builtin_field_type(target.type_name, value.member)
+            field_type := compile.internal.prelude.lookup_builtin_field_type(target.type_name, value.member)
             if field_type == "" {
                 return check_result {
                     type_name: "unknown", errors target.errors + add_error(source, diagnostics, "e3011", "unknown member", value.member),
                 }
             }
             check_result {
-                type_name: parse_type(field_type), errors target.errors,
+                type_name: compile.internal.typesys.parse_type(field_type), errors target.errors,
             }
         }
         expr::index(value) : {
@@ -1422,7 +1398,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
                 }
                 return check_result {
-                    type_name: parse_type(slice(target.type_name, 2, len(target.type_name))), errors errors,
+                    type_name: compile.internal.typesys.parse_type(std.prelude.slice(target.type_name, 2, std.prelude.len(target.type_name))), errors errors,
                 }
             }
             if starts_with(target.type_name, "[") {
@@ -1454,7 +1430,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             errors := 0
             arg_types := string[]()
             i := 0
-            for i < len(value.args) {
+            for i < std.prelude.len(value.args) {
                 arg_result := infer_expr(value.args[i], env, borrow_state, expected_return, functions, traits, source, diagnostics)
                 errors = errors + arg_result.errors
                 arg_types = append(arg_types, arg_result.type_name);
@@ -1470,14 +1446,14 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     errors = errors + target.errors
                     named_methods := lookup_named_methods(functions, target.type_name, member.member)
                     methods := lookup_methods(functions, target.type_name, member.member, member.target.value)
-                    if len(methods) > 0 {
+                    if std.prelude.len(methods) > 0 {
                         matches := signature_match[]()
                         j := 0
-                        for j < len(methods) {
+                        for j < std.prelude.len(methods) {
                             method_arg_types := string[]()
                             method_arg_types = append(method_arg_types, method_receiver_arg_type(target.type_name, methods[j].receiver_mode));
                             ai := 0
-                            for ai < len(arg_types) {
+                            for ai < std.prelude.len(arg_types) {
                                 method_arg_types = append(method_arg_types, arg_types[ai]);
                                 ai = ai + 1
                             }
@@ -1487,7 +1463,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                             }
                             j = j + 1
                         }
-                        if len(matches) == 0 {
+                        if std.prelude.len(matches) == 0 {
                             return check_result {
                                 type_name: "unknown", errors errors + add_error(source, diagnostics, "e1002", "no matching overload", member.member),
                             }
@@ -1495,7 +1471,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                         best := matches[0]
                         ambiguous := false
                         j = 1
-                        for j < len(matches) {
+                        for j < std.prelude.len(matches) {
                             if better_match(matches[j], best) {
                                 best = matches[j]
                                 ambiguous = false
@@ -1515,7 +1491,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                             type_name: best.return_type, errors errors,
                         }
                     }
-                    if len(named_methods) > 0 {
+                    if std.prelude.len(named_methods) > 0 {
                         return check_result {
                             type_name: "unknown", errors errors + add_error(source, diagnostics, "e3051", receiver_requirement_message(member.member, named_methods[0].receiver_mode), member.member),
                         }
@@ -1525,13 +1501,13 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                         required_method := find_trait_method(trait_result.unwrap(), member.member)
                         if required_method.is_some() {
                             requirement := required_method.unwrap()
-                            if len(requirement.param_types) != len(arg_types) {
+                            if std.prelude.len(requirement.param_types) != std.prelude.len(arg_types) {
                                 return check_result {
                                     type_name: "unknown", errors errors + add_error(source, diagnostics, "e1002", "no matching interface method", member.member),
                                 }
                             }
                             ai := 0
-                            for ai < len(arg_types) {
+                            for ai < std.prelude.len(arg_types) {
                                 if !types_compatible(requirement.param_types[ai], arg_types[ai]) {
                                     return check_result {
                                         type_name: "unknown", errors errors + add_error(source, diagnostics, "e1002", "no matching interface method", member.member),
@@ -1544,11 +1520,11 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                             }
                         }
                     }
-                    arity := lookup_builtin_method_arity(target.type_name, member.member)
-                    if arity >= 0 && arity != len(value.args) {
+                    arity := compile.internal.prelude.lookup_builtin_method_arity(target.type_name, member.member)
+                    if arity >= 0 && arity != std.prelude.len(value.args) {
                         errors = errors + add_error(source, diagnostics, "e1005", "builtin method arity mismatch", member.member)
                     }
-                    method_type := lookup_builtin_method_type(target.type_name, member.member)
+                    method_type := compile.internal.prelude.lookup_builtin_method_type(target.type_name, member.member)
                     if method_type == "" {
                         return check_result {
                             type_name: "unknown", errors errors + add_error(source, diagnostics, "e1006", "unknown method", member.member),
@@ -1560,13 +1536,13 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 }
                 expr::name(callee_name) : {
                     if callee_name.name == "copy" {
-                        if len(value.args) != 1 {
+                        if std.prelude.len(value.args) != 1 {
                             return check_result {
                                 type_name: "unknown", errors errors + add_error(source, diagnostics, "e3068", "copy expects exactly one value", "copy"),
                             }
                         }
                         copied := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics)
-                        if !is_copy_type(copied.type_name) {
+                        if !compile.internal.typesys.is_copy_type(copied.type_name) {
                             return check_result {
                                 type_name: "unknown", errors errors + copied.errors + add_error(source, diagnostics, "e3068", "copy requires a Copy type; move or clone the value explicitly", "copy"),
                             }
@@ -1576,7 +1552,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                         }
                     }
                     if callee_name.name == "box" || callee_name.name == "box_new" {
-                        if len(value.args) != 1 {
+                        if std.prelude.len(value.args) != 1 {
                             return check_result {
                                 type_name: "unknown", errors errors + add_error(source, diagnostics, "e3066", "box expects exactly one value", callee_name.name),
                             }
@@ -1591,13 +1567,13 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                         }
                     }
                     if callee_name.name == "box_free" {
-                        if len(value.args) != 1 {
+                        if std.prelude.len(value.args) != 1 {
                             return check_result {
                                 type_name: "unknown", errors errors + add_error(source, diagnostics, "e3067", "box_free expects exactly one owned value", "box_free"),
                             }
                         }
                         owned := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics)
-                        if base_type_name(owned.type_name) != "box" {
+                        if compile.internal.typesys.base_type_name(owned.type_name) != "box" {
                             return check_result {
                                 type_name: "unknown", errors errors + owned.errors + add_error(source, diagnostics, "e3067", "box_free requires an explicit box[T] value", "box_free"),
                             }
@@ -1611,21 +1587,21 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                         }
                     }
                     candidates := lookup_functions(functions, callee_name.name)
-                    if len(candidates) == 0 {
+                    if std.prelude.len(candidates) == 0 {
                         return check_result {
                             type_name: "unknown", errors errors + add_error(source, diagnostics, "e1001", "undefined function", callee_name.name),
                         }
                     }
                     matches := signature_match[]()
                     j := 0
-                    for j < len(candidates) {
+                    for j < std.prelude.len(candidates) {
                         m := try_match_signature(candidates[j], arg_types, functions, traits)
                         if m.ok {
                             matches = append(matches, m);
                         }
                         j = j + 1
                     }
-                    if len(matches) == 0 {
+                    if std.prelude.len(matches) == 0 {
                         return check_result {
                             type_name: "unknown", errors errors + add_error(source, diagnostics, "e1002", "no matching overload", callee_name.name),
                         }
@@ -1633,7 +1609,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     best := matches[0]
                     ambiguous := false
                     j = 1
-                    for j < len(matches) {
+                    for j < std.prelude.len(matches) {
                         if better_match(matches[j], best) {
                             best = matches[j]
                             ambiguous = false
@@ -1668,7 +1644,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             seen_patterns := pattern[]()
             arm_base_borrows := borrow_state_clone(borrow_state)
             i := 0
-            for i < len(value.arms) {
+            for i < std.prelude.len(value.arms) {
                 arm := value.arms[i]
                 if pattern_unreachable(seen_patterns, arm.pattern, subject.type_name) {
                     errors = errors + add_error(source, diagnostics, "e2003", "unreachable switch arm", pattern_anchor(arm.pattern))
@@ -1692,7 +1668,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 seen_patterns = append(seen_patterns, arm.pattern);
                 i = i + 1
             }
-            base := base_type_name(subject.type_name)
+            base := compile.internal.typesys.base_type_name(subject.type_name)
             if (base == "option" || base == "result") && !patterns_cover_type(seen_patterns, subject.type_name) {
                 errors = errors + add_error(source, diagnostics, "e2001", "non-exhaustive switch", "switch")
             }
@@ -1754,13 +1730,13 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             infer_block_expr(value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
         }
         expr::array(value) : {
-            if len(value.items) == 0 {
+            if std.prelude.len(value.items) == 0 {
                 return ok_type("unknown[]"
             }
             first := infer_expr(value.items[0], env, borrow_state, expected_return, functions, traits, source, diagnostics)
             errors := first.errors
             i := 1
-            for i < len(value.items) {
+            for i < std.prelude.len(value.items) {
                 item := infer_expr(value.items[i], env, borrow_state, expected_return, functions, traits, source, diagnostics)
                 errors = errors + item.errors
                 if !types_compatible(first.type_name, item.type_name) {
@@ -1775,7 +1751,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
         expr::map(value) : {
             errors := 0
             i := 0
-            for i < len(value.entries) {
+            for i < std.prelude.len(value.entries) {
                 errors = errors + infer_expr(value.entries[i].key, env, borrow_state, expected_return, functions, traits, source, diagnostics).errors
                 errors = errors + infer_expr(value.entries[i].value, env, borrow_state, expected_return, functions, traits, source, diagnostics).errors
                 i = i + 1
@@ -1820,16 +1796,16 @@ func bind_pattern(pattern pattern, string expected_type, type_binding[] bindings
         }
         pattern::variant(value) : {
             variant := last_path_segment(value.path)
-            base := base_type_name(expected_type)
+            base := compile.internal.typesys.base_type_name(expected_type)
             if base == "option" {
                 if variant == "some" {
-                    if len(value.args) != 1 {
+                    if std.prelude.len(value.args) != 1 {
                         return add_error(source, diagnostics, "e2004", "some payload arity mismatch", value.path
                     }
                     return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics
                 }
                 if variant == "none" {
-                    if len(value.args) == 0 {
+                    if std.prelude.len(value.args) == 0 {
                         return 0
                     }
                     return add_error(source, diagnostics, "e2004", "none must not have payload", value.path
@@ -1838,13 +1814,13 @@ func bind_pattern(pattern pattern, string expected_type, type_binding[] bindings
             }
             if base == "result" {
                 if variant == "ok" {
-                    if len(value.args) != 1 {
+                    if std.prelude.len(value.args) != 1 {
                         return add_error(source, diagnostics, "e2004", "ok payload arity mismatch", value.path
                     }
                     return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics
                 }
                 if variant == "err" {
-                    if len(value.args) != 1 {
+                    if std.prelude.len(value.args) != 1 {
                         return add_error(source, diagnostics, "e2004", "err payload arity mismatch", value.path
                     }
                     return bind_pattern(value.args[0], second_type_arg(expected_type), bindings, source, diagnostics
@@ -1861,7 +1837,7 @@ func add_binding(type_binding[] bindings, string name, string type_name, string 
         return 0
     }
     i := 0
-    for i < len(bindings) {
+    for i < std.prelude.len(bindings) {
         if bindings[i].name == name {
             if !types_compatible(bindings[i].type_name, type_name) {
                 return add_error(source, diagnostics, "e2008", "conflicting binding type in pattern", name
@@ -1871,7 +1847,7 @@ func add_binding(type_binding[] bindings, string name, string type_name, string 
         i = i + 1
     }
     bindings.push(type_binding {
-        name: name, type_name parse_type(type_name),
+        name: name, type_name compile.internal.typesys.parse_type(type_name),
     })
     ;
     0
@@ -1879,7 +1855,7 @@ func add_binding(type_binding[] bindings, string name, string type_name, string 
 
 func append_bindings(type_binding[] target, type_binding[] source) {
     i := 0
-    for i < len(source) {
+    for i < std.prelude.len(source) {
         target = append(target, source[i]);
         i = i + 1
     }
@@ -1887,7 +1863,7 @@ func append_bindings(type_binding[] target, type_binding[] source) {
 
 func pattern_duplicate(pattern[] seen, pattern current, string expected_type) bool {
     i := 0
-    for i < len(seen) {
+    for i < std.prelude.len(seen) {
         if pattern_equivalent(seen[i], current, expected_type) {
             return true
         }
@@ -1898,7 +1874,7 @@ func pattern_duplicate(pattern[] seen, pattern current, string expected_type) bo
 
 func pattern_unreachable(pattern[] seen, pattern current, string expected_type) bool {
     i := 0
-    for i < len(seen) {
+    for i < std.prelude.len(seen) {
         if pattern_subsumes(seen[i], current, expected_type) {
             return true
         }
@@ -1933,10 +1909,10 @@ func pattern_subsumes(pattern left, pattern right, string expected_type) bool {
                     if lctor != rctor {
                         return false
                     }
-                    if len(lv.args) == 0 && len(rv.args) == 0 {
+                    if std.prelude.len(lv.args) == 0 && std.prelude.len(rv.args) == 0 {
                         return true
                     }
-                    if len(lv.args) != 1 || len(rv.args) != 1 {
+                    if std.prelude.len(lv.args) != 1 || std.prelude.len(rv.args) != 1 {
                         return false
                     }
                     payload_type := variant_payload_type(expected_type, lctor)
@@ -1954,13 +1930,13 @@ func pattern_subsumes(pattern left, pattern right, string expected_type) bool {
 
 func patterns_cover_type(pattern[] patterns, string expected_type) bool {
     i := 0
-    for i < len(patterns) {
+    for i < std.prelude.len(patterns) {
         if pattern_is_wild(patterns[i]) {
             return true
         }
         i = i + 1
     }
-    base := base_type_name(expected_type)
+    base := compile.internal.typesys.base_type_name(expected_type)
     if base == "option" {
         return option_patterns_cover(patterns, expected_type
     }
@@ -1974,13 +1950,13 @@ func option_patterns_cover(pattern[] patterns, string expected_type) bool {
     seen_none := false
     some_patterns := pattern[]()
     i := 0
-    for i < len(patterns) {
+    for i < std.prelude.len(patterns) {
         switch patterns[i] {
             pattern::variant(value) : {
                 ctor := last_path_segment(value.path)
                 if ctor == "none" {
                     seen_none = true
-                } else if ctor == "some" && len(value.args) == 1 {
+                } else if ctor == "some" && std.prelude.len(value.args) == 1 {
                     some_patterns = append(some_patterns, value.args[0]);
                 }
             }
@@ -1998,13 +1974,13 @@ func result_patterns_cover(pattern[] patterns, string expected_type) bool {
     ok_patterns := pattern[]()
     err_patterns := pattern[]()
     i := 0
-    for i < len(patterns) {
+    for i < std.prelude.len(patterns) {
         switch patterns[i] {
             pattern::variant(value) : {
                 ctor := last_path_segment(value.path)
-                if ctor == "ok" && len(value.args) == 1 {
+                if ctor == "ok" && std.prelude.len(value.args) == 1 {
                     ok_patterns = append(ok_patterns, value.args[0]);
-                } else if ctor == "err" && len(value.args) == 1 {
+                } else if ctor == "err" && std.prelude.len(value.args) == 1 {
                     err_patterns = append(err_patterns, value.args[0]);
                 }
             }
@@ -2058,7 +2034,7 @@ func literal_pattern_equals(literal_pattern left, literal_pattern right) bool {
 }
 
 func variant_payload_type(string expected_type, string ctor) string {
-    base := base_type_name(expected_type)
+    base := compile.internal.typesys.base_type_name(expected_type)
     if base == "option" {
         if ctor == "some" {
             return first_type_arg(expected_type
@@ -2101,7 +2077,7 @@ func infer_binary(string op, check_result left, check_result right, string sourc
             errors = errors + add_error(source, diagnostics, "e3020", "equality compare requires same type", op)
         }
         if !is_unknown(left.type_name) && !is_unknown(right.type_name) && !nil_comparable_pair(left.type_name, right.type_name) {
-            if !comparable_type(left.type_name) || !comparable_type(right.type_name) {
+            if !compile.internal.typesys.comparable_type(left.type_name) || !compile.internal.typesys.comparable_type(right.type_name) {
                 errors = errors + add_error(source, diagnostics, "e3039", "equality compare requires comparable types", op)
             }
         }
@@ -2125,7 +2101,7 @@ func infer_binary(string op, check_result left, check_result right, string sourc
 func lookup_functions(function_binding[] functions, string name) function_binding[] {
     out := function_binding[]()
     i := 0
-    for i < len(functions) {
+    for i < std.prelude.len(functions) {
         if !functions[i].has_receiver && functions[i].name == name {
             out = append(out, functions[i]);
         }
@@ -2138,7 +2114,7 @@ func lookup_named_methods(function_binding[] functions, string receiver_type, st
     out := function_binding[]()
     normalized_receiver := method_owner_type(receiver_type)
     i := 0
-    for i < len(functions) {
+    for i < std.prelude.len(functions) {
         if functions[i].has_receiver && functions[i].owner_type == normalized_receiver && functions[i].name == name {
             out = append(out, functions[i]);
         }
@@ -2151,7 +2127,7 @@ func lookup_methods(function_binding[] functions, string receiver_type, string n
     out := function_binding[]()
     normalized_receiver := method_owner_type(receiver_type)
     i := 0
-    for i < len(functions) {
+    for i < std.prelude.len(functions) {
         if functions[i].has_receiver && functions[i].owner_type == normalized_receiver && functions[i].name == name {
             if receiver_allows_method(receiver_type, receiver_expr, functions[i].receiver_mode) {
                 out = append(out, functions[i]);
@@ -2164,10 +2140,10 @@ func lookup_methods(function_binding[] functions, string receiver_type, string n
 
 func method_owner_type(string receiver_type) string {
     if starts_with(receiver_type, "&") {
-        return slice(receiver_type, 5, len(receiver_type))
+        return std.prelude.slice(receiver_type, 5, std.prelude.len(receiver_type))
     }
     if starts_with(receiver_type, "&") {
-        return slice(receiver_type, 1, len(receiver_type))
+        return std.prelude.slice(receiver_type, 1, std.prelude.len(receiver_type))
     }
     receiver_type
 }
@@ -2222,7 +2198,7 @@ func receiver_requirement_message(string method_name, string receiver_mode) stri
 }
 
 func try_match_signature(function_binding binding, string[] arg_types, function_binding[] functions, trait_binding[] traits) signature_match {
-    if len(binding.param_types) != len(arg_types) {
+    if std.prelude.len(binding.param_types) != std.prelude.len(arg_types) {
         return signature_match {
             ok: false,
             return_type: "unknown", instance_name: "", type_args string[](), score 0, generic_bind_count 0, unknown_arg_count 0,
@@ -2232,9 +2208,9 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
     score := 0
     unknown_arg_count := 0
     i := 0
-    for i < len(arg_types) {
-        expected_ref := parse_type_ref(binding.param_types[i])
-        actual_ref := parse_type_ref(arg_types[i])
+    for i < std.prelude.len(arg_types) {
+        expected_ref := compile.internal.typesys.parse_type_ref(binding.param_types[i])
+        actual_ref := compile.internal.typesys.parse_type_ref(arg_types[i])
         if is_unknown(actual_ref.canonical) {
             unknown_arg_count = unknown_arg_count + 1
         }
@@ -2255,14 +2231,14 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
         i = i + 1
     }
     signature_match {
-        ok: true, return_type instantiate_type(binding.return_type, binding.generic_names, generic_bindings), instance_name specialized_instance_name(binding, generic_bindings), type_args ordered_type_args(binding.generic_names, generic_bindings), score score, generic_bind_count len(generic_bindings), unknown_arg_count unknown_arg_count,
+        ok: true, return_type instantiate_type(binding.return_type, binding.generic_names, generic_bindings), instance_name specialized_instance_name(binding, generic_bindings), type_args ordered_type_args(binding.generic_names, generic_bindings), score score, generic_bind_count std.prelude.len(generic_bindings), unknown_arg_count unknown_arg_count,
     }
 }
 
 func ordered_type_args(string[] generic_names, type_binding[] bindings) string[] {
     args := string[]()
     i := 0
-    for i < len(generic_names) {
+    for i < std.prelude.len(generic_names) {
         bound := lookup_name_type(bindings, generic_names[i])
         if is_unknown(bound) {
             bound = "unknown"
@@ -2274,12 +2250,12 @@ func ordered_type_args(string[] generic_names, type_binding[] bindings) string[]
 }
 
 func specialized_instance_name(function_binding binding, type_binding[] bindings) string {
-    if len(binding.generic_names) == 0 {
+    if std.prelude.len(binding.generic_names) == 0 {
         return binding.name
     }
     name := binding.name + "__mono"
     i := 0
-    for i < len(binding.generic_names) {
+    for i < std.prelude.len(binding.generic_names) {
         bound := lookup_name_type(bindings, binding.generic_names[i])
         if is_unknown(bound) {
             bound = "unknown"
@@ -2293,7 +2269,7 @@ func specialized_instance_name(function_binding binding, type_binding[] bindings
 func mono_type_name(string type_name) string {
     out := ""
     i := 0
-    for i < len(type_name) {
+    for i < std.prelude.len(type_name) {
         ch := string(type_name[i])
         if ch == "&" { out = out + "ref"
         } else if ch == "[" { out = out + "arr"
@@ -2337,7 +2313,7 @@ func match_type_pattern_ref(type_ref param_type, type_ref arg_type, string[] gen
             ;
             return true
         }
-        return same_type(bound, a
+        return compile.internal.typesys.same_type(bound, a
     }
     if param_type.is_ref != arg_type.is_ref {
         return false
@@ -2359,13 +2335,13 @@ func match_type_pattern_ref(type_ref param_type, type_ref arg_type, string[] gen
     }
     p_args := param_type.args
     a_args := arg_type.args
-    if len(p_args) != len(a_args) {
-        return same_type_ref(param_type, arg_type
+    if std.prelude.len(p_args) != std.prelude.len(a_args) {
+        return compile.internal.typesys.same_type_ref(param_type, arg_type
     }
     i := 0
-    for i < len(p_args) {
-        p_next := parse_type_ref(p_args[i])
-        a_next := parse_type_ref(a_args[i])
+    for i < std.prelude.len(p_args) {
+        p_next := compile.internal.typesys.parse_type_ref(p_args[i])
+        a_next := compile.internal.typesys.parse_type_ref(a_args[i])
         if !match_type_pattern_ref(p_next, a_next, generic_names, generic_bindings) {
             return false
         }
@@ -2375,7 +2351,7 @@ func match_type_pattern_ref(type_ref param_type, type_ref arg_type, string[] gen
 }
 
 func match_specificity(type_ref expected, type_ref actual, string[] generic_names) int {
-    if same_type_ref(expected, actual) {
+    if compile.internal.typesys.same_type_ref(expected, actual) {
         return 5
     }
     if is_generic_name(generic_names, expected.canonical) {
@@ -2398,7 +2374,7 @@ func match_specificity(type_ref expected, type_ref actual, string[] generic_name
 }
 
 func instantiate_type(string ty, string[] generic_names, type_binding[] generic_bindings) string {
-    clean := parse_type(ty)
+    clean := compile.internal.typesys.parse_type(ty)
     if is_generic_name(generic_names, clean) {
         bound := lookup_name_type(generic_bindings, clean)
         if !is_unknown(bound) {
@@ -2406,25 +2382,25 @@ func instantiate_type(string ty, string[] generic_names, type_binding[] generic_
         }
     }
     if starts_with(clean, "&") {
-        return "&" + instantiate_type(slice(clean, 5, len(clean)), generic_names, generic_bindings
+        return "&" + instantiate_type(std.prelude.slice(clean, 5, std.prelude.len(clean)), generic_names, generic_bindings
     }
     if starts_with(clean, "&") {
-        return "&" + instantiate_type(slice(clean, 1, len(clean)), generic_names, generic_bindings
+        return "&" + instantiate_type(std.prelude.slice(clean, 1, std.prelude.len(clean)), generic_names, generic_bindings
     }
     if starts_with(clean, "[]") {
-        return "[]" + instantiate_type(slice(clean, 2, len(clean)), generic_names, generic_bindings
+        return "[]" + instantiate_type(std.prelude.slice(clean, 2, std.prelude.len(clean)), generic_names, generic_bindings
     }
     if starts_with(clean, "[") {
         return array_prefix_text(clean) + instantiate_type(strip_array_prefix(clean), generic_names, generic_bindings
     }
-    args := extract_type_args(clean)
-    if len(args) == 0 {
+    args := compile.internal.typesys.extract_type_args(clean)
+    if std.prelude.len(args) == 0 {
         return clean
     }
-    base := base_type_name(clean)
+    base := compile.internal.typesys.base_type_name(clean)
     built := base + "["
     i := 0
-    for i < len(args) {
+    for i < std.prelude.len(args) {
         if i > 0 {
             built = built + ", "
         }
@@ -2435,25 +2411,25 @@ func instantiate_type(string ty, string[] generic_names, type_binding[] generic_
 }
 
 func type_contains_generic(string ty, string[] generic_names) bool {
-    clean := parse_type(ty)
+    clean := compile.internal.typesys.parse_type(ty)
     if is_generic_name(generic_names, clean) {
         return true
     }
     if starts_with(clean, "&") {
-        return type_contains_generic(slice(clean, 5, len(clean)), generic_names
+        return type_contains_generic(std.prelude.slice(clean, 5, std.prelude.len(clean)), generic_names
     }
     if starts_with(clean, "&") {
-        return type_contains_generic(slice(clean, 1, len(clean)), generic_names
+        return type_contains_generic(std.prelude.slice(clean, 1, std.prelude.len(clean)), generic_names
     }
     if starts_with(clean, "[]") {
-        return type_contains_generic(slice(clean, 2, len(clean)), generic_names
+        return type_contains_generic(std.prelude.slice(clean, 2, std.prelude.len(clean)), generic_names
     }
     if starts_with(clean, "[") {
         return type_contains_generic(strip_array_prefix(clean), generic_names
     }
-    args := extract_type_args(clean)
+    args := compile.internal.typesys.extract_type_args(clean)
     i := 0
-    for i < len(args) {
+    for i < std.prelude.len(args) {
         if type_contains_generic(args[i], generic_names) {
             return true
         }
@@ -2464,7 +2440,7 @@ func type_contains_generic(string ty, string[] generic_names) bool {
 
 func is_generic_name(string[] generic_names, string name) bool {
     i := 0
-    for i < len(generic_names) {
+    for i < std.prelude.len(generic_names) {
         if generic_names[i] == name {
             return true
         }
@@ -2474,20 +2450,20 @@ func is_generic_name(string[] generic_names, string name) bool {
 }
 
 func strip_array_prefix(string ty) string {
-    clean := parse_type(ty)
+    clean := compile.internal.typesys.parse_type(ty)
     if !starts_with(clean, "[") || starts_with(clean, "[]") {
         return clean
     }
     depth := 0
     i := 0
-    for i < len(clean) {
-        ch := char_at(clean, i)
+    for i < std.prelude.len(clean) {
+        ch := std.prelude.char_at(clean, i)
         if ch == "[" {
             depth = depth + 1
         } else if ch == "]" {
             depth = depth - 1
             if depth == 0 {
-                return parse_type(slice(clean, i + 1, len(clean)))
+                return compile.internal.typesys.parse_type(std.prelude.slice(clean, i + 1, std.prelude.len(clean)))
             }
         }
         i = i + 1
@@ -2496,19 +2472,19 @@ func strip_array_prefix(string ty) string {
 }
 
 func array_prefix_text(string ty) string {
-    clean := parse_type(ty)
+    clean := compile.internal.typesys.parse_type(ty)
     tail := strip_array_prefix(clean)
     if tail == clean {
         return ""
     }
-    slice(clean, 0, len(clean) - len(tail))
+    std.prelude.slice(clean, 0, std.prelude.len(clean) - std.prelude.len(tail))
 }
 
 func generic_name(string raw) string {
     i := 0
-    for i < len(raw) {
-        if char_at(raw, i) == ":" {
-            return trim_text(slice(raw, 0, i))
+    for i < std.prelude.len(raw) {
+        if std.prelude.char_at(raw, i) == ":" {
+            return trim_text(std.prelude.slice(raw, 0, i))
         }
         i = i + 1
     }
@@ -2518,7 +2494,7 @@ func generic_name(string raw) string {
 func clone_env(type_binding[] env) type_binding[] {
     out := type_binding[]()
     i := 0
-    for i < len(env) {
+    for i < std.prelude.len(env) {
         out = append(out, env[i]);
         i = i + 1
     }
@@ -2526,7 +2502,7 @@ func clone_env(type_binding[] env) type_binding[] {
 }
 
 func lookup_name_type(type_binding[] env, string name) string {
-    i := len(env)
+    i := std.prelude.len(env)
     for i > 0 {
         i = i - 1
         if env[i].name == name {
@@ -2538,7 +2514,7 @@ func lookup_name_type(type_binding[] env, string name) string {
 
 func ok_type(string type_name) check_result {
     check_result {
-        type_name: parse_type(type_name), errors 0,
+        type_name: compile.internal.typesys.parse_type(type_name), errors 0,
     }
 }
 
@@ -2555,7 +2531,7 @@ func types_compatible(string left, string right) bool {
     if is_nil(right) {
         return is_nilable_type(left
     }
-    assignable_type(left, right) || compatible_type(left, right)
+    compile.internal.typesys.assignable_type(left, right) || compile.internal.typesys.compatible_type(left, right)
 }
 
 func nil_comparable_pair(string left, string right) bool {
@@ -2569,23 +2545,23 @@ func nil_comparable_pair(string left, string right) bool {
 }
 
 func is_nil(string type_name) bool {
-    parse_type(type_name) == "nil"
+    compile.internal.typesys.parse_type(type_name) == "nil"
 }
 
 func is_nilable_type(string type_name) bool {
-    clean := parse_type(type_name)
+    clean := compile.internal.typesys.parse_type(type_name)
     if clean == "fn" || clean == "map" {
         return true
     }
     if starts_with(clean, "[]") || starts_with(clean, "&") {
         return true
     }
-    base := base_type_name(clean)
+    base := compile.internal.typesys.base_type_name(clean)
     base == "interface" || base == "trait"
 }
 
 func is_unknown(string type_name) bool {
-    clean := parse_type(type_name)
+    clean := compile.internal.typesys.parse_type(type_name)
     clean == "" || clean == "unknown"
 }
 
@@ -2593,7 +2569,7 @@ func declared_type_is_safe(string type_name) bool {
     if is_unknown(type_name) {
         return false
     }
-    if has_unknown_component(type_name) {
+    if compile.internal.typesys.has_unknown_component(type_name) {
         return false
     }
     if type_name == "nil" {
@@ -2604,7 +2580,7 @@ func declared_type_is_safe(string type_name) bool {
 
 func has_duplicate_binding(type_binding[] env, string name) bool {
     i := 0
-    for i < len(env) {
+    for i < std.prelude.len(env) {
         if env[i].name == name {
             return true
         }
@@ -2621,29 +2597,29 @@ func is_zero_int_expr(expr value) bool {
 }
 
 func resolve_method_return(string target_type, string method_type) string {
-    target_ref := parse_type_ref(target_type)
+    target_ref := compile.internal.typesys.parse_type_ref(target_type)
     if method_type == "t" {
-        return type_arg(target_ref, 0
+        return compile.internal.typesys.type_arg(target_ref, 0
     }
     if method_type == "e" {
-        return type_arg(target_ref, 1
+        return compile.internal.typesys.type_arg(target_ref, 1
     }
     if method_type == "option[t]" {
-        arg := type_arg(target_ref, 0)
+        arg := compile.internal.typesys.type_arg(target_ref, 0)
         if is_unknown(arg) {
             return "option[unknown]"
         }
         return "option[" + arg + "]"
     }
-    parse_type(method_type)
+    compile.internal.typesys.parse_type(method_type)
 }
 
 func first_type_arg(string type_name) string {
-    type_arg(parse_type_ref(type_name), 0)
+    compile.internal.typesys.type_arg(compile.internal.typesys.parse_type_ref(type_name), 0)
 }
 
 func second_type_arg(string type_name) string {
-    type_arg(parse_type_ref(type_name), 1)
+    compile.internal.typesys.type_arg(compile.internal.typesys.parse_type_ref(type_name), 1)
 }
 
 func add_error(string source, semantic_error[] diagnostics, string code, string message, string anchor) int {
@@ -2673,8 +2649,8 @@ func chain_id_from_anchor(string anchor) string {
 func sanitize_chain_anchor(string anchor) string {
     out := ""
     i := 0
-    for i < len(anchor) {
-        ch := slice(anchor, i, i + 1)
+    for i < std.prelude.len(anchor) {
+        ch := std.prelude.slice(anchor, i, i + 1)
         if ch == " " || ch == "\t" || ch == "\n" || ch == "\r" {
             out = out + "_"
         } else {
@@ -2741,10 +2717,10 @@ func diagnostic_tier(string code) int {
 }
 
 func starts_with_text(string text, string prefix) bool {
-    if len(prefix) > len(text) {
+    if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
-    slice(text, 0, len(prefix)) == prefix
+    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
 }
 
 func locate_anchor(string source, string anchor) source_pos {
@@ -2766,12 +2742,12 @@ func find_substring(string haystack, string needle) int {
     if needle == "" {
         return 0
     }
-    if len(needle) > len(haystack) {
+    if std.prelude.len(needle) > std.prelude.len(haystack) {
         return 0 - 1
     }
     i := 0
-    for i + len(needle) <= len(haystack) {
-        if slice(haystack, i, i + len(needle)) == needle {
+    for i + std.prelude.len(needle) <= std.prelude.len(haystack) {
+        if std.prelude.slice(haystack, i, i + std.prelude.len(needle)) == needle {
             return i
         }
         i = i + 1
@@ -2784,7 +2760,7 @@ func index_to_pos(string source, int index) source_pos {
     column := 1
     i := 0
     for i < index {
-        if char_at(source, i) == "\n" {
+        if std.prelude.char_at(source, i) == "\n" {
             line = line + 1
             column = 1
         } else {
@@ -2798,10 +2774,10 @@ func index_to_pos(string source, int index) source_pos {
 }
 
 func starts_with(string text, string prefix) bool {
-    if len(prefix) > len(text) {
+    if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
-    slice(text, 0, len(prefix)) == prefix
+    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
 }
 
 func contains_token(string text, string token) bool {
@@ -2813,8 +2789,8 @@ func contains_token(string text, string token) bool {
 
 func find_char(string text, string needle) int {
     i := 0
-    for i < len(text) {
-        if char_at(text, i) == needle {
+    for i < std.prelude.len(text) {
+        if std.prelude.char_at(text, i) == needle {
             return i
         }
         i = i + 1
@@ -2823,10 +2799,10 @@ func find_char(string text, string needle) int {
 }
 
 func find_last_char(string text, string needle) int {
-    i := len(text)
+    i := std.prelude.len(text)
     for i > 0 {
         i = i - 1
-        if char_at(text, i) == needle {
+        if std.prelude.char_at(text, i) == needle {
             return i
         }
     }
@@ -2834,11 +2810,11 @@ func find_last_char(string text, string needle) int {
 }
 
 func last_path_segment(string path) string {
-    i := len(path)
+    i := std.prelude.len(path)
     for i > 0 {
         i = i - 1
-        if char_at(path, i) == "." {
-            return slice(path, i + 1, len(path))
+        if std.prelude.char_at(path, i) == "." {
+            return std.prelude.slice(path, i + 1, std.prelude.len(path))
         }
     }
     path
@@ -2846,14 +2822,14 @@ func last_path_segment(string path) string {
 
 func trim_text(string text) string {
     start := 0
-    end := len(text)
-    for start < end && is_space(char_at(text, start)) {
+    end := std.prelude.len(text)
+    for start < end && is_space(std.prelude.char_at(text, start)) {
         start = start + 1
     }
-    for end > start && is_space(char_at(text, end - 1)) {
+    for end > start && is_space(std.prelude.char_at(text, end - 1)) {
         end = end - 1
     }
-    slice(text, start, end)
+    std.prelude.slice(text, start, end)
 }
 
 func is_space(string ch) bool {

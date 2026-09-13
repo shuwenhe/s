@@ -1,5 +1,7 @@
 package compile.internal.arm
-use std.slices
+import (
+    "std"
+)
 struct ssa_value {
     string op
     string[] args

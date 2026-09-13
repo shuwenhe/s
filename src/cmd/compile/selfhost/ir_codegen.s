@@ -1,12 +1,7 @@
 package cmd
-use std.io.file as file_type
-use std.io.open as io_open
-use std.io.write as io_write
-use std.io.read_all as io_read_all
-use std.strings.split as split_string
-use std.strings.trim as trim_string
-use std.strings.contains as contains_string
-use std.fmt.sprintf
+import (
+    "std.fmt"
+)
 struct ir_program {
     functions: function[]
     globals: global[]

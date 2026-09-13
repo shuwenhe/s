@@ -1,9 +1,7 @@
 package compile.internal.compiler
-use compile.internal.arch.dispatch_init as arch_dispatch_init
-use compile.internal.build.main as build_main
-use internal.buildcfg.check as buildcfg_check
-use internal.buildcfg.goarch as buildcfg_goarch
-use std.slices
+import (
+    "std"
+)
 func main(string[] args) int {
     buildcfg_err := buildcfg_check()
     if buildcfg_err != "" {

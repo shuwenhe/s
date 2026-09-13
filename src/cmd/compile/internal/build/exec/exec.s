@@ -1,32 +1,21 @@
 package compile.internal.build.exec
-use compile.internal.build.utils.build as build_binary
-use compile.internal.build.utils.run as run_binary
-use compile.internal.build.utils.emit_ast as emit_ast
-use compile.internal.build.utils.emit_built as emit_built
-use compile.internal.build.utils.emit_check_ok as emit_check_ok
-use compile.internal.build.utils.emit_tokens as emit_tokens
-use compile.internal.build.cache.cache_hit_target
-use compile.internal.build.cache.cache_hit_explain_target
-use compile.internal.build.cache.update_cache_target
-use compile.internal.tests.test_golden.run_golden_suite
-use compile.internal.tests.test_backend_abi.run_backend_abi_suite
-use compile.internal.tests.test_mir.run_mir_suite
-use compile.internal.tests.test_ssa.run_ssa_suite
-use compile.internal.tests.test_pipeline_regression.run_pipeline_regression_suite
-use compile.internal.tests.test_typesys.run_typesys_suite
-use compile.internal.tests.test_semantic.run_semantic_suite
-use compile.internal.semantic.check_text
-use compile.internal.syntax.parse_source
-use compile.internal.syntax.read_source
-use compile.internal.syntax.tokenize
-use compile.internal.backend_elf64.resolve_module_source_path
-use std.env.get
-use std.fs.read_to_string
-use std.fs.write_text_file
-use std.io.eprintln
-use std.io.println
-use std.prelude.char_at
-use std.prelude.len
+import (
+    "compile.internal.backend_elf64"
+    "compile.internal.build.cache"
+    "compile.internal.semantic"
+    "compile.internal.syntax"
+    "compile.internal.tests.test_backend_abi"
+    "compile.internal.tests.test_golden"
+    "compile.internal.tests.test_mir"
+    "compile.internal.tests.test_pipeline_regression"
+    "compile.internal.tests.test_semantic"
+    "compile.internal.tests.test_ssa"
+    "compile.internal.tests.test_typesys"
+    "std.env"
+    "std.fs"
+    "std.io"
+    "std.prelude"
+)
 func run(string[] options) int {
     if options[0] == "help" {
         return 0
@@ -38,15 +27,15 @@ func run(string[] options) int {
         return run_mod_command(options
     }
     if is_module_name(options[1]) {
-        resolved := resolve_module_source_path(options[1])
+        resolved := compile.internal.backend_elf64.resolve_module_source_path(options[1])
         if resolved.is_none() {
-            eprintln("error: module not found: " + options[1])
-            eprintln("hint: set S_PROJECT_ROOT=<workspace> or S_ROOT=<s-root> so the module can be located")
+            std.io.eprintln("error: module not found: " + options[1])
+            std.io.eprintln("hint: set S_PROJECT_ROOT=<workspace> or S_ROOT=<s-root> so the module can be located")
             return 1
         }
         ignored_set := options.set(1, resolved.unwrap())
     }
-    source_result := read_source(options[1])
+    source_result := compile.internal.syntax.read_source(options[1])
     if source_result.is_err() {
         return 1
     }
@@ -54,25 +43,25 @@ func run(string[] options) int {
     source_key := options[1]
     if options[0] == "check" {
         check_target := "semantic@" + source_key
-        check_explain := cache_hit_explain_target(options[1], source, "check", check_target)
-        if cache_hit_target(options[1], source, "check", check_target) {
+        check_explain := compile.internal.build.cache.cache_hit_explain_target(options[1], source, "check", check_target)
+        if compile.internal.build.cache.cache_hit_target(options[1], source, "check", check_target) {
             ignored := check_explain
             emit_check_ok(options[1]);
             return 0
         }
-        parse_result := parse_source(source)
+        parse_result := compile.internal.syntax.parse_source(source)
         if parse_result.is_err() {
             return 1
         }
-        if check_text(source) != 0 {
+        if compile.internal.semantic.check_text(source) != 0 {
             return 1
         }
-        ignored_cache := update_cache_target(options[1], source, "check", check_target)
+        ignored_cache := compile.internal.build.cache.update_cache_target(options[1], source, "check", check_target)
         emit_check_ok(options[1]);
         return 0
     }
     if options[0] == "tokens" {
-        tokens_result := tokenize(source)
+        tokens_result := compile.internal.syntax.tokenize(source)
         if tokens_result.is_err() {
             return 1
         }
@@ -80,7 +69,7 @@ func run(string[] options) int {
         return 0
     }
     if options[0] == "ast" {
-        ast_result := parse_source(source)
+        ast_result := compile.internal.syntax.parse_source(source)
         if ast_result.is_err() {
             return 1
         }
@@ -89,22 +78,22 @@ func run(string[] options) int {
     }
     if options[0] == "build" {
         build_target := options[2] + "@" + source_key + "#ssa_margin=" + options[3]
-        build_explain := cache_hit_explain_target(options[1], source, "build", build_target)
-        if cache_hit_target(options[1], source, "build", build_target) {
+        build_explain := compile.internal.build.cache.cache_hit_explain_target(options[1], source, "build", build_target)
+        if compile.internal.build.cache.cache_hit_target(options[1], source, "build", build_target) {
             ignored0 := build_explain
             emit_built(options[2]);
             return 0
         }
-        nostdlib := len(options) > 4 && options[4] == "nostdlib"
+        nostdlib := std.prelude.len(options) > 4 && options[4] == "nostdlib"
         if build_binary(options[1], options[2], options[3], nostdlib) == 0 {
-            ignored_cache := update_cache_target(options[1], source, "build", build_target)
+            ignored_cache := compile.internal.build.cache.update_cache_target(options[1], source, "build", build_target)
             emit_built(options[2]);
             return 0
         }
         return 1
     }
     if options[0] == "run" {
-        nostdlib := len(options) > 4 && options[4] == "nostdlib"
+        nostdlib := std.prelude.len(options) > 4 && options[4] == "nostdlib"
         return run_binary(options[1], options[3], nostdlib
     }
     return 1
@@ -112,42 +101,42 @@ func run(string[] options) int {
 
 func run_test_command(string[] options) int {
     fixtures_root := resolve_fixtures_root(options[1])
-    semantic_result := run_semantic_suite(fixtures_root)
+    semantic_result := compile.internal.tests.test_semantic.run_semantic_suite(fixtures_root)
     if semantic_result != 0 {
-        eprintln("semantic suite failed")
+        std.io.eprintln("semantic suite failed")
         return semantic_result
     }
-    golden_result := run_golden_suite(fixtures_root)
+    golden_result := compile.internal.tests.test_golden.run_golden_suite(fixtures_root)
     if golden_result != 0 {
-        eprintln("golden suite failed")
+        std.io.eprintln("golden suite failed")
         return golden_result
     }
-    backend_abi_result := run_backend_abi_suite()
+    backend_abi_result := compile.internal.tests.test_backend_abi.run_backend_abi_suite()
     if backend_abi_result != 0 {
-        eprintln("backend abi suite failed")
+        std.io.eprintln("backend abi suite failed")
         return backend_abi_result
     }
-    mir_result := run_mir_suite()
+    mir_result := compile.internal.tests.test_mir.run_mir_suite()
     if mir_result != 0 {
-        eprintln("mir suite failed")
+        std.io.eprintln("mir suite failed")
         return mir_result
     }
-    ssa_result := run_ssa_suite()
+    ssa_result := compile.internal.tests.test_ssa.run_ssa_suite()
     if ssa_result != 0 {
-        eprintln("ssa suite failed")
+        std.io.eprintln("ssa suite failed")
         return ssa_result
     }
-    pipeline_result := run_pipeline_regression_suite()
+    pipeline_result := compile.internal.tests.test_pipeline_regression.run_pipeline_regression_suite()
     if pipeline_result != 0 {
-        eprintln("pipeline regression suite failed")
+        std.io.eprintln("pipeline regression suite failed")
         return pipeline_result
     }
-    typesys_result := run_typesys_suite()
+    typesys_result := compile.internal.tests.test_typesys.run_typesys_suite()
     if typesys_result != 0 {
-        eprintln("typesys suite failed")
+        std.io.eprintln("typesys suite failed")
         return typesys_result
     }
-    println("test: ok")
+    std.io.println("test: ok")
     return 0
 }
 
@@ -155,7 +144,7 @@ func resolve_fixtures_root(string override) string {
     if override != "" {
         return override
     }
-    env_root := get("s_test_fixtures_root")
+    env_root := std.env.get("s_test_fixtures_root")
     if env_root.is_some() {
         return env_root.unwrap(
     }
@@ -172,16 +161,16 @@ func run_mod_command(string[] options) int {
     if options[1] == "index" {
         return run_mod_index(options[2]
     }
-    eprintln("mod command is not supported")
+    std.io.eprintln("mod command is not supported")
     return 1
 }
 
 func run_mod_index(string dir) int {
     if dir == "" {
-        eprintln("mod index failed: directory path required")
+        std.io.eprintln("mod index failed: directory path required")
         return 1
     }
-    println("mod index: scanning " + dir + "...")
+    std.io.println("mod index: scanning " + dir + "...")
     cmd := string[]()
     cmd = append(cmd, "sh")
     cmd = append(cmd, "-c")
@@ -192,27 +181,27 @@ func run_mod_index(string dir) int {
     cmd = append(cmd, script)
     result := run_process_output(cmd)
     if result.is_err() {
-        eprintln("mod index failed: " + result.unwrap_err().message)
+        std.io.eprintln("mod index failed: " + result.unwrap_err().message)
         return 1
     }
     index_content := result.unwrap()
-    write_res := write_text_file("scripts/s-package-index.tsv", index_content)
+    write_res := std.fs.write_text_file("scripts/s-package-index.tsv", index_content)
     if write_res.is_err() {
-        eprintln("failed to save index: " + write_res.unwrap_err().message)
+        std.io.eprintln("failed to save index: " + write_res.unwrap_err().message)
         return 1
     }
-    println("mod index: generated scripts/s-package-index.tsv")
+    std.io.println("mod index: generated scripts/s-package-index.tsv")
     0
 }
 
 func run_mod_init(string module_name) int {
     if !is_valid_module_name(module_name) {
-        eprintln("mod init failed: invalid module name")
+        std.io.eprintln("mod init failed: invalid module name")
         return 1
     }
-    existing := read_to_string("s.mod")
+    existing := std.fs.read_to_string("s.mod")
     if existing.is_ok() {
-        eprintln("mod init failed: s.mod already exists")
+        std.io.eprintln("mod init failed: s.mod already exists")
         return 1
     }
     content := "[package]\n"
@@ -220,22 +209,22 @@ func run_mod_init(string module_name) int {
         + "version = \"0.1.0\"\n"
         + "edition = \"2026\"\n\n"
         + "[dependencies]\n"
-    write_result := write_text_file("s.mod", content)
+    write_result := std.fs.write_text_file("s.mod", content)
     if write_result.is_err() {
-        eprintln("mod init failed: " + write_result.unwrap_err().message)
+        std.io.eprintln("mod init failed: " + write_result.unwrap_err().message)
         return 1
     }
-    println("mod init: created s.mod")
+    std.io.println("mod init: created s.mod")
     return 0
 }
 
 func run_mod_tidy() int {
-    read_result := read_to_string("s.mod")
+    read_result := std.fs.read_to_string("s.mod")
     if read_result.is_err() {
-        eprintln("mod tidy failed: s.mod not found")
+        std.io.eprintln("mod tidy failed: s.mod not found")
         return 1
     }
-    println("mod tidy: ok")
+    std.io.println("mod tidy: ok")
     return 0
 }
 
@@ -244,8 +233,8 @@ func is_valid_module_name(string name) bool {
         return false
     }
     i := 0
-    for i < len(name) {
-        ch := char_at(name, i)
+    for i < std.prelude.len(name) {
+        ch := std.prelude.char_at(name, i)
         if ch == " " || ch == "\t" || ch == "\r" || ch == "\n" {
             return false
         }
@@ -260,8 +249,8 @@ func is_module_name(string path) bool {
     }
     has_dot := false
     i := 0
-    for i < len(path) {
-        ch := char_at(path, i)
+    for i < std.prelude.len(path) {
+        ch := std.prelude.char_at(path, i)
         if ch == "/" {
             return false
         }
@@ -273,8 +262,8 @@ func is_module_name(string path) bool {
     if !has_dot {
         return false
     }
-    if len(path) >= 2 {
-        if char_at(path, len(path) - 2) == "." && char_at(path, len(path) - 1) == "s" {
+    if std.prelude.len(path) >= 2 {
+        if std.prelude.char_at(path, std.prelude.len(path) - 2) == "." && std.prelude.char_at(path, std.prelude.len(path) - 1) == "s" {
             return false
         }
     }

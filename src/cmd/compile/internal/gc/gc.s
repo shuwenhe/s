@@ -1,5 +1,7 @@
 package compile.internal.gc
-use std.slices
+import (
+    "std"
+)
 func main(string[] args) int {
     return compile_main(args
 }

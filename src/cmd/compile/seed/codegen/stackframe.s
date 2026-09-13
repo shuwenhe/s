@@ -1,5 +1,7 @@
 package seed.codegen
-use std.vec.vec
+import (
+    "std.vec"
+)
 struct stack_frame {
     base_offset: int
     current_offset: int

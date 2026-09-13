@@ -1,5 +1,7 @@
 package src.runtime
-use std.slices
+import (
+    "std"
+)
 extern "intrinsic" func __mem_heap_list_all() int[]
 extern "intrinsic" func __mem_obj_read_header(int obj_id) obj_header
 extern "intrinsic" func __mem_obj_set_mark(int obj_id, int mark) ()

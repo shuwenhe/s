@@ -1,5 +1,7 @@
 package compile.internal.ssa
-use std.slices
+import (
+    "std"
+)
 struct ssa_func {
     string name
     int entry

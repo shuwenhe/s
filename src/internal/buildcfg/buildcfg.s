@@ -1,8 +1,9 @@
 package internal.buildcfg
-use std.env.get
-use std.prelude.len
-use std.prelude.slice
-use std.slices
+import (
+    "std"
+    "std.env"
+    "std.prelude"
+)
 struct build_cfg_error {
     string message
 }
@@ -66,8 +67,8 @@ func first_non_empty_goos_env() string {
     names = append(names, "s_goos")
     names = append(names, "GOOS")
     i := 0
-    for i < len(names) {
-        value := get(names[i])
+    for i < std.prelude.len(names) {
+        value := std.env.get(names[i])
         switch value {
             some(raw) : {
                 text := trim_spaces(raw)
@@ -89,8 +90,8 @@ func infer_goos_from_host_env() string {
     names = append(names, "VSCODE_CLI_OS")
     names = append(names, "MSYSTEM")
     i := 0
-    for i < len(names) {
-        value := get(names[i])
+    for i < std.prelude.len(names) {
+        value := std.env.get(names[i])
         switch value {
             some(raw) : {
                 mapped := map_host_os(raw)
@@ -147,8 +148,8 @@ func first_non_empty_env() string {
     names = append(names, "s_goarch")
     names = append(names, "GOARCH")
     i := 0
-    for i < len(names) {
-        value := get(names[i])
+    for i < std.prelude.len(names) {
+        value := std.env.get(names[i])
         switch value {
             some(raw) : {
                 text := trim_spaces(raw)
@@ -170,8 +171,8 @@ func infer_goarch_from_host_env() string {
     names = append(names, "PROCESSOR_ARCHITECTURE")
     names = append(names, "VSCODE_CLI_ARCH")
     i := 0
-    for i < len(names) {
-        value := get(names[i])
+    for i < std.prelude.len(names) {
+        value := std.env.get(names[i])
         switch value {
             some(raw) : {
                 mapped := map_host_arch(raw)
@@ -227,16 +228,16 @@ func is_supported_goarch(string arch) bool {
 }
 
 func contains_token(string text, string token) bool {
-    if len(token) == 0 {
+    if std.prelude.len(token) == 0 {
         return true
     }
-    if len(text) < len(token) {
+    if std.prelude.len(text) < std.prelude.len(token) {
         return false
     }
     i := 0
-    limit := len(text) - len(token)
+    limit := std.prelude.len(text) - std.prelude.len(token)
     for i <= limit {
-        if slice(text, i, i + len(token)) == token {
+        if std.prelude.slice(text, i, i + std.prelude.len(token)) == token {
             return true
         }
         i = i + 1
@@ -246,14 +247,14 @@ func contains_token(string text, string token) bool {
 
 func trim_spaces(string text) string {
     start := 0
-    end := len(text)
-    for start < end && is_space(slice(text, start, start + 1)) {
+    end := std.prelude.len(text)
+    for start < end && is_space(std.prelude.slice(text, start, start + 1)) {
         start = start + 1
     }
-    for end > start && is_space(slice(text, end - 1, end)) {
+    for end > start && is_space(std.prelude.slice(text, end - 1, end)) {
         end = end - 1
     }
-    slice(text, start, end)
+    std.prelude.slice(text, start, end)
 }
 
 func is_space(string ch) bool {
