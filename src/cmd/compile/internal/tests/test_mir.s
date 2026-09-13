@@ -190,6 +190,9 @@ func run_mir_suite() int {
     if test_real_mir_source_ownership_facts() != 0 {
         return 1
     }
+    if test_real_mir_semantic_order() != 0 {
+        return 1
+    }
     0
 }
 
@@ -336,4 +339,96 @@ func contains_substring(string haystack, string needle) bool {
         i = i + 1
     }
     false
+}
+
+func test_real_mir_semantic_order() int {
+    // Step 6c: Verify semantic point ordering with interleaved statements
+    // Ensures ownership operations maintain source-order semantics
+    // even when mixed with regular (non-ownership) statements
+    
+    fixture_path := "src/cmd/compile/internal/tests/fixtures/real_mir_ref_flow.s"
+    
+    // Read and lower real source
+    source_result := read_source(fixture_path)
+    if source_result.is_err() {
+        return 1
+    }
+    source := source_result.unwrap()
+    
+    parsed, parse_err := parse_source(source)
+    if parse_err.message != "" {
+        return 1
+    }
+    
+    mir_result := lower_main_to_mir(parsed)
+    if mir_result.is_err() {
+        return 1
+    }
+    graph := mir_result.unwrap()
+    
+    // Build point map for canonical ID mapping
+    point_map := build_mir_point_map(graph)
+    if len(point_map.points) == 0 {
+        return 1
+    }
+    
+    // Find ownership statements and their positions
+    borrow_block := -1
+    borrow_stmt := -1
+    ref_assign_block := -1
+    ref_assign_stmt := -1
+    ref_use_block := -1
+    ref_use_stmt := -1
+    
+    block_idx := 0
+    while block_idx < len(graph.blocks) {
+        stmt_idx := 0
+        while stmt_idx < len(graph.blocks[block_idx].statements) {
+            switch graph.blocks[block_idx].statements[stmt_idx] {
+                mir_statement::borrow(_) : {
+                    borrow_block = block_idx
+                    borrow_stmt = stmt_idx
+                }
+                mir_statement::ref_assign(_) : {
+                    ref_assign_block = block_idx
+                    ref_assign_stmt = stmt_idx
+                }
+                mir_statement::ref_use(_) : {
+                    ref_use_block = block_idx
+                    ref_use_stmt = stmt_idx
+                }
+                _ : { }
+            }
+            stmt_idx = stmt_idx + 1
+        }
+        block_idx = block_idx + 1
+    }
+    
+    // Verify all three statements found
+    if borrow_block == -1 || ref_assign_block == -1 || ref_use_block == -1 {
+        return 1
+    }
+    
+    // Verify same basic block (for now, Step 6c phase 1)
+    if borrow_block != ref_assign_block || ref_assign_block != ref_use_block {
+        return 1
+    }
+    
+    // Verify semantic order within block (relative point ordering)
+    // NOT checking absolute P0/P1/P2, only relative sequence
+    if !(borrow_stmt < ref_assign_stmt && ref_assign_stmt < ref_use_stmt) {
+        return 1
+    }
+    
+    // Additional: Verify points exist and are in order too
+    borrow_point := mir_point_id(point_map, graph.blocks[borrow_block].id, borrow_stmt)
+    ref_assign_point := mir_point_id(point_map, graph.blocks[ref_assign_block].id, ref_assign_stmt)
+    ref_use_point := mir_point_id(point_map, graph.blocks[ref_use_block].id, ref_use_stmt)
+    
+    // Same-block canonical ordering should match statement ordering
+    if !(borrow_point < ref_assign_point && ref_assign_point < ref_use_point) {
+        return 1
+    }
+    
+    0
 }
