@@ -11,6 +11,7 @@ use compile.internal.mir.mir_graph
 use compile.internal.mir.mir_basic_block
 use compile.internal.mir.mir_statement
 use compile.internal.mir.mir_eval_stmt
+use compile.internal.mir.mir_append_ownership_semantics_from_stmt
 use compile.internal.mir.mir_terminator
 use compile.internal.mir.mir_control_edge
 use compile.internal.mir.mir_local_slot
@@ -616,7 +617,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 entry_edges := mir_control_edge[]()
                 entry_edges = append(entry_edges, make_edge("then", 1))
                 entry_edges = append(entry_edges, make_edge("else", 2))
-                blocks = append(blocks, make_block(0, "entry", stmt_texts, "branch", entry_edges))
+                blocks = append(blocks, make_entry_block(0, "entry", stmt_texts, block.statements, "branch", entry_edges))
                 then_lines := string[]()
                 then_lines = append(then_lines, "if.then")
                 blocks = append(blocks, make_block(1, "if.then", then_lines, "jump", vec1_edge("merge", 3)))
@@ -630,7 +631,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 return make_graph(function_name, blocks, trace, 0, 3
             }
             expr.while(while_expr) : {
-                blocks = append(blocks, make_block(0, "entry", stmt_texts, "jump", vec1_edge("cond", 1)))
+                blocks = append(blocks, make_entry_block(0, "entry", stmt_texts, block.statements, "jump", vec1_edge("cond", 1)))
                 cond_lines := string[]()
                 cond_lines = append(cond_lines, "while.cond " + substitute_const_text(dump_expr(while_expr.condition.value), const_entries))
                 cond_edges := mir_control_edge[]()
@@ -651,7 +652,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 dispatch_edges = append(dispatch_edges, make_edge("case0", 1))
                 dispatch_edges = append(dispatch_edges, make_edge("case1", 2))
                 dispatch_edges = append(dispatch_edges, make_edge("default", 3))
-                blocks = append(blocks, make_block(0, "entry", stmt_texts, "branch", dispatch_edges))
+                blocks = append(blocks, make_entry_block(0, "entry", stmt_texts, block.statements, "branch", dispatch_edges))
                 blocks = append(blocks, make_block(1, "switch.case0", vec1("switch.case0"), "jump", vec1_edge("merge", 4)))
                 blocks = append(blocks, make_block(2, "switch.case1", vec1("switch.case1"), "jump", vec1_edge("merge", 4)))
                 blocks = append(blocks, make_block(3, "switch.default", vec1("switch.default"), "jump", vec1_edge("merge", 4)))
@@ -660,7 +661,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 return make_graph(function_name, blocks, trace, 0, 4
             }
             expr.for(for_expr) : {
-                blocks = append(blocks, make_block(0, "entry", stmt_texts, "jump", vec1_edge("for.cond", 1)))
+                blocks = append(blocks, make_entry_block(0, "entry", stmt_texts, block.statements, "jump", vec1_edge("for.cond", 1)))
                 cond_edges := mir_control_edge[]()
                 cond_edges = append(cond_edges, make_edge("next", 2))
                 cond_edges = append(cond_edges, make_edge("exit", 3))
@@ -679,7 +680,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
     } else {
         final_lines = append(final_lines, "yield unit")
     }
-    blocks = append(blocks, make_block(0, "entry", final_lines, "return", mir_control_edge[]()))
+    blocks = append(blocks, make_entry_block(0, "entry", final_lines, block.statements, "return", mir_control_edge[]()))
     make_graph(function_name, blocks, trace, 0, 0)
 }
 
@@ -989,6 +990,27 @@ func make_block(int id, string label, string[] lines, string term_kind, mir_cont
         statements.push(mir_statement::eval(mir_eval_stmt {
             op: "line", args args,
         }))
+        i = i + 1
+    }
+    mir_basic_block {
+        id: id, label label, statements statements, terminator mir_terminator {
+            kind: term_kind, edges edges,
+        },
+    }
+}
+
+func make_entry_block(int id, string label, string[] lines, stmt[] source_statements, string term_kind, mir_control_edge[] edges) mir_basic_block {
+    statements := mir_statement[]()
+    i := 0
+    for i < len(lines) {
+        args := string[]()
+        args = append(args, lines[i])
+        statements.push(mir_statement::eval(mir_eval_stmt {
+            op: "line", args args,
+        }))
+        if i < len(source_statements) {
+            mir_append_ownership_semantics_from_stmt(statements, source_statements[i])
+        }
         i = i + 1
     }
     mir_basic_block {

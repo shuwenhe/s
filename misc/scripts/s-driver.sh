@@ -49,6 +49,8 @@ usage() {
     echo '  s --emit-mir-nll-borrow-check <input.s> <output.mir>' >&2
     echo '  s --emit-mir-nll-shadow <input.s> <output.mir>' >&2
     echo '  s --emit-mir-nll-real-cfg <input.s> <output.mir>' >&2
+    echo '  s --emit-mir-ownership-solver-check <input.s> <output.mir>' >&2
+    echo '  s --emit-mir-real-ownership-shadow <input.s> <output.mir>' >&2
     echo '  s --emit-mir-nll-ownership <input.s> <output.mir>' >&2
 
     echo '  s --seed <input.s> <output.ir>' >&2
@@ -297,6 +299,22 @@ if [ "$#" -eq 3 ] && [ "$1" = "--emit-mir-nll-shadow" ]; then
 fi
 
 if [ "$#" -eq 3 ] && [ "$1" = "--emit-mir-nll-real-cfg" ]; then
+
+    ensure_compiler
+
+    exec "$compiler" "$@"
+
+fi
+
+if [ "$#" -eq 3 ] && [ "$1" = "--emit-mir-ownership-solver-check" ]; then
+
+    ensure_compiler
+
+    exec "$compiler" "$@"
+
+fi
+
+if [ "$#" -eq 3 ] && [ "$1" = "--emit-mir-real-ownership-shadow" ]; then
 
     ensure_compiler
 
