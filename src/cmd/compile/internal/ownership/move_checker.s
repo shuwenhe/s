@@ -138,7 +138,7 @@ func (move_checker* mc) check_use(int pc, expr interface{}, string use_kind) {
         }
     case "move":
         if state != state_owned {
-            mc.ctx.add_error(errorf("cannot move %s from %s state at PC %d", 
+            mc.ctx.add_error(errorf("cannot move %s from %s state at PC %d",
                 expr_str, state, pc))
         }
     }

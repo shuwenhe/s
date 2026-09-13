@@ -8,7 +8,7 @@ import (
 
 func test_elf_object_parsing(t testing.T) {
 
-	obj := NewELFObject(0x3e) 
+	obj := NewELFObject(0x3e)
 
 	data := make(u8[], 100)
 	for i := i32(0); i < 100; i += 1 {
@@ -24,9 +24,9 @@ func test_elf_object_parsing(t testing.T) {
 		Name: "main",
 		Value: 0,
 		Size: 100,
-		Binding: 1,    
-		Type: 2,       
-		Visibility: 0, 
+		Binding: 1,
+		Type: 2,
+		Visibility: 0,
 		SectionIndex: 0,
 		IsGlobal: true,
 		IsWeak: false,
@@ -47,9 +47,9 @@ func test_symbol_resolution(t testing.T) {
 		Name: "global_func",
 		Value: 0x1000,
 		Size: 50,
-		Binding: 1,    
-		Type: 2,       
-		Visibility: 0, 
+		Binding: 1,
+		Type: 2,
+		Visibility: 0,
 		SectionIndex: 0,
 		IsGlobal: true,
 		IsWeak: false,
@@ -64,9 +64,9 @@ func test_symbol_resolution(t testing.T) {
 		Name: "global_func",
 		Value: 0x2000,
 		Size: 30,
-		Binding: 2,    
-		Type: 2,       
-		Visibility: 0, 
+		Binding: 2,
+		Type: 2,
+		Visibility: 0,
 		SectionIndex: 0,
 		IsGlobal: false,
 		IsWeak: true,
@@ -96,9 +96,9 @@ func test_relocations(t testing.T) {
 		Name: "printf",
 		Value: 0x1000,
 		Size: 50,
-		Binding: 1,    
-		Type: 2,       
-		Visibility: 0, 
+		Binding: 1,
+		Type: 2,
+		Visibility: 0,
 		SectionIndex: 0,
 		IsGlobal: true,
 		IsWeak: false,
@@ -201,7 +201,7 @@ func test_build_id_generation(t testing.T) {
 	bm.generate_build_id(data)
 
 	bid_str := bm.get_build_idstring()
-	if len(bid_str) != 64 { 
+	if len(bid_str) != 64 {
 		t.errorf("Expected Build-ID string length 64, got %d", len(bid_str))
 	}
 
@@ -217,7 +217,7 @@ func test_production_linker_workflow(t testing.T) {
 
 	config := LinkerConfig{
 		Format: FORMAT_ELF,
-		Machine: 0x3e, 
+		Machine: 0x3e,
 		OutputFile: "output.o",
 		InputFiles: make(string[], 0),
 		SymbolStripMode: 0,
@@ -294,8 +294,8 @@ func example_complete_linker_usage() {
 
 	obj1 := NewELFObject(0x3e)
 	code_data := u8[]{
-		0x55, 0x48, 0x89, 0xe5, 
-		0xc9, 0xc3,              
+		0x55, 0x48, 0x89, 0xe5,
+		0xc9, 0xc3,
 	}
 	obj1.add_section(".text", 1, 0x6, code_data)
 

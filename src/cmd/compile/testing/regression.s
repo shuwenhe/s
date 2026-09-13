@@ -91,9 +91,9 @@ func regression_print_results(regression_suite* suite) {
 
 func test_lexer_basic() test_case {
     source := "func add(int a, int b) int { a + b }"
-    test := test_case { 
-        name: "lexer_basic", 
-        source: source, 
+    test := test_case {
+        name: "lexer_basic",
+        source: source,
         expected_output: "OK",
         should_compile: 1
     }

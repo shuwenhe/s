@@ -18,7 +18,7 @@ func main() int {
         Resource(3),
         Resource(4)
     )
-    
-    x := p.c        // ← p.c MOVED
+
+    x := p.c
     return x.id
 }
