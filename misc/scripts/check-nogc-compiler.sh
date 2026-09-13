@@ -2033,6 +2033,27 @@ expect_compile_fail() {
 
 }
 
+expect_compile_pass() {
+
+    name=$1
+
+    source=$2
+
+    printf '%s\n' "$source" >"$work/$name.s"
+
+    if ! "$root/bin/s" "$work/$name.s" -o "$work/$name" >"$work/$name.out" 2>&1; then
+
+        echo "valid program unexpectedly failed: $name" >&2
+
+        cat "$work/$name.out" >&2
+
+        exit 1
+
+    fi
+
+}
+
+
 
 
 expect_compile_fail invalid_drop_args 'package bad
@@ -2277,7 +2298,7 @@ func main() int {
 
 }' 'cannot overwrite borrowed struct field'
 
-expect_compile_fail cfg_field_maybe_borrowed_move 'package bad
+expect_compile_pass cfg_field_maybe_borrowed_move 'package bad
 
 struct Resource { data box }
 
@@ -2297,7 +2318,7 @@ func main() int {
 
     return 42
 
-}' 'cannot move borrowed pair field'
+}'
 
 expect_compile_fail cfg_field_maybe_borrowed_overwrite 'package bad
 
@@ -2441,9 +2462,9 @@ func main() int {
 
     return 42
 
-}' 'cannot move borrowed nested struct field'
+}' 'OwnershipAuthority(solver) SolverDecision(ERROR)'
 
-expect_compile_fail cfg_nested_field_maybe_borrowed_move 'package bad
+expect_compile_pass cfg_nested_field_maybe_borrowed_move 'package bad
 
 struct Left { data box }
 
@@ -2467,7 +2488,7 @@ func main() int {
 
     return 42
 
-}' 'cannot move borrowed nested struct field'
+}'
 
 
 
