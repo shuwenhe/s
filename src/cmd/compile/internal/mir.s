@@ -588,6 +588,46 @@ func mir_place_equal(a mir_place, b mir_place) bool {
     return true
 }
 
+// C.3.1b.2-pre.A4: Structural prefix for MIR places
+// Determines if prefix is a prefix of place (including exact match)
+// Algebraic basis for place overlap: places overlap iff they share a common prefix
+// Examples:
+//   prefix(Local(1), Local(1))         → true   (exact match)
+//   prefix(Local(1), Local(1).Field(0)) → true   (proper prefix)
+//   prefix(Local(1).Field(0), Local(1).Field(0).Field(1)) → true (nested)
+//   prefix(Local(1).Field(0), Local(1).Field(1)) → false (different branch)
+//   prefix(Local(1), Local(2))         → false (different root)
+func mir_place_is_prefix(prefix mir_place, place mir_place) bool {
+    // [1] Roots must match (necessary for any prefix relationship)
+    if prefix.root != place.root {
+        return false
+    }
+
+    // [2] Prefix projection count must not exceed place count
+    if len(prefix.projections) > len(place.projections) {
+        return false
+    }
+
+    // [3] Each prefix projection must match corresponding place projection
+    i := 0
+    for i < len(prefix.projections) {
+        // Kind must match exactly
+        if prefix.projections[i].kind != place.projections[i].kind {
+            return false
+        }
+
+        // Value must match exactly
+        if prefix.projections[i].value != place.projections[i].value {
+            return false
+        }
+
+        i = i + 1
+    }
+
+    // Prefix is a valid prefix of place
+    return true
+}
+
 func mir_extend_events(string[] base, string[] extra) string[] {
     i := 0
     for i < len(extra) {
