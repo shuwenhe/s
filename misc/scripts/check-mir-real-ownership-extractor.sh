@@ -17,22 +17,25 @@ require_text() {
     fi
 }
 
-require_text "$mir_file" 'struct mir_ownership_analysis_input {' 'real MIR facts output'
+require_text "$mir_file" 'use compile.internal.ownership.analysis.ownership_analysis_input' 'shared analysis input import'
+require_text "$mir_file" 'struct mir_ownership_facts {' 'real MIR facts debug wrapper'
+require_text "$mir_file" 'ownership_analysis_input input' 'shared analysis input payload'
 require_text "$mir_file" 'func build_ownership_analysis_input_from_mir' 'real MIR facts extractor'
+require_text "$mir_file" 'func build_ownership_facts_from_mir' 'real MIR named facts extractor'
 require_text "$mir_file" 'func mir_ownership_ref_id' 'MIR ref name to analysis ref id mapping'
 require_text "$mir_file" 'mir_statement::borrow(borrow_stmt)' 'borrow fact extraction'
 require_text "$mir_file" 'mir_statement::ref_use(use_stmt)' 'reference use fact extraction'
 require_text "$mir_file" 'mir_statement::ref_assign(assign_stmt)' 'reference assignment fact extraction'
 require_text "$mir_file" 'point := mir_point_id(points, graph.blocks[block_index].id, stmt_index)' 'semantic point to dense point mapping'
-require_text "$mir_file" 'input.loan_points = append(input.loan_points, mir_add_point_value(0, point))' 'loan issue point fact'
-require_text "$mir_file" 'input.region_points[ref_id] = mir_add_point_value(input.region_points[ref_id], point)' 'region use point fact'
-require_text "$mir_file" 'input.outlives_from = append(input.outlives_from, source_ref)' 'outlives source direction'
-require_text "$mir_file" 'input.outlives_to = append(input.outlives_to, target_ref)' 'outlives target direction'
+require_text "$mir_file" 'facts.input.loan_points = append(facts.input.loan_points, mir_add_point_value(0, point))' 'loan issue point fact'
+require_text "$mir_file" 'facts.input.region_points[ref_id] = mir_add_point_value(facts.input.region_points[ref_id], point)' 'region use point fact'
+require_text "$mir_file" 'facts.input.outlives_from = append(facts.input.outlives_from, source_ref)' 'outlives source direction'
+require_text "$mir_file" 'facts.input.outlives_to = append(facts.input.outlives_to, target_ref)' 'outlives target direction'
 require_text "$mir_file" 'func dump_ownership_analysis_input_from_mir' 'facts debug view'
 
 awk '
-    /func build_ownership_analysis_input_from_mir/ { in_extractor = 1 }
-    /func mir_empty_ownership_analysis_input/ { in_extractor = 0 }
+    /func build_ownership_facts_from_mir/ { in_extractor = 1 }
+    /func build_ownership_analysis_input_from_mir/ { in_extractor = 0 }
     in_extractor && /(while changed|converged|analyze_ownership_liveness|borrow conflict|move legality|compiler_fail)/ {
         print "mir real ownership extractor: extractor leaked solver or authority semantics"
         exit 1

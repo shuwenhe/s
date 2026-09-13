@@ -1,7 +1,4 @@
 package compile.compiler
-use compile.internal.ownership.analysis.ownership_analysis_input
-use compile.internal.ownership.analysis.ownership_analysis
-use compile.internal.ownership.analysis.analyze_ownership_liveness
 extern "intrinsic" func host_args() string[];
 extern "intrinsic" func __host_read_to_string(string path) string;
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
@@ -82,6 +79,25 @@ struct ownership_decision {
     int point_id
     int conflict_place
     bool legacy_allowed
+}
+
+struct ownership_analysis_input {
+    int point_count
+    int[] ref_seen
+    int[] ref_loans
+    int[] region_points
+    int[] loan_points
+    int[] outlives_from
+    int[] outlives_to
+    int outlives_count
+    int loan_count
+}
+
+struct ownership_analysis {
+    int[] region_live_points
+    int[] loan_live_points
+    int iterations
+    bool converged
 }
 
 func compiler_number(int n) string {
@@ -3846,6 +3862,37 @@ func compiler_region_union_value(int target_bits, int source_bits) int {
     return result
 }
 
+func analyze_ownership_liveness(ownership_analysis_input input) ownership_analysis {
+    region_points := input.region_points
+    loan_points := input.loan_points
+    iterations := 0
+    changed := true
+    while changed && iterations < 8 {
+        changed = false
+        i := 0
+        while i < input.outlives_count {
+            from := input.outlives_from[i]
+            to := input.outlives_to[i]
+            before := region_points[from]
+            region_points[from] = compiler_region_union_value(region_points[from], region_points[to])
+            if region_points[from] != before { changed = true }
+            i = i + 1
+        }
+        i = 0
+        while i < len(input.ref_seen) {
+            loan := input.ref_loans[i]
+            if input.ref_seen[i] == 1 && loan >= 0 && loan < input.loan_count {
+                before_loan := loan_points[loan]
+                loan_points[loan] = compiler_region_union_value(loan_points[loan], region_points[i])
+                if loan_points[loan] != before_loan { changed = true }
+            }
+            i = i + 1
+        }
+        iterations = iterations + 1
+    }
+    ownership_analysis { region_live_points: region_points, loan_live_points: loan_points, iterations: iterations, converged: !changed }
+}
+
 func compiler_emit_mir_region_solver(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3945,38 +3992,6 @@ func compiler_emit_ownership_solver_check() string {
     out = out + "Region(R1) = " + compiler_region_points_string(analysis.region_live_points[1]) + "\n"
     out = out + "LoanLivePoints(L0) = " + compiler_region_points_string(analysis.loan_live_points[0]) + "\n"
     out = out + "OwnershipAnalysis(iterations=" + compiler_number(analysis.iterations) + ", converged=true)\n"
-    return out
-}
-
-func compiler_emit_mir_real_ownership_shadow(string source) string {
-    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
-    ref_seen := empty_ints
-    ref_loans := empty_ints
-    region_points := empty_ints
-    loan_points := empty_ints
-    outlives_from := empty_ints
-    outlives_to := empty_ints
-    ref_seen[0] = 1
-    ref_seen[1] = 1
-    ref_loans[0] = 0
-    ref_loans[1] = 0
-    loan_points[0] = compiler_region_add_point_value(loan_points[0], 0)
-    region_points[0] = compiler_region_add_point_value(region_points[0], 0)
-    region_points[1] = compiler_region_add_point_value(region_points[1], 2)
-    outlives_from[0] = 0
-    outlives_to[0] = 1
-    input := ownership_analysis_input { point_count: 4, ref_seen: ref_seen, ref_loans: ref_loans, region_points: region_points, loan_points: loan_points, outlives_from: outlives_from, outlives_to: outlives_to, outlives_count: 1, loan_count: 1 }
-    analysis := analyze_ownership_liveness(input)
-    out := "RealMIROwnershipShadow\n"
-    out = out + "RealMIRFacts(point_count=4, refs=2, loans=1, outlives=1)\n"
-    out = out + "Point(P0) = BB0(entry):stmt0 Borrow(_2, _1)\n"
-    out = out + "Point(P1) = BB0(entry):stmt1 RefAssign(_3, _2)\n"
-    out = out + "Point(P2) = BB0(entry):stmt2 RefUse(_3)\n"
-    out = out + "Point(P3) = BB0(entry):term\n"
-    out = out + "Region(R0) = " + compiler_region_points_string(analysis.region_live_points[0]) + "\n"
-    out = out + "Region(R1) = " + compiler_region_points_string(analysis.region_live_points[1]) + "\n"
-    out = out + "LoanLivePoints(L0) = " + compiler_region_points_string(analysis.loan_live_points[0]) + "\n"
-    out = out + "SharedSolverShadow(iterations=" + compiler_number(analysis.iterations) + ", converged=true)\n"
     return out
 }
 
@@ -4589,8 +4604,8 @@ func compiler_emit_mir_partial_drop(string source) string {
 
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-real-ownership-shadow" && args[1] != "--emit-mir-nll-ownership") {
-        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|--emit-mir-real-ownership-shadow|--emit-mir-nll-ownership) input.s output")
+    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
+        eprintln("usage: s_compiler (--emit-c|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|--emit-mir-nll-ownership) input.s output")
         return 2
     }
     string source = __host_read_to_string(args[2])
@@ -4649,10 +4664,6 @@ func main() {
     }
     if args[1] == "--emit-mir-ownership-solver-check" {
         if __host_write_text_file(args[3], compiler_emit_ownership_solver_check()) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
-    }
-    if args[1] == "--emit-mir-real-ownership-shadow" {
-        if __host_write_text_file(args[3], compiler_emit_mir_real_ownership_shadow(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-mir-nll-ownership" {

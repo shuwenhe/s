@@ -2,42 +2,46 @@
 set -euo pipefail
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/s-mir-real-shadow.XXXXXXXX")
-trap 'rm -rf "$tmpdir"' EXIT
-
-input="$tmpdir/real_shadow.s"
-out="$tmpdir/real_shadow.mir"
-
-cat > "$input" <<'SRC'
-func main() int {
-    return 0
-}
-SRC
-
-"$root/bin/s" --emit-mir-real-ownership-shadow "$input" "$out"
+mir_file="$root/src/cmd/compile/internal/mir.s"
+test_file="$root/src/cmd/compile/internal/tests/test_mir.s"
+compiler_file="$root/src/cmd/compile/compiler.s"
+driver_file="$root/misc/scripts/s-driver.sh"
 
 require_text() {
-    needle=$1
-    label=$2
-    if ! grep -Fq "$needle" "$out"; then
+    file=$1
+    needle=$2
+    label=$3
+    if ! grep -Fq -- "$needle" "$file"; then
         echo "mir real ownership shadow: missing $label" >&2
+        echo "  file: ${file#$root/}" >&2
         echo "  text: $needle" >&2
-        echo "---- output ----" >&2
-        cat "$out" >&2
         exit 1
     fi
 }
 
-require_text 'RealMIROwnershipShadow' 'shadow header'
-require_text 'RealMIRFacts(point_count=4, refs=2, loans=1, outlives=1)' 'real MIR facts summary'
-require_text 'Point(P0) = BB0(entry):stmt0 Borrow(_2, _1)' 'borrow point'
-require_text 'Point(P1) = BB0(entry):stmt1 RefAssign(_3, _2)' 'ref assign point'
-require_text 'Point(P2) = BB0(entry):stmt2 RefUse(_3)' 'ref use point'
-require_text 'Point(P3) = BB0(entry):term' 'terminator point'
-require_text 'Region(R0) = {P0, P2}' 'shared solver propagated source region'
-require_text 'Region(R1) = {P2}' 'shared solver retained use region'
-require_text 'LoanLivePoints(L0) = {P0, P2}' 'shared solver loan live points'
-require_text 'SharedSolverShadow(iterations=' 'shared solver shadow result'
-require_text 'converged=true' 'solver convergence'
+reject_text() {
+    file=$1
+    needle=$2
+    label=$3
+    if grep -Fq -- "$needle" "$file"; then
+        echo "mir real ownership shadow: unexpected $label" >&2
+        echo "  file: ${file#$root/}" >&2
+        echo "  text: $needle" >&2
+        exit 1
+    fi
+}
+
+require_text "$mir_file" 'func dump_ownership_shadow_from_mir(mir_graph graph) string' 'real MIR shadow client'
+require_text "$mir_file" 'facts := build_ownership_facts_from_mir(graph, points)' 'real MIR extractor feed'
+require_text "$mir_file" 'analysis := analyze_ownership_liveness(facts.input)' 'shared solver feed'
+require_text "$mir_file" 'LoanLivePoints(L" + to_string(i) + ") = " + mir_points_string(analysis.loan_live_points[i])' 'loan live points output'
+require_text "$test_file" 'expected_shadow := "RealMIROwnershipShadow' 'shadow regression expectation'
+require_text "$test_file" 'RealMIRFacts(point_count=4, refs=2, loans=1, outlives=1)' 'shadow facts summary expectation'
+require_text "$test_file" 'LoanLivePoints(L0) = {P0,P2}' 'shared solver shadow expectation'
+require_text "$test_file" 'dump_ownership_shadow_from_mir(fact_graph)' 'real MIR shadow regression call'
+
+reject_text "$compiler_file" 'compiler_emit_mir_real_ownership_shadow' 'monolithic fixture emitter'
+reject_text "$compiler_file" 'Point(P0) = BB0(entry):stmt0 Borrow(_2, _1)' 'hard-coded shadow fixture'
+reject_text "$driver_file" '--emit-mir-real-ownership-shadow' 'driver fixture flag'
 
 echo "mir-real-ownership-shadow-check: ok"
