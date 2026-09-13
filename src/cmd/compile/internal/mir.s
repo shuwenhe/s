@@ -549,6 +549,45 @@ func mir_place_key(mir_place place) string {
     out
 }
 
+// C.3.1b.2-pre.A3: Structural equality for MIR places
+// Compares two places for identity equality
+// This is MIR Place identity equality, NOT alias equivalence
+// Two places are equal if and only if:
+//   1. roots are identical
+//   2. projection counts are identical
+//   3. each projection kind and value are identical
+// NOTE: Uses direct field comparison, NOT mir_place_key() or string parsing
+func mir_place_equal(a mir_place, b mir_place) bool {
+    // [1] Root identity must match
+    if a.root != b.root {
+        return false
+    }
+
+    // [2] Projection count must match
+    if len(a.projections) != len(b.projections) {
+        return false
+    }
+
+    // [3] Each projection must match (kind and value)
+    i := 0
+    for i < len(a.projections) {
+        // Kind must match (enum-based comparison, never string dispatch)
+        if a.projections[i].kind != b.projections[i].kind {
+            return false
+        }
+
+        // Value must match (direct string comparison on stored value)
+        if a.projections[i].value != b.projections[i].value {
+            return false
+        }
+
+        i = i + 1
+    }
+
+    // All fields match: places are equal
+    return true
+}
+
 func mir_extend_events(string[] base, string[] extra) string[] {
     i := 0
     for i < len(extra) {
