@@ -1,6 +1,5 @@
 package test
 
-
 struct Resource {
     value box
 }
@@ -19,7 +18,6 @@ func main() {
         Resource(box(30)),
         Resource(box(40))
     )
-
 
     x := p.c
 

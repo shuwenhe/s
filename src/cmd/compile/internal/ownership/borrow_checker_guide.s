@@ -1,7 +1,6 @@
 
 package borrow_checker_guide
 
-
 struct owner {
     *int resource
 }
@@ -21,7 +20,6 @@ func ownership_rule2() {
     }
     r2 := r1
 
-
 }
 
 func ownership_rule3() {
@@ -35,7 +33,6 @@ func ownership_rule3() {
 
 }
 
-
 struct data {
     *int value
 }
@@ -47,10 +44,8 @@ func valid_shared_borrows() int {
     b2 := &d
     b3 := &d
 
-
     return *b1.value + *b2.value + *b3.value
 }
-
 
 func valid_sequential_mutable() int {
     d := Data{value: box(100)}
@@ -68,7 +63,6 @@ func valid_sequential_mutable() int {
     return *d.value
 }
 
-
 struct container {
     *int data
 }
@@ -83,16 +77,13 @@ func valid_lifetime() int {
 
     }
 
-
     return *c.data
 }
-
 
 func borrow_from_param(c *Container) *int {
 
     return c.data
 }
-
 
 struct resource {
     *int ptr
@@ -111,13 +102,10 @@ func borrow_resource(r *Resource) int {
 func move_vs_borrow() int {
     r := Resource{ptr: box(100)}
 
-
     value := borrowResource(&r)
-
 
     return value
 }
-
 
 struct box_int {
     *int ptr
@@ -142,10 +130,8 @@ func borrow_scope_example() int {
     return *b.ptr
 }
 
-
 func state_transitions() int {
     r := Resource{ptr: box(10)}
-
 
     {
         ref := &r
@@ -153,14 +139,11 @@ func state_transitions() int {
         println(*ref.ptr)
     }
 
-
     r2 := r
-
 
     return *r2.ptr
 
 }
-
 
 func non_lexical_lifetime() int {
     r := Resource{ptr: box(50)}
@@ -180,7 +163,6 @@ func non_lexical_lifetime() int {
     return *r.ptr
 }
 
-
 func return_ownership_example() Resource {
     r := Resource{ptr: box(100)}
     return r
@@ -198,19 +180,15 @@ func conditional_return(bool condition) Resource {
     }
 }
 
-
 struct global_state {
     *int data
 }
-
 
 func best_practices() int {
 
     r := Resource{ptr: box(42)}
 
-
     value := useWithBorrow(&r)
-
 
     println(*r.ptr)
 
@@ -220,7 +198,6 @@ func best_practices() int {
 func use_with_borrow(r *Resource) int {
     return *r.ptr
 }
-
 
 func main() int {
     println("=== Ownership Rules ===") ownership_rule1()

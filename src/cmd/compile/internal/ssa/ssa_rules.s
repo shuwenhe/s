@@ -352,7 +352,6 @@ func (engine* rule_engine) run_on_block(value[] block_values) int {
 
     engine.stats_applied
 }
-
 const op_phi = 1
 const op_const = 2
 const op_add = 3

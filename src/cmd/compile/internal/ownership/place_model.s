@@ -1,9 +1,13 @@
 package ownership_place_model
 
 func ownership_place_local() int { return 0 }
+
 func ownership_place_field0() int { return 1 }
+
 func ownership_place_field1() int { return 2 }
+
 func ownership_place_field0_0() int { return 3 }
+
 func ownership_place_field0_1() int { return 4 }
 
 func ownership_place_name(int place) string {

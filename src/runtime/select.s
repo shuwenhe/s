@@ -6,7 +6,6 @@ struct runtime_select_result {
     int value
     bool ok
 }
-
 const runtime_select_receive = 0
 const runtime_select_send = 1
 

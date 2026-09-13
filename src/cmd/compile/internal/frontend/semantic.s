@@ -10,7 +10,6 @@ struct symbol {
     is_exported: int
     is_mut: int
 }
-
 const symbol_var = 1
 const symbol_func = 2
 const symbol_struct = 3

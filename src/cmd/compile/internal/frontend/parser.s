@@ -6,7 +6,6 @@ struct parser {
     peek_token: token
     errors: array
 }
-
 const token_and = 57
 const token_or = 58
 const token_bit_and = 60

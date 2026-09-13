@@ -1,7 +1,6 @@
 
 package ownership_examples
 
-
 struct memory_block {
     *int addr
     int size
@@ -28,16 +27,12 @@ func memory_example() int {
     block1 := allocateBlock(1024)
     block2 := allocateBlock(2048)
 
-
     block3 := block2
-
 
     total := block1.size + block3.size
 
-
     return total
 }
-
 
 struct owned_string {
     *int data
@@ -67,7 +62,6 @@ func string_example() int {
     return s2.len
 
 }
-
 
 struct vector {
     [100]*int elements
@@ -102,11 +96,9 @@ func (v *Vector) len_value() int {
 func vector_example() int {
     v := newVector()
 
-
     v.push(10)
     v.push(20)
     v.push(30)
-
 
     first := v.get(0)
     second := v.get(1)
@@ -115,7 +107,6 @@ func vector_example() int {
     return sum
 
 }
-
 
 struct file_handle {
     int fd
@@ -153,13 +144,10 @@ func file_example() int {
 
     f := openFile("data.txt")
 
-
     content := f.read()
-
 
     return content
 }
-
 
 struct list_node {
     int value
@@ -192,7 +180,6 @@ func list_example() int {
     return sumList(&head)
 }
 
-
 struct ref_counted {
     *int data
     *int refCount
@@ -217,14 +204,11 @@ func ref_counted_example() int {
     rc1 := newRefCounted(100)
     rc2 := rc1.clone()
 
-
     val1 := *rc1.data
     val2 := *rc2.data
 
     return val1 + val2
 }
-
-
 type ProcessState int
 const (
     IDLE ProcessState = 0
@@ -261,7 +245,6 @@ func process_example() int {
     return result
 }
 
-
 struct event_handler {
     callback func() int
     *int context
@@ -286,7 +269,6 @@ func callback_example() int {
     handler := createEventHandler(50)
     return triggerEvent(&handler)
 }
-
 
 struct resource_pool {
     [10]*int resources
@@ -325,7 +307,6 @@ func pool_example() int {
 
 }
 
-
 struct copyable_data {
     int x
     int y
@@ -340,7 +321,6 @@ func copy_example() int {
     c1 := CopyableData{x: 10, y: 20}
     c2 := c1
 
-
     return c1.x + c2.y
 }
 
@@ -349,11 +329,9 @@ func move_example() int {
     m1 := MoveableData{ptr: box(10)}
     m2 := m1
 
-
     value := *m2.ptr
     return value
 }
-
 
 struct validation_result {
     *int resource
@@ -385,7 +363,6 @@ func early_return_example() int {
     return *result.resource
 }
 
-
 struct container {
     *int item
 }
@@ -400,64 +377,50 @@ func deep_transfer() int {
         item: box(100),
     }
 
-
     wrapper := Wrapper{
         container: container,
     }
-
 
     value := *wrapper.container.item
     return value
 
 }
 
-
 func main() int {
 
     println("=== Memory Allocator ===")
     println("Result:", memoryExample())
 
-
     println("=== Owned String ===")
     println("Result:", stringExample())
-
 
     println("=== Vector ===")
     println("Result:", vectorExample())
 
-
     println("=== File Handle ===")
     println("Result:", fileExample())
-
 
     println("=== Linked List ===")
     println("Result:", listExample())
 
-
     println("=== Reference Counting ===")
     println("Result:", refCountedExample())
-
 
     println("=== State Machine ===")
     println("Result:", processExample())
 
-
     println("=== Owned Callback ===")
     println("Result:", callbackExample())
 
-
     println("=== Resource Pool ===")
     println("Result:", poolExample())
-
 
     println("=== Copy vs Move ===")
     println("Copy result:", copyExample())
     println("Move result:", moveExample())
 
-
     println("=== Early Return ===")
     println("Result:", earlyReturnExample())
-
 
     println("=== Complex Transfer ===")
     println("Result:", deepTransfer())
