@@ -1648,7 +1648,7 @@ selfhost-bin:
 
 
 
-.PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-borrow-dataflow-check mir-drop-elaboration-check mir-place-check mir-movepath-check mir-partial-move-check mir-reinit-check mir-partial-drop-check mir-place-borrow-check mir-ref-liveness-check mir-loan-liveness-check mir-region-constraints-check mir-region-solver-check mir-nll-borrow-check mir-nll-ownership-check ownership-module-check mir-ownership-lowering-check mir-nogc-e2e-check no-gc-test
+.PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-borrow-dataflow-check mir-drop-elaboration-check mir-place-check mir-movepath-check mir-partial-move-check mir-reinit-check mir-partial-drop-check mir-place-borrow-check mir-ref-liveness-check mir-loan-liveness-check mir-region-constraints-check mir-region-solver-check mir-nll-borrow-check mir-nll-shadow-check mir-nll-ownership-check ownership-module-check mir-ownership-lowering-check mir-ownership-pipeline-check mir-nogc-e2e-check no-gc-test
 
 compiler: seed-compiler-bin
 
@@ -1835,6 +1835,15 @@ mir-nll-borrow-check: compiler
 	@echo "✓ MIR NLL borrow check passed"
 
 
+mir-nll-shadow-check: compiler
+
+	@echo "Running MIR NLL shadow check..."
+
+	@misc/scripts/check-mir-nll-shadow.sh
+
+	@echo "✓ MIR NLL shadow check passed"
+
+
 
 mir-nll-ownership-check: compiler
 
@@ -1863,6 +1872,15 @@ mir-ownership-lowering-check: compiler
 	@misc/scripts/check-mir-ownership-lowering.sh
 
 	@echo "✓ MIR ownership lowering check passed"
+
+
+mir-ownership-pipeline-check: compiler seed-compiler-bin
+
+	@echo "Running real MIR ownership pipeline gate..."
+
+	@misc/scripts/check-mir-ownership-pipeline.sh
+
+	@echo "✓ Real MIR ownership pipeline gate passed"
 
 
 
@@ -1935,7 +1953,7 @@ modular-gate-b: bin/s_modular package-index
 	 fi
 
 .PHONY: ownership-check
-ownership-check: seed-compiler-bin mir-nogc-e2e-check ownership-module-check
+ownership-check: seed-compiler-bin mir-nll-shadow-check mir-ownership-pipeline-check mir-nogc-e2e-check ownership-module-check
 	@echo "Running ownership system semantic validation..."
 	@mkdir -p .bootstrap/ownership
 	@./bin/s_seed src/cmd/compile/internal/ownership_system.s .bootstrap/ownership/ownership_system.ir

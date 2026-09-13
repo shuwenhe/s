@@ -110,7 +110,7 @@ func (gm* got_manager) add_entry(sym_idx i32, reloc_type reloc_type) i64 {
 
 	gm.entries = append(gm.entries, entry)
 	idx := gm.offset
-	gm.offset += 8 
+	gm.offset += 8
 
 	idx
 }
@@ -197,7 +197,7 @@ func (pm* plt_manager) generate_plt_code() u8[] {
 		data[offset+6] = 0x68
 		binary.LittleEndian.put_uint32(data[offset+7:offset+11], u32(entry.symbol_index))
 
-		jmp_offset := -i32(offset+11) - 5 
+		jmp_offset := -i32(offset+11) - 5
 		binary.LittleEndian.put_uint32(data[offset+11:offset+15], u32(jmp_offset))
 	}
 

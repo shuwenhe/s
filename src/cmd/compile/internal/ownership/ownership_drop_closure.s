@@ -106,7 +106,7 @@ func (ownership_drop_context* ctx) analyze_assign(int pc, stmt* assign_stmt, int
         rhs_var := stmt.rhs
         if record, exists := ctx.variable_owners[rhs_var]; exists {
             if record.state != ownership_state.OWNED {
-                ctx.errors = append(ctx.errors, 
+                ctx.errors = append(ctx.errors,
                     sprintf("ERROR at PC %d: Cannot move %s from state %d", pc, rhs_var, record.state))
                 return false
             }
@@ -125,12 +125,12 @@ func (ownership_drop_context* ctx) analyze_assign(int pc, stmt* assign_stmt, int
 func (ownership_drop_context* ctx) analyze_move(int pc, stmt* move_stmt, int depth) bool {
     if record, exists := ctx.variable_owners[stmt.source]; exists {
         if record.state == ownership_state.MOVED {
-            ctx.errors = append(ctx.errors, 
+            ctx.errors = append(ctx.errors,
                 sprintf("ERROR at PC %d: double-move of %s", pc, stmt.source))
             return false
         }
         if record.state == ownership_state.DROPPED {
-            ctx.errors = append(ctx.errors, 
+            ctx.errors = append(ctx.errors,
                 sprintf("ERROR at PC %d: use-after-drop of %s", pc, stmt.source))
             return false
         }
@@ -142,7 +142,7 @@ func (ownership_drop_context* ctx) analyze_move(int pc, stmt* move_stmt, int dep
 func (ownership_drop_context* ctx) analyze_drop(int pc, stmt* drop_stmt, int depth) bool {
     if record, exists := ctx.variable_owners[stmt.target]; exists {
         if record.state == ownership_state.DROPPED {
-            ctx.errors = append(ctx.errors, 
+            ctx.errors = append(ctx.errors,
                 sprintf("ERROR at PC %d: double-drop of %s", pc, stmt.target))
             return false
         }
@@ -170,7 +170,7 @@ func (ownership_drop_context* ctx) phase_borrow_check(stmts interface{}) bool {
     }
     if len(ctx.active_borrows) > 0 {
         for borrow_var, record := range ctx.active_borrows {
-            ctx.errors = append(ctx.errors, 
+            ctx.errors = append(ctx.errors,
                 sprintf("ERROR: dangling borrow %s (source: %s)", borrow_var, record.source_var))
         }
         return false
@@ -196,18 +196,18 @@ func (ownership_drop_context* ctx) check_borrow_creation(int pc, stmt* borrow_st
     source := stmt.source
     if record, exists := ctx.variable_owners[source]; exists {
         if record.state == ownership_state.MOVED {
-            ctx.errors = append(ctx.errors, 
+            ctx.errors = append(ctx.errors,
                 sprintf("ERROR at PC %d: borrow of moved variable %s", pc, source))
             return false
         }
         if record.state == ownership_state.DROPPED {
-            ctx.errors = append(ctx.errors, 
+            ctx.errors = append(ctx.errors,
                 sprintf("ERROR at PC %d: borrow of dropped variable %s (dangling borrow)", pc, source))
             return false
         }
         if stmt.is_mutable {
             for _, existing := range ctx.borrowed_set[source] {
-                ctx.errors = append(ctx.errors, 
+                ctx.errors = append(ctx.errors,
                     sprintf("ERROR at PC %d: cannot create mutable borrow while %s is borrowed", pc, source))
                 return false
             }
@@ -215,7 +215,7 @@ func (ownership_drop_context* ctx) check_borrow_creation(int pc, stmt* borrow_st
         } else {
             for _, existing := range ctx.borrowed_set[source] {
                 if existing.is_mutable {
-                    ctx.errors = append(ctx.errors, 
+                    ctx.errors = append(ctx.errors,
                         sprintf("ERROR at PC %d: cannot create shared borrow while %s is mutably borrowed", pc, source))
                     return false
                 }
@@ -251,7 +251,7 @@ func (ownership_drop_context* ctx) check_borrow_end(int pc, stmt* borrow_end_stm
 func (ownership_drop_context* ctx) check_move_with_borrows(int pc, stmt* move_stmt, int depth) bool {
     source := stmt.source
     if len(ctx.borrowed_set[source]) > 0 {
-        ctx.errors = append(ctx.errors, 
+        ctx.errors = append(ctx.errors,
             sprintf("ERROR at PC %d: cannot move %s while borrowed", pc, source))
         return false
     }
@@ -333,7 +333,7 @@ case block_stmt*:
 func (ownership_drop_context* ctx) verify_closed_loop() bool {
     for var_name, record := range ctx.variable_owners {
         if record.state == ownership_state.UNDEFINED {
-            ctx.errors = append(ctx.errors, 
+            ctx.errors = append(ctx.errors,
                 sprintf("ERROR: %s is never initialized", var_name))
             return false
         }
@@ -341,7 +341,7 @@ func (ownership_drop_context* ctx) verify_closed_loop() bool {
     for var_name, is_moved := range ctx.moved_set {
         if is_moved {
             if _, is_owner := ctx.owned_set[var_name]; is_owner {
-                ctx.errors = append(ctx.errors, 
+                ctx.errors = append(ctx.errors,
                     sprintf("ERROR: %s is both moved and owned", var_name))
                 return false
             }
@@ -349,7 +349,7 @@ func (ownership_drop_context* ctx) verify_closed_loop() bool {
     }
     for borrow_var, record := range ctx.active_borrows {
         if record.lifetime_end == -1 {
-            ctx.errors = append(ctx.errors, 
+            ctx.errors = append(ctx.errors,
                 sprintf("ERROR: dangling borrow %s of %s", borrow_var, record.source_var))
             return false
         }
@@ -357,7 +357,7 @@ func (ownership_drop_context* ctx) verify_closed_loop() bool {
     for var_name, record := range ctx.variable_owners {
         if record.state != ownership_state.MOVED && record.state != ownership_state.DROPPED {
             if _, has_drop := ctx.drop_registry[var_name]; !has_drop {
-                ctx.warnings = append(ctx.warnings, 
+                ctx.warnings = append(ctx.warnings,
                     sprintf("WARNING: %s not scheduled for drop", var_name))
             }
         }
