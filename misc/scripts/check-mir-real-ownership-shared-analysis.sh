@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -30,16 +30,29 @@ reject_text() {
     fi
 }
 
-require_text "$analysis_file" 'package compile.internal.ownership.analysis' 'shared ownership analysis package'
-require_text "$analysis_file" 'struct ownership_analysis_input {' 'shared analysis input type'
-require_text "$analysis_file" 'struct ownership_analysis {' 'shared analysis output type'
-require_text "$analysis_file" 'func analyze_ownership_liveness' 'shared liveness solver'
-require_text "$mir_file" 'use compile.internal.ownership.analysis.ownership_analysis_input' 'MIR imports shared input type'
-require_text "$mir_file" 'use compile.internal.ownership.analysis.analyze_ownership_liveness' 'MIR imports shared solver'
-require_text "$mir_file" 'func build_ownership_analysis_input_from_mir(mir_graph graph, mir_point_map points) ownership_analysis_input' 'MIR extractor returns shared input'
-require_text "$mir_file" 'func dump_ownership_shadow_from_mir' 'MIR shadow diagnostic client'
-require_text "$mir_file" 'analysis := analyze_ownership_liveness(facts.input)' 'MIR shadow uses shared solver'
-reject_text "$mir_file" 'while changed' 'MIR package duplicate fixed-point loop'
-require_text "$compiler_file" 'func analyze_ownership_liveness(ownership_analysis_input input) ownership_analysis' 'monolithic diagnostic compatibility solver'
+# Architecture Gate (C.2.4b.1): Sole Solver Authority in compiler.s
+# After Phase B2: Single analyze_ownership_liveness() implementation in compiler.s
+# analysis.s: type definitions only (no solver implementation)
+
+require_text "$analysis_file" 'package compile.internal.ownership.analysis' 'analysis package'
+require_text "$analysis_file" 'struct ownership_analysis_input {' 'shared input type'
+require_text "$analysis_file" 'struct ownership_analysis {' 'shared output type'
+
+# CRITICAL: No solver in analysis.s (Phase B2 architecture decision)
+reject_text "$analysis_file" 'func analyze_ownership_liveness' 'analysis.s must NOT have solver'
+
+# MIR imports solver from compiler.s (via analysis.s package namespace)
+require_text "$mir_file" 'use compile.internal.ownership.analysis.ownership_analysis_input' 'MIR imports input type'
+require_text "$mir_file" 'use compile.internal.ownership.analysis.analyze_ownership_liveness' 'MIR imports solver'
+
+require_text "$mir_file" 'func build_ownership_analysis_input_from_mir' 'MIR fact extractor'
+require_text "$mir_file" 'func dump_ownership_shadow_from_mir' 'MIR shadow diagnostic'
+require_text "$mir_file" 'analysis := analyze_ownership_liveness(facts.input)' 'MIR shadow invokes solver'
+
+# No duplicate solver in mir.s (Phase B2 architecture decision)
+reject_text "$mir_file" 'while changed' 'MIR must not duplicate solver loop'
+
+# Sole solver authority in compiler.s
+require_text "$compiler_file" 'func analyze_ownership_liveness(ownership_analysis_input input) ownership_analysis' 'compiler.s sole solver'
 
 echo "mir-real-ownership-shared-analysis-check: ok"
