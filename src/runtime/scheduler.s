@@ -63,7 +63,6 @@ struct scheduler {
 	sync.mutex global_lock
 	bool schedenable
 }
-
 var global_scheduler scheduler
 var global_m_lock sync.mutex
 var global_p_lock sync.mutex

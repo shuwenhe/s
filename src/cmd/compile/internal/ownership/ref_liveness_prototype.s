@@ -1,13 +1,11 @@
 package ref_liveness_prototype
 
-
 struct ref_occurrence {
     string ref_name
     int block_id
     int point_in_block
     string kind
 }
-
 
 struct simple_cfg {
     vec[simple_block] blocks
@@ -20,13 +18,11 @@ struct simple_block {
     vec[ref_occurrence] occurrences
 }
 
-
 struct liveness_result {
 
     map[string]bool live_in_by_block
     map[string]bool live_out_by_block
 }
-
 
 func build_test1_cfg() simple_cfg {
     cfg := simple_cfg{}
@@ -45,7 +41,6 @@ func build_test1_cfg() simple_cfg {
     cfg.blocks = vec[simple_block]{ block0 }
     return cfg
 }
-
 
 func build_test3_cfg() simple_cfg {
     cfg := simple_cfg{}
@@ -88,13 +83,10 @@ func build_test3_cfg() simple_cfg {
     return cfg
 }
 
-
 func compute_simplified_liveness(cfg simple_cfg) {
-
 
     _ = cfg
 }
-
 
 func analyze_test_case(test_id int) string {
     cfg := simple_cfg{}
@@ -104,7 +96,6 @@ func analyze_test_case(test_id int) string {
     } else if test_id == 3 {
         cfg = build_test3_cfg()
     }
-
 
     return "NOT_YET_IMPLEMENTED"
 }

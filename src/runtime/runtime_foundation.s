@@ -227,7 +227,6 @@ func runtime_type_of(int id, string name, int size, int pointer_words) runtime_t
 func runtime_value_assignable(runtime_value value, runtime_type target) bool {
     value.type.id == target.id
 }
-
 extern "intrinsic" func __syscall0(int nr) int;
 extern "intrinsic" func __syscall1(int nr, int a1) int;
 extern "intrinsic" func __syscall2(int nr, int a1, int a2) int;
@@ -251,7 +250,6 @@ struct runtime_profile_sample {
     int count
     int nanos
 }
-
 var runtime_profile_samples = runtime_profile_sample[]()
 var runtime_profile_enabled = false
 
@@ -280,7 +278,6 @@ func runtime_profile_record(string name, int nanos) () {
 func runtime_profile_snapshot() runtime_profile_sample[] {
     runtime_profile_samples
 }
-
 extern "intrinsic" func __race_read(int address, int size) ();
 extern "intrinsic" func __race_write(int address, int size) ();
 

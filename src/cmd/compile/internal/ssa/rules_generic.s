@@ -17,7 +17,6 @@ struct rule_context {
     operands: ssa_value_ptr[]
     config: compile_config
 }
-
 enum optimization_category {
     const_fold,
     algebraic_simp,

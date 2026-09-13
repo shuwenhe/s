@@ -2,7 +2,6 @@ package ref_liveness_test_driver
 
 use compile.internal.ownership.ref_liveness_analyzer
 
-
 func main() {
     test_results := vec[string]{
         analyze_test_1(),

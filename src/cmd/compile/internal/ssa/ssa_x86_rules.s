@@ -270,7 +270,6 @@ func (engine* x86_rule_engine) fuse_compare_branch(int cmp_op, int branch_op) in
 
     return 0
 }
-
 const op_add = 3
 const op_sub = 4
 const op_mul = 5

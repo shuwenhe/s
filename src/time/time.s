@@ -18,7 +18,6 @@ struct time_zone {
 struct duration {
 	i64 nanoseconds
 }
-
 const (
 	nanosecond = i64(1)
 	microsecond = i64(1000)
@@ -111,7 +110,6 @@ struct location {
 	string name
 	time_zone[] zone
 }
-
 var utc_location location = location{name: "UTC"}
 var local_location location = location{name: "Local"}
 

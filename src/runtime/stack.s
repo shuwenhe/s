@@ -36,7 +36,6 @@ struct stack_info {
 	shrink_state stack_shrink_state
 	sync.mutex lock
 }
-
 const (
 	min_stack_size = i32(2048)
 	max_stack_size = i32(1024*1024)

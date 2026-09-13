@@ -1,6 +1,5 @@
 package ref_liveness_validation
 
-
 func validate_straight_last_use(r_live_at_reborrow bool) string {
 
     if r_live_at_reborrow {

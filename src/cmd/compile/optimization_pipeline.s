@@ -302,7 +302,6 @@ func estimate_instr_size(int op) int {
 func (pipeline* optimization_pipeline) print_stats() int {
     return 0
 }
-
 const phase_ssa_construction = 0
 const phase_constant_folding = 1
 const phase_dead_code_elim = 2
