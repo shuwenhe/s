@@ -1,6 +1,8 @@
 package compile.internal.mir
 use compile.internal.borrow.borrow_check_events
 use compile.internal.borrow.analyze_function as analyze_borrow_function
+use compile.internal.ownership.analysis.ownership_analysis_input
+use compile.internal.ownership.analysis.analyze_ownership_liveness
 use compile.internal.typesys.is_copy_type
 use compile.internal.typesys.requires_drop
 use s.block_expr
@@ -134,17 +136,10 @@ struct mir_point_map {
     mir_point[] points
 }
 
-struct mir_ownership_analysis_input {
-    int point_count
+struct mir_ownership_facts {
+    ownership_analysis_input input
     string[] ref_names
-    int[] ref_loans
-    int[] region_points
-    int[] loan_points
     string[] loan_places
-    int[] outlives_from
-    int[] outlives_to
-    int outlives_count
-    int loan_count
 }
 
 func build_mir_point_map(mir_graph graph) mir_point_map {
@@ -211,8 +206,8 @@ func mir_point_text(mir_graph graph, mir_point point) string {
     "BB" + to_string(point.block_id) + "(" + label + "):stmt" + to_string(point.statement_index)
 }
 
-func build_ownership_analysis_input_from_mir(mir_graph graph, mir_point_map points) mir_ownership_analysis_input {
-    input := mir_empty_ownership_analysis_input(len(points.points))
+func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_ownership_facts {
+    facts := mir_empty_ownership_facts(len(points.points))
     block_index := 0
     for block_index < len(graph.blocks) {
         stmt_index := 0
@@ -220,25 +215,25 @@ func build_ownership_analysis_input_from_mir(mir_graph graph, mir_point_map poin
             point := mir_point_id(points, graph.blocks[block_index].id, stmt_index)
             switch graph.blocks[block_index].statements[stmt_index] {
                 mir_statement::borrow(borrow_stmt) : {
-                    ref_id := mir_ownership_ref_id(&input, borrow_stmt.ref_name)
-                    loan_id := input.loan_count
-                    input.loan_count = input.loan_count + 1
-                    input.loan_points = append(input.loan_points, mir_add_point_value(0, point))
-                    input.loan_places = append(input.loan_places, mir_place_key(borrow_stmt.place))
-                    input.ref_loans[ref_id] = loan_id
-                    input.region_points[ref_id] = mir_add_point_value(input.region_points[ref_id], point)
+                    ref_id := mir_ownership_ref_id(&facts, borrow_stmt.ref_name)
+                    loan_id := facts.input.loan_count
+                    facts.input.loan_count = facts.input.loan_count + 1
+                    facts.input.loan_points = append(facts.input.loan_points, mir_add_point_value(0, point))
+                    facts.loan_places = append(facts.loan_places, mir_place_key(borrow_stmt.place))
+                    facts.input.ref_loans[ref_id] = loan_id
+                    facts.input.region_points[ref_id] = mir_add_point_value(facts.input.region_points[ref_id], point)
                 }
                 mir_statement::ref_use(use_stmt) : {
-                    ref_id := mir_ownership_ref_id(&input, use_stmt.ref_name)
-                    input.region_points[ref_id] = mir_add_point_value(input.region_points[ref_id], point)
+                    ref_id := mir_ownership_ref_id(&facts, use_stmt.ref_name)
+                    facts.input.region_points[ref_id] = mir_add_point_value(facts.input.region_points[ref_id], point)
                 }
                 mir_statement::ref_assign(assign_stmt) : {
-                    target_ref := mir_ownership_ref_id(&input, assign_stmt.target_ref)
-                    source_ref := mir_ownership_ref_id(&input, assign_stmt.source_ref)
-                    input.ref_loans[target_ref] = input.ref_loans[source_ref]
-                    input.outlives_from = append(input.outlives_from, source_ref)
-                    input.outlives_to = append(input.outlives_to, target_ref)
-                    input.outlives_count = input.outlives_count + 1
+                    target_ref := mir_ownership_ref_id(&facts, assign_stmt.target_ref)
+                    source_ref := mir_ownership_ref_id(&facts, assign_stmt.source_ref)
+                    facts.input.ref_loans[target_ref] = facts.input.ref_loans[source_ref]
+                    facts.input.outlives_from = append(facts.input.outlives_from, source_ref)
+                    facts.input.outlives_to = append(facts.input.outlives_to, target_ref)
+                    facts.input.outlives_count = facts.input.outlives_count + 1
                 }
                 _ : { }
             }
@@ -246,25 +241,33 @@ func build_ownership_analysis_input_from_mir(mir_graph graph, mir_point_map poin
         }
         block_index = block_index + 1
     }
-    input
+    facts
 }
 
-func mir_empty_ownership_analysis_input(int point_count) mir_ownership_analysis_input {
-    mir_ownership_analysis_input {
-        point_count: point_count, ref_names string[](), ref_loans int[](), region_points int[](), loan_points int[](), loan_places string[](), outlives_from int[](), outlives_to int[](), outlives_count 0, loan_count 0,
+func build_ownership_analysis_input_from_mir(mir_graph graph, mir_point_map points) ownership_analysis_input {
+    build_ownership_facts_from_mir(graph, points).input
+}
+
+func mir_empty_ownership_facts(int point_count) mir_ownership_facts {
+    mir_ownership_facts {
+        input: ownership_analysis_input {
+            point_count: point_count, ref_seen int[](), ref_loans int[](), region_points int[](), loan_points int[](), outlives_from int[](), outlives_to int[](), outlives_count 0, loan_count 0,
+        },
+        ref_names string[](), loan_places string[](),
     }
 }
 
-func mir_ownership_ref_id(mir_ownership_analysis_input* input, string name) int {
+func mir_ownership_ref_id(mir_ownership_facts* facts, string name) int {
     i := 0
-    for i < len(input.ref_names) {
-        if input.ref_names[i] == name { return i }
+    for i < len(facts.ref_names) {
+        if facts.ref_names[i] == name { return i }
         i = i + 1
     }
-    input.ref_names = append(input.ref_names, name)
-    input.ref_loans = append(input.ref_loans, -1)
-    input.region_points = append(input.region_points, 0)
-    len(input.ref_names) - 1
+    facts.ref_names = append(facts.ref_names, name)
+    facts.input.ref_seen = append(facts.input.ref_seen, 1)
+    facts.input.ref_loans = append(facts.input.ref_loans, -1)
+    facts.input.region_points = append(facts.input.region_points, 0)
+    len(facts.ref_names) - 1
 }
 
 func mir_add_point_value(int bits, int point) int {
@@ -303,21 +306,22 @@ func mir_points_string(int bits) string {
 
 func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
     points := build_mir_point_map(graph)
-    input := build_ownership_analysis_input_from_mir(graph, points)
+    facts := build_ownership_facts_from_mir(graph, points)
+    input := facts.input
     out := "PointCount = " + to_string(input.point_count)
     i := 0
-    for i < len(input.ref_names) {
-        out = out + " | Ref(" + input.ref_names[i] + ") = R" + to_string(i)
+    for i < len(facts.ref_names) {
+        out = out + " | Ref(" + facts.ref_names[i] + ") = R" + to_string(i)
         i = i + 1
     }
     i = 0
     for i < input.loan_count {
         out = out + " | Loan" + to_string(i) + " issued = " + mir_points_string(input.loan_points[i])
-        out = out + " place=" + input.loan_places[i]
+        out = out + " place=" + facts.loan_places[i]
         i = i + 1
     }
     i = 0
-    for i < len(input.ref_names) {
+    for i < len(facts.ref_names) {
         if input.ref_loans[i] >= 0 {
             out = out + " | RefLoan(R" + to_string(i) + ") = L" + to_string(input.ref_loans[i])
         }
@@ -329,10 +333,25 @@ func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
         i = i + 1
     }
     i = 0
-    for i < len(input.ref_names) {
+    for i < len(facts.ref_names) {
         out = out + " | RegionPoint(R" + to_string(i) + ") = " + mir_points_string(input.region_points[i])
         i = i + 1
     }
+    out
+}
+
+func dump_ownership_shadow_from_mir(mir_graph graph) string {
+    points := build_mir_point_map(graph)
+    facts := build_ownership_facts_from_mir(graph, points)
+    analysis := analyze_ownership_liveness(facts.input)
+    out := "RealMIROwnershipShadow\n"
+    out = out + "RealMIRFacts(point_count=" + to_string(facts.input.point_count) + ", refs=" + to_string(len(facts.ref_names)) + ", loans=" + to_string(facts.input.loan_count) + ", outlives=" + to_string(facts.input.outlives_count) + ")\n"
+    i := 0
+    for i < facts.input.loan_count {
+        out = out + "LoanLivePoints(L" + to_string(i) + ") = " + mir_points_string(analysis.loan_live_points[i]) + "\n"
+        i = i + 1
+    }
+    out = out + "SharedSolverShadow(iterations=" + to_string(analysis.iterations) + ", converged=true)\n"
     out
 }
 
