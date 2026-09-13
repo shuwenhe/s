@@ -141,6 +141,18 @@ struct mir_point_map {
 
 // B1.2: Preserve canonical borrowed Place through MIR ownership facts
 // Dual-path migration: legacy string paths + canonical structured places
+// 
+// LOAN IDENTITY INVARIANT (B1.3)
+// All loan-indexed metadata must share the same dense Loan ID:
+//   For Loan L:
+//     input.loan_points[L]          → issued_at points
+//     input.loan_count              → total loan count (determines L validity)
+//     loan_places[L]                → legacy string (diagnostic)
+//     loan_borrowed_places[L]       → canonical mir_place
+// 
+// Maintenance rule: every Borrow statement that increments loan_count
+// must ALSO append to BOTH loan_places and loan_borrowed_places.
+// Violation results in L+1 being out-of-sync with all future loans.
 struct mir_ownership_facts {
     ownership_analysis_input input
     string[] ref_names
@@ -154,7 +166,7 @@ struct mir_ownership_facts {
     // Indexed by loan_id, stored directly from mir_borrow_stmt.place
     // Structured preservation: no string serialization involved
     // Authority: YES (source of truth for place identity)
-    // Contract: loan_borrowed_places[i] corresponds to loan id i
+    // Contract: loan_borrowed_places[i] corresponds to loan id i (see LOAN IDENTITY INVARIANT above)
     mir_place[] loan_borrowed_places
 }
 
@@ -280,6 +292,64 @@ func mir_empty_ownership_facts(int point_count) mir_ownership_facts {
         ref_names: string[](),
         loan_places: string[](),
         loan_borrowed_places: mir_place[](),
+    }
+}
+
+// B1.3: Query Loan's borrowed Place (shadow analysis entry point)
+// Returns the canonical mir_place that Loan with given id borrowed.
+// 
+// Preconditions:
+//   - facts must not be nil
+//   - loan_id must be in [0, facts.input.loan_count)
+// 
+// Returns:
+//   place: the mir_place structure representing the borrowed location
+//   ok: true if loan_id is valid, false if out-of-bounds
+// 
+// Contract: caller MUST check bool ok; must NOT use place.root == "" as sentinel.
+// Failure produces zero-value place + false; success produces place + true.
+// 
+// Example usage:
+//   place, ok := mir_loan_borrowed_place(&facts, 0)
+//   if !ok {
+//       // loan_id out of bounds
+//   } else {
+//       // process place
+//   }
+func mir_loan_borrowed_place(mir_ownership_facts* facts, int loan_id) (mir_place, bool) {
+    // Precondition: facts must not be nil
+    if facts == nil {
+        return mir_place{}, false
+    }
+
+    // Bounds check: loan_id must be in [0, loan_count)
+    if loan_id < 0 || loan_id >= facts.input.loan_count {
+        return mir_place{}, false
+    }
+
+    // Invariant check: ensure array is in sync with loan_count
+    if loan_id >= len(facts.loan_borrowed_places) {
+        return mir_place{}, false
+    }
+
+    // Return the canonical structured place for this loan
+    return facts.loan_borrowed_places[loan_id], true
+}
+
+// Helper: Create a mir_place from root and field names (for testing)
+func mir_place_from_fields(string root, string[] fields) mir_place {
+    projections := mir_place_projection[]()
+    i := 0
+    for i < len(fields) {
+        projections = append(projections, mir_place_projection{
+            kind: mir_projection_kind::field,
+            value: fields[i],
+        })
+        i = i + 1
+    }
+    mir_place{
+        root: root,
+        projections: projections,
     }
 }
 
