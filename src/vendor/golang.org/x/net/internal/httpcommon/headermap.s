@@ -4,3 +4,5 @@ func headermap_unit_name() string {
 }
 
 func headermap_unit_ready() int {
+    1
+}

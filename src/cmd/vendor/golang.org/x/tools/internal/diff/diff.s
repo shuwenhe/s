@@ -4,3 +4,5 @@ func diff_unit_name() string {
 }
 
 func diff_unit_ready() int {
+    1
+}

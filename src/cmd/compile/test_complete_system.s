@@ -196,3 +196,5 @@ func int_to_string(int value) string {
 
 func main() {
     print(run_all_tests())
+    return 0
+}

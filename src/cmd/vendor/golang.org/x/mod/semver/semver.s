@@ -4,3 +4,5 @@ func semver_unit_name() string {
 }
 
 func semver_unit_ready() int {
+    1
+}

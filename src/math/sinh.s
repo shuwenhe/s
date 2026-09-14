@@ -4,3 +4,5 @@ func sinh_unit_name() string {
 }
 
 func sinh_unit_ready() int {
+    1
+}

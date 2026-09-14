@@ -1,4 +1,5 @@
 package compile.internal.ownership
+
 struct drop_elaborator {
     ownership_context* ctx
 }
@@ -203,3 +204,5 @@ func (drop_elaborator* de) generate_drop_summary(block_stmt* block) drop_summary
         drop_order:  make(string[], 0),
         field_drops: make(map[string]string[]),
     }
+    return summary
+}

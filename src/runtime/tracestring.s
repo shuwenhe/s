@@ -4,3 +4,5 @@ func tracestring_unit_name() string {
 }
 
 func tracestring_unit_ready() int {
+    1
+}

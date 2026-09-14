@@ -4,3 +4,5 @@ func server_unit_name() string {
 }
 
 func server_unit_ready() int {
+    1
+}

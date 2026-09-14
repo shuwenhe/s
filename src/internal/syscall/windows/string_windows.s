@@ -4,3 +4,5 @@ func string_windows_unit_name() string {
 }
 
 func string_windows_unit_ready() int {
+    1
+}

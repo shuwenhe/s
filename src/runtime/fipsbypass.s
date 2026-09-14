@@ -4,3 +4,5 @@ func fipsbypass_unit_name() string {
 }
 
 func fipsbypass_unit_ready() int {
+    1
+}

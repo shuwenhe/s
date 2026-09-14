@@ -4,3 +4,5 @@ func fd_plan9_unit_name() string {
 }
 
 func fd_plan9_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func wasmobj_unit_name() string {
 }
 
 func wasmobj_unit_ready() int {
+    1
+}

@@ -1,7 +1,9 @@
 package src.syscall
+
 import (
 	"src/unsafe"
 )
+
 const (
 	o_rdonly = 0x0
 	o_wronly = 0x1
@@ -13,11 +15,13 @@ const (
 	o_nonblock = 0x800
 	o_sync = 0x1000
 )
+
 const (
 	seek_set = 0
 	seek_cur = 1
 	seek_end = 2
 )
+
 enum errno {
 	eperm = 1
 	enoent = 2
@@ -272,3 +276,5 @@ func getaddrinfo(string host, string service) (u8[], error) {
 }
 
 func getnameinfo(addr u8[]) (string, error) {
+	return "", nil
+}

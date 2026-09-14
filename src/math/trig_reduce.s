@@ -4,3 +4,5 @@ func trig_reduce_unit_name() string {
 }
 
 func trig_reduce_unit_ready() int {
+    1
+}

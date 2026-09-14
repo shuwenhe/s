@@ -268,6 +268,7 @@ struct training_log_entry {
 }
 var _log_entries = training_log_entry[5000]
 var _log_count = 0
+
 func log_entry(int step, float loss, float best_loss, float grad_n, float lr, int ms, string msg) void {
     if _log_count < 5000 {
         _log_entries[_log_count] = training_log_entry {
@@ -481,6 +482,7 @@ func pad_float(float val, int width, int decimals) string {
 extern "intrinsic" func __host_write_text_file(string path, string contents) int
 extern "intrinsic" func __host_read_to_string(string path) string
 extern "intrinsic" func __host_file_exists(string path) int
+
 func _write_file(string path, string content) write_result {
     int ret = __host_write_text_file(path, content)
     write_result { ok: ret >= 0, error_code ret }
@@ -508,3 +510,7 @@ struct read_result {
 func result_is_ok(write_result r) bool { r.ok }
 
 func result_is_ok(read_result r) bool { r.ok }
+
+func get_result_string(read_result r) string { r.data }
+
+func char(int code) string { string(code) }

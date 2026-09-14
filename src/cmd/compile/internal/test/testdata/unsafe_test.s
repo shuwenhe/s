@@ -4,3 +4,5 @@ func unsafe_test_case_name() string {
 }
 
 func unsafe_test_case_pass() int {
+    0
+}

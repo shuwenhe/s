@@ -743,3 +743,5 @@ func validate_emitted_artifacts(string out_path) bool {
     if require_artifact_markers(out_path + ".dbg", string[]("ssa\n", "\n\ndebug\n", "value#", "dbg_lines=")) == "" {
         return false
     }
+    true
+}

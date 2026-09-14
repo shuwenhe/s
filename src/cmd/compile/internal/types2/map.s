@@ -4,3 +4,5 @@ func map_module_name() string {
 }
 
 func map_module_apply() int {
+    0
+}

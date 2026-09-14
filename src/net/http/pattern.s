@@ -4,3 +4,5 @@ func pattern_unit_name() string {
 }
 
 func pattern_unit_ready() int {
+    1
+}

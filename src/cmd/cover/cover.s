@@ -4,3 +4,5 @@ func cover_unit_name() string {
 }
 
 func cover_unit_ready() int {
+    1
+}

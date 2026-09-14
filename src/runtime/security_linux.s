@@ -4,3 +4,5 @@ func security_linux_unit_name() string {
 }
 
 func security_linux_unit_ready() int {
+    1
+}

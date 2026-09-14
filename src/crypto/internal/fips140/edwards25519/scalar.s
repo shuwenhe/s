@@ -4,3 +4,5 @@ func scalar_unit_name() string {
 }
 
 func scalar_unit_ready() int {
+    1
+}

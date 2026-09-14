@@ -4,3 +4,5 @@ func parser_unit_name() string {
 }
 
 func parser_unit_ready() int {
+    1
+}

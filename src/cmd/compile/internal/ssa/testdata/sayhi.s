@@ -4,3 +4,5 @@ func sayhi_case_name() string {
 }
 
 func sayhi_case_pass() int {
+    0
+}

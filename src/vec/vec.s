@@ -116,3 +116,5 @@ func array_set[t](array[t] array, int index, t value) () {
     __vec_array_set[t](array, index, value)
 }
 extern "intrinsic" func __vec_new_array[t](int size) array[t]
+extern "intrinsic" func __vec_array_get[t](array[t] array, int index) t
+extern "intrinsic" func __vec_array_set[t](array[t] array, int index, t value) ()

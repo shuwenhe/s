@@ -1,4 +1,5 @@
 package compile.internal.ownership
+
 func test_basic_ownership() bool {
     ctx := new_ownership_drop_context()
     x_decl := decl_stmt*{ name: "x", type_name: "File" }
@@ -254,3 +255,5 @@ func run_ownership_drop_closure_tests() int {
     if failed > 0 {
         return 1
     }
+    return 0
+}

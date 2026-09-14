@@ -44,6 +44,7 @@ func num_sroutine() int {
 }
 extern "intrinsic" func __runtime_panic(string msg) ()
 extern "intrinsic" func __runtime_recover() option[string]
+
 func panic(string msg) () {
     __runtime_panic(msg)
 }
@@ -51,3 +52,7 @@ func panic(string msg) () {
 func version() string {
     runtime_version
 }
+
+func runtime_unit_name() string { "src/runtime/runtime" }
+
+func runtime_unit_ready() int   { 1 }

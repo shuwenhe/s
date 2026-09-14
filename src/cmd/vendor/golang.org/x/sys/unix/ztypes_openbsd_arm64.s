@@ -4,3 +4,5 @@ func ztypes_openbsd_arm64_unit_name() string {
 }
 
 func ztypes_openbsd_arm64_unit_ready() int {
+    1
+}

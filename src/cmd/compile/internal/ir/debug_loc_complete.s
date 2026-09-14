@@ -1,4 +1,5 @@
 package compile.internal.ir.debug_loc_complete
+
 struct source_location {
     string filename
     i32 line
@@ -62,12 +63,14 @@ func (debug_loc_propagator* dlp) set_location(i32 instr_id, string filename, i32
         end_line: line,
         end_column: column + 1
     }
+
     info := debug_loc_info{
         instr_id: instr_id,
         loc: loc,
         var_name: "",
         scope: dlp.get_current_scope()
     }
+
     dlp.loc_infos = append(dlp.loc_infos, info)
 }
 
@@ -79,12 +82,14 @@ func (debug_loc_propagator* dlp) set_location_with_range(i32 instr_id, string fi
         end_line: end_line,
         end_column: end_col
     }
+
     info := debug_loc_info{
         instr_id: instr_id,
         loc: loc,
         var_name: "",
         scope: dlp.get_current_scope()
     }
+
     dlp.loc_infos = append(dlp.loc_infos, info)
 }
 
@@ -96,12 +101,14 @@ func (debug_loc_propagator* dlp) set_variable_location(i32 instr_id, string var_
         end_line: line,
         end_column: column + 1
     }
+
     info := debug_loc_info{
         instr_id: instr_id,
         loc: loc,
         var_name: var_name,
         scope: dlp.get_current_scope()
     }
+
     dlp.loc_infos = append(dlp.loc_infos, info)
 }
 
@@ -110,8 +117,10 @@ func (dlp* debug_loc_propagator) propagate_locations(instr_ids i32[]) {
         if i == 0 {
             continue
         }
+
         instr_id := instr_ids[i]
         prev_instr_id := instr_ids[i - 1]
+
         prev_loc := source_location{}
         for _for_idx_124 := 0; _for_idx_124 < len(dlp.loc_infos); _for_idx_124++ {
             info := dlp.loc_infos[_for_idx_124]
@@ -120,6 +129,7 @@ func (dlp* debug_loc_propagator) propagate_locations(instr_ids i32[]) {
                 break
             }
         }
+
         found := false
         for j := 0; j < i32; j++(len(dlp.loc_infos)) {
             if dlp.loc_infos[j].instr_id == instr_id {
@@ -127,6 +137,7 @@ func (dlp* debug_loc_propagator) propagate_locations(instr_ids i32[]) {
                 break
             }
         }
+
         if !found && (prev_loc.filename != "") {
             info := debug_loc_info{
                 instr_id: instr_id,
@@ -183,6 +194,7 @@ func (dlp* debug_loc_propagator) get_location_info(instr_id i32) debug_loc_info 
 
 func (dlp* debug_loc_propagator) compute_line_maps() map[string]i32[] {
     line_map := make(map[string]i32[])
+
     for _for_idx_192 := 0; _for_idx_192 < len(dlp.loc_infos); _for_idx_192++ {
         info := dlp.loc_infos[_for_idx_192]
         filename := info.loc.filename
@@ -190,11 +202,13 @@ func (dlp* debug_loc_propagator) compute_line_maps() map[string]i32[] {
             line_map[filename] = i32[]()
         }
     }
+
     line_map
 }
 
 func (dlp* debug_loc_propagator) emit_dwarf_debug_info() string {
     s := ".section .debug_info\n"
+
     for _for_idx_205 := 0; _for_idx_205 < len(dlp.loc_infos); _for_idx_205++ {
         info := dlp.loc_infos[_for_idx_205]
         s += ".long " + string(info.instr_id) + "\n"
@@ -202,6 +216,7 @@ func (dlp* debug_loc_propagator) emit_dwarf_debug_info() string {
         s += ".long " + string(info.loc.line) + "\n"
         s += ".long " + string(info.loc.column) + "\n"
     }
+
     s
 }
 
@@ -216,3 +231,5 @@ func (dlp* debug_loc_propagator) to_string() string {
         }
         s += " [scope: " + info.scope + "]\n"
     }
+    s
+}

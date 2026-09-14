@@ -4,3 +4,5 @@ func profilerecord_unit_name() string {
 }
 
 func profilerecord_unit_ready() int {
+    1
+}

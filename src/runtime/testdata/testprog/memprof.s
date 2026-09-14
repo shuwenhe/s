@@ -4,3 +4,5 @@ func memprof_unit_name() string {
 }
 
 func memprof_unit_ready() int {
+    1
+}

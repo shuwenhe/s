@@ -4,3 +4,5 @@ func pcg_unit_name() string {
 }
 
 func pcg_unit_ready() int {
+    1
+}

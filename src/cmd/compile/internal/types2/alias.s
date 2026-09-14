@@ -4,3 +4,5 @@ func alias_module_name() string {
 }
 
 func alias_module_apply() int {
+    0
+}

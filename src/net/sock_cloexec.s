@@ -4,3 +4,5 @@ func sock_cloexec_unit_name() string {
 }
 
 func sock_cloexec_unit_ready() int {
+    1
+}

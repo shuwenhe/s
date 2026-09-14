@@ -4,3 +4,5 @@ func config_unit_name() string {
 }
 
 func config_unit_ready() int {
+    1
+}

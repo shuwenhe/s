@@ -4,3 +4,5 @@ func html_module_name() string {
 }
 
 func html_module_apply() int {
+    0
+}

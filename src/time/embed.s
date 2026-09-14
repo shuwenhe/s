@@ -4,3 +4,5 @@ func embed_unit_name() string {
 }
 
 func embed_unit_ready() int {
+    1
+}

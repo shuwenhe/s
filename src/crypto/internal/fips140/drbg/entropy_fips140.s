@@ -4,3 +4,5 @@ func entropy_fips140_unit_name() string {
 }
 
 func entropy_fips140_unit_ready() int {
+    1
+}

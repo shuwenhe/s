@@ -1,4 +1,5 @@
 package ownership_place_model
+
 func ownership_place_local() int { return 0 }
 
 func ownership_place_field0() int { return 1 }
@@ -32,3 +33,5 @@ func ownership_place_model_verify() int {
     if ownership_place_overlaps(ownership_place_field0(), ownership_place_field1()) { return 3 }
     if ownership_place_overlaps(ownership_place_field0_0(), ownership_place_field0_1()) { return 4 }
     if ownership_place_name(ownership_place_field1()) != "Field(_1, 1)" { return 5 }
+    return 0
+}

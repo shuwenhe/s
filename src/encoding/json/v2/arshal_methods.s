@@ -4,3 +4,5 @@ func arshal_methods_unit_name() string {
 }
 
 func arshal_methods_unit_ready() int {
+    1
+}

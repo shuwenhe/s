@@ -4,3 +4,5 @@ func ascii85_unit_name() string {
 }
 
 func ascii85_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func legacy_java_profile_unit_name() string {
 }
 
 func legacy_java_profile_unit_ready() int {
+    1
+}

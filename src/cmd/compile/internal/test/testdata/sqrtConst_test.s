@@ -4,3 +4,5 @@ func sqrt_const_test_case_name() string {
 }
 
 func sqrt_const_test_case_pass() int {
+    0
+}

@@ -1,7 +1,9 @@
 package compile.internal.drop_flag
+
 import (
     "compile.internal.drop_system"
 )
+
 func drop_state_unknown() int { 0 }
 
 func drop_state_present() int { 1 }
@@ -135,3 +137,5 @@ func drop_flag_cleanup_names(dflag_map flags, dtor_registry registry) string[] {
         }
         i = i - 1
     }
+    cleanup
+}

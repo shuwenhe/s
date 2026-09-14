@@ -4,3 +4,5 @@ func passbm_test_case_name() string {
 }
 
 func passbm_test_case_pass() int {
+    0
+}

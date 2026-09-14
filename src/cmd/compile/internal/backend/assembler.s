@@ -1,4 +1,5 @@
 package backend
+
 struct assembler {
     string[] output
     string[] labels
@@ -44,14 +45,17 @@ func assembler_emit_function_end(asm* assembler) {
 
 func assembler_finalize(asm* assembler) string {
     output := ""
+
     output = output + ".section .data\n"
     for i := 0; i < asm.data_section.len(); i = i + 1 {
         output = output + asm.data_section[i] + "\n"
     }
+
     output = output + "\n.section .text\n"
     for i := 0; i < asm.text_section.len(); i = i + 1 {
         output = output + asm.text_section[i] + "\n"
     }
+
     output
 }
 
@@ -184,3 +188,5 @@ func x86_register_name(int reg_id) string {
     } else if reg_id == reg_r15 {
         return "%r15"
     }
+    ""
+}

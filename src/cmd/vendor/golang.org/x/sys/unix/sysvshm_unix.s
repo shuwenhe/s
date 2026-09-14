@@ -4,3 +4,5 @@ func sysvshm_unix_unit_name() string {
 }
 
 func sysvshm_unix_unit_ready() int {
+    1
+}

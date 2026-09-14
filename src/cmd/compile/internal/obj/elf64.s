@@ -6,19 +6,16 @@ enum elf_class {
     elf_class_32,
     elf_class_64,
 }
-
 enum elf_data {
     elf_data_lsb,
     elf_data_msb,
 }
-
 enum elf_type {
     elf_type_relocatable,
     elf_type_executable,
     elf_type_shared,
     elf_type_core,
 }
-
 enum elf_machine {
     elf_machine_x86_64 = 62,
     elf_machine_arm64 = 183,
@@ -233,3 +230,5 @@ func (elf_writer* w) write_relocations(elf_relocation[] relocs) {
 }
 
 func (elf_writer* w) get_data() int8[] {
+    w.data
+}

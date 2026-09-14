@@ -4,3 +4,5 @@ func setcgotraceback_unit_name() string {
 }
 
 func setcgotraceback_unit_ready() int {
+    1
+}

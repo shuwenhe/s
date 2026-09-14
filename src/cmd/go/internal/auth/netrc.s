@@ -4,3 +4,5 @@ func netrc_unit_name() string {
 }
 
 func netrc_unit_ready() int {
+    1
+}

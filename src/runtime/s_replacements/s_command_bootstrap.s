@@ -9,3 +9,5 @@ func main(args: [string]): int {
     try_exec_if_present(os.getenv("s_selfhosted_runner"), args)
     try_exec_if_present("/app/s/bin/s_arm64", args)
     eprint("s command launcher")
+    return 127
+}

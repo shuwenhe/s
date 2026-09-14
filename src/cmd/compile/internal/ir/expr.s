@@ -4,3 +4,5 @@ func expr_module_name() string {
 }
 
 func expr_module_apply() int {
+    0
+}

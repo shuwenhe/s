@@ -4,3 +4,5 @@ func shake_unit_name() string {
 }
 
 func shake_unit_ready() int {
+    1
+}

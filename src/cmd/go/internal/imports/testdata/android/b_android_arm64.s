@@ -4,3 +4,5 @@ func b_android_arm64_unit_name() string {
 }
 
 func b_android_arm64_unit_ready() int {
+    1
+}

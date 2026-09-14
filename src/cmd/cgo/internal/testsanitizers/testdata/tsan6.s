@@ -4,3 +4,5 @@ func tsan6_unit_name() string {
 }
 
 func tsan6_unit_ready() int {
+    1
+}

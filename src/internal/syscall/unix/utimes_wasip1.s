@@ -4,3 +4,5 @@ func utimes_wasip1_unit_name() string {
 }
 
 func utimes_wasip1_unit_ready() int {
+    1
+}

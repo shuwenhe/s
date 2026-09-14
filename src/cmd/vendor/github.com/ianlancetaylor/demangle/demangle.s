@@ -4,3 +4,5 @@ func demangle_unit_name() string {
 }
 
 func demangle_unit_ready() int {
+    1
+}

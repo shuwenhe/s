@@ -4,3 +4,5 @@ func tempfile_unit_name() string {
 }
 
 func tempfile_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func os_openbsd_arm64_unit_name() string {
 }
 
 func os_openbsd_arm64_unit_ready() int {
+    1
+}

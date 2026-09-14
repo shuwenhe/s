@@ -4,3 +4,5 @@ func mkmalloc_unit_name() string {
 }
 
 func mkmalloc_unit_ready() int {
+    1
+}

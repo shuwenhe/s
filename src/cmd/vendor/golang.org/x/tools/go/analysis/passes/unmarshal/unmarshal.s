@@ -4,3 +4,5 @@ func unmarshal_unit_name() string {
 }
 
 func unmarshal_unit_ready() int {
+    1
+}

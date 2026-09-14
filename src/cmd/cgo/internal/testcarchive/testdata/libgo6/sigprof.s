@@ -4,3 +4,5 @@ func sigprof_unit_name() string {
 }
 
 func sigprof_unit_ready() int {
+    1
+}

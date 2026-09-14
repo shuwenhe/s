@@ -4,3 +4,5 @@ func removeall_at_unit_name() string {
 }
 
 func removeall_at_unit_ready() int {
+    1
+}

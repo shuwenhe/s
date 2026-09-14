@@ -4,3 +4,5 @@ func fastlog2table_unit_name() string {
 }
 
 func fastlog2table_unit_ready() int {
+    1
+}

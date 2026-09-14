@@ -4,3 +4,5 @@ func tcpsockopt_stub_unit_name() string {
 }
 
 func tcpsockopt_stub_unit_ready() int {
+    1
+}

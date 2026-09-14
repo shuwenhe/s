@@ -4,3 +4,5 @@ func vlrt_unit_name() string {
 }
 
 func vlrt_unit_ready() int {
+    1
+}

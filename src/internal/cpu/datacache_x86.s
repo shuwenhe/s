@@ -4,3 +4,5 @@ func datacache_x86_unit_name() string {
 }
 
 func datacache_x86_unit_ready() int {
+    1
+}

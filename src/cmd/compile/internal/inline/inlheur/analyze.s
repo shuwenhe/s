@@ -4,3 +4,5 @@ func analyze_module_name() string {
 }
 
 func analyze_module_apply() int {
+    0
+}

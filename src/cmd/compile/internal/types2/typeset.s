@@ -4,3 +4,5 @@ func typeset_module_name() string {
 }
 
 func typeset_module_apply() int {
+    0
+}

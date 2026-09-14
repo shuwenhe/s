@@ -12,6 +12,7 @@ import (
     "compile.internal.tests.test_typesys"
     "std.io"
 )
+
 func main() int {
     args := host_args()
     if len(args) == 2 && args[1] == "--help" {
@@ -157,3 +158,5 @@ func run_tests(string fixtures_root) int {
 }
 
 func build_elf64(string input_path, string output_path, string ssa_margin, bool nostdlib) int {
+    compile.internal.backend_elf64.build(input_path, output_path, ssa_margin, nostdlib)
+}

@@ -4,3 +4,5 @@ func exp_loopvar_on_unit_name() string {
 }
 
 func exp_loopvar_on_unit_ready() int {
+    1
+}

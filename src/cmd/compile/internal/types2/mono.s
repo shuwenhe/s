@@ -4,3 +4,5 @@ func mono_module_name() string {
 }
 
 func mono_module_apply() int {
+    0
+}

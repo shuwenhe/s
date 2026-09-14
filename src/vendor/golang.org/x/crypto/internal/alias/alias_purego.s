@@ -4,3 +4,5 @@ func alias_purego_unit_name() string {
 }
 
 func alias_purego_unit_ready() int {
+    1
+}

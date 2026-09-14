@@ -4,3 +4,5 @@ func exp_preemptibleloops_on_unit_name() string {
 }
 
 func exp_preemptibleloops_on_unit_ready() int {
+    1
+}

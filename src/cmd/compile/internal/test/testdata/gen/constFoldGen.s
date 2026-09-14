@@ -4,3 +4,5 @@ func const_fold_gen_case_name() string {
 }
 
 func const_fold_gen_case_pass() int {
+    0
+}

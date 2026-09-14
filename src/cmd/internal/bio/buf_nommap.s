@@ -4,3 +4,5 @@ func buf_nommap_unit_name() string {
 }
 
 func buf_nommap_unit_ready() int {
+    1
+}

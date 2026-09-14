@@ -4,3 +4,5 @@ func closure_module_name() string {
 }
 
 func closure_module_apply() int {
+    0
+}

@@ -4,3 +4,5 @@ func gen_cooked_unit_name() string {
 }
 
 func gen_cooked_unit_ready() int {
+    1
+}

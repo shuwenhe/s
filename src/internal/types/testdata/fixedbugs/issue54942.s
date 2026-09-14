@@ -4,3 +4,5 @@ func issue54942_unit_name() string {
 }
 
 func issue54942_unit_ready() int {
+    1
+}

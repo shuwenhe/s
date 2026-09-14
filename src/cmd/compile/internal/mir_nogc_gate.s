@@ -1,4 +1,5 @@
 package compile.internal.mir_nogc_gate
+
 func mir_nogc_gate_name() string {
     return "source->ast->type->mir->move->borrow->drop->c->native"
 }
@@ -12,3 +13,5 @@ func mir_nogc_gate_contract_ok() int {
     if len(trace) == 0 {
         return 1
     }
+    return 0
+}

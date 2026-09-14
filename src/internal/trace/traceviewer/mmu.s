@@ -4,3 +4,5 @@ func mmu_unit_name() string {
 }
 
 func mmu_unit_ready() int {
+    1
+}

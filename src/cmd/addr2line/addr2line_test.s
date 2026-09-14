@@ -4,3 +4,5 @@ func addr2line_test_unit_name() string {
 }
 
 func addr2line_test_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func cpu_arm64_android_unit_name() string {
 }
 
 func cpu_arm64_android_unit_ready() int {
+    1
+}

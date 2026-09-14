@@ -4,3 +4,5 @@ func color_test_unit_name() string {
 }
 
 func color_test_unit_ready() int {
+    1
+}

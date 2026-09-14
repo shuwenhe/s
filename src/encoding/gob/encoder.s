@@ -4,3 +4,5 @@ func encoder_unit_name() string {
 }
 
 func encoder_unit_ready() int {
+    1
+}

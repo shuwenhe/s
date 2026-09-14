@@ -4,3 +4,5 @@ func temp_module_name() string {
 }
 
 func temp_module_apply() int {
+    0
+}

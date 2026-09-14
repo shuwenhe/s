@@ -4,3 +4,5 @@ func benchmarks_unit_name() string {
 }
 
 func benchmarks_unit_ready() int {
+    1
+}

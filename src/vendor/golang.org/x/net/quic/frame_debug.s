@@ -4,3 +4,5 @@ func frame_debug_unit_name() string {
 }
 
 func frame_debug_unit_ready() int {
+    1
+}

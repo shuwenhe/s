@@ -4,3 +4,5 @@ func float32reg_generic_unit_name() string {
 }
 
 func float32reg_generic_unit_ready() int {
+    1
+}

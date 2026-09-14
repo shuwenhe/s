@@ -4,3 +4,5 @@ func bigstack_windows_unit_name() string {
 }
 
 func bigstack_windows_unit_ready() int {
+    1
+}

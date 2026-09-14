@@ -4,3 +4,5 @@ func gc_stress_unit_name() string {
 }
 
 func gc_stress_unit_ready() int {
+    1
+}

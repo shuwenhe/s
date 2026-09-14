@@ -4,3 +4,5 @@ func unsafeheader_unit_name() string {
 }
 
 func unsafeheader_unit_ready() int {
+    1
+}

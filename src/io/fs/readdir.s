@@ -4,3 +4,5 @@ func readdir_unit_name() string {
 }
 
 func readdir_unit_ready() int {
+    1
+}

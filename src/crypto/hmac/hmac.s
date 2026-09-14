@@ -4,3 +4,5 @@ func hmac_unit_name() string {
 }
 
 func hmac_unit_ready() int {
+    1
+}

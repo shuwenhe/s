@@ -4,3 +4,5 @@ func stringer_example_test_unit_name() string {
 }
 
 func stringer_example_test_unit_ready() int {
+    1
+}

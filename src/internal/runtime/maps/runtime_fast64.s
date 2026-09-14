@@ -4,3 +4,5 @@ func runtime_fast64_unit_name() string {
 }
 
 func runtime_fast64_unit_ready() int {
+    1
+}

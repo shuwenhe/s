@@ -4,3 +4,5 @@ func polar_unit_name() string {
 }
 
 func polar_unit_ready() int {
+    1
+}

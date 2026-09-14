@@ -4,3 +4,5 @@ func pkix_unit_name() string {
 }
 
 func pkix_unit_ready() int {
+    1
+}

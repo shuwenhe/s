@@ -4,3 +4,5 @@ func predeclared_unit_name() string {
 }
 
 func predeclared_unit_ready() int {
+    1
+}

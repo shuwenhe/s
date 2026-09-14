@@ -4,3 +4,5 @@ func sha512block_unit_name() string {
 }
 
 func sha512block_unit_ready() int {
+    1
+}

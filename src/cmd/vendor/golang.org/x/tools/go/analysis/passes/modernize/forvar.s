@@ -4,3 +4,5 @@ func forvar_unit_name() string {
 }
 
 func forvar_unit_ready() int {
+    1
+}

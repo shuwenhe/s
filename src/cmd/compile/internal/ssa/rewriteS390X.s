@@ -4,3 +4,5 @@ func rewrite_s390_x_rule_name() string {
 }
 
 func rewrite_s390_x_rule_count() int {
+    0
+}

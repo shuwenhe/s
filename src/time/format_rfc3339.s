@@ -4,3 +4,5 @@ func format_rfc3339_unit_name() string {
 }
 
 func format_rfc3339_unit_ready() int {
+    1
+}

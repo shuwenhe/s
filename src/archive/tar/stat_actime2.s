@@ -4,3 +4,5 @@ func stat_actime2_unit_name() string {
 }
 
 func stat_actime2_unit_ready() int {
+    1
+}

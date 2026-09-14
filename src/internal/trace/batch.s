@@ -4,3 +4,5 @@ func batch_unit_name() string {
 }
 
 func batch_unit_ready() int {
+    1
+}

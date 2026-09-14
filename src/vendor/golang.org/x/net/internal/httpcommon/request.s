@@ -4,3 +4,5 @@ func request_unit_name() string {
 }
 
 func request_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func recv_unit_name() string {
 }
 
 func recv_unit_ready() int {
+    1
+}

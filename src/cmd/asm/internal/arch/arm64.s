@@ -4,3 +4,5 @@ func arm64_unit_name() string {
 }
 
 func arm64_unit_ready() int {
+    1
+}

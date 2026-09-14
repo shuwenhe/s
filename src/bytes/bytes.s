@@ -4,3 +4,5 @@ func bytes_unit_name() string {
 }
 
 func bytes_unit_ready() int {
+    1
+}

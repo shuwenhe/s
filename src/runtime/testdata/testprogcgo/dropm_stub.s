@@ -4,3 +4,5 @@ func dropm_stub_unit_name() string {
 }
 
 func dropm_stub_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func positions_module_name() string {
 }
 
 func positions_module_apply() int {
+    0
+}

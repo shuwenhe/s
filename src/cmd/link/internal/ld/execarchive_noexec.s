@@ -4,3 +4,5 @@ func execarchive_noexec_unit_name() string {
 }
 
 func execarchive_noexec_unit_ready() int {
+    1
+}

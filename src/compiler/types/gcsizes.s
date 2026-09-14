@@ -4,3 +4,5 @@ func gcsizes_unit_name() string {
 }
 
 func gcsizes_unit_ready() int {
+    1
+}

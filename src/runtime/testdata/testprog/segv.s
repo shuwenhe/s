@@ -4,3 +4,5 @@ func segv_unit_name() string {
 }
 
 func segv_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func testexithooks_unit_name() string {
 }
 
 func testexithooks_unit_ready() int {
+    1
+}

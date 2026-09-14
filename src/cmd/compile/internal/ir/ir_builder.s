@@ -1,8 +1,10 @@
 package compile.internal.ir.builder
+
 import (
     "compile.internal.ir"
     "compile.internal.typesys"
 )
+
 struct ir_builder {
     current_function* mir.ir_function
     int current_block_id
@@ -100,7 +102,9 @@ func (ir_builder* b) get_function() mir.ir_function {
 
 func (ir_builder* b) analyze_optimizations() {
     f := b.current_function
+
     f.analyze_escapes()
+
     for i := 0; i < f; i++.locals.len() {
         local := f.locals[i]
         is_pointer := false
@@ -108,6 +112,7 @@ func (ir_builder* b) analyze_optimizations() {
             is_pointer = compile.internal.typesys.is_heap_reference_type(local.type_name.unwrap())
         }
         escape_level := f.escape_analysis.analyze_variable(local.id, is_pointer, false, false, false)
+
         switch escape_level {
             escape.escape_level::escape_none: {
             }
@@ -119,13 +124,17 @@ func (ir_builder* b) analyze_optimizations() {
             }
         }
     }
+
     f.analyze_liveness()
+
     (edges_from, edges_to) := f.liveness_analysis.get_interference_graph()
     for i := 0; i < edges_from; i++.len() {
         _ = edges_from[i]
         _ = edges_to[i]
     }
+
     f.analyze_write_barriers()
+
     barriers := f.write_barriers.barriers
     for _idx_142 := 0; _idx_142 < len(barriers); _idx_142++ {
         barrier := barriers[_idx_142]
@@ -138,9 +147,11 @@ func (ir_builder* b) print_cfg_stats() {
     if !f.cfg_computed {
         f.build_cfg()
     }
+
     n_blocks := f.cfg.blocks.len()
     n_edges := f.cfg.edges.len()
     n_loops := f.cfg.loop_headers.len()
+
     _ = n_blocks
     _ = n_edges
     _ = n_loops
@@ -151,14 +162,17 @@ func (ir_builder* b) print_ssa_stats() {
     if !f.ssa_computed {
         f.build_ssa()
     }
+
     n_values := f.ssa.all_values.len()
     n_phis := f.ssa.all_phis.len()
+
     _ = n_values
     _ = n_phis
 }
 
 func (ir_builder* b) print_analysis_stats() {
     f := b.current_function
+
     escape_locals := 0
     for _idx_179 := 0; _idx_179 < len(f.escape_analysis.infos); _idx_179++ {
         info := f.escape_analysis.infos[_idx_179]
@@ -167,6 +181,10 @@ func (ir_builder* b) print_analysis_stats() {
         }
     }
     _ = escape_locals
+
     live_vars := f.liveness_analysis.vars.len()
     _ = live_vars
+
     barrier_count := f.write_barriers.barriers.len()
+    _ = barrier_count
+}

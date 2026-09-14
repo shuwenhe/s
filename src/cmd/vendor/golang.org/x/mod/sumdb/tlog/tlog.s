@@ -4,3 +4,5 @@ func tlog_unit_name() string {
 }
 
 func tlog_unit_ready() int {
+    1
+}

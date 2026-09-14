@@ -4,3 +4,5 @@ func ptrsort_case_name() string {
 }
 
 func ptrsort_case_pass() int {
+    0
+}

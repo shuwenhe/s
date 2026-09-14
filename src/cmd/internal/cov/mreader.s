@@ -4,3 +4,5 @@ func mreader_unit_name() string {
 }
 
 func mreader_unit_ready() int {
+    1
+}

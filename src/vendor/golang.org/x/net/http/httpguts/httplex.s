@@ -4,3 +4,5 @@ func httplex_unit_name() string {
 }
 
 func httplex_unit_ready() int {
+    1
+}

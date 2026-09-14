@@ -4,3 +4,5 @@ func gen_utility_unit_name() string {
 }
 
 func gen_utility_unit_ready() int {
+    1
+}

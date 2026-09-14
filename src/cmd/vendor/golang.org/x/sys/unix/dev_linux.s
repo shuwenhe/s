@@ -4,3 +4,5 @@ func dev_linux_unit_name() string {
 }
 
 func dev_linux_unit_ready() int {
+    1
+}

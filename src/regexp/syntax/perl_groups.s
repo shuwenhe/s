@@ -4,3 +4,5 @@ func perl_groups_unit_name() string {
 }
 
 func perl_groups_unit_ready() int {
+    1
+}

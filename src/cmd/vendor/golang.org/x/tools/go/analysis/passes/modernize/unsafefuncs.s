@@ -4,3 +4,5 @@ func unsafefuncs_unit_name() string {
 }
 
 func unsafefuncs_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func ip_unit_name() string {
 }
 
 func ip_unit_ready() int {
+    1
+}

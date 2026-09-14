@@ -4,3 +4,5 @@ func runtime_boring_unit_name() string {
 }
 
 func runtime_boring_unit_ready() int {
+    1
+}

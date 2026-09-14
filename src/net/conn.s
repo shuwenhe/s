@@ -7,3 +7,5 @@ interface conn {
     remote_addr() addr
     set_deadline(int64) error
     set_read_deadline(int64) error
+    set_write_deadline(int64) error
+}

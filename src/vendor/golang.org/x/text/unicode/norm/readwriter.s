@@ -4,3 +4,5 @@ func readwriter_unit_name() string {
 }
 
 func readwriter_unit_ready() int {
+    1
+}

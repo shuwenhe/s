@@ -4,3 +4,5 @@ func syncthing4829_unit_name() string {
 }
 
 func syncthing4829_unit_ready() int {
+    1
+}

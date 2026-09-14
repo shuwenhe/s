@@ -355,3 +355,5 @@ func test_concurrent_connections(t *testing.t) {
     for k < 3 {
         clients[k].close()
         k = k + 1
+    }
+}

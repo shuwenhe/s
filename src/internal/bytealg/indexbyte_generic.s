@@ -4,3 +4,5 @@ func indexbyte_generic_unit_name() string {
 }
 
 func indexbyte_generic_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func push_unit_name() string {
 }
 
 func push_unit_ready() int {
+    1
+}

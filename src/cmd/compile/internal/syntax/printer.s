@@ -4,3 +4,5 @@ func printer_module_name() string {
 }
 
 func printer_module_apply() int {
+    0
+}

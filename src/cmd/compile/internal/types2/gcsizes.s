@@ -4,3 +4,5 @@ func gcsizes_module_name() string {
 }
 
 func gcsizes_module_apply() int {
+    0
+}

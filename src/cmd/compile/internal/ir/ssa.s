@@ -1,4 +1,5 @@
 package compile.internal.ir.ssa
+
 struct ssa_value {
     int id
     string op
@@ -94,14 +95,17 @@ func (ssa* static_single_assignment) add_block(int id, string label) ssa_block {
 func (ssa* static_single_assignment) insert_phi_nodes(int[] dominance_frontier) {
     n := ssa.blocks.len()
     work_list := int[]()
+
     for _idx_98 := 0; _idx_98 < len(dominance_frontier); _idx_98++ {
         df_block := dominance_frontier[_idx_98]
         work_list.push(df_block)
     }
+
     for work_list.len() > 0 {
         block := work_list[0]
         work_list[0] = work_list[work_list.len() - 1]
         work_list = work_list[0..work_list.len() - 1]
+
         if block < ssa.blocks.len() {
             for _idx_108 := 0; _idx_108 < len(ssa.blocks[block].phis); _idx_108++ {
                 phi := ssa.blocks[block].phis[_idx_108]
@@ -115,9 +119,11 @@ func (ssa* static_single_assignment) insert_phi_nodes(int[] dominance_frontier) 
                             break
                         }
                     }
+
                     if !already_has {
                         new_phi := ssa.create_phi(df, phi.incoming_blocks, phi.incoming_values, phi.type_name)
                         ssa.blocks[df].phis.push(new_phi)
+
                         in_list := false
                         for _idx_123 := 0; _idx_123 < len(work_list); _idx_123++ {
                             w := work_list[_idx_123]
@@ -139,6 +145,7 @@ func (ssa* static_single_assignment) insert_phi_nodes(int[] dominance_frontier) 
 func (ssa* static_single_assignment) rename_variables() {
     stacks := int[][]()
     n := ssa.variable_versions.len()
+
     for i := 0; i < n; i++ {
         stacks.push(int[]())
     }
@@ -147,7 +154,9 @@ func (ssa* static_single_assignment) rename_variables() {
         if block_id >= ssa.blocks.len() {
             return
         }
+
         block := &ssa.blocks[block_id]
+
         for _idx_154 := 0; _idx_154 < len(block.phis); _idx_154++ {
             phi := block.phis[_idx_154]
             var_index := 0
@@ -160,6 +169,7 @@ func (ssa* static_single_assignment) rename_variables() {
                 }
             }
         }
+
         for _idx_166 := 0; _idx_166 < len(block.values); _idx_166++ {
             value := block.values[_idx_166]
             for _idx_167 := 0; _idx_167 < len(value.args); _idx_167++ {
@@ -169,6 +179,7 @@ func (ssa* static_single_assignment) rename_variables() {
                     value.args[arg] = var_stack[var_stack.len() - 1]
                 }
             }
+
             var_index := 0
             for i := 0; i < n; i++ {
                 if i == var_index {
@@ -179,6 +190,7 @@ func (ssa* static_single_assignment) rename_variables() {
                 }
             }
         }
+
         for _idx_185 := 0; _idx_185 < len(block.successors); _idx_185++ {
             succ := block.successors[_idx_185]
             if succ < ssa.blocks.len() {
@@ -196,6 +208,7 @@ func (ssa* static_single_assignment) rename_variables() {
                 }
             }
         }
+
         for child := 0; child < ssa; child++.blocks.len() {
             children_ok := false
             for _idx_203 := 0; _idx_203 < len(block.successors); _idx_203++ {
@@ -209,6 +222,7 @@ func (ssa* static_single_assignment) rename_variables() {
                 rename_block(child)
             }
         }
+
         for _idx_214 := 0; _idx_214 < len(block.phis); _idx_214++ {
             phi := block.phis[_idx_214]
             var_index := 0
@@ -221,6 +235,7 @@ func (ssa* static_single_assignment) rename_variables() {
                 }
             }
         }
+
         for _idx_226 := 0; _idx_226 < len(block.values); _idx_226++ {
             value := block.values[_idx_226]
             var_index := 0
@@ -234,6 +249,7 @@ func (ssa* static_single_assignment) rename_variables() {
             }
         }
     }
+
     rename_block(ssa.entry_block)
 }
 
@@ -242,3 +258,5 @@ func (ssa* static_single_assignment) is_phi_function(ssa_phi_node phi) bool {
 }
 
 func (ssa* static_single_assignment) get_phi_operands(ssa_phi_node phi) (int[], int[]) {
+    (phi.incoming_blocks, phi.incoming_values)
+}

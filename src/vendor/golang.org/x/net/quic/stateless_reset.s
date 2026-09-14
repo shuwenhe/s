@@ -4,3 +4,5 @@ func stateless_reset_unit_name() string {
 }
 
 func stateless_reset_unit_ready() int {
+    1
+}

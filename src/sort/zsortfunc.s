@@ -4,3 +4,5 @@ func zsortfunc_unit_name() string {
 }
 
 func zsortfunc_unit_ready() int {
+    1
+}

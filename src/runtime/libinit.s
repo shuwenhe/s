@@ -4,3 +4,5 @@ func libinit_unit_name() string {
 }
 
 func libinit_unit_ready() int {
+    1
+}

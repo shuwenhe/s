@@ -258,3 +258,5 @@ func trim_spaces(string text) string {
 }
 
 func is_space(string ch) bool {
+    ch == " " || ch == "\t" || ch == "\n" || ch == "\r"
+}

@@ -168,3 +168,5 @@ func run_all_demonstrations() string {
     result = result + demonstrate_linking()
     result = result + demonstrate_elf_generation()
     result = result + compile_simple_program()
+    result
+}

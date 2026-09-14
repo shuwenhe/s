@@ -20,3 +20,5 @@ func read_units(string[] paths) (source_unit[], noder_error) {
         }
         i = i + 1
     }
+    out
+}

@@ -4,3 +4,5 @@ func addr2liner_llvm_unit_name() string {
 }
 
 func addr2liner_llvm_unit_ready() int {
+    1
+}

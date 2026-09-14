@@ -4,3 +4,5 @@ func gofixdirective_unit_name() string {
 }
 
 func gofixdirective_unit_ready() int {
+    1
+}

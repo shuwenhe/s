@@ -4,3 +4,5 @@ func moby7559_unit_name() string {
 }
 
 func moby7559_unit_ready() int {
+    1
+}

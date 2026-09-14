@@ -4,3 +4,5 @@ func netpoll_aix_unit_name() string {
 }
 
 func netpoll_aix_unit_ready() int {
+    1
+}

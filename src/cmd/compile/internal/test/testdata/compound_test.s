@@ -4,3 +4,5 @@ func compound_test_case_name() string {
 }
 
 func compound_test_case_pass() int {
+    0
+}

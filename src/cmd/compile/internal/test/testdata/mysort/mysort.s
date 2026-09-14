@@ -4,3 +4,5 @@ func mysort_case_name() string {
 }
 
 func mysort_case_pass() int {
+    0
+}

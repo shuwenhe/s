@@ -4,3 +4,5 @@ func cycles1_unit_name() string {
 }
 
 func cycles1_unit_ready() int {
+    1
+}

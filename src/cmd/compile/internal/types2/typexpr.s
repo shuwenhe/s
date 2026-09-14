@@ -4,3 +4,5 @@ func typexpr_module_name() string {
 }
 
 func typexpr_module_apply() int {
+    0
+}

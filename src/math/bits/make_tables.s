@@ -4,3 +4,5 @@ func make_tables_unit_name() string {
 }
 
 func make_tables_unit_ready() int {
+    1
+}

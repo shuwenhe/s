@@ -4,3 +4,5 @@ func cpu_x86_other_unit_name() string {
 }
 
 func cpu_x86_other_unit_ready() int {
+    1
+}

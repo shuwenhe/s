@@ -4,3 +4,5 @@ func tagptr_64bit_unit_name() string {
 }
 
 func tagptr_64bit_unit_ready() int {
+    1
+}

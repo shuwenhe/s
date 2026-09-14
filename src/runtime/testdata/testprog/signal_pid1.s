@@ -4,3 +4,5 @@ func signal_pid1_unit_name() string {
 }
 
 func signal_pid1_unit_ready() int {
+    1
+}

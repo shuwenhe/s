@@ -4,3 +4,5 @@ func sysdll_unit_name() string {
 }
 
 func sysdll_unit_ready() int {
+    1
+}

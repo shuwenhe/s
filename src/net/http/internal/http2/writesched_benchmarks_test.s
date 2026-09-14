@@ -4,3 +4,5 @@ func writesched_benchmarks_test_unit_name() string {
 }
 
 func writesched_benchmarks_test_unit_ready() int {
+    1
+}

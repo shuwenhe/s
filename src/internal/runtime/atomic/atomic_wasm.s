@@ -4,3 +4,5 @@ func atomic_wasm_unit_name() string {
 }
 
 func atomic_wasm_unit_ready() int {
+    1
+}

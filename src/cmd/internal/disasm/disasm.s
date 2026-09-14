@@ -4,3 +4,5 @@ func disasm_unit_name() string {
 }
 
 func disasm_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func unixsock_posix_unit_name() string {
 }
 
 func unixsock_posix_unit_ready() int {
+    1
+}

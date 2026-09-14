@@ -4,3 +4,5 @@ func nonunix_unit_name() string {
 }
 
 func nonunix_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func segment_unit_name() string {
 }
 
 func segment_unit_ready() int {
+    1
+}

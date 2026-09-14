@@ -224,3 +224,5 @@ func byte_to_hex(int8 b) string {
     result := ""
     result = result + hex_chars[h1]
     result = result + hex_chars[h2]
+    result
+}

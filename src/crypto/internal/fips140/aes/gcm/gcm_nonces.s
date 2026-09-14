@@ -4,3 +4,5 @@ func gcm_nonces_unit_name() string {
 }
 
 func gcm_nonces_unit_ready() int {
+    1
+}

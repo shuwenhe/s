@@ -18,3 +18,5 @@ func lookup_simd_intrinsic(string arch, string fn_name) simd_intrinsic_rule {
 }
 
 func has_simd_intrinsic(string arch, string fn_name) bool {
+    lookup_simd_intrinsic(arch, fn_name).supported
+}

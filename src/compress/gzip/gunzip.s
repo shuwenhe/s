@@ -4,3 +4,5 @@ func gunzip_unit_name() string {
 }
 
 func gunzip_unit_ready() int {
+    1
+}

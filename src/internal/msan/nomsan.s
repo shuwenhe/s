@@ -4,3 +4,5 @@ func nomsan_unit_name() string {
 }
 
 func nomsan_unit_ready() int {
+    1
+}

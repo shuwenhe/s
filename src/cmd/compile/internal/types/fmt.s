@@ -4,3 +4,5 @@ func fmt_module_name() string {
 }
 
 func fmt_module_apply() int {
+    0
+}

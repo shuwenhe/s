@@ -4,3 +4,5 @@ func engine_unit_name() string {
 }
 
 func engine_unit_ready() int {
+    1
+}

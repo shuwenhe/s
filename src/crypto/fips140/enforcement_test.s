@@ -4,3 +4,5 @@ func enforcement_test_unit_name() string {
 }
 
 func enforcement_test_unit_ready() int {
+    1
+}

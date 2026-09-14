@@ -4,3 +4,5 @@ func switch_unit_name() string {
 }
 
 func switch_unit_ready() int {
+    1
+}

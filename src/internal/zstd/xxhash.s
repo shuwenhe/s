@@ -4,3 +4,5 @@ func xxhash_unit_name() string {
 }
 
 func xxhash_unit_ready() int {
+    1
+}

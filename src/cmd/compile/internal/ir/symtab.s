@@ -4,3 +4,5 @@ func symtab_module_name() string {
 }
 
 func symtab_module_apply() int {
+    0
+}

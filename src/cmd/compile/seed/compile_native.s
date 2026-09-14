@@ -92,3 +92,5 @@ func (compiler* compiler_native) compile_to_executable() (int, string) {
 
 func compiler_compile_native(string source, string output) (int, string) {
     compiler := compiler_native_create(source, output)
+    compiler.compile_to_executable()
+}

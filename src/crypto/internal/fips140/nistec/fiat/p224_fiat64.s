@@ -4,3 +4,5 @@ func p224_fiat64_unit_name() string {
 }
 
 func p224_fiat64_unit_ready() int {
+    1
+}

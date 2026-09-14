@@ -5,3 +5,5 @@ func lower_module_name() string {
 
 func lower_module_apply(ssa_func f) int {
     recompute_uses(f)
+    0
+}

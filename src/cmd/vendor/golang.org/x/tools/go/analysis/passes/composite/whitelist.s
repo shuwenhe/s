@@ -4,3 +4,5 @@ func whitelist_unit_name() string {
 }
 
 func whitelist_unit_ready() int {
+    1
+}

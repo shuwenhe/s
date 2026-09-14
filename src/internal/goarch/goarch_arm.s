@@ -4,3 +4,5 @@ func goarch_arm_unit_name() string {
 }
 
 func goarch_arm_unit_ready() int {
+    1
+}

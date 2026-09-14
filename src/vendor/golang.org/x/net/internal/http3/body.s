@@ -4,3 +4,5 @@ func body_unit_name() string {
 }
 
 func body_unit_ready() int {
+    1
+}

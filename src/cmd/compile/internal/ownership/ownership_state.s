@@ -10,6 +10,7 @@ const (
     state_dropped
     state_maybe_moved
 )
+
 func (s ownership_state) string() string {
     switch s {
     case state_undefined:
@@ -121,3 +122,5 @@ func is_primitive_type(string type_name) bool {
         return true
     default:
         return false
+    }
+}

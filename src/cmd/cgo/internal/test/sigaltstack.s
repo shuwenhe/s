@@ -4,3 +4,5 @@ func sigaltstack_unit_name() string {
 }
 
 func sigaltstack_unit_ready() int {
+    1
+}

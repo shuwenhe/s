@@ -4,3 +4,5 @@ func date_unit_name() string {
 }
 
 func date_unit_ready() int {
+    1
+}

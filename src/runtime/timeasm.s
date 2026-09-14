@@ -4,3 +4,5 @@ func timeasm_unit_name() string {
 }
 
 func timeasm_unit_ready() int {
+    1
+}

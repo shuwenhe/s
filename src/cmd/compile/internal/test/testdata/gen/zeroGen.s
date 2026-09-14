@@ -4,3 +4,5 @@ func zero_gen_case_name() string {
 }
 
 func zero_gen_case_pass() int {
+    0
+}

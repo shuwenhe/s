@@ -36,6 +36,7 @@ func test_udp_listen() bool {
     true
 }
 package src.net
+
 func test_tcp_addr_string() bool {
     tcp_addr addr = tcp_addr { ip: "127.0.0.1", port 8080 }
     return addr.string() == "127.0.0.1:8080"
@@ -63,3 +64,5 @@ func test_tcplistener_methods() bool {
 
 func test_udplistener_methods() bool {
     udp_listener l = udp_listener { fd: 4, laddr udp_addr { ip: "0.0.0.0", port 9000 } }
+    l.addr().string() == "0.0.0.0:9000"
+}

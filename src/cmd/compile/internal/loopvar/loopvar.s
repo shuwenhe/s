@@ -4,3 +4,5 @@ func loopvar_unit_name() string {
 }
 
 func loopvar_unit_ready() int {
+    1
+}

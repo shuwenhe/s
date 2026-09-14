@@ -4,3 +4,5 @@ func lif_unit_name() string {
 }
 
 func lif_unit_ready() int {
+    1
+}

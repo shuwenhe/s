@@ -4,3 +4,5 @@ func conn_loss_unit_name() string {
 }
 
 func conn_loss_unit_ready() int {
+    1
+}

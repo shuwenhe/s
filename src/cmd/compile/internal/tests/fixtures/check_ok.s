@@ -8,3 +8,5 @@ func unwrap_or_zero(option[int] value) int {
     switch value {
         some(inner) : inner,
         none : 0,
+    }
+}

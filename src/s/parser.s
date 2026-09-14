@@ -32,6 +32,7 @@ func parse_tokens(token[] tokens) (source_file, parse_error) {
     p.parse_source_file()
 }
 int global_parse_depth = 0
+
 func log_depth(string msg) {
     print(msg)
 }
@@ -2058,3 +2059,5 @@ func starts_with_upper(string text) bool {
         "y" : true,
         "z" : true,
         _ : false,
+    }
+}

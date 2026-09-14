@@ -4,3 +4,5 @@ func dsa_unit_name() string {
 }
 
 func dsa_unit_ready() int {
+    1
+}

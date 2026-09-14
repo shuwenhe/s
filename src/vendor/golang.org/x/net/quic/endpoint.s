@@ -4,3 +4,5 @@ func endpoint_unit_name() string {
 }
 
 func endpoint_unit_ready() int {
+    1
+}

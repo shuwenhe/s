@@ -2,6 +2,7 @@ package compile.internal.ownership_test
 import (
     "compile.internal.ownership"
 )
+
 func run_ownership_checker_test() int {
     valid := string[] { "declare:count:int", "move:count", "use:count", "scope_exit" }
     if compile.internal.ownership.ownership_check_events(valid).ok == false {
@@ -28,3 +29,5 @@ func run_ownership_checker_test() int {
     if result.ok == false || len(result.drops) != 1 || result.drops[0] != "right" {
         return 6
     }
+    0
+}

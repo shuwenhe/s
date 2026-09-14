@@ -4,3 +4,5 @@ func unify_test_unit_name() string {
 }
 
 func unify_test_unit_ready() int {
+    1
+}

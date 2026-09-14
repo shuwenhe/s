@@ -4,3 +4,5 @@ func interface_module_name() string {
 }
 
 func interface_module_apply() int {
+    0
+}

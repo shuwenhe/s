@@ -4,3 +4,5 @@ func nbpipe_pipe2_unit_name() string {
 }
 
 func nbpipe_pipe2_unit_ready() int {
+    1
+}

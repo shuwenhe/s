@@ -4,3 +4,5 @@ func scalarmult_unit_name() string {
 }
 
 func scalarmult_unit_ready() int {
+    1
+}

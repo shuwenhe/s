@@ -4,3 +4,5 @@ func race_v3_amd64_unit_name() string {
 }
 
 func race_v3_amd64_unit_ready() int {
+    1
+}

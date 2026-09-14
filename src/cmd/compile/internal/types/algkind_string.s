@@ -4,3 +4,5 @@ func algkind_string_module_name() string {
 }
 
 func algkind_string_module_apply() int {
+    0
+}

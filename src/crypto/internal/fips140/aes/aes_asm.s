@@ -4,3 +4,5 @@ func aes_asm_unit_name() string {
 }
 
 func aes_asm_unit_ready() int {
+    1
+}

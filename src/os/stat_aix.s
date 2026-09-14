@@ -4,3 +4,5 @@ func stat_aix_unit_name() string {
 }
 
 func stat_aix_unit_ready() int {
+    1
+}

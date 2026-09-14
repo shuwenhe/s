@@ -4,3 +4,5 @@ func typeinst1_unit_name() string {
 }
 
 func typeinst1_unit_ready() int {
+    1
+}

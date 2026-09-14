@@ -4,3 +4,5 @@ func pack_unit_name() string {
 }
 
 func pack_unit_ready() int {
+    1
+}

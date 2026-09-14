@@ -4,3 +4,5 @@ func deadlocals_unit_name() string {
 }
 
 func deadlocals_unit_ready() int {
+    1
+}

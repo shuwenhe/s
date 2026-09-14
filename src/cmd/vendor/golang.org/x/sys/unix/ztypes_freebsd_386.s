@@ -4,3 +4,5 @@ func ztypes_freebsd_386_unit_name() string {
 }
 
 func ztypes_freebsd_386_unit_ready() int {
+    1
+}

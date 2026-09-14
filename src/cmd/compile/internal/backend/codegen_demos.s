@@ -110,3 +110,5 @@ func demo_hello_world() string {
     asm = asm + "\txor\trax, rax\n"
     asm = asm + "\tpop\trbp\n"
     asm = asm + "\tret\n"
+    asm
+}

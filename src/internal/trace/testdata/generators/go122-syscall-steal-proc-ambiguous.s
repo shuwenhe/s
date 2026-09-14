@@ -4,3 +4,5 @@ func go122_syscall_steal_proc_ambiguous_unit_name() string {
 }
 
 func go122_syscall_steal_proc_ambiguous_unit_ready() int {
+    1
+}

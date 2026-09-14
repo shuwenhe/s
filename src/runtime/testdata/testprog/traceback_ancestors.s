@@ -4,3 +4,5 @@ func traceback_ancestors_unit_name() string {
 }
 
 func traceback_ancestors_unit_ready() int {
+    1
+}

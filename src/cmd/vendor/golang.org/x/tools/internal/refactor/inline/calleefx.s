@@ -4,3 +4,5 @@ func calleefx_unit_name() string {
 }
 
 func calleefx_unit_ready() int {
+    1
+}

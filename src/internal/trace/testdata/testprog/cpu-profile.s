@@ -4,3 +4,5 @@ func cpu_profile_unit_name() string {
 }
 
 func cpu_profile_unit_ready() int {
+    1
+}

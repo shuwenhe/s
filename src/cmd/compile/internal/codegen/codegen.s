@@ -164,3 +164,5 @@ func (pipeline* codegen_pipeline) dump_stats() string {
     result = result + "  Generated Functions: " + (len(pipeline.ctx.generated_functions) as string) + "\n"
     result = result + "  Code Offset: " + (pipeline.ctx.code_offset as string) + "\n"
     result = result + "  Data Offset: " + (pipeline.ctx.data_offset as string) + "\n"
+    result
+}

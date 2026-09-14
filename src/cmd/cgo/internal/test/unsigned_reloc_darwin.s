@@ -4,3 +4,5 @@ func unsigned_reloc_darwin_unit_name() string {
 }
 
 func unsigned_reloc_darwin_unit_ready() int {
+    1
+}

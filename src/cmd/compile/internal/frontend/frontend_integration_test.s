@@ -1,4 +1,5 @@
 package compile.internal.frontend
+
 func test_frontend_simple_function() int {
     source := "func main() int {
     return 0
@@ -6,19 +7,24 @@ func test_frontend_simple_function() int {
     lex := lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
+
     if p.errors.len() > 0 {
         return 1
     }
+
     if prog.children.len() != 1 {
         return 1
     }
+
     func_decl := prog.children[0]
     if func_decl.node_type != ast_func_decl {
         return 1
     }
+
     if func_decl.name != "main" {
         return 1
     }
+
     0
 }
 
@@ -30,22 +36,28 @@ func test_frontend_struct_with_fields() int {
     lex := lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
+
     if p.errors.len() > 0 {
         return 1
     }
+
     if prog.children.len() != 1 {
         return 1
     }
+
     struct_decl := prog.children[0]
     if struct_decl.node_type != ast_struct_decl {
         return 1
     }
+
     if struct_decl.name != "Point" {
         return 1
     }
+
     if struct_decl.children.len() != 2 {
         return 1
     }
+
     0
 }
 
@@ -59,23 +71,29 @@ func test() {
     lex := lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
+
     if p.errors.len() > 0 {
         return 1
     }
+
     if prog.children.len() < 2 {
         return 1
     }
+
     pkg := prog.children[0]
     if pkg.node_type != ast_package {
         return 1
     }
+
     if pkg.name != "main" {
         return 1
     }
+
     imp := prog.children[1]
     if imp.node_type != ast_import {
         return 1
     }
+
     0
 }
 
@@ -85,16 +103,20 @@ y: int = 20"
     lex := lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
+
     if p.errors.len() > 0 {
         return 1
     }
+
     if prog.children.len() < 2 {
         return 1
     }
+
     var1 := prog.children[0]
     if var1.node_type != ast_var_decl {
         return 1
     }
+
     0
 }
 
@@ -107,9 +129,11 @@ func test_frontend_binary_expressions() int {
     lex := lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
+
     if p.errors.len() > 0 {
         return 1
     }
+
     0
 }
 
@@ -124,9 +148,11 @@ func test_frontend_if_statement() int {
     lex := lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
+
     if p.errors.len() > 0 {
         return 1
     }
+
     0
 }
 
@@ -139,9 +165,11 @@ func test_frontend_for_loop() int {
     lex := lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
+
     if p.errors.len() > 0 {
         return 1
     }
+
     0
 }
 
@@ -152,12 +180,15 @@ func test_frontend_method_with_receiver() int {
     lex := lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
+
     if p.errors.len() > 0 {
         return 1
     }
+
     if prog.children.len() != 1 {
         return 1
     }
+
     0
 }
 
@@ -170,19 +201,24 @@ func test_frontend_enum_declaration() int {
     lex := lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
+
     if p.errors.len() > 0 {
         return 1
     }
+
     if prog.children.len() != 1 {
         return 1
     }
+
     enum_decl := prog.children[0]
     if enum_decl.node_type != ast_enum_decl {
         return 1
     }
+
     if enum_decl.name != "Color" {
         return 1
     }
+
     0
 }
 
@@ -195,9 +231,11 @@ func test_frontend_complex_expression() int {
     lex := lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
+
     if p.errors.len() > 0 {
         return 1
     }
+
     0
 }
 
@@ -212,71 +250,87 @@ func test_frontend_switch_statement() int {
     lex := lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
+
     if p.errors.len() > 0 {
         return 1
     }
+
     0
 }
 
 func run_frontend_integration_tests() int {
     tests_passed := 0
     tests_failed := 0
+
     if test_frontend_simple_function() == 0 {
         tests_passed = tests_passed + 1
     } else {
         tests_failed = tests_failed + 1
     }
+
     if test_frontend_struct_with_fields() == 0 {
         tests_passed = tests_passed + 1
     } else {
         tests_failed = tests_failed + 1
     }
+
     if test_frontend_package_and_import() == 0 {
         tests_passed = tests_passed + 1
     } else {
         tests_failed = tests_failed + 1
     }
+
     if test_frontend_variable_declaration() == 0 {
         tests_passed = tests_passed + 1
     } else {
         tests_failed = tests_failed + 1
     }
+
     if test_frontend_binary_expressions() == 0 {
         tests_passed = tests_passed + 1
     } else {
         tests_failed = tests_failed + 1
     }
+
     if test_frontend_if_statement() == 0 {
         tests_passed = tests_passed + 1
     } else {
         tests_failed = tests_failed + 1
     }
+
     if test_frontend_for_loop() == 0 {
         tests_passed = tests_passed + 1
     } else {
         tests_failed = tests_failed + 1
     }
+
     if test_frontend_method_with_receiver() == 0 {
         tests_passed = tests_passed + 1
     } else {
         tests_failed = tests_failed + 1
     }
+
     if test_frontend_enum_declaration() == 0 {
         tests_passed = tests_passed + 1
     } else {
         tests_failed = tests_failed + 1
     }
+
     if test_frontend_complex_expression() == 0 {
         tests_passed = tests_passed + 1
     } else {
         tests_failed = tests_failed + 1
     }
+
     if test_frontend_switch_statement() == 0 {
         tests_passed = tests_passed + 1
     } else {
         tests_failed = tests_failed + 1
     }
+
     if tests_failed == 0 {
         0
     } else {
         1
+    }
+}

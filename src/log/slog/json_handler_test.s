@@ -4,3 +4,5 @@ func json_handler_test_unit_name() string {
 }
 
 func json_handler_test_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func pos_module_name() string {
 }
 
 func pos_module_apply() int {
+    0
+}

@@ -4,3 +4,5 @@ func mgcmark_greenteagc_unit_name() string {
 }
 
 func mgcmark_greenteagc_unit_ready() int {
+    1
+}

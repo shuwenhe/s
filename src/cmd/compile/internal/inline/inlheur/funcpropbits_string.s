@@ -4,3 +4,5 @@ func funcpropbits_string_module_name() string {
 }
 
 func funcpropbits_string_module_apply() int {
+    0
+}

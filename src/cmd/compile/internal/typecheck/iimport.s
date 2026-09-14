@@ -4,3 +4,5 @@ func iimport_module_name() string {
 }
 
 func iimport_module_apply() int {
+    0
+}

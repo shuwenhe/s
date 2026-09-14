@@ -4,3 +4,5 @@ func dgram_unit_name() string {
 }
 
 func dgram_unit_ready() int {
+    1
+}

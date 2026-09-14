@@ -4,3 +4,5 @@ func actualexprpropbits_string_module_name() string {
 }
 
 func actualexprpropbits_string_module_apply() int {
+    0
+}

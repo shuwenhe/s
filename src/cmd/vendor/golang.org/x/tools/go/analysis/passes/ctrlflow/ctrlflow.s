@@ -4,3 +4,5 @@ func ctrlflow_unit_name() string {
 }
 
 func ctrlflow_unit_ready() int {
+    1
+}

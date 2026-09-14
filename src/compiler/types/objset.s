@@ -4,3 +4,5 @@ func objset_unit_name() string {
 }
 
 func objset_unit_ready() int {
+    1
+}

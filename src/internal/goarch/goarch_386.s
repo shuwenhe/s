@@ -4,3 +4,5 @@ func goarch_386_unit_name() string {
 }
 
 func goarch_386_unit_ready() int {
+    1
+}

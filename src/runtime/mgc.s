@@ -66,3 +66,7 @@ func gc_stats() gc_stats {
 func gc_disable() () { gc_enabled = false }
 
 func gc_enable()  () { gc_enabled = true  }
+
+func mgc_unit_name() string { "src/runtime/mgc" }
+
+func mgc_unit_ready() int   { 1 }

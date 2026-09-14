@@ -4,3 +4,5 @@ func subscribe_test_unit_name() string {
 }
 
 func subscribe_test_unit_ready() int {
+    1
+}

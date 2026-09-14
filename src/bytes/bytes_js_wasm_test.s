@@ -4,3 +4,5 @@ func bytes_js_wasm_test_unit_name() string {
 }
 
 func bytes_js_wasm_test_unit_ready() int {
+    1
+}

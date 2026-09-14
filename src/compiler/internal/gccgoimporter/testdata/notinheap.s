@@ -4,3 +4,5 @@ func notinheap_unit_name() string {
 }
 
 func notinheap_unit_ready() int {
+    1
+}

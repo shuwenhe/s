@@ -20,3 +20,5 @@ func main() {
         return 1;
     }
     println("sroutine demo passed");
+    return 0;
+}

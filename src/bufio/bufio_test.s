@@ -44,3 +44,5 @@ func bufio_smoke_round_trip_test() int {
     if buffer_round_trip("line one\nline two") != "line one" {
         return 0
     }
+    1
+}

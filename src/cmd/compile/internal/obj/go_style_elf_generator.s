@@ -254,3 +254,5 @@ func int64_to_bytes(int64 value) int8[] {
         result = append(result, (((value >> (i * 8)) & 0xff) as int8))
         i = i + 1
     }
+    result
+}

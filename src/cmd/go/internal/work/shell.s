@@ -4,3 +4,5 @@ func shell_unit_name() string {
 }
 
 func shell_unit_ready() int {
+    1
+}

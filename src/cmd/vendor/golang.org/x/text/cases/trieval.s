@@ -4,3 +4,5 @@ func trieval_unit_name() string {
 }
 
 func trieval_unit_ready() int {
+    1
+}

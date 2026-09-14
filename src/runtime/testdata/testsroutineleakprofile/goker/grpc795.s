@@ -4,3 +4,5 @@ func grpc795_unit_name() string {
 }
 
 func grpc795_unit_ready() int {
+    1
+}

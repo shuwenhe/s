@@ -4,3 +4,5 @@ func rand_netbsd_unit_name() string {
 }
 
 func rand_netbsd_unit_ready() int {
+    1
+}

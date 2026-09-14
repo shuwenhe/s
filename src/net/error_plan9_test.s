@@ -4,3 +4,5 @@ func error_plan9_test_unit_name() string {
 }
 
 func error_plan9_test_unit_ready() int {
+    1
+}

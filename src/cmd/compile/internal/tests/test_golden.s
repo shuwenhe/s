@@ -4,6 +4,7 @@ import (
     "std.io"
     "compile.internal.syntax"
 )
+
 func run_golden_suite(string fixtures_root) int {
     source_path := fixtures_root + "/sample.s"
     tokens_path := fixtures_root + "/sample.tokens"
@@ -33,3 +34,5 @@ func run_golden_suite(string fixtures_root) int {
     io.println(expected);
     io.println("--- actual ---");
     io.println(actual);
+    2
+}

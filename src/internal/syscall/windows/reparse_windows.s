@@ -4,3 +4,5 @@ func reparse_windows_unit_name() string {
 }
 
 func reparse_windows_unit_ready() int {
+    1
+}

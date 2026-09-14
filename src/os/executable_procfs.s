@@ -4,3 +4,5 @@ func executable_procfs_unit_name() string {
 }
 
 func executable_procfs_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func interface_classic_unit_name() string {
 }
 
 func interface_classic_unit_ready() int {
+    1
+}

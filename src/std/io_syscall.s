@@ -9,6 +9,7 @@ struct file_handle {
 }
 const file_read_buffer_size = 65536
 var __read_buffer = allocate_read_buffer()
+
 func allocate_read_buffer() byte[] {
     byte[]{}
 }
@@ -113,3 +114,5 @@ func files_equal(string path1, string path2) bool {
 }
 
 func temp_file() (file_handle, string, int) {
+    file_handle{}, "", 0
+}

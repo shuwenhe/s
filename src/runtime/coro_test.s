@@ -4,3 +4,5 @@ func coro_test_unit_name() string {
 }
 
 func coro_test_unit_ready() int {
+    1
+}

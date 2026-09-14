@@ -4,3 +4,5 @@ func listgroups_unix_unit_name() string {
 }
 
 func listgroups_unix_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func signature_module_name() string {
 }
 
 func signature_module_apply() int {
+    0
+}

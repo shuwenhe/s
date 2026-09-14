@@ -154,3 +154,5 @@ func codegen_write_to_file(ctx* codegen_context, string output_file) (int, strin
         f.write_line(line)
     }
     f.close()
+    0, ""
+}

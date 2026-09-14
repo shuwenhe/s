@@ -4,3 +4,5 @@ func endian_little_unit_name() string {
 }
 
 func endian_little_unit_ready() int {
+    1
+}

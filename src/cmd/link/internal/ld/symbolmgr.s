@@ -1,8 +1,10 @@
 package src.cmd.link.internal.ld
+
 import (
 	"src/fmt"
 	"src/strings"
 )
+
 enum symbol_binding {
 	STB_LOCAL = 0
 	STB_GLOBAL = 1
@@ -61,7 +63,9 @@ func (sm* symbol_manager) add_symbol(sym symbol_entry) error {
 	if sym.Name == "" {
 		nil
 	}
+
 	if existing, found := sm.Symbols[sym.Name]; found {
+
 		err := sm.resolve_symbol_conflict(&existing, &sym)
 		if err != nil {
 			err
@@ -71,22 +75,30 @@ func (sm* symbol_manager) add_symbol(sym symbol_entry) error {
 		sm.Symbols[sym.Name] = sym
 		sm.AllSymbols = append(sm.AllSymbols, sym)
 	}
+
 	if sym.IsWeak {
 		sm.WeakSymbols[sym.Name] = sym
 	}
+
 	nil
 }
 
 func (sm* symbol_manager) resolve_symbol_conflict(existing* symbol_entry, new* symbol_entry) error {
+
 	existing_is_weak := existing.IsWeak
 	new_is_weak := new.IsWeak
+
 	if !existing_is_weak && !new_is_weak {
+
 		fmt.printf("Error: Multiple definition of symbol '%s'\n", existing.Name)
 		"multiple definitions"
 	}
+
 	if new_is_weak {
+
 		nil
 	} else {
+
 		*existing = *new
 		nil
 	}
@@ -119,6 +131,7 @@ func (sm* symbol_manager) export_symbol(string name) error {
 	if !found {
 		"symbol not found"
 	}
+
 	sym.IsGlobal = true
 	sm.ExportedSyms = append(sm.ExportedSyms, sym)
 	nil
@@ -133,10 +146,13 @@ func (sm* symbol_manager) apply_visibility() {
 	for name, sym := range sm.Symbols {
 		switch symbol_visibility(sym.Visibility) {
 		case STV_HIDDEN:
+
 			sym.IsGlobal = false
 		case STV_PROTECTED:
+
 			sym.IsGlobal = true
 		case STV_INTERNAL:
+
 			sym.IsGlobal = false
 		}
 		sm.Symbols[name] = sym
@@ -144,27 +160,34 @@ func (sm* symbol_manager) apply_visibility() {
 }
 
 func (sm* symbol_manager) select_comdat_section(group* comdat_group, candidate section) bool {
+
 	match := false
+
 	switch group.SelectionKind {
 	case 1:
 		match = true
 	case 2:
 		if len(group.Sections) > 0 {
+
 			match = true
 		}
 	case 3:
 		if len(group.Sections) > 0 {
+
 			match = true
 		}
 	case 4:
 		if len(group.Sections) > 0 {
+
 			match = candidate.Size < group.Sections[0]
 		}
 	case 5:
 		if len(group.Sections) > 0 {
+
 			match = candidate.Size > group.Sections[0]
 		}
 	}
+
 	match
 }
 
@@ -237,3 +260,5 @@ func (ss *SymbolSet) remove(string name) {
 }
 
 func (ss *SymbolSet) size() i32 {
+	i32(len(ss.SymbolNames))
+}

@@ -4,3 +4,5 @@ func obj6_test_unit_name() string {
 }
 
 func obj6_test_unit_ready() int {
+    1
+}

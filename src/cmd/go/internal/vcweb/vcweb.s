@@ -4,3 +4,5 @@ func vcweb_unit_name() string {
 }
 
 func vcweb_unit_ready() int {
+    1
+}

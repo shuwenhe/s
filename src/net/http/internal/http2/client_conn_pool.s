@@ -4,3 +4,5 @@ func client_conn_pool_unit_name() string {
 }
 
 func client_conn_pool_unit_ready() int {
+    1
+}

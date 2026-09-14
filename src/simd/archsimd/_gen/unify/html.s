@@ -4,3 +4,5 @@ func html_unit_name() string {
 }
 
 func html_unit_ready() int {
+    1
+}

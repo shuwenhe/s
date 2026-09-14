@@ -4,3 +4,5 @@ func constant_time_test_unit_name() string {
 }
 
 func constant_time_test_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func root_bsd_unit_name() string {
 }
 
 func root_bsd_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func interface_darwin_unit_name() string {
 }
 
 func interface_darwin_unit_ready() int {
+    1
+}

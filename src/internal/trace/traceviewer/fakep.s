@@ -4,3 +4,5 @@ func fakep_unit_name() string {
 }
 
 func fakep_unit_ready() int {
+    1
+}

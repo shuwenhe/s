@@ -4,3 +4,5 @@ func cpu_linux_noinit_unit_name() string {
 }
 
 func cpu_linux_noinit_unit_ready() int {
+    1
+}

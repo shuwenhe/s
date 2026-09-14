@@ -4,3 +4,5 @@ func conj_unit_name() string {
 }
 
 func conj_unit_ready() int {
+    1
+}

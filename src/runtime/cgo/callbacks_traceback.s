@@ -4,3 +4,5 @@ func callbacks_traceback_unit_name() string {
 }
 
 func callbacks_traceback_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func gen_sort_variants_unit_name() string {
 }
 
 func gen_sort_variants_unit_ready() int {
+    1
+}

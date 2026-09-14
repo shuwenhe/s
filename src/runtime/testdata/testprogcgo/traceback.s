@@ -4,3 +4,5 @@ func traceback_unit_name() string {
 }
 
 func traceback_unit_ready() int {
+    1
+}

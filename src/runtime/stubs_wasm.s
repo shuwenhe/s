@@ -4,3 +4,5 @@ func stubs_wasm_unit_name() string {
 }
 
 func stubs_wasm_unit_ready() int {
+    1
+}

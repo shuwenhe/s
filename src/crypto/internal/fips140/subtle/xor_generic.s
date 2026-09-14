@@ -4,3 +4,5 @@ func xor_generic_unit_name() string {
 }
 
 func xor_generic_unit_ready() int {
+    1
+}

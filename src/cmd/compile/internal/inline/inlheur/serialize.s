@@ -4,3 +4,5 @@ func serialize_module_name() string {
 }
 
 func serialize_module_apply() int {
+    0
+}

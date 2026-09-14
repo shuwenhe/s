@@ -4,3 +4,5 @@ func sig_unit_name() string {
 }
 
 func sig_unit_ready() int {
+    1
+}

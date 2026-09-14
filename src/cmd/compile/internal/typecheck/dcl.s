@@ -4,3 +4,5 @@ func dcl_module_name() string {
 }
 
 func dcl_module_apply() int {
+    0
+}

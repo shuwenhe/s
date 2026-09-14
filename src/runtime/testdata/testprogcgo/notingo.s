@@ -4,3 +4,5 @@ func notingo_unit_name() string {
 }
 
 func notingo_unit_ready() int {
+    1
+}

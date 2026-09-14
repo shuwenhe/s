@@ -4,3 +4,5 @@ func vector_unit_name() string {
 }
 
 func vector_unit_ready() int {
+    1
+}

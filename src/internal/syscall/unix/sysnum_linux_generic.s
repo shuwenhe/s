@@ -4,3 +4,5 @@ func sysnum_linux_generic_unit_name() string {
 }
 
 func sysnum_linux_generic_unit_ready() int {
+    1
+}

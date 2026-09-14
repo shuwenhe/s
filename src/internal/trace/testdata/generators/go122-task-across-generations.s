@@ -4,3 +4,5 @@ func go122_task_across_generations_unit_name() string {
 }
 
 func go122_task_across_generations_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func hkdf_unit_name() string {
 }
 
 func hkdf_unit_ready() int {
+    1
+}

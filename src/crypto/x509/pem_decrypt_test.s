@@ -4,3 +4,5 @@ func pem_decrypt_test_unit_name() string {
 }
 
 func pem_decrypt_test_unit_ready() int {
+    1
+}

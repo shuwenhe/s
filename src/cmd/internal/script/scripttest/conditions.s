@@ -4,3 +4,5 @@ func conditions_unit_name() string {
 }
 
 func conditions_unit_ready() int {
+    1
+}

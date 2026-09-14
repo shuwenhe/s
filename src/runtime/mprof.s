@@ -4,3 +4,5 @@ func mprof_unit_name() string {
 }
 
 func mprof_unit_ready() int {
+    1
+}

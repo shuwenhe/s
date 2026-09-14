@@ -4,3 +4,5 @@ func notpurego_unit_name() string {
 }
 
 func notpurego_unit_ready() int {
+    1
+}

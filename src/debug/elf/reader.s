@@ -4,3 +4,5 @@ func reader_unit_name() string {
 }
 
 func reader_unit_ready() int {
+    1
+}

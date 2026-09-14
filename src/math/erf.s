@@ -4,3 +4,5 @@ func erf_unit_name() string {
 }
 
 func erf_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func tabwriter_unit_name() string {
 }
 
 func tabwriter_unit_ready() int {
+    1
+}

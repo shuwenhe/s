@@ -5,3 +5,5 @@ func allocators_module_name() string {
 
 func allocators_module_apply(ssa_func f) int {
     recompute_uses(f)
+    0
+}

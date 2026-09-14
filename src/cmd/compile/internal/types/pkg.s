@@ -4,3 +4,5 @@ func pkg_module_name() string {
 }
 
 func pkg_module_apply() int {
+    0
+}

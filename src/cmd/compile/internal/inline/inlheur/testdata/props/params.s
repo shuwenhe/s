@@ -4,3 +4,5 @@ func params_case_name() string {
 }
 
 func params_case_pass() int {
+    0
+}

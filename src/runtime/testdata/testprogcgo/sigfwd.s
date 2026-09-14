@@ -4,3 +4,5 @@ func sigfwd_unit_name() string {
 }
 
 func sigfwd_unit_ready() int {
+    1
+}

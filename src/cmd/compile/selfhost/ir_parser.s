@@ -115,3 +115,5 @@ func instruction_to_string(ir_instruction instr) string {
     s += "|" + instr.dest
     s += "|" + instr.src1
     s += "|" + instr.src2
+    return s
+}

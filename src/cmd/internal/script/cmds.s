@@ -4,3 +4,5 @@ func cmds_unit_name() string {
 }
 
 func cmds_unit_ready() int {
+    1
+}

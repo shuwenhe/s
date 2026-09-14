@@ -4,3 +4,5 @@ func sequence_unit_name() string {
 }
 
 func sequence_unit_ready() int {
+    1
+}

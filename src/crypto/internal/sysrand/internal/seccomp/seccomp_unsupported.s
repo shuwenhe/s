@@ -4,3 +4,5 @@ func seccomp_unsupported_unit_name() string {
 }
 
 func seccomp_unsupported_unit_ready() int {
+    1
+}

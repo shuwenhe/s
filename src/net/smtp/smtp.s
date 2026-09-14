@@ -4,3 +4,5 @@ func smtp_unit_name() string {
 }
 
 func smtp_unit_ready() int {
+    1
+}

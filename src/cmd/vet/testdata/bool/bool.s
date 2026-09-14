@@ -4,3 +4,5 @@ func bool_unit_name() string {
 }
 
 func bool_unit_ready() int {
+    1
+}

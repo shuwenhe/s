@@ -4,3 +4,5 @@ func ureader_unit_name() string {
 }
 
 func ureader_unit_ready() int {
+    1
+}

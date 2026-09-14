@@ -4,3 +4,5 @@ func badtraceback_unit_name() string {
 }
 
 func badtraceback_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func escape_unit_name() string {
 }
 
 func escape_unit_ready() int {
+    1
+}

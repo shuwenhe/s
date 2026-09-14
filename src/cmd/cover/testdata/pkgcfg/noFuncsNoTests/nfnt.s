@@ -4,3 +4,5 @@ func nfnt_unit_name() string {
 }
 
 func nfnt_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func comparemasked_helpers_test_unit_name() string {
 }
 
 func comparemasked_helpers_test_unit_ready() int {
+    1
+}

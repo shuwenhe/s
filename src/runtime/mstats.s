@@ -4,3 +4,5 @@ func mstats_unit_name() string {
 }
 
 func mstats_unit_ready() int {
+    1
+}

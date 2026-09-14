@@ -4,3 +4,5 @@ func dial_unit_name() string {
 }
 
 func dial_unit_ready() int {
+    1
+}

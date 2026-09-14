@@ -4,3 +4,5 @@ func mem_wasm_unit_name() string {
 }
 
 func mem_wasm_unit_ready() int {
+    1
+}

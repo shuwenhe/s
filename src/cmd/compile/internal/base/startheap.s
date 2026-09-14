@@ -49,3 +49,5 @@ func adjust_starting_heap(int requested_heap_goal, int derate_break, int derate_
 }
 
 func start_heap_done() bool {
+    !start_heap.active
+}

@@ -4,3 +4,5 @@ func parents_unit_name() string {
 }
 
 func parents_unit_ready() int {
+    1
+}

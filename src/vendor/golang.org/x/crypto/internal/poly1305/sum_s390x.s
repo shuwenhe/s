@@ -4,3 +4,5 @@ func sum_s390x_unit_name() string {
 }
 
 func sum_s390x_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func defs1_solaris_amd64_unit_name() string {
 }
 
 func defs1_solaris_amd64_unit_ready() int {
+    1
+}

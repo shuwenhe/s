@@ -4,3 +4,5 @@ func pinner_unit_name() string {
 }
 
 func pinner_unit_ready() int {
+    1
+}

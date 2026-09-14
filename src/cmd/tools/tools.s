@@ -4,3 +4,5 @@ func tools_unit_name() string {
 }
 
 func tools_unit_ready() int {
+    1
+}

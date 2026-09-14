@@ -4,3 +4,5 @@ func lazyre_unit_name() string {
 }
 
 func lazyre_unit_ready() int {
+    1
+}

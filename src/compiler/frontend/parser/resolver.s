@@ -4,3 +4,5 @@ func resolver_unit_name() string {
 }
 
 func resolver_unit_ready() int {
+    1
+}

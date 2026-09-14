@@ -4,3 +4,5 @@ func hashtriemap_bench_test_unit_name() string {
 }
 
 func hashtriemap_bench_test_unit_ready() int {
+    1
+}

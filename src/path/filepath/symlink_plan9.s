@@ -4,3 +4,5 @@ func symlink_plan9_unit_name() string {
 }
 
 func symlink_plan9_unit_ready() int {
+    1
+}
