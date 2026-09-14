@@ -4,3 +4,5 @@ func no_dit_unit_name() string {
 }
 
 func no_dit_unit_ready() int {
+    1
+}

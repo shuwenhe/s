@@ -4,3 +4,5 @@ func sigpanic_unit_name() string {
 }
 
 func sigpanic_unit_ready() int {
+    1
+}

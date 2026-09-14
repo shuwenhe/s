@@ -4,3 +4,5 @@ func global_unit_name() string {
 }
 
 func global_unit_ready() int {
+    1
+}

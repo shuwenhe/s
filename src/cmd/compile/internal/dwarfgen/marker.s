@@ -4,3 +4,5 @@ func marker_unit_name() string {
 }
 
 func marker_unit_ready() int {
+    1
+}

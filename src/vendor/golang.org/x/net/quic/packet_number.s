@@ -4,3 +4,5 @@ func packet_number_unit_name() string {
 }
 
 func packet_number_unit_ready() int {
+    1
+}

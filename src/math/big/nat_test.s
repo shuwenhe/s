@@ -4,3 +4,5 @@ func nat_test_unit_name() string {
 }
 
 func nat_test_unit_ready() int {
+    1
+}

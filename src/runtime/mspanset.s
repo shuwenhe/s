@@ -4,3 +4,5 @@ func mspanset_unit_name() string {
 }
 
 func mspanset_unit_ready() int {
+    1
+}

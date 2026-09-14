@@ -1,4 +1,5 @@
 package compile.internal.ir.debug_loc
+
 struct source_location {
     string file
     int line
@@ -74,12 +75,14 @@ func (debug_info* di) add_variable(int id, string name, string type_name, int sc
         use_locations: int[]()
     }
     di.variables.push(var)
+
     for i := 0; i < di; i++.scopes.len() {
         if di.scopes[i].id == scope_id {
             di.scopes[i].local_vars.push(id)
             break
         }
     }
+
     var
 }
 
@@ -178,6 +181,7 @@ func (debug_info* di) compute_scope_lines() {
         scope := &di.scopes[i]
         first_line := -1
         last_line := -1
+
         for _idx_181 := 0; _idx_181 < len(scope.start_instr..scope.end_instr); _idx_181++ {
             instr_id := scope.start_instr..scope.end_instr[_idx_181]
             if instr_id < di.instr_locations.len() {
@@ -190,6 +194,7 @@ func (debug_info* di) compute_scope_lines() {
                 }
             }
         }
+
         scope.line_start = first_line
         scope.line_end = last_line
     }
@@ -202,3 +207,5 @@ func (debug_info* di) find_scope_for_instr(int instr_id) int {
             return scope.id
         }
     }
+    -1
+}

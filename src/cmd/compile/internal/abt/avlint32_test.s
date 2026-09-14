@@ -26,3 +26,5 @@ func self_test() int {
     if find(t1, 10) != "" {
         return 1
     }
+    0
+}

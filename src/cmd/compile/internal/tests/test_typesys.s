@@ -75,3 +75,5 @@ func run_typesys_suite() int {
     if !compile.internal.typesys.requires_drop("box[int]") || !compile.internal.typesys.requires_drop("string") || compile.internal.typesys.requires_drop("int") {
         return 1
     }
+    0
+}

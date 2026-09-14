@@ -4,3 +4,5 @@ func sais_unit_name() string {
 }
 
 func sais_unit_ready() int {
+    1
+}

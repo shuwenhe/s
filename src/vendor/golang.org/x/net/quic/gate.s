@@ -4,3 +4,5 @@ func gate_unit_name() string {
 }
 
 func gate_unit_ready() int {
+    1
+}

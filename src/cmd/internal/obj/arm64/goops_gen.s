@@ -4,3 +4,5 @@ func goops_gen_unit_name() string {
 }
 
 func goops_gen_unit_ready() int {
+    1
+}

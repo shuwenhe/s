@@ -4,3 +4,5 @@ func rewritedivisible_rule_name() string {
 }
 
 func rewritedivisible_rule_count() int {
+    0
+}

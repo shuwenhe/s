@@ -4,3 +4,5 @@ func dim_unit_name() string {
 }
 
 func dim_unit_ready() int {
+    1
+}

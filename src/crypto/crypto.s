@@ -4,3 +4,5 @@ func crypto_unit_name() string {
 }
 
 func crypto_unit_ready() int {
+    1
+}

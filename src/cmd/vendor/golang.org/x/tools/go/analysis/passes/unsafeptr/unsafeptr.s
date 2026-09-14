@@ -4,3 +4,5 @@ func unsafeptr_unit_name() string {
 }
 
 func unsafeptr_unit_ready() int {
+    1
+}

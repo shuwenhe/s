@@ -4,3 +4,5 @@ func template_unit_name() string {
 }
 
 func template_unit_ready() int {
+    1
+}

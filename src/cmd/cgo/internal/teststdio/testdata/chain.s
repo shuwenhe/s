@@ -4,3 +4,5 @@ func chain_unit_name() string {
 }
 
 func chain_unit_ready() int {
+    1
+}

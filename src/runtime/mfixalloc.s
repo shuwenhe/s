@@ -4,3 +4,5 @@ func mfixalloc_unit_name() string {
 }
 
 func mfixalloc_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func fe_generic_unit_name() string {
 }
 
 func fe_generic_unit_ready() int {
+    1
+}

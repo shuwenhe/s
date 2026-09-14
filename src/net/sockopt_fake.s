@@ -4,3 +4,5 @@ func sockopt_fake_unit_name() string {
 }
 
 func sockopt_fake_unit_ready() int {
+    1
+}

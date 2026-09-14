@@ -40,6 +40,7 @@ func eprintln(string text) {
     _ := stderr_write("\n")
 }
 var heap_top = 0x10000000
+
 func malloc(int size) int {
     if size <= 0 {
         return 0
@@ -53,4 +54,7 @@ func malloc(int size) int {
 func free(int ptr) {
 }
 extern func main() int
+
 func __start() int {
+    main()
+}

@@ -4,3 +4,5 @@ func selection_unit_name() string {
 }
 
 func selection_unit_ready() int {
+    1
+}

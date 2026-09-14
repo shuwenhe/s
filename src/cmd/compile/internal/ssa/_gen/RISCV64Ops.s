@@ -4,3 +4,5 @@ func riscv64_ops_rule_name() string {
 }
 
 func riscv64_ops_rule_count() int {
+    0
+}

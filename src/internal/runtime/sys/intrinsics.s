@@ -4,3 +4,5 @@ func intrinsics_unit_name() string {
 }
 
 func intrinsics_unit_ready() int {
+    1
+}

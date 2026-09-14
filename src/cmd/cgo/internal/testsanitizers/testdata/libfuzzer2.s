@@ -4,3 +4,5 @@ func libfuzzer2_unit_name() string {
 }
 
 func libfuzzer2_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func simd_amd64ops_rule_name() string {
 }
 
 func simd_amd64ops_rule_count() int {
+    0
+}

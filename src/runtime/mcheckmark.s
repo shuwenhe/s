@@ -4,3 +4,5 @@ func mcheckmark_unit_name() string {
 }
 
 func mcheckmark_unit_ready() int {
+    1
+}

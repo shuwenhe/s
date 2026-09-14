@@ -4,3 +4,5 @@ func robustio_flaky_unit_name() string {
 }
 
 func robustio_flaky_unit_ready() int {
+    1
+}

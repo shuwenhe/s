@@ -4,3 +4,5 @@ func preempt_loong64_unit_name() string {
 }
 
 func preempt_loong64_unit_ready() int {
+    1
+}

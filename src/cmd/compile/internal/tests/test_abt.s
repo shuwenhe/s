@@ -68,3 +68,5 @@ func run_abt_suite() int {
     if !compile.internal.abt.equals(a, c) {
         return 1
     }
+    0
+}

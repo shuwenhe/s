@@ -4,3 +4,5 @@ func inline_hot_test_case_name() string {
 }
 
 func inline_hot_test_case_pass() int {
+    0
+}

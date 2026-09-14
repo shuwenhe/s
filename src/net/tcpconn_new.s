@@ -177,3 +177,5 @@ func (tcp_listener* l) close() error {
 }
 
 func (tcp_listener* l) addr() addr {
+    l.addr
+}

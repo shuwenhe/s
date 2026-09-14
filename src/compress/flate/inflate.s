@@ -4,3 +4,5 @@ func inflate_unit_name() string {
 }
 
 func inflate_unit_ready() int {
+    1
+}

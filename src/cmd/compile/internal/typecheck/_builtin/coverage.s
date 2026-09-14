@@ -4,3 +4,5 @@ func coverage_module_name() string {
 }
 
 func coverage_module_apply() int {
+    0
+}

@@ -4,3 +4,5 @@ func telemetry_unit_name() string {
 }
 
 func telemetry_unit_ready() int {
+    1
+}

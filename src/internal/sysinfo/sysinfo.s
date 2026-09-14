@@ -4,3 +4,5 @@ func sysinfo_unit_name() string {
 }
 
 func sysinfo_unit_ready() int {
+    1
+}

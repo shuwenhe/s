@@ -4,3 +4,5 @@ func zip_sum_test_unit_name() string {
 }
 
 func zip_sum_test_unit_ready() int {
+    1
+}

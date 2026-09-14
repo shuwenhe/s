@@ -67,6 +67,7 @@ const sht_rela = 4
 const shf_write = 0x1
 const shf_alloc = 0x2
 const shf_execinstr = 0x4
+
 struct elf_builder {
     header: elf_header
     program_headers: program_header[]
@@ -101,3 +102,5 @@ func (elf_builder* builder) generate() byte[] {
 }
 
 func generate_elf_from_x86_64_asm(string asm_source, string output_binary) error {
+    return nil
+}

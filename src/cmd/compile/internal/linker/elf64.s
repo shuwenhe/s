@@ -1,7 +1,9 @@
 package linker
+
 const elf64_header_size = 64
 const elf64_prog_header_size = 56
 const elf64_sect_header_size = 64
+
 const elfmag0 = 0x7f
 const elfclass64 = 2
 const elfdata2_lsb = 1
@@ -9,6 +11,7 @@ const elfosabi_sysv = 0
 const et_exec = 2
 const et_dyn = 3
 const em_x86_64 = 62
+
 const sht_null = 0
 const sht_progbits = 1
 const sht_symtab = 2
@@ -16,27 +19,33 @@ const sht_strtab = 3
 const sht_rela = 4
 const sht_nobits = 8
 const sht_rel = 9
+
 const shf_write = 1
 const shf_alloc = 2
 const shf_execinstr = 4
+
 const pt_null = 0
 const pt_load = 1
 const pt_dynamic = 3
 const pt_interp = 3
 const pt_phdr = 4
+
 const stb_local = 0
 const stb_global = 1
 const stb_weak = 2
+
 const stt_notype = 0
 const stt_object = 1
 const stt_func = 2
 const stt_section = 3
+
 const r_x86_64_none = 0
 const r_x86_64_64 = 1
 const r_x86_64_pc32 = 2
 const r_x86_64_got32 = 3
 const r_x86_64_plt32 = 4
 const r_x86_64_relative = 8
+
 struct elf64_header {
     int magic
     int class
@@ -186,3 +195,5 @@ func elf64_write_symbol(elf64_symbol symbol) int[] {
 
 func elf64_write_relocation(elf64_relocation reloc) int[] {
     buf := int[]()
+    buf
+}

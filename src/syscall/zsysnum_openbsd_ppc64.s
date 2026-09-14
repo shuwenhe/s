@@ -4,3 +4,5 @@ func zsysnum_openbsd_ppc64_unit_name() string {
 }
 
 func zsysnum_openbsd_ppc64_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func zgoos_ios_unit_name() string {
 }
 
 func zgoos_ios_unit_ready() int {
+    1
+}

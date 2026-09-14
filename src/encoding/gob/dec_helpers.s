@@ -4,3 +4,5 @@ func dec_helpers_unit_name() string {
 }
 
 func dec_helpers_unit_ready() int {
+    1
+}

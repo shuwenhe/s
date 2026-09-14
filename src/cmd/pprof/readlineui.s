@@ -4,3 +4,5 @@ func readlineui_unit_name() string {
 }
 
 func readlineui_unit_ready() int {
+    1
+}

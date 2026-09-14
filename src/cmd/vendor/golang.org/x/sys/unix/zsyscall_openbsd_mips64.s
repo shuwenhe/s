@@ -4,3 +4,5 @@ func zsyscall_openbsd_mips64_unit_name() string {
 }
 
 func zsyscall_openbsd_mips64_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func set_vma_name_stub_unit_name() string {
 }
 
 func set_vma_name_stub_unit_ready() int {
+    1
+}

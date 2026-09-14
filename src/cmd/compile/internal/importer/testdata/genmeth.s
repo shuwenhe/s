@@ -4,3 +4,5 @@ func genmeth_unit_name() string {
 }
 
 func genmeth_unit_ready() int {
+    1
+}

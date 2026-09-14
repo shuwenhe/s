@@ -428,3 +428,5 @@ func has_code(semantic_error[] diagnostics, string code) bool {
         }
         i = i + 1
     }
+    false
+}

@@ -4,3 +4,5 @@ func server_push_test_unit_name() string {
 }
 
 func server_push_test_unit_ready() int {
+    1
+}

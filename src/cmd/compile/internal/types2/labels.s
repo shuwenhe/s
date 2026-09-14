@@ -4,3 +4,5 @@ func labels_module_name() string {
 }
 
 func labels_module_apply() int {
+    0
+}

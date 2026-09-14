@@ -4,3 +4,5 @@ func sroutinegen_unit_name() string {
 }
 
 func sroutinegen_unit_ready() int {
+    1
+}

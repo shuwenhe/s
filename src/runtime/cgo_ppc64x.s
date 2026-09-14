@@ -4,3 +4,5 @@ func cgo_ppc64x_unit_name() string {
 }
 
 func cgo_ppc64x_unit_ready() int {
+    1
+}

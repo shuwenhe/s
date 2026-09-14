@@ -4,3 +4,5 @@ func sockoptip6_posix_unit_name() string {
 }
 
 func sockoptip6_posix_unit_ready() int {
+    1
+}

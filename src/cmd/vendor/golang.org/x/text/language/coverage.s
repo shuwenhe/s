@@ -4,3 +4,5 @@ func coverage_unit_name() string {
 }
 
 func coverage_unit_ready() int {
+    1
+}

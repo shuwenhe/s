@@ -4,3 +4,5 @@ func composite_unit_name() string {
 }
 
 func composite_unit_ready() int {
+    1
+}

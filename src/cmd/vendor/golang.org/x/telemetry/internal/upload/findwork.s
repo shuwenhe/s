@@ -4,3 +4,5 @@ func findwork_unit_name() string {
 }
 
 func findwork_unit_ready() int {
+    1
+}

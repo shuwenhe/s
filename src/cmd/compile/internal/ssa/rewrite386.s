@@ -4,3 +4,5 @@ func rewrite386_rule_name() string {
 }
 
 func rewrite386_rule_count() int {
+    0
+}

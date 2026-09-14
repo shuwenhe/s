@@ -4,3 +4,5 @@ func os_linux_noauxv_unit_name() string {
 }
 
 func os_linux_noauxv_unit_ready() int {
+    1
+}

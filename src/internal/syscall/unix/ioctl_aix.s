@@ -4,3 +4,5 @@ func ioctl_aix_unit_name() string {
 }
 
 func ioctl_aix_unit_ready() int {
+    1
+}

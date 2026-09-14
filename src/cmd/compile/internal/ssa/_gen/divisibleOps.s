@@ -4,3 +4,5 @@ func divisible_ops_rule_name() string {
 }
 
 func divisible_ops_rule_count() int {
+    0
+}

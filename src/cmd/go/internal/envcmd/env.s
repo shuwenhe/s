@@ -4,3 +4,5 @@ func env_unit_name() string {
 }
 
 func env_unit_ready() int {
+    1
+}

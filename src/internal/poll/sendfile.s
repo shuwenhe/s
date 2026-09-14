@@ -4,3 +4,5 @@ func sendfile_unit_name() string {
 }
 
 func sendfile_unit_ready() int {
+    1
+}

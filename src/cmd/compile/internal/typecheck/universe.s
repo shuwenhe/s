@@ -4,3 +4,5 @@ func universe_module_name() string {
 }
 
 func universe_module_apply() int {
+    0
+}

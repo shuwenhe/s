@@ -4,3 +4,5 @@ func jn_unit_name() string {
 }
 
 func jn_unit_ready() int {
+    1
+}

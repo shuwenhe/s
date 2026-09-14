@@ -4,3 +4,5 @@ func arith_const_gen_case_name() string {
 }
 
 func arith_const_gen_case_pass() int {
+    0
+}

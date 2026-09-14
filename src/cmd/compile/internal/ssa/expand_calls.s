@@ -5,3 +5,5 @@ func expand_calls_module_name() string {
 
 func expand_calls_module_apply(ssa_func f) int {
     recompute_uses(f)
+    0
+}

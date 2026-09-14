@@ -4,3 +4,5 @@ func flightrecorder_unit_name() string {
 }
 
 func flightrecorder_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func evex_unit_name() string {
 }
 
 func evex_unit_ready() int {
+    1
+}

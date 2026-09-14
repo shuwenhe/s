@@ -4,3 +4,5 @@ func comments_unit_name() string {
 }
 
 func comments_unit_ready() int {
+    1
+}

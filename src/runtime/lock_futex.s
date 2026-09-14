@@ -4,3 +4,5 @@ func lock_futex_unit_name() string {
 }
 
 func lock_futex_unit_ready() int {
+    1
+}

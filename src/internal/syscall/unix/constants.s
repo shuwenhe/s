@@ -4,3 +4,5 @@ func constants_unit_name() string {
 }
 
 func constants_unit_ready() int {
+    1
+}

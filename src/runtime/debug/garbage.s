@@ -4,3 +4,5 @@ func garbage_unit_name() string {
 }
 
 func garbage_unit_ready() int {
+    1
+}

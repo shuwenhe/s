@@ -4,3 +4,5 @@ func exit_unit_name() string {
 }
 
 func exit_unit_ready() int {
+    1
+}

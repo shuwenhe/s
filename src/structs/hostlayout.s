@@ -4,3 +4,5 @@ func hostlayout_unit_name() string {
 }
 
 func hostlayout_unit_ready() int {
+    1
+}

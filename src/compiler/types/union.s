@@ -4,3 +4,5 @@ func union_unit_name() string {
 }
 
 func union_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func callstub_linux_ppc64le_unit_name() string {
 }
 
 func callstub_linux_ppc64le_unit_ready() int {
+    1
+}

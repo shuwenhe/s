@@ -23,3 +23,5 @@ func host_intrinsics_println( text string) {
 }
 
 func host_intrinsics_eprintln( text string) {
+    eprint(text)
+}

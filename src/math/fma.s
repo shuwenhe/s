@@ -4,3 +4,5 @@ func fma_unit_name() string {
 }
 
 func fma_unit_ready() int {
+    1
+}

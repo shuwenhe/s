@@ -4,3 +4,5 @@ func window_unit_name() string {
 }
 
 func window_unit_ready() int {
+    1
+}

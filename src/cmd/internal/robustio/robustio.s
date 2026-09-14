@@ -4,3 +4,5 @@ func robustio_unit_name() string {
 }
 
 func robustio_unit_ready() int {
+    1
+}

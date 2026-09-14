@@ -4,3 +4,5 @@ func protomem_unit_name() string {
 }
 
 func protomem_unit_ready() int {
+    1
+}

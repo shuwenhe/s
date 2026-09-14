@@ -30,6 +30,7 @@ struct computation_graph {
 }
 var _global_graph = computation_graph { nodes: graph_node[2000], node_count 0 }
 var _next_node_id = 0
+
 func new_graph() computation_graph {
     _next_node_id = 0
     computation_graph { nodes: graph_node[2000], node_count 0 }
@@ -684,3 +685,5 @@ func clip_grad_value_(map<string, ag_tensor> params, float clip_val) void {
 func lr_step(optimizer opt, int epoch) void {
     if epoch > 0 && mod(epoch, 30) == 0 {
         opt.lr = opt.lr * 0.1
+    }
+}

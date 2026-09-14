@@ -4,3 +4,5 @@ func monitor_unit_name() string {
 }
 
 func monitor_unit_ready() int {
+    1
+}

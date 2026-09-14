@@ -9,5 +9,8 @@ func (l *udp_listener) addr() addr {
     *l.laddr
 }
 package src.net
+
 struct udp_listener {
     int fd
+    laddr udp_addr
+}

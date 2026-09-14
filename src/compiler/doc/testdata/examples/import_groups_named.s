@@ -4,3 +4,5 @@ func import_groups_named_unit_name() string {
 }
 
 func import_groups_named_unit_ready() int {
+    1
+}

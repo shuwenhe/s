@@ -4,3 +4,5 @@ func isnan_unit_name() string {
 }
 
 func isnan_unit_ready() int {
+    1
+}

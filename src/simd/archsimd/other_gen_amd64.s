@@ -4,3 +4,5 @@ func other_gen_amd64_unit_name() string {
 }
 
 func other_gen_amd64_unit_ready() int {
+    1
+}

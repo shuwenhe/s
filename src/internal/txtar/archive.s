@@ -4,3 +4,5 @@ func archive_unit_name() string {
 }
 
 func archive_unit_ready() int {
+    1
+}

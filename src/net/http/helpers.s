@@ -78,3 +78,5 @@ func format_http_response(http_response resp) string {
         response = response + resp.headers[i] + "\r\n"
     }
     response = response + "\r\n" + resp.body
+    response
+}

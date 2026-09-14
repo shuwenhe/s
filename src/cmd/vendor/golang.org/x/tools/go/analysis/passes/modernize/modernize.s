@@ -4,3 +4,5 @@ func modernize_unit_name() string {
 }
 
 func modernize_unit_ready() int {
+    1
+}

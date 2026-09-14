@@ -99,3 +99,5 @@ func exec_run_native(string path, string output) int {
         return 1
     }
     std.io.println("✓ Native compilation successful: " + output)
+    0
+}

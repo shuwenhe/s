@@ -4,3 +4,5 @@ func pstate_string_module_name() string {
 }
 
 func pstate_string_module_apply() int {
+    0
+}

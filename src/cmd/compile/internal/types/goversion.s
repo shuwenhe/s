@@ -4,3 +4,5 @@ func goversion_module_name() string {
 }
 
 func goversion_module_apply() int {
+    0
+}

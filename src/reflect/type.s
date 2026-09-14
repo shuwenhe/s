@@ -1,4 +1,5 @@
 package src.reflect
+
 const kind_invalid = 0
 const kind_bool = 1
 const kind_int = 2
@@ -6,6 +7,7 @@ const kind_string = 3
 const kind_struct = 4
 const kind_array = 5
 const kind_function = 6
+
 struct field {
     string name
     int offset
@@ -57,3 +59,5 @@ func type_unit_name() string {
 }
 
 func type_unit_ready() int {
+    1
+}

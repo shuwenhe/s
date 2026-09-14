@@ -4,3 +4,5 @@ func pgo_inl_test_case_name() string {
 }
 
 func pgo_inl_test_case_pass() int {
+    0
+}

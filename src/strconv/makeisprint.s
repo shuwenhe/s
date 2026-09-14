@@ -4,3 +4,5 @@ func makeisprint_unit_name() string {
 }
 
 func makeisprint_unit_ready() int {
+    1
+}

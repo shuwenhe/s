@@ -4,3 +4,5 @@ func ticket_unit_name() string {
 }
 
 func ticket_unit_ready() int {
+    1
+}

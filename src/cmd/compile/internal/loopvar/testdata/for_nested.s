@@ -4,3 +4,5 @@ func for_nested_unit_name() string {
 }
 
 func for_nested_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func lockrank_on_unit_name() string {
 }
 
 func lockrank_on_unit_ready() int {
+    1
+}

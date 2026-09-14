@@ -4,3 +4,5 @@ func mem_darwin_unit_name() string {
 }
 
 func mem_darwin_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func outbuf_darwin_unit_name() string {
 }
 
 func outbuf_darwin_unit_ready() int {
+    1
+}

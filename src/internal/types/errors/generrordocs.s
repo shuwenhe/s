@@ -4,3 +4,5 @@ func generrordocs_unit_name() string {
 }
 
 func generrordocs_unit_ready() int {
+    1
+}

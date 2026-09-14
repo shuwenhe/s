@@ -4,3 +4,5 @@ func edwards25519_unit_name() string {
 }
 
 func edwards25519_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func headscan_unit_name() string {
 }
 
 func headscan_unit_ready() int {
+    1
+}

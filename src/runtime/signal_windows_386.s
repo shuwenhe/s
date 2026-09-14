@@ -4,3 +4,5 @@ func signal_windows_386_unit_name() string {
 }
 
 func signal_windows_386_unit_ready() int {
+    1
+}

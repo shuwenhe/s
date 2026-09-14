@@ -4,3 +4,5 @@ func os_wasm_unit_name() string {
 }
 
 func os_wasm_unit_ready() int {
+    1
+}

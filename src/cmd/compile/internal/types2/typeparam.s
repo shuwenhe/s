@@ -4,3 +4,5 @@ func typeparam_module_name() string {
 }
 
 func typeparam_module_apply() int {
+    0
+}

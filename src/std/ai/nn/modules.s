@@ -5,7 +5,6 @@ use std.tensor.{tensor, zeros, ones, randn, xavier_uniform, kaiming_normal,
                   tanh_tensor, gelu_tensor, dropout as tensor_dropout}
 use std.switch.{sqrt, exp, tanh}
 use std.ai.autograd.{auto_grad_tensor, parameter, create_autograd_tensor}
-
 struct module {
     string name
     string type_name
@@ -468,4 +467,7 @@ func count_trainable_params(module m) int {
         i = i + 1
     }
     total
+}
+
+func to_device(module m, string device) void {
 }

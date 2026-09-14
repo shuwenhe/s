@@ -4,3 +4,5 @@ func runtime_module_name() string {
 }
 
 func runtime_module_apply() int {
+    0
+}

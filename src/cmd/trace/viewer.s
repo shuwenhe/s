@@ -4,3 +4,5 @@ func viewer_unit_name() string {
 }
 
 func viewer_unit_ready() int {
+    1
+}

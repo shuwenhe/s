@@ -4,3 +4,5 @@ func emitter_unit_name() string {
 }
 
 func emitter_unit_ready() int {
+    1
+}

@@ -21,3 +21,5 @@ func pair_equal(int_pair a, int_pair b) bool {
 }
 
 func pair_contains(int_pair p, int value) bool {
+    p.left == value || p.right == value
+}

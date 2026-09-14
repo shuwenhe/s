@@ -4,3 +4,5 @@ func prop_unit_name() string {
 }
 
 func prop_unit_ready() int {
+    1
+}

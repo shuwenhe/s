@@ -4,3 +4,5 @@ func test_stubs_unit_name() string {
 }
 
 func test_stubs_unit_ready() int {
+    1
+}

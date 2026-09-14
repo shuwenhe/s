@@ -4,3 +4,5 @@ func plan9obj_unit_name() string {
 }
 
 func plan9obj_unit_ready() int {
+    1
+}

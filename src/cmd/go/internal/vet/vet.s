@@ -4,3 +4,5 @@ func vet_unit_name() string {
 }
 
 func vet_unit_ready() int {
+    1
+}

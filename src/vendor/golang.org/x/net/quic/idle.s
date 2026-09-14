@@ -4,3 +4,5 @@ func idle_unit_name() string {
 }
 
 func idle_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func letter_unit_name() string {
 }
 
 func letter_unit_ready() int {
+    1
+}

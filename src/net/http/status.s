@@ -4,3 +4,5 @@ func status_unit_name() string {
 }
 
 func status_unit_ready() int {
+    1
+}

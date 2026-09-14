@@ -28,3 +28,5 @@ func ((t, e)* self) unwrap_err() e {
         err : err,
     }
 }
+extern "intrinsic" func __result_panic_unwrap[t]() t
+extern "intrinsic" func __result_panic_unwrap_err[e]() e

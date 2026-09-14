@@ -44,3 +44,5 @@ func apply_quirks(string[] quirks, source_unit unit) ((), noder_error) {
         }
         i = i + 1
     }
+    ()
+}

@@ -4,3 +4,5 @@ func setupapi_windows_unit_name() string {
 }
 
 func setupapi_windows_unit_ready() int {
+    1
+}

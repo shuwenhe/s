@@ -4,3 +4,5 @@ func ldexp_unit_name() string {
 }
 
 func ldexp_unit_ready() int {
+    1
+}

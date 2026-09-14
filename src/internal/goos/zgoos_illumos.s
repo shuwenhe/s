@@ -4,3 +4,5 @@ func zgoos_illumos_unit_name() string {
 }
 
 func zgoos_illumos_unit_ready() int {
+    1
+}

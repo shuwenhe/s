@@ -4,3 +4,5 @@ func universe_unit_name() string {
 }
 
 func universe_unit_ready() int {
+    1
+}

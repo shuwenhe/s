@@ -4,3 +4,5 @@ func summary_unit_name() string {
 }
 
 func summary_unit_ready() int {
+    1
+}

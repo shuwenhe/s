@@ -4,3 +4,5 @@ func funcpc_unit_name() string {
 }
 
 func funcpc_unit_ready() int {
+    1
+}

@@ -5,3 +5,5 @@ func biasedsparsemap_module_name() string {
 
 func biasedsparsemap_module_apply(ssa_func f) int {
     recompute_uses(f)
+    0
+}

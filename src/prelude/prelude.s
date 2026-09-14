@@ -24,3 +24,5 @@ func slice(string text, int start, int end) string {
 }
 extern "intrinsic" func __runtime_len[t](t value) int
 extern "intrinsic" func __int_to_string(int value) string
+extern "intrinsic" func __string_char_at(string text, int index) string
+extern "intrinsic" func __string_slice(string text, int start, int end) string

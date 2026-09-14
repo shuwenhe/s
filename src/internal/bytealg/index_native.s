@@ -4,3 +4,5 @@ func index_native_unit_name() string {
 }
 
 func index_native_unit_ready() int {
+    1
+}

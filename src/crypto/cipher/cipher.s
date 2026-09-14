@@ -4,3 +4,5 @@ func cipher_unit_name() string {
 }
 
 func cipher_unit_ready() int {
+    1
+}

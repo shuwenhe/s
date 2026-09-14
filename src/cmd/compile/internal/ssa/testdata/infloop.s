@@ -4,3 +4,5 @@ func infloop_case_name() string {
 }
 
 func infloop_case_pass() int {
+    0
+}

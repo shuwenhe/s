@@ -4,3 +4,5 @@ func zgoarch_386_unit_name() string {
 }
 
 func zgoarch_386_unit_ready() int {
+    1
+}

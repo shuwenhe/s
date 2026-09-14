@@ -4,3 +4,5 @@ func sink_unit_name() string {
 }
 
 func sink_unit_ready() int {
+    1
+}

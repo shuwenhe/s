@@ -4,3 +4,5 @@ func h2_error_test_unit_name() string {
 }
 
 func h2_error_test_unit_ready() int {
+    1
+}

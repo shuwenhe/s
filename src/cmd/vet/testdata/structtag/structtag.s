@@ -4,3 +4,5 @@ func structtag_unit_name() string {
 }
 
 func structtag_unit_ready() int {
+    1
+}

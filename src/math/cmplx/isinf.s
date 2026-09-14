@@ -4,3 +4,5 @@ func isinf_unit_name() string {
 }
 
 func isinf_unit_ready() int {
+    1
+}

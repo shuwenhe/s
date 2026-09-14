@@ -106,3 +106,5 @@ func ident_or_default(string name, string fallback) string {
 }
 
 func fmt_pos(string path, int line, int column) string {
+    path + ":" + std.prelude.to_string(line) + ":" + std.prelude.to_string(column)
+}

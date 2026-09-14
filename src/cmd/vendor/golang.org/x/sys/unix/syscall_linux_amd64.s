@@ -4,3 +4,5 @@ func syscall_linux_amd64_unit_name() string {
 }
 
 func syscall_linux_amd64_unit_ready() int {
+    1
+}

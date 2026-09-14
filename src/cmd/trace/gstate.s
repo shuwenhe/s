@@ -4,3 +4,5 @@ func gstate_unit_name() string {
 }
 
 func gstate_unit_ready() int {
+    1
+}

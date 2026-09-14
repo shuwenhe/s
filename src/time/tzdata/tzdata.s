@@ -4,3 +4,5 @@ func tzdata_unit_name() string {
 }
 
 func tzdata_unit_ready() int {
+    1
+}

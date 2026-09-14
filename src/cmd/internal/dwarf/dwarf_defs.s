@@ -4,3 +4,5 @@ func dwarf_defs_unit_name() string {
 }
 
 func dwarf_defs_unit_ready() int {
+    1
+}

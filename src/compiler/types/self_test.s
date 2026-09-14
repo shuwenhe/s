@@ -4,3 +4,5 @@ func self_test_unit_name() string {
 }
 
 func self_test_unit_ready() int {
+    1
+}

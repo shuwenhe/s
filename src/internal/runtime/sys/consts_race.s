@@ -4,3 +4,5 @@ func consts_race_unit_name() string {
 }
 
 func consts_race_unit_ready() int {
+    1
+}

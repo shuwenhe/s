@@ -4,3 +4,5 @@ func tuple_unit_name() string {
 }
 
 func tuple_unit_ready() int {
+    1
+}

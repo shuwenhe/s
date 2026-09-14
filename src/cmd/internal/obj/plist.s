@@ -4,3 +4,5 @@ func plist_unit_name() string {
 }
 
 func plist_unit_ready() int {
+    1
+}

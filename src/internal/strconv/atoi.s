@@ -4,3 +4,5 @@ func atoi_unit_name() string {
 }
 
 func atoi_unit_ready() int {
+    1
+}

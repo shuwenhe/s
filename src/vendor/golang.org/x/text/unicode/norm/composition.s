@@ -4,3 +4,5 @@ func composition_unit_name() string {
 }
 
 func composition_unit_ready() int {
+    1
+}

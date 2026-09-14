@@ -4,3 +4,5 @@ func atan_unit_name() string {
 }
 
 func atan_unit_ready() int {
+    1
+}

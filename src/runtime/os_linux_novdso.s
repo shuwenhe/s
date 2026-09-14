@@ -4,3 +4,5 @@ func os_linux_novdso_unit_name() string {
 }
 
 func os_linux_novdso_unit_ready() int {
+    1
+}

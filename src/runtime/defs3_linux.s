@@ -4,3 +4,5 @@ func defs3_linux_unit_name() string {
 }
 
 func defs3_linux_unit_ready() int {
+    1
+}

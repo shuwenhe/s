@@ -4,3 +4,5 @@ func sock_plan9_unit_name() string {
 }
 
 func sock_plan9_unit_ready() int {
+    1
+}

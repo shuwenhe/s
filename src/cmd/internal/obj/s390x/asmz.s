@@ -4,3 +4,5 @@ func asmz_unit_name() string {
 }
 
 func asmz_unit_ready() int {
+    1
+}

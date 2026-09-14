@@ -4,3 +4,5 @@ func entity_unit_name() string {
 }
 
 func entity_unit_ready() int {
+    1
+}

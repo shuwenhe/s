@@ -4,3 +4,5 @@ func api_test_case_name() string {
 }
 
 func api_test_case_pass() int {
+    0
+}

@@ -1,4 +1,5 @@
 package internal.ssa
+
 const op_const = 1
 const op_add = 2
 const op_sub = 3
@@ -24,6 +25,7 @@ const op_call = 22
 const op_return = 23
 const op_if = 24
 const op_phi = 25
+
 struct ssa_value {
     int id
     int op
@@ -73,3 +75,5 @@ func ssa_value_new_unary_op(int id, int op, ssa_value* arg, int type_id) ssa_val
         aux_string: "",
     }
     v.args[0] = arg
+    v
+}

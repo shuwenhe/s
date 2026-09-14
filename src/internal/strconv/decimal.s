@@ -4,3 +4,5 @@ func decimal_unit_name() string {
 }
 
 func decimal_unit_ready() int {
+    1
+}

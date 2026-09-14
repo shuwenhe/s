@@ -4,3 +4,5 @@ func omitzero_unit_name() string {
 }
 
 func omitzero_unit_ready() int {
+    1
+}

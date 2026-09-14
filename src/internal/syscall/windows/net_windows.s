@@ -4,3 +4,5 @@ func net_windows_unit_name() string {
 }
 
 func net_windows_unit_ready() int {
+    1
+}

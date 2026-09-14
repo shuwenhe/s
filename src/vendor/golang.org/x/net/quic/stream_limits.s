@@ -4,3 +4,5 @@ func stream_limits_unit_name() string {
 }
 
 func stream_limits_unit_ready() int {
+    1
+}

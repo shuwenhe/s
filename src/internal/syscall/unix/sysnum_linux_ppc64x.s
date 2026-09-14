@@ -4,3 +4,5 @@ func sysnum_linux_ppc64x_unit_name() string {
 }
 
 func sysnum_linux_ppc64x_unit_ready() int {
+    1
+}

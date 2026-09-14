@@ -4,3 +4,5 @@ func issue9400_linux_unit_name() string {
 }
 
 func issue9400_linux_unit_ready() int {
+    1
+}

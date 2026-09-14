@@ -4,3 +4,5 @@ func secret_nosecret_unit_name() string {
 }
 
 func secret_nosecret_unit_ready() int {
+    1
+}

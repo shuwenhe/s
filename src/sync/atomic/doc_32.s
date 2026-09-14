@@ -4,3 +4,5 @@ func doc_32_unit_name() string {
 }
 
 func doc_32_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func tables_wasip1_unit_name() string {
 }
 
 func tables_wasip1_unit_ready() int {
+    1
+}

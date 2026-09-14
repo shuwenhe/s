@@ -4,3 +4,5 @@ func arena_unit_name() string {
 }
 
 func arena_unit_ready() int {
+    1
+}

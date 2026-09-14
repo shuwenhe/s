@@ -89,3 +89,5 @@ func println(string text) {
 
 func eprintln(string text) {
     _ := stderr_write(text)
+    _ := stderr_write("\n")
+}

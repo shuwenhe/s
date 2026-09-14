@@ -4,3 +4,5 @@ func lock_spinbit_unit_name() string {
 }
 
 func lock_spinbit_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func frexp_unit_name() string {
 }
 
 func frexp_unit_ready() int {
+    1
+}

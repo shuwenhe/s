@@ -4,3 +4,5 @@ func arandom_netbsd_unit_name() string {
 }
 
 func arandom_netbsd_unit_ready() int {
+    1
+}

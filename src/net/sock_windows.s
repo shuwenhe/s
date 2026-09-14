@@ -4,3 +4,5 @@ func sock_windows_unit_name() string {
 }
 
 func sock_windows_unit_ready() int {
+    1
+}

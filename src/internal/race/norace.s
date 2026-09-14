@@ -4,3 +4,5 @@ func norace_unit_name() string {
 }
 
 func norace_unit_ready() int {
+    1
+}

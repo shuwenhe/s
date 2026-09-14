@@ -32,3 +32,5 @@ func listen(string network, string address) listener {
     } else {
         nil
     }
+}
+}

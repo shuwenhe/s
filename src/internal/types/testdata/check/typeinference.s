@@ -4,3 +4,5 @@ func typeinference_unit_name() string {
 }
 
 func typeinference_unit_ready() int {
+    1
+}

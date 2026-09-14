@@ -4,3 +4,5 @@ func readme_unit_name() string {
 }
 
 func readme_unit_ready() int {
+    1
+}

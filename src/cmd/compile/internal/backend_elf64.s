@@ -74,7 +74,9 @@ func fail_int(string message) (int, backend_error) {
 control_panic_active := "@panic.active"
 control_panic_payload := "@panic.payload"
 control_in_defer := "@defer.active"
+
 struct unit_value {}
+
 struct fn_map_entry_value {
     string key
     string func_name
@@ -142,7 +144,6 @@ struct runtime_metrics {
     int channel_recvs
     int channel_closed
 }
-
 enum value {
     int(int),
     string(string),
@@ -5588,3 +5589,5 @@ func join_with(string[] values, string sep) string {
 
 func report_failure(string message) int {
     std.io.eprintln("backend error: " + message)
+    1
+}

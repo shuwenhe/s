@@ -4,3 +4,5 @@ func typestring_test_case_name() string {
 }
 
 func typestring_test_case_pass() int {
+    0
+}

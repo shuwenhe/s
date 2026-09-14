@@ -4,3 +4,5 @@ func mips_ops_rule_name() string {
 }
 
 func mips_ops_rule_count() int {
+    0
+}

@@ -4,3 +4,5 @@ func fields_unit_name() string {
 }
 
 func fields_unit_ready() int {
+    1
+}

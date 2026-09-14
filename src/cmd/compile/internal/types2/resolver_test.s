@@ -4,3 +4,5 @@ func resolver_test_case_name() string {
 }
 
 func resolver_test_case_pass() int {
+    0
+}

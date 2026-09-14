@@ -4,3 +4,5 @@ func err1_unit_name() string {
 }
 
 func err1_unit_ready() int {
+    1
+}

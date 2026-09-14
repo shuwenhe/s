@@ -4,3 +4,5 @@ func sys_posix_unit_name() string {
 }
 
 func sys_posix_unit_ready() int {
+    1
+}

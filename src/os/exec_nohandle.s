@@ -4,3 +4,5 @@ func exec_nohandle_unit_name() string {
 }
 
 func exec_nohandle_unit_ready() int {
+    1
+}

@@ -1,4 +1,5 @@
 package middleend
+
 const ir_value_const = 1
 const ir_value_var = 2
 const ir_value_param = 3
@@ -10,6 +11,7 @@ const ir_value_store = 8
 const ir_value_alloca = 9
 const ir_value_phi = 10
 const ir_value_cast = 11
+
 const ir_op_add = 100
 const ir_op_sub = 101
 const ir_op_mul = 102
@@ -28,9 +30,11 @@ const ir_op_gt = 114
 const ir_op_ge = 115
 const ir_op_land = 116
 const ir_op_lor = 117
+
 const ir_op_neg = 200
 const ir_op_not = 201
 const ir_op_lnot = 202
+
 const ir_instr_binop = 300
 const ir_instr_unop = 301
 const ir_instr_call = 302
@@ -43,12 +47,14 @@ const ir_instr_condbr = 308
 const ir_instr_phi = 309
 const ir_instr_cast = 310
 const ir_instr_switch = 311
+
 struct ir_value {
     int value_type
     int value_id
     string type_info
     int line
     int column
+
     string const_value
     string var_name
     int param_index
@@ -61,6 +67,7 @@ struct ir_instruction {
     int opcode
     int line
     int column
+
     int branch_target_true
     int branch_target_false
     int[] branch_targets
@@ -71,6 +78,7 @@ struct ir_basicblock {
     string label
     ir_instruction[] instructions
     ir_instruction terminator
+
     int[] predecessors
     int[] successors
 }
@@ -202,3 +210,5 @@ func ir_module_add_function(ir_module* module, ir_function func) {
 }
 
 func ir_module_add_global(ir_module* module, ir_value global) {
+    module.global_vars = append(module.global_vars, global)
+}

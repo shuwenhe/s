@@ -4,3 +4,5 @@ func list6_unit_name() string {
 }
 
 func list6_unit_ready() int {
+    1
+}

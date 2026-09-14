@@ -4,3 +4,5 @@ func x509_test_import_unit_name() string {
 }
 
 func x509_test_import_unit_ready() int {
+    1
+}

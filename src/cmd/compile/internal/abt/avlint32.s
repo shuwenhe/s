@@ -292,3 +292,5 @@ func lower_bound(t tree, int key) int {
         }
         i = i + 1
     }
+    len(tree.items)
+}

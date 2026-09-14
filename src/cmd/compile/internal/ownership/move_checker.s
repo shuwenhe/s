@@ -189,3 +189,5 @@ func replace_first(string s, string old, string new) string {
             return s[:i] + new + s[i+len(old):]
         }
     }
+    return s
+}

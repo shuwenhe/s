@@ -4,3 +4,5 @@ func mmap_nomremap_unit_name() string {
 }
 
 func mmap_nomremap_unit_ready() int {
+    1
+}

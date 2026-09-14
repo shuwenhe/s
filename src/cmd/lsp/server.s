@@ -363,3 +363,5 @@ func extract_did_change_params(string message) option[(string, string, int)] {
             }
         },
         option::none() : option::none()
+    }
+}

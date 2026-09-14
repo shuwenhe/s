@@ -4,3 +4,5 @@ func httptest_test_unit_name() string {
 }
 
 func httptest_test_unit_ready() int {
+    1
+}

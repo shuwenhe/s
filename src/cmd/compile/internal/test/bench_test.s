@@ -4,3 +4,5 @@ func bench_test_case_name() string {
 }
 
 func bench_test_case_pass() int {
+    0
+}

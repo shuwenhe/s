@@ -4,3 +4,5 @@ func mkzip_unit_name() string {
 }
 
 func mkzip_unit_ready() int {
+    1
+}

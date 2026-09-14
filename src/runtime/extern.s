@@ -4,3 +4,5 @@ func extern_unit_name() string {
 }
 
 func extern_unit_ready() int {
+    1
+}

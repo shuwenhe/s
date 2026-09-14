@@ -4,3 +4,5 @@ func decgen_unit_name() string {
 }
 
 func decgen_unit_ready() int {
+    1
+}

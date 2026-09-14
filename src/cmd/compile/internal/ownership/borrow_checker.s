@@ -192,3 +192,5 @@ struct use_stmt {
 }
 
 struct move_stmt {
+    string variable
+}

@@ -4,3 +4,5 @@ func zgoos_hurd_unit_name() string {
 }
 
 func zgoos_hurd_unit_ready() int {
+    1
+}

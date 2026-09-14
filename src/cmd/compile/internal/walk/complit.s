@@ -4,3 +4,5 @@ func complit_module_name() string {
 }
 
 func complit_module_apply() int {
+    0
+}

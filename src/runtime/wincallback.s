@@ -4,3 +4,5 @@ func wincallback_unit_name() string {
 }
 
 func wincallback_unit_ready() int {
+    1
+}

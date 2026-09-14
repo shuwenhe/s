@@ -52,3 +52,5 @@ func (assembly_generator* ag) emit_string_literal( label string, string value) {
 }
 
 func (assembly_generator* ag) get_output() string {
+    ag.buffer
+}

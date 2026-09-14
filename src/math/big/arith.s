@@ -4,3 +4,5 @@ func arith_unit_name() string {
 }
 
 func arith_unit_ready() int {
+    1
+}

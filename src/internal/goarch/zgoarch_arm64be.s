@@ -4,3 +4,5 @@ func zgoarch_arm64be_unit_name() string {
 }
 
 func zgoarch_arm64be_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func hexdump_unit_name() string {
 }
 
 func hexdump_unit_ready() int {
+    1
+}

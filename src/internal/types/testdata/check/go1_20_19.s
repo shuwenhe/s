@@ -4,3 +4,5 @@ func go1_20_19_unit_name() string {
 }
 
 func go1_20_19_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func enclosing_rule_name() string {
 }
 
 func enclosing_rule_count() int {
+    0
+}

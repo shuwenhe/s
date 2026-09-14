@@ -4,3 +4,5 @@ func runtime_sema_test_unit_name() string {
 }
 
 func runtime_sema_test_unit_ready() int {
+    1
+}

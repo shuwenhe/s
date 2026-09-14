@@ -4,3 +4,5 @@ func init_asan_globals_unit_name() string {
 }
 
 func init_asan_globals_unit_ready() int {
+    1
+}

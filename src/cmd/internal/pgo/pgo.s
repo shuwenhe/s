@@ -4,3 +4,5 @@ func pgo_unit_name() string {
 }
 
 func pgo_unit_ready() int {
+    1
+}

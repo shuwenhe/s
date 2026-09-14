@@ -4,3 +4,5 @@ func crc64_unit_name() string {
 }
 
 func crc64_unit_ready() int {
+    1
+}

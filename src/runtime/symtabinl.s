@@ -4,3 +4,5 @@ func symtabinl_unit_name() string {
 }
 
 func symtabinl_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func tracecpu_unit_name() string {
 }
 
 func tracecpu_unit_ready() int {
+    1
+}

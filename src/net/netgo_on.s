@@ -4,3 +4,5 @@ func netgo_on_unit_name() string {
 }
 
 func netgo_on_unit_ready() int {
+    1
+}

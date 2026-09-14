@@ -4,3 +4,5 @@ func transfer_unit_name() string {
 }
 
 func transfer_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func arshal_inlined_unit_name() string {
 }
 
 func arshal_inlined_unit_ready() int {
+    1
+}

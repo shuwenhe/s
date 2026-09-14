@@ -4,3 +4,5 @@ func outbuf_linux_unit_name() string {
 }
 
 func outbuf_linux_unit_ready() int {
+    1
+}

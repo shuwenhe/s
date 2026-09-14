@@ -4,3 +4,5 @@ func readlink_unit_name() string {
 }
 
 func readlink_unit_ready() int {
+    1
+}

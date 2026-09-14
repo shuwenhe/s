@@ -4,3 +4,5 @@ func routing_index_test_unit_name() string {
 }
 
 func routing_index_test_unit_ready() int {
+    1
+}

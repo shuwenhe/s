@@ -4,3 +4,5 @@ func trivial_unit_name() string {
 }
 
 func trivial_unit_ready() int {
+    1
+}

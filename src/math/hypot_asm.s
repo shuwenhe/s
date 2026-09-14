@@ -4,3 +4,5 @@ func hypot_asm_unit_name() string {
 }
 
 func hypot_asm_unit_ready() int {
+    1
+}

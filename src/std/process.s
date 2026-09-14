@@ -74,3 +74,5 @@ func emit_ir_binary(string ir_codegen_bin, string input_ir, string output_bin) (
 }
 
 func pipe_commands(string cmd1, string cmd2) (int, string) {
+    0, ""
+}

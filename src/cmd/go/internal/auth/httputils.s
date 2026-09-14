@@ -4,3 +4,5 @@ func httputils_unit_name() string {
 }
 
 func httputils_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func xor_asm_unit_name() string {
 }
 
 func xor_asm_unit_ready() int {
+    1
+}

@@ -51,3 +51,5 @@ func emit_export_payload(export_record[] exports) string {
         out = out + exports[i].kind + " " + exports[i].name + "\n"
         i = i + 1
     }
+    out
+}

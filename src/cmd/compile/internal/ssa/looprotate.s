@@ -5,3 +5,5 @@ func looprotate_module_name() string {
 
 func looprotate_module_apply(ssa_func f) int {
     recompute_uses(f)
+    0
+}

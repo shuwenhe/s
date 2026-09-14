@@ -4,3 +4,5 @@ func signal_openbsd_arm64_unit_name() string {
 }
 
 func signal_openbsd_arm64_unit_ready() int {
+    1
+}

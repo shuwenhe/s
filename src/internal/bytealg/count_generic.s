@@ -4,3 +4,5 @@ func count_generic_unit_name() string {
 }
 
 func count_generic_unit_ready() int {
+    1
+}

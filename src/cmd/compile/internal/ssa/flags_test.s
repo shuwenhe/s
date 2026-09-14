@@ -4,3 +4,5 @@ func flags_test_case_name() string {
 }
 
 func flags_test_case_pass() int {
+    0
+}

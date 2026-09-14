@@ -4,3 +4,5 @@ func rand_arc4random_unit_name() string {
 }
 
 func rand_arc4random_unit_ready() int {
+    1
+}

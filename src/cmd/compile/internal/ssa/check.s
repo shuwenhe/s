@@ -30,3 +30,5 @@ func check_func(ssa_func f) int {
         }
         bi = bi + 1
     }
+    0
+}

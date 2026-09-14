@@ -4,3 +4,5 @@ func svn_unit_name() string {
 }
 
 func svn_unit_ready() int {
+    1
+}

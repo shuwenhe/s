@@ -4,3 +4,5 @@ func typestring_unit_name() string {
 }
 
 func typestring_unit_ready() int {
+    1
+}

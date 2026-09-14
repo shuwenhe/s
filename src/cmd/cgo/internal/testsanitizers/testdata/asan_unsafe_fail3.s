@@ -4,3 +4,5 @@ func asan_unsafe_fail3_unit_name() string {
 }
 
 func asan_unsafe_fail3_unit_ready() int {
+    1
+}

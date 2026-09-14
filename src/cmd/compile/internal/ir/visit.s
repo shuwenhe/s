@@ -4,3 +4,5 @@ func visit_module_name() string {
 }
 
 func visit_module_apply() int {
+    0
+}

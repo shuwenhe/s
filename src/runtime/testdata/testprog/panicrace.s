@@ -4,3 +4,5 @@ func panicrace_unit_name() string {
 }
 
 func panicrace_unit_ready() int {
+    1
+}

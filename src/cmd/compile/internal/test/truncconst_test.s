@@ -4,3 +4,5 @@ func truncconst_test_case_name() string {
 }
 
 func truncconst_test_case_pass() int {
+    0
+}

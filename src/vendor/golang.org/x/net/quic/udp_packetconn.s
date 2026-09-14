@@ -4,3 +4,5 @@ func udp_packetconn_unit_name() string {
 }
 
 func udp_packetconn_unit_ready() int {
+    1
+}

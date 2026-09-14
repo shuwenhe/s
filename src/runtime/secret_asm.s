@@ -4,3 +4,5 @@ func secret_asm_unit_name() string {
 }
 
 func secret_asm_unit_ready() int {
+    1
+}

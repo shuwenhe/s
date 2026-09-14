@@ -12,6 +12,7 @@ pos := ""
 error_msgs := error_msg[]()
 num_errors := 0
 num_syntax_errors := 0
+
 func errors() int {
     num_errors
 }
@@ -82,3 +83,5 @@ func starts_with_text(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
     }
+    return slice(text, 0, len(prefix)) == prefix
+}

@@ -4,3 +4,5 @@ func lp_wasm_unit_name() string {
 }
 
 func lp_wasm_unit_ready() int {
+    1
+}

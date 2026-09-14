@@ -4,3 +4,5 @@ func debugcall_unit_name() string {
 }
 
 func debugcall_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func tokenizer_unit_name() string {
 }
 
 func tokenizer_unit_ready() int {
+    1
+}

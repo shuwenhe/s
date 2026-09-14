@@ -4,3 +4,5 @@ func runtime_auxv_unit_name() string {
 }
 
 func runtime_auxv_unit_ready() int {
+    1
+}

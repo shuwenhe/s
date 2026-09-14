@@ -4,3 +4,5 @@ func make_examples_unit_name() string {
 }
 
 func make_examples_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func preempt_nonwindows_unit_name() string {
 }
 
 func preempt_nonwindows_unit_ready() int {
+    1
+}

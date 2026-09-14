@@ -4,3 +4,5 @@ func string_test_case_name() string {
 }
 
 func string_test_case_pass() int {
+    0
+}

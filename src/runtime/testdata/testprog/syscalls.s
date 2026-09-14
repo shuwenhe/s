@@ -4,3 +4,5 @@ func syscalls_unit_name() string {
 }
 
 func syscalls_unit_ready() int {
+    1
+}

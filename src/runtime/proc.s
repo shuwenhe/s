@@ -39,6 +39,7 @@ struct scheduler {
     mu mutex
 }
 scheduler _sched = init_scheduler()
+
 func init_scheduler() scheduler {
     scheduler {
         task:        sroutine[](), ms m[](), ps p[](), global_q int[](), next_sroutine_id 1, next_mid 1, num_p __runtime_num_cpu(), mu new_mutex(),
@@ -211,3 +212,7 @@ func runtime_init() () {
     m0 := m { id: 0, p_id 0, current_sroutine: -1, spinning false }
     _sched.ms = append(_sched.ms, m0)
 }
+
+func proc_unit_name() string { "src/runtime/proc" }
+
+func proc_unit_ready() int   { 1 }

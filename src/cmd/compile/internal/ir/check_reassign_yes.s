@@ -4,3 +4,5 @@ func check_reassign_yes_module_name() string {
 }
 
 func check_reassign_yes_module_apply() int {
+    0
+}

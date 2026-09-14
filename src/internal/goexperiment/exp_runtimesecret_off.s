@@ -4,3 +4,5 @@ func exp_runtimesecret_off_unit_name() string {
 }
 
 func exp_runtimesecret_off_unit_ready() int {
+    1
+}

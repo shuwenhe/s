@@ -1,21 +1,26 @@
 package src.cmd.link.internal.ld
+
 const s_obj_elf = 1
 const s_obj_macho = 2
 const s_obj_pe = 3
 const s_obj_wasm = 4
+
 const s_sym_local = 0
 const s_sym_global = 1
 const s_sym_weak = 2
+
 const s_vis_default = 0
 const s_vis_internal = 1
 const s_vis_hidden = 2
 const s_vis_protected = 3
+
 const s_reloc_abs64 = 1
 const s_reloc_pcrel32 = 2
 const s_reloc_got64 = 3
 const s_reloc_plt32 = 4
 const s_reloc_tls_le64 = 5
 const s_reloc_tls_ie64 = 6
+
 struct s_obj_section {
     string name
     int kind
@@ -306,6 +311,7 @@ func s_dwarf_line_program(s_dwarf_range[] ranges) u8[] {
 }
 
 func s_unwind_cfi(int cfa_register, int cfa_offset) u8[] {
+
     data := u8[] { 0x0c, u8(cfa_register), u8(cfa_offset) }
     data
 }
@@ -318,3 +324,5 @@ func s_unwind_add(s_unwind_entry[] entries, int start, int length, int reg, int 
         cfa_offset: offset,
         instructions: s_unwind_cfi(reg, offset)
     })
+    entries
+}

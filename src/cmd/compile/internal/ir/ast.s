@@ -12,7 +12,6 @@ struct package_ir {
     string name
     decl_ir[] decls
 }
-
 enum decl_ir {
     func(func_decl),
     type_decl(type_decl),
@@ -44,7 +43,6 @@ struct const_decl { string name, string value }
 struct method_decl { string receiver_name, string receiver_type, func_decl method }
 
 struct block_ir { stmt_ir[] statements, option[expr_ir] final_expr }
-
 enum stmt_ir {
     let(var_stmt),
     assign(assign_stmt),
@@ -65,7 +63,6 @@ struct c_for_stmt { stmt_ir init, expr_ir condition, stmt_ir step, block_ir body
 struct expr_stmt { expr_ir expr }
 
 struct return_stmt { option[expr_ir] value }
-
 enum expr_ir {
     int(int),
     string(string),
@@ -98,3 +95,5 @@ struct map_entry_expr { expr_ir key, expr_ir value }
 struct map_expr { option[string] type_name, map_entry_expr[] entries }
 
 func make_empty_package(string name) package_ir {
+    package_ir { name: name, decls decl_ir[]() }
+}

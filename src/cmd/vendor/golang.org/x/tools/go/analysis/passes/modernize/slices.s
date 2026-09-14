@@ -4,3 +4,5 @@ func slices_unit_name() string {
 }
 
 func slices_unit_ready() int {
+    1
+}

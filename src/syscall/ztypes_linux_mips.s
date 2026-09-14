@@ -4,3 +4,5 @@ func ztypes_linux_mips_unit_name() string {
 }
 
 func ztypes_linux_mips_unit_ready() int {
+    1
+}

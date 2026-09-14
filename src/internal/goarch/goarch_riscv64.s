@@ -4,3 +4,5 @@ func goarch_riscv64_unit_name() string {
 }
 
 func goarch_riscv64_unit_ready() int {
+    1
+}

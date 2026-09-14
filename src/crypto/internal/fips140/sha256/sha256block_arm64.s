@@ -4,3 +4,5 @@ func sha256block_arm64_unit_name() string {
 }
 
 func sha256block_arm64_unit_ready() int {
+    1
+}

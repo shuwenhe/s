@@ -4,3 +4,5 @@ func syslist_unit_name() string {
 }
 
 func syslist_unit_ready() int {
+    1
+}

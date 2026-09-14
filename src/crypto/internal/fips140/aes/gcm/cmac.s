@@ -4,3 +4,5 @@ func cmac_unit_name() string {
 }
 
 func cmac_unit_ready() int {
+    1
+}

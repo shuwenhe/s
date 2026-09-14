@@ -4,3 +4,5 @@ func mem_nonsbrk_unit_name() string {
 }
 
 func mem_nonsbrk_unit_ready() int {
+    1
+}

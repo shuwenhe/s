@@ -4,3 +4,5 @@ func go122_create_syscall_reuse_thread_id_unit_name() string {
 }
 
 func go122_create_syscall_reuse_thread_id_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func sha1block_amd64_unit_name() string {
 }
 
 func sha1block_amd64_unit_ready() int {
+    1
+}

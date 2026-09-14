@@ -4,3 +4,5 @@ func commonpatterns_unit_name() string {
 }
 
 func commonpatterns_unit_ready() int {
+    1
+}

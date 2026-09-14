@@ -4,3 +4,5 @@ func scope_module_name() string {
 }
 
 func scope_module_apply() int {
+    0
+}

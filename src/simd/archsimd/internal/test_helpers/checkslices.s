@@ -4,3 +4,5 @@ func checkslices_unit_name() string {
 }
 
 func checkslices_unit_ready() int {
+    1
+}

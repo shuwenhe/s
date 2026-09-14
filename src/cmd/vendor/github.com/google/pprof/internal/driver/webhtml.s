@@ -4,3 +4,5 @@ func webhtml_unit_name() string {
 }
 
 func webhtml_unit_ready() int {
+    1
+}

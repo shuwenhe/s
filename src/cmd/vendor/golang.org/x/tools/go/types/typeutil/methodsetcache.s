@@ -4,3 +4,5 @@ func methodsetcache_unit_name() string {
 }
 
 func methodsetcache_unit_ready() int {
+    1
+}

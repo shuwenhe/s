@@ -4,3 +4,5 @@ func p384_invert_unit_name() string {
 }
 
 func p384_invert_unit_ready() int {
+    1
+}

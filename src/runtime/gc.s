@@ -1,8 +1,10 @@
 package src.runtime
+
 import (
 	"src/sync"
 	"src/unsafe"
 )
+
 enum gc_color {
 	gc_white = 0
 	gc_gray = 1
@@ -50,6 +52,7 @@ var global_heap gc_heap
 var gc_stats_data gc_stats
 var gc_roots u64[]
 var gc_enabled bool
+
 func gc_init() error {
 	global_heap.objects = make(gc_object[], 0)
 	global_heap.gray_queue = make(u64[], 0)
@@ -63,21 +66,26 @@ func gc_init() error {
 func gc_malloc(size u64) (unsafe.pointer, error) {
 	global_heap.lock.lock()
 	defer global_heap.lock.unlock()
+
 	if global_heap.total_alloc > 100*1024*1024 {
 		gc_run()
 	}
+
 	addr := allocate_memory(size)
 	if addr == 0 {
 		nil, "allocation failed"
 	}
+
 	obj := gc_object{
 		addr: addr,
 		size: size,
 		color: gc_white,
 		alloc_tick: get_ticks(),
 	}
+
 	global_heap.objects = append(global_heap.objects, obj)
 	global_heap.total_alloc += size
+
 	unsafe.pointer(addr), nil
 }
 
@@ -85,10 +93,13 @@ func gc_run() {
 	if !gc_enabled {
 		return
 	}
+
 	start := get_time_ns()
+
 	gc_mark_phase()
 	gc_mark_termination_phase()
 	gc_sweep_phase()
+
 	end := get_time_ns()
 	gc_stats_data.pause_ns = append(gc_stats_data.pause_ns, end-start)
 	gc_stats_data.num_collections += 1
@@ -96,9 +107,11 @@ func gc_run() {
 
 func gc_mark_phase() {
 	global_heap.gc_phase = gc_mark
+
 	for _, root := range gc_roots {
 		gc_mark_object(root)
 	}
+
 	for len(global_heap.gray_queue) > 0 {
 		obj_addr := global_heap.gray_queue[0]
 		global_heap.gray_queue = global_heap.gray_queue[1:]
@@ -110,6 +123,7 @@ func gc_mark_object(addr u64) {
 	if addr == 0 {
 		return
 	}
+
 	for i := i32(0); i < i32(len(global_heap.objects)); i += 1 {
 		if global_heap.objects[i].addr == addr {
 			if global_heap.objects[i].color == gc_white {
@@ -126,6 +140,7 @@ func gc_process_object(addr u64) {
 		if global_heap.objects[i].addr == addr {
 			if global_heap.objects[i].color == gc_gray {
 				global_heap.objects[i].color = gc_black
+
 				ptr := unsafe.pointer(addr)
 				scan_object_for_pointers(ptr, global_heap.objects[i].size)
 			}
@@ -146,6 +161,7 @@ func scan_object_for_pointers(obj unsafe.pointer, size u64) {
 
 func gc_mark_termination_phase() {
 	global_heap.gc_phase = gc_mark_termination
+
 	for len(global_heap.gray_queue) > 0 {
 		obj_addr := global_heap.gray_queue[0]
 		global_heap.gray_queue = global_heap.gray_queue[1:]
@@ -155,10 +171,13 @@ func gc_mark_termination_phase() {
 
 func gc_sweep_phase() {
 	global_heap.gc_phase = gc_sweep
+
 	live_count := 0
 	new_objects := make(gc_object[], 0)
+
 	for i := i32(0); i < i32(len(global_heap.objects)); i += 1 {
 		obj := global_heap.objects[i]
+
 		if obj.color == gc_black {
 			obj.color = gc_white
 			new_objects = append(new_objects, obj)
@@ -168,6 +187,7 @@ func gc_sweep_phase() {
 			free_memory(obj.addr, obj.size)
 		}
 	}
+
 	global_heap.objects = new_objects
 	gc_stats_data.live_objects = i32(live_count)
 	gc_stats_data.heap_size = global_heap.total_alloc - global_heap.total_freed
@@ -181,7 +201,9 @@ func gc_write_barrier(src u64, dst u64) {
 	if !gc_enabled || global_heap.gc_phase != gc_mark {
 		return
 	}
+
 	global_heap.barrier_buf = append(global_heap.barrier_buf, dst)
+
 	if len(global_heap.barrier_buf) > 1024 {
 		for _, obj_addr := range global_heap.barrier_buf {
 			gc_mark_object(obj_addr)
@@ -218,3 +240,5 @@ func get_ticks() u64 {
 }
 
 func get_time_ns() i64 {
+	return 0
+}

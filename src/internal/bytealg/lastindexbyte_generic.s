@@ -4,3 +4,5 @@ func lastindexbyte_generic_unit_name() string {
 }
 
 func lastindexbyte_generic_unit_ready() int {
+    1
+}

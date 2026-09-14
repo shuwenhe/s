@@ -4,3 +4,5 @@ func tcpsockopt_plan9_unit_name() string {
 }
 
 func tcpsockopt_plan9_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func writesched_priority_rfc9218_test_unit_name() string {
 }
 
 func writesched_priority_rfc9218_test_unit_ready() int {
+    1
+}

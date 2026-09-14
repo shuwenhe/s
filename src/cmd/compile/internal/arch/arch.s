@@ -140,3 +140,5 @@ func wasm_init() string {
 }
 
 func not_wired(string arch) string {
+    return "architecture \"" + arch + "\" is recognized but not wired to backend yet"
+}

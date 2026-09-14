@@ -102,3 +102,5 @@ func (gen* direct_code_generator) emit_add_i64(int lhs_reg, int rhs_reg, int res
 }
 
 func (gen* direct_code_generator) get_asm() string {
+    gen.generate_asm()
+}

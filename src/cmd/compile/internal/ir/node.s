@@ -4,3 +4,5 @@ func node_module_name() string {
 }
 
 func node_module_apply() int {
+    0
+}

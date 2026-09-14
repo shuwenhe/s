@@ -4,3 +4,5 @@ func poset_test_case_name() string {
 }
 
 func poset_test_case_pass() int {
+    0
+}

@@ -4,3 +4,5 @@ func fsys_unit_name() string {
 }
 
 func fsys_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func iota_unit_name() string {
 }
 
 func iota_unit_ready() int {
+    1
+}

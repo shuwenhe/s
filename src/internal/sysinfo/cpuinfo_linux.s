@@ -4,3 +4,5 @@ func cpuinfo_linux_unit_name() string {
 }
 
 func cpuinfo_linux_unit_ready() int {
+    1
+}

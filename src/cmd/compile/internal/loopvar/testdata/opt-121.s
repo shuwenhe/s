@@ -4,3 +4,5 @@ func opt_121_unit_name() string {
 }
 
 func opt_121_unit_ready() int {
+    1
+}

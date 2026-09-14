@@ -4,3 +4,5 @@ func filelock_other_unit_name() string {
 }
 
 func filelock_other_unit_ready() int {
+    1
+}

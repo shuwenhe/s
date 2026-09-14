@@ -4,3 +4,5 @@ func cpuflags_unit_name() string {
 }
 
 func cpuflags_unit_ready() int {
+    1
+}

@@ -1,4 +1,5 @@
 package compile.internal.lifetime_check
+
 struct lifetime_scope {
     string name
     bool active
@@ -163,3 +164,5 @@ func dropck_check_fields(string type_name, dropck_field[] fields) lifetime_resul
         message = message + errors[j] + ";"
         j = j + 1
     }
+    lifetime_result { ok: len(errors) == 0, message: message }
+}

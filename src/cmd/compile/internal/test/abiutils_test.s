@@ -4,3 +4,5 @@ func abiutils_test_case_name() string {
 }
 
 func abiutils_test_case_pass() int {
+    0
+}

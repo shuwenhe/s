@@ -4,3 +4,5 @@ func xor_linux_test_unit_name() string {
 }
 
 func xor_linux_test_unit_ready() int {
+    1
+}

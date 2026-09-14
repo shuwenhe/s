@@ -63,3 +63,5 @@ func sparse_tree_is_ancestor_eq(sparse_tree t, int x, int y) bool {
     if x == y {
         return true
     }
+    t.nodes[x].entry <= t.nodes[y].entry && t.nodes[y].exit <= t.nodes[x].exit
+}

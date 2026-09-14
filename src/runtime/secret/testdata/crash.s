@@ -4,3 +4,5 @@ func crash_unit_name() string {
 }
 
 func crash_unit_ready() int {
+    1
+}

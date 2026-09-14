@@ -4,3 +4,5 @@ func itoa_test_unit_name() string {
 }
 
 func itoa_test_unit_ready() int {
+    1
+}

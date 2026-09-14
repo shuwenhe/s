@@ -4,3 +4,5 @@ func sha512block_s390x_unit_name() string {
 }
 
 func sha512block_s390x_unit_ready() int {
+    1
+}

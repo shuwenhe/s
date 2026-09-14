@@ -4,3 +4,5 @@ func structof_funcof_unit_name() string {
 }
 
 func structof_funcof_unit_ready() int {
+    1
+}

@@ -12,3 +12,5 @@ func (http_server* s) handle_func(string path, func(http_request, http_response)
 }
 
 func (http_server* s) listen_and_serve() {
+    print("[http] listen on " + s.addr)
+}

@@ -4,3 +4,5 @@ func dump_module_name() string {
 }
 
 func dump_module_apply() int {
+    0
+}

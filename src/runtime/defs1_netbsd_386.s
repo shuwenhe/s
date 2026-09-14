@@ -4,3 +4,5 @@ func defs1_netbsd_386_unit_name() string {
 }
 
 func defs1_netbsd_386_unit_ready() int {
+    1
+}

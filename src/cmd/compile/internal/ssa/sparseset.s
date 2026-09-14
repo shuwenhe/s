@@ -73,3 +73,5 @@ func sparse_set_pop(sparse_set s) int_pair {
 
 func sparse_set_clear(sparse_set s) sparse_set {
     s.dense = int[]()
+    s
+}

@@ -4,3 +4,5 @@ func aead_unit_name() string {
 }
 
 func aead_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func timeprof_unit_name() string {
 }
 
 func timeprof_unit_ready() int {
+    1
+}

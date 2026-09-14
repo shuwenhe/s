@@ -4,3 +4,5 @@ func framepointer_unit_name() string {
 }
 
 func framepointer_unit_ready() int {
+    1
+}

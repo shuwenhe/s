@@ -4,3 +4,5 @@ func putvarabbrevgen_unit_name() string {
 }
 
 func putvarabbrevgen_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func filetransport_unit_name() string {
 }
 
 func filetransport_unit_ready() int {
+    1
+}

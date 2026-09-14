@@ -4,3 +4,5 @@ func shift_test_case_name() string {
 }
 
 func shift_test_case_pass() int {
+    0
+}

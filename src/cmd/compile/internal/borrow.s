@@ -131,6 +131,7 @@ func ownership_check_events(string[] events) ownership_check_result {
         }
         kind := slice(event, 0, first)
         payload := ownership_event_payload(event, first)
+
         if kind == "declare" {
             second := ownership_next_colon(payload, 0)
             if second <= 0 {
@@ -155,6 +156,7 @@ func ownership_check_events(string[] events) ownership_check_result {
             i = i + 1
             continue
         }
+
         slot_id := ownership_find_slot(slots, payload)
         if slot_id < 0 {
             errors = errors + 1
@@ -434,3 +436,5 @@ func lifetime_check_events(string[] events) lifetime_check_result {
         }
         i = i + 1
     }
+    lifetime_check_result { ok: errors == 0, errors: errors, message: message }
+}

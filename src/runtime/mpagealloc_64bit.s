@@ -4,3 +4,5 @@ func mpagealloc_64bit_unit_name() string {
 }
 
 func mpagealloc_64bit_unit_ready() int {
+    1
+}

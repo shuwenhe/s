@@ -4,3 +4,5 @@ func loader_unit_name() string {
 }
 
 func loader_unit_ready() int {
+    1
+}

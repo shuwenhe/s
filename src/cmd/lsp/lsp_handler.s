@@ -207,3 +207,5 @@ func format_symbol_kind(kind symbol_kind) string {
 
 func format_hover_contents(symbol document_symbol) string {
     kind_str := format_symbol_kind(symbol.kind)
+    "**" + kind_str + "** `" + symbol.name + "`"
+}

@@ -318,3 +318,5 @@ func least_alignment(int off) int {
         align = align * 2
         v = v / 2
     }
+    align
+}
