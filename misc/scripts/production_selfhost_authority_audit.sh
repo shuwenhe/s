@@ -6,6 +6,7 @@ report=${1:?usage: production_selfhost_authority_audit.sh REPORT CLOSURE BOOTSTR
 closure=${2:?usage: production_selfhost_authority_audit.sh REPORT CLOSURE BOOTSTRAP_REPORT}
 bootstrap_report=${3:?usage: production_selfhost_authority_audit.sh REPORT CLOSURE BOOTSTRAP_REPORT}
 parser_report=${4:-}
+source_report=${5:-}
 entry=src/cmd/compile/modular_build_main.s
 
 status_for() {
@@ -62,7 +63,7 @@ parser_status() {
 }
 
 {
-    echo "Bootstrap Phase 1"
+    echo "Bootstrap Phase 1 - Artifact Ladder"
     echo "================="
     if [ -x "$root/.bootstrap/modular/s_stage0" ]; then
         echo "explicit-c-stage0=PASS"
@@ -91,7 +92,19 @@ parser_status() {
     else
         echo "hello-native-e2e=NOT_RUN"
     fi
-    echo "bootstrap-ladder=PASS"
+    echo "artifact-ladder=PASS"
+    echo "canonical-source-compilation=NOT_PROVEN"
+    echo "production-compiler-bootstrap=NOT_PROVEN"
+    echo
+    echo "Bootstrap Phase 1.5 - Source-Dependent Subset Execution"
+    if [ -n "$source_report" ] && [ -f "$source_report" ] &&
+       grep -qx 'bootstrap-subset-source-execution=PASS' "$source_report"; then
+        echo "bootstrap-subset-source-execution=PASS"
+        echo "bootstrap-subset-proof-report=$source_report"
+    else
+        echo "bootstrap-subset-source-execution=NOT_PROVEN"
+    fi
+    echo "canonical-source-compilation=NOT_PROVEN"
     echo
     echo "Bootstrap Phase 2"
     echo "================="

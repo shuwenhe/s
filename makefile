@@ -30,6 +30,8 @@ PRODUCTION_AUTHORITY_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/production-authority-rep
 
 PARSER_AUTHORITY_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/parser-authority-report.txt
 
+PARSER_EXECUTION_PATH_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/parser-execution-path-report.txt
+
 MODULAR_BOOTSTRAP_COMPAT_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-compat-audit.txt
 
 MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-stage-discovery.txt
@@ -2141,6 +2143,9 @@ modular-bootstrap: stage0-build stage0-closure-check
 	@cp "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_BIN)"
 	@chmod +x "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_BIN)"
 	@echo "status=bootstrap-ok" >>"$(MODULAR_BOOTSTRAP_REPORT)"
+	@echo "explicit-bootstrap-root=ESTABLISHED" >>"$(MODULAR_BOOTSTRAP_REPORT)"
+	@echo "canonical-source-compilation=NOT_PROVEN" >>"$(MODULAR_BOOTSTRAP_REPORT)"
+	@echo "production-compiler-bootstrap=NOT_PROVEN" >>"$(MODULAR_BOOTSTRAP_REPORT)"
 
 .PHONY: stage0-build
 stage0-build:
@@ -2166,14 +2171,14 @@ stage0-freeze-check: stage0-build
 
 .PHONY: modular-selfhost-check
 modular-selfhost-check: modular-bootstrap
-	@echo "Checking stage1 -> stage2 and stage2 -> hello..."
-	@"$(MODULAR_STAGE1_BIN)" build src/cmd/compile/modular_build_main.s -o "$(MODULAR_STAGE2_BIN)"
+	@echo "Checking artifact/template ladder only..."
+	@"$(MODULAR_STAGE1_BIN)" --emit-artifact-stage2 src/cmd/compile/modular_build_main.s -o "$(MODULAR_STAGE2_BIN)"
 	@test -x "$(MODULAR_STAGE2_BIN)"
 	@"$(MODULAR_STAGE2_BIN)" build test/cli/hello.s -o "$(MODULAR_BOOTSTRAP_DIR)/hello"
 	@test -x "$(MODULAR_BOOTSTRAP_DIR)/hello"
 	@"$(MODULAR_BOOTSTRAP_DIR)/hello" >"$(MODULAR_BOOTSTRAP_DIR)/hello.out"
 	@grep -qx "hello from S" "$(MODULAR_BOOTSTRAP_DIR)/hello.out"
-	@echo "Modular selfhost check passed"
+	@echo "artifact-ladder=PASS; canonical-source-compilation=NOT_PROVEN; production-compiler-bootstrap=NOT_PROVEN"
 
 .PHONY: parser-authority-check
 parser-authority-check: modular-bootstrap stage0-freeze-check
@@ -2182,12 +2187,33 @@ parser-authority-check: modular-bootstrap stage0-freeze-check
 	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/parser_authority_check.sh \
 	  "$(MODULAR_STAGE1_BIN)" "$(PARSER_AUTHORITY_REPORT)"
 
+.PHONY: parser-execution-path-check
+parser-execution-path-check: modular-bootstrap
+	@echo "Tracing parser execution path..."
+	@chmod +x misc/scripts/parser_execution_path_check.sh
+	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/parser_execution_path_check.sh \
+	  "$(MODULAR_STAGE1_BIN)" "$(PARSER_EXECUTION_PATH_REPORT)"
+
+.PHONY: parser-carry-capability-check
+parser-carry-capability-check: modular-bootstrap stage0-freeze-check
+	@S_SOURCE_ROOT=$(CURDIR) sh misc/scripts/parser_carry_capability_check.sh \
+	  "$(MODULAR_STAGE1_BIN)" "$(STAGE0_CLOSURE)" "$(MODULAR_BOOTSTRAP_DIR)/parser-carry-capability-report.txt"
+
+.PHONY: stage1-source-execution-check
+stage1-source-execution-check: modular-bootstrap stage0-freeze-check
+	@sh misc/scripts/stage1_source_execution_check.sh "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_DIR)"
+
 .PHONY: production-selfhost-check
-production-selfhost-check: modular-selfhost-check parser-authority-check
+.PHONY: canonical-bootstrap-capability-check
+canonical-bootstrap-capability-check: stage1-source-execution-check
+	@S_SOURCE_ROOT=$(CURDIR) sh misc/scripts/canonical_bootstrap_capability_check.sh \
+	  "$(MODULAR_STAGE1_BIN)" "$(STAGE0_CLOSURE)" "$(MODULAR_BOOTSTRAP_DIR)"
+
+production-selfhost-check: modular-selfhost-check stage1-source-execution-check parser-execution-path-check parser-authority-check
 	@echo "Auditing production compiler authority..."
 	@chmod +x misc/scripts/production_selfhost_authority_audit.sh
 	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/production_selfhost_authority_audit.sh \
-	  "$(PRODUCTION_AUTHORITY_REPORT)" "$(STAGE0_CLOSURE)" "$(MODULAR_BOOTSTRAP_REPORT)" "$(PARSER_AUTHORITY_REPORT)"
+	  "$(PRODUCTION_AUTHORITY_REPORT)" "$(STAGE0_CLOSURE)" "$(MODULAR_BOOTSTRAP_REPORT)" "$(PARSER_AUTHORITY_REPORT)" "$(MODULAR_BOOTSTRAP_DIR)/stage1-source-execution-report.txt"
 	@grep -qx "production-authority=NOT_YET_PROVEN" "$(PRODUCTION_AUTHORITY_REPORT)"
 
 .PHONY: modular-bootstrap-check

@@ -108,18 +108,18 @@ func macho_builder_new() macho_builder* {
     return &builder
 }
 
-func (b* macho_builder) set_arch(string arch) {
+func (macho_builder* b) set_arch(string arch) {
     b.arch = arch
 }
 
-func (b* macho_builder) add_code(string asm) {
+func (macho_builder* b) add_code(string asm) {
     if b.code_offset < len(b.code_text) {
         b.code_text[b.code_offset] = asm
         b.code_offset = b.code_offset + 1
     }
 }
 
-func (b* macho_builder) add_function_arm64(string name, string body) {
+func (macho_builder* b) add_function_arm64(string name, string body) {
 
     func_asm := ".globl _" + name + "\n"
     func_asm = func_asm + "_" + name + ":\n"
@@ -130,7 +130,7 @@ func (b* macho_builder) add_function_arm64(string name, string body) {
     b.add_code(func_asm)
 }
 
-func (b* macho_builder) add_function_x86_64(string name, string body) {
+func (macho_builder* b) add_function_x86_64(string name, string body) {
 
     func_asm := ".globl _" + name + "\n"
     func_asm = func_asm + "_" + name + ":\n"
@@ -142,7 +142,7 @@ func (b* macho_builder) add_function_x86_64(string name, string body) {
     b.add_code(func_asm)
 }
 
-func (b* macho_builder) add_symbol(string name) int {
+func (macho_builder* b) add_symbol(string name) int {
     if b.symbol_count < len(b.symbols) {
         b.symbols[b.symbol_count] = name
         ret := b.symbol_count
@@ -190,7 +190,7 @@ func chr(int b) string {
     return chars[b:b+1]
 }
 
-func (b* macho_builder) pad_string(string s, int len) string {
+func (macho_builder* b) pad_string(string s, int len) string {
 
     current_len := len(s)
     if current_len >= len { return s }
@@ -204,7 +204,7 @@ func (b* macho_builder) pad_string(string s, int len) string {
     return s + pad
 }
 
-func (b* macho_builder) write_mach_header(string arch) string {
+func (macho_builder* b) write_mach_header(string arch) string {
 
     header := ""
 
@@ -231,21 +231,21 @@ func (b* macho_builder) write_mach_header(string arch) string {
     return header
 }
 
-func (b* macho_builder) generate_arm64_binary() string {
+func (macho_builder* b) generate_arm64_binary() string {
 
     binary := b.write_mach_header("arm64")
 
     return binary
 }
 
-func (b* macho_builder) generate_x86_64_binary() string {
+func (macho_builder* b) generate_x86_64_binary() string {
 
     binary := b.write_mach_header("x86_64")
 
     return binary
 }
 
-func (b* macho_builder) generate_macho() string {
+func (macho_builder* b) generate_macho() string {
     if b.arch == "arm64" {
         return b.generate_arm64_binary()
     } else if b.arch == "x86_64" {

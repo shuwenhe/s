@@ -42,15 +42,15 @@ func run_monomorphization_test() int {
     if int_instance.sig.name == box_instance.sig.name {
         return 1
     }
-    if int_instance.sig.params[0].type_name != "int" || int_instance.sig.return_type.unwrap() != "int" {
+    if int_instance.sig.params[0].kindname != "int" || int_instance.sig.return_type.unwrap() != "int" {
         return 1
     }
-    if box_instance.sig.params[0].type_name != "box[int]" || box_instance.sig.return_type.unwrap() != "box[int]" {
+    if box_instance.sig.params[0].kindname != "box[int]" || box_instance.sig.return_type.unwrap() != "box[int]" {
         return 1
     }
     nested_args := string[] { "string[]" }
     nested := compile.internal.mono.specialize_function(generic, nested_args)
-    if nested.sig.params[0].type_name != "string[]" || nested.sig.return_type.unwrap() != "string[]" {
+    if nested.sig.params[0].kindname != "string[]" || nested.sig.return_type.unwrap() != "string[]" {
         return 1
     }
     if compile.internal.mono.substitute_type("box[T[]]", string[] { "T" }, string[] { "int" }) != "box[int[]]" {

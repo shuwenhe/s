@@ -26,7 +26,7 @@ func classify_safety_error(semantic_error diagnostic, safety_proof* proof) () {
     } else if code == "e3060" || code == "e3061" {
         proof.unsafe_errors = proof.unsafe_errors + 1
     } else {
-        proof.type_errors = proof.type_errors + 1
+        proof.kinderrors = proof.kinderrors + 1
     }
 }
 
@@ -47,7 +47,7 @@ func prove_safety(string source) safety_proof {
         classify_safety_error(diagnostics[i], &proof)
         i = i + 1
     }
-    proof.summary = "safety-proof type=" + (proof.type_errors as string)
+    proof.summary = "safety-proof type=" + (proof.kinderrors as string)
         + " ownership=" + (proof.ownership_errors as string)
         + " borrow=" + (proof.borrow_errors as string)
         + " lifetime=" + (proof.lifetime_errors as string)

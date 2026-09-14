@@ -89,7 +89,7 @@ func new_empty_function(string name) ir_function {
     }
 }
 
-func (ir_function* f) build_cfg() {
+func (f* ir_function) build_cfg() {
     n := f.blocks.len()
     for i := 0; i < n; i++ {
         block := f.cfg.add_block(f.blocks[i].id, f.blocks[i].label)
@@ -112,7 +112,7 @@ func (ir_function* f) build_cfg() {
     f.cfg_computed = true
 }
 
-func (ir_function* f) compute_dominators() {
+func (f* ir_function) compute_dominators() {
     if !f.cfg_computed {
         f.build_cfg()
     }
@@ -124,7 +124,7 @@ func (ir_function* f) compute_dominators() {
     f.dominators_computed = true
 }
 
-func (ir_function* f) detect_loops() {
+func (f* ir_function) detect_loops() {
     if !f.cfg_computed {
         f.build_cfg()
     }
@@ -133,7 +133,7 @@ func (ir_function* f) detect_loops() {
     f.cfg.compute_loop_depths()
 }
 
-func (ir_function* f) build_ssa() {
+func (f* ir_function) build_ssa() {
     if !f.cfg_computed {
         f.build_cfg()
     }
@@ -174,7 +174,7 @@ func (ir_function* f) build_ssa() {
     f.ssa_computed = true
 }
 
-func (ir_function* f) insert_phi_nodes() {
+func (f* ir_function) insert_phi_nodes() {
     if !f.dominators_computed {
         f.compute_dominators()
     }
@@ -185,19 +185,19 @@ func (ir_function* f) insert_phi_nodes() {
     }
 }
 
-func (ir_function* f) rename_ssa_variables() {
+func (f* ir_function) rename_ssa_variables() {
     f.ssa.rename_variables()
 }
 
-func (ir_function* f) analyze_escapes() {
+func (f* ir_function) analyze_escapes() {
     n := f.locals.len()
     f.escape_analysis = escape.new_escape_analysis()
 
     for i := 0; i < n; i++ {
         local := f.locals[i]
         is_pointer := false
-        if local.type_name != option::none {
-            is_pointer = compile.internal.typesys.is_heap_reference_type(local.type_name.unwrap())
+        if local.kindname != option::none {
+            is_pointer = compile.internal.typesys.is_heap_reference_type(local.kindname.unwrap())
         }
 
         _ = f.escape_analysis.analyze_variable(local.id, is_pointer, false, false, false)
@@ -206,7 +206,7 @@ func (ir_function* f) analyze_escapes() {
     f.escape_computed = true
 }
 
-func (ir_function* f) analyze_liveness() {
+func (f* ir_function) analyze_liveness() {
     n := f.cfg.blocks.len()
     f.liveness_analysis = liveness.new_liveness_analysis(n)
 
@@ -239,7 +239,7 @@ func (ir_function* f) analyze_liveness() {
     f.liveness_computed = true
 }
 
-func (ir_function* f) analyze_write_barriers() {
+func (f* ir_function) analyze_write_barriers() {
     n := f.locals.len()
     f.write_barriers = writebarrier.new_write_barrier_analysis(n)
 
@@ -250,8 +250,8 @@ func (ir_function* f) analyze_write_barriers() {
                 mir_statement::assign(a): {
                     if a.op == "store" && a.args.len() > 0 {
                         target_type := "value"
-                        if a.target >= 0 && a.target < len(f.locals) && f.locals[a.target].type_name != option::none {
-                            if compile.internal.typesys.is_explicit_owned_type(f.locals[a.target].type_name.unwrap()) {
+                        if a.target >= 0 && a.target < len(f.locals) && f.locals[a.target].kindname != option::none {
+                            if compile.internal.typesys.is_explicit_owned_type(f.locals[a.target].kindname.unwrap()) {
                                 target_type = "pointer"
                             }
                         }
@@ -266,11 +266,11 @@ func (ir_function* f) analyze_write_barriers() {
     f.barriers_computed = true
 }
 
-func (ir_function* f) add_debug_location(int instr_id, debug_loc.source_location loc) {
+func (f* ir_function) add_debug_location(int instr_id, debug_loc.source_location loc) {
     f.debug_info.set_instr_location(instr_id, loc)
 }
 
-func (ir_function* f) run_all_analyses() {
+func (f* ir_function) run_all_analyses() {
     f.build_cfg()
     f.compute_dominators()
     f.detect_loops()
@@ -282,41 +282,41 @@ func (ir_function* f) run_all_analyses() {
     f.analyze_write_barriers()
 }
 
-func (ir_function* f) get_cfg() cfg.control_flow_graph {
+func (f* ir_function) get_cfg() cfg.control_flow_graph {
     if !f.cfg_computed {
         f.build_cfg()
     }
     f.cfg
 }
 
-func (ir_function* f) get_ssa() ssa.static_single_assignment {
+func (f* ir_function) get_ssa() ssa.static_single_assignment {
     if !f.ssa_computed {
         f.build_ssa()
     }
     f.ssa
 }
 
-func (ir_function* f) get_escape_analysis() escape.escape_analysis {
+func (f* ir_function) get_escape_analysis() escape.escape_analysis {
     if !f.escape_computed {
         f.analyze_escapes()
     }
     f.escape_analysis
 }
 
-func (ir_function* f) get_liveness_analysis() liveness.liveness_analysis {
+func (f* ir_function) get_liveness_analysis() liveness.liveness_analysis {
     if !f.liveness_computed {
         f.analyze_liveness()
     }
     f.liveness_analysis
 }
 
-func (ir_function* f) get_write_barriers() writebarrier.write_barrier_analysis {
+func (f* ir_function) get_write_barriers() writebarrier.write_barrier_analysis {
     if !f.barriers_computed {
         f.analyze_write_barriers()
     }
     f.write_barriers
 }
 
-func (ir_function* f) get_debug_info() debug_loc.debug_info {
+func (f* ir_function) get_debug_info() debug_loc.debug_info {
     f.debug_info
 }

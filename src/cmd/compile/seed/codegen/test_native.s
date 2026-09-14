@@ -14,7 +14,7 @@ struct test_suite {
     int failed_count
 }
 
-func (suite* test_suite) add_result(string name, bool passed, string message) {
+func (est_suite* suite) add_result(string name, bool passed, string message) {
     test_result result = {
         name: name, passed passed, message message,
     }
@@ -26,7 +26,7 @@ func (suite* test_suite) add_result(string name, bool passed, string message) {
     }
 }
 
-func (suite* test_suite) print_summary() {
+func (est_suite* suite) print_summary() {
     int total = suite.passed_count + suite.failed_count
     string status = "PASS"
     if suite.failed_count > 0 {

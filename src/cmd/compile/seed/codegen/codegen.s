@@ -50,36 +50,36 @@ func codegen_context_create(string prog_name) codegen_context {
     ctx
 }
 
-func (ctx* codegen_context) gen_label() string {
+func (codegen_context* ctx) gen_label() string {
     label_id := ctx.next_label_id
     ctx.next_label_id = ctx.next_label_id + 1
     ".L" + label_id as string
 }
 
-func (ctx* codegen_context) emit_line( line string) {
+func (codegen_context* ctx) emit_line( line string) {
     ctx.assembly_lines.push(line)
 }
 
-func (ctx* codegen_context) emit_comment( text string) {
+func (codegen_context* ctx) emit_comment( text string) {
     ctx.emit_line("# " + text)
 }
 
-func (ctx* codegen_context) emit_label( label string) {
+func (codegen_context* ctx) emit_label( label string) {
     ctx.emit_line(label + ":")
 }
 
-func (ctx* codegen_context) emit_directive( directive string) {
+func (codegen_context* ctx) emit_directive( directive string) {
     ctx.emit_line("." + directive)
 }
 
-func codegen_emit_preamble(ctx* codegen_context) {
+func codegen_emit_preamble(codegen_context* ctx) {
     ctx.emit_comment("Generated assembly for " + ctx.program_name)
     ctx.emit_directive("text")
     ctx.emit_directive("globl main")
     ctx.emit_line("")
 }
 
-func codegen_emit_function_prologue(ctx* codegen_context, string fn_name, int param_count) {
+func codegen_emit_function_prologue(codegen_context* ctx, string fn_name, int param_count) {
     ctx.emit_label(fn_name)
     ctx.emit_line("    push %rbp")
     ctx.emit_line("    mov %rsp, %rbp")
@@ -89,62 +89,62 @@ func codegen_emit_function_prologue(ctx* codegen_context, string fn_name, int pa
     }
 }
 
-func codegen_emit_function_epilogue(ctx* codegen_context) {
+func codegen_emit_function_epilogue(codegen_context* ctx) {
     ctx.emit_line("    leave")
     ctx.emit_line("    ret")
 }
 
-func codegen_emit_mov_reg_imm(ctx* codegen_context, string reg, int imm) {
+func codegen_emit_mov_reg_imm(codegen_context* ctx, string reg, int imm) {
     ctx.emit_line("    mov $" + imm as string + ", %" + reg)
 }
 
-func codegen_emit_mov_reg_reg(ctx* codegen_context, string dst, string src) {
+func codegen_emit_mov_reg_reg(codegen_context* ctx, string dst, string src) {
     ctx.emit_line("    mov %" + src + ", %" + dst)
 }
 
-func codegen_emit_add_reg_reg(ctx* codegen_context, string dst, string src) {
+func codegen_emit_add_reg_reg(codegen_context* ctx, string dst, string src) {
     ctx.emit_line("    add %" + src + ", %" + dst)
 }
 
-func codegen_emit_sub_reg_reg(ctx* codegen_context, string dst, string src) {
+func codegen_emit_sub_reg_reg(codegen_context* ctx, string dst, string src) {
     ctx.emit_line("    sub %" + src + ", %" + dst)
 }
 
-func codegen_emit_mul_reg_reg(ctx* codegen_context, string dst, string src) {
+func codegen_emit_mul_reg_reg(codegen_context* ctx, string dst, string src) {
     ctx.emit_line("    imul %" + src + ", %" + dst)
 }
 
-func codegen_emit_cmp_reg_reg(ctx* codegen_context, string dst, string src) {
+func codegen_emit_cmp_reg_reg(codegen_context* ctx, string dst, string src) {
     ctx.emit_line("    cmp %" + src + ", %" + dst)
 }
 
-func codegen_emit_jmp(ctx* codegen_context, string label) {
+func codegen_emit_jmp(codegen_context* ctx, string label) {
     ctx.emit_line("    jmp " + label)
 }
 
-func codegen_emit_jne(ctx* codegen_context, string label) {
+func codegen_emit_jne(codegen_context* ctx, string label) {
     ctx.emit_line("    jne " + label)
 }
 
-func codegen_emit_je(ctx* codegen_context, string label) {
+func codegen_emit_je(codegen_context* ctx, string label) {
     ctx.emit_line("    je " + label)
 }
 
-func codegen_emit_call(ctx* codegen_context, string fn_name) {
+func codegen_emit_call(codegen_context* ctx, string fn_name) {
     ctx.emit_line("    call " + fn_name)
 }
 
-func codegen_emit_ret_reg(ctx* codegen_context, string reg) {
+func codegen_emit_ret_reg(codegen_context* ctx, string reg) {
     ctx.emit_line("    mov %" + reg + ", %rax")
     ctx.emit_line("    leave")
     ctx.emit_line("    ret")
 }
 
-func codegen_get_assembly(ctx* codegen_context) string[] {
+func codegen_get_assembly(codegen_context* ctx) string[] {
     ctx.assembly_lines
 }
 
-func codegen_write_to_file(ctx* codegen_context, string output_file) (int, string) {
+func codegen_write_to_file(codegen_context* ctx, string output_file) (int, string) {
     f := file_create(output_file)
     if f.is_error {
         return -1, "Failed to create file: " + output_file

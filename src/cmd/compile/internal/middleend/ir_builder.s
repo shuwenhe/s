@@ -218,7 +218,7 @@ func ir_builder_visit_var_decl(ir_builder_context* ctx, var_node* frontend.ast_n
 
     alloca := ir_instr_alloca()
     alloca.result.var_name = var_name
-    alloca.result.type_info = var_type
+    alloca.result.kindinfo = var_type
 
     ctx.current_block.add_instr(alloca)
 }

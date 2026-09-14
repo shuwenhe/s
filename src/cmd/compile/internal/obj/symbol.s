@@ -37,7 +37,7 @@ func make_symbol_table() symbol_table {
     }
 }
 
-func (symbol_table* st) add_symbol(string name, symbol_bind bind, symbol_type type, int64 value, int64 size, int section_idx) int {
+func (st* symbol_table) add_symbol(string name, symbol_bind bind, symbol_type type, int64 value, int64 size, int section_idx) int {
     entry := symbol_entry {
         name: name, bind bind, type type, value value, size size, section_index section_idx, defined true,
     }
@@ -46,7 +46,7 @@ func (symbol_table* st) add_symbol(string name, symbol_bind bind, symbol_type ty
     len(st.entries) - 1
 }
 
-func (symbol_table* st) lookup_symbol(string name) (symbol_entry*, bool) {
+func (st* symbol_table) lookup_symbol(string name) (symbol_entry*, bool) {
     i := 0
     for i < len(st.names) {
         if st.names[i] == name {
@@ -57,7 +57,7 @@ func (symbol_table* st) lookup_symbol(string name) (symbol_entry*, bool) {
     nil, false
 }
 
-func (symbol_table* st) get_symbol_index(string name) (int, bool) {
+func (st* symbol_table) get_symbol_index(string name) (int, bool) {
     i := 0
     for i < len(st.names) {
         if st.names[i] == name {
@@ -68,11 +68,11 @@ func (symbol_table* st) get_symbol_index(string name) (int, bool) {
     0, false
 }
 
-func (symbol_table* st) count_symbols() int {
+func (st* symbol_table) count_symbols() int {
     len(st.entries)
 }
 
-func (symbol_table* st) get_string_table_size() int64 {
+func (st* symbol_table) get_string_table_size() int64 {
     total := 0 as int64
     i := 0
     for i < len(st.names) {
@@ -102,13 +102,13 @@ func symbol_type_value(symbol_type t) int8 {
     0 as int8
 }
 
-func (symbol_entry* se) encode_info() int8 {
+func (se* symbol_entry) encode_info() int8 {
     bind := symbol_bind_value(se.bind)
     type_val := symbol_type_value(se.type)
     ((bind << 4) + type_val) as int8
 }
 
-func (symbol_table* st) dump() string {
+func (st* symbol_table) dump() string {
     result := "Symbol Table:\n"
     i := 0
     for i < len(st.entries) {
@@ -119,7 +119,7 @@ func (symbol_table* st) dump() string {
     result
 }
 
-func (symbol_table* st) encode_elf_symbols() elf_symbol[] {
+func (st* symbol_table) encode_elf_symbols() elf_symbol[] {
     result := elf_symbol[]()()
     null_sym := elf_symbol {
         name: 0 as int32, info 0 as int8, other 0 as int8, shndx 0 as int16, value 0 as int64, size 0 as int64,

@@ -324,7 +324,7 @@ func dump_const(const_decl item) string[] {
 
 func dump_var(var_decl item) string[] {
     decl := "var " + item.name
-    switch item.type_name {
+    switch item.kindname {
         option.some(t) : decl = decl + " " + t,
         option.none : {},
     }
@@ -347,7 +347,7 @@ func dump_function(function_decl item, string indent) string[] {
     _pi := 0
     for _pi < len(item.sig.params) {
         param := item.sig.params[_pi]
-        params = append(params, param.type_name + " " + param.name)
+        params = append(params, param.kindname + " " + param.name)
         _pi = _pi + 1
     }
     ret :=
@@ -382,7 +382,7 @@ func dump_struct(struct_decl item) string[] {
     for _fi < len(item.fields) {
         field := item.fields[_fi]
         fp := if field.is_public { "pub " } else { "" }
-        lines = append(lines, "  " + fp + field.type_name + " " + field.name)
+        lines = append(lines, "  " + fp + field.kindname + " " + field.name)
         _fi = _fi + 1
     }
     lines
@@ -414,7 +414,7 @@ func dump_trait(trait_decl item) string[] {
         _mpi := 0
         for _mpi < len(method.params) {
             param := method.params[_mpi]
-            params = append(params, param.type_name + " " + param.name)
+            params = append(params, param.kindname + " " + param.name)
             _mpi = _mpi + 1
         }
         ret :=
@@ -442,7 +442,7 @@ func dump_receiver_method(receiver_method_decl item) string[] {
     _mi2 := 0
     for _mi2 < len(method.sig.params) {
         param := method.sig.params[_mi2]
-        params = append(params, param.type_name + " " + param.name)
+        params = append(params, param.kindname + " " + param.name)
         _mi2 = _mi2 + 1
     }
     ret :=
@@ -489,7 +489,7 @@ func dump_stmt(stmt stmt, string indent) string[] {
     switch stmt {
         stmt.let(value) : {
             text :=
-                switch value.type_name {
+                switch value.kindname {
                     option.some(type_name) : indent + type_name + " " + value.name + " = " + dump_expr(value.value),
                     option.none : indent + "" + value.name + " := " + dump_expr(value.value),
             }
@@ -533,7 +533,7 @@ func dump_stmt(stmt stmt, string indent) string[] {
 func dump_for_clause(stmt stmt) string {
     switch stmt {
         stmt.let(value) : {
-            switch value.type_name {
+            switch value.kindname {
                 option.some(type_name) : type_name + " " + value.name + " = " + dump_expr(value.value),
                 option.none : "" + value.name + " := " + dump_expr(value.value),
             }

@@ -25,7 +25,7 @@ func compiler_native_create(string source_file, string output_file) compiler_nat
     compiler
 }
 
-func (compiler* compiler_native) generate_assembly(program* runtime_program) (int, string) {
+func (compiler_native* compiler) generate_assembly(runtime_program* program) (int, string) {
     codegen_emit_preamble(&compiler.codegen)
     for i < program.function_count {
         fn := program.functions[i]
@@ -34,7 +34,7 @@ func (compiler* compiler_native) generate_assembly(program* runtime_program) (in
     0, ""
 }
 
-func (compiler* compiler_native) generate_function(fn* runtime_function) {
+func (compiler_native* compiler) generate_function(runtime_function* fn) {
     codegen_emit_function_prologue(&compiler.codegen, fn.name, fn.param_count)
     allocator := register_allocator_create()
     frame := stack_frame_create(fn.param_count)
@@ -46,7 +46,7 @@ func (compiler* compiler_native) generate_function(fn* runtime_function) {
     codegen_emit_function_epilogue(&compiler.codegen)
 }
 
-func (compiler* compiler_native) generate_instruction(ra* register_allocator, sf* stack_frame, ins* runtime_ins) {
+func (compiler_native* compiler) generate_instruction(register_allocator* ra,stack_frame* sf,runtime_ins* ins) {
     if ins.op == "MOV" {
         instruction_select_mov(&compiler.codegen, ra, ins.op1, ins.result)
     } else if ins.op == "ADD" {
@@ -68,11 +68,11 @@ func (compiler* compiler_native) generate_instruction(ra* register_allocator, sf
     }
 }
 
-func (compiler* compiler_native) write_assembly_file() (int, string) {
+func (compiler_native* compiler) write_assembly_file() (int, string) {
     codegen_write_to_file(&compiler.codegen, compiler.asm_file)
 }
 
-func (compiler* compiler_native) compile_to_executable() (int, string) {
+func (compiler_native* compiler) compile_to_executable() (int, string) {
     exit_code, msg := compiler.write_assembly_file()
     if exit_code != 0 {
         return exit_code, "Failed to write assembly: " + msg

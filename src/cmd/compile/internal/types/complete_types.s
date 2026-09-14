@@ -76,7 +76,7 @@ func type_table_new() type_table {
     table
 }
 
-func type_register_builtin(type_table* table) {
+func type_register_builtin(able* type_table) {
     int_type := type_info { kind: type_int, name: "int", size: 8, align: 8 }
     table.types = append(table.types, int_type)
 
@@ -90,7 +90,7 @@ func type_register_builtin(type_table* table) {
     table.types = append(table.types, bool_type)
 }
 
-func type_lookup(type_table* table, string name) type_info {
+func type_lookup(able* type_table, string name) type_info {
     for i := 0; i < table.types.len(); i = i + 1 {
         if table.types[i].name == name {
             return table.types[i]
@@ -100,7 +100,7 @@ func type_lookup(type_table* table, string name) type_info {
     type_info { kind: type_invalid, name: "invalid" }
 }
 
-func type_create_pointer(type_table* table, string elem_type) type_info {
+func type_create_pointer(able* type_table, string elem_type) type_info {
     ptr_type := type_info {
         kind: type_ptr,
         name: elem_type + "*",
@@ -112,7 +112,7 @@ func type_create_pointer(type_table* table, string elem_type) type_info {
     ptr_type
 }
 
-func type_create_array(type_table* table, string elem_type, int size) type_info {
+func type_create_array(able* type_table, string elem_type, int size) type_info {
     elem := type_lookup(table, elem_type)
     array_type := type_info {
         kind: type_array,
@@ -125,7 +125,7 @@ func type_create_array(type_table* table, string elem_type, int size) type_info 
     array_type
 }
 
-func type_create_slice(type_table* table, string elem_type) type_info {
+func type_create_slice(able* type_table, string elem_type) type_info {
     slice_type := type_info {
         kind: type_slice,
         name: "[]" + elem_type,
@@ -137,7 +137,7 @@ func type_create_slice(type_table* table, string elem_type) type_info {
     slice_type
 }
 
-func type_create_func(type_table* table, string[] params, string[] returns) type_info {
+func type_create_func(able* type_table, string[] params, string[] returns) type_info {
     func_name := "func("
     for i := 0; i < params.len(); i = i + 1 {
         if i > 0 {
@@ -166,7 +166,7 @@ func type_create_func(type_table* table, string[] params, string[] returns) type
     func_type
 }
 
-func type_create_struct(type_table* table, string name, string[] fields) type_info {
+func type_create_struct(able* type_table, string name, string[] fields) type_info {
     struct_type := type_info {
         kind: type_struct,
         name: name,
@@ -178,7 +178,7 @@ func type_create_struct(type_table* table, string name, string[] fields) type_in
     struct_type
 }
 
-func type_create_interface(type_table* table, string name, string[] methods) type_info {
+func type_create_interface(able* type_table, string name, string[] methods) type_info {
     iface_type := type_info {
         kind: type_interface,
         name: name,
@@ -190,7 +190,7 @@ func type_create_interface(type_table* table, string name, string[] methods) typ
     iface_type
 }
 
-func type_add_method(type_table* table, string type_name, method_info method) {
+func type_add_method(able* type_table, string type_name, method_info method) {
     for i := 0; i < table.types.len(); i = i + 1 {
         if table.types[i].name == type_name {
             table.types[i].methods = append(table.types[i].methods, method)
@@ -198,7 +198,7 @@ func type_add_method(type_table* table, string type_name, method_info method) {
     }
 }
 
-func type_create_generic(type_table* table, string name, type_param[] params) generic_type {
+func type_create_generic(able* type_table, string name, type_param[] params) generic_type {
     gen_type := generic_type {
         name: name,
         params: params,
@@ -208,7 +208,7 @@ func type_create_generic(type_table* table, string name, type_param[] params) ge
     gen_type
 }
 
-func type_instantiate_generic(type_table* table, string generic_name, string[] type_args) type_info {
+func type_instantiate_generic(able* type_table, string generic_name, string[] type_args) type_info {
     inst_name := generic_name + "["
     for i := 0; i < type_args.len(); i = i + 1 {
         if i > 0 {
@@ -221,7 +221,7 @@ func type_instantiate_generic(type_table* table, string generic_name, string[] t
     type_info { kind: type_generic, name: inst_name }
 }
 
-func type_is_assignable(type_table* table, string from_type, string to_type) int {
+func type_is_assignable(able* type_table, string from_type, string to_type) int {
     if from_type == to_type {
         return 1
     }
@@ -240,7 +240,7 @@ func type_is_assignable(type_table* table, string from_type, string to_type) int
     return 0
 }
 
-func type_implements_interface(type_table* table, string type_name, string interface_name) int {
+func type_implements_interface(able* type_table, string type_name, string interface_name) int {
     type_type := type_lookup(table, type_name)
     iface := type_lookup(table, interface_name)
 

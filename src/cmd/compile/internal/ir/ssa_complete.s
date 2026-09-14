@@ -79,7 +79,7 @@ func new_ssa_function(string name) ssa_function* {
     f
 }
 
-func (f* ssa_function) new_block(string label) ssa_block* {
+func (ssa_function* f) new_block(string label) ssa_block* {
     block := new(ssa_block)
     block.id = f.block_counter
     block.label = label
@@ -93,12 +93,12 @@ func (f* ssa_function) new_block(string label) ssa_block* {
     block
 }
 
-func (f* ssa_function) new_value(op value_op, string name, string type_str) ssa_value* {
+func (ssa_function* f) new_value(op value_op, string name, string type_str) ssa_value* {
     val := new(ssa_value)
     val.id = f.value_counter
     val.op = op
     val.name = name
-    val.type_str = type_str
+    val.kindstr = type_str
     val.args = i32[]()
     val.block = -1
     val.is_const = false
@@ -109,40 +109,40 @@ func (f* ssa_function) new_value(op value_op, string name, string type_str) ssa_
     val
 }
 
-func (f* ssa_function) new_const_value(string const_val, string type_str) ssa_value* {
+func (ssa_function* f) new_const_value(string const_val, string type_str) ssa_value* {
     val := f.new_value(op_const, "const_" + const_val, type_str)
     val.is_const = true
     val.const_value = const_val
     val
 }
 
-func (f* ssa_function) new_param_value(string name, string type_str) ssa_value* {
+func (ssa_function* f) new_param_value(string name, string type_str) ssa_value* {
     val := f.new_value(op_param, name, type_str)
     val
 }
 
-func (b* ssa_block) add_value(val* ssa_value) {
+func (ssa_block* b) add_value(ssa_value* val) {
     val.block = b.id
     b.values = append(b.values, val)
 }
 
-func (b* ssa_block) add_phi(var_id i32, string type_str) ssa_phi* {
+func (ssa_block* b) add_phi(var_id i32, string type_str) ssa_phi* {
     phi := new(ssa_phi)
     phi.id = i32(len(b.phis))
     phi.var_id = var_id
     phi.block_preds = i32[]()
     phi.value_preds = i32[]()
-    phi.type_str = type_str
+    phi.kindstr = type_str
     b.phis = append(b.phis, phi)
     phi
 }
 
-func (phi* ssa_phi) add_input(pred_block i32, value_id i32) {
+func (ssa_phi* phi) add_input(pred_block i32, value_id i32) {
     phi.block_preds = append(phi.block_preds, pred_block)
     phi.value_preds = append(phi.value_preds, value_id)
 }
 
-func (f* ssa_function) add_edge(from_id i32, to_id i32) {
+func (ssa_function* f) add_edge(from_id i32, to_id i32) {
     if from_id >= 0 && from_id < i32(len(f.blocks)) {
         from_block := f.blocks[from_id]
         from_block.successors = append(from_block.successors, to_id)
@@ -153,14 +153,14 @@ func (f* ssa_function) add_edge(from_id i32, to_id i32) {
     }
 }
 
-func (f* ssa_function) build_ssa() {
+func (ssa_function* f) build_ssa() {
     for i := i32(0); i < i32(len(f.blocks)); i += 1 {
         block := f.blocks[i]
         if len(block.predecessors) > 1 {
             for j := i32(0); j < i32(len(f.values)); j += 1 {
                 val := f.values[j]
                 if val.op == op_param {
-                    phi := block.add_phi(val.id, val.type_str)
+                    phi := block.add_phi(val.id, val.kindstr)
                     for _, pred := range block.predecessors {
                         phi.add_input(pred, val.id)
                     }
@@ -178,14 +178,14 @@ struct ssa_opt_stats {
     int blocks_merged
 }
 
-func ssa_value_at(ssa_function* f, int id) ssa_value* {
+func ssa_value_at(f* ssa_function, int id) ssa_value* {
     if f == 0 || id < 0 || id >= len(f.values) {
         return 0
     }
     f.values[id]
 }
 
-func ssa_replace_uses(ssa_function* f, int old_id, int new_id) {
+func ssa_replace_uses(f* ssa_function, int old_id, int new_id) {
     for i := 0; i < len(f.values); i = i + 1 {
         value := f.values[i]
         for j := 0; j < len(value.args); j = j + 1 {
@@ -207,7 +207,7 @@ func ssa_replace_uses(ssa_function* f, int old_id, int new_id) {
     }
 }
 
-func ssa_fold_constants(ssa_function* f) int {
+func ssa_fold_constants(f* ssa_function) int {
     changed := 0
     for i := 0; i < len(f.values); i = i + 1 {
         value := f.values[i]
@@ -240,7 +240,7 @@ func ssa_fold_constants(ssa_function* f) int {
     changed
 }
 
-func ssa_apply_identities(ssa_function* f) int {
+func ssa_apply_identities(f* ssa_function) int {
     changed := 0
     for i := 0; i < len(f.values); i = i + 1 {
         value := f.values[i]
@@ -265,7 +265,7 @@ func ssa_apply_identities(ssa_function* f) int {
     changed
 }
 
-func ssa_eliminate_common_subexpressions(ssa_function* f) int {
+func ssa_eliminate_common_subexpressions(f* ssa_function) int {
     changed := 0
     for i := 0; i < len(f.values); i = i + 1 {
         current := f.values[i]
@@ -274,7 +274,7 @@ func ssa_eliminate_common_subexpressions(ssa_function* f) int {
         }
         for j := 0; j < i; j = j + 1 {
             previous := f.values[j]
-            if previous.removed || previous.op != current.op || previous.type_str != current.type_str || len(previous.args) != len(current.args) {
+            if previous.removed || previous.op != current.op || previous.kindstr != current.kindstr || len(previous.args) != len(current.args) {
                 continue
             }
             same := true
@@ -298,7 +298,7 @@ func ssa_is_pure(value_op op) bool {
     value_op != op_store && value_op != op_call && value_op != op_return && value_op != op_branch && value_op != op_switch
 }
 
-func ssa_mark_live(ssa_function* f, int id, bool[] live) {
+func ssa_mark_live(f* ssa_function, int id, bool[] live) {
     if id < 0 || id >= len(f.values) || live[id] {
         return
     }
@@ -308,7 +308,7 @@ func ssa_mark_live(ssa_function* f, int id, bool[] live) {
     }
 }
 
-func ssa_eliminate_dead_values(ssa_function* f) int {
+func ssa_eliminate_dead_values(f* ssa_function) int {
     bool[len(f.values)] live
     for i := 0; i < len(f.values); i = i + 1 {
         value := f.values[i]
@@ -333,7 +333,7 @@ func ssa_eliminate_dead_values(ssa_function* f) int {
     removed
 }
 
-func ssa_fold_constant_branches(ssa_function* f) int {
+func ssa_fold_constant_branches(f* ssa_function) int {
     changed := 0
     for i := 0; i < len(f.values); i = i + 1 {
         branch := f.values[i]
@@ -356,7 +356,7 @@ func ssa_fold_constant_branches(ssa_function* f) int {
     changed
 }
 
-func ssa_merge_trivial_blocks(ssa_function* f) int {
+func ssa_merge_trivial_blocks(f* ssa_function) int {
     merged := 0
     for i := 0; i < len(f.blocks); i = i + 1 {
         block := f.blocks[i]
@@ -382,7 +382,7 @@ func ssa_merge_trivial_blocks(ssa_function* f) int {
     merged
 }
 
-func (f* ssa_function) optimize() ssa_opt_stats {
+func (ssa_function* f) optimize() ssa_opt_stats {
     stats := ssa_opt_stats {}
     stats.constants_folded = ssa_fold_constants(f)
     stats.constants_folded = stats.constants_folded + ssa_apply_identities(f)
@@ -393,7 +393,7 @@ func (f* ssa_function) optimize() ssa_opt_stats {
     stats
 }
 
-func (f* ssa_function) get_value_by_name(string name) ssa_value* {
+func (ssa_function* f) get_value_by_name(string name) ssa_value* {
     if id, ok := f.name_to_value[name]; ok {
         if id >= 0 && id < i32(len(f.values)) {
             return f.values[id]
@@ -402,7 +402,7 @@ func (f* ssa_function) get_value_by_name(string name) ssa_value* {
     nil
 }
 
-func (f* ssa_function) eliminate_dead_code() {
+func (ssa_function* f) eliminate_dead_code() {
     live := make(map[i32]bool)
 
     for i := i32(0); i < i32(len(f.values)); i += 1 {
@@ -429,7 +429,7 @@ func (f* ssa_function) eliminate_dead_code() {
     }
 }
 
-func (f* ssa_function) to_string() string {
+func (ssa_function* f) to_string() string {
     s := "SSA Function: " + f.name + "\n"
     for _, block := range f.blocks {
         s += "Block " + string(block.id) + ": " + block.label + "\n"

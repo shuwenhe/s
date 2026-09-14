@@ -25,7 +25,7 @@ struct symbol_table {
 }
 
 struct semantic_result {
-    ast* ast_node
+    ast_node* ast
     symbols: symbol_table
     errors: string[]
     type_info: string[]
@@ -37,19 +37,19 @@ func symbol_table_new() symbol_table {
     }
 }
 
-func symbol_table_push_scope(st* symbol_table) {
+func symbol_table_push_scope(symbol_table* st) {
     st.scope_stack.push(st.current_scope)
     st.current_scope = st.current_scope + 1
 }
 
-func symbol_table_pop_scope(st* symbol_table) {
+func symbol_table_pop_scope(symbol_table* st) {
     if st.scope_stack.len() > 0 {
         st.current_scope = st.scope_stack[st.scope_stack.len() - 1]
         st.scope_stack.pop()
     }
 }
 
-func symbol_table_define(st* symbol_table, string name, int kind, string type_name) int {
+func symbol_table_define(symbol_table* st, string name, int kind, string type_name) int {
     for i := 0; i < st.symbols.len(); i = i + 1 {
         if st.symbols[i].name == name && st.symbols[i].scope_depth == st.current_scope {
             return 0
@@ -63,7 +63,7 @@ func symbol_table_define(st* symbol_table, string name, int kind, string type_na
     1
 }
 
-func symbol_table_lookup(st* symbol_table, string name) &symbol {
+func symbol_table_lookup(symbol_table* st, string name) &symbol {
     for i := st.symbols.len() - 1; i >= 0; i = i - 1 {
         if st.symbols[i].name == name {
             return &st.symbols[i]
@@ -107,7 +107,7 @@ struct semantic_analyzer {
     symbols: symbol_table
     types: type_system
     errors: string[]
-    current_function* ast_node
+    ast_node* current_function
     in_loop: int
     in_function: int
 }
@@ -118,11 +118,11 @@ func semantic_analyzer_new() semantic_analyzer {
     }
 }
 
-func semantic_analyzer_add_error(ana* semantic_analyzer, string msg) {
+func semantic_analyzer_add_error(semantic_analyzer* ana, string msg) {
     ana.errors.push(msg)
 }
 
-func semantic_analyze(ast_node* ast) semantic_result {
+func semantic_analyze(ast* ast_node) semantic_result {
     ana := semantic_analyzer_new()
 
     semantic_analyze_node(&mut ana, ast)
@@ -132,7 +132,7 @@ func semantic_analyze(ast_node* ast) semantic_result {
     }
 }
 
-func semantic_analyze_node(ana* semantic_analyzer, ast_node* node) {
+func semantic_analyze_node(semantic_analyzer* ana,node* ast_node) {
     if node == 0 {
         return
     }
@@ -175,17 +175,17 @@ func semantic_analyze_node(ana* semantic_analyzer, ast_node* node) {
         symbol_table_define(&mut ana.symbols, node.name, symbol_enum, "")
 
     case ast_var_decl :
-        if node.type_name == "" {
+        if node.kindname == "" {
             semantic_analyzer_add_error(ana, "Variable " + node.name + " has no type")
         }
-        symbol_table_define(&mut ana.symbols, node.name, symbol_var, node.type_name)
+        symbol_table_define(&mut ana.symbols, node.name, symbol_var, node.kindname)
 
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
 
     case ast_const_decl :
-        symbol_table_define(&mut ana.symbols, node.name, symbol_const, node.type_name)
+        symbol_table_define(&mut ana.symbols, node.name, symbol_const, node.kindname)
 
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])

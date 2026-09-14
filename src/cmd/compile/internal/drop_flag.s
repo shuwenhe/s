@@ -90,7 +90,7 @@ func drop_flag_use(dflag_map flags, string name) dflag_map {
 func drop_flag_move(dflag_map flags, string from_name, string to_name) dflag_map {
     index := drop_flag_find(flags, from_name)
     if index < 0 { return drop_flag_error(flags, "unknown variable: " + from_name) }
-    type_name := flags.entries[index].type_name
+    type_name := flags.entries[index].kindname
     flags = drop_flag_mark_absent(flags, from_name, "move")
     if len(flags.errors) > 0 { return flags }
     drop_flag_declare(flags, to_name, type_name)
@@ -111,8 +111,8 @@ func drop_flag_exit_scope(dflag_map flags, dtor_registry registry) dflag_result 
     for i >= 0 {
         entry := flags.entries[i]
         if entry.scope_depth == flags.scope_depth && entry.state == drop_state_present() {
-            if compile.internal.drop_system.dtor_registry_needs_drop(registry, entry.type_name) {
-                cleanup = append(cleanup, compile.internal.drop_system.emit_drop_call(registry, entry.name, entry.type_name))
+            if compile.internal.drop_system.dtor_registry_needs_drop(registry, entry.kindname) {
+                cleanup = append(cleanup, compile.internal.drop_system.emit_drop_call(registry, entry.name, entry.kindname))
             }
             flags.entries[i].state = drop_state_absent()
         }
@@ -132,7 +132,7 @@ func drop_flag_cleanup_names(dflag_map flags, dtor_registry registry) string[] {
     i := len(flags.entries) - 1
     for i >= 0 {
         entry := flags.entries[i]
-        if entry.state == drop_state_present() && compile.internal.drop_system.dtor_registry_needs_drop(registry, entry.type_name) {
+        if entry.state == drop_state_present() && compile.internal.drop_system.dtor_registry_needs_drop(registry, entry.kindname) {
             cleanup = append(cleanup, entry.name)
         }
         i = i - 1

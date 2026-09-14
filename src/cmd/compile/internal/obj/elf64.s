@@ -79,7 +79,7 @@ func make_elf_writer(elf_machine machine) elf_writer {
     }
 }
 
-func (elf_writer* w) write_bytes(int8[] bytes) int64 {
+func (w* elf_writer) write_bytes(int8[] bytes) int64 {
     start := w.offset
     i := 0
     for i < len(bytes) {
@@ -90,7 +90,7 @@ func (elf_writer* w) write_bytes(int8[] bytes) int64 {
     start
 }
 
-func (elf_writer* w) write_u32(int32 value) int64 {
+func (w* elf_writer) write_u32(int32 value) int64 {
     start := w.offset
     b0 := (value as int8)
     b1 := ((value >> 8) as int8)
@@ -104,7 +104,7 @@ func (elf_writer* w) write_u32(int32 value) int64 {
     start
 }
 
-func (elf_writer* w) write_u64(int64 value) int64 {
+func (w* elf_writer) write_u64(int64 value) int64 {
     start := w.offset
     b0 := (value as int8)
     b1 := ((value >> 8) as int8)
@@ -126,7 +126,7 @@ func (elf_writer* w) write_u64(int64 value) int64 {
     start
 }
 
-func (elf_writer* w) write_u16(int16 value) int64 {
+func (w* elf_writer) write_u16(int16 value) int64 {
     start := w.offset
     b0 := (value as int8)
     b1 := ((value >> 8) as int8)
@@ -136,14 +136,14 @@ func (elf_writer* w) write_u16(int16 value) int64 {
     start
 }
 
-func (elf_writer* w) write_u8(int8 value) int64 {
+func (w* elf_writer) write_u8(int8 value) int64 {
     start := w.offset
     w.data = append(w.data, value)
     w.offset = w.offset + 1
     start
 }
 
-func (elf_writer* w) pad_to(int64 align) {
+func (w* elf_writer) pad_to(int64 align) {
     remainder := w.offset % align
     if remainder != 0 {
         padding := align - remainder
@@ -156,7 +156,7 @@ func (elf_writer* w) pad_to(int64 align) {
     }
 }
 
-func (elf_writer* w) write_elf_header(elf_machine machine) {
+func (w* elf_writer) write_elf_header(elf_machine machine) {
     w.write_u8(0x7f as int8)
     w.write_u8(69 as int8)
     w.write_u8(76 as int8)
@@ -186,7 +186,7 @@ func (elf_writer* w) write_elf_header(elf_machine machine) {
     w.write_u16(0 as int16)
 }
 
-func (elf_writer* w) write_section_headers(elf_section_header[] sections) {
+func (w* elf_writer) write_section_headers(elf_section_header[] sections) {
     i := 0
     for i < len(sections) {
         sh := sections[i]
@@ -204,7 +204,7 @@ func (elf_writer* w) write_section_headers(elf_section_header[] sections) {
     }
 }
 
-func (elf_writer* w) write_symbol_table(elf_symbol[] symbols) {
+func (w* elf_writer) write_symbol_table(elf_symbol[] symbols) {
     i := 0
     for i < len(symbols) {
         sym := symbols[i]
@@ -218,7 +218,7 @@ func (elf_writer* w) write_symbol_table(elf_symbol[] symbols) {
     }
 }
 
-func (elf_writer* w) write_relocations(elf_relocation[] relocs) {
+func (w* elf_writer) write_relocations(elf_relocation[] relocs) {
     i := 0
     for i < len(relocs) {
         r := relocs[i]
@@ -229,6 +229,6 @@ func (elf_writer* w) write_relocations(elf_relocation[] relocs) {
     }
 }
 
-func (elf_writer* w) get_data() int8[] {
+func (w* elf_writer) get_data() int8[] {
     w.data
 }

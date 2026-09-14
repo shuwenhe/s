@@ -58,7 +58,8 @@ S_SOURCE_ROOT="$root" "$root/misc/scripts/stage0_freeze_check.sh" >"$tmp.freeze"
         if [ "$accept_status" -ne 0 ]; then
             echo "reason=accepted-fixture-not-accepted"
         elif [ "$reject_status" -eq 0 ]; then
-            echo "reason=negative-syntax-fixture-accepted-production-parser-not-executing-or-fallback-present"
+            echo "reason=check-command-stops-at-stage1-read-file-stub-before-canonical-s-parser"
+            echo "gap=BOOTSTRAP_CAPABILITY_GAP"
         else
             echo "reason=stage0-freeze-check-failed"
         fi

@@ -34,7 +34,7 @@ func run_semantic_suite(string fixtures_root) int {
         return 1
     }
     inline_fail_proof := compile.internal.safety.prove_safety(inline_fail)
-    if inline_fail_proof.proven || inline_fail_proof.type_errors == 0 {
+    if inline_fail_proof.proven || inline_fail_proof.kinderrors == 0 {
         return 1
     }
     call_ok := "package demo.call\nfunc add(int a, int b) int {\n  a + b\n}\nfunc main() {\n  add(1, 2)\n}"

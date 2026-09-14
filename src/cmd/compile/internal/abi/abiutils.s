@@ -148,7 +148,7 @@ func assignment_string(abi_param_assignment assignment, abi_config config, bool 
     if extra {
         regs = regs + " | #I=" + to_string(config.reg_amounts.int_regs) + " #F=" + to_string(config.reg_amounts.float_regs)
     }
-    regs + " } " + offname + ": " + to_string(assignment.offset) + " typ: " + assignment.type_name
+    regs + " } " + offname + ": " + to_string(assignment.offset) + " typ: " + assignment.kindname
 }
 
 func info_string(abi_param_result_info info) string {
@@ -203,7 +203,7 @@ func register_types(abi_param_assignment[] assignments) string[] {
     i := 0
     for i < len(assignments) {
         if assignments[i]len(.registers) > 0 {
-            rts = append_param_types(rts, assignments[i].type_name)
+            rts = append_param_types(rts, assignments[i].kindname)
         }
         i = i + 1
     }
@@ -216,8 +216,8 @@ func register_types_and_offsets(abi_param_assignment assignment) register_layout
             types: string[](), offsets int[](),
         }
     }
-    types := append_param_types(string[](), assignment.type_name)
-    pair := append_param_offsets(int[](), 0, assignment.type_name)
+    types := append_param_types(string[](), assignment.kindname)
+    pair := append_param_offsets(int[](), 0, assignment.kindname)
     register_layout {
         types: types, offsets pair.offsets,
     }

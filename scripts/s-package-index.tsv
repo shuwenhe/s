@@ -711,6 +711,8 @@ main	src/cmd/compile/internal/ownership/quick_reference.s
 main	src/cmd/compile/internal/tests/fixtures/cfor_sample.s
 main	src/cmd/compile/internal/tests/fixtures/parser_authority_accept.s
 main	src/cmd/compile/internal/tests/fixtures/parser_authority_reject.s
+main	src/cmd/compile/internal/tests/fixtures/parser_carry_return17.s
+main	src/cmd/compile/internal/tests/fixtures/parser_carry_return29.s
 main	src/cmd/compile/main_demo.s
 main	src/cmd/compile/platforms/macos/macos_demo.s
 main	src/cmd/compile/selfhost/bootstrap_pure_s.s

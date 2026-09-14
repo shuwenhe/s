@@ -144,7 +144,7 @@ func lexer_new(string source) lexer {
     lex
 }
 
-func lexer_read_char(lex* lexer) {
+func lexer_read_char(lexer* lex) {
     if lex.read_position >= lex.source.len() {
         lex.current_char = '\0'
     } else {
@@ -161,7 +161,7 @@ func lexer_read_char(lex* lexer) {
     }
 }
 
-func lexer_peek_char(lex* lexer) string {
+func lexer_peek_char(lexer* lex) string {
     if lex.read_position >= lex.source.len() {
         return '\0'
     } else {
@@ -169,13 +169,13 @@ func lexer_peek_char(lex* lexer) string {
     }
 }
 
-func lexer_skip_whitespace(lex* lexer) {
+func lexer_skip_whitespace(lexer* lex) {
     for is_whitespace(lex.current_char) {
         lexer_read_char(lex)
     }
 }
 
-func lexer_read_ident(lex* lexer) string {
+func lexer_read_ident(lexer* lex) string {
     start := lex.position
     for is_letter(lex.current_char) || is_digit(lex.current_char) {
         lexer_read_char(lex)
@@ -193,7 +193,7 @@ func lexer_slice(string source, int start, int end) string {
     result
 }
 
-func lexer_read_number(lex* lexer) (string, int) {
+func lexer_read_number(lexer* lex) (string, int) {
     start := lex.position
     has_dot := 0
 
@@ -212,7 +212,7 @@ func lexer_read_number(lex* lexer) (string, int) {
     }
 }
 
-func lexer_read_string(lex* lexer, string quote) string {
+func lexer_read_string(lexer* lex, string quote) string {
     lexer_read_char(lex)
     start := lex.position
 
@@ -230,13 +230,13 @@ func lexer_read_string(lex* lexer, string quote) string {
     return str
 }
 
-func lexer_skip_line_comment(lex* lexer) {
+func lexer_skip_line_comment(lexer* lex) {
     for lex.current_char != '\n' && lex.current_char != '\0' {
         lexer_read_char(lex)
     }
 }
 
-func lexer_skip_block_comment(lex* lexer) {
+func lexer_skip_block_comment(lexer* lex) {
     lexer_read_char(lex)
     lexer_read_char(lex)
 
@@ -250,7 +250,7 @@ func lexer_skip_block_comment(lex* lexer) {
     }
 }
 
-func lexer_next_token(lex* lexer) token {
+func lexer_next_token(lexer* lex) token {
     lexer_skip_whitespace(lex)
 
     lex.start_column = lex.column

@@ -131,7 +131,7 @@ func edit_expr(expr value, bool in_bloop) expr {
                 i = i + 1
             }
             expr::call(call_expr {
-                callee: std.prelude.box(edit_expr(call_value.callee.value, in_bloop)), args out_args, inferred_type call_value.inferred_type, resolved_callee call_value.resolved_callee, type_args call_value.type_args,
+                callee: std.prelude.box(edit_expr(call_value.callee.value, in_bloop)), args out_args, inferred_type call_value.inferred_type, resolved_callee call_value.resolved_callee, type_args call_value.kindargs,
             })
         }
         expr.if(if_value) : {
@@ -183,7 +183,7 @@ func edit_stmt(stmt value, bool in_bloop) stmt {
             })
         }
         stmt.let(var_value) : stmt::let(var_stmt {
-            name: var_value.name, type_name var_value.type_name, value edit_expr(var_value.value, in_bloop),
+            name: var_value.name, type_name var_value.kindname, value edit_expr(var_value.value, in_bloop),
         }),
         stmt.expr(expr_value) : stmt::s.expr(expr_stmt {
             expr: edit_expr(expr_value.expr, in_bloop),

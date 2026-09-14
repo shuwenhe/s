@@ -1,4 +1,5 @@
 package compile.internal.syntax
+
 enum token_type {
     tok_eof = 0,
     tok_ident = 1,
@@ -91,18 +92,18 @@ enum token_type {
 }
 
 struct token {
-    type_* int
-    value* string
+    int* kind
+    string* value
     int line
     int col
 }
 
 struct lexer {
-    source* string
+    string* source
     int pos
     int line
     int col
-    tokens* token
+    token* tokens
     int token_count
     int token_capacity
 }
@@ -119,14 +120,14 @@ func lexer_new(string* source) lexer* {
     return l
 }
 
-func lexer_current_char(l* lexer) int {
+func lexer_current_char(lexer* l) int {
     if l.pos >= len(l.source) {
         return 0
     }
     return l.source[l.pos]
 }
 
-func lexer_peek_char(l* lexer, int offset) int {
+func lexer_peek_char(lexer* l, int offset) int {
     pos := l.pos + offset
     if pos >= len(l.source) {
         return 0
@@ -134,7 +135,7 @@ func lexer_peek_char(l* lexer, int offset) int {
     return l.source[pos]
 }
 
-func lexer_advance(l* lexer) {
+func lexer_advance(lexer* l) {
     if l.pos < len(l.source) {
         if l.source[l.pos] == 10 {
             l.line = l.line + 1
@@ -146,7 +147,7 @@ func lexer_advance(l* lexer) {
     }
 }
 
-func lexer_skip_whitespace(l* lexer) {
+func lexer_skip_whitespace(lexer* l) {
     for {
         ch := lexer_current_char(l)
         if ch != 32 && ch != 9 {
@@ -212,9 +213,9 @@ func lexer_read_ident(l* lexer) token {
     tok.line = l.line
     tok.col = start_col
     tok.value = value
-    tok.type_ = lexer_keyword_type(value)
-    if tok.type_ == 0 {
-        tok.type_ = 1
+    tok.kind = lexer_keyword_type(value)
+    if tok.kind == 0 {
+        tok.kind = 1
     }
     return *tok
 }
@@ -341,7 +342,7 @@ func lexer_read_number(l* lexer) token {
     tok := alloc(token)
     tok.line = l.line
     tok.col = start_col
-    tok.type_ = 2
+    tok.kind = 2
     tok.value = value
     return *tok
 }
@@ -374,7 +375,7 @@ func lexer_read_string(l* lexer) token {
     tok := alloc(token)
     tok.line = l.line
     tok.col = start_col
-    tok.type_ = 3
+    tok.kind = 3
     tok.value = value
     return *tok
 }
@@ -581,7 +582,7 @@ func lexer_tokenize(l* lexer) {
         }
         if tok_type > 0 {
             tok := alloc(token)
-            tok.type_ = tok_type
+            tok.kind = tok_type
             tok.line = l.line
             tok.col = col
             lexer_add_token(l, tok)
@@ -589,7 +590,7 @@ func lexer_tokenize(l* lexer) {
         lexer_advance(l)
     }
     eof_tok := alloc(token)
-    eof_tok.type_ = 0
+    eof_tok.kind = 0
     eof_tok.line = l.line
     eof_tok.col = l.col
     lexer_add_token(l, eof_tok)
