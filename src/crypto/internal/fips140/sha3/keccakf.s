@@ -4,3 +4,5 @@ func keccakf_unit_name() string {
 }
 
 func keccakf_unit_ready() int {
+    1
+}

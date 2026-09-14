@@ -83,3 +83,5 @@ func is_keyword(string text) bool {
         "where" : true,
         "in" : true,
         _ : false,
+    }
+}

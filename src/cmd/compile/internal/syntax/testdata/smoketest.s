@@ -4,3 +4,5 @@ func smoketest_case_name() string {
 }
 
 func smoketest_case_pass() int {
+    0
+}

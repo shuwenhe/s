@@ -4,3 +4,5 @@ func os_freebsd_unit_name() string {
 }
 
 func os_freebsd_unit_ready() int {
+    1
+}

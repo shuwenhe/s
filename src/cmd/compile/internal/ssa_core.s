@@ -1,10 +1,12 @@
 package compile.internal.ssa_core
+
 import (
     "compile.internal.bounds"
     "compile.internal.mir"
     "std"
     "std.prelude"
 )
+
 struct ssa_pipeline_options {
     bool enable_dce
     bool enable_coalesce
@@ -2837,3 +2839,5 @@ func starts_with(string text, string prefix) bool {
     if std.prelude.len(text) < std.prelude.len(prefix) {
         return false
     }
+    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
+}

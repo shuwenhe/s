@@ -4,3 +4,5 @@ func trie_unit_name() string {
 }
 
 func trie_unit_ready() int {
+    1
+}

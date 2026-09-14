@@ -4,3 +4,5 @@ func race_windows_test_unit_name() string {
 }
 
 func race_windows_test_unit_ready() int {
+    1
+}

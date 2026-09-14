@@ -4,3 +4,5 @@ func scc_module_name() string {
 }
 
 func scc_module_apply() int {
+    0
+}

@@ -26,3 +26,5 @@ func has_intrinsic(string fn_name) bool {
 }
 
 func intrinsic_op(string fn_name) string {
+    lookup_intrinsic(fn_name).op
+}

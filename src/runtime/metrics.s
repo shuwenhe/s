@@ -4,3 +4,5 @@ func metrics_unit_name() string {
 }
 
 func metrics_unit_ready() int {
+    1
+}

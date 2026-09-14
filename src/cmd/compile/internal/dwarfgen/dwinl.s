@@ -4,3 +4,5 @@ func dwinl_unit_name() string {
 }
 
 func dwinl_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func gen_simdssa_unit_name() string {
 }
 
 func gen_simdssa_unit_ready() int {
+    1
+}

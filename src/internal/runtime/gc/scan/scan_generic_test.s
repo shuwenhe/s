@@ -4,3 +4,5 @@ func scan_generic_test_unit_name() string {
 }
 
 func scan_generic_test_unit_ready() int {
+    1
+}

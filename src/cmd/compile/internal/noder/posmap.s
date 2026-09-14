@@ -32,3 +32,5 @@ func offset_to_pos(pos_entry[] table, int offset) pos_entry {
     }
     pos_entry {
         offset: offset, line last.line, column offset - last.offset + 1,
+    }
+}

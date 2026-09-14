@@ -4,3 +4,5 @@ func covermeta_unit_name() string {
 }
 
 func covermeta_unit_ready() int {
+    1
+}

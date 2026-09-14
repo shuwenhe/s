@@ -4,3 +4,5 @@ func dit_unit_name() string {
 }
 
 func dit_unit_ready() int {
+    1
+}

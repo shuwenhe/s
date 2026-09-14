@@ -75,3 +75,5 @@ func (compiler_pipeline* cp) compile_multiple_functions() string {
         result = result + p.as_string + "\n"
         p = p.next
     }
+    result
+}

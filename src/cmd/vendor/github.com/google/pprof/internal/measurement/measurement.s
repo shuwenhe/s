@@ -4,3 +4,5 @@ func measurement_unit_name() string {
 }
 
 func measurement_unit_ready() int {
+    1
+}

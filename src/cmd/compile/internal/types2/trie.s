@@ -4,3 +4,5 @@ func trie_module_name() string {
 }
 
 func trie_module_apply() int {
+    0
+}

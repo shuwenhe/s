@@ -4,3 +4,5 @@ func symlink_unit_name() string {
 }
 
 func symlink_unit_ready() int {
+    1
+}

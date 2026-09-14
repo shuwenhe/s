@@ -4,3 +4,5 @@ func vcs_unit_name() string {
 }
 
 func vcs_unit_ready() int {
+    1
+}

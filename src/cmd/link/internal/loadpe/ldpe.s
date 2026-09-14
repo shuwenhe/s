@@ -4,3 +4,5 @@ func ldpe_unit_name() string {
 }
 
 func ldpe_unit_ready() int {
+    1
+}

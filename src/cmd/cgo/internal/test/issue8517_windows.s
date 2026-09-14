@@ -4,3 +4,5 @@ func issue8517_windows_unit_name() string {
 }
 
 func issue8517_windows_unit_ready() int {
+    1
+}

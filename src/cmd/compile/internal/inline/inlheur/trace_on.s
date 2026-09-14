@@ -4,3 +4,5 @@ func trace_on_module_name() string {
 }
 
 func trace_on_module_apply() int {
+    0
+}

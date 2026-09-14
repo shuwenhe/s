@@ -4,3 +4,5 @@ func sent_packet_unit_name() string {
 }
 
 func sent_packet_unit_ready() int {
+    1
+}

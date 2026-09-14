@@ -4,3 +4,5 @@ func getrandom_solaris_unit_name() string {
 }
 
 func getrandom_solaris_unit_ready() int {
+    1
+}

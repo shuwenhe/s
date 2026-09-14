@@ -4,3 +4,5 @@ func syscall_netbsd_arm_unit_name() string {
 }
 
 func syscall_netbsd_arm_unit_ready() int {
+    1
+}

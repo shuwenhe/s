@@ -4,3 +4,5 @@ func mediatype_unit_name() string {
 }
 
 func mediatype_unit_ready() int {
+    1
+}

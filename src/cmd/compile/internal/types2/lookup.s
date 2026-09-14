@@ -4,3 +4,5 @@ func lookup_module_name() string {
 }
 
 func lookup_module_apply() int {
+    0
+}

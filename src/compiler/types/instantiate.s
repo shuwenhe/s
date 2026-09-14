@@ -4,3 +4,5 @@ func instantiate_unit_name() string {
 }
 
 func instantiate_unit_ready() int {
+    1
+}

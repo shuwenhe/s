@@ -4,3 +4,5 @@ func cgo_stubs_ppc64x_internal_linking_test_unit_name() string {
 }
 
 func cgo_stubs_ppc64x_internal_linking_test_unit_ready() int {
+    1
+}

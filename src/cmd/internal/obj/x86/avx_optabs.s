@@ -4,3 +4,5 @@ func avx_optabs_unit_name() string {
 }
 
 func avx_optabs_unit_ready() int {
+    1
+}

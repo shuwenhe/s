@@ -4,3 +4,5 @@ func goos_unit_name() string {
 }
 
 func goos_unit_ready() int {
+    1
+}

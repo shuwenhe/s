@@ -4,3 +4,5 @@ func typelists_unit_name() string {
 }
 
 func typelists_unit_ready() int {
+    1
+}

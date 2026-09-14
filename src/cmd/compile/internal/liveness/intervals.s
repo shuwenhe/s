@@ -73,3 +73,5 @@ func find_interval_index(live_interval[] ivs, int value_id) int {
         }
         i = i + 1
     }
+    -1
+}

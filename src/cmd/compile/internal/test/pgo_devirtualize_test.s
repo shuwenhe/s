@@ -4,3 +4,5 @@ func pgo_devirtualize_test_case_name() string {
 }
 
 func pgo_devirtualize_test_case_pass() int {
+    0
+}

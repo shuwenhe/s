@@ -27,3 +27,5 @@ func (option[t]* self) unwrap_or(t default) t {
             option::some(value) : value,
             option::none : default,
         }
+    }
+extern "intrinsic" func __option_panic_unwrap[t]() t

@@ -4,3 +4,5 @@ func compare_module_name() string {
 }
 
 func compare_module_apply() int {
+    0
+}

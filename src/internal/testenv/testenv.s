@@ -4,3 +4,5 @@ func testenv_unit_name() string {
 }
 
 func testenv_unit_ready() int {
+    1
+}

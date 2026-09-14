@@ -4,3 +4,5 @@ func sha256block_noasm_unit_name() string {
 }
 
 func sha256block_noasm_unit_ready() int {
+    1
+}

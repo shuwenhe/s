@@ -4,3 +4,5 @@ func stubs_mipsx_unit_name() string {
 }
 
 func stubs_mipsx_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func godefs_unit_name() string {
 }
 
 func godefs_unit_ready() int {
+    1
+}

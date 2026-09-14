@@ -4,3 +4,5 @@ func timeformat_unit_name() string {
 }
 
 func timeformat_unit_ready() int {
+    1
+}

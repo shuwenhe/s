@@ -4,3 +4,5 @@ func compliterals_unit_name() string {
 }
 
 func compliterals_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func secret_noasm_unit_name() string {
 }
 
 func secret_noasm_unit_ready() int {
+    1
+}

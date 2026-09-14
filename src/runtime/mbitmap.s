@@ -4,3 +4,5 @@ func mbitmap_unit_name() string {
 }
 
 func mbitmap_unit_ready() int {
+    1
+}

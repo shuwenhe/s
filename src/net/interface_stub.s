@@ -4,3 +4,5 @@ func interface_stub_unit_name() string {
 }
 
 func interface_stub_unit_ready() int {
+    1
+}

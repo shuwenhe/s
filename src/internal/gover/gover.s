@@ -4,3 +4,5 @@ func gover_unit_name() string {
 }
 
 func gover_unit_ready() int {
+    1
+}

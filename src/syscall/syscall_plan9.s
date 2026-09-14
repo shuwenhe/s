@@ -4,3 +4,5 @@ func syscall_plan9_unit_name() string {
 }
 
 func syscall_plan9_unit_ready() int {
+    1
+}

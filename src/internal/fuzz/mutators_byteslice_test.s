@@ -4,3 +4,5 @@ func mutators_byteslice_test_unit_name() string {
 }
 
 func mutators_byteslice_test_unit_ready() int {
+    1
+}

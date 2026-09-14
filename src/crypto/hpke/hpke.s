@@ -4,3 +4,5 @@ func hpke_unit_name() string {
 }
 
 func hpke_unit_ready() int {
+    1
+}

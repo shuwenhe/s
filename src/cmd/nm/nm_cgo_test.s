@@ -4,3 +4,5 @@ func nm_cgo_test_unit_name() string {
 }
 
 func nm_cgo_test_unit_ready() int {
+    1
+}

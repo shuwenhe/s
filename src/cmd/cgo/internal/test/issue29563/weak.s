@@ -4,3 +4,5 @@ func weak_unit_name() string {
 }
 
 func weak_unit_ready() int {
+    1
+}

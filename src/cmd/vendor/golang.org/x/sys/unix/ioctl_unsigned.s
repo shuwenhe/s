@@ -4,3 +4,5 @@ func ioctl_unsigned_unit_name() string {
 }
 
 func ioctl_unsigned_unit_ready() int {
+    1
+}

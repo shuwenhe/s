@@ -4,3 +4,5 @@ func level6_unit_name() string {
 }
 
 func level6_unit_ready() int {
+    1
+}

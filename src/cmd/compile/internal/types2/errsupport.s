@@ -4,3 +4,5 @@ func errsupport_module_name() string {
 }
 
 func errsupport_module_apply() int {
+    0
+}

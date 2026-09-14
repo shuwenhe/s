@@ -4,3 +4,5 @@ func scalar_fiat_unit_name() string {
 }
 
 func scalar_fiat_unit_ready() int {
+    1
+}

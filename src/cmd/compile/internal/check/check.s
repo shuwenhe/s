@@ -8,3 +8,5 @@ func load_frontend(string path) string {
 }
 
 func check_frontend(string frontend) int {
+    return compile.internal.semantic.check_text(frontend
+}

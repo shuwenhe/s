@@ -4,3 +4,5 @@ func env_windows_unit_name() string {
 }
 
 func env_windows_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func dateonly_unit_name() string {
 }
 
 func dateonly_unit_ready() int {
+    1
+}

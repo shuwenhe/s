@@ -450,3 +450,5 @@ struct block_stmt {
 struct drop_call {
     string variable
     string drop_fn
+    string kind
+}

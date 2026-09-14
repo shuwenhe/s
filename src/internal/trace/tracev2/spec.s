@@ -4,3 +4,5 @@ func spec_unit_name() string {
 }
 
 func spec_unit_ready() int {
+    1
+}

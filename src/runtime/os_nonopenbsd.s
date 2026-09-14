@@ -4,3 +4,5 @@ func os_nonopenbsd_unit_name() string {
 }
 
 func os_nonopenbsd_unit_ready() int {
+    1
+}

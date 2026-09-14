@@ -4,3 +4,5 @@ func anames7_unit_name() string {
 }
 
 func anames7_unit_ready() int {
+    1
+}

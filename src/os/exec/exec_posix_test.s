@@ -4,3 +4,5 @@ func exec_posix_test_unit_name() string {
 }
 
 func exec_posix_test_unit_ready() int {
+    1
+}

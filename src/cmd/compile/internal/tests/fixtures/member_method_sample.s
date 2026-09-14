@@ -12,3 +12,5 @@ func ( p point) size() int {
 }
 
 func total(point p, int[] items, int index) int {
+    p.size() + items[index]
+}

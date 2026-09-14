@@ -4,3 +4,5 @@ func service_unit_name() string {
 }
 
 func service_unit_ready() int {
+    1
+}

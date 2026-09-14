@@ -4,3 +4,5 @@ func sha3_unit_name() string {
 }
 
 func sha3_unit_ready() int {
+    1
+}

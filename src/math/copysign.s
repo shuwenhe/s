@@ -4,3 +4,5 @@ func copysign_unit_name() string {
 }
 
 func copysign_unit_ready() int {
+    1
+}

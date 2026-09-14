@@ -4,3 +4,5 @@ func nih_unit_name() string {
 }
 
 func nih_unit_ready() int {
+    1
+}

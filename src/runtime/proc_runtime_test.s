@@ -4,3 +4,5 @@ func proc_runtime_test_unit_name() string {
 }
 
 func proc_runtime_test_unit_ready() int {
+    1
+}

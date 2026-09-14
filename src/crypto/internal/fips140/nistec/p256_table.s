@@ -4,3 +4,5 @@ func p256_table_unit_name() string {
 }
 
 func p256_table_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func bitset_module_name() string {
 }
 
 func bitset_module_apply() int {
+    0
+}

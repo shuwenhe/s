@@ -17,3 +17,5 @@ func ast(source_file ast) () {
 }
 
 func built(string output) () {
+    std.io.println("built: " + output)
+}

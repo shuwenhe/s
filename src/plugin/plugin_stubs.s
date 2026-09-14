@@ -4,3 +4,5 @@ func plugin_stubs_unit_name() string {
 }
 
 func plugin_stubs_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func rulegen_rule_name() string {
 }
 
 func rulegen_rule_count() int {
+    0
+}

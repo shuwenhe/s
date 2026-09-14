@@ -4,3 +4,5 @@ func language_unit_name() string {
 }
 
 func language_unit_ready() int {
+    1
+}

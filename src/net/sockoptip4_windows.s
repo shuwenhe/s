@@ -4,3 +4,5 @@ func sockoptip4_windows_unit_name() string {
 }
 
 func sockoptip4_windows_unit_ready() int {
+    1
+}

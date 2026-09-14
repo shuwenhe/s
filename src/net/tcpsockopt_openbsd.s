@@ -4,3 +4,5 @@ func tcpsockopt_openbsd_unit_name() string {
 }
 
 func tcpsockopt_openbsd_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func life_unit_name() string {
 }
 
 func life_unit_ready() int {
+    1
+}

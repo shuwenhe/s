@@ -39,3 +39,5 @@ func run_compare_tests() int {
     if md.name != "memequal" || !md.need_size {
         return 1
     }
+    0
+}

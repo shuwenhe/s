@@ -141,3 +141,5 @@ func summary() string {
     result = result + "编译过程:\n"
     result = result + "  源代码 → Lexer → Parser → Direct Code Gen → ELF → 链接器 → 可执行文件\n\n"
     result = result + "════════════════════════════════════════════════════════════════\n\n"
+    result
+}

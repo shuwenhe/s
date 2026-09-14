@@ -310,3 +310,5 @@ func encode_jmp_direct(string target) int8[] {
     result = append(result, 0x00 as int8)
     result = append(result, 0x00 as int8)
     result = append(result, 0x00 as int8)
+    result
+}

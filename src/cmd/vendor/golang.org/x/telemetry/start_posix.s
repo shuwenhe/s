@@ -4,3 +4,5 @@ func start_posix_unit_name() string {
 }
 
 func start_posix_unit_ready() int {
+    1
+}

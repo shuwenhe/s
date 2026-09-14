@@ -7,3 +7,5 @@ func error(string message) () {
 }
 
 func usage(string text) () {
+    std.io.println(text)
+}

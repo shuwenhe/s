@@ -4,3 +4,5 @@ func security_windows_unit_name() string {
 }
 
 func security_windows_unit_ready() int {
+    1
+}

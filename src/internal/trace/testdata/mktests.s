@@ -4,3 +4,5 @@ func mktests_unit_name() string {
 }
 
 func mktests_unit_ready() int {
+    1
+}

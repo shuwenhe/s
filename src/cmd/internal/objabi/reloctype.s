@@ -4,3 +4,5 @@ func reloctype_unit_name() string {
 }
 
 func reloctype_unit_ready() int {
+    1
+}

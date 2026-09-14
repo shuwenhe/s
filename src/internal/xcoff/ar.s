@@ -4,3 +4,5 @@ func ar_unit_name() string {
 }
 
 func ar_unit_ready() int {
+    1
+}

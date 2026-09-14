@@ -4,3 +4,5 @@ func write_err_android_unit_name() string {
 }
 
 func write_err_android_unit_ready() int {
+    1
+}

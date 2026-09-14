@@ -4,3 +4,5 @@ func index_generic_unit_name() string {
 }
 
 func index_generic_unit_ready() int {
+    1
+}

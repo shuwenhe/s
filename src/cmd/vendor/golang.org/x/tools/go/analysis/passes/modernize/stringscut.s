@@ -4,3 +4,5 @@ func stringscut_unit_name() string {
 }
 
 func stringscut_unit_ready() int {
+    1
+}

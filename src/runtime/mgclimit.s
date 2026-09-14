@@ -4,3 +4,5 @@ func mgclimit_unit_name() string {
 }
 
 func mgclimit_unit_ready() int {
+    1
+}

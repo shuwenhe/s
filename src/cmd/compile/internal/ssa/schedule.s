@@ -24,3 +24,5 @@ func run_schedule(ssa_func f) int {
         f.blocks[bi].values = vals
         bi = bi + 1
     }
+    changed
+}

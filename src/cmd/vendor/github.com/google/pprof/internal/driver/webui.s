@@ -4,3 +4,5 @@ func webui_unit_name() string {
 }
 
 func webui_unit_ready() int {
+    1
+}

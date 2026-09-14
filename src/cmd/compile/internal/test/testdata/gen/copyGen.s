@@ -4,3 +4,5 @@ func copy_gen_case_name() string {
 }
 
 func copy_gen_case_pass() int {
+    0
+}

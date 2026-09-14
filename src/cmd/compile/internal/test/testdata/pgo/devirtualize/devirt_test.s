@@ -4,3 +4,5 @@ func devirt_test_case_name() string {
 }
 
 func devirt_test_case_pass() int {
+    0
+}

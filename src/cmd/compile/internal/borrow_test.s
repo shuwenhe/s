@@ -2,6 +2,7 @@ package compile.internal.borrow_test
 import (
     "compile.internal.borrow"
 )
+
 func run_borrow_checker_test() int {
     shared_ok := string[] { "declare:x", "shared:x", "shared:x", "read:x", "end_shared:x", "end_shared:x", "write:x" }
     if compile.internal.borrow.borrow_check_events(shared_ok).ok == false {
@@ -71,3 +72,5 @@ func run_ownership_checker_test() int {
     if compile.internal.borrow.ownership_check_events(unknown_place_fail).ok {
         return 5
     }
+    0
+}

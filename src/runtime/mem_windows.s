@@ -4,3 +4,5 @@ func mem_windows_unit_name() string {
 }
 
 func mem_windows_unit_ready() int {
+    1
+}

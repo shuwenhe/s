@@ -4,3 +4,5 @@ func xed_unit_name() string {
 }
 
 func xed_unit_ready() int {
+    1
+}

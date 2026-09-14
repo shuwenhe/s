@@ -4,3 +4,5 @@ func branchelim_test_case_name() string {
 }
 
 func branchelim_test_case_pass() int {
+    0
+}

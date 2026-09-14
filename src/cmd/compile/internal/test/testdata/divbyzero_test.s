@@ -4,3 +4,5 @@ func divbyzero_test_case_name() string {
 }
 
 func divbyzero_test_case_pass() int {
+    0
+}

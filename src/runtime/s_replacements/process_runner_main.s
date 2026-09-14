@@ -19,3 +19,5 @@ func main(args: [string]): int {
         }
         return process_runner_run_shell(args[2]
     }
+    return usage(
+}

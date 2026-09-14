@@ -4,3 +4,5 @@ func validtype_module_name() string {
 }
 
 func validtype_module_apply() int {
+    0
+}

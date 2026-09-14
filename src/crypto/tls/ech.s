@@ -4,3 +4,5 @@ func ech_unit_name() string {
 }
 
 func ech_unit_ready() int {
+    1
+}

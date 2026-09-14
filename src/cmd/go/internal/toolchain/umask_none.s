@@ -4,3 +4,5 @@ func umask_none_unit_name() string {
 }
 
 func umask_none_unit_ready() int {
+    1
+}

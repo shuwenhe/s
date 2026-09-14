@@ -4,3 +4,5 @@ func rewrite_cond_test_case_name() string {
 }
 
 func rewrite_cond_test_case_pass() int {
+    0
+}

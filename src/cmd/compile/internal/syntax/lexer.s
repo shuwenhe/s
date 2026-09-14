@@ -600,3 +600,5 @@ func lexer_get_tokens(l* lexer) token* {
 }
 
 func lexer_get_token_count(l* lexer) int {
+    return l.token_count
+}

@@ -4,3 +4,5 @@ func pos_unit_name() string {
 }
 
 func pos_unit_ready() int {
+    1
+}

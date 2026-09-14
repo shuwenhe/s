@@ -1,4 +1,5 @@
 package toolchain
+
 struct compiler_tool {
     string name
     string version
@@ -25,14 +26,17 @@ struct build_system {
 }
 toolchain_config global_toolchain
 global_build_system global_build
+
 func toolchain_init(string target) {
     global_toolchain.target = target
     global_toolchain.compiler.name = "s_compiler"
     global_toolchain.compiler.version = "1.0.0"
     global_toolchain.compiler.path = "/usr/local/bin/s"
+
     global_toolchain.linker.name = "s_linker"
     global_toolchain.linker.version = "1.0.0"
     global_toolchain.linker.target = target
+
     global_toolchain.tools = string[]()
 }
 
@@ -71,6 +75,7 @@ func create_executable(string[] sources, string output) int {
             return -1
         }
     }
+
     return toolchain_link(sources, output)
 }
 
@@ -81,3 +86,6 @@ func create_library(string[] sources, string output) int {
             return -1
         }
     }
+
+    return 0
+}

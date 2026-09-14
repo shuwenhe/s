@@ -4,3 +4,5 @@ func example_marshaling_test_unit_name() string {
 }
 
 func example_marshaling_test_unit_ready() int {
+    1
+}

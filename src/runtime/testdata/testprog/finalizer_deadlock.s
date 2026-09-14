@@ -4,3 +4,5 @@ func finalizer_deadlock_unit_name() string {
 }
 
 func finalizer_deadlock_unit_ready() int {
+    1
+}

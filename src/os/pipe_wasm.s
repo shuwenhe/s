@@ -4,3 +4,5 @@ func pipe_wasm_unit_name() string {
 }
 
 func pipe_wasm_unit_ready() int {
+    1
+}

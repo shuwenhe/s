@@ -4,3 +4,5 @@ func forminfo_unit_name() string {
 }
 
 func forminfo_unit_ready() int {
+    1
+}

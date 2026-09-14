@@ -19,3 +19,5 @@ func exit(int code) () {
     __host_exit(code)
 }
 extern "intrinsic" func __host_run_process(string[] argv) ((), process_error)
+extern "intrinsic" func __host_run_process_output(string[] argv) (string, process_error)
+extern "intrinsic" func __host_exit(int code) ()

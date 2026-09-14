@@ -4,3 +4,5 @@ func atomic_andor_test_unit_name() string {
 }
 
 func atomic_andor_test_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func union_module_name() string {
 }
 
 func union_module_apply() int {
+    0
+}

@@ -7,6 +7,7 @@ extern "intrinsic" func __host_byte_at(string text, int index) int;
 extern "intrinsic" func __host_byte_string(int value) string;
 extern "intrinsic" func __host_make_executable(string path) int;
 extern "intrinsic" func __host_slice(string text, int start, int end) string;
+
 func digit_text(int value) string {
     if value == 0 { return "0" }
     if value == 1 { return "1" }
@@ -109,6 +110,7 @@ func find_code_word(string source, string word) int {
 func unsupported_report(string source) string {
     string report = "S-BOOTSTRAP-UNSUPPORTED-V1\n"
     report = report + "phase|line|construct|detail\n"
+
     int for_at = find_code_word(source, "for")
     if for_at >= 0 {
         report = report + unsupported_item(source, for_at, "semantic", "for-loop",
@@ -3979,3 +3981,5 @@ func compile_selfhost_c(string source, string path) int {
     string output = emit_selfhost_c(source)
     if find_word(output, "S_C_UNSUPPORTED") >= 0 { eprintln("compile: unsupported C bootstrap construct"); return 1 }
     if __host_write_text_file(path, output) != 0 { eprintln("compile: cannot write C output"); return 1 }
+    return 0
+}

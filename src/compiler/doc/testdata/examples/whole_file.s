@@ -4,3 +4,5 @@ func whole_file_unit_name() string {
 }
 
 func whole_file_unit_ready() int {
+    1
+}

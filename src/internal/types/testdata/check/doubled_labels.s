@@ -4,3 +4,5 @@ func doubled_labels_unit_name() string {
 }
 
 func doubled_labels_unit_ready() int {
+    1
+}

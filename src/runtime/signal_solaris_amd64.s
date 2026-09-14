@@ -4,3 +4,5 @@ func signal_solaris_amd64_unit_name() string {
 }
 
 func signal_solaris_amd64_unit_ready() int {
+    1
+}

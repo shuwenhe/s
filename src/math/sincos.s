@@ -4,3 +4,5 @@ func sincos_unit_name() string {
 }
 
 func sincos_unit_ready() int {
+    1
+}

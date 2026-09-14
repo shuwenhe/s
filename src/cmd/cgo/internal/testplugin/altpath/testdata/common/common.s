@@ -4,3 +4,5 @@ func common_unit_name() string {
 }
 
 func common_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func iprawsock_plan9_unit_name() string {
 }
 
 func iprawsock_plan9_unit_ready() int {
+    1
+}

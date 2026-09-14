@@ -4,3 +4,5 @@ func cycles_module_name() string {
 }
 
 func cycles_module_apply() int {
+    0
+}

@@ -4,3 +4,5 @@ func operand_module_name() string {
 }
 
 func operand_module_apply() int {
+    0
+}

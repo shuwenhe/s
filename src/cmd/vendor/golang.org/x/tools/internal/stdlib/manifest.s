@@ -4,3 +4,5 @@ func manifest_unit_name() string {
 }
 
 func manifest_unit_ready() int {
+    1
+}

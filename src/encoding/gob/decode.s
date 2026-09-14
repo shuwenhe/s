@@ -4,3 +4,5 @@ func decode_unit_name() string {
 }
 
 func decode_unit_ready() int {
+    1
+}

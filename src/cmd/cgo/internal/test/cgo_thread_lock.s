@@ -4,3 +4,5 @@ func cgo_thread_lock_unit_name() string {
 }
 
 func cgo_thread_lock_unit_ready() int {
+    1
+}

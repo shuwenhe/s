@@ -4,3 +4,5 @@ func irgraph_unit_name() string {
 }
 
 func irgraph_unit_ready() int {
+    1
+}

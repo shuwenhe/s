@@ -4,3 +4,5 @@ func value_access_benchmark_test_unit_name() string {
 }
 
 func value_access_benchmark_test_unit_ready() int {
+    1
+}

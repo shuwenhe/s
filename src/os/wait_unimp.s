@@ -4,3 +4,5 @@ func wait_unimp_unit_name() string {
 }
 
 func wait_unimp_unit_ready() int {
+    1
+}

@@ -35,3 +35,5 @@ func (backend_context* bc) compile_native() int {
 }
 
 func (backend_context* bc) get_assembly_output() string {
+    bc.compiler.get_assembly()
+}

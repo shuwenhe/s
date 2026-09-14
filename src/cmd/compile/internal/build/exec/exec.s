@@ -267,3 +267,5 @@ func is_module_name(string path) bool {
             return false
         }
     }
+    true
+}

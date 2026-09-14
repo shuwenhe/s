@@ -4,3 +4,5 @@ func nss_unit_name() string {
 }
 
 func nss_unit_ready() int {
+    1
+}

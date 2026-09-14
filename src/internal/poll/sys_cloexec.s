@@ -4,3 +4,5 @@ func sys_cloexec_unit_name() string {
 }
 
 func sys_cloexec_unit_ready() int {
+    1
+}

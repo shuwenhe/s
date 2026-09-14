@@ -4,3 +4,5 @@ func pow_unit_name() string {
 }
 
 func pow_unit_ready() int {
+    1
+}

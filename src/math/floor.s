@@ -4,3 +4,5 @@ func floor_unit_name() string {
 }
 
 func floor_unit_ready() int {
+    1
+}

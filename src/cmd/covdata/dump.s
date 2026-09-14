@@ -4,3 +4,5 @@ func dump_unit_name() string {
 }
 
 func dump_unit_ready() int {
+    1
+}

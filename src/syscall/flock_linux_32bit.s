@@ -4,3 +4,5 @@ func flock_linux_32bit_unit_name() string {
 }
 
 func flock_linux_32bit_unit_ready() int {
+    1
+}

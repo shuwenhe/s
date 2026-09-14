@@ -2,6 +2,7 @@ package compile.internal.ir.ssa
 import (
     "std.conv"
 )
+
 enum value_op {
     op_const,
     op_param,
@@ -403,12 +404,14 @@ func (f* ssa_function) get_value_by_name(string name) ssa_value* {
 
 func (f* ssa_function) eliminate_dead_code() {
     live := make(map[i32]bool)
+
     for i := i32(0); i < i32(len(f.values)); i += 1 {
         val := f.values[i]
         if val.op == op_return || val.op == op_store {
             live[val.id] = true
         }
     }
+
     changed := true
     for changed {
         changed = false
@@ -437,3 +440,5 @@ func (f* ssa_function) to_string() string {
             s += "  phi_" + string(phi.id) + " = phi(...)\n"
         }
     }
+    s
+}

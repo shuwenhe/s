@@ -4,3 +4,5 @@ func plusbuild_unit_name() string {
 }
 
 func plusbuild_unit_ready() int {
+    1
+}

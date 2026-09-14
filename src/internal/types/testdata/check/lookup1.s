@@ -4,3 +4,5 @@ func lookup1_unit_name() string {
 }
 
 func lookup1_unit_ready() int {
+    1
+}

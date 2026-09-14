@@ -4,3 +4,5 @@ func cpu_loong64_linux_unit_name() string {
 }
 
 func cpu_loong64_linux_unit_ready() int {
+    1
+}

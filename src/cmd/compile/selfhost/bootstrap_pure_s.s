@@ -112,3 +112,5 @@ func make_manifest(
     out = out + "stage2=" + stage2_bin + "\n"
     out = out + "stage3.ir=" + stage3_ir + "\n"
     out = out + "stage3=" + stage3_bin + "\n"
+    out
+}

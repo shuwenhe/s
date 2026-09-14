@@ -4,3 +4,5 @@ func tagptr_unit_name() string {
 }
 
 func tagptr_unit_ready() int {
+    1
+}

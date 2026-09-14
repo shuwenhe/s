@@ -4,3 +4,5 @@ func metamerge_unit_name() string {
 }
 
 func metamerge_unit_ready() int {
+    1
+}

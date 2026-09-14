@@ -4,3 +4,5 @@ func typeinstcycles_unit_name() string {
 }
 
 func typeinstcycles_unit_ready() int {
+    1
+}

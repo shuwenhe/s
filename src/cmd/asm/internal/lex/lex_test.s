@@ -4,3 +4,5 @@ func lex_test_unit_name() string {
 }
 
 func lex_test_unit_ready() int {
+    1
+}

@@ -22,3 +22,5 @@ func string_char_at( text string, int index): string {
 }
 
 func string_slice( text string, int start, int end): string {
+    return text.slice(start, end
+}

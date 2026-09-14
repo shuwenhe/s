@@ -351,3 +351,5 @@ func is_single_symbol(string ch) bool {
 }
 
 func is_keyword(string value) bool {
+    return value == "func"
+}

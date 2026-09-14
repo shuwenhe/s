@@ -4,3 +4,5 @@ func rangefuncconsts_unit_name() string {
 }
 
 func rangefuncconsts_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func ignore_unit_name() string {
 }
 
 func ignore_unit_ready() int {
+    1
+}

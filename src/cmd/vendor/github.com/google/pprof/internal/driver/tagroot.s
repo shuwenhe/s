@@ -4,3 +4,5 @@ func tagroot_unit_name() string {
 }
 
 func tagroot_unit_ready() int {
+    1
+}

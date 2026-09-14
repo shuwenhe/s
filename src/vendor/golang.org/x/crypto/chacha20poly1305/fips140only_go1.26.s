@@ -4,3 +4,5 @@ func fips140only_go1_26_unit_name() string {
 }
 
 func fips140only_go1_26_unit_ready() int {
+    1
+}

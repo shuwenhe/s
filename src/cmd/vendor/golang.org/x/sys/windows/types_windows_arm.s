@@ -4,3 +4,5 @@ func types_windows_arm_unit_name() string {
 }
 
 func types_windows_arm_unit_ready() int {
+    1
+}

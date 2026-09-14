@@ -4,3 +4,5 @@ func kubernetes26980_unit_name() string {
 }
 
 func kubernetes26980_unit_ready() int {
+    1
+}

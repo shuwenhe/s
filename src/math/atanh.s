@@ -4,3 +4,5 @@ func atanh_unit_name() string {
 }
 
 func atanh_unit_ready() int {
+    1
+}

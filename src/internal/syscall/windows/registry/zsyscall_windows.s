@@ -4,3 +4,5 @@ func zsyscall_windows_unit_name() string {
 }
 
 func zsyscall_windows_unit_ready() int {
+    1
+}

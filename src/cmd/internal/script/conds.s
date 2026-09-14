@@ -4,3 +4,5 @@ func conds_unit_name() string {
 }
 
 func conds_unit_ready() int {
+    1
+}

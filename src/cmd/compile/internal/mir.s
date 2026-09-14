@@ -8,6 +8,7 @@ import (
     "std.option"
     "std.prelude"
 )
+
 // C.3.1b.2-pre.A1: Canonical projection kind
 // Structured representation of place projection operations
 enum mir_projection_kind {
@@ -26,6 +27,7 @@ struct mir_place_projection {
     mir_projection_kind kind   // Canonical: enum, not string
     string value               // Field name or index expression (string for now)
 }
+
 
 struct mir_place {
     string root
@@ -137,6 +139,7 @@ struct mir_point {
 struct mir_point_map {
     mir_point[] points
 }
+
 // B1.2: Preserve canonical borrowed Place through MIR ownership facts
 // Dual-path migration: legacy string paths + canonical structured places
 // 
@@ -154,11 +157,13 @@ struct mir_point_map {
 struct mir_ownership_facts {
     ownership_analysis_input input
     string[] ref_names
+
     // LEGACY / DEBUG: string representation of borrowed places
     // Used for backward compatibility and diagnostic output only
     // Authority: NONE (use loan_borrowed_places for semantics)
     // TODO: Remove after legacy diagnostic consumers migrate.
     string[] loan_places
+
     // CANONICAL / SEMANTIC: structured representation of borrowed places
     // Indexed by loan_id, stored directly from mir_borrow_stmt.place
     // Structured preservation: no string serialization involved
@@ -244,12 +249,15 @@ func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_o
                     loan_id := facts.input.loan_count
                     facts.input.loan_count = facts.input.loan_count + 1
                     facts.input.loan_points = append(facts.input.loan_points, mir_add_point_value(0, point))
+
                     // [LEGACY] Store string representation for backward compatibility/diagnostics
                     facts.loan_places = append(facts.loan_places, mir_place_key(borrow_stmt.place))
+
                     // [CANONICAL] Store structured place directly from borrow statement
                     // Structural preservation without string conversion (no serialization round-trip)
                     // This is the canonical semantic record of what place was borrowed
                     facts.loan_borrowed_places = append(facts.loan_borrowed_places, borrow_stmt.place)
+
                     facts.input.ref_loans[ref_id] = loan_id
                     facts.input.region_points[ref_id] = mir_add_point_value(facts.input.region_points[ref_id], point)
                 }
@@ -288,6 +296,7 @@ func mir_empty_ownership_facts(int point_count) mir_ownership_facts {
         loan_borrowed_places: mir_place[](),
     }
 }
+
 // B1.3: Query Loan's borrowed Place (shadow analysis entry point)
 // Returns the canonical mir_place that Loan with given id borrowed.
 // 
@@ -309,23 +318,26 @@ func mir_empty_ownership_facts(int point_count) mir_ownership_facts {
 //   } else {
 //       // process place
 //   }
-
 func mir_loan_borrowed_place(mir_ownership_facts* facts, int loan_id) (mir_place, bool) {
     // Precondition: facts must not be nil
     if facts == nil {
         return mir_place{}, false
     }
+
     // Bounds check: loan_id must be in [0, loan_count)
     if loan_id < 0 || loan_id >= facts.input.loan_count {
         return mir_place{}, false
     }
+
     // Invariant check: ensure array is in sync with loan_count
     if loan_id >= len(facts.loan_borrowed_places) {
         return mir_place{}, false
     }
+
     // Return the canonical structured place for this loan
     return facts.loan_borrowed_places[loan_id], true
 }
+
 // Helper: Create a mir_place from root and field names (for testing)
 func mir_place_from_fields(string root, string[] fields) mir_place {
     projections := mir_place_projection[]()
@@ -631,6 +643,7 @@ func mir_place_key(mir_place place) string {
     }
     out
 }
+
 // C.3.1b.2-pre.A3: Structural equality for MIR places
 // Compares two places for identity equality
 // This is MIR Place identity equality, NOT alias equivalence
@@ -644,10 +657,12 @@ func mir_place_equal(a mir_place, b mir_place) bool {
     if a.root != b.root {
         return false
     }
+
     // [2] Projection count must match
     if len(a.projections) != len(b.projections) {
         return false
     }
+
     // [3] Each projection must match (kind and value)
     i := 0
     for i < len(a.projections) {
@@ -655,15 +670,19 @@ func mir_place_equal(a mir_place, b mir_place) bool {
         if a.projections[i].kind != b.projections[i].kind {
             return false
         }
+
         // Value must match (direct string comparison on stored value)
         if a.projections[i].value != b.projections[i].value {
             return false
         }
+
         i = i + 1
     }
+
     // All fields match: places are equal
     return true
 }
+
 // C.3.1b.2-pre.A4: Structural prefix for MIR places
 // Determines if prefix is a prefix of place (including exact match)
 // Algebraic basis for place overlap: places overlap iff they share a common prefix
@@ -678,10 +697,12 @@ func mir_place_is_prefix(prefix mir_place, place mir_place) bool {
     if prefix.root != place.root {
         return false
     }
+
     // [2] Prefix projection count must not exceed place count
     if len(prefix.projections) > len(place.projections) {
         return false
     }
+
     // [3] Each prefix projection must match corresponding place projection
     i := 0
     for i < len(prefix.projections) {
@@ -689,12 +710,15 @@ func mir_place_is_prefix(prefix mir_place, place mir_place) bool {
         if prefix.projections[i].kind != place.projections[i].kind {
             return false
         }
+
         // Value must match exactly
         if prefix.projections[i].value != place.projections[i].value {
             return false
         }
+
         i = i + 1
     }
+
     // Prefix is a valid prefix of place
     return true
 }
@@ -1002,3 +1026,5 @@ func join_text(string[] values, string sep) string {
         out = out + values[i]
         i = i + 1
     }
+    return out
+}

@@ -4,3 +4,5 @@ func security_test_unit_name() string {
 }
 
 func security_test_unit_ready() int {
+    1
+}

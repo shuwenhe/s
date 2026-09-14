@@ -4,3 +4,5 @@ func literals_module_name() string {
 }
 
 func literals_module_apply() int {
+    0
+}

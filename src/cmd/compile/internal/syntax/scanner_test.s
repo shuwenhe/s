@@ -4,3 +4,5 @@ func scanner_test_case_name() string {
 }
 
 func scanner_test_case_pass() int {
+    0
+}

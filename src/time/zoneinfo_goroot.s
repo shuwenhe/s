@@ -4,3 +4,5 @@ func zoneinfo_goroot_unit_name() string {
 }
 
 func zoneinfo_goroot_unit_ready() int {
+    1
+}

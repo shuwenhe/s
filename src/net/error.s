@@ -64,3 +64,5 @@ func (e *op_error) error() string {
         s = s + e.addr.string()
     }
     s = s + ": " + e.err
+    s
+}

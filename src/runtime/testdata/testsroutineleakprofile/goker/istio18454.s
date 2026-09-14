@@ -4,3 +4,5 @@ func istio18454_unit_name() string {
 }
 
 func istio18454_unit_ready() int {
+    1
+}

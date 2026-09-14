@@ -255,3 +255,5 @@ func run_all_tests() test_suite {
 
 func main() {
     test_suite suite = run_all_tests()
+    suite.print_summary()
+}

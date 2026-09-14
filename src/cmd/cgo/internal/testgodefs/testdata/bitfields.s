@@ -4,3 +4,5 @@ func bitfields_unit_name() string {
 }
 
 func bitfields_unit_ready() int {
+    1
+}

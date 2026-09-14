@@ -4,3 +4,5 @@ func shift_unit_name() string {
 }
 
 func shift_unit_ready() int {
+    1
+}

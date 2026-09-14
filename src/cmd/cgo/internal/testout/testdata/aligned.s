@@ -4,3 +4,5 @@ func aligned_unit_name() string {
 }
 
 func aligned_unit_ready() int {
+    1
+}

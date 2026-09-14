@@ -4,3 +4,5 @@ func hybrid_pool_test_unit_name() string {
 }
 
 func hybrid_pool_test_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func pow10gen_unit_name() string {
 }
 
 func pow10gen_unit_ready() int {
+    1
+}

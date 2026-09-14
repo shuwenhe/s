@@ -4,3 +4,5 @@ func identity_module_name() string {
 }
 
 func identity_module_apply() int {
+    0
+}

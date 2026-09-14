@@ -4,3 +4,5 @@ func fallthrough_case_name() string {
 }
 
 func fallthrough_case_pass() int {
+    0
+}

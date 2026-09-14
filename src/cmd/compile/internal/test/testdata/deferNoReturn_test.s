@@ -4,3 +4,5 @@ func defer_no_return_test_case_name() string {
 }
 
 func defer_no_return_test_case_pass() int {
+    0
+}

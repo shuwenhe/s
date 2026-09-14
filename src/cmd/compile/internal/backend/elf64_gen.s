@@ -93,3 +93,5 @@ func (elf64_writer* w) generate_elf() string {
         result = result + ""
         i = i + 1
     }
+    result
+}

@@ -4,3 +4,5 @@ func initorder_module_name() string {
 }
 
 func initorder_module_apply() int {
+    0
+}

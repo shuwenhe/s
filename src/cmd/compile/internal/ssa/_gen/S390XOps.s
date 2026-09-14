@@ -4,3 +4,5 @@ func s390_x_ops_rule_name() string {
 }
 
 func s390_x_ops_rule_count() int {
+    0
+}

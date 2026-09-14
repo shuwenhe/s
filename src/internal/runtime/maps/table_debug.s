@@ -4,3 +4,5 @@ func table_debug_unit_name() string {
 }
 
 func table_debug_unit_ready() int {
+    1
+}

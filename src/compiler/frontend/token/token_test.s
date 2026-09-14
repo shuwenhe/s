@@ -4,3 +4,5 @@ func token_test_unit_name() string {
 }
 
 func token_test_unit_ready() int {
+    1
+}

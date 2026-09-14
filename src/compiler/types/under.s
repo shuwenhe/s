@@ -4,3 +4,5 @@ func under_unit_name() string {
 }
 
 func under_unit_ready() int {
+    1
+}

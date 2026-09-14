@@ -56,3 +56,7 @@ struct sweep_result {
     int freed_count
     int live_count
 }
+
+func mgcsweep_unit_name() string { "src/runtime/mgcsweep" }
+
+func mgcsweep_unit_ready() int   { 1 }

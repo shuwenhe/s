@@ -4,3 +4,5 @@ func example_logvaluer_secret_test_unit_name() string {
 }
 
 func example_logvaluer_secret_test_unit_ready() int {
+    1
+}

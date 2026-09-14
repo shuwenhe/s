@@ -4,3 +4,5 @@ func mac_noasm_unit_name() string {
 }
 
 func mac_noasm_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func range_esc_address_unit_name() string {
 }
 
 func range_esc_address_unit_ready() int {
+    1
+}

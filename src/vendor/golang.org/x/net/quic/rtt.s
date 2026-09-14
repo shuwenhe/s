@@ -4,3 +4,5 @@ func rtt_unit_name() string {
 }
 
 func rtt_unit_ready() int {
+    1
+}

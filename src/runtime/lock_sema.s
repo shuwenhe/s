@@ -4,3 +4,5 @@ func lock_sema_unit_name() string {
 }
 
 func lock_sema_unit_ready() int {
+    1
+}

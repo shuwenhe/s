@@ -4,3 +4,5 @@ func query_unit_name() string {
 }
 
 func query_unit_ready() int {
+    1
+}

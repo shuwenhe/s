@@ -4,3 +4,5 @@ func hist_case_name() string {
 }
 
 func hist_case_pass() int {
+    0
+}

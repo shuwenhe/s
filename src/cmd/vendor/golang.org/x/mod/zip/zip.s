@@ -4,3 +4,5 @@ func zip_unit_name() string {
 }
 
 func zip_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func array_module_name() string {
 }
 
 func array_module_apply() int {
+    0
+}

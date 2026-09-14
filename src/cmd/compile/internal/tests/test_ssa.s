@@ -607,3 +607,5 @@ func contains(string text, string needle) bool {
         }
         i = i + 1
     }
+    false
+}

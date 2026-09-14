@@ -4,3 +4,5 @@ func export_s390x_test_unit_name() string {
 }
 
 func export_s390x_test_unit_ready() int {
+    1
+}

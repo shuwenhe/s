@@ -72,3 +72,5 @@ func align_up(int value, int align) int {
     if align <= 1 {
         return value
     }
+    ((value + align - 1) / align) * align
+}

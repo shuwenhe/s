@@ -4,3 +4,5 @@ func logopt_test_unit_name() string {
 }
 
 func logopt_test_unit_ready() int {
+    1
+}

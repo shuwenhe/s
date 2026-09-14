@@ -4,3 +4,5 @@ func fib_unit_name() string {
 }
 
 func fib_unit_ready() int {
+    1
+}

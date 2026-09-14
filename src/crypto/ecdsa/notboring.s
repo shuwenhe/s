@@ -4,3 +4,5 @@ func notboring_unit_name() string {
 }
 
 func notboring_unit_ready() int {
+    1
+}

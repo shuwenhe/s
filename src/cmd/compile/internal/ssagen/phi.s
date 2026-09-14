@@ -42,3 +42,5 @@ func lower_phi(int target, phi_input[] inputs) lowered_phi {
 }
 
 func phi_is_trivial(lowered_phi p) bool {
+    p.trivial
+}

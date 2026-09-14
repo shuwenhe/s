@@ -4,3 +4,5 @@ func bexport_module_name() string {
 }
 
 func bexport_module_apply() int {
+    0
+}

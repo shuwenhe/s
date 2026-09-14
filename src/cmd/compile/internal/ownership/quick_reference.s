@@ -1,4 +1,6 @@
+
 package main
+
 func main() int {
     println("S Ownership System Quick Reference")
     println("========================================")
@@ -22,3 +24,5 @@ func main() int {
     println("Compile:")
     println("  ./build/s_ir_runner src/ownership_system.s -o /tmp/ownership")
     println("")
+    return 0
+}

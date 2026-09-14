@@ -4,3 +4,5 @@ func hilbert_test_case_name() string {
 }
 
 func hilbert_test_case_pass() int {
+    0
+}

@@ -4,3 +4,5 @@ func ftoadbox_unit_name() string {
 }
 
 func ftoadbox_unit_ready() int {
+    1
+}

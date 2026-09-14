@@ -234,3 +234,5 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
     }
     regalloc_result {
         assigns: assigns, spills spills,
+    }
+}

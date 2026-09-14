@@ -4,3 +4,5 @@ func kernel_version_solaris_unit_name() string {
 }
 
 func kernel_version_solaris_unit_ready() int {
+    1
+}

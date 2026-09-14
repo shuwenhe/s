@@ -4,3 +4,5 @@ func waitgroup_unit_name() string {
 }
 
 func waitgroup_unit_ready() int {
+    1
+}

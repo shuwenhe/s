@@ -4,3 +4,5 @@ func create_file_nounix_unit_name() string {
 }
 
 func create_file_nounix_unit_ready() int {
+    1
+}

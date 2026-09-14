@@ -4,3 +4,5 @@ func sha384_unit_name() string {
 }
 
 func sha384_unit_ready() int {
+    1
+}

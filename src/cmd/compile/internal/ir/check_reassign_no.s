@@ -4,3 +4,5 @@ func check_reassign_no_module_name() string {
 }
 
 func check_reassign_no_module_apply() int {
+    0
+}

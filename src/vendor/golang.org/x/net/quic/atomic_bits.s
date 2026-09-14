@@ -4,3 +4,5 @@ func atomic_bits_unit_name() string {
 }
 
 func atomic_bits_unit_ready() int {
+    1
+}

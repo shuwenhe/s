@@ -4,3 +4,5 @@ func const_module_name() string {
 }
 
 func const_module_apply() int {
+    0
+}

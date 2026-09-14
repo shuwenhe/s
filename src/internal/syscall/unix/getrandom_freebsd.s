@@ -4,3 +4,5 @@ func getrandom_freebsd_unit_name() string {
 }
 
 func getrandom_freebsd_unit_ready() int {
+    1
+}

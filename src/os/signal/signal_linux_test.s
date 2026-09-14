@@ -4,3 +4,5 @@ func signal_linux_test_unit_name() string {
 }
 
 func signal_linux_test_unit_ready() int {
+    1
+}

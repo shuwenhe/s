@@ -88,3 +88,5 @@ func (opt* optimizer) run_optimization_passes() {
 }
 
 func (opt* optimizer) get_optimized_prog() prog_list {
+    *opt.prog
+}

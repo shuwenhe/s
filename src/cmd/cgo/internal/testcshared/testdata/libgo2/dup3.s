@@ -4,3 +4,5 @@ func dup3_unit_name() string {
 }
 
 func dup3_unit_ready() int {
+    1
+}

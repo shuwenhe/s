@@ -4,3 +4,5 @@ func map_benchmark_test_unit_name() string {
 }
 
 func map_benchmark_test_unit_ready() int {
+    1
+}

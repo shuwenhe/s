@@ -4,3 +4,5 @@ func cpu_riscv64_other_unit_name() string {
 }
 
 func cpu_riscv64_other_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func setuidgid_linux_unit_name() string {
 }
 
 func setuidgid_linux_unit_ready() int {
+    1
+}

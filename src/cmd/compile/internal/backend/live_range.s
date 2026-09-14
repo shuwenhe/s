@@ -110,3 +110,5 @@ func (reg_alloc_state* s) try_allocate_free_reg(int value_id, interval iv) int {
         }
         i = i + 1
     }
+    reg_candidate
+}

@@ -4,3 +4,5 @@ func linkname_libc_unit_name() string {
 }
 
 func linkname_libc_unit_ready() int {
+    1
+}

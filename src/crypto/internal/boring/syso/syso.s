@@ -4,3 +4,5 @@ func syso_unit_name() string {
 }
 
 func syso_unit_ready() int {
+    1
+}

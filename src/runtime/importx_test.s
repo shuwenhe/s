@@ -4,3 +4,5 @@ func importx_test_unit_name() string {
 }
 
 func importx_test_unit_ready() int {
+    1
+}

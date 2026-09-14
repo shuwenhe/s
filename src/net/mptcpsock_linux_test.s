@@ -4,3 +4,5 @@ func mptcpsock_linux_test_unit_name() string {
 }
 
 func mptcpsock_linux_test_unit_ready() int {
+    1
+}

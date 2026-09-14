@@ -1,4 +1,5 @@
 package compile.internal.ir.alias
+
 enum alias_kind {
     alias_none
     alias_may
@@ -26,6 +27,7 @@ func new_alias_analysis(num_values i32) alias_analysis* {
     aa.must_alias_matrix = make(i32[][], num_values)
     aa.value_names = make(string[], num_values)
     aa.num_values = num_values
+
     for i := i32(0); i < num_values; i += 1 {
         aa.may_alias_matrix[i] = make(i32[], num_values)
         aa.must_alias_matrix[i] = make(i32[], num_values)
@@ -42,6 +44,7 @@ func (aa* alias_analysis) add_may_alias(v1 i32, v2 i32) {
     if v1 >= 0 && v1 < aa.num_values && v2 >= 0 && v2 < aa.num_values {
         aa.may_alias_matrix[v1][v2] = 1
         aa.may_alias_matrix[v2][v1] = 1
+
         rel := alias_relation{value1: v1, value2: v2, kind: alias_may}
         aa.relations = append(aa.relations, rel)
     }
@@ -53,6 +56,7 @@ func (aa* alias_analysis) add_must_alias(v1 i32, v2 i32) {
         aa.must_alias_matrix[v2][v1] = 1
         aa.may_alias_matrix[v1][v2] = 1
         aa.may_alias_matrix[v2][v1] = 1
+
         rel := alias_relation{value1: v1, value2: v2, kind: alias_must}
         aa.relations = append(aa.relations, rel)
     }
@@ -186,3 +190,5 @@ func (aa* alias_analysis) to_string() string {
             }
         }
     }
+    s
+}

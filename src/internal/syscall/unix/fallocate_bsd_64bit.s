@@ -4,3 +4,5 @@ func fallocate_bsd_64bit_unit_name() string {
 }
 
 func fallocate_bsd_64bit_unit_ready() int {
+    1
+}

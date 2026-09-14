@@ -4,3 +4,5 @@ func long_double_size_unit_name() string {
 }
 
 func long_double_size_unit_ready() int {
+    1
+}

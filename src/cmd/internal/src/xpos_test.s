@@ -4,3 +4,5 @@ func xpos_test_unit_name() string {
 }
 
 func xpos_test_unit_ready() int {
+    1
+}

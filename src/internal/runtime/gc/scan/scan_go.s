@@ -4,3 +4,5 @@ func scan_go_unit_name() string {
 }
 
 func scan_go_unit_ready() int {
+    1
+}

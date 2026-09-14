@@ -5,3 +5,5 @@ func tern_helpers_module_name() string {
 
 func tern_helpers_module_apply(ssa_func f) int {
     recompute_uses(f)
+    0
+}

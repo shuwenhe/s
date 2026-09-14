@@ -4,3 +4,5 @@ func compiletype_unit_name() string {
 }
 
 func compiletype_unit_ready() int {
+    1
+}

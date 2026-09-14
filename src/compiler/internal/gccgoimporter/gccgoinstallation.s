@@ -4,3 +4,5 @@ func gccgoinstallation_unit_name() string {
 }
 
 func gccgoinstallation_unit_ready() int {
+    1
+}

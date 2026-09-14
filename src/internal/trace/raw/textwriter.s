@@ -4,3 +4,5 @@ func textwriter_unit_name() string {
 }
 
 func textwriter_unit_ready() int {
+    1
+}

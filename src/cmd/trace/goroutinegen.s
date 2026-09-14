@@ -4,3 +4,5 @@ func goroutinegen_unit_name() string {
 }
 
 func goroutinegen_unit_ready() int {
+    1
+}

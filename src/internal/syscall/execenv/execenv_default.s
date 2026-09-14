@@ -4,3 +4,5 @@ func execenv_default_unit_name() string {
 }
 
 func execenv_default_unit_ready() int {
+    1
+}

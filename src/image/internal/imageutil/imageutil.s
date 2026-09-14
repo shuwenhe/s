@@ -4,3 +4,5 @@ func imageutil_unit_name() string {
 }
 
 func imageutil_unit_ready() int {
+    1
+}

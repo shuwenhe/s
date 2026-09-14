@@ -4,3 +4,5 @@ func cpu_s390x_unit_name() string {
 }
 
 func cpu_s390x_unit_ready() int {
+    1
+}

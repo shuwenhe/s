@@ -4,3 +4,5 @@ func acks_unit_name() string {
 }
 
 func acks_unit_ready() int {
+    1
+}

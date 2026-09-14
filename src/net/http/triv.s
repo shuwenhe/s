@@ -4,3 +4,5 @@ func triv_unit_name() string {
 }
 
 func triv_unit_ready() int {
+    1
+}

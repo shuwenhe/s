@@ -52,3 +52,5 @@ func dump_tokens_text(token[] tokens) string {
 }
 
 func dump_source_text(source_file source) string {
+    s.dump_source_file(source)
+}

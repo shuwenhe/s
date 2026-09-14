@@ -4,3 +4,5 @@ func go125_sync_unit_name() string {
 }
 
 func go125_sync_unit_ready() int {
+    1
+}

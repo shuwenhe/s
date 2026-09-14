@@ -239,3 +239,5 @@ func popcount_word(int value) int {
         }
         bit = bit + 1
     }
+    c
+}

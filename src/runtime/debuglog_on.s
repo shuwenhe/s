@@ -4,3 +4,5 @@ func debuglog_on_unit_name() string {
 }
 
 func debuglog_on_unit_ready() int {
+    1
+}

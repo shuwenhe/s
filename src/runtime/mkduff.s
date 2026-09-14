@@ -4,3 +4,5 @@ func mkduff_unit_name() string {
 }
 
 func mkduff_unit_ready() int {
+    1
+}

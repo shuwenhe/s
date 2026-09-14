@@ -4,3 +4,5 @@ func mgcstack_unit_name() string {
 }
 
 func mgcstack_unit_ready() int {
+    1
+}

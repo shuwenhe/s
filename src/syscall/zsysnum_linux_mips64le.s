@@ -4,3 +4,5 @@ func zsysnum_linux_mips64le_unit_name() string {
 }
 
 func zsysnum_linux_mips64le_unit_ready() int {
+    1
+}

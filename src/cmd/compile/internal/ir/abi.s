@@ -4,3 +4,5 @@ func abi_module_name() string {
 }
 
 func abi_module_apply() int {
+    0
+}

@@ -4,3 +4,5 @@ func ytab_unit_name() string {
 }
 
 func ytab_unit_ready() int {
+    1
+}

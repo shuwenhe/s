@@ -4,3 +4,5 @@ func mksyscall_unit_name() string {
 }
 
 func mksyscall_unit_ready() int {
+    1
+}

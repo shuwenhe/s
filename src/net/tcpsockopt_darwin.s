@@ -4,3 +4,5 @@ func tcpsockopt_darwin_unit_name() string {
 }
 
 func tcpsockopt_darwin_unit_ready() int {
+    1
+}

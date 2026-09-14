@@ -22,3 +22,5 @@ func intervals_test_case_pass() int {
     if !intervals_overlap(ivs[0], ivs[1]) {
         return 0
     }
+    1
+}

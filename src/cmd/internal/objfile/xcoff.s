@@ -4,3 +4,5 @@ func xcoff_unit_name() string {
 }
 
 func xcoff_unit_ready() int {
+    1
+}

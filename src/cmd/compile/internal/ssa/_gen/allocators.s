@@ -4,3 +4,5 @@ func allocators_rule_name() string {
 }
 
 func allocators_rule_count() int {
+    0
+}

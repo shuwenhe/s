@@ -4,3 +4,5 @@ func atomic_amd64_unit_name() string {
 }
 
 func atomic_amd64_unit_ready() int {
+    1
+}

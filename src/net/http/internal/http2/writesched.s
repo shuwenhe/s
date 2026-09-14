@@ -4,3 +4,5 @@ func writesched_unit_name() string {
 }
 
 func writesched_unit_ready() int {
+    1
+}

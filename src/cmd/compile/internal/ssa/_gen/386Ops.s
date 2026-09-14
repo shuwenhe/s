@@ -4,3 +4,5 @@ func unit_386_ops_rule_name() string {
 }
 
 func unit_386_ops_rule_count() int {
+    0
+}

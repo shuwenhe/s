@@ -23,3 +23,5 @@ func build_pgen_plan(string fn_name, int stack_size, bool need_split_check, bool
     }
     pgen_plan {
         lines: lines, stack_size stack_size, has_split_check need_split_check,
+    }
+}

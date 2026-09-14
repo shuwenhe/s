@@ -4,3 +4,5 @@ func typeterm_module_name() string {
 }
 
 func typeterm_module_apply() int {
+    0
+}

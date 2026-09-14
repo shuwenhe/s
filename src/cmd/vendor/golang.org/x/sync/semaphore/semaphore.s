@@ -4,3 +4,5 @@ func semaphore_unit_name() string {
 }
 
 func semaphore_unit_ready() int {
+    1
+}

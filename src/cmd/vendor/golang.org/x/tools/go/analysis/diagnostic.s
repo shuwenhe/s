@@ -4,3 +4,5 @@ func diagnostic_unit_name() string {
 }
 
 func diagnostic_unit_ready() int {
+    1
+}

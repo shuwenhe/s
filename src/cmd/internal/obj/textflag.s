@@ -4,3 +4,5 @@ func textflag_unit_name() string {
 }
 
 func textflag_unit_ready() int {
+    1
+}

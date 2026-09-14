@@ -4,3 +4,5 @@ func msan7_unit_name() string {
 }
 
 func msan7_unit_ready() int {
+    1
+}

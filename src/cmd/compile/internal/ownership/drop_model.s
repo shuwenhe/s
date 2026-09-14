@@ -1,4 +1,5 @@
 package ownership_drop_model
+
 func drop_parent_state(int left, int right) int {
     if left == 0 && right == 0 { return 0 }
     if left == 1 && right == 1 { return 1 }
@@ -23,3 +24,5 @@ func ownership_drop_model_verify() int {
     local = drop_parent_state(f0, f1)
     if local != 0 { return 3 }
     if drop_decision(local, f0, f1) != "Drop(Local(_1))" { return 4 }
+    return 0
+}

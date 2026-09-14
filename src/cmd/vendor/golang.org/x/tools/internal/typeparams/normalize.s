@@ -4,3 +4,5 @@ func normalize_unit_name() string {
 }
 
 func normalize_unit_ready() int {
+    1
+}

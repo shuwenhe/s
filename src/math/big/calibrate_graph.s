@@ -4,3 +4,5 @@ func calibrate_graph_unit_name() string {
 }
 
 func calibrate_graph_unit_ready() int {
+    1
+}

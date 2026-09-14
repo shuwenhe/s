@@ -4,3 +4,5 @@ func exec_stub_unit_name() string {
 }
 
 func exec_stub_unit_ready() int {
+    1
+}

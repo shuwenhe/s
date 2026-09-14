@@ -4,3 +4,5 @@ func mremap_unit_name() string {
 }
 
 func mremap_unit_ready() int {
+    1
+}

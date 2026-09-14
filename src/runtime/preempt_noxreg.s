@@ -4,3 +4,5 @@ func preempt_noxreg_unit_name() string {
 }
 
 func preempt_noxreg_unit_ready() int {
+    1
+}

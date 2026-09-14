@@ -4,3 +4,5 @@ func maphash_unit_name() string {
 }
 
 func maphash_unit_ready() int {
+    1
+}

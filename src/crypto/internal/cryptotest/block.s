@@ -4,3 +4,5 @@ func block_unit_name() string {
 }
 
 func block_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func syms_module_name() string {
 }
 
 func syms_module_apply() int {
+    0
+}

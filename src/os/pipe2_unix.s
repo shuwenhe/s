@@ -4,3 +4,5 @@ func pipe2_unix_unit_name() string {
 }
 
 func pipe2_unix_unit_ready() int {
+    1
+}

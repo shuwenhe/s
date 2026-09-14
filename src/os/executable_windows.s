@@ -4,3 +4,5 @@ func executable_windows_unit_name() string {
 }
 
 func executable_windows_unit_ready() int {
+    1
+}

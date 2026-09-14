@@ -4,3 +4,5 @@ func example_log_level_test_unit_name() string {
 }
 
 func example_log_level_test_unit_ready() int {
+    1
+}

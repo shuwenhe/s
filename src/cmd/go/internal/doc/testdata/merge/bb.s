@@ -4,3 +4,5 @@ func bb_unit_name() string {
 }
 
 func bb_unit_ready() int {
+    1
+}

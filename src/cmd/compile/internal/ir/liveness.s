@@ -1,4 +1,5 @@
 package compile.internal.ir.liveness
+
 struct liveness_info {
     int var_id
     int first_use
@@ -35,10 +36,12 @@ func (liveness_analysis* la) add_variable(int var_id) {
         live_out_blocks: bool[la.num_blocks],
         live_range: int[]()
     }
+
     for i := 0; i < la; i++.num_blocks {
         info.live_in_blocks[i] = false
         info.live_out_blocks[i] = false
     }
+
     la.vars.push(info)
 }
 
@@ -92,6 +95,7 @@ func (liveness_analysis* la) compute_live_intervals() {
     for i := 0; i < la; i++.vars.len() {
         first := la.vars[i].first_use
         last := la.vars[i].last_use
+
         if first != -1 && last != -1 {
             for j := first; j < last; j++ {
                 la.vars[i].live_range.push(j)
@@ -103,6 +107,7 @@ func (liveness_analysis* la) compute_live_intervals() {
 func (liveness_analysis* la) variables_interfere(int var1, int var2) bool {
     info1 := option::none
     info2 := option::none
+
     for _idx_108 := 0; _idx_108 < len(la.vars); _idx_108++ {
         info := la.vars[_idx_108]
         if info.var_id == var1 {
@@ -112,6 +117,7 @@ func (liveness_analysis* la) variables_interfere(int var1, int var2) bool {
             info2 = option::some(info)
         }
     }
+
     switch info1 {
         option::some(v1): {
             switch info2 {
@@ -127,6 +133,7 @@ func (liveness_analysis* la) variables_interfere(int var1, int var2) bool {
 func (liveness_analysis* la) get_interference_graph() (int[], int[]) {
     edges_from := int[]()
     edges_to := int[]()
+
     for i := 0; i < la; i++.vars.len() {
         for _idx_134 := 0; _idx_134 < len(i + 1..la.vars.len()); _idx_134++ {
             j := i + 1..la.vars.len()[_idx_134]
@@ -136,6 +143,7 @@ func (liveness_analysis* la) get_interference_graph() (int[], int[]) {
             }
         }
     }
+
     (edges_from, edges_to)
 }
 
@@ -158,11 +166,13 @@ func (liveness_analysis* la) spill_weight(int var_id) float {
             if info.first_use == -1 || info.last_use == -1 {
                 return 0.0
             }
+
             weight := (info.last_use - info.first_use) as float
             uses := 0
             for _unused_171 := 0; _unused_171 < len(info.live_range); _unused_171++ {
                 uses = uses + 1
             }
+
             if uses > 0 {
                 return weight / (uses as float)
             }
@@ -187,3 +197,5 @@ func (liveness_analysis* la) find_optimal_split_point(int var_id) int {
             return (info.first_use + info.last_use) / 2
         }
     }
+    -1
+}

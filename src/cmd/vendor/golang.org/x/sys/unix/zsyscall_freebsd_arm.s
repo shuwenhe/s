@@ -4,3 +4,5 @@ func zsyscall_freebsd_arm_unit_name() string {
 }
 
 func zsyscall_freebsd_arm_unit_ready() int {
+    1
+}

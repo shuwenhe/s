@@ -4,3 +4,5 @@ func browser_unit_name() string {
 }
 
 func browser_unit_ready() int {
+    1
+}

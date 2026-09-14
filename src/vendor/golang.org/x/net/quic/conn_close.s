@@ -4,3 +4,5 @@ func conn_close_unit_name() string {
 }
 
 func conn_close_unit_ready() int {
+    1
+}

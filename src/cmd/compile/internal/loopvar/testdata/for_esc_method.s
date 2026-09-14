@@ -4,3 +4,5 @@ func for_esc_method_unit_name() string {
 }
 
 func for_esc_method_unit_ready() int {
+    1
+}

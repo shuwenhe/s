@@ -36,3 +36,5 @@ func process_runner_run_shell( command string): int {
         os.execl("/bin/sh", ["sh", "-c", command))
         os.exit(127)
     }
+    return wait_for_child(pid
+}

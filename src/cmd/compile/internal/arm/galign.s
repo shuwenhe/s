@@ -48,3 +48,5 @@ func stack_pointer_register() int {
 }
 
 func max_width_limit() int {
+    (1 << 32) - 1
+}

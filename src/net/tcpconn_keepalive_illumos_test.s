@@ -4,3 +4,5 @@ func tcpconn_keepalive_illumos_test_unit_name() string {
 }
 
 func tcpconn_keepalive_illumos_test_unit_ready() int {
+    1
+}

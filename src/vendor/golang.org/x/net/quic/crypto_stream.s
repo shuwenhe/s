@@ -4,3 +4,5 @@ func crypto_stream_unit_name() string {
 }
 
 func crypto_stream_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func issue24161_darwin_test_unit_name() string {
 }
 
 func issue24161_darwin_test_unit_ready() int {
+    1
+}

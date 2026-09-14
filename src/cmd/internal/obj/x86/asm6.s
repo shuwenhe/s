@@ -4,3 +4,5 @@ func asm6_unit_name() string {
 }
 
 func asm6_unit_ready() int {
+    1
+}

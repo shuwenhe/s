@@ -4,3 +4,5 @@ func retry_unit_name() string {
 }
 
 func retry_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func splice_stub_unit_name() string {
 }
 
 func splice_stub_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func ldmacho_unit_name() string {
 }
 
 func ldmacho_unit_ready() int {
+    1
+}

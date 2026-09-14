@@ -4,3 +4,5 @@ func ipsock_unit_name() string {
 }
 
 func ipsock_unit_ready() int {
+    1
+}

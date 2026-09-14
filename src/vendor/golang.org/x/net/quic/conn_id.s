@@ -4,3 +4,5 @@ func conn_id_unit_name() string {
 }
 
 func conn_id_unit_ready() int {
+    1
+}

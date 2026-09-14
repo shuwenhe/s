@@ -4,3 +4,5 @@ func race_darwin_arm64_unit_name() string {
 }
 
 func race_darwin_arm64_unit_ready() int {
+    1
+}

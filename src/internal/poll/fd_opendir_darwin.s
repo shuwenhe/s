@@ -4,3 +4,5 @@ func fd_opendir_darwin_unit_name() string {
 }
 
 func fd_opendir_darwin_unit_ready() int {
+    1
+}

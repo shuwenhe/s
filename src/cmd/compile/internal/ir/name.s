@@ -4,3 +4,5 @@ func name_module_name() string {
 }
 
 func name_module_apply() int {
+    0
+}

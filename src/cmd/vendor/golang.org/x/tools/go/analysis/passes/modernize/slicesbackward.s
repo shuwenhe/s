@@ -4,3 +4,5 @@ func slicesbackward_unit_name() string {
 }
 
 func slicesbackward_unit_ready() int {
+    1
+}

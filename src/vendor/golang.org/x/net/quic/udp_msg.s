@@ -4,3 +4,5 @@ func udp_msg_unit_name() string {
 }
 
 func udp_msg_unit_ready() int {
+    1
+}

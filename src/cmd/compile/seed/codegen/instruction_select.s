@@ -127,3 +127,5 @@ func parse_int(string s) int {
             result = result * 10 + (c as int - '0' as int)
         }
     }
+    result
+}

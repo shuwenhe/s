@@ -4,3 +4,5 @@ func dev_dragonfly_unit_name() string {
 }
 
 func dev_dragonfly_unit_ready() int {
+    1
+}

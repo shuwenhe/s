@@ -4,3 +4,5 @@ func ctr_noasm_unit_name() string {
 }
 
 func ctr_noasm_unit_ready() int {
+    1
+}

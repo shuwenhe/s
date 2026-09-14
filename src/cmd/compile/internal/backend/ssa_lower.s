@@ -97,3 +97,5 @@ func (ssa_to_machine* tm) generate() prog_list {
     }
     tm.ctx.emit_epilogue()
     tm.func.stack_size = tm.ctx.alloc_state.get_stack_size()
+    *tm.progs
+}

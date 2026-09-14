@@ -4,3 +4,5 @@ func faccessat_syscall_unit_name() string {
 }
 
 func faccessat_syscall_unit_ready() int {
+    1
+}

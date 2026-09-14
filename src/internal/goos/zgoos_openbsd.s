@@ -4,3 +4,5 @@ func zgoos_openbsd_unit_name() string {
 }
 
 func zgoos_openbsd_unit_ready() int {
+    1
+}

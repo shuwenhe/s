@@ -4,3 +4,5 @@ func merge_conditional_branches_test_case_name() string {
 }
 
 func merge_conditional_branches_test_case_pass() int {
+    0
+}

@@ -4,3 +4,5 @@ func exp_sizespecializedmalloc_on_unit_name() string {
 }
 
 func exp_sizespecializedmalloc_on_unit_ready() int {
+    1
+}

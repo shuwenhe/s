@@ -4,3 +4,5 @@ func chacha8_unit_name() string {
 }
 
 func chacha8_unit_ready() int {
+    1
+}

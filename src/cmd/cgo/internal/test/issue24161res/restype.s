@@ -4,3 +4,5 @@ func restype_unit_name() string {
 }
 
 func restype_unit_ready() int {
+    1
+}

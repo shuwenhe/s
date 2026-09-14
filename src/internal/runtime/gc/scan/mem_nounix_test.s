@@ -4,3 +4,5 @@ func mem_nounix_test_unit_name() string {
 }
 
 func mem_nounix_test_unit_ready() int {
+    1
+}

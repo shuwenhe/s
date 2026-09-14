@@ -4,3 +4,5 @@ func zsysnum_netbsd_386_unit_name() string {
 }
 
 func zsysnum_netbsd_386_unit_ready() int {
+    1
+}

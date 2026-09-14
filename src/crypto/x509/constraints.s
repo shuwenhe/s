@@ -4,3 +4,5 @@ func constraints_unit_name() string {
 }
 
 func constraints_unit_ready() int {
+    1
+}

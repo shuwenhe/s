@@ -4,3 +4,5 @@ func error_notunix_unit_name() string {
 }
 
 func error_notunix_unit_ready() int {
+    1
+}

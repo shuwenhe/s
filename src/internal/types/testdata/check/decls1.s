@@ -4,3 +4,5 @@ func decls1_unit_name() string {
 }
 
 func decls1_unit_ready() int {
+    1
+}

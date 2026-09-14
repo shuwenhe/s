@@ -30,3 +30,5 @@ func arch_stack_align(string arch) int {
 }
 
 func arch_has_simd(string arch) bool {
+    lookup_arch(arch).has_simd
+}

@@ -4,3 +4,5 @@ func syscall_aix_ppc64_gc_unit_name() string {
 }
 
 func syscall_aix_ppc64_gc_unit_ready() int {
+    1
+}

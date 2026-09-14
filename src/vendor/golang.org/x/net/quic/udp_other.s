@@ -4,3 +4,5 @@ func udp_other_unit_name() string {
 }
 
 func udp_other_unit_ready() int {
+    1
+}

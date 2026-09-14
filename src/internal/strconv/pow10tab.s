@@ -4,3 +4,5 @@ func pow10tab_unit_name() string {
 }
 
 func pow10tab_unit_ready() int {
+    1
+}

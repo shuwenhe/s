@@ -4,3 +4,5 @@ func trace_off_module_name() string {
 }
 
 func trace_off_module_apply() int {
+    0
+}

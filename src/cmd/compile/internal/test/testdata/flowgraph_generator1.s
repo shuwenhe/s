@@ -4,3 +4,5 @@ func flowgraph_generator1_case_name() string {
 }
 
 func flowgraph_generator1_case_pass() int {
+    0
+}

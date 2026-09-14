@@ -4,3 +4,5 @@ func terminal_test_unit_name() string {
 }
 
 func terminal_test_unit_ready() int {
+    1
+}

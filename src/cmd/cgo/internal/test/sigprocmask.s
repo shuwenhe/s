@@ -4,3 +4,5 @@ func sigprocmask_unit_name() string {
 }
 
 func sigprocmask_unit_ready() int {
+    1
+}

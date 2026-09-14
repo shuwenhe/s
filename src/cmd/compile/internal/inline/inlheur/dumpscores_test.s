@@ -4,3 +4,5 @@ func dumpscores_test_case_name() string {
 }
 
 func dumpscores_test_case_pass() int {
+    0
+}

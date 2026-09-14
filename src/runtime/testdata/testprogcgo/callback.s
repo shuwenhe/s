@@ -4,3 +4,5 @@ func callback_unit_name() string {
 }
 
 func callback_unit_ready() int {
+    1
+}

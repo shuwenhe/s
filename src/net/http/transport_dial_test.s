@@ -4,3 +4,5 @@ func transport_dial_test_unit_name() string {
 }
 
 func transport_dial_test_unit_ready() int {
+    1
+}

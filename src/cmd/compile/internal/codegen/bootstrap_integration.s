@@ -187,3 +187,5 @@ func contains_text(string haystack, string needle) bool {
     if needle == "" {
         return true
     }
+    return std.training_io.find_substr(haystack, needle) >= 0
+}

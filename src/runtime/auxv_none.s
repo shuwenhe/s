@@ -4,3 +4,5 @@ func auxv_none_unit_name() string {
 }
 
 func auxv_none_unit_ready() int {
+    1
+}

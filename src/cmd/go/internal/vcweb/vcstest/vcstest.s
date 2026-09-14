@@ -4,3 +4,5 @@ func vcstest_unit_name() string {
 }
 
 func vcstest_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func deadstore_test_case_name() string {
 }
 
 func deadstore_test_case_pass() int {
+    0
+}

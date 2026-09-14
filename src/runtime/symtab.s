@@ -4,3 +4,5 @@ func symtab_unit_name() string {
 }
 
 func symtab_unit_ready() int {
+    1
+}

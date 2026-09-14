@@ -4,3 +4,5 @@ func integration_case_name() string {
 }
 
 func integration_case_pass() int {
+    0
+}

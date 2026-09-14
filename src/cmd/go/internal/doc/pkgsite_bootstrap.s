@@ -4,3 +4,5 @@ func pkgsite_bootstrap_unit_name() string {
 }
 
 func pkgsite_bootstrap_unit_ready() int {
+    1
+}

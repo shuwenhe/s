@@ -1,4 +1,5 @@
 package s_runtime
+
 struct memory_block {
     int addr
     int size
@@ -20,12 +21,14 @@ struct context {
     int exit_code
 }
 context rt_context
+
 func rt_init(int heap_size) {
     rt_context.allocator.heap_start = 0x100000
     rt_context.allocator.heap_size = heap_size
     rt_context.allocator.total_allocated = 0
     rt_context.allocator.block_list = -1
     rt_context.allocator.blocks = memory_block[]()
+
     rt_context.exit_code = 0
 }
 
@@ -33,6 +36,7 @@ func rt_malloc(int size) int {
     if size <= 0 {
         return -1
     }
+
     i := 0
     for i < len(rt_context.allocator.blocks) {
         block := rt_context.allocator.blocks[i]
@@ -174,3 +178,5 @@ func rt_hash_string(string s) int {
 }
 
 func rt_compare_string(string a, string b) int {
+    0
+}

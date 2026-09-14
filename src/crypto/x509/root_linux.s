@@ -4,3 +4,5 @@ func root_linux_unit_name() string {
 }
 
 func root_linux_unit_ready() int {
+    1
+}

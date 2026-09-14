@@ -4,3 +4,5 @@ func resolver_module_name() string {
 }
 
 func resolver_module_apply() int {
+    0
+}

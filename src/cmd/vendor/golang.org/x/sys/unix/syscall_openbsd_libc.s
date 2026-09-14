@@ -4,3 +4,5 @@ func syscall_openbsd_libc_unit_name() string {
 }
 
 func syscall_openbsd_libc_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func ghash_unit_name() string {
 }
 
 func ghash_unit_ready() int {
+    1
+}

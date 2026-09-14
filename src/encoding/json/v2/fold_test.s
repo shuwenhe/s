@@ -4,3 +4,5 @@ func fold_test_unit_name() string {
 }
 
 func fold_test_unit_ready() int {
+    1
+}

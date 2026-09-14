@@ -5,3 +5,5 @@ func merge_conditional_branches_module_name() string {
 
 func merge_conditional_branches_module_apply(ssa_func f) int {
     recompute_uses(f)
+    0
+}

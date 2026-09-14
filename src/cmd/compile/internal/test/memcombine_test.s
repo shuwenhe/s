@@ -4,3 +4,5 @@ func memcombine_test_case_name() string {
 }
 
 func memcombine_test_case_pass() int {
+    0
+}

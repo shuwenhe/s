@@ -4,3 +4,5 @@ func pidfd_other_unit_name() string {
 }
 
 func pidfd_other_unit_ready() int {
+    1
+}

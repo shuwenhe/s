@@ -4,3 +4,5 @@ func compact_unit_name() string {
 }
 
 func compact_unit_ready() int {
+    1
+}

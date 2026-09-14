@@ -4,3 +4,5 @@ func prog1_unit_name() string {
 }
 
 func prog1_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func http2_unit_name() string {
 }
 
 func http2_unit_ready() int {
+    1
+}

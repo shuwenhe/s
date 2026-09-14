@@ -4,3 +4,5 @@ func nonblocking_unix_unit_name() string {
 }
 
 func nonblocking_unix_unit_ready() int {
+    1
+}

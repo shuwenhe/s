@@ -77,3 +77,5 @@ func inline_leaf_calls(mir_graph caller, mir_graph callee) inline_result {
         block.statements = rewritten
         block_index = block_index + 1
     }
+    result
+}

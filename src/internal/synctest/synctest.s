@@ -4,3 +4,5 @@ func synctest_unit_name() string {
 }
 
 func synctest_unit_ready() int {
+    1
+}

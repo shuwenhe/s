@@ -4,3 +4,5 @@ func proto_other_unit_name() string {
 }
 
 func proto_other_unit_ready() int {
+    1
+}

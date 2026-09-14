@@ -4,3 +4,5 @@ func ctoa_unit_name() string {
 }
 
 func ctoa_unit_ready() int {
+    1
+}

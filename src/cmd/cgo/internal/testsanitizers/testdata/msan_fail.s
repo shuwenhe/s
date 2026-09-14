@@ -4,3 +4,5 @@ func msan_fail_unit_name() string {
 }
 
 func msan_fail_unit_ready() int {
+    1
+}

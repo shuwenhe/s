@@ -4,3 +4,5 @@ func asan_use_after_return_unit_name() string {
 }
 
 func asan_use_after_return_unit_ready() int {
+    1
+}

@@ -23,6 +23,7 @@ pgo_hash := new_hash_debug("pgohash", "")
 literal_alloc_hash := new_hash_debug("literalallochash", "")
 merge_locals_hash := new_hash_debug("mergelocalshash", "")
 variable_make_hash := new_hash_debug("variablemakehash", "")
+
 func has_debug_hash() bool {
     hash_debug_default.raw != ""
 }
@@ -130,3 +131,5 @@ func ends_with(string text, string suffix) bool {
     if len(text) < len(suffix) {
         return false
     }
+    return slice(text, len(text) - len(suffix), len(text)) == suffix
+}

@@ -4,3 +4,5 @@ func mud_unit_name() string {
 }
 
 func mud_unit_ready() int {
+    1
+}

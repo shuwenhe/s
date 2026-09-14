@@ -4,3 +4,5 @@ func align_unit_name() string {
 }
 
 func align_unit_ready() int {
+    1
+}

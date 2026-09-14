@@ -4,3 +4,5 @@ func mbarrier_unit_name() string {
 }
 
 func mbarrier_unit_ready() int {
+    1
+}

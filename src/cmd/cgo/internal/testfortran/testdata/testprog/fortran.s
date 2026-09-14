@@ -4,3 +4,5 @@ func fortran_unit_name() string {
 }
 
 func fortran_unit_ready() int {
+    1
+}

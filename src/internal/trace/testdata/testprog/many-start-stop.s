@@ -4,3 +4,5 @@ func many_start_stop_unit_name() string {
 }
 
 func many_start_stop_unit_ready() int {
+    1
+}

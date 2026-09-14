@@ -1010,3 +1010,5 @@ func make_graph(string function_name, mir_basic_block[] blocks, string[] trace, 
     mir_graph {
         function_name: function_name, blocks blocks, locals mir_local_slot[](), trace trace, entry entry, exit exit,
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
+    }
+}

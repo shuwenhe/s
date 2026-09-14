@@ -4,3 +4,5 @@ func zosarch_unit_name() string {
 }
 
 func zosarch_unit_ready() int {
+    1
+}

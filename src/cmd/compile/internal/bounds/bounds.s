@@ -1,4 +1,5 @@
 package compile.internal.bounds
+
 struct bounds_proof {
     bool safe
     int lower_bound
@@ -33,3 +34,5 @@ func bounds_prove_loop(int start, int limit, int step, int length) bounds_proof 
 }
 
 func bounds_should_eliminate(bounds_proof proof) bool {
+    proof.safe
+}

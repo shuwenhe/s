@@ -4,3 +4,5 @@ func symbolizer_unit_name() string {
 }
 
 func symbolizer_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func databuffer_unit_name() string {
 }
 
 func databuffer_unit_ready() int {
+    1
+}

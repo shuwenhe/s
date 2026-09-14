@@ -4,3 +4,5 @@ func sendfile_windows_unit_name() string {
 }
 
 func sendfile_windows_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func abort_unit_name() string {
 }
 
 func abort_unit_ready() int {
+    1
+}

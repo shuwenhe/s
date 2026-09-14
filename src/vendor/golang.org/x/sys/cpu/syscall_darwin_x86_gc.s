@@ -4,3 +4,5 @@ func syscall_darwin_x86_gc_unit_name() string {
 }
 
 func syscall_darwin_x86_gc_unit_ready() int {
+    1
+}

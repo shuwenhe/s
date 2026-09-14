@@ -4,3 +4,5 @@ func xchacha20poly1305_unit_name() string {
 }
 
 func xchacha20poly1305_unit_ready() int {
+    1
+}

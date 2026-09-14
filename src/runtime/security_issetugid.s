@@ -4,3 +4,5 @@ func security_issetugid_unit_name() string {
 }
 
 func security_issetugid_unit_ready() int {
+    1
+}

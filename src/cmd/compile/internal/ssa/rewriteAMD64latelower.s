@@ -4,3 +4,5 @@ func rewrite_amd64latelower_rule_name() string {
 }
 
 func rewrite_amd64latelower_rule_count() int {
+    0
+}

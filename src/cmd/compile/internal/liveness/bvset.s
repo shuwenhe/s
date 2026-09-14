@@ -52,3 +52,5 @@ func bitmap_equal(int[] left, int[] right) bool {
         }
         i = i + 1
     }
+    true
+}

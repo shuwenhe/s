@@ -4,3 +4,5 @@ func zerrors_linux_ppc_unit_name() string {
 }
 
 func zerrors_linux_ppc_unit_ready() int {
+    1
+}

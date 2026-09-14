@@ -4,3 +4,5 @@ func sockoptip_unit_name() string {
 }
 
 func sockoptip_unit_ready() int {
+    1
+}

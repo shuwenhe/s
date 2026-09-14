@@ -4,3 +4,5 @@ func binutils_unit_name() string {
 }
 
 func binutils_unit_ready() int {
+    1
+}

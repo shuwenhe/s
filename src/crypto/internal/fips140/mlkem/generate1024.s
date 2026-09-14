@@ -4,3 +4,5 @@ func generate1024_unit_name() string {
 }
 
 func generate1024_unit_ready() int {
+    1
+}

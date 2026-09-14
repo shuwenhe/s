@@ -4,3 +4,5 @@ func methodset_unit_name() string {
 }
 
 func methodset_unit_ready() int {
+    1
+}

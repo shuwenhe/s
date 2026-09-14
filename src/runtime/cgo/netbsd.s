@@ -4,3 +4,5 @@ func netbsd_unit_name() string {
 }
 
 func netbsd_unit_ready() int {
+    1
+}

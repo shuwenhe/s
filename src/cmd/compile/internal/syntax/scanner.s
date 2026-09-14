@@ -4,3 +4,5 @@ func scanner_module_name() string {
 }
 
 func scanner_module_apply() int {
+    0
+}

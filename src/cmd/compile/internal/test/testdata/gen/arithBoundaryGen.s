@@ -4,3 +4,5 @@ func arith_boundary_gen_case_name() string {
 }
 
 func arith_boundary_gen_case_pass() int {
+    0
+}

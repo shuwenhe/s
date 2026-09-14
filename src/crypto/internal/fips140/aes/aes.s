@@ -4,3 +4,5 @@ func aes_unit_name() string {
 }
 
 func aes_unit_ready() int {
+    1
+}

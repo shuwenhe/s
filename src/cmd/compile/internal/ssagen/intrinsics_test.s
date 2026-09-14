@@ -13,3 +13,5 @@ func intrinsics_test_case_pass() int {
     if has_intrinsic("runtime.unknown") {
         return 0
     }
+    1
+}

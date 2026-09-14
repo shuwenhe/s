@@ -4,3 +4,5 @@ func sys_unimplemented_unit_name() string {
 }
 
 func sys_unimplemented_unit_ready() int {
+    1
+}

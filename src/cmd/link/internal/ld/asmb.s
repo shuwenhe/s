@@ -4,3 +4,5 @@ func asmb_unit_name() string {
 }
 
 func asmb_unit_ready() int {
+    1
+}

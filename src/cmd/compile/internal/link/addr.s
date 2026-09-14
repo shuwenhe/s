@@ -77,3 +77,5 @@ func (addr* a) string_repr() string {
         case addr_type_branch: return "label:" + a.sym
         case addr_type_special: return "special:" + a.sym
     }
+    "unknown"
+}

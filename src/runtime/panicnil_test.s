@@ -4,3 +4,5 @@ func panicnil_test_unit_name() string {
 }
 
 func panicnil_test_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func hostport_unit_name() string {
 }
 
 func hostport_unit_ready() int {
+    1
+}

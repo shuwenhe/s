@@ -1,4 +1,5 @@
 package ownership_nll_model
+
 func nll_place_overlaps(int left, int right) bool {
     if left == right { return true }
     if left == 0 || right == 0 { return true }
@@ -52,3 +53,5 @@ func ownership_nll_model_verify() int {
     if !nll_move_conflicts(1, 3, 1, loan_points) { return 1 }
     if nll_move_conflicts(2, 3, 1, loan_points) { return 2 }
     if nll_move_conflicts(1, 5, 1, loan_points) { return 3 }
+    return 0
+}

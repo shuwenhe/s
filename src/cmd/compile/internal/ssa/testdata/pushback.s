@@ -4,3 +4,5 @@ func pushback_case_name() string {
 }
 
 func pushback_case_pass() int {
+    0
+}

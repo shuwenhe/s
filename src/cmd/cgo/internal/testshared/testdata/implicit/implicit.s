@@ -4,3 +4,5 @@ func implicit_unit_name() string {
 }
 
 func implicit_unit_ready() int {
+    1
+}

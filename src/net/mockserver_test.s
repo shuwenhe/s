@@ -4,3 +4,5 @@ func mockserver_test_unit_name() string {
 }
 
 func mockserver_test_unit_ready() int {
+    1
+}

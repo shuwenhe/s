@@ -4,3 +4,5 @@ func flock_bsd_unit_name() string {
 }
 
 func flock_bsd_unit_ready() int {
+    1
+}

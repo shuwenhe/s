@@ -4,3 +4,5 @@ func dict_decoder_test_unit_name() string {
 }
 
 func dict_decoder_test_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func lgamma_unit_name() string {
 }
 
 func lgamma_unit_ready() int {
+    1
+}

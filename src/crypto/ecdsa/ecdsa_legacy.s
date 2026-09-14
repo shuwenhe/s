@@ -4,3 +4,5 @@ func ecdsa_legacy_unit_name() string {
 }
 
 func ecdsa_legacy_unit_ready() int {
+    1
+}

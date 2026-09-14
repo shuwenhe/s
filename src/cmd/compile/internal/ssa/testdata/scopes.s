@@ -4,3 +4,5 @@ func scopes_case_name() string {
 }
 
 func scopes_case_pass() int {
+    0
+}

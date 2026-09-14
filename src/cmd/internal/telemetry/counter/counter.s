@@ -4,3 +4,5 @@ func counter_unit_name() string {
 }
 
 func counter_unit_ready() int {
+    1
+}

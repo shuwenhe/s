@@ -4,3 +4,5 @@ func fips140only_compat_unit_name() string {
 }
 
 func fips140only_compat_unit_ready() int {
+    1
+}

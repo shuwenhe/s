@@ -4,3 +4,5 @@ func syscall_darwin_lib_system_unit_name() string {
 }
 
 func syscall_darwin_lib_system_unit_ready() int {
+    1
+}

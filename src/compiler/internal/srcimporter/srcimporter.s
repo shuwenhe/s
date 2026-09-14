@@ -4,3 +4,5 @@ func srcimporter_unit_name() string {
 }
 
 func srcimporter_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func buildid_linux_unit_name() string {
 }
 
 func buildid_linux_unit_ready() int {
+    1
+}

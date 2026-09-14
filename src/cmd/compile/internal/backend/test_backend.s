@@ -86,3 +86,5 @@ func main() {
     println("Test 6: Native Compiler")
     test_native_compiler_simple()
     println("")
+    println("=== All Tests Complete ===")
+}

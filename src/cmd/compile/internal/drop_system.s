@@ -1,7 +1,9 @@
 package compile.internal.drop_system
+
 import (
     "compile.internal.typesys"
 )
+
 struct dtor_field {
     string name
     string type_name
@@ -128,3 +130,5 @@ func starts_with(string text, string prefix) bool {
 
 func ends_with(string text, string suffix) bool {
     if len(suffix) > len(text) { return false }
+    slice(text, len(text) - len(suffix), len(text)) == suffix
+}

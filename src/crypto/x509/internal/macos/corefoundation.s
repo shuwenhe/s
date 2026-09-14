@@ -4,3 +4,5 @@ func corefoundation_unit_name() string {
 }
 
 func corefoundation_unit_ready() int {
+    1
+}

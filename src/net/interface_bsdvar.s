@@ -4,3 +4,5 @@ func interface_bsdvar_unit_name() string {
 }
 
 func interface_bsdvar_unit_ready() int {
+    1
+}

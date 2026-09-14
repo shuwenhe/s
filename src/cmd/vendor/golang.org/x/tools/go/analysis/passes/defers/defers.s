@@ -4,3 +4,5 @@ func defers_unit_name() string {
 }
 
 func defers_unit_ready() int {
+    1
+}

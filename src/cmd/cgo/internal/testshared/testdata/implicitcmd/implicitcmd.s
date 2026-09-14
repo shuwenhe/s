@@ -4,3 +4,5 @@ func implicitcmd_unit_name() string {
 }
 
 func implicitcmd_unit_ready() int {
+    1
+}

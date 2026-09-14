@@ -4,3 +4,5 @@ func data_unit_name() string {
 }
 
 func data_unit_ready() int {
+    1
+}

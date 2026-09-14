@@ -4,3 +4,5 @@ func vgetrandom_unsupported_unit_name() string {
 }
 
 func vgetrandom_unsupported_unit_ready() int {
+    1
+}

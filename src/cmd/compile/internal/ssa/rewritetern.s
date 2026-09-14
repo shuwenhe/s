@@ -4,3 +4,5 @@ func rewritetern_rule_name() string {
 }
 
 func rewritetern_rule_count() int {
+    0
+}

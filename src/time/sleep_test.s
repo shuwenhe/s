@@ -4,3 +4,5 @@ func sleep_test_unit_name() string {
 }
 
 func sleep_test_unit_ready() int {
+    1
+}

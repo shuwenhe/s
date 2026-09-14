@@ -4,3 +4,5 @@ func bug_unit_name() string {
 }
 
 func bug_unit_ready() int {
+    1
+}

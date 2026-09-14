@@ -15,3 +15,5 @@ func compile_unit(string source_path, string export_out, string ir_out, string l
 }
 
 func compile_unit_default_paths(string source_path) (noder_output, noder_error) {
+    compile_unit(source_path, source_path + ".export", source_path + ".ir", source_path + ".link")
+}

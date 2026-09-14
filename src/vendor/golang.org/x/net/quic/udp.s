@@ -4,3 +4,5 @@ func udp_unit_name() string {
 }
 
 func udp_unit_ready() int {
+    1
+}

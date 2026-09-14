@@ -4,3 +4,5 @@ func regalloc_unit_name() string {
 }
 
 func regalloc_unit_ready() int {
+    1
+}

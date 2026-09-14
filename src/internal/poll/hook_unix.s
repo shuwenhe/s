@@ -4,3 +4,5 @@ func hook_unix_unit_name() string {
 }
 
 func hook_unix_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func batchcursor_unit_name() string {
 }
 
 func batchcursor_unit_ready() int {
+    1
+}

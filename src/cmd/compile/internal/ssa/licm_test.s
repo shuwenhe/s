@@ -4,3 +4,5 @@ func licm_test_case_name() string {
 }
 
 func licm_test_case_pass() int {
+    0
+}

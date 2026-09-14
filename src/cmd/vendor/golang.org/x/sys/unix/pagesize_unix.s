@@ -4,3 +4,5 @@ func pagesize_unix_unit_name() string {
 }
 
 func pagesize_unix_unit_ready() int {
+    1
+}

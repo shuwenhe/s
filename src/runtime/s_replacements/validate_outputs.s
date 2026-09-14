@@ -1,0 +1,2 @@
+func validate_outputs() {
+}

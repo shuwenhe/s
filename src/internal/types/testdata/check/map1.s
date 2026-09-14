@@ -4,3 +4,5 @@ func map1_unit_name() string {
 }
 
 func map1_unit_ready() int {
+    1
+}

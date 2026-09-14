@@ -28,3 +28,5 @@ func run_versions_test_suite() int {
     if !ssa_gen_simd_value(simd) {
         return 1
     }
+    0
+}

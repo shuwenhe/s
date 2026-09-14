@@ -4,3 +4,5 @@ func hypot_noasm_unit_name() string {
 }
 
 func hypot_noasm_unit_ready() int {
+    1
+}

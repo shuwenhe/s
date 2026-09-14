@@ -34,3 +34,5 @@ func ends_with_slash(string text) bool {
         return false
     }
     last := text[len(text) - 1]
+    last == "/" || last == "\\"
+}

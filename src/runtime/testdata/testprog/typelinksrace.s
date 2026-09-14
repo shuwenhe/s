@@ -4,3 +4,5 @@ func typelinksrace_unit_name() string {
 }
 
 func typelinksrace_unit_ready() int {
+    1
+}

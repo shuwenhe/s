@@ -4,3 +4,5 @@ func macho_unit_name() string {
 }
 
 func macho_unit_ready() int {
+    1
+}

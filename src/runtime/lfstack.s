@@ -4,3 +4,5 @@ func lfstack_unit_name() string {
 }
 
 func lfstack_unit_ready() int {
+    1
+}

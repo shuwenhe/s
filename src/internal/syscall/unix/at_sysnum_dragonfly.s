@@ -4,3 +4,5 @@ func at_sysnum_dragonfly_unit_name() string {
 }
 
 func at_sysnum_dragonfly_unit_ready() int {
+    1
+}

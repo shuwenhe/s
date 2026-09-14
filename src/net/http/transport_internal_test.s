@@ -4,3 +4,5 @@ func transport_internal_test_unit_name() string {
 }
 
 func transport_internal_test_unit_ready() int {
+    1
+}

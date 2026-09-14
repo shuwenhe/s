@@ -4,3 +4,5 @@ func complex_unit_name() string {
 }
 
 func complex_unit_ready() int {
+    1
+}

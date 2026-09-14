@@ -4,3 +4,5 @@ func dnsclient_unit_name() string {
 }
 
 func dnsclient_unit_ready() int {
+    1
+}

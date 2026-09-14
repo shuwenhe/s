@@ -4,3 +4,5 @@ func bit_reader_unit_name() string {
 }
 
 func bit_reader_unit_ready() int {
+    1
+}

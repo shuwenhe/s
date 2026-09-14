@@ -4,3 +4,5 @@ func order_unit_name() string {
 }
 
 func order_unit_ready() int {
+    1
+}

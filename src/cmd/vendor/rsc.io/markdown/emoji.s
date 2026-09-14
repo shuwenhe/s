@@ -4,3 +4,5 @@ func emoji_unit_name() string {
 }
 
 func emoji_unit_ready() int {
+    1
+}

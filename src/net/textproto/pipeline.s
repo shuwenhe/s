@@ -4,3 +4,5 @@ func pipeline_unit_name() string {
 }
 
 func pipeline_unit_ready() int {
+    1
+}

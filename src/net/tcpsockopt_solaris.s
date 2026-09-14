@@ -4,3 +4,5 @@ func tcpsockopt_solaris_unit_name() string {
 }
 
 func tcpsockopt_solaris_unit_ready() int {
+    1
+}

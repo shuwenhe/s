@@ -5,6 +5,7 @@ import (
     "std.option"
     "std.prelude"
 )
+
 func run_monomorphization_test() int {
     int_args := string[] { "int" }
     box_args := string[] { "box[int]" }
@@ -151,6 +152,7 @@ func run_monomorphization_test() int {
 }
 
 func run_e2e_transitive_monomorphization_test() int {
+
     baz_return := expr::name(name_expr { name: "x", inferred_type option::some("T") })
     baz := function_decl {
         sig: function_sig {
@@ -166,6 +168,7 @@ func run_e2e_transitive_monomorphization_test() int {
         }),
         is_public: false,
     }
+
     baz_call := expr::call(call_expr {
         callee: std.prelude.box(expr::name(name_expr { name: "baz", inferred_type: option::none })),
         args: expr[] { expr::name(name_expr { name: "x", inferred_type: option::some("T") }) },
@@ -187,6 +190,7 @@ func run_e2e_transitive_monomorphization_test() int {
         }),
         is_public: false,
     }
+
     bar_call := expr::call(call_expr {
         callee: std.prelude.box(expr::name(name_expr { name: "bar", inferred_type: option::none })),
         args: expr[] { expr::name(name_expr { name: "x", inferred_type: option::some("T") }) },
@@ -208,6 +212,7 @@ func run_e2e_transitive_monomorphization_test() int {
         }),
         is_public: false,
     }
+
     foo_call := expr::call(call_expr {
         callee: std.prelude.box(expr::name(name_expr { name: "foo", inferred_type: option::none })),
         args: expr[] { expr::int(int_expr { value: "42", inferred_type: option::some("int") }) },
@@ -229,6 +234,7 @@ func run_e2e_transitive_monomorphization_test() int {
         }),
         is_public: true,
     }
+
     file := source_file {
         pkg: "e2e.mono.test",
         uses: use_decl[] {},
@@ -239,23 +245,32 @@ func run_e2e_transitive_monomorphization_test() int {
             item::function(main),
         },
     }
+
     mono_file := compile.internal.mono.monomorphize_file(file)
+
     if compile.internal.mono.mono_cache_count(mono_file.cache) != 3 {
+
         return 1
     }
+
     if len(mono_file.file.items) != 4 {
+
         return 1
     }
+
     if mono_file.invariant_errors != 0 {
         return 1
     }
+
     if compile.internal.mono.verify_monomorphized_file_with_details(mono_file.file) != 0 {
         return 1
     }
+
     method_result := run_generic_receiver_method_monomorphization_test()
     if method_result != 0 {
         return method_result
     }
+
     0
 }
 
@@ -387,10 +402,12 @@ func run_generic_receiver_method_monomorphization_test() int {
     if mono_file.invariant_errors != 0 {
         return 1
     }
+
     recursive_result := run_recursive_generic_method_monomorphization_test()
     if recursive_result != 0 {
         return recursive_result
     }
+
     0
 }
 
@@ -507,3 +524,5 @@ func count_function_named(source_file file, string name) int {
         }
         i = i + 1
     }
+    count
+}

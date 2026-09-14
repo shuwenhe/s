@@ -4,3 +4,5 @@ func gen_const_ppc64le_unit_name() string {
 }
 
 func gen_const_ppc64le_unit_ready() int {
+    1
+}

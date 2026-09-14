@@ -4,3 +4,5 @@ func singleflight_unit_name() string {
 }
 
 func singleflight_unit_ready() int {
+    1
+}

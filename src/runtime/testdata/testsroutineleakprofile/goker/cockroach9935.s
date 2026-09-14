@@ -4,3 +4,5 @@ func cockroach9935_unit_name() string {
 }
 
 func cockroach9935_unit_ready() int {
+    1
+}

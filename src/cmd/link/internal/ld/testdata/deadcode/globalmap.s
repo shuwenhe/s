@@ -4,3 +4,5 @@ func globalmap_unit_name() string {
 }
 
 func globalmap_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func sortslice_unit_name() string {
 }
 
 func sortslice_unit_ready() int {
+    1
+}

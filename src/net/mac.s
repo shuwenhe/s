@@ -4,3 +4,5 @@ func mac_unit_name() string {
 }
 
 func mac_unit_ready() int {
+    1
+}

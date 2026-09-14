@@ -4,3 +4,5 @@ func slice_module_name() string {
 }
 
 func slice_module_apply() int {
+    0
+}

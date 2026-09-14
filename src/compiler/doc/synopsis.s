@@ -4,3 +4,5 @@ func synopsis_unit_name() string {
 }
 
 func synopsis_unit_ready() int {
+    1
+}

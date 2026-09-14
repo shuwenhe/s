@@ -4,3 +4,5 @@ func insecure_unit_name() string {
 }
 
 func insecure_unit_ready() int {
+    1
+}

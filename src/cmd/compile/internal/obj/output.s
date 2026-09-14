@@ -92,3 +92,5 @@ func (gen* object_file_generator) dump_info() string {
     result = result + "  Relocations: " + (len(gen.relocs.relocations) as string) + "\n"
     result = result + "\n" + gen.symbols.dump()
     result = result + "\n" + gen.relocs.dump()
+    result
+}

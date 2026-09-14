@@ -4,3 +4,5 @@ func printer_test_case_name() string {
 }
 
 func printer_test_case_pass() int {
+    0
+}

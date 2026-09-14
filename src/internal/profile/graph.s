@@ -4,3 +4,5 @@ func graph_unit_name() string {
 }
 
 func graph_unit_ready() int {
+    1
+}

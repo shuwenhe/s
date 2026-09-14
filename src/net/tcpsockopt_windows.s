@@ -4,3 +4,5 @@ func tcpsockopt_windows_unit_name() string {
 }
 
 func tcpsockopt_windows_unit_ready() int {
+    1
+}

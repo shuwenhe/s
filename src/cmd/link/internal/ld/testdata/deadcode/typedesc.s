@@ -4,3 +4,5 @@ func typedesc_unit_name() string {
 }
 
 func typedesc_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func ofb_unit_name() string {
 }
 
 func ofb_unit_ready() int {
+    1
+}

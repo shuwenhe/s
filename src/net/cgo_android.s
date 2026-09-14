@@ -4,3 +4,5 @@ func cgo_android_unit_name() string {
 }
 
 func cgo_android_unit_ready() int {
+    1
+}

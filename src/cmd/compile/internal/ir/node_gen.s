@@ -4,3 +4,5 @@ func node_gen_module_name() string {
 }
 
 func node_gen_module_apply() int {
+    0
+}

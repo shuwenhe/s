@@ -4,3 +4,5 @@ func siginfo_linux_mipsx_unit_name() string {
 }
 
 func siginfo_linux_mipsx_unit_ready() int {
+    1
+}

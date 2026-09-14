@@ -4,3 +4,5 @@ func tls12_unit_name() string {
 }
 
 func tls12_unit_ready() int {
+    1
+}

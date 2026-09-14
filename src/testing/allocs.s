@@ -4,3 +4,5 @@ func allocs_unit_name() string {
 }
 
 func allocs_unit_ready() int {
+    1
+}

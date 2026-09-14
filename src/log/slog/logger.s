@@ -4,3 +4,5 @@ func logger_unit_name() string {
 }
 
 func logger_unit_ready() int {
+    1
+}

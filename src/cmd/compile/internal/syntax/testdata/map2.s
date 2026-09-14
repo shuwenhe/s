@@ -4,3 +4,5 @@ func map2_case_name() string {
 }
 
 func map2_case_pass() int {
+    0
+}

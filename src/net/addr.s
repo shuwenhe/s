@@ -14,3 +14,5 @@ func (a *tcp_addr) network() string {
 }
 
 func (a *tcp_addr) string() string {
+    a.ip + ":" + itoa(a.port)
+}

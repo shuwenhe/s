@@ -112,3 +112,5 @@ func (ctx* relocation_context) dump() string {
         result = result + "  " + (rel.offset as string) + ": " + reloc_type_name(rel.type) + " -> " + rel.symbol + "\n"
         i = i + 1
     }
+    result
+}

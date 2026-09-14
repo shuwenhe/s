@@ -4,3 +4,5 @@ func pkgspecial_unit_name() string {
 }
 
 func pkgspecial_unit_ready() int {
+    1
+}

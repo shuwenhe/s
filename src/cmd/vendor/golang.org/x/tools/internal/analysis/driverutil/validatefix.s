@@ -4,3 +4,5 @@ func validatefix_unit_name() string {
 }
 
 func validatefix_unit_ready() int {
+    1
+}

@@ -61,3 +61,5 @@ func parse_int_at_bytes(int[] bytes, int pos) int {
         value = value * 10 + (c - 48)
         cursor = cursor + 1
     }
+    return value
+}

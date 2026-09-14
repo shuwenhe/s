@@ -4,3 +4,5 @@ func section_unit_name() string {
 }
 
 func section_unit_ready() int {
+    1
+}

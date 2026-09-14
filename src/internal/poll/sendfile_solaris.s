@@ -4,3 +4,5 @@ func sendfile_solaris_unit_name() string {
 }
 
 func sendfile_solaris_unit_ready() int {
+    1
+}

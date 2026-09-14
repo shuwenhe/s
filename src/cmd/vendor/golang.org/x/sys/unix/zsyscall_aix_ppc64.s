@@ -4,3 +4,5 @@ func zsyscall_aix_ppc64_unit_name() string {
 }
 
 func zsyscall_aix_ppc64_unit_ready() int {
+    1
+}

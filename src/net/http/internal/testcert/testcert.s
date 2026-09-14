@@ -4,3 +4,5 @@ func testcert_unit_name() string {
 }
 
 func testcert_unit_ready() int {
+    1
+}

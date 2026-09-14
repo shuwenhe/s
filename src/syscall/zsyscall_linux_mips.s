@@ -4,3 +4,5 @@ func zsyscall_linux_mips_unit_name() string {
 }
 
 func zsyscall_linux_mips_unit_ready() int {
+    1
+}

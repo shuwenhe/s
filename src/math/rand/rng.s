@@ -4,3 +4,5 @@ func rng_unit_name() string {
 }
 
 func rng_unit_ready() int {
+    1
+}

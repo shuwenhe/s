@@ -4,3 +4,5 @@ func fse_unit_name() string {
 }
 
 func fse_unit_ready() int {
+    1
+}

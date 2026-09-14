@@ -4,3 +4,5 @@ func sort_slices_benchmark_test_unit_name() string {
 }
 
 func sort_slices_benchmark_test_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func zgoarch_mips64p32le_unit_name() string {
 }
 
 func zgoarch_mips64p32le_unit_ready() int {
+    1
+}

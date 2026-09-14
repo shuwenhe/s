@@ -365,3 +365,5 @@ func (udp_conn self) close() ((), net_error) {
     switch sc.close(self.fd) {
             v  : v,
             e : wrap_sc_err(e),
+        }
+    }

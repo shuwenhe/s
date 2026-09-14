@@ -4,3 +4,5 @@ func loadstore_test_case_name() string {
 }
 
 func loadstore_test_case_pass() int {
+    0
+}

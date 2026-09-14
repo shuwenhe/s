@@ -186,3 +186,5 @@ func is_digit_char(string ch) bool {
     if ch == "5" || ch == "6" || ch == "7" || ch == "8" || ch == "9" {
         return true
     }
+    false
+}

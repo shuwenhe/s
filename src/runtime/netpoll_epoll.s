@@ -4,3 +4,5 @@ func netpoll_epoll_unit_name() string {
 }
 
 func netpoll_epoll_unit_ready() int {
+    1
+}

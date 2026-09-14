@@ -4,3 +4,5 @@ func nettest_unit_name() string {
 }
 
 func nettest_unit_ready() int {
+    1
+}

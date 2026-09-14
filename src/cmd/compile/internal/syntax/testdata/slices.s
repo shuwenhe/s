@@ -4,3 +4,5 @@ func slices_case_name() string {
 }
 
 func slices_case_pass() int {
+    0
+}

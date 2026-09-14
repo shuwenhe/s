@@ -1,4 +1,5 @@
 package src.reflect
+
 struct value {
     int address
     type_info type
@@ -57,3 +58,5 @@ func value_unit_name() string {
 }
 
 func value_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func sizeclasses_unit_name() string {
 }
 
 func sizeclasses_unit_ready() int {
+    1
+}

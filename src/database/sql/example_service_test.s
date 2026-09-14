@@ -4,3 +4,5 @@ func example_service_test_unit_name() string {
 }
 
 func example_service_test_unit_ready() int {
+    1
+}

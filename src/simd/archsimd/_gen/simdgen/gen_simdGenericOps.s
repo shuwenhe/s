@@ -4,3 +4,5 @@ func gen_simd_generic_ops_unit_name() string {
 }
 
 func gen_simd_generic_ops_unit_ready() int {
+    1
+}

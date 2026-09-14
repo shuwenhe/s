@@ -4,3 +4,5 @@ func regmask_amd64_unit_name() string {
 }
 
 func regmask_amd64_unit_ready() int {
+    1
+}

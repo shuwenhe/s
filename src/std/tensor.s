@@ -1,6 +1,5 @@
 package std.tensor
 use std.switch.{abs, sqrt, exp, log, pow, max as fmax, min as fmin, epsilon}
-
 struct tensor_shape {
     int[] dims
     int ndim
@@ -1002,3 +1001,5 @@ func format_float(float val, int decimals) string {
             d = d + 1
         }
     }
+    result
+}

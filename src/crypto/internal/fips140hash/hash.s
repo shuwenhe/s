@@ -4,3 +4,5 @@ func hash_unit_name() string {
 }
 
 func hash_unit_ready() int {
+    1
+}

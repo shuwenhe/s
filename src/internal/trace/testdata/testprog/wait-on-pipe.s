@@ -4,3 +4,5 @@ func wait_on_pipe_unit_name() string {
 }
 
 func wait_on_pipe_unit_ready() int {
+    1
+}

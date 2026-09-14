@@ -174,3 +174,5 @@ func format_immediate(string value) string {
     if value == "" || value == "_" {
         return "$0"
     }
+    return "$" + value
+}

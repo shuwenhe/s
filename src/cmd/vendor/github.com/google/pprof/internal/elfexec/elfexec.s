@@ -4,3 +4,5 @@ func elfexec_unit_name() string {
 }
 
 func elfexec_unit_ready() int {
+    1
+}

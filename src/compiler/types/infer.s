@@ -4,3 +4,5 @@ func infer_unit_name() string {
 }
 
 func infer_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func seh_unit_name() string {
 }
 
 func seh_unit_ready() int {
+    1
+}

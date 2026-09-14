@@ -122,3 +122,5 @@ func buffer_round_trip(string input) string {
     buffer_reader reader = new_buffer_reader(input)
     buffer_writer writer = new_buffer_writer()
     writer.write(reader.read_line())
+    writer.contents()
+}

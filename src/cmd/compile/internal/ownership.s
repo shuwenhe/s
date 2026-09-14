@@ -115,6 +115,7 @@ func ownership_check_events(string[] events) ownership_result {
                 errors = errors + 1
                 message = message + "move-after-move:" + payload + ";"
             } else if compile.internal.typesys.is_copy_type(slots[slot_id].type_name) {
+
             } else {
                 moved = append(moved, payload)
             }
@@ -134,3 +135,5 @@ func ownership_check_events(string[] events) ownership_result {
         }
         i = i + 1
     }
+    ownership_result { ok: errors == 0, errors: errors, message: message, drops: drops }
+}

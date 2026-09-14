@@ -4,3 +4,5 @@ func msize_unit_name() string {
 }
 
 func msize_unit_ready() int {
+    1
+}

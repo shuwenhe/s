@@ -4,3 +4,5 @@ func mldsa_unit_name() string {
 }
 
 func mldsa_unit_ready() int {
+    1
+}

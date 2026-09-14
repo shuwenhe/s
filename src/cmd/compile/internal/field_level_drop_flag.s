@@ -1,8 +1,10 @@
 package compile.internal.field_level_drop_flag
+
 import (
     "compile.internal.drop_state_v2"
     "compile.internal.path"
 )
+
 struct field_level_entry {
     path path
     state drop_state
@@ -50,6 +52,7 @@ func fldf_declare(field_level_drop_flag f, path p, string type_name) field_level
         f.errors = append(f.errors, "duplicate variable: variable already declared")
         return f
     }
+
     entry := field_level_entry {
         path: p,
         state: compile.internal.drop_state_v2.drop_state_new_live(),
@@ -66,14 +69,18 @@ func fldf_move(field_level_drop_flag f, path from_path, path to_path, int line, 
         f.errors = append(f.errors, "unknown variable in move")
         return f
     }
+
     from_entry := f.entries[idx]
     type_name := from_entry.type_name
+
     new_state, err := compile.internal.drop_state_v2.drop_state_after_move(from_entry.state, "move", line, col)
     if len(err) > 0 {
         f.errors = append(f.errors, err)
         return f
     }
+
     f.entries[idx].state = new_state
+
     to_idx := fldf_find(f, to_path)
     if to_idx < 0 {
         entry := field_level_entry {
@@ -84,8 +91,10 @@ func fldf_move(field_level_drop_flag f, path from_path, path to_path, int line, 
         }
         f.entries = append(f.entries, entry)
     } else {
+
         f.entries[to_idx].state = compile.internal.drop_state_v2.drop_state_new_live()
     }
+
     f
 }
 
@@ -95,20 +104,24 @@ func fldf_use(field_level_drop_flag f, path p) field_level_drop_flag {
         f.errors = append(f.errors, "unknown variable in use")
         return f
     }
+
     entry := f.entries[idx]
     _, err := compile.internal.drop_state_v2.drop_state_after_use(entry.state)
     if len(err) > 0 {
         f.errors = append(f.errors, err)
         return f
     }
+
     f
 }
 
 func fldf_reassign(field_level_drop_flag f, path p, string type_name) field_level_drop_flag {
     idx := fldf_find(f, p)
     if idx < 0 {
+
         return fldf_declare(f, p, type_name)
     }
+
     f.entries[idx].state = compile.internal.drop_state_v2.drop_state_new_live()
     f.entries[idx].type_name = type_name
     f
@@ -121,20 +134,26 @@ func fldf_enter_scope(field_level_drop_flag f) field_level_drop_flag {
 
 func fldf_scope_exit(field_level_drop_flag f) (field_level_drop_flag, path[]) {
     path[] drops
+
     i := len(f.entries) - 1
     for i >= 0 {
         entry := f.entries[i]
+
         if entry.scope_depth != f.scope_depth {
             i = i - 1
             continue
         }
+
         if compile.internal.drop_state_v2.drop_state_needs_drop(entry.state) {
             drops = append(drops, entry.path)
+
             new_state, _ := compile.internal.drop_state_v2.drop_state_after_drop(entry.state)
             f.entries[i].state = new_state
         }
+
         i = i - 1
     }
+
     f.scope_depth = f.scope_depth - 1
     f, drops
 }
@@ -145,6 +164,7 @@ struct branch_snapshot {
 }
 
 func fldf_save_checkpoint(field_level_drop_flag f) branch_snapshot {
+
     branch_snapshot {
         entries: f.entries,
         branch_id: -1,
@@ -154,9 +174,11 @@ func fldf_save_checkpoint(field_level_drop_flag f) branch_snapshot {
 func fldf_merge_branches(field_level_drop_flag f_if, field_level_drop_flag f_else) field_level_drop_flag {
     merged := fldf_new()
     merged.scope_depth = f_if.scope_depth
+
     i := 0
     for i < len(f_if.entries) {
         if_entry := f_if.entries[i]
+
         else_idx := -1
         j := 0
         for j < len(f_else.entries) {
@@ -166,9 +188,12 @@ func fldf_merge_branches(field_level_drop_flag f_if, field_level_drop_flag f_els
             }
             j = j + 1
         }
+
         if else_idx >= 0 {
+
             else_entry := f_else.entries[else_idx]
             merged_state := compile.internal.drop_state_v2.drop_state_merge(if_entry.state, else_entry.state)
+
             entry := field_level_entry {
                 path: if_entry.path,
                 state: merged_state,
@@ -177,13 +202,17 @@ func fldf_merge_branches(field_level_drop_flag f_if, field_level_drop_flag f_els
             }
             merged.entries = append(merged.entries, entry)
         } else {
+
             merged.entries = append(merged.entries, if_entry)
         }
+
         i = i + 1
     }
+
     i = 0
     for i < len(f_else.entries) {
         else_entry := f_else.entries[i]
+
         found := false
         j := 0
         for j < len(merged.entries) {
@@ -193,11 +222,14 @@ func fldf_merge_branches(field_level_drop_flag f_if, field_level_drop_flag f_els
             }
             j = j + 1
         }
+
         if !found {
             merged.entries = append(merged.entries, else_entry)
         }
+
         i = i + 1
     }
+
     merged
 }
 
@@ -262,3 +294,5 @@ func fldf_use_var(field_level_drop_flag f, string var_name) field_level_drop_fla
 }
 
 func fldf_reassign_var(field_level_drop_flag f, string var_name, string type_name) field_level_drop_flag {
+    fldf_reassign(f, compile.internal.path.path_new(var_name), type_name)
+}

@@ -8,3 +8,7 @@ func send_file(int socket_fd, int file_fd, int offset, int count) (int, net_erro
         e : wrap_sc_err(e),
     }
 }
+
+func sendfile_unit_name() string { "src/net/sendfile" }
+
+func sendfile_unit_ready() int { 1 }

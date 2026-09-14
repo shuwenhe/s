@@ -4,3 +4,5 @@ func seh_windows_test_unit_name() string {
 }
 
 func seh_windows_test_unit_ready() int {
+    1
+}

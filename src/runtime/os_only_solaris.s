@@ -4,3 +4,5 @@ func os_only_solaris_unit_name() string {
 }
 
 func os_only_solaris_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func ecdh_unit_name() string {
 }
 
 func ecdh_unit_ready() int {
+    1
+}

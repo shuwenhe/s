@@ -96,3 +96,5 @@ func (register_allocator* ra) compute_stack_size() int {
             }
         }
     }
+    -min_offset
+}

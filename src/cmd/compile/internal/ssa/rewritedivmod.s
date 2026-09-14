@@ -4,3 +4,5 @@ func rewritedivmod_rule_name() string {
 }
 
 func rewritedivmod_rule_count() int {
+    0
+}

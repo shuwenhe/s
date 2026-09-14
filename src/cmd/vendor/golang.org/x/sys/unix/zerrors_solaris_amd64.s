@@ -4,3 +4,5 @@ func zerrors_solaris_amd64_unit_name() string {
 }
 
 func zerrors_solaris_amd64_unit_ready() int {
+    1
+}

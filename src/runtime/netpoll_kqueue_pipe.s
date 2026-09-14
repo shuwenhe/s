@@ -4,3 +4,5 @@ func netpoll_kqueue_pipe_unit_name() string {
 }
 
 func netpoll_kqueue_pipe_unit_ready() int {
+    1
+}

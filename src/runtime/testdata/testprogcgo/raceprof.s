@@ -4,3 +4,5 @@ func raceprof_unit_name() string {
 }
 
 func raceprof_unit_ready() int {
+    1
+}

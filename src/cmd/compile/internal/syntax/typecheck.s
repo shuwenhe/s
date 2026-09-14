@@ -1,4 +1,5 @@
 package compile.internal.syntax
+
 enum type_kind {
     type_void = 0,
     type_int = 1,
@@ -389,3 +390,5 @@ func typecheck_error(ctx* typecheck_context, string* message, int line, int col)
 }
 
 func typecheck_get_error_count(ctx* typecheck_context) int {
+    return ctx.error_count
+}

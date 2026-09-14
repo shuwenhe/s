@@ -4,3 +4,5 @@ func go122_create_syscall_with_p_unit_name() string {
 }
 
 func go122_create_syscall_with_p_unit_ready() int {
+    1
+}

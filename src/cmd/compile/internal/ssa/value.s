@@ -30,3 +30,5 @@ func value_key(ssa_value v) string {
         key = key + "#" + to_string(v.args[i])
         i = i + 1
     }
+    key
+}

@@ -243,6 +243,7 @@ func dequeue_waiter(waiter[]* q) waiter {
 }
 extern "intrinsic" func __chan_deliver(int sroutine_id, int val) ()
 extern "intrinsic" func __chan_take_delivered(int sroutine_id) int
+
 func chan_deliver(int sroutine_id, int val) () {
     __chan_deliver(sroutine_id, val)
 }
@@ -254,3 +255,7 @@ func chan_take_delivered(int sroutine_id) int {
 func chan_len(raw_chan ch) int  { ch.count }
 
 func chan_cap(raw_chan ch) int  { ch.buffer_capacity }
+
+func chan_unit_name() string { "src/runtime/chan" }
+
+func chan_unit_ready() int   { 1 }

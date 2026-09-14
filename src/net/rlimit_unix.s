@@ -4,3 +4,5 @@ func rlimit_unix_unit_name() string {
 }
 
 func rlimit_unix_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func overlaydir_unit_name() string {
 }
 
 func overlaydir_unit_ready() int {
+    1
+}

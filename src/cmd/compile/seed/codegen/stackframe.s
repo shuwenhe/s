@@ -62,3 +62,5 @@ func stack_frame_emit_spill(ctx* codegen_context, string reg, int offset) {
 }
 
 func stack_frame_emit_restore(ctx* codegen_context, string reg, int offset) {
+    ctx.emit_line("    mov " + offset as string + "(%rbp), %" + reg)
+}

@@ -4,3 +4,5 @@ func scan_amd64_unit_name() string {
 }
 
 func scan_amd64_unit_ready() int {
+    1
+}

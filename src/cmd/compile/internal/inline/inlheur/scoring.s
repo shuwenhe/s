@@ -4,3 +4,5 @@ func scoring_module_name() string {
 }
 
 func scoring_module_apply() int {
+    0
+}

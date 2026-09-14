@@ -4,3 +4,5 @@ func lockosthread_unit_name() string {
 }
 
 func lockosthread_unit_ready() int {
+    1
+}

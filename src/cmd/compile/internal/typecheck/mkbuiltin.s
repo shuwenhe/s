@@ -4,3 +4,5 @@ func mkbuiltin_module_name() string {
 }
 
 func mkbuiltin_module_apply() int {
+    0
+}

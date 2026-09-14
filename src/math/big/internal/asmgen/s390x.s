@@ -4,3 +4,5 @@ func s390x_unit_name() string {
 }
 
 func s390x_unit_ready() int {
+    1
+}

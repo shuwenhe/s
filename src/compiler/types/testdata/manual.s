@@ -4,3 +4,5 @@ func manual_unit_name() string {
 }
 
 func manual_unit_ready() int {
+    1
+}

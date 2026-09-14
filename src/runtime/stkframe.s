@@ -4,3 +4,5 @@ func stkframe_unit_name() string {
 }
 
 func stkframe_unit_ready() int {
+    1
+}

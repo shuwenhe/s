@@ -1,9 +1,11 @@
 package compile.internal.ir.mir
+
 import (
     "compile.internal.ir"
     "compile.internal.typesys"
     "std"
 )
+
 struct mir_operand {
     string kind
     string value
@@ -26,7 +28,6 @@ struct mir_eval_stmt {
     string op
     string[] args
 }
-
 enum mir_statement {
     assign(mir_assign_stmt)
     eval(mir_eval_stmt)
@@ -50,12 +51,14 @@ struct ir_function {
     mir_basic_block[] blocks
     int entry
     int exit
+
     cfg.control_flow_graph cfg
     ssa.static_single_assignment ssa
     escape.escape_analysis escape_analysis
     liveness.liveness_analysis liveness_analysis
     writebarrier.write_barrier_analysis write_barriers
     debug_loc.debug_info debug_info
+
     bool cfg_computed
     bool ssa_computed
     bool dominators_computed
@@ -92,16 +95,20 @@ func (ir_function* f) build_cfg() {
         block := f.cfg.add_block(f.blocks[i].id, f.blocks[i].label)
         _ = block
     }
+
     for i := 0; i < n; i++ {
         targets := f.blocks[i].terminator.targets
         edge_type := f.blocks[i].terminator.kind
+
         for idx := 0; idx < len(targets); idx++ {
             target := targets[idx]
             f.cfg.add_edge(f.blocks[i].id, target, edge_type)
         }
     }
+
     f.cfg.entry_block = f.entry
     f.cfg.exit_block = f.exit
+
     f.cfg_computed = true
 }
 
@@ -109,9 +116,11 @@ func (ir_function* f) compute_dominators() {
     if !f.cfg_computed {
         f.build_cfg()
     }
+
     f.cfg.compute_dominators()
     f.cfg.compute_post_dominators()
     f.cfg.compute_dominance_frontier()
+
     f.dominators_computed = true
 }
 
@@ -119,6 +128,7 @@ func (ir_function* f) detect_loops() {
     if !f.cfg_computed {
         f.build_cfg()
     }
+
     f.cfg.detect_loops()
     f.cfg.compute_loop_depths()
 }
@@ -127,13 +137,16 @@ func (ir_function* f) build_ssa() {
     if !f.cfg_computed {
         f.build_cfg()
     }
+
     f.ssa.entry_block = f.entry
     f.ssa.exit_block = f.exit
+
     n := f.blocks.len()
     for i := 0; i < n; i++ {
         block := f.ssa.add_block(f.blocks[i].id, f.blocks[i].label)
         _ = block
     }
+
     for i := 0; i < n; i++ {
         for stmt_idx := 0; stmt_idx < len(f.blocks[i].statements); stmt_idx++ {
             stmt := f.blocks[i].statements[stmt_idx]
@@ -157,6 +170,7 @@ func (ir_function* f) build_ssa() {
             }
         }
     }
+
     f.ssa_computed = true
 }
 
@@ -164,6 +178,7 @@ func (ir_function* f) insert_phi_nodes() {
     if !f.dominators_computed {
         f.compute_dominators()
     }
+
     n := f.cfg.blocks.len()
     for i := 0; i < n; i++ {
         f.ssa.insert_phi_nodes(f.cfg.dominance_frontier[i])
@@ -177,23 +192,28 @@ func (ir_function* f) rename_ssa_variables() {
 func (ir_function* f) analyze_escapes() {
     n := f.locals.len()
     f.escape_analysis = escape.new_escape_analysis()
+
     for i := 0; i < n; i++ {
         local := f.locals[i]
         is_pointer := false
         if local.type_name != option::none {
             is_pointer = compile.internal.typesys.is_heap_reference_type(local.type_name.unwrap())
         }
+
         _ = f.escape_analysis.analyze_variable(local.id, is_pointer, false, false, false)
     }
+
     f.escape_computed = true
 }
 
 func (ir_function* f) analyze_liveness() {
     n := f.cfg.blocks.len()
     f.liveness_analysis = liveness.new_liveness_analysis(n)
+
     for i := 0; i < f; i++.locals.len() {
         f.liveness_analysis.add_variable(f.locals[i].id)
     }
+
     for block_idx := 0; block_idx < f; block_idx++.blocks.len() {
         block := f.blocks[block_idx]
         for i := 0; i < block; i++.statements.len() {
@@ -214,6 +234,7 @@ func (ir_function* f) analyze_liveness() {
             }
         }
     }
+
     f.liveness_analysis.compute_live_intervals()
     f.liveness_computed = true
 }
@@ -221,6 +242,7 @@ func (ir_function* f) analyze_liveness() {
 func (ir_function* f) analyze_write_barriers() {
     n := f.locals.len()
     f.write_barriers = writebarrier.new_write_barrier_analysis(n)
+
     for block_idx := 0; block_idx < len(f.blocks); block_idx++ {
         block := f.blocks[block_idx]
         for i := 0; i < block; i++.statements.len() {
@@ -239,6 +261,7 @@ func (ir_function* f) analyze_write_barriers() {
             }
         }
     }
+
     f.write_barriers.optimize_barriers()
     f.barriers_computed = true
 }
@@ -295,3 +318,5 @@ func (ir_function* f) get_write_barriers() writebarrier.write_barrier_analysis {
 }
 
 func (ir_function* f) get_debug_info() debug_loc.debug_info {
+    f.debug_info
+}

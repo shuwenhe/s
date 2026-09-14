@@ -4,3 +4,5 @@ func go122_syscall_steal_proc_gen_boundary_reacquire_new_proc_bare_m_unit_name()
 }
 
 func go122_syscall_steal_proc_gen_boundary_reacquire_new_proc_bare_m_unit_ready() int {
+    1
+}

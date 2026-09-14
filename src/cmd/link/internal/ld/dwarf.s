@@ -1,15 +1,18 @@
 package src.cmd.link.internal.ld
+
 import (
 	"src/fmt"
 	"src/time"
 	"src/crypto/sha256"
 )
+
 const (
 	DWARF_VERSION_2 = 2
 	DWARF_VERSION_3 = 3
 	DWARF_VERSION_4 = 4
 	DWARF_VERSION_5 = 5
 )
+
 enum dwarf_tag {
 	DW_TAG_COMPILE_UNIT = 0x11
 	DW_TAG_TYPE_UNIT = 0x41
@@ -72,7 +75,6 @@ struct dwarf_die {
 	dwarf_die[] children
 	i64 offset
 }
-
 enum dwarf_attribute_value {
 	IntValue(i64)
 	StringValue(string)
@@ -146,31 +148,45 @@ func (dm* dwarf_manager) add_compile_unit(cu dwarf_compile_unit) {
 
 func (dm* dwarf_manager) generate_debug_line() u8[] {
 	data := make(u8[], 0)
+
 	for _, line_info := range dm.LineInfo {
+
 		len_offset := len(data)
 		data = append(data, 0, 0, 0, 0, 0, 0, 0, 0)
+
 		version_start := len(data)
+
 		data = append(data, 4, 0)
+
 		hdr_len_offset := len(data)
 		data = append(data, 0, 0, 0, 0, 0, 0, 0, 0)
+
 		data = append(data, u8(line_info.MinInstructionLength))
+
 		data = append(data, 1)
+
 		data = append(data, 1)
+
 		data = append(data,
 			u8(line_info.LineBase),
 			u8(line_info.LineBase >> 8),
 			u8(line_info.LineBase >> 16),
 			u8(line_info.LineBase >> 24))
+
 		data = append(data, u8(line_info.LineRange))
+
 		data = append(data, u8(line_info.OpcodeBase))
+
 		for i := i32(1); i < line_info.OpcodeBase; i += 1 {
 			data = append(data, 0)
 		}
+
 		for _, dir := range line_info.DirectoryNames {
 			data = append(data, u8[](dir)...)
 			data = append(data, 0)
 		}
 		data = append(data, 0)
+
 		for _, fname := range line_info.FileNames {
 			data = append(data, u8[](fname)...)
 			data = append(data, 0)
@@ -180,6 +196,7 @@ func (dm* dwarf_manager) generate_debug_line() u8[] {
 		}
 		data = append(data, 0)
 	}
+
 	data
 }
 
@@ -227,36 +244,44 @@ func new_unwind_manager() unwind_manager {
 
 func (um* unwind_manager) generate_eh_frame() u8[] {
 	data := make(u8[], 0)
+
 	for _, cie := range um.UnwindInfo.Cies {
 		data = append(data,
 			u8(cie.Length),
 			u8(cie.Length >> 8),
 			u8(cie.Length >> 16),
 			u8(cie.Length >> 24))
+
 		data = append(data,
 			u8(cie.CieId),
 			u8(cie.CieId >> 8),
 			u8(cie.CieId >> 16),
 			u8(cie.CieId >> 24))
+
 		data = append(data, u8(cie.Version))
 		data = append(data, u8[](cie.AugmentationString)...)
 		data = append(data, 0)
+
 		data = append(data, u8(cie.CodeAlignmentFactor))
 		data = append(data, u8(cie.DataAlignmentFactor))
 		data = append(data, u8(cie.ReturnAddressRegister))
+
 		data = append(data, cie.AugmentationData...)
 	}
+
 	for _, fde := range um.UnwindInfo.Fdes {
 		data = append(data,
 			u8(fde.Length),
 			u8(fde.Length >> 8),
 			u8(fde.Length >> 16),
 			u8(fde.Length >> 24))
+
 		data = append(data,
 			u8(fde.CiePointer),
 			u8(fde.CiePointer >> 8),
 			u8(fde.CiePointer >> 16),
 			u8(fde.CiePointer >> 24))
+
 		data = append(data,
 			u8(fde.PcBegin),
 			u8(fde.PcBegin >> 8),
@@ -266,6 +291,7 @@ func (um* unwind_manager) generate_eh_frame() u8[] {
 			u8(fde.PcBegin >> 40),
 			u8(fde.PcBegin >> 48),
 			u8(fde.PcBegin >> 56))
+
 		data = append(data,
 			u8(fde.PcRange),
 			u8(fde.PcRange >> 8),
@@ -275,6 +301,10 @@ func (um* unwind_manager) generate_eh_frame() u8[] {
 			u8(fde.PcRange >> 40),
 			u8(fde.PcRange >> 48),
 			u8(fde.PcRange >> 56))
+
 		data = append(data, fde.AugmentationData...)
 		data = append(data, fde.Instructions...)
 	}
+
+	data
+}

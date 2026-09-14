@@ -70,6 +70,7 @@ extern "intrinsic" func __sys_poller_create() int
 extern "intrinsic" func __sys_poller_add(int poller_fd, int fd, int events) int
 extern "intrinsic" func __sys_poller_del(int poller_fd, int fd) int
 extern "intrinsic" func __sys_poller_wait(int poller_fd, int max, int timeout_ms) int[]
+
 func make_net_error(string msg) net_error {
     code := __sys_errno()
     net_error {
@@ -336,3 +337,7 @@ func poller_wait(int poller_fd, int max, int timeout_ms) (int[], net_error) {
         ready
     }
 }
+
+func syscall_unix_unit_name() string { "src/syscall/syscall_unix" }
+
+func syscall_unix_unit_ready() int   { 1 }

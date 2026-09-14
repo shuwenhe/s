@@ -4,3 +4,5 @@ func cgo_unix_syscall_unit_name() string {
 }
 
 func cgo_unix_syscall_unit_ready() int {
+    1
+}

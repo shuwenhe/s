@@ -4,3 +4,5 @@ func callback_pprof_unit_name() string {
 }
 
 func callback_pprof_unit_ready() int {
+    1
+}

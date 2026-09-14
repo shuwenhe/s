@@ -4,3 +4,5 @@ func isnamed_unit_name() string {
 }
 
 func isnamed_unit_ready() int {
+    1
+}

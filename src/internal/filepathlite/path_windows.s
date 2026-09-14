@@ -4,3 +4,5 @@ func path_windows_unit_name() string {
 }
 
 func path_windows_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func order_module_name() string {
 }
 
 func order_module_apply() int {
+    0
+}

@@ -4,3 +4,5 @@ func hpack_unit_name() string {
 }
 
 func hpack_unit_ready() int {
+    1
+}

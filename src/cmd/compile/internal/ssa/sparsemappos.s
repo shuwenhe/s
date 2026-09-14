@@ -15,3 +15,5 @@ func sparse_pos_get(sparse_map s, int pos) int_pair {
 }
 
 func sparse_pos_set(sparse_map s, int pos, int value) sparse_map {
+    sparse_map_set(s, pos, value)
+}

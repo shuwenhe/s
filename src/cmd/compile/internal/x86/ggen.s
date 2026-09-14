@@ -4,3 +4,5 @@ func ggen_unit_name() string {
 }
 
 func ggen_unit_ready() int {
+    1
+}

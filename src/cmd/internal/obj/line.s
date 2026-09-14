@@ -4,3 +4,5 @@ func line_unit_name() string {
 }
 
 func line_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func at_fstatat2_unit_name() string {
 }
 
 func at_fstatat2_unit_ready() int {
+    1
+}

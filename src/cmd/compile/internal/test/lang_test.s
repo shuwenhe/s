@@ -4,3 +4,5 @@ func lang_test_case_name() string {
 }
 
 func lang_test_case_pass() int {
+    0
+}

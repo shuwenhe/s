@@ -4,3 +4,5 @@ func context_module_name() string {
 }
 
 func context_module_apply() int {
+    0
+}

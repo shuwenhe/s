@@ -4,3 +4,5 @@ func cpu_gccgo_x86_unit_name() string {
 }
 
 func cpu_gccgo_x86_unit_ready() int {
+    1
+}

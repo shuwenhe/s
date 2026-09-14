@@ -73,3 +73,5 @@ func main() {
         return mono_result
     }
     std.io.println("test_compiler: ok");
+    0
+}

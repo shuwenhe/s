@@ -4,3 +4,5 @@ func pclntab_test_unit_name() string {
 }
 
 func pclntab_test_unit_ready() int {
+    1
+}

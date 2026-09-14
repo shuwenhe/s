@@ -4,3 +4,5 @@ func stmt_unit_name() string {
 }
 
 func stmt_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func multiscanner_rule_name() string {
 }
 
 func multiscanner_rule_count() int {
+    0
+}

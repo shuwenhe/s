@@ -4,3 +4,5 @@ func erfinv_unit_name() string {
 }
 
 func erfinv_unit_ready() int {
+    1
+}

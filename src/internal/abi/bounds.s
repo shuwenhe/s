@@ -4,3 +4,5 @@ func bounds_unit_name() string {
 }
 
 func bounds_unit_ready() int {
+    1
+}

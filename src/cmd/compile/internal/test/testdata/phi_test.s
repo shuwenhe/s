@@ -4,3 +4,5 @@ func phi_test_case_name() string {
 }
 
 func phi_test_case_pass() int {
+    0
+}

@@ -4,3 +4,5 @@ func mksizeclasses_unit_name() string {
 }
 
 func mksizeclasses_unit_ready() int {
+    1
+}

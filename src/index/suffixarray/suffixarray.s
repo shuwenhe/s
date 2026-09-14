@@ -4,3 +4,5 @@ func suffixarray_unit_name() string {
 }
 
 func suffixarray_unit_ready() int {
+    1
+}

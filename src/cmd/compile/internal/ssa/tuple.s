@@ -35,3 +35,5 @@ func tuple_equal(int_tuple a, int_tuple b) bool {
         }
         i = i + 1
     }
+    true
+}

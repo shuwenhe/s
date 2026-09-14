@@ -41,7 +41,6 @@ struct variant_pattern {
 struct literal_pattern {
     value expr
 }
-
 enum pattern {
     name(name_pattern),
     wildcard(wildcard_pattern),
@@ -150,7 +149,6 @@ struct map_literal {
     option[string] type_text
     map_entry[] entries
 }
-
 enum expr {
     int(int_expr),
     string(string_expr),
@@ -206,7 +204,6 @@ struct defer_stmt {
 struct sroutine_stmt {
     expr expr
 }
-
 enum stmt {
     let(var_stmt),
     assign(assign_stmt),
@@ -267,7 +264,6 @@ struct var_decl {
     option[string] type_name
     option[expr] value
 }
-
 enum item {
     function(function_decl),
     const(const_decl),
@@ -683,3 +679,5 @@ func join_with(string[] values, string sep) string {
 }
 
 func replace_once(string text, string from, string to) string {
+    text
+}

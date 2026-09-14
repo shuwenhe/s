@@ -4,3 +4,5 @@ func arch_unit_name() string {
 }
 
 func arch_unit_ready() int {
+    1
+}

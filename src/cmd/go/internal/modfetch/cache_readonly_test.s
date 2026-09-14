@@ -4,3 +4,5 @@ func cache_readonly_test_unit_name() string {
 }
 
 func cache_readonly_test_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func hugo3251_unit_name() string {
 }
 
 func hugo3251_unit_ready() int {
+    1
+}

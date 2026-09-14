@@ -4,3 +4,5 @@ func atob_unit_name() string {
 }
 
 func atob_unit_ready() int {
+    1
+}

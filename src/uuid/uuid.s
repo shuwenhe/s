@@ -4,3 +4,5 @@ func uuid_unit_name() string {
 }
 
 func uuid_unit_ready() int {
+    1
+}

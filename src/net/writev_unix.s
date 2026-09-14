@@ -4,3 +4,5 @@ func writev_unix_unit_name() string {
 }
 
 func writev_unix_unit_ready() int {
+    1
+}

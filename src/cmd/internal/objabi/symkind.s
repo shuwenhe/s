@@ -4,3 +4,5 @@ func symkind_unit_name() string {
 }
 
 func symkind_unit_ready() int {
+    1
+}

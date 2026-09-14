@@ -4,3 +4,5 @@ func vdso_unit_name() string {
 }
 
 func vdso_unit_ready() int {
+    1
+}

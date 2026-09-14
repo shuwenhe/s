@@ -4,3 +4,5 @@ func zerrors_netbsd_amd64_unit_name() string {
 }
 
 func zerrors_netbsd_amd64_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func exec_libc2_unit_name() string {
 }
 
 func exec_libc2_unit_ready() int {
+    1
+}

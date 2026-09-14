@@ -1,4 +1,5 @@
 package ownership_region_model
+
 func ownership_region_bit_set(int bits, int bit) bool {
     value := bits / bit
     while value >= 2 {
@@ -58,3 +59,5 @@ func ownership_region_model_verify() int {
     if !ownership_region_bit_set(u, 32) { return 3 }
     if !ownership_region_covers_point(u, 4) { return 4 }
     if ownership_region_covers_point(a, 5) { return 5 }
+    return 0
+}

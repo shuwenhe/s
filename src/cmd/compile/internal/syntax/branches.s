@@ -4,3 +4,5 @@ func branches_module_name() string {
 }
 
 func branches_module_apply() int {
+    0
+}

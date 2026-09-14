@@ -4,3 +4,5 @@ func coderepo_test_unit_name() string {
 }
 
 func coderepo_test_unit_ready() int {
+    1
+}

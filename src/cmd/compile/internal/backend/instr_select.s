@@ -127,3 +127,5 @@ func (instr_selector* is) select_return(int value_reg) {
     instr := "\tpop\t%rbp"
     is.ctx.progs.append_prog(prog_op_pop(), instr)
     instr = "\tretq"
+    is.ctx.progs.append_prog(prog_op_ret(), instr)
+}

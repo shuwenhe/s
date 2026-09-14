@@ -4,3 +4,5 @@ func defs_openbsd_unit_name() string {
 }
 
 func defs_openbsd_unit_ready() int {
+    1
+}

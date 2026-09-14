@@ -4,3 +4,5 @@ func go122_fail_first_gen_first_unit_name() string {
 }
 
 func go122_fail_first_gen_first_unit_ready() int {
+    1
+}

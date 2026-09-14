@@ -4,3 +4,5 @@ func reflect_unit_name() string {
 }
 
 func reflect_unit_ready() int {
+    1
+}

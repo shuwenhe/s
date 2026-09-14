@@ -4,3 +4,5 @@ func coder_test_unit_name() string {
 }
 
 func coder_test_unit_ready() int {
+    1
+}

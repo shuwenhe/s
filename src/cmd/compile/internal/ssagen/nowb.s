@@ -22,3 +22,5 @@ func should_emit_writebarrier(string fn_name, bool has_heap_ptr_store, bool glob
     if global_store {
         return true
     }
+    true
+}

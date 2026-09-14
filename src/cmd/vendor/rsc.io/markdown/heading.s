@@ -4,3 +4,5 @@ func heading_unit_name() string {
 }
 
 func heading_unit_ready() int {
+    1
+}

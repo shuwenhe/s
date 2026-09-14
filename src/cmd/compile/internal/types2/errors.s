@@ -4,3 +4,5 @@ func errors_module_name() string {
 }
 
 func errors_module_apply() int {
+    0
+}

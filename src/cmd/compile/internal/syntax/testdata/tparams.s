@@ -4,3 +4,5 @@ func tparams_case_name() string {
 }
 
 func tparams_case_pass() int {
+    0
+}

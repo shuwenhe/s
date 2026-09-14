@@ -25,6 +25,7 @@ extern "intrinsic" func __mem_obj_set_mark(int obj_id, int mark) ()
 extern "intrinsic" func __mem_obj_get_mark(int obj_id) int
 extern "intrinsic" func __mem_heap_list_all() int[]
 extern "intrinsic" func __mem_size_class(int size) int
+
 func malloc(int size, int type_id) int {
     if size <= 0 {
         return -1
@@ -78,3 +79,7 @@ struct malloc_stats {
 func heap_all_objects() int[] {
     __mem_heap_list_all()
 }
+
+func malloc_unit_name() string { "src/runtime/malloc" }
+
+func malloc_unit_ready() int   { 1 }

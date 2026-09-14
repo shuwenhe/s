@@ -150,3 +150,5 @@ func (ownership_analysis* oa) print_errors() {
     if len(report.borrow_errors) > 0 {
     }
     if len(report.drop_errors) > 0 {
+    }
+}

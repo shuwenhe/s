@@ -4,3 +4,5 @@ func syscall_wasip1_unit_name() string {
 }
 
 func syscall_wasip1_unit_ready() int {
+    1
+}

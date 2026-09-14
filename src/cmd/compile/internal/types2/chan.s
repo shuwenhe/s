@@ -4,3 +4,5 @@ func chan_module_name() string {
 }
 
 func chan_module_apply() int {
+    0
+}

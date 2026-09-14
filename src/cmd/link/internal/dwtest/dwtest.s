@@ -4,3 +4,5 @@ func dwtest_unit_name() string {
 }
 
 func dwtest_unit_ready() int {
+    1
+}

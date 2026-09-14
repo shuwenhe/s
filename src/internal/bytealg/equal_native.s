@@ -4,3 +4,5 @@ func equal_native_unit_name() string {
 }
 
 func equal_native_unit_ready() int {
+    1
+}

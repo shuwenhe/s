@@ -4,3 +4,5 @@ func mgcpacer_unit_name() string {
 }
 
 func mgcpacer_unit_ready() int {
+    1
+}

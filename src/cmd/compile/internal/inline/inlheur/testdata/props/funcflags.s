@@ -4,3 +4,5 @@ func funcflags_case_name() string {
 }
 
 func funcflags_case_pass() int {
+    0
+}

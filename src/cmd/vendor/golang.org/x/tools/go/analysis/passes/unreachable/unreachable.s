@@ -4,3 +4,5 @@ func unreachable_unit_name() string {
 }
 
 func unreachable_unit_ready() int {
+    1
+}

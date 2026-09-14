@@ -4,3 +4,5 @@ func signature_unit_name() string {
 }
 
 func signature_unit_ready() int {
+    1
+}

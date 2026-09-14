@@ -4,3 +4,5 @@ func exp2_noasm_unit_name() string {
 }
 
 func exp2_noasm_unit_ready() int {
+    1
+}

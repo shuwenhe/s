@@ -4,3 +4,5 @@ func range_module_name() string {
 }
 
 func range_module_apply() int {
+    0
+}

@@ -4,3 +4,5 @@ func route_unit_name() string {
 }
 
 func route_unit_ready() int {
+    1
+}

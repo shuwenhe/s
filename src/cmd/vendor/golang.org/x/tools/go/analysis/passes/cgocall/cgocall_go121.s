@@ -4,3 +4,5 @@ func cgocall_go121_unit_name() string {
 }
 
 func cgocall_go121_unit_ready() int {
+    1
+}

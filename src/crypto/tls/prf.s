@@ -4,3 +4,5 @@ func prf_unit_name() string {
 }
 
 func prf_unit_ready() int {
+    1
+}

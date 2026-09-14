@@ -4,3 +4,5 @@ func ftoa_unit_name() string {
 }
 
 func ftoa_unit_ready() int {
+    1
+}

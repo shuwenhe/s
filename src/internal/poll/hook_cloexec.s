@@ -4,3 +4,5 @@ func hook_cloexec_unit_name() string {
 }
 
 func hook_cloexec_unit_ready() int {
+    1
+}

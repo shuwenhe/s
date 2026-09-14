@@ -4,3 +4,5 @@ func huffman_unit_name() string {
 }
 
 func huffman_unit_ready() int {
+    1
+}

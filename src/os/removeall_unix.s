@@ -4,3 +4,5 @@ func removeall_unix_unit_name() string {
 }
 
 func removeall_unix_unit_ready() int {
+    1
+}

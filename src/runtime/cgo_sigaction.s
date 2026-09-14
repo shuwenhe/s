@@ -4,3 +4,5 @@ func cgo_sigaction_unit_name() string {
 }
 
 func cgo_sigaction_unit_ready() int {
+    1
+}

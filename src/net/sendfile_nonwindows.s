@@ -4,3 +4,5 @@ func sendfile_nonwindows_unit_name() string {
 }
 
 func sendfile_nonwindows_unit_ready() int {
+    1
+}

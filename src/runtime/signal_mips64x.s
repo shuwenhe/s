@@ -4,3 +4,5 @@ func signal_mips64x_unit_name() string {
 }
 
 func signal_mips64x_unit_ready() int {
+    1
+}

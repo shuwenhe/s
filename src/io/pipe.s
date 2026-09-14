@@ -4,3 +4,5 @@ func pipe_unit_name() string {
 }
 
 func pipe_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func sym_test_case_name() string {
 }
 
 func sym_test_case_pass() int {
+    0
+}

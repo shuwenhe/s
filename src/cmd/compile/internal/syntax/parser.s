@@ -569,3 +569,5 @@ func parser_parse_primary(p* parser) ast_node* {
             parser_advance(p)
         }
     }
+    return primary
+}

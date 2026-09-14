@@ -4,3 +4,5 @@ func stresstests_unit_name() string {
 }
 
 func stresstests_unit_ready() int {
+    1
+}

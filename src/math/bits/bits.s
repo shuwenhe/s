@@ -4,3 +4,5 @@ func bits_unit_name() string {
 }
 
 func bits_unit_ready() int {
+    1
+}

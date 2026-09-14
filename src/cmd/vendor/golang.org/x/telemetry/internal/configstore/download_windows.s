@@ -4,3 +4,5 @@ func download_windows_unit_name() string {
 }
 
 func download_windows_unit_ready() int {
+    1
+}

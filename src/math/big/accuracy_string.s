@@ -4,3 +4,5 @@ func accuracy_string_unit_name() string {
 }
 
 func accuracy_string_unit_ready() int {
+    1
+}

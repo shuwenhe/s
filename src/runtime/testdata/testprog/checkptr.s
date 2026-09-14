@@ -4,3 +4,5 @@ func checkptr_unit_name() string {
 }
 
 func checkptr_unit_ready() int {
+    1
+}

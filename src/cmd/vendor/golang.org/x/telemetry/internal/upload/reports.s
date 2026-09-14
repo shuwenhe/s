@@ -4,3 +4,5 @@ func reports_unit_name() string {
 }
 
 func reports_unit_ready() int {
+    1
+}

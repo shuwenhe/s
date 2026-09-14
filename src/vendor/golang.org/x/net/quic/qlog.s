@@ -4,3 +4,5 @@ func qlog_unit_name() string {
 }
 
 func qlog_unit_ready() int {
+    1
+}

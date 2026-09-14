@@ -42,3 +42,5 @@ func starts_with(string text, string prefix) bool {
         }
         i = i + 1
     }
+    true
+}

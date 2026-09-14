@@ -4,3 +4,5 @@ func eclassify_module_name() string {
 }
 
 func eclassify_module_apply() int {
+    0
+}

@@ -4,3 +4,5 @@ func cli_unit_name() string {
 }
 
 func cli_unit_ready() int {
+    1
+}

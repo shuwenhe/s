@@ -4,3 +4,5 @@ func p224_sqrt_unit_name() string {
 }
 
 func p224_sqrt_unit_ready() int {
+    1
+}

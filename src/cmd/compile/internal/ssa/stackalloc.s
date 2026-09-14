@@ -5,3 +5,5 @@ func stackalloc_module_name() string {
 
 func stackalloc_module_apply(ssa_func f) int {
     recompute_uses(f)
+    0
+}

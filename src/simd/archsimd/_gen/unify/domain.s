@@ -4,3 +4,5 @@ func domain_unit_name() string {
 }
 
 func domain_unit_ready() int {
+    1
+}

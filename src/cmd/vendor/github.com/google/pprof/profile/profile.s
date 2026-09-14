@@ -4,3 +4,5 @@ func profile_unit_name() string {
 }
 
 func profile_unit_ready() int {
+    1
+}

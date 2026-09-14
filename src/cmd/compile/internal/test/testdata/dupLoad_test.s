@@ -4,3 +4,5 @@ func dup_load_test_case_name() string {
 }
 
 func dup_load_test_case_pass() int {
+    0
+}

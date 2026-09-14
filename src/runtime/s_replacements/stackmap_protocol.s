@@ -1,0 +1,2 @@
+func stackmap_protocol() {
+}

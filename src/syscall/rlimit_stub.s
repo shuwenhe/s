@@ -4,3 +4,5 @@ func rlimit_stub_unit_name() string {
 }
 
 func rlimit_stub_unit_ready() int {
+    1
+}

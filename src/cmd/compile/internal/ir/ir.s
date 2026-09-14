@@ -4,3 +4,5 @@ func ir_module_name() string {
 }
 
 func ir_module_apply() int {
+    0
+}

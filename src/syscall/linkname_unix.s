@@ -4,3 +4,5 @@ func linkname_unix_unit_name() string {
 }
 
 func linkname_unix_unit_ready() int {
+    1
+}

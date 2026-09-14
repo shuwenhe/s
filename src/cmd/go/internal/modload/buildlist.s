@@ -4,3 +4,5 @@ func buildlist_unit_name() string {
 }
 
 func buildlist_unit_ready() int {
+    1
+}

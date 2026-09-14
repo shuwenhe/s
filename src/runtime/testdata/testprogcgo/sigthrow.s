@@ -4,3 +4,5 @@ func sigthrow_unit_name() string {
 }
 
 func sigthrow_unit_ready() int {
+    1
+}

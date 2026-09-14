@@ -4,3 +4,5 @@ func tick_test_unit_name() string {
 }
 
 func tick_test_unit_ready() int {
+    1
+}

@@ -54,3 +54,5 @@ func compile_functions(string[] queue, int workers) string {
         out = out + prepare_func(queue[i]) + "\n"
         i = i + 1
     }
+    out
+}

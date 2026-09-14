@@ -4,3 +4,5 @@ func cgi_main_unit_name() string {
 }
 
 func cgi_main_unit_ready() int {
+    1
+}

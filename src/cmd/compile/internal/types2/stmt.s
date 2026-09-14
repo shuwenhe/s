@@ -4,3 +4,5 @@ func stmt_module_name() string {
 }
 
 func stmt_module_apply() int {
+    0
+}

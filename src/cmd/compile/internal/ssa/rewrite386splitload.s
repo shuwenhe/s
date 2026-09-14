@@ -4,3 +4,5 @@ func rewrite386splitload_rule_name() string {
 }
 
 func rewrite386splitload_rule_count() int {
+    0
+}

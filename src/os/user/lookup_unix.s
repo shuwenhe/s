@@ -4,3 +4,5 @@ func lookup_unix_unit_name() string {
 }
 
 func lookup_unix_unit_ready() int {
+    1
+}

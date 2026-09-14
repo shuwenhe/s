@@ -4,3 +4,5 @@ func siginfo_linux_test_unit_name() string {
 }
 
 func siginfo_linux_test_unit_ready() int {
+    1
+}

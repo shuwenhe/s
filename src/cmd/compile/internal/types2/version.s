@@ -4,3 +4,5 @@ func version_module_name() string {
 }
 
 func version_module_apply() int {
+    0
+}

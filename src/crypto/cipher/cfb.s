@@ -4,3 +4,5 @@ func cfb_unit_name() string {
 }
 
 func cfb_unit_ready() int {
+    1
+}

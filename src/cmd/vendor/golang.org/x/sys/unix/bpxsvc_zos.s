@@ -4,3 +4,5 @@ func bpxsvc_zos_unit_name() string {
 }
 
 func bpxsvc_zos_unit_ready() int {
+    1
+}

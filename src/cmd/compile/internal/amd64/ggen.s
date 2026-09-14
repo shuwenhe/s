@@ -35,3 +35,5 @@ func ginsnop(prog[] insns) prog[] {
         from: "AX",
         to: "AX", offset 0,
     })
+    out
+}

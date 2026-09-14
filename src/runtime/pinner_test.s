@@ -4,3 +4,5 @@ func pinner_test_unit_name() string {
 }
 
 func pinner_test_unit_ready() int {
+    1
+}

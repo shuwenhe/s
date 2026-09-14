@@ -4,3 +4,5 @@ func countertest_unit_name() string {
 }
 
 func countertest_unit_ready() int {
+    1
+}

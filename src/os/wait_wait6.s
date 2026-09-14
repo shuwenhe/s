@@ -4,3 +4,5 @@ func wait_wait6_unit_name() string {
 }
 
 func wait_wait6_unit_ready() int {
+    1
+}

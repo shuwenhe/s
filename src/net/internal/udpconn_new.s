@@ -133,3 +133,5 @@ func (udp_listener* l) read_from_udp(buf: byte[]) (int, *udp_addr, error) {
 }
 
 func (udp_listener* l) write_to_udp(buf: byte[], ud* addrp_addr) (int, error) {
+    l.raw_socket.send_to(buf, addr.ip, addr.port)
+}

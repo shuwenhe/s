@@ -4,3 +4,5 @@ func attr_string_unit_name() string {
 }
 
 func attr_string_unit_ready() int {
+    1
+}

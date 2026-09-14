@@ -4,3 +4,5 @@ func funcprop_string_module_name() string {
 }
 
 func funcprop_string_module_apply() int {
+    0
+}

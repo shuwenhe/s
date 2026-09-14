@@ -4,3 +4,5 @@ func mgcscavenge_unit_name() string {
 }
 
 func mgcscavenge_unit_ready() int {
+    1
+}

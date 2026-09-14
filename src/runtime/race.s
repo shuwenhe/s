@@ -1,7 +1,9 @@
 package src.runtime
+
 var race_enabled = false
 var race_read_count = 0
 var race_write_count = 0
+
 func race_enable() () { race_enabled = true }
 
 func race_disable() () { race_enabled = false }
@@ -31,3 +33,5 @@ func race_unit_name() string {
 }
 
 func race_unit_ready() int {
+    1
+}

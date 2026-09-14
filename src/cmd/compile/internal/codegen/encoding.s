@@ -273,3 +273,5 @@ func opcode_name(amd64_opcode op) string {
         case op_imul: return "imul"
         case op_idiv: return "idiv"
     }
+    "unknown"
+}

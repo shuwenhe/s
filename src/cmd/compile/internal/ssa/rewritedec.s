@@ -4,3 +4,5 @@ func rewritedec_rule_name() string {
 }
 
 func rewritedec_rule_count() int {
+    0
+}

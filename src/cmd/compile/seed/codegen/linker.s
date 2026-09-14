@@ -48,3 +48,5 @@ func (compiler_toolchain* tc) compile_to_executable( asm_file string, string obj
 }
 
 func (compiler_toolchain* tc) add_stdlib_objects(obj_files* string[]) {
+    obj_files.push("libc.so.6")
+}

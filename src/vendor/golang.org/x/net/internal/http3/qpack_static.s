@@ -4,3 +4,5 @@ func qpack_static_unit_name() string {
 }
 
 func qpack_static_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func svg_unit_name() string {
 }
 
 func svg_unit_ready() int {
+    1
+}

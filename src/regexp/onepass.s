@@ -4,3 +4,5 @@ func onepass_unit_name() string {
 }
 
 func onepass_unit_ready() int {
+    1
+}

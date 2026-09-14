@@ -4,3 +4,5 @@ func chacha_ppc64x_unit_name() string {
 }
 
 func chacha_ppc64x_unit_ready() int {
+    1
+}

@@ -1,4 +1,5 @@
 package src.runtime
+
 struct profile_buffer {
     runtime_profile_sample[] samples
     int limit
@@ -31,3 +32,5 @@ func profbuf_unit_name() string {
 }
 
 func profbuf_unit_ready() int {
+    1
+}

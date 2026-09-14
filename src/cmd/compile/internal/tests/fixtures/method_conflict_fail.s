@@ -18,3 +18,5 @@ func ( p point) size() int {
 }
 
 func bad(point p) int {
+    p.size()
+}

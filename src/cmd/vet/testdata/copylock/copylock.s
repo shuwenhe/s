@@ -4,3 +4,5 @@ func copylock_unit_name() string {
 }
 
 func copylock_unit_ready() int {
+    1
+}

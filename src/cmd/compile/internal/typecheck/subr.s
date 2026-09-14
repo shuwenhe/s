@@ -4,3 +4,5 @@ func subr_module_name() string {
 }
 
 func subr_module_apply() int {
+    0
+}

@@ -48,3 +48,5 @@ func align_stack(int size, int align) int {
     if align <= 1 {
         return size
     }
+    ((size + align - 1) / align) * align
+}

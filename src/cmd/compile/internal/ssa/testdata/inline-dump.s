@@ -4,3 +4,5 @@ func inline_dump_case_name() string {
 }
 
 func inline_dump_case_pass() int {
+    0
+}

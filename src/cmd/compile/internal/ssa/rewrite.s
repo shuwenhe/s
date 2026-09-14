@@ -25,3 +25,5 @@ func run_rewrite(ssa_func f, string arch) int {
         }
         rounds = rounds + 1
     }
+    total
+}

@@ -58,3 +58,5 @@ func compile_func(ssa_func f, ssa_config cfg) compile_report {
     code := check_func(f)
     compile_report {
         f: f, stats stats, prove_facts facts, dom dominfo, regalloc regs, check_code code, dump dump_func(f),
+    }
+}

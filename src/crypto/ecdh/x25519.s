@@ -4,3 +4,5 @@ func x25519_unit_name() string {
 }
 
 func x25519_unit_ready() int {
+    1
+}

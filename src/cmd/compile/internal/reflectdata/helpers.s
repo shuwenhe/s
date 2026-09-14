@@ -4,3 +4,5 @@ func helpers_unit_name() string {
 }
 
 func helpers_unit_ready() int {
+    1
+}

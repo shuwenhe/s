@@ -4,3 +4,5 @@ func csrf_unit_name() string {
 }
 
 func csrf_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func validation_unit_name() string {
 }
 
 func validation_unit_ready() int {
+    1
+}

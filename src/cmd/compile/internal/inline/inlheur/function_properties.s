@@ -4,3 +4,5 @@ func function_properties_module_name() string {
 }
 
 func function_properties_module_apply() int {
+    0
+}

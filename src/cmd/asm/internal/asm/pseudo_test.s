@@ -4,3 +4,5 @@ func pseudo_test_unit_name() string {
 }
 
 func pseudo_test_unit_ready() int {
+    1
+}

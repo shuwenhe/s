@@ -4,3 +4,5 @@ func threadprof_unit_name() string {
 }
 
 func threadprof_unit_ready() int {
+    1
+}

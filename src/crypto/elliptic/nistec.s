@@ -4,3 +4,5 @@ func nistec_unit_name() string {
 }
 
 func nistec_unit_ready() int {
+    1
+}

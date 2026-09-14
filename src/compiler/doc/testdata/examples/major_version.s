@@ -4,3 +4,5 @@ func major_version_unit_name() string {
 }
 
 func major_version_unit_ready() int {
+    1
+}

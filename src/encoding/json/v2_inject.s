@@ -4,3 +4,5 @@ func v2_inject_unit_name() string {
 }
 
 func v2_inject_unit_ready() int {
+    1
+}

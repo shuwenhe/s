@@ -4,3 +4,5 @@ func recording_module_name() string {
 }
 
 func recording_module_apply() int {
+    0
+}

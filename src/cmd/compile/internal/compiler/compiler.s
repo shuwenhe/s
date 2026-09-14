@@ -15,3 +15,5 @@ func main(string[] args) int {
 }
 
 func run_cli(string[] args) int {
+    main(args)
+}

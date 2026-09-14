@@ -4,3 +4,5 @@ func set_vma_name_linux_unit_name() string {
 }
 
 func set_vma_name_linux_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func rotate_unit_name() string {
 }
 
 func rotate_unit_ready() int {
+    1
+}

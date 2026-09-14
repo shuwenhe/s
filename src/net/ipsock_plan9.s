@@ -4,3 +4,5 @@ func ipsock_plan9_unit_name() string {
 }
 
 func ipsock_plan9_unit_ready() int {
+    1
+}

@@ -66,3 +66,5 @@ func (instruction_selector* is) select_return_instruction( value string) {
 }
 
 func (instruction_selector* is) get_assembly() string {
+    is.builder.get_assembly()
+}

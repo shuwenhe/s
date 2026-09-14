@@ -4,3 +4,5 @@ func sockaddr_posix_unit_name() string {
 }
 
 func sockaddr_posix_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func utf8_unit_name() string {
 }
 
 func utf8_unit_ready() int {
+    1
+}

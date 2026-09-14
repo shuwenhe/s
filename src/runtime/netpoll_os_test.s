@@ -4,3 +4,5 @@ func netpoll_os_test_unit_name() string {
 }
 
 func netpoll_os_test_unit_ready() int {
+    1
+}

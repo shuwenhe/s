@@ -4,3 +4,5 @@ func rawconn_unit_name() string {
 }
 
 func rawconn_unit_ready() int {
+    1
+}

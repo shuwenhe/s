@@ -4,3 +4,5 @@ func zsysctl_openbsd_386_unit_name() string {
 }
 
 func zsysctl_openbsd_386_unit_ready() int {
+    1
+}

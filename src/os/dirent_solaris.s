@@ -4,3 +4,5 @@ func dirent_solaris_unit_name() string {
 }
 
 func dirent_solaris_unit_ready() int {
+    1
+}

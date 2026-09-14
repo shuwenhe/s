@@ -4,3 +4,5 @@ func tuple_module_name() string {
 }
 
 func tuple_module_apply() int {
+    0
+}

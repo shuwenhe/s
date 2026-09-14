@@ -4,3 +4,5 @@ func asm_stub_unit_name() string {
 }
 
 func asm_stub_unit_ready() int {
+    1
+}

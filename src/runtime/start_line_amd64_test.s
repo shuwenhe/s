@@ -4,3 +4,5 @@ func start_line_amd64_test_unit_name() string {
 }
 
 func start_line_amd64_test_unit_ready() int {
+    1
+}

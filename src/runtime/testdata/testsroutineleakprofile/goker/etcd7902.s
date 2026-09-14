@@ -4,3 +4,5 @@ func etcd7902_unit_name() string {
 }
 
 func etcd7902_unit_ready() int {
+    1
+}

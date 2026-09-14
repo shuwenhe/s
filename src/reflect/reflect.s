@@ -1,7 +1,9 @@
 package src.reflect
+
 import (
 	"src/unsafe"
 )
+
 enum kind {
 	invalid = 0
 	bool = 1
@@ -171,11 +173,14 @@ func (v value) field(index i32) value {
 	if v.type_info == nil || v.type_info.kind != struct {
 		return value{type_info: nil, data: nil, is_nil: true}
 	}
+
 	if index < 0 || index >= v.type_info.field_count {
 		return value{type_info: nil, data: nil, is_nil: true}
 	}
+
 	field := v.type_info.fields[index]
 	field_ptr := unsafe.add_pointer(v.data, field.offset)
+
 	return value{type_info: field.type_info, data: field_ptr, is_nil: false}
 }
 
@@ -201,6 +206,7 @@ func (v value) elem() value {
 	if v.type_info == nil {
 		return value{type_info: nil, data: nil, is_nil: true}
 	}
+
 	match v.type_info.kind {
 	case pointer {
 		ptr := unsafe.load_pointer(v.data)
@@ -297,8 +303,12 @@ func (ti* type_info) field_by_name(string name) field_info* {
 	if ti == nil || ti.kind != struct {
 		return nil
 	}
+
 	for i := i32(0); i < ti.field_count; i += 1 {
 		if ti.fields[i].name == name {
 			return &ti.fields[i]
 		}
 	}
+
+	return nil
+}

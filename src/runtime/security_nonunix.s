@@ -4,3 +4,5 @@ func security_nonunix_unit_name() string {
 }
 
 func security_nonunix_unit_ready() int {
+    1
+}

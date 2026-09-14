@@ -4,3 +4,5 @@ func types_test_unit_name() string {
 }
 
 func types_test_unit_ready() int {
+    1
+}

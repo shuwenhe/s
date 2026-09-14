@@ -4,3 +4,5 @@ func cheat_unit_name() string {
 }
 
 func cheat_unit_ready() int {
+    1
+}

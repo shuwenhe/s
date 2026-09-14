@@ -4,3 +4,5 @@ func forkpipe_unit_name() string {
 }
 
 func forkpipe_unit_ready() int {
+    1
+}

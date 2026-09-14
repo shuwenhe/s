@@ -4,3 +4,5 @@ func rect_unit_name() string {
 }
 
 func rect_unit_ready() int {
+    1
+}

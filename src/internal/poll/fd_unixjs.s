@@ -4,3 +4,5 @@ func fd_unixjs_unit_name() string {
 }
 
 func fd_unixjs_unit_ready() int {
+    1
+}

@@ -73,3 +73,5 @@ func sparse_map_remove(sparse_map s, int key) sparse_map {
 
 func sparse_map_clear(sparse_map s) sparse_map {
     s.dense = sparse_entry[]()
+    s
+}

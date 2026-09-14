@@ -4,3 +4,5 @@ func cap_freebsd_unit_name() string {
 }
 
 func cap_freebsd_unit_ready() int {
+    1
+}

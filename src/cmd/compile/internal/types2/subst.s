@@ -4,3 +4,5 @@ func subst_module_name() string {
 }
 
 func subst_module_apply() int {
+    0
+}

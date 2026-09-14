@@ -97,3 +97,5 @@ func find_substring(string text, string substr) int {
         }
         i = i + 1
     }
+    return -1
+}

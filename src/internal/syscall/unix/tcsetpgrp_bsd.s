@@ -4,3 +4,5 @@ func tcsetpgrp_bsd_unit_name() string {
 }
 
 func tcsetpgrp_bsd_unit_ready() int {
+    1
+}

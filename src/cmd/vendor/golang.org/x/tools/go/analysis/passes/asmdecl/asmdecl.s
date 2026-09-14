@@ -4,3 +4,5 @@ func asmdecl_unit_name() string {
 }
 
 func asmdecl_unit_ready() int {
+    1
+}

@@ -4,6 +4,7 @@ extern "intrinsic" func __host_read_to_string(string path) string;
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
 extern "intrinsic" func __host_char_at(string text, int index) string;
 extern "intrinsic" func __host_slice(string text, int start, int end) string;
+
 struct compiler_state {
     string source
     int pos
@@ -2261,6 +2262,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     if s.return_kind == 3 || s.return_kind == 4 || s.return_kind == 5 || s.return_kind == 9 { s = compiler_next(s) }
     s.parameter_count = param_count
     s.return_param = -1
+
     int start = s.function_param_total
     s.function_names[s.function_count] = name
     s.function_counts[s.function_count] = param_count
@@ -2276,6 +2278,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     }
     s.function_param_total = s.function_param_total + param_count
     s.function_count = s.function_count + 1
+
     string signature = "static int64_t " + name + "("
     if s.return_kind == 0 { signature = "static void " + name + "(" }
     if s.return_kind == 2 || s.return_kind == 4 { signature = "static int64_t *" + name + "(" }
@@ -2291,6 +2294,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         pi = pi + 1
     }
     signature = signature + ")\n"
+
     s.count = 0
     s.depth = 0
     s.loop_floor = -1
@@ -4673,3 +4677,5 @@ func main() {
     result := compiler_compile(source)
     if result.error != "" { eprintln(result.error); return 1 }
     if __host_write_text_file(args[3], result.code) != 0 { eprintln("compiler: cannot write output"); return 1 }
+    return 0
+}

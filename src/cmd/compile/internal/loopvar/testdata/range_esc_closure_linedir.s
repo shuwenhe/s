@@ -4,3 +4,5 @@ func range_esc_closure_linedir_unit_name() string {
 }
 
 func range_esc_closure_linedir_unit_ready() int {
+    1
+}

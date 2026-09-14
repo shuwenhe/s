@@ -5,3 +5,5 @@ func poset_module_name() string {
 
 func poset_module_apply(ssa_func f) int {
     recompute_uses(f)
+    0
+}

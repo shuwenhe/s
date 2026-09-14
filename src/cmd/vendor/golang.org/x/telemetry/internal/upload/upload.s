@@ -4,3 +4,5 @@ func upload_unit_name() string {
 }
 
 func upload_unit_ready() int {
+    1
+}

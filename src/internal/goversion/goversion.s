@@ -4,3 +4,5 @@ func goversion_unit_name() string {
 }
 
 func goversion_unit_ready() int {
+    1
+}

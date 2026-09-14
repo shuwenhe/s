@@ -4,3 +4,5 @@ func cbrt_unit_name() string {
 }
 
 func cbrt_unit_ready() int {
+    1
+}

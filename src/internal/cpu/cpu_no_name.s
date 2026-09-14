@@ -4,3 +4,5 @@ func cpu_no_name_unit_name() string {
 }
 
 func cpu_no_name_unit_ready() int {
+    1
+}

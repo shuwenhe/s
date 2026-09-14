@@ -4,3 +4,5 @@ func mvs_unit_name() string {
 }
 
 func mvs_unit_ready() int {
+    1
+}

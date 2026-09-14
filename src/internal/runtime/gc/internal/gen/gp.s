@@ -4,3 +4,5 @@ func gp_unit_name() string {
 }
 
 func gp_unit_ready() int {
+    1
+}

@@ -267,3 +267,5 @@ func main() {
     if __host_write_text_file(args[2], output) != 0 {
         return 1
     }
+    return 0
+}

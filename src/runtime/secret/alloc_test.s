@@ -11,3 +11,5 @@ func main() {
     if alloc_test_unit_ready() == 1 {
         return 0
     }
+    return 1
+}

@@ -172,3 +172,5 @@ func ir_compile_to_elf(string ir_path, string output_path) error {
     }
     io_write(asm_file, byte[](asm_code))
     asm_file.close()
+    return nil
+}

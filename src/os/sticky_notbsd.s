@@ -4,3 +4,5 @@ func sticky_notbsd_unit_name() string {
 }
 
 func sticky_notbsd_unit_ready() int {
+    1
+}

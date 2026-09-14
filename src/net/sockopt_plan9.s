@@ -4,3 +4,5 @@ func sockopt_plan9_unit_name() string {
 }
 
 func sockopt_plan9_unit_ready() int {
+    1
+}

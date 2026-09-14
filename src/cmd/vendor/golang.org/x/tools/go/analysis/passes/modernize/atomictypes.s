@@ -4,3 +4,5 @@ func atomictypes_unit_name() string {
 }
 
 func atomictypes_unit_ready() int {
+    1
+}

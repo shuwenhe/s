@@ -4,3 +4,5 @@ func map_fast32_unit_name() string {
 }
 
 func map_fast32_unit_ready() int {
+    1
+}

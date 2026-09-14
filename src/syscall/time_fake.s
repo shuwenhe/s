@@ -4,3 +4,5 @@ func time_fake_unit_name() string {
 }
 
 func time_fake_unit_ready() int {
+    1
+}

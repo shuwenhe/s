@@ -4,3 +4,5 @@ func traceallocfree_unit_name() string {
 }
 
 func traceallocfree_unit_ready() int {
+    1
+}

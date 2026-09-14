@@ -4,3 +4,5 @@ func asm_arm64_test_unit_name() string {
 }
 
 func asm_arm64_test_unit_ready() int {
+    1
+}

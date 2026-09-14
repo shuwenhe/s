@@ -4,3 +4,5 @@ func valgrind_unit_name() string {
 }
 
 func valgrind_unit_ready() int {
+    1
+}

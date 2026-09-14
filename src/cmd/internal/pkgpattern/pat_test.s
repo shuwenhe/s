@@ -4,3 +4,5 @@ func pat_test_unit_name() string {
 }
 
 func pat_test_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func node_unit_name() string {
 }
 
 func node_unit_ready() int {
+    1
+}

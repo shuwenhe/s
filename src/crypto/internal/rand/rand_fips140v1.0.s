@@ -4,3 +4,5 @@ func rand_fips140v1_0_unit_name() string {
 }
 
 func rand_fips140v1_0_unit_ready() int {
+    1
+}

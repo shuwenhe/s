@@ -4,3 +4,5 @@ func abi_unit_name() string {
 }
 
 func abi_unit_ready() int {
+    1
+}

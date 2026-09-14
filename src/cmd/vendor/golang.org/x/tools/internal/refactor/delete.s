@@ -4,3 +4,5 @@ func delete_unit_name() string {
 }
 
 func delete_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func graphic_unit_name() string {
 }
 
 func graphic_unit_ready() int {
+    1
+}

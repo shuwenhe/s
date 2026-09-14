@@ -4,3 +4,5 @@ func lookpath_unit_name() string {
 }
 
 func lookpath_unit_ready() int {
+    1
+}

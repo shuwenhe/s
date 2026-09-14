@@ -4,3 +4,5 @@ func readcovdata_unit_name() string {
 }
 
 func readcovdata_unit_ready() int {
+    1
+}

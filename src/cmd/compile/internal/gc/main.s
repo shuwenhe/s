@@ -20,3 +20,5 @@ func init_compile_environment() string {
     if arch_err != "" {
         return arch_err
     }
+    ""
+}

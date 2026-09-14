@@ -4,3 +4,5 @@ func noopt_unit_name() string {
 }
 
 func noopt_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func chans_case_name() string {
 }
 
 func chans_case_pass() int {
+    0
+}

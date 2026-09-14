@@ -4,3 +4,5 @@ func md5block_unit_name() string {
 }
 
 func md5block_unit_ready() int {
+    1
+}

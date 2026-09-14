@@ -4,3 +4,5 @@ func zgoarch_mipsle_unit_name() string {
 }
 
 func zgoarch_mipsle_unit_ready() int {
+    1
+}

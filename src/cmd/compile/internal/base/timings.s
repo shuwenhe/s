@@ -69,3 +69,5 @@ func join_with_colon(string[] labels) string {
         out = out + ":" + labels[i]
         i = i + 1
     }
+    out
+}

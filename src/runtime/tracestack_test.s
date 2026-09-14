@@ -4,3 +4,5 @@ func tracestack_test_unit_name() string {
 }
 
 func tracestack_test_unit_ready() int {
+    1
+}

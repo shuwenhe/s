@@ -4,3 +4,5 @@ func literals_unit_name() string {
 }
 
 func literals_unit_ready() int {
+    1
+}

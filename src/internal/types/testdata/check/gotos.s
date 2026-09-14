@@ -4,3 +4,5 @@ func gotos_unit_name() string {
 }
 
 func gotos_unit_ready() int {
+    1
+}

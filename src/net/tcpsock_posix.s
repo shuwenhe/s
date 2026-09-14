@@ -4,3 +4,5 @@ func tcpsock_posix_unit_name() string {
 }
 
 func tcpsock_posix_unit_ready() int {
+    1
+}

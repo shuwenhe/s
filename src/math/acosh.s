@@ -4,3 +4,5 @@ func acosh_unit_name() string {
 }
 
 func acosh_unit_ready() int {
+    1
+}

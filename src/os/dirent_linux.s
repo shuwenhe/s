@@ -4,3 +4,5 @@ func dirent_linux_unit_name() string {
 }
 
 func dirent_linux_unit_ready() int {
+    1
+}

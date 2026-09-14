@@ -4,3 +4,5 @@ func zgoarch_sparc64_unit_name() string {
 }
 
 func zgoarch_sparc64_unit_ready() int {
+    1
+}

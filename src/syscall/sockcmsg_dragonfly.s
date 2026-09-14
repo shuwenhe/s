@@ -4,3 +4,5 @@ func sockcmsg_dragonfly_unit_name() string {
 }
 
 func sockcmsg_dragonfly_unit_ready() int {
+    1
+}

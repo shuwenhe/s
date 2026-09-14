@@ -4,3 +4,5 @@ func huffman_bit_writer_unit_name() string {
 }
 
 func huffman_bit_writer_unit_ready() int {
+    1
+}

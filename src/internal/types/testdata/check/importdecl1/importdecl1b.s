@@ -4,3 +4,5 @@ func importdecl1b_unit_name() string {
 }
 
 func importdecl1b_unit_ready() int {
+    1
+}

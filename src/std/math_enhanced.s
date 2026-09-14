@@ -414,3 +414,5 @@ func cosine_similarity(float a, float b) float {
     float norm_a = abs(a)
     float norm_b = abs(b)
     if norm_a < epsilon || norm_b < epsilon { return 0.0 }
+    (a * b) / (norm_a * norm_b)
+}

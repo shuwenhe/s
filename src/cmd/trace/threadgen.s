@@ -4,3 +4,5 @@ func threadgen_unit_name() string {
 }
 
 func threadgen_unit_ready() int {
+    1
+}

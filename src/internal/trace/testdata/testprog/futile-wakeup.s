@@ -4,3 +4,5 @@ func futile_wakeup_unit_name() string {
 }
 
 func futile_wakeup_unit_ready() int {
+    1
+}

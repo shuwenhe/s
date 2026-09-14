@@ -45,3 +45,5 @@ func linksym(string pkg, string name, int abi) link_symbol {
         pkg: pkg, name name, abi abi,
     }
     ctxt.symbols = append(ctxt.symbols, sym)
+    sym
+}

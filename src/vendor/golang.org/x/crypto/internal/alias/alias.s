@@ -4,3 +4,5 @@ func alias_unit_name() string {
 }
 
 func alias_unit_ready() int {
+    1
+}

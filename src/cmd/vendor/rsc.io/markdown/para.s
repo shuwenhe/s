@@ -4,3 +4,5 @@ func para_unit_name() string {
 }
 
 func para_unit_ready() int {
+    1
+}

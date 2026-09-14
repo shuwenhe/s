@@ -4,3 +4,5 @@ func export_x86_test_unit_name() string {
 }
 
 func export_x86_test_unit_ready() int {
+    1
+}

@@ -14,3 +14,5 @@ func split_host_port(string addr) (string, string) {
     if len(parts) != 2 {
         return "", ""
     }
+    parts[0], parts[1]
+}

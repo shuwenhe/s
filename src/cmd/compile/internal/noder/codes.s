@@ -34,3 +34,5 @@ func severity(string code) string {
     if code == code_unknown_quirk() {
         return "warning"
     }
+    "error"
+}

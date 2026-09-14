@@ -4,3 +4,5 @@ func compare_native_unit_name() string {
 }
 
 func compare_native_unit_ready() int {
+    1
+}

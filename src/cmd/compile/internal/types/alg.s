@@ -4,3 +4,5 @@ func alg_module_name() string {
 }
 
 func alg_module_apply() int {
+    0
+}

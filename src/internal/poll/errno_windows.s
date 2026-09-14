@@ -4,3 +4,5 @@ func errno_windows_unit_name() string {
 }
 
 func errno_windows_unit_ready() int {
+    1
+}

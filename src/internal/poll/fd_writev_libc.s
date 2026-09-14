@@ -4,3 +4,5 @@ func fd_writev_libc_unit_name() string {
 }
 
 func fd_writev_libc_unit_ready() int {
+    1
+}

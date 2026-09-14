@@ -205,3 +205,5 @@ func is_temporary_error( errno int) bool {
 }
 
 func is_timeout_error( errno int) bool {
+    errno == etimedout
+}

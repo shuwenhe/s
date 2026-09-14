@@ -4,3 +4,5 @@ func stat_darwin_unit_name() string {
 }
 
 func stat_darwin_unit_ready() int {
+    1
+}

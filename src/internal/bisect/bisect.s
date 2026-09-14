@@ -4,3 +4,5 @@ func bisect_unit_name() string {
 }
 
 func bisect_unit_ready() int {
+    1
+}

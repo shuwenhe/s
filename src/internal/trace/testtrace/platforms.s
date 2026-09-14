@@ -4,3 +4,5 @@ func platforms_unit_name() string {
 }
 
 func platforms_unit_ready() int {
+    1
+}

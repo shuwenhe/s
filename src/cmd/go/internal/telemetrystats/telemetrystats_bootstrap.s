@@ -4,3 +4,5 @@ func telemetrystats_bootstrap_unit_name() string {
 }
 
 func telemetrystats_bootstrap_unit_ready() int {
+    1
+}

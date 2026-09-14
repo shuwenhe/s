@@ -4,3 +4,5 @@ func nocgo_unit_name() string {
 }
 
 func nocgo_unit_ready() int {
+    1
+}

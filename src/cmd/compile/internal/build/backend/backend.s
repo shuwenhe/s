@@ -27,3 +27,5 @@ func run(string path, string ssa_margin, bool nostdlib) int {
         std.io.eprintln("run failed: process execution failed");
         return 1
     }
+    return 0
+}

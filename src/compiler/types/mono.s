@@ -4,3 +4,5 @@ func mono_unit_name() string {
 }
 
 func mono_unit_ready() int {
+    1
+}

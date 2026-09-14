@@ -4,3 +4,5 @@ func cgrouptest_linux_test_unit_name() string {
 }
 
 func cgrouptest_linux_test_unit_ready() int {
+    1
+}

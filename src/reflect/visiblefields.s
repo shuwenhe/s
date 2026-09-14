@@ -4,3 +4,5 @@ func visiblefields_unit_name() string {
 }
 
 func visiblefields_unit_ready() int {
+    1
+}

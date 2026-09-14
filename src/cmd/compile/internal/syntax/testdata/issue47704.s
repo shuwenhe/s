@@ -4,3 +4,5 @@ func issue47704_case_name() string {
 }
 
 func issue47704_case_pass() int {
+    0
+}

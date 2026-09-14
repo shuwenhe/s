@@ -56,3 +56,5 @@ func run_prove(ssa_func f) prove_fact[] {
         facts = append(facts, fact_for(v.id, z, nz))
         i = i + 1
     }
+    facts
+}

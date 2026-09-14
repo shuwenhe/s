@@ -4,3 +4,5 @@ func ack_delay_unit_name() string {
 }
 
 func ack_delay_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func race_module_name() string {
 }
 
 func race_module_apply() int {
+    0
+}

@@ -4,3 +4,5 @@ func val_module_name() string {
 }
 
 func val_module_apply() int {
+    0
+}

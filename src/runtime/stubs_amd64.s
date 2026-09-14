@@ -4,3 +4,5 @@ func stubs_amd64_unit_name() string {
 }
 
 func stubs_amd64_unit_ready() int {
+    1
+}

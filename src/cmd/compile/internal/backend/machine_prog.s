@@ -171,3 +171,5 @@ func op_name(int op) string {
         case 21 : "shl",
         case 22 : "shr",
         default : "unknown"
+    }
+}

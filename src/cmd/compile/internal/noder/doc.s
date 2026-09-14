@@ -4,3 +4,5 @@ func package_doc() string {
 }
 
 func package_version() string {
+    "v0.1"
+}

@@ -4,3 +4,5 @@ func fcntl_wasip1_unit_name() string {
 }
 
 func fcntl_wasip1_unit_ready() int {
+    1
+}

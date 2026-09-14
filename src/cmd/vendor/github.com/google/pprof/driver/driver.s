@@ -4,3 +4,5 @@ func driver_unit_name() string {
 }
 
 func driver_unit_ready() int {
+    1
+}

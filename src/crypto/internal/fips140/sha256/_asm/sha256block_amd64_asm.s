@@ -4,3 +4,5 @@ func sha256block_amd64_asm_unit_name() string {
 }
 
 func sha256block_amd64_asm_unit_ready() int {
+    1
+}

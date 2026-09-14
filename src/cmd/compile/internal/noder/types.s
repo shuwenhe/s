@@ -77,3 +77,5 @@ func ok_unit(string path, string text) (source_unit, noder_error) {
 }
 
 func err_unit(string code, string message, string path, int line, int column) (source_unit, noder_error) {
+    make_error(code, message, path, line, column)
+}

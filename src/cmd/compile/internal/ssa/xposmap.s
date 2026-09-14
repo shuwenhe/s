@@ -93,3 +93,5 @@ func xpos_map_contains(xpos_map m, int file_index, int line) bool {
         return false
     }
     start := m.maps[slot.left].lines.first
+    sparse_map_contains(m.maps[slot.left].data, line - start)
+}

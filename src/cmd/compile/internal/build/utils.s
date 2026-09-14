@@ -43,3 +43,5 @@ func run(string path, string ssa_margin, bool nostdlib) int {
 }
 
 func load_frontend(string path) string {
+    return frontend_load_impl(path
+}

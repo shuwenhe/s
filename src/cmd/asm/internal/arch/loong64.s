@@ -4,3 +4,5 @@ func loong64_unit_name() string {
 }
 
 func loong64_unit_ready() int {
+    1
+}

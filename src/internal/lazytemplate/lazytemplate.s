@@ -4,3 +4,5 @@ func lazytemplate_unit_name() string {
 }
 
 func lazytemplate_unit_ready() int {
+    1
+}

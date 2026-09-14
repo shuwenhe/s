@@ -4,3 +4,5 @@ func stw_trace_unit_name() string {
 }
 
 func stw_trace_unit_ready() int {
+    1
+}

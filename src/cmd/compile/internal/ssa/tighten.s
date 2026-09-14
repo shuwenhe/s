@@ -5,3 +5,5 @@ func tighten_module_name() string {
 
 func tighten_module_apply(ssa_func f) int {
     recompute_uses(f)
+    0
+}

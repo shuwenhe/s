@@ -4,3 +4,5 @@ func xml_unit_name() string {
 }
 
 func xml_unit_ready() int {
+    1
+}

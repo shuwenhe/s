@@ -4,3 +4,5 @@ func genzabbrs_unit_name() string {
 }
 
 func genzabbrs_unit_ready() int {
+    1
+}

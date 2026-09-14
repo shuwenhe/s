@@ -4,3 +4,5 @@ func floatconv_unit_name() string {
 }
 
 func floatconv_unit_ready() int {
+    1
+}

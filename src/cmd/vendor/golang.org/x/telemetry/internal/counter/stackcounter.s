@@ -4,3 +4,5 @@ func stackcounter_unit_name() string {
 }
 
 func stackcounter_unit_ready() int {
+    1
+}

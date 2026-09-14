@@ -4,3 +4,5 @@ func infer_module_name() string {
 }
 
 func infer_module_apply() int {
+    0
+}

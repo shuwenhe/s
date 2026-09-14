@@ -4,3 +4,5 @@ func js_unit_name() string {
 }
 
 func js_unit_ready() int {
+    1
+}

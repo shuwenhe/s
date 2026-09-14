@@ -4,3 +4,5 @@ func net_unit_name() string {
 }
 
 func net_unit_ready() int {
+    1
+}

@@ -650,3 +650,5 @@ func extract_section(string text, string open, string close) string {
         }
         i = i + 1
     }
+    return ""
+}

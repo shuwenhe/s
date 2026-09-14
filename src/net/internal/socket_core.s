@@ -323,3 +323,5 @@ func ntohl( net int) int {
     b2 := (net >> 16) & 0x_ff
     b3 := (net >> 8) & 0x_ff
     b4 := net & 0x_ff
+    (b4 << 24) | (b3 << 16) | (b2 << 8) | b1
+}

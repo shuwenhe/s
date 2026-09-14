@@ -4,3 +4,5 @@ func sys_mipsx_unit_name() string {
 }
 
 func sys_mipsx_unit_ready() int {
+    1
+}

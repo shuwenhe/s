@@ -4,3 +4,5 @@ func sys_libc_unit_name() string {
 }
 
 func sys_libc_unit_ready() int {
+    1
+}

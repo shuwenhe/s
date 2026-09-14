@@ -4,3 +4,5 @@ func closemu_unit_name() string {
 }
 
 func closemu_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func rewrite_mips_rule_name() string {
 }
 
 func rewrite_mips_rule_count() int {
+    0
+}

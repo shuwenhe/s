@@ -4,3 +4,5 @@ func paeth_unit_name() string {
 }
 
 func paeth_unit_ready() int {
+    1
+}

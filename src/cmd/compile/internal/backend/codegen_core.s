@@ -164,3 +164,5 @@ func (ctx* codegen_context) emit_prologue() {
 
 func (ctx* codegen_context) emit_epilogue() {
     ctx.emit_pop("%rbp")
+    ctx.emit_ret()
+}

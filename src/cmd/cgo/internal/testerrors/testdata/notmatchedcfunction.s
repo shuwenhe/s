@@ -4,3 +4,5 @@ func notmatchedcfunction_unit_name() string {
 }
 
 func notmatchedcfunction_unit_ready() int {
+    1
+}

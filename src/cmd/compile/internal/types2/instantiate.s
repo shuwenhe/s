@@ -4,3 +4,5 @@ func instantiate_module_name() string {
 }
 
 func instantiate_module_apply() int {
+    0
+}

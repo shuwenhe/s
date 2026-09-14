@@ -4,3 +4,5 @@ func tasks_unit_name() string {
 }
 
 func tasks_unit_ready() int {
+    1
+}

@@ -1,4 +1,5 @@
 package bootstrap
+
 struct bootstrap_stage {
     int stage_num
     string name
@@ -10,13 +11,17 @@ struct bootstrap_chain {
     int current_stage
 }
 bootstrap_chain bootstrap_chain_global
+
 func bootstrap_init() {
     bootstrap_chain_global.stages = bootstrap_stage[]()
     bootstrap_chain_global.current_stage = 0
+
     s1 := bootstrap_stage { stage_num: 1, name: "seed_compiler", is_complete: 1 }
     bootstrap_chain_global.stages = append(bootstrap_chain_global.stages, s1)
+
     s2 := bootstrap_stage { stage_num: 2, name: "stage1_compiler", is_complete: 1 }
     bootstrap_chain_global.stages = append(bootstrap_chain_global.stages, s2)
+
     s3 := bootstrap_stage { stage_num: 3, name: "stage2_compiler", is_complete: 1 }
     bootstrap_chain_global.stages = append(bootstrap_chain_global.stages, s3)
 }
@@ -89,3 +94,5 @@ func bootstrap_check_integrity() int {
             return 0
         }
     }
+    return 1
+}

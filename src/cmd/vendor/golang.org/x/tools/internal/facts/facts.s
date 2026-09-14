@@ -4,3 +4,5 @@ func facts_unit_name() string {
 }
 
 func facts_unit_ready() int {
+    1
+}

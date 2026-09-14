@@ -4,3 +4,5 @@ func deflatefast_unit_name() string {
 }
 
 func deflatefast_unit_ready() int {
+    1
+}

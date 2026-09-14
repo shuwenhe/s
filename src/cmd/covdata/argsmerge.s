@@ -4,3 +4,5 @@ func argsmerge_unit_name() string {
 }
 
 func argsmerge_unit_ready() int {
+    1
+}

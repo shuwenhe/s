@@ -4,3 +4,5 @@ func sumdb_unit_name() string {
 }
 
 func sumdb_unit_ready() int {
+    1
+}

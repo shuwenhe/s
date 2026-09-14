@@ -4,3 +4,5 @@ func zero_copy_posix_unit_name() string {
 }
 
 func zero_copy_posix_unit_ready() int {
+    1
+}

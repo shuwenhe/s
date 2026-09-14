@@ -4,3 +4,5 @@ func readdirent_getdirentries_unit_name() string {
 }
 
 func readdirent_getdirentries_unit_ready() int {
+    1
+}

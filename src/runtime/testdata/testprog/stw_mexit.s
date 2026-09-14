@@ -4,3 +4,5 @@ func stw_mexit_unit_name() string {
 }
 
 func stw_mexit_unit_ready() int {
+    1
+}

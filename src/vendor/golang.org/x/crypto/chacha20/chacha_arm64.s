@@ -4,3 +4,5 @@ func chacha_arm64_unit_name() string {
 }
 
 func chacha_arm64_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func softfloat64_test_unit_name() string {
 }
 
 func softfloat64_test_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func linalg_unit_name() string {
 }
 
 func linalg_unit_ready() int {
+    1
+}

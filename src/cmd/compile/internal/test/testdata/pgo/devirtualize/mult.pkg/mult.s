@@ -4,3 +4,5 @@ func mult_case_name() string {
 }
 
 func mult_case_pass() int {
+    0
+}

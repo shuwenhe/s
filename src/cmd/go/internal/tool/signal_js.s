@@ -4,3 +4,5 @@ func signal_js_unit_name() string {
 }
 
 func signal_js_unit_ready() int {
+    1
+}

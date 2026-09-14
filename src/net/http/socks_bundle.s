@@ -4,3 +4,5 @@ func socks_bundle_unit_name() string {
 }
 
 func socks_bundle_unit_ready() int {
+    1
+}

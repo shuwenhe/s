@@ -4,3 +4,5 @@ func fmt_test_unit_name() string {
 }
 
 func fmt_test_unit_ready() int {
+    1
+}

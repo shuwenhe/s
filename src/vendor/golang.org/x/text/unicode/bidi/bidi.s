@@ -4,3 +4,5 @@ func bidi_unit_name() string {
 }
 
 func bidi_unit_ready() int {
+    1
+}

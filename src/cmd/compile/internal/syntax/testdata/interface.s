@@ -4,3 +4,5 @@ func interface_case_name() string {
 }
 
 func interface_case_pass() int {
+    0
+}

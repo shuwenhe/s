@@ -127,3 +127,5 @@ func lookup_builtin_method_arity(string type_name, string member) int {
     if base == "string" && member == "is_empty" {
         return 0
     }
+    0 - 1
+}

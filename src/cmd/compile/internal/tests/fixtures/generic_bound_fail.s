@@ -4,3 +4,5 @@ func require_copy[t: copy](t value) t {
 }
 
 func bad(string text) string {
+    require_copy(text)
+}

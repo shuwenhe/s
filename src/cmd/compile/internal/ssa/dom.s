@@ -80,3 +80,5 @@ func dominates(dom_tree t, int a, int b) bool {
         }
         guard = guard + 1
     }
+    false
+}

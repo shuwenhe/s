@@ -4,3 +4,5 @@ func mpagecache_unit_name() string {
 }
 
 func mpagecache_unit_ready() int {
+    1
+}

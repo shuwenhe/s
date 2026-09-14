@@ -70,3 +70,5 @@ func print_usage() () {
     io.println("Options:")
     io.println("  --dump-tokens   Print lexer output")
     io.println("  --dump-ast      Print parser output")
+    io.println("  --verbose       Verbose compilation output")
+}

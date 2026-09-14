@@ -1,9 +1,11 @@
 package compile.internal.no_gc_memory
+
 import (
     "compile.internal.drop_flag"
     "compile.internal.drop_system"
     "compile.internal.lifetime_check"
 )
+
 func alloc_stack() int { 1 }
 
 func alloc_heap() int { 2 }
@@ -118,3 +120,5 @@ func decide_allocation_strategy(int type_size, bool dynamic_size) allocation_dec
     if type_size <= 4096 {
         return allocation_decision { strategy: alloc_stack(), size: type_size, reason: "fits stack threshold" }
     }
+    allocation_decision { strategy: alloc_heap(), size: type_size, reason: "large value" }
+}

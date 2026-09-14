@@ -4,3 +4,5 @@ func typebits_unit_name() string {
 }
 
 func typebits_unit_ready() int {
+    1
+}
