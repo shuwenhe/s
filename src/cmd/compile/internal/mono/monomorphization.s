@@ -24,7 +24,7 @@ struct mono_cache {
 }
 
 struct mono_cache_result {
-    cache mono_cache
+    mono_cache cache
     string instance_name
 }
 
@@ -38,12 +38,12 @@ struct mono_ownership_summary {
 struct mono_function_summary {
     string instance_name
     mono_ownership_summary[] params
-    result mono_ownership_summary
+    mono_ownership_summary result
 }
 
 struct monomorphize_file_result {
     file source_file
-    cache mono_cache
+    mono_cache cache
     int invariant_errors
 }
 
@@ -55,7 +55,7 @@ struct mono_work_item {
 }
 
 struct mono_context {
-    cache mono_cache
+    mono_cache cache
     mono_work_item[] worklist
     string[] processed
     function_decl[] generated
