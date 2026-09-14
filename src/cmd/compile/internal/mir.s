@@ -8,6 +8,8 @@ import (
     "std.option"
     "std.prelude"
 )
+use compile.internal.ownership.analysis.ownership_analysis_input
+use compile.internal.ownership.analysis.analyze_ownership_liveness
 
 // C.3.1b.2-pre.A1: Canonical projection kind
 // Structured representation of place projection operations
@@ -440,7 +442,7 @@ func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
 func dump_ownership_shadow_from_mir(mir_graph graph) string {
     points := build_mir_point_map(graph)
     facts := build_ownership_facts_from_mir(graph, points)
-    analysis := compile.internal.ownership.analysis.analyze_ownership_liveness(facts.input)
+    analysis := analyze_ownership_liveness(facts.input)
     out := "RealMIROwnershipShadow\n"
     out = out + "RealMIRFacts(point_count=" + std.prelude.to_string(facts.input.point_count) + ", refs=" + std.prelude.to_string(len(facts.ref_names)) + ", loans=" + std.prelude.to_string(facts.input.loan_count) + ", outlives=" + std.prelude.to_string(facts.input.outlives_count) + ")\n"
     i := 0
