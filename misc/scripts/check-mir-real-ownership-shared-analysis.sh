@@ -42,12 +42,11 @@ require_text "$analysis_file" 'struct ownership_analysis {' 'shared output type'
 reject_text "$analysis_file" 'func analyze_ownership_liveness' 'analysis.s must NOT have solver'
 
 # MIR imports solver from compiler.s (via analysis.s package namespace)
-require_text "$mir_file" 'use compile.internal.ownership.analysis.ownership_analysis_input' 'MIR imports input type'
-require_text "$mir_file" 'use compile.internal.ownership.analysis.analyze_ownership_liveness' 'MIR imports solver'
+require_text "$mir_file" '"compile.internal.ownership.analysis"' 'MIR imports input type'
 
 require_text "$mir_file" 'func build_ownership_analysis_input_from_mir' 'MIR fact extractor'
 require_text "$mir_file" 'func dump_ownership_shadow_from_mir' 'MIR shadow diagnostic'
-require_text "$mir_file" 'analysis := analyze_ownership_liveness(facts.input)' 'MIR shadow invokes solver'
+require_text "$mir_file" 'compile.internal.ownership.analysis.analyze_ownership_liveness(facts.input)' 'MIR shadow invokes solver'
 
 # No duplicate solver in mir.s (Phase B2 architecture decision)
 reject_text "$mir_file" 'while changed' 'MIR must not duplicate solver loop'
