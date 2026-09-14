@@ -43,8 +43,8 @@ if [ ! -f "$fixture_file" ]; then
 fi
 
 # Step 8.5: Verify mir.s imports solver properly
-if ! grep -q "use compile.internal.ownership.analysis.analyze_ownership_liveness" "$mir_file"; then
-    echo "mir-real-ownership-solver-integration: ERROR - mir.s doesn't import solver" >&2
+if ! grep -q "compile.internal.ownership.analysis.analyze_ownership_liveness" "$mir_file"; then
+    echo "mir-real-ownership-solver-integration: ERROR - mir.s doesn't call solver" >&2
     exit 1
 fi
 

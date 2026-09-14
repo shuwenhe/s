@@ -17,7 +17,7 @@ require_text() {
     fi
 }
 
-require_text "$mir_file" 'use compile.internal.ownership.analysis.ownership_analysis_input' 'shared analysis input import'
+require_text "$mir_file" '"compile.internal.ownership.analysis"' 'shared analysis input import'
 require_text "$mir_file" 'struct mir_ownership_facts {' 'real MIR facts debug wrapper'
 require_text "$mir_file" 'ownership_analysis_input input' 'shared analysis input payload'
 require_text "$mir_file" 'func build_ownership_analysis_input_from_mir' 'real MIR facts extractor'
