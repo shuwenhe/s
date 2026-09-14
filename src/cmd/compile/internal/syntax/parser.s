@@ -35,14 +35,14 @@ enum ast_node_type {
 }
 
 struct ast_node {
-    type_* int
+    int* kind
     int line
     int col
-    value* string
-    left* ast_node
-    right* ast_node
-    child* ast_node
-    next* ast_node
+    string* value
+    ast_node* left
+    ast_node* right
+    ast_node* child
+    ast_node* next
 }
 
 struct parser {
