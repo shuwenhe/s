@@ -10,7 +10,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-enum { BS_EOF = 256, BS_NAME, BS_INT, BS_STRING, BS_WALRUS };
+enum { BS_EOF = 256, BS_NAME, BS_INT, BS_STRING, BS_WALRUS, BS_DOT };
 
 typedef struct {
     char name[64];
@@ -92,6 +92,9 @@ static void bs_next(BsUnit *u) {
     } else if (p[0] == ':' && p[1] == '=') {
         u->token = BS_WALRUS;
         p += 2;
+    } else if (*p == '.') {
+        u->token = BS_DOT;
+        p++;
     } else {
         if (!strchr("(){};", *p)) { bs_error(u, "unsupported character"); return; }
         u->token = (unsigned char)*p++;
