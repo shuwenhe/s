@@ -34,7 +34,7 @@ func new_write_barrier_analysis(int num_vars) write_barrier_analysis {
     }
 }
 
-func (wba* write_barrier_analysis) analyze_store(int instr_id, int target_var, int source_var, string target_type) barrier_type {
+func (write_barrier_analysis* wba) analyze_store(int instr_id, int target_var, int source_var, string target_type) barrier_type {
     kind := barrier_type::barrier_none
 
     if target_type == "pointer" || target_type == "interface" {
@@ -57,7 +57,7 @@ func (wba* write_barrier_analysis) analyze_store(int instr_id, int target_var, i
     kind
 }
 
-func (wba* write_barrier_analysis) analyze_array_write(int instr_id, int array_var, int index_var, int value_var, string elem_type) barrier_type {
+func (write_barrier_analysis* wba) analyze_array_write(int instr_id, int array_var, int index_var, int value_var, string elem_type) barrier_type {
     kind := barrier_type::barrier_none
 
     if elem_type == "pointer" || elem_type == "interface" {
@@ -80,7 +80,7 @@ func (wba* write_barrier_analysis) analyze_array_write(int instr_id, int array_v
     kind
 }
 
-func (wba* write_barrier_analysis) analyze_slice_write(int instr_id, int slice_var, int index_var, int value_var, string elem_type) barrier_type {
+func (write_barrier_analysis* wba) analyze_slice_write(int instr_id, int slice_var, int index_var, int value_var, string elem_type) barrier_type {
     kind := barrier_type::barrier_none
 
     if elem_type == "pointer" || elem_type == "interface" {
@@ -103,18 +103,18 @@ func (wba* write_barrier_analysis) analyze_slice_write(int instr_id, int slice_v
     kind
 }
 
-func (wba* write_barrier_analysis) needs_barrier(int var_id) bool {
+func (write_barrier_analysis* wba) needs_barrier(int var_id) bool {
     if var_id < wba.num_vars {
         return wba.var_needs_barrier[var_id]
     }
     false
 }
 
-func (wba* write_barrier_analysis) record_gc_safe_point(int instr_id) {
+func (write_barrier_analysis* wba) record_gc_safe_point(int instr_id) {
     wba.gc_safe_points.push(instr_id)
 }
 
-func (wba* write_barrier_analysis) is_gc_safe_point(int instr_id) bool {
+func (write_barrier_analysis* wba) is_gc_safe_point(int instr_id) bool {
     for _idx_117 := 0; _idx_117 < len(wba.gc_safe_points); _idx_117++ {
         sp := wba.gc_safe_points[_idx_117]
         if sp == instr_id {
@@ -124,7 +124,7 @@ func (wba* write_barrier_analysis) is_gc_safe_point(int instr_id) bool {
     false
 }
 
-func (wba* write_barrier_analysis) get_barriers_in_range(int start, int end) write_barrier[] {
+func (write_barrier_analysis* wba) get_barriers_in_range(int start, int end) write_barrier[] {
     result := write_barrier[]()
     for _idx_127 := 0; _idx_127 < len(wba.barriers); _idx_127++ {
         barrier := wba.barriers[_idx_127]
@@ -135,7 +135,7 @@ func (wba* write_barrier_analysis) get_barriers_in_range(int start, int end) wri
     result
 }
 
-func (wba* write_barrier_analysis) optimize_barriers() {
+func (write_barrier_analysis* wba) optimize_barriers() {
     i := 0
     for i < wba.barriers.len() {
         if i + 1 < wba.barriers.len() {
@@ -154,7 +154,7 @@ func (wba* write_barrier_analysis) optimize_barriers() {
     }
 }
 
-func (wba* write_barrier_analysis) insert_barrier_code(write_barrier wb) string[] {
+func (write_barrier_analysis* wba) insert_barrier_code(write_barrier wb) string[] {
     code := string[]()
 
     if wb.needs_nil_check {

@@ -51,7 +51,7 @@ func new_ssa() static_single_assignment {
     }
 }
 
-func (ssa* static_single_assignment) create_value(string op, int[] args, int block_id, string type_name) ssa_value {
+func (static_single_assignment* ssa) create_value(string op, int[] args, int block_id, string type_name) ssa_value {
     val := ssa_value {
         id: ssa.value_counter,
         op: op,
@@ -65,7 +65,7 @@ func (ssa* static_single_assignment) create_value(string op, int[] args, int blo
     val
 }
 
-func (ssa* static_single_assignment) create_phi(int block_id, int[] incoming_blocks, int[] incoming_values, string type_name) ssa_phi_node {
+func (static_single_assignment* ssa) create_phi(int block_id, int[] incoming_blocks, int[] incoming_values, string type_name) ssa_phi_node {
     phi := ssa_phi_node {
         id: ssa.phi_counter,
         target_block: block_id,
@@ -78,7 +78,7 @@ func (ssa* static_single_assignment) create_phi(int block_id, int[] incoming_blo
     phi
 }
 
-func (ssa* static_single_assignment) add_block(int id, string label) ssa_block {
+func (static_single_assignment* ssa) add_block(int id, string label) ssa_block {
     block := ssa_block {
         id: id,
         label: label,
@@ -92,7 +92,7 @@ func (ssa* static_single_assignment) add_block(int id, string label) ssa_block {
     block
 }
 
-func (ssa* static_single_assignment) insert_phi_nodes(int[] dominance_frontier) {
+func (static_single_assignment* ssa) insert_phi_nodes(int[] dominance_frontier) {
     n := ssa.blocks.len()
     work_list := int[]()
 
@@ -121,7 +121,7 @@ func (ssa* static_single_assignment) insert_phi_nodes(int[] dominance_frontier) 
                     }
 
                     if !already_has {
-                        new_phi := ssa.create_phi(df, phi.incoming_blocks, phi.incoming_values, phi.type_name)
+                        new_phi := ssa.create_phi(df, phi.incoming_blocks, phi.incoming_values, phi.kindname)
                         ssa.blocks[df].phis.push(new_phi)
 
                         in_list := false
@@ -142,7 +142,7 @@ func (ssa* static_single_assignment) insert_phi_nodes(int[] dominance_frontier) 
     }
 }
 
-func (ssa* static_single_assignment) rename_variables() {
+func (static_single_assignment* ssa) rename_variables() {
     stacks := int[][]()
     n := ssa.variable_versions.len()
 
@@ -253,10 +253,10 @@ func (ssa* static_single_assignment) rename_variables() {
     rename_block(ssa.entry_block)
 }
 
-func (ssa* static_single_assignment) is_phi_function(ssa_phi_node phi) bool {
+func (static_single_assignment* ssa) is_phi_function(ssa_phi_node phi) bool {
     phi.incoming_values.len() > 1
 }
 
-func (ssa* static_single_assignment) get_phi_operands(ssa_phi_node phi) (int[], int[]) {
+func (static_single_assignment* ssa) get_phi_operands(ssa_phi_node phi) (int[], int[]) {
     (phi.incoming_blocks, phi.incoming_values)
 }

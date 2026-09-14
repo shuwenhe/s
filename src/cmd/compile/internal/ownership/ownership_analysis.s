@@ -51,7 +51,7 @@ func (ownership_analysis* oa) classify_type(string type_name) type_classificatio
 }
 
 func (ownership_analysis* oa) set_type_classification(string type_name, class* type_classification) {
-    oa.ctx.type_classes[type_name] = class
+    oa.ctx.kindclasses[type_name] = class
 }
 
 func (ownership_analysis* oa) set_variable_type(string var_name, string type_name) {
@@ -124,8 +124,8 @@ func (ownership_analysis* oa) apply_ownership_hints(ownership_hints* hints) {
     if hints == nil {
         return
     }
-    for type_name, class := range hints.type_classes {
-        oa.ctx.type_classes[type_name] = class
+    for type_name, class := range hints.kindclasses {
+        oa.ctx.kindclasses[type_name] = class
     }
 }
 

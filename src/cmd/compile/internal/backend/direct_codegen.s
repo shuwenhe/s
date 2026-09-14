@@ -1,9 +1,9 @@
 package backend
 struct direct_code_generator {
-    prog_list* main_code
-    prog_list* data_section
-    instr_selector* selector
-    reg_alloc_state* alloc
+    main_code* prog_list
+    data_section* prog_list
+    selector* instr_selector
+    alloc* reg_alloc_state
 }
 
 func make_direct_code_generator() direct_code_generator {
@@ -14,7 +14,7 @@ func make_direct_code_generator() direct_code_generator {
     gen
 }
 
-func (gen* direct_code_generator) generate_function_prologue(string func_name, int stack_size) {
+func (direct_code_generator* gen) generate_function_prologue(string func_name, int stack_size) {
     gen.main_code.append_prog(20, ".globl " + func_name)
     gen.main_code.append_prog(20, ".type " + func_name + ", @function")
     gen.main_code.append_prog(20, func_name + ":")
@@ -26,12 +26,12 @@ func (gen* direct_code_generator) generate_function_prologue(string func_name, i
     }
 }
 
-func (gen* direct_code_generator) generate_function_epilogue() {
+func (direct_code_generator* gen) generate_function_epilogue() {
     gen.main_code.append_prog(prog_op_pop(), "\tpopq\t%rbp")
     gen.main_code.append_prog(prog_op_ret(), "\tretq")
 }
 
-func (gen* direct_code_generator) generate_text_section() string {
+func (direct_code_generator* gen) generate_text_section() string {
     result := ".section\t.text\n"
     p := gen.main_code.first()
     for p != nil {
@@ -41,7 +41,7 @@ func (gen* direct_code_generator) generate_text_section() string {
     result
 }
 
-func (gen* direct_code_generator) generate_data_section() string {
+func (direct_code_generator* gen) generate_data_section() string {
     result := ".section\t.data\n"
     p := gen.data_section.first()
     for p != nil {
@@ -51,22 +51,22 @@ func (gen* direct_code_generator) generate_data_section() string {
     result
 }
 
-func (gen* direct_code_generator) generate_rodata_section() string {
+func (direct_code_generator* gen) generate_rodata_section() string {
     result := ".section\t.rodata\n"
     result
 }
 
-func (gen* direct_code_generator) generate_symtab() string {
+func (direct_code_generator* gen) generate_symtab() string {
     result := ".section\t.symtab\n"
     result
 }
 
-func (gen* direct_code_generator) generate_strtab() string {
+func (direct_code_generator* gen) generate_strtab() string {
     result := ".section\t.strtab\n"
     result
 }
 
-func (gen* direct_code_generator) generate_asm() string {
+func (direct_code_generator* gen) generate_asm() string {
     asm := ""
     asm = asm + ".intel_syntax noprefix\n"
     asm = asm + gen.generate_text_section()
@@ -77,7 +77,7 @@ func (gen* direct_code_generator) generate_asm() string {
     asm
 }
 
-func (gen* direct_code_generator) emit_const_i64(int value, int reg) {
+func (direct_code_generator* gen) emit_const_i64(int value, int reg) {
     reg_name := x86_64_reg_name(reg)
     if value == 0 {
         instr := "\txorq\t%" + reg_name + ", %" + reg_name
@@ -88,7 +88,7 @@ func (gen* direct_code_generator) emit_const_i64(int value, int reg) {
     }
 }
 
-func (gen* direct_code_generator) emit_add_i64(int lhs_reg, int rhs_reg, int result_reg) {
+func (direct_code_generator* gen) emit_add_i64(int lhs_reg, int rhs_reg, int result_reg) {
     if lhs_reg != result_reg {
         lhs_name := x86_64_reg_name(lhs_reg)
         result_name := x86_64_reg_name(result_reg)
@@ -101,6 +101,6 @@ func (gen* direct_code_generator) emit_add_i64(int lhs_reg, int rhs_reg, int res
     gen.main_code.append_prog(prog_op_add(), instr)
 }
 
-func (gen* direct_code_generator) get_asm() string {
+func (direct_code_generator* gen) get_asm() string {
     gen.generate_asm()
 }

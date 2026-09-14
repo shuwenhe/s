@@ -43,7 +43,7 @@ func macos_compiler_new(string source, string output) macos_compiler* {
     return &compiler
 }
 
-func (c* macos_compiler) detect_architecture() string {
+func (macos_compiler* c) detect_architecture() string {
 
     arch_output := ""
 
@@ -58,7 +58,7 @@ func (c* macos_compiler) detect_architecture() string {
     return "arm64"
 }
 
-func (c* macos_compiler) detect_sdk_path() string {
+func (macos_compiler* c) detect_sdk_path() string {
 
     sdk_path := ""
     ret := system("xcrun --show-sdk-path > /tmp/s_sdk_path.txt 2>/dev/null")
@@ -68,13 +68,13 @@ func (c* macos_compiler) detect_sdk_path() string {
     return sdk_path
 }
 
-func (c* macos_compiler) setup() {
+func (macos_compiler* c) setup() {
 
     c.config.arch = c.detect_architecture()
     c.config.sdk_path = c.detect_sdk_path()
 }
 
-func (c* macos_compiler) generate_arm64_assembly() string {
+func (macos_compiler* c) generate_arm64_assembly() string {
 
     asm := ""
     asm = asm + ".section __TEXT,__text,regular,pure_instructions\n"
@@ -94,7 +94,7 @@ func (c* macos_compiler) generate_arm64_assembly() string {
     return asm
 }
 
-func (c* macos_compiler) generate_x86_64_assembly() string {
+func (macos_compiler* c) generate_x86_64_assembly() string {
 
     asm := ""
     asm = asm + ".section __TEXT,__text,regular,pure_instructions\n"
@@ -114,7 +114,7 @@ func (c* macos_compiler) generate_x86_64_assembly() string {
     return asm
 }
 
-func (c* macos_compiler) compile_assembly_to_object() int {
+func (macos_compiler* c) compile_assembly_to_object() int {
 
     compiler := "clang"
     if !c.config.use_clang {
@@ -135,7 +135,7 @@ func (c* macos_compiler) compile_assembly_to_object() int {
     return ret
 }
 
-func (c* macos_compiler) link_to_executable() int {
+func (macos_compiler* c) link_to_executable() int {
 
     linker := "clang"
     if !c.config.use_clang {
@@ -156,7 +156,7 @@ func (c* macos_compiler) link_to_executable() int {
     return ret
 }
 
-func (c* macos_compiler) compile() int {
+func (macos_compiler* c) compile() int {
 
     c.setup()
 

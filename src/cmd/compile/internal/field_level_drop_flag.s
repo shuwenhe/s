@@ -71,7 +71,7 @@ func fldf_move(field_level_drop_flag f, path from_path, path to_path, int line, 
     }
 
     from_entry := f.entries[idx]
-    type_name := from_entry.type_name
+    type_name := from_entry.kindname
 
     new_state, err := compile.internal.drop_state_v2.drop_state_after_move(from_entry.state, "move", line, col)
     if len(err) > 0 {
@@ -123,7 +123,7 @@ func fldf_reassign(field_level_drop_flag f, path p, string type_name) field_leve
     }
 
     f.entries[idx].state = compile.internal.drop_state_v2.drop_state_new_live()
-    f.entries[idx].type_name = type_name
+    f.entries[idx].kindname = type_name
     f
 }
 
@@ -197,7 +197,7 @@ func fldf_merge_branches(field_level_drop_flag f_if, field_level_drop_flag f_els
             entry := field_level_entry {
                 path: if_entry.path,
                 state: merged_state,
-                type_name: if_entry.type_name,
+                type_name: if_entry.kindname,
                 scope_depth: if_entry.scope_depth,
             }
             merged.entries = append(merged.entries, entry)

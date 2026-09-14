@@ -103,7 +103,7 @@ func (ownership_context* ctx) has_errors() bool {
 }
 
 func (ownership_context* ctx) classify_type(string type_name) type_classification* {
-    if class, ok := ctx.type_classes[type_name]; ok {
+    if class, ok := ctx.kindclasses[type_name]; ok {
         return class
     }
     class := type_classification*{
@@ -112,7 +112,7 @@ func (ownership_context* ctx) classify_type(string type_name) type_classificatio
         owned_fields:    make(string[], 0),
         drop_order:      make(string[], 0),
     }
-    ctx.type_classes[type_name] = class
+    ctx.kindclasses[type_name] = class
     return class
 }
 

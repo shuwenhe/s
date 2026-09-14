@@ -99,7 +99,7 @@ func eq_can_panic(compare_struct t) bool {
     i := 0
     for i < len(t.fields) {
         f := t.fields[i]
-        if f.name != "_" && (f.can_panic || (f.type_kind == "array" && f.elem_can_panic)) {
+        if f.name != "_" && (f.can_panic || (f.kindkind == "array" && f.elem_can_panic)) {
             return true
         }
         i = i + 1
@@ -141,19 +141,19 @@ func eq_struct_field_cost(compare_struct t, int i) field_cost_result {
 }
 
 func calculate_cost_for_field(compare_field f, int reg_size) int {
-    if f.type_kind == "struct" {
+    if f.kindkind == "struct" {
         return f.elem_cost
     }
-    if f.type_kind == "slice" {
+    if f.kindkind == "slice" {
         return 0
     }
-    if f.type_kind == "array" {
+    if f.kindkind == "array" {
         return f.num_elem * f.elem_cost
     }
-    if f.type_kind == "string" || f.type_kind == "interface" || f.type_kind == "complex64" || f.type_kind == "complex128" {
+    if f.kindkind == "string" || f.kindkind == "interface" || f.kindkind == "complex64" || f.kindkind == "complex128" {
         return 2
     }
-    if f.type_kind == "int64" || f.type_kind == "uint64" {
+    if f.kindkind == "int64" || f.kindkind == "uint64" {
         c := 8 / reg_size
         if c <= 0 {
             return 1
@@ -173,12 +173,12 @@ func eq_struct(compare_struct t, string np, string nq) eq_struct_result {
             i = i + 1
             continue
         }
-        type_can_panic := f.can_panic || (f.type_kind == "array" && f.elem_can_panic)
+        type_can_panic := f.can_panic || (f.kindkind == "array" && f.elem_can_panic)
         if !f.regular_memory {
             if type_can_panic {
                 segments = append(segments, compare_node[]())
             }
-            if f.type_kind == "string" {
+            if f.kindkind == "string" {
                 sres := eq_string(np + "." + f.name, nq + "." + f.name)
                 append_segment_node(segments, compare_node { expr: sres.eqlen, is_call false })
                 append_segment_node(segments, compare_node { expr: sres.eqmem, is_call true })

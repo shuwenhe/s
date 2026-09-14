@@ -76,7 +76,7 @@ func (ownership_drop_context* ctx) collect_from_stmt(stmt interface{}, int depth
 case decl_stmt*:
         owner := ownership_record*{
             name: s.name,
-            type_name: s.type_name,
+            type_name: s.kindname,
             state: ownership_state.OWNED,
             declaration_order: len(ctx.variable_owners),
             scope_depth: depth,
@@ -281,9 +281,9 @@ func (ownership_drop_context* ctx) build_drop_registry() {
         if record.state != ownership_state.MOVED {
             drop_record := drop_record*{
                 variable: var_name,
-                type_name: record.type_name,
+                type_name: record.kindname,
                 has_drop_impl: true,
-                drop_fn: sprintf("__s_drop_%s", record.type_name),
+                drop_fn: sprintf("__s_drop_%s", record.kindname),
                 fields: make(string[], 0),
                 field_drop_order: make(string[], 0),
             }
