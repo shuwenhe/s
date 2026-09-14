@@ -28,4 +28,3 @@ func run_ownership_checker_test() int {
     if result.ok == false || len(result.drops) != 1 || result.drops[0] != "right" {
         return 6
     }
-    0

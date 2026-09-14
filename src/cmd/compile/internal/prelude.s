@@ -5,6 +5,7 @@ import (
 func load_prelude() int {
     0
 }
+
 func lookup_builtin_type(string name) bool {
     base := compile.internal.typesys.base_type_name(name)
     base == "string"
@@ -23,6 +24,7 @@ func lookup_builtin_type(string name) bool {
         || base == "target"
         || base == "toolchain"
 }
+
 func lookup_builtin_field_type(string type_name, string field_name) string {
     base := compile.internal.typesys.base_type_name(type_name)
     if base == "file_info" {
@@ -37,6 +39,7 @@ func lookup_builtin_field_type(string type_name, string field_name) string {
     }
     ""
 }
+
 func lookup_builtin_index_type(string type_name) string {
     base := compile.internal.typesys.base_type_name(type_name)
     if base == "vec" || base == "array" {
@@ -47,6 +50,7 @@ func lookup_builtin_index_type(string type_name) string {
     }
     ""
 }
+
 func lookup_builtin_method_type(string type_name, string member) string {
     base := compile.internal.typesys.base_type_name(type_name)
     if base == "string" && member == "len" {
@@ -96,6 +100,7 @@ func lookup_builtin_method_type(string type_name, string member) string {
     }
     ""
 }
+
 func lookup_builtin_method_arity(string type_name, string member) int {
     base := compile.internal.typesys.base_type_name(type_name)
     if base == "vec" && member == "push" {
@@ -122,4 +127,3 @@ func lookup_builtin_method_arity(string type_name, string member) int {
     if base == "string" && member == "is_empty" {
         return 0
     }
-    0 - 1

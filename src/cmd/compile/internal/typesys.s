@@ -13,6 +13,7 @@ struct type_ref {
     string array_len
     string[] args
 }
+
 func parse_type(string text) string {
     clean := normalize_type_text(trim_text(text))
     if clean == "" {
@@ -38,6 +39,7 @@ func parse_type(string text) string {
     }
     return clean
 }
+
 func parse_type_ref(string text) type_ref {
     canonical := parse_type(text)
     rest := canonical
@@ -69,22 +71,27 @@ func parse_type_ref(string text) type_ref {
         canonical: canonical, base base_type_name(rest), is_ref is_ref, is_mut_ref is_mut_ref, is_slice is_slice, is_array is_array, array_len array_len, args extract_type_args(rest),
     }
 }
+
 func dump_type_ref(type_ref ty) string {
     ty.canonical
 }
+
 func same_type_ref(type_ref left, type_ref right) bool {
     left.canonical == right.canonical
 }
+
 func type_arg(type_ref ty, int index) string {
     if index < 0 || index >= std.prelude.len(ty.args) {
         return "unknown"
     }
     parse_type(ty.args[index])
 }
+
 func generic_arity(string ty) int {
     args := extract_type_args(ty)
     std.prelude.len(args)
 }
+
 func has_unknown_component(string ty) bool {
     clean := parse_type(ty)
     if clean == "unknown" {
@@ -100,6 +107,7 @@ func has_unknown_component(string ty) bool {
     }
     false
 }
+
 func rules_consistent() bool {
     if parse_type("  int  ") != "int" {
         return false
@@ -140,9 +148,11 @@ func rules_consistent() bool {
     }
     true
 }
+
 func dump_type(string ty) string {
     return parse_type(ty
 }
+
 func base_type_name(string ty) string {
     clean := parse_type(ty)
     if starts_with(clean, "&mut") {
@@ -174,6 +184,7 @@ func base_type_name(string ty) string {
     }
     return clean
 }
+
 func extract_type_args(string type_name) string[] {
     out := string[]()
     clean := parse_type(type_name)
@@ -209,9 +220,11 @@ func extract_type_args(string type_name) string[] {
     }
     out
 }
+
 func same_type(string left, string right) bool {
     return parse_type(left) == parse_type(right
 }
+
 func compatible_type(string left, string right) bool {
     l := parse_type(left)
     r := parse_type(right)
@@ -250,6 +263,7 @@ func compatible_type(string left, string right) bool {
     }
     true
 }
+
 func comparable_type(string ty) bool {
     clean := parse_type(ty)
     if clean == "unknown" || clean == "map" || clean == "fn" {
@@ -292,6 +306,7 @@ func comparable_type(string ty) bool {
     }
     false
 }
+
 func assignable_type(string target, string source) bool {
     t := parse_type(target)
     s := parse_type(source)
@@ -318,6 +333,7 @@ func assignable_type(string target, string source) bool {
     }
     false
 }
+
 func is_nilable_type(string ty) bool {
     clean := parse_type(ty)
     if clean == "map" || clean == "fn" {
@@ -329,6 +345,7 @@ func is_nilable_type(string ty) bool {
     base := base_type_name(clean)
     return base == "interface" || base == "trait"
 }
+
 func compatible_tuple_type(string left, string right) bool {
     l := parse_type(left)
     r := parse_type(right)
@@ -349,6 +366,7 @@ func compatible_tuple_type(string left, string right) bool {
     }
     true
 }
+
 func assignable_tuple_type(string target, string source) bool {
     t := parse_type(target)
     s := parse_type(source)
@@ -369,6 +387,7 @@ func assignable_tuple_type(string target, string source) bool {
     }
     true
 }
+
 func is_tuple_type(string ty) bool {
     clean := parse_type(ty)
     if std.prelude.len(clean) < 2 {
@@ -376,6 +395,7 @@ func is_tuple_type(string ty) bool {
     }
     return starts_with(clean, "(") && ends_with(clean, ")"
 }
+
 func extract_tuple_args(string type_name) string[] {
     out := string[]()
     clean := parse_type(type_name)
@@ -403,6 +423,7 @@ func extract_tuple_args(string type_name) string[] {
     }
     out
 }
+
 func is_numeric_primitive(string ty) bool {
     clean := parse_type(ty)
     return clean == "i8"
@@ -418,6 +439,7 @@ func is_numeric_primitive(string ty) bool {
         || clean == "f32"
         || clean == "f64"
 }
+
 func numeric_rank(string ty) int {
     clean := parse_type(ty)
     if clean == "i8" || clean == "u8" {
@@ -434,6 +456,7 @@ func numeric_rank(string ty) int {
     }
     0
 }
+
 func is_builtin_primitive(string ty) bool {
     clean := parse_type(ty)
     return clean == "()"
@@ -455,6 +478,7 @@ func is_builtin_primitive(string ty) bool {
         || clean == "f32"
         || clean == "f64"
 }
+
 func is_copy_type(string ty) bool {
     clean := parse_type(ty)
     if clean == "()"
@@ -485,6 +509,7 @@ func is_copy_type(string ty) bool {
     }
     return false
 }
+
 func is_array_length(string text) bool {
     if text == "" {
         return false
@@ -499,9 +524,11 @@ func is_array_length(string text) bool {
     }
     true
 }
+
 func is_explicit_owned_type(string ty) bool {
     base_type_name(ty) == "box"
 }
+
 func ownership_mode(string ty) string {
     clean := parse_type(ty)
     if starts_with(clean, "&") {
@@ -515,9 +542,11 @@ func ownership_mode(string ty) string {
     }
     "move"
 }
+
 func requires_drop(string ty) bool {
     ownership_mode(ty) == "move" || ownership_mode(ty) == "owned"
 }
+
 func is_heap_reference_type(string ty) bool {
     clean := parse_type(ty)
     if is_explicit_owned_type(clean) {
@@ -529,19 +558,24 @@ func is_heap_reference_type(string ty) bool {
     base := base_type_name(clean)
     base == "vec" || base == "map" || base == "string"
 }
+
 func is_reference_type(string ty) bool {
     return starts_with(trim_text(ty), "&"
 }
+
 func is_slice_type(string ty) bool {
     return starts_with(trim_text(ty), "[]"
 }
+
 func is_generic_type(string ty) bool {
     clean := trim_text(ty)
     return find_char(clean, "[") >= 0 || find_char(clean, "<") >= 0
 }
+
 func normalize_type_text(string text) string {
     return trim_text(text
 }
+
 func trim_text(string text) string {
     start := 0
     end := std.prelude.len(text)
@@ -553,6 +587,7 @@ func trim_text(string text) string {
     }
     return std.prelude.slice(text, start, end
 }
+
 func starts_with(string text, string prefix) bool {
     prefix_len := std.prelude.len(prefix)
     if prefix_len > std.prelude.len(text) {
@@ -560,6 +595,7 @@ func starts_with(string text, string prefix) bool {
     }
     return std.prelude.slice(text, 0, prefix_len) == prefix
 }
+
 func ends_with(string text, string suffix) bool {
     suffix_len := std.prelude.len(suffix)
     text_len := std.prelude.len(text)
@@ -568,9 +604,11 @@ func ends_with(string text, string suffix) bool {
     }
     return std.prelude.slice(text, text_len - suffix_len, text_len) == suffix
 }
+
 func is_space(string ch) bool {
     return ch == " " || ch == "\n" || ch == "\t" || ch == "\r"
 }
+
 func find_char(string text, string needle) int {
     i := 0
     for i < std.prelude.len(text) {
@@ -581,6 +619,7 @@ func find_char(string text, string needle) int {
     }
     return 0 - 1
 }
+
 func find_last_char(string text, string needle) int {
     i := std.prelude.len(text)
     for i > 0 {
@@ -591,6 +630,7 @@ func find_last_char(string text, string needle) int {
     }
     return 0 - 1
 }
+
 func extract_section(string text, string open, string close) string {
     start := find_char(text, open)
     if start < 0 {
@@ -610,4 +650,3 @@ func extract_section(string text, string open, string close) string {
         }
         i = i + 1
     }
-    return ""

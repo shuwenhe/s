@@ -27,6 +27,7 @@ enum dwarf_tag {
 	DW_TAG_NAMESPACE = 0x39
 	DW_TAG_MODULE = 0x1d
 }
+
 enum dwarf_attribute {
 	DW_AT_NAME = 0x03
 	DW_AT_TYPE = 0x49
@@ -45,6 +46,7 @@ enum dwarf_attribute {
 	DW_AT_ARTIFICIAL = 0x34
 	DW_AT_EXTERNAL = 0x3f
 }
+
 enum dwarf_encoding {
 	DW_ATE_ADDRESS = 0x1
 	DW_ATE_BOOLEAN = 0x2
@@ -63,12 +65,14 @@ enum dwarf_encoding {
 	DW_ATE_DECIMAL_FLOAT = 0xf
 	DW_ATE_UTF = 0x10
 }
+
 struct dwarf_die {
 	dwarf_tag tag
 	map[dwarf_attribute]dwarf_attribute_value attributes
 	dwarf_die[] children
 	i64 offset
 }
+
 enum dwarf_attribute_value {
 	IntValue(i64)
 	StringValue(string)
@@ -77,6 +81,7 @@ enum dwarf_attribute_value {
 	AddressValue(i64)
 	BoolValue(bool)
 }
+
 struct dwarf_compile_unit {
 	i32 version
 	i64 abbrev_offset
@@ -87,6 +92,7 @@ struct dwarf_compile_unit {
 	dwarf_line_info line_info
 	DWARFLocationInfo[] location_info
 }
+
 struct dwarf_line_info {
 	i32 min_instruction_length
 	i32 line_base
@@ -97,6 +103,7 @@ struct dwarf_line_info {
 	string[] directory_names
 	dwarf_line_statement[] statements
 }
+
 struct dwarf_line_statement {
 	i64 address
 	i32 file
@@ -106,6 +113,7 @@ struct dwarf_line_statement {
 	bool basic_block
 	bool end_sequence
 }
+
 struct DWARFLocationInfo {
 	string variable
 	i64 address
@@ -113,6 +121,7 @@ struct DWARFLocationInfo {
 	i32 register
 	i64 offset
 }
+
 struct dwarf_manager {
 	dwarf_compile_unit[] compile_units
 	map[i32]u8[] abbrev_table
@@ -120,6 +129,7 @@ struct dwarf_manager {
 	dwarf_line_info[] line_info
 	i32 version
 }
+
 func new_dwarfmanager(version i32) dwarf_manager {
 	dwarf_manager{
 		CompileUnits: make(dwarf_compile_unit[], 0),
@@ -129,9 +139,11 @@ func new_dwarfmanager(version i32) dwarf_manager {
 		Version: version,
 	}
 }
+
 func (dm* dwarf_manager) add_compile_unit(cu dwarf_compile_unit) {
 	dm.CompileUnits = append(dm.CompileUnits, cu)
 }
+
 func (dm* dwarf_manager) generate_debug_line() u8[] {
 	data := make(u8[], 0)
 	for _, line_info := range dm.LineInfo {
@@ -170,12 +182,14 @@ func (dm* dwarf_manager) generate_debug_line() u8[] {
 	}
 	data
 }
+
 struct UnwindInfo {
 	i32 version
 	i64 eh_frame_offset
 	FrameDescriptionEntry[] fdes
 	CommonInformationEntry[] cies
 }
+
 struct CommonInformationEntry {
 	i32 length
 	i32 cie_id
@@ -186,6 +200,7 @@ struct CommonInformationEntry {
 	i32 return_address_register
 	u8[] augmentation_data
 }
+
 struct FrameDescriptionEntry {
 	i32 length
 	i32 cie_pointer
@@ -194,9 +209,11 @@ struct FrameDescriptionEntry {
 	u8[] augmentation_data
 	u8[] instructions
 }
+
 struct unwind_manager {
 	UnwindInfo unwind_info
 }
+
 func new_unwind_manager() unwind_manager {
 	unwind_manager{
 		UnwindInfo: UnwindInfo{
@@ -207,6 +224,7 @@ func new_unwind_manager() unwind_manager {
 		},
 	}
 }
+
 func (um* unwind_manager) generate_eh_frame() u8[] {
 	data := make(u8[], 0)
 	for _, cie := range um.UnwindInfo.Cies {
@@ -260,4 +278,3 @@ func (um* unwind_manager) generate_eh_frame() u8[] {
 		data = append(data, fde.AugmentationData...)
 		data = append(data, fde.Instructions...)
 	}
-	data

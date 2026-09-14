@@ -8,6 +8,7 @@ struct control_flow_graph {
     int[][] post_dominators
     int[][] dominance_frontier
 }
+
 struct cfg_block {
     int block_id
     string label
@@ -19,6 +20,7 @@ struct cfg_block {
     int idom
     int depth
 }
+
 struct loop_info {
     int loop_id
     int header_id
@@ -26,6 +28,7 @@ struct loop_info {
     int[] body_blocks
     int[] exit_blocks
 }
+
 func cfg_new(ir_function func) control_flow_graph {
     cfg := control_flow_graph {
         function: func, entry_block_id 0
@@ -39,6 +42,7 @@ func cfg_new(ir_function func) control_flow_graph {
     }
     cfg
 }
+
 func cfg_compute_dominators(cfg* control_flow_graph) {
     n := cfg.blocks.len()
     doms := make(int[][], n)
@@ -81,6 +85,7 @@ func cfg_compute_dominators(cfg* control_flow_graph) {
     }
     cfg.dominators = doms
 }
+
 func cfg_compute_post_dominators(cfg* control_flow_graph) {
     n := cfg.blocks.len()
     post_doms := make(int[][], n)
@@ -130,6 +135,7 @@ func cfg_compute_post_dominators(cfg* control_flow_graph) {
     }
     cfg.post_dominators = post_doms
 }
+
 func cfg_compute_dominance_frontier(cfg* control_flow_graph) {
     n := cfg.blocks.len()
     frontier := make(int[][], n)
@@ -156,6 +162,7 @@ func cfg_compute_dominance_frontier(cfg* control_flow_graph) {
     }
     cfg.dominance_frontier = frontier
 }
+
 func cfg_detect_loops(cfg* control_flow_graph) loop_info[] {
     loops := loop_info[]()
     for i := 0; i < cfg.blocks.len(); i = i + 1 {
@@ -170,6 +177,7 @@ func cfg_detect_loops(cfg* control_flow_graph) loop_info[] {
     }
     loops
 }
+
 func cfg_find_or_create_loop(loop_info[] loops, int header_id) int {
     for i := 0; i < loops.len(); i = i + 1 {
         if loops[i].header_id == header_id {
@@ -182,6 +190,7 @@ func cfg_find_or_create_loop(loop_info[] loops, int header_id) int {
     loops = append(loops, new_loop)
     loops.len() - 1
 }
+
 func cfg_dump(cfg* control_flow_graph) string {
     result := "Control Flow Graph:\n"
     for i := 0; i < cfg.blocks.len(); i = i + 1 {
@@ -199,4 +208,3 @@ func cfg_dump(cfg* control_flow_graph) string {
         result = result + "\n"
         result = result + "  Instructions: " + block.instructions.len() + "\n"
     }
-    result

@@ -7,15 +7,18 @@ struct arg_liveness_slot {
     int frame_offset
     int ptr_words
 }
+
 struct arg_liveness_payload {
     string symbol_name
     int min_slot_offset
     int[] map_offsets
     string[] maps
 }
+
 func arg_emit_symbol_name(string fn_name) string {
     fn_name + ".argliveinfo"
 }
+
 func arg_emit(string fn_name, arg_liveness_slot[] args, int[][]] raw_maps) arg_liveness_payload {
     maps := dedupe_bitmaps(raw_maps)
     min_slot_offset := 0
@@ -50,6 +53,7 @@ func arg_emit(string fn_name, arg_liveness_slot[] args, int[][]] raw_maps) arg_l
         symbol_name: arg_emit_symbol_name(fn_name), min_slot_offset min_slot_offset, map_offsets map_offsets, maps encoded_maps,
     }
 }
+
 func dedupe_bitmaps(int[][]] maps) int[][]] {
     out := int[][]]()
     i := 0
@@ -70,6 +74,7 @@ func dedupe_bitmaps(int[][]] maps) int[][]] {
     }
     out
 }
+
 func bitmap_equal(int[] left, int[] right) bool {
     if len(left) != len(right) {
         return false
@@ -83,6 +88,7 @@ func bitmap_equal(int[] left, int[] right) bool {
     }
     true
 }
+
 func encode_bitmap(int[] bits) string {
     out := ""
     i := 0
@@ -94,4 +100,3 @@ func encode_bitmap(int[] bits) string {
         }
         i = i + 1
     }
-    out

@@ -3,6 +3,7 @@ struct prog_op {
     string name
     int code
 }
+
 struct prog {
     int id
     int op
@@ -11,48 +12,63 @@ struct prog {
     string as_string
     int lineno
 }
+
 struct prog_list {
     prog* head
     prog* tail
     int count
 }
+
 func prog_op_mov() int { 0 }
+
 func prog_op_add() int { 1 }
 
 func prog_op_sub() int { 2 }
+
 func prog_op_mul() int { 3 }
 
 func prog_op_div() int { 4 }
+
 func prog_op_and() int { 5 }
 
 func prog_op_or() int { 6 }
+
 func prog_op_xor() int { 7 }
 
 func prog_op_cmp() int { 8 }
+
 func prog_op_jmp() int { 9 }
 
 func prog_op_jne() int { 10 }
+
 func prog_op_je() int { 11 }
 
 func prog_op_call() int { 12 }
+
 func prog_op_ret() int { 13 }
 
 func prog_op_push() int { 14 }
+
 func prog_op_pop() int { 15 }
 
 func prog_op_lea() int { 16 }
+
 func prog_op_load() int { 17 }
 
 func prog_op_store() int { 18 }
+
 func prog_op_nop() int { 19 }
 
 func prog_op_test() int { 20 }
+
 func prog_op_shl() int { 21 }
 
 func prog_op_shr() int { 22 }
+
 func make_prog_list() prog_list {
     prog_list { nil, nil, 0 }
 }
+
 func (prog_list* pl) append_prog(int op, string as_string) {
     p := &prog { pl.count, op, pl.tail, nil, as_string, 0 }
     if pl.tail != nil {
@@ -64,6 +80,7 @@ func (prog_list* pl) append_prog(int op, string as_string) {
     pl.tail = p
     pl.count = pl.count + 1
 }
+
 func (prog_list* pl) append_prog_at_head(int op, string as_string) {
     p := &prog { pl.count, op, nil, pl.head, as_string, 0 }
     if pl.head != nil {
@@ -75,6 +92,7 @@ func (prog_list* pl) append_prog_at_head(int op, string as_string) {
     pl.head = p
     pl.count = pl.count + 1
 }
+
 func (prog_list* pl) insert_after(prog* pos, int op, string as_string) {
     if pos == nil {
         pl.append_prog_at_head(op, as_string)
@@ -90,6 +108,7 @@ func (prog_list* pl) insert_after(prog* pos, int op, string as_string) {
     }
     pl.count = pl.count + 1
 }
+
 func (prog_list* pl) remove_prog(prog* p) {
     if p.prev != nil {
         p.prev.next = p.next
@@ -103,15 +122,19 @@ func (prog_list* pl) remove_prog(prog* p) {
     }
     pl.count = pl.count - 1
 }
+
 func (prog_list* pl) first() prog* {
     pl.head
 }
+
 func (prog_list* pl) last() prog* {
     pl.tail
 }
+
 func (prog_list* pl) len() int {
     pl.count
 }
+
 func (prog_list* pl) dump() string {
     result := ""
     p := pl.head
@@ -121,6 +144,7 @@ func (prog_list* pl) dump() string {
     }
     result
 }
+
 func op_name(int op) string {
     switch op {
         case 0 : "mov",
@@ -147,4 +171,3 @@ func op_name(int op) string {
         case 21 : "shl",
         case 22 : "shr",
         default : "unknown"
-    }

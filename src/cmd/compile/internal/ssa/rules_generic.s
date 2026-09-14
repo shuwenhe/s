@@ -11,11 +11,13 @@ struct ssa_rule {
     int benefit_estimate
     bool requires_liveness
 }
+
 struct rule_context {
     instr: ssa_instr_ptr
     operands: ssa_value_ptr[]
     config: compile_config
 }
+
 enum optimization_category {
     const_fold,
     algebraic_simp,
@@ -26,6 +28,7 @@ enum optimization_category {
     dce,
     ccp,
 }
+
 func load_generic_rules() ssa_rule[] {
     rules := std.vec.vec()
     rules.push_all(get_const_fold_rules())
@@ -34,6 +37,7 @@ func load_generic_rules() ssa_rule[] {
     rules.push_all(get_cse_rules())
     return rules
 }
+
 func get_const_fold_rules() ssa_rule[] {
     rules := std.vec.vec()
     rules.push(ssa_rule{
@@ -142,6 +146,7 @@ func get_const_fold_rules() ssa_rule[] {
     })
     return rules
 }
+
 func get_algebraic_simp_rules() ssa_rule[] {
     rules := std.vec.vec()
     rules.push(ssa_rule{
@@ -306,6 +311,7 @@ func get_algebraic_simp_rules() ssa_rule[] {
     })
     return rules
 }
+
 func get_condition_opt_rules() ssa_rule[] {
     rules := std.vec.vec()
     rules.push(ssa_rule{
@@ -342,6 +348,7 @@ func get_condition_opt_rules() ssa_rule[] {
     })
     return rules
 }
+
 func get_cse_rules() ssa_rule[] {
     rules := std.vec.vec()
     rules.push(ssa_rule{
@@ -362,6 +369,7 @@ func get_cse_rules() ssa_rule[] {
     })
     return rules
 }
+
 func get_licm_rules() ssa_rule[] {
     rules := std.vec.vec()
     rules.push(ssa_rule{
@@ -374,6 +382,7 @@ func get_licm_rules() ssa_rule[] {
     })
     return rules
 }
+
 func get_gvn_rules() ssa_rule[] {
     rules := std.vec.vec()
     rules.push(ssa_rule{
@@ -386,6 +395,7 @@ func get_gvn_rules() ssa_rule[] {
     })
     return rules
 }
+
 func get_dce_rules() ssa_rule[] {
     rules := std.vec.vec()
     rules.push(ssa_rule{
@@ -398,10 +408,12 @@ func get_dce_rules() ssa_rule[] {
     })
     return rules
 }
+
 struct ssa_optimizer {
     rules: ssa_rule[]
     stats: optimization_stats
 }
+
 struct optimization_stats {
     string pass_name
     int instructions_before64
@@ -409,6 +421,7 @@ struct optimization_stats {
     int time_us64
     float reduction_ratio
 }
+
 func (opt: &mut ssa_optimizer) run_optimization(ssa: &mut ssa_function) () {
     stats_before := opt.count_instructions(ssa)
     start_time := now_ns()
@@ -426,6 +439,7 @@ func (opt: &mut ssa_optimizer) run_optimization(ssa: &mut ssa_function) () {
         reduction_ratio: float(stats_after) / float(stats_before),
     }
 }
+
 func (opt: &mut ssa_optimizer) apply_rule(ssa: &mut ssa_function, rule: ssa_rule) () {
     for _for_idx_498 := 0; _for_idx_498 < len(ssa.blocks); _for_idx_498++ {
         block := ssa.blocks[_for_idx_498]
@@ -437,9 +451,11 @@ func (opt: &mut ssa_optimizer) apply_rule(ssa: &mut ssa_function, rule: ssa_rule
         }
     }
 }
+
 func (opt: &ssa_optimizer) matches_pattern(instr: ssa_instr_ptr, pattern: string) bool {
     return false
 }
+
 func (opt: &mut ssa_optimizer) apply_replacement(instr: ssa_instr_ptr, replacement: string) () {
 }
 
@@ -451,6 +467,7 @@ func (opt: &ssa_optimizer) count_instructions(ssa: &ssa_function) int64 {
     }
     return count
 }
+
 func create_ssa_optimizer() ssa_optimizer {
     return ssa_optimizer{
         rules: load_generic_rules(),
@@ -461,4 +478,3 @@ func create_ssa_optimizer() ssa_optimizer {
             time_us: 0,
             reduction_ratio: 1.0,
         },
-    }

@@ -6,6 +6,7 @@ struct compile_result {
     int status
     string report
 }
+
 func compile_package(string[] args) compile_result {
     status := build_main(args)
     if status != 0 {
@@ -23,6 +24,7 @@ func compile_package(string[] args) compile_result {
         status: 0, report obj_payload,
     }
 }
+
 func enqueue_func(string[] queue, string fn_name) string[] {
     if fn_name == "" || fn_name == "_" {
         return queue
@@ -36,12 +38,14 @@ func enqueue_func(string[] queue, string fn_name) string[] {
     out = append(out, fn_name)
     out
 }
+
 func prepare_func(string fn_name) string {
     if fn_name == "" {
         return "skip"
     }
     "prepared:" + fn_name
 }
+
 func compile_functions(string[] queue, int workers) string {
     bounded_workers := clamp_backend_workers(workers)
     out := "workers=" + to_string(bounded_workers) + "\n"
@@ -50,4 +54,3 @@ func compile_functions(string[] queue, int workers) string {
         out = out + prepare_func(queue[i]) + "\n"
         i = i + 1
     }
-    out

@@ -4,4 +4,3 @@ import (
     "std.env"
 )
 func main() {
-    return compile.internal.dispatch.main(std.env.args())

@@ -6,6 +6,7 @@ struct end_to_end_compiler {
     asm_file: string
     obj_file: string
 }
+
 func new_end_to_end_compiler(string source, string output) end_to_end_compiler {
     compiler: end_to_end_compiler
     compiler.source_file = source
@@ -15,34 +16,40 @@ func new_end_to_end_compiler(string source, string output) end_to_end_compiler {
     compiler.obj_file = output + ".o"
     compiler
 }
+
 func (e2e* end_to_end_compiler) stage_1_parse_and_typecheck() int {
     println("Stage 1: Parse and Type Check")
     println("  Input: " + e2e.source_file)
     0
 }
+
 func (e2e* end_to_end_compiler) stage_2_generate_ir() int {
     println("Stage 2: Generate IR (SSA)")
     println("  Output: " + e2e.ir_file)
     0
 }
+
 func (e2e* end_to_end_compiler) stage_3_instruction_selection() int {
     println("Stage 3: Instruction Selection")
     println("  IR: " + e2e.ir_file)
     println("  Method: Direct x86-64 generation (not via IR runner)")
     0
 }
+
 func (e2e* end_to_end_compiler) stage_4_register_allocation() int {
     println("Stage 4: Register Allocation")
     println("  Available Registers: rax,rcx,rdx,rsi,rdi,r8-r11 (9 total)")
     println("  Spillover Strategy: Stack allocation at negative offsets")
     0
 }
+
 func (e2e* end_to_end_compiler) stage_5_code_generation() int {
     println("Stage 5: Code Generation")
     println("  Output: " + e2e.asm_file)
     println("  Format: AT&T Assembly (gcc compatible)")
     0
 }
+
 func (e2e* end_to_end_compiler) stage_6_assemble() int {
     println("Stage 6: Assemble")
     println("  Input: " + e2e.asm_file)
@@ -50,6 +57,7 @@ func (e2e* end_to_end_compiler) stage_6_assemble() int {
     println("  Tool: gcc -c (System V AMD64 ABI)")
     0
 }
+
 func (e2e* end_to_end_compiler) stage_7_link() int {
     println("Stage 7: Link")
     println("  Input: " + e2e.obj_file)
@@ -57,6 +65,7 @@ func (e2e* end_to_end_compiler) stage_7_link() int {
     println("  Tool: gcc/ld")
     0
 }
+
 func (e2e* end_to_end_compiler) full_native_pipeline() int {
     println("=== Native Compilation Pipeline ===")
     println("")
@@ -79,6 +88,7 @@ func (e2e* end_to_end_compiler) full_native_pipeline() int {
     println("  Executable: " + e2e.output_file)
     0
 }
+
 func (e2e* end_to_end_compiler) compare_with_ir_pipeline() {
     println("")
     println("=== IR+VM vs Native Compilation ===")
@@ -106,4 +116,3 @@ func (e2e* end_to_end_compiler) compare_with_ir_pipeline() {
     println("  IR+VM Method:    900ms (10M iterations)")
     println("  Native Method:    50ms (10M iterations)")
     println("  Speedup:          18x faster")
-    println("  Efficiency:       73x better cycles/instruction")

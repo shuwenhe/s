@@ -4,6 +4,7 @@ struct linker_test_result {
     int passed
     string error_message
 }
+
 func test_elf64_header_creation() linker_test_result {
     header := elf64_header_new()
     result := linker_test_result {
@@ -28,6 +29,7 @@ func test_elf64_header_creation() linker_test_result {
     }
     result
 }
+
 func test_elf64_section_creation() linker_test_result {
     section := elf64_section_new(1, sht_progbits, shf_alloc | shf_execinstr)
     result := linker_test_result {
@@ -47,6 +49,7 @@ func test_elf64_section_creation() linker_test_result {
     }
     result
 }
+
 func test_elf64_symbol_creation() linker_test_result {
     symbol := elf64_symbol_new(0, stb_global, stt_func, 1)
     result := linker_test_result {
@@ -67,6 +70,7 @@ func test_elf64_symbol_creation() linker_test_result {
     }
     result
 }
+
 func test_relocation_creation() linker_test_result {
     reloc := elf64_relocation_new(0x1000, r_x86_64_64, 5)
     result := linker_test_result {
@@ -87,6 +91,7 @@ func test_relocation_creation() linker_test_result {
     }
     result
 }
+
 func test_relocation_resolve_64() linker_test_result {
     ctx := relocation_context {
         section_index: 0,
@@ -114,6 +119,7 @@ func test_relocation_resolve_64() linker_test_result {
     }
     result
 }
+
 func test_relocation_resolve_pc32() linker_test_result {
     ctx := relocation_context {
         section_index: 0,
@@ -142,6 +148,7 @@ func test_relocation_resolve_pc32() linker_test_result {
     }
     result
 }
+
 func test_linker_context_creation() linker_test_result {
     ctx := linker_context_new("output.o")
     result := linker_test_result {
@@ -161,6 +168,7 @@ func test_linker_context_creation() linker_test_result {
     }
     result
 }
+
 func test_linker_add_object_file() linker_test_result {
     ctx := linker_context_new("output.o")
     linker_add_object_file(&ctx, "test.o")
@@ -181,6 +189,7 @@ func test_linker_add_object_file() linker_test_result {
     }
     result
 }
+
 func run_linker_tests() int {
     tests := linker_test_result[]()
     tests = append(tests, test_elf64_header_creation())
@@ -201,4 +210,3 @@ func run_linker_tests() int {
             failed = failed + 1
         }
     }
-    failed

@@ -6,6 +6,7 @@ struct dominator_tree {
     i32[][] strict_dom_frontier
     bool[] computed
 }
+
 func new_dominator_tree(num_blocks i32) dominator_tree* {
     dt := new(dominator_tree)
     dt.immediate_dominator = make(i32[], num_blocks)
@@ -22,6 +23,7 @@ func new_dominator_tree(num_blocks i32) dominator_tree* {
     }
     dt
 }
+
 func (dt* dominator_tree) compute_dominators(preds i32[][], entry i32) {
     n := i32(len(preds))
     dom := make(bool[][], n)
@@ -100,6 +102,7 @@ func (dt* dominator_tree) compute_dominators(preds i32[][], entry i32) {
         dt.computed[b] = true
     }
 }
+
 func (dt* dominator_tree) compute_dominance_frontier(succs i32[][], preds i32[][]) {
     n := i32(len(preds))
     for b := i32(0); b < n; b += 1 {
@@ -120,6 +123,7 @@ func (dt* dominator_tree) compute_dominance_frontier(succs i32[][], preds i32[][
         }
     }
 }
+
 func (dt* dominator_tree) strictly_dominates(a i32, b i32) bool {
     if a == b {
         return false
@@ -133,20 +137,22 @@ func (dt* dominator_tree) strictly_dominates(a i32, b i32) bool {
     }
     false
 }
+
 func (dt* dominator_tree) get_idom(block i32) i32 {
     if block >= 0 && block < i32(len(dt.immediate_dominator)) {
         return dt.immediate_dominator[block]
     }
     -1
 }
+
 func (dt* dominator_tree) get_dom_children(block i32) i32[] {
     if block >= 0 && block < i32(len(dt.dom_children)) {
         return dt.dom_children[block]
     }
     i32[]()
 }
+
 func (dt* dominator_tree) get_dominance_frontier(block i32) i32[] {
     if block >= 0 && block < i32(len(dt.dom_frontier)) {
         return dt.dom_frontier[block]
     }
-    i32[]()

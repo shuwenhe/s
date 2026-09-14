@@ -10,6 +10,7 @@ struct waiter {
     int sroutine_id
     int val_idx
 }
+
 struct raw_chan {
     int buffer_capacity
     int[] buf
@@ -21,6 +22,7 @@ struct raw_chan {
     waiter[] receivers
     mu mutex
 }
+
 func new_raw_chan(int cap) raw_chan {
     buf := int[]()
     var i = 0
@@ -32,6 +34,7 @@ func new_raw_chan(int cap) raw_chan {
         buffer_capacity: cap, buf buf, head 0, tail 0, count 0, state chan_open, senders waiter[](), receivers waiter[](), mu new_mutex(),
     }
 }
+
 func chan_send(raw_chan ch, int val) ((), string) {
     ch.mu.lock()
     if ch.state == chan_closed {
@@ -79,6 +82,7 @@ func chan_send(raw_chan ch, int val) ((), string) {
     ch.mu.unlock()
     ()
 }
+
 func chan_recv(raw_chan ch) recv_result {
     ch.mu.lock()
     if ch.buffer_capacity == 0 {
@@ -131,10 +135,12 @@ func chan_recv(raw_chan ch) recv_result {
     ch.mu.unlock()
     recv_result { value: val, ok true }
 }
+
 struct recv_result {
     int value
     bool ok
 }
+
 func chan_try_send(raw_chan ch, int val) bool {
     ch.mu.lock()
     if ch.state == chan_closed {
@@ -164,6 +170,7 @@ func chan_try_send(raw_chan ch, int val) bool {
     ch.mu.unlock()
     true
 }
+
 func chan_try_recv(raw_chan ch) option[recv_result] {
     ch.mu.lock()
     if ch.buffer_capacity == 0 {
@@ -196,6 +203,7 @@ func chan_try_recv(raw_chan ch) option[recv_result] {
     ch.mu.unlock()
     option::some(recv_result { value: val, ok true })
 }
+
 func chan_close(raw_chan ch) ((), string) {
     ch.mu.lock()
     if ch.state == chan_closed {
@@ -218,6 +226,7 @@ func chan_close(raw_chan ch) ((), string) {
     ch.mu.unlock()
     ()
 }
+
 func dequeue_waiter(waiter[]* q) waiter {
     if q.is_empty() {
         return waiter { sroutine_id: -1, val_idx: -1 }
@@ -237,10 +246,11 @@ extern "intrinsic" func __chan_take_delivered(int sroutine_id) int
 func chan_deliver(int sroutine_id, int val) () {
     __chan_deliver(sroutine_id, val)
 }
+
 func chan_take_delivered(int sroutine_id) int {
     __chan_take_delivered(sroutine_id)
 }
-func chan_len(raw_chan ch) int  { ch.count }
-func chan_cap(raw_chan ch) int  { ch.buffer_capacity }
 
-func chan_unit_name() string { "src/runtime/chan" }
+func chan_len(raw_chan ch) int  { ch.count }
+
+func chan_cap(raw_chan ch) int  { ch.buffer_capacity }

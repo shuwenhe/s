@@ -18,6 +18,7 @@ func int_to_string(int value) string {
     }
     return result
 }
+
 func int64_to_string(int64 value) string {
     if value == 0 {
         return "0"
@@ -37,6 +38,7 @@ func int64_to_string(int64 value) string {
     }
     return result
 }
+
 func parse_int_default(string text, int fallback) int {
     if len(text) == 0 {
         return fallback
@@ -58,9 +60,11 @@ func parse_int_default(string text, int fallback) int {
     }
     sign * value
 }
+
 func parse_int(string text) int {
     parse_int_default(text, 0)
 }
+
 func string_to_int(string text) int {
     int result = 0
     int index = 0
@@ -83,6 +87,7 @@ func string_to_int(string text) int {
     }
     return result
 }
+
 func extract_int_default(string text, int fallback) int {
     if len(text) == 0 {
         return fallback
@@ -110,6 +115,7 @@ func extract_int_default(string text, int fallback) int {
     }
     return sign * value
 }
+
 func float_to_string_precision(float value, int precision) string {
     if precision < 0 {
         precision = 0
@@ -149,5 +155,5 @@ func float_to_string_precision(float value, int precision) string {
     }
     return result
 }
+
 func float_to_string(float value) string {
-    return float_to_string_precision(value, 3

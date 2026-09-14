@@ -9,6 +9,7 @@ enum channel_status {
 	ch_recv_waiting = 2
 	ch_send_waiting = 3
 }
+
 struct channel {
 	u64 element_size
 	u8[] buffer
@@ -26,12 +27,14 @@ struct channel {
 	u64 send_count
 	u64 closed_count
 }
+
 struct channel_op {
 	u64 g
 	unsafe.pointer data
 	bool is_send
 	bool is_close
 }
+
 func make_channel(element_size u64, buffer_size i32) (channel*, error) {
 	if element_size == 0 {
 		nil, "element size must be > 0"
@@ -52,6 +55,7 @@ func make_channel(element_size u64, buffer_size i32) (channel*, error) {
 	}
 	return ch, nil
 }
+
 func (ch* channel) send(data unsafe.pointer) error {
 	if ch == nil {
 		return "channel is nil"
@@ -92,6 +96,7 @@ func (ch* channel) send(data unsafe.pointer) error {
 	sleep_sroutine(current_g)
 	nil
 }
+
 func (ch* channel) recv() (unsafe.pointer, error) {
 	if ch == nil {
 		return nil, "channel is nil"
@@ -135,6 +140,7 @@ func (ch* channel) recv() (unsafe.pointer, error) {
 	sleep_sroutine(current_g)
 	get_element_from_buffer(ch), nil
 }
+
 func (ch* channel) close() error {
 	if ch == nil {
 		return "channel is nil"
@@ -156,22 +162,27 @@ func (ch* channel) close() error {
 	ch.send_queue = make(u64[], 0)
 	nil
 }
+
 func (ch* channel) len() i32 {
 	return ch.buf_size
 }
+
 func (ch* channel) cap() i32 {
 	return ch.buf_capacity
 }
+
 struct select_case {
 	channel* ch
 	unsafe.pointer data
 	bool is_send
 	bool is_default
 }
+
 struct select_result {
 	i32 chosen
 	bool received_ok
 }
+
 func select_channels(cases select_case[]) select_result {
 	result := select_result{chosen: -1, received_ok: false}
 	for i := i32(0); i < i32(len(cases)); i += 1 {
@@ -217,24 +228,28 @@ func select_channels(cases select_case[]) select_result {
 	}
 	result
 }
+
 func copy_element_to_buffer(ch* channel, data unsafe.pointer) {
 	offset := i64(ch.buf_tail) * i64(ch.element_size)
 	dst := unsafe.pointer(u64(unsafe.pointer(ch.buffer)) + u64(offset))
 	copy_memory(dst, data, ch.element_size)
 	ch.buf_tail = (ch.buf_tail + 1) % ch.buf_capacity
 }
+
 func get_element_from_buffer(ch* channel) unsafe.pointer {
 	offset := i64(ch.buf_head) * i64(ch.element_size)
 	src := unsafe.pointer(u64(unsafe.pointer(ch.buffer)) + u64(offset))
 	ch.buf_head = (ch.buf_head + 1) % ch.buf_capacity
 	return src
 }
+
 func copy_element_to_g(g u64, data unsafe.pointer, size u64) {
 }
 
 func recv_element_from_g(g u64) unsafe.pointer {
 	return nil
 }
+
 func copy_memory(dst unsafe.pointer, src unsafe.pointer, size u64) {
 }
 
@@ -245,4 +260,3 @@ func sleep_sroutine(g u64) {
 }
 
 func get_current_sroutine_id() u64 {
-	return 0

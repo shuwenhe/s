@@ -10,6 +10,7 @@ enum sroutine_status {
 	g_waiting = 3
 	g_dead = 4
 }
+
 struct sroutine {
 	u64 id
 	sroutine_status status
@@ -24,6 +25,7 @@ struct sroutine {
 	u64 parent_g
 	u8[] context
 }
+
 struct processor {
 	i32 id
 	sroutine* runnext
@@ -34,6 +36,7 @@ struct processor {
 	sroutine*[] gfree
 	i32 nfree
 }
+
 struct machine_thread {
 	i32 id
 	processor* p
@@ -43,6 +46,7 @@ struct machine_thread {
 	i64 idle_time
 	u64 cpu_ticks
 }
+
 struct scheduler {
 	machine_thread[] m
 	processor[] p
@@ -75,6 +79,7 @@ func scheduler_init(num_procs i32) error {
 	}
 	nil
 }
+
 func go_func(fn func()) u64 {
 	global_scheduler.glock.lock()
 	defer global_scheduler.glock.unlock()
@@ -83,6 +88,7 @@ func go_func(fn func()) u64 {
 	schedule_sroutine(&g)
 	g.id
 }
+
 func create_sroutine(fn func()) sroutine {
 	id := atomic.add_u64(&global_scheduler.next_gid, 1)
 	g := sroutine{
@@ -97,6 +103,7 @@ func create_sroutine(fn func()) sroutine {
 	g.sp = g.stack_base + g.stack_size
 	return g
 }
+
 func schedule_sroutine(g* sroutine) {
 	p_id := select_processor()
 	p := &global_scheduler.p[p_id]
@@ -108,6 +115,7 @@ func schedule_sroutine(g* sroutine) {
 		p.runq_size += 1
 	}
 }
+
 func select_processor() i32 {
 	min_load := i32(1000000)
 	min_p := i32(0)
@@ -119,11 +127,13 @@ func select_processor() i32 {
 	}
 	return min_p
 }
+
 func move_to_global_queue(g* sroutine) {
 	global_scheduler.global_lock.lock()
 	defer global_scheduler.global_lock.unlock()
 	global_scheduler.run_queue = append(global_scheduler.run_queue, g)
 }
+
 func scheduler_run() {
 	for global_scheduler.schedenable {
 		g := pick_next_sroutine()
@@ -135,6 +145,7 @@ func scheduler_run() {
 		}
 	}
 }
+
 func pick_next_sroutine() sroutine* {
 	p_id := select_processor()
 	p := &global_scheduler.p[p_id]
@@ -159,6 +170,7 @@ func pick_next_sroutine() sroutine* {
 	global_scheduler.global_lock.unlock()
 	nil
 }
+
 func run_sroutine(g* sroutine) {
 	if g == nil {
 		return
@@ -171,6 +183,7 @@ func run_sroutine(g* sroutine) {
 	g.status = g_dead
 	g.end_time = get_current_time_ns()
 }
+
 func sroutine_yield() {
 	current := get_current_sroutine()
 	if current != nil {
@@ -178,17 +191,20 @@ func sroutine_yield() {
 		schedule_sroutine(current)
 	}
 }
+
 func allocate_stack(size u64) u64 {
 	return 0
 }
+
 func free_stack(addr u64, size u64) {
 }
 
 func get_current_sroutine() sroutine* {
 	return nil
 }
+
 func get_current_time_ns() i64 {
 	return 0
 }
+
 func scheduler_stop() {
-	global_scheduler.schedenable = false

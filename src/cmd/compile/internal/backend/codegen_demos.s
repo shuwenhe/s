@@ -14,6 +14,7 @@ func demo_add_two_numbers() string {
     asm = asm + "\tret\n"
     asm
 }
+
 func demo_fibonacci(int n) string {
     pipeline := make_compiler_pipeline()
     asm := ".intel_syntax noprefix\n"
@@ -46,6 +47,7 @@ func demo_fibonacci(int n) string {
     asm = asm + "\tret\n"
     asm
 }
+
 func demo_factorial() string {
     pipeline := make_compiler_pipeline()
     asm := ".intel_syntax noprefix\n"
@@ -67,6 +69,7 @@ func demo_factorial() string {
     asm = asm + "\tret\n"
     asm
 }
+
 func demo_array_sum() string {
     pipeline := make_compiler_pipeline()
     asm := ".intel_syntax noprefix\n"
@@ -89,6 +92,7 @@ func demo_array_sum() string {
     asm = asm + "\tret\n"
     asm
 }
+
 func demo_hello_world() string {
     pipeline := make_compiler_pipeline()
     asm := ".intel_syntax noprefix\n"
@@ -106,4 +110,3 @@ func demo_hello_world() string {
     asm = asm + "\txor\trax, rax\n"
     asm = asm + "\tpop\trbp\n"
     asm = asm + "\tret\n"
-    asm

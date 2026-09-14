@@ -23,6 +23,7 @@ enum value_op {
     op_branch,
     op_switch,
 }
+
 struct ssa_value {
     i32 id
     string name
@@ -34,6 +35,7 @@ struct ssa_value {
     string const_value
     bool removed
 }
+
 struct ssa_phi {
     i32 id
     i32 var_id
@@ -41,6 +43,7 @@ struct ssa_phi {
     i32[] value_preds
     string type_str
 }
+
 struct ssa_block {
     i32 id
     string label
@@ -50,6 +53,7 @@ struct ssa_block {
     ssa_phi*[] phis
     bool removed
 }
+
 struct ssa_function {
     string name
     ssa_block*[] blocks
@@ -60,6 +64,7 @@ struct ssa_function {
     i32 block_counter
     map[string]i32 name_to_value
 }
+
 func new_ssa_function(string name) ssa_function* {
     f := new(ssa_function)
     f.name = name
@@ -72,6 +77,7 @@ func new_ssa_function(string name) ssa_function* {
     f.name_to_value = make(map[string]i32)
     f
 }
+
 func (f* ssa_function) new_block(string label) ssa_block* {
     block := new(ssa_block)
     block.id = f.block_counter
@@ -85,6 +91,7 @@ func (f* ssa_function) new_block(string label) ssa_block* {
     f.blocks = append(f.blocks, block)
     block
 }
+
 func (f* ssa_function) new_value(op value_op, string name, string type_str) ssa_value* {
     val := new(ssa_value)
     val.id = f.value_counter
@@ -100,20 +107,24 @@ func (f* ssa_function) new_value(op value_op, string name, string type_str) ssa_
     f.name_to_value[name] = val.id
     val
 }
+
 func (f* ssa_function) new_const_value(string const_val, string type_str) ssa_value* {
     val := f.new_value(op_const, "const_" + const_val, type_str)
     val.is_const = true
     val.const_value = const_val
     val
 }
+
 func (f* ssa_function) new_param_value(string name, string type_str) ssa_value* {
     val := f.new_value(op_param, name, type_str)
     val
 }
+
 func (b* ssa_block) add_value(val* ssa_value) {
     val.block = b.id
     b.values = append(b.values, val)
 }
+
 func (b* ssa_block) add_phi(var_id i32, string type_str) ssa_phi* {
     phi := new(ssa_phi)
     phi.id = i32(len(b.phis))
@@ -124,10 +135,12 @@ func (b* ssa_block) add_phi(var_id i32, string type_str) ssa_phi* {
     b.phis = append(b.phis, phi)
     phi
 }
+
 func (phi* ssa_phi) add_input(pred_block i32, value_id i32) {
     phi.block_preds = append(phi.block_preds, pred_block)
     phi.value_preds = append(phi.value_preds, value_id)
 }
+
 func (f* ssa_function) add_edge(from_id i32, to_id i32) {
     if from_id >= 0 && from_id < i32(len(f.blocks)) {
         from_block := f.blocks[from_id]
@@ -138,6 +151,7 @@ func (f* ssa_function) add_edge(from_id i32, to_id i32) {
         to_block.predecessors = append(to_block.predecessors, from_id)
     }
 }
+
 func (f* ssa_function) build_ssa() {
     for i := i32(0); i < i32(len(f.blocks)); i += 1 {
         block := f.blocks[i]
@@ -154,6 +168,7 @@ func (f* ssa_function) build_ssa() {
         }
     }
 }
+
 struct ssa_opt_stats {
     int constants_folded
     int cse_eliminated
@@ -161,12 +176,14 @@ struct ssa_opt_stats {
     int branches_folded
     int blocks_merged
 }
+
 func ssa_value_at(ssa_function* f, int id) ssa_value* {
     if f == 0 || id < 0 || id >= len(f.values) {
         return 0
     }
     f.values[id]
 }
+
 func ssa_replace_uses(ssa_function* f, int old_id, int new_id) {
     for i := 0; i < len(f.values); i = i + 1 {
         value := f.values[i]
@@ -188,6 +205,7 @@ func ssa_replace_uses(ssa_function* f, int old_id, int new_id) {
         }
     }
 }
+
 func ssa_fold_constants(ssa_function* f) int {
     changed := 0
     for i := 0; i < len(f.values); i = i + 1 {
@@ -220,6 +238,7 @@ func ssa_fold_constants(ssa_function* f) int {
     }
     changed
 }
+
 func ssa_apply_identities(ssa_function* f) int {
     changed := 0
     for i := 0; i < len(f.values); i = i + 1 {
@@ -244,6 +263,7 @@ func ssa_apply_identities(ssa_function* f) int {
     }
     changed
 }
+
 func ssa_eliminate_common_subexpressions(ssa_function* f) int {
     changed := 0
     for i := 0; i < len(f.values); i = i + 1 {
@@ -272,9 +292,11 @@ func ssa_eliminate_common_subexpressions(ssa_function* f) int {
     }
     changed
 }
+
 func ssa_is_pure(value_op op) bool {
     value_op != op_store && value_op != op_call && value_op != op_return && value_op != op_branch && value_op != op_switch
 }
+
 func ssa_mark_live(ssa_function* f, int id, bool[] live) {
     if id < 0 || id >= len(f.values) || live[id] {
         return
@@ -284,6 +306,7 @@ func ssa_mark_live(ssa_function* f, int id, bool[] live) {
         ssa_mark_live(f, f.values[id].args[i], live)
     }
 }
+
 func ssa_eliminate_dead_values(ssa_function* f) int {
     bool[len(f.values)] live
     for i := 0; i < len(f.values); i = i + 1 {
@@ -308,6 +331,7 @@ func ssa_eliminate_dead_values(ssa_function* f) int {
     }
     removed
 }
+
 func ssa_fold_constant_branches(ssa_function* f) int {
     changed := 0
     for i := 0; i < len(f.values); i = i + 1 {
@@ -330,6 +354,7 @@ func ssa_fold_constant_branches(ssa_function* f) int {
     }
     changed
 }
+
 func ssa_merge_trivial_blocks(ssa_function* f) int {
     merged := 0
     for i := 0; i < len(f.blocks); i = i + 1 {
@@ -355,6 +380,7 @@ func ssa_merge_trivial_blocks(ssa_function* f) int {
     }
     merged
 }
+
 func (f* ssa_function) optimize() ssa_opt_stats {
     stats := ssa_opt_stats {}
     stats.constants_folded = ssa_fold_constants(f)
@@ -365,6 +391,7 @@ func (f* ssa_function) optimize() ssa_opt_stats {
     stats.blocks_merged = ssa_merge_trivial_blocks(f)
     stats
 }
+
 func (f* ssa_function) get_value_by_name(string name) ssa_value* {
     if id, ok := f.name_to_value[name]; ok {
         if id >= 0 && id < i32(len(f.values)) {
@@ -373,6 +400,7 @@ func (f* ssa_function) get_value_by_name(string name) ssa_value* {
     }
     nil
 }
+
 func (f* ssa_function) eliminate_dead_code() {
     live := make(map[i32]bool)
     for i := i32(0); i < i32(len(f.values)); i += 1 {
@@ -397,6 +425,7 @@ func (f* ssa_function) eliminate_dead_code() {
         }
     }
 }
+
 func (f* ssa_function) to_string() string {
     s := "SSA Function: " + f.name + "\n"
     for _, block := range f.blocks {
@@ -408,4 +437,3 @@ func (f* ssa_function) to_string() string {
             s += "  phi_" + string(phi.id) + " = phi(...)\n"
         }
     }
-    s

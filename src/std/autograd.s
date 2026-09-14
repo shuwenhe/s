@@ -13,6 +13,7 @@ struct graph_node {
     bool requires_grad
     t.tensor grad
 }
+
 struct ag_tensor {
     t.tensor data
     t.tensor grad
@@ -21,6 +22,7 @@ struct ag_tensor {
     bool is_leaf
     string name
 }
+
 struct computation_graph {
     graph_node[] nodes
     int node_count
@@ -32,6 +34,7 @@ func new_graph() computation_graph {
     _next_node_id = 0
     computation_graph { nodes: graph_node[2000], node_count 0 }
 }
+
 func add_node(computation_graph g, graph_node n) int {
     if g.node_count < 2000 {
         n.id = _next_node_id
@@ -42,6 +45,7 @@ func add_node(computation_graph g, graph_node n) int {
     }
     -1
 }
+
 func get_node(computation_graph g, int id) graph_node {
     int i = 0
     for i < g.node_count {
@@ -50,6 +54,7 @@ func get_node(computation_graph g, int id) graph_node {
     }
     graph_node {}
 }
+
 func _dfs_topo(int node_idx, bool[] visited, int[] order, int order_pos) void {
     if visited[node_idx] { return }
     visited[node_idx] = true
@@ -62,6 +67,7 @@ func _dfs_topo(int node_idx, bool[] visited, int[] order, int order_pos) void {
     order[order_pos] = node_idx
     order_pos = order_pos + 1
 }
+
 func topological_sort() int[] {
     bool[] visited = bool[_global_graph.node_count]
     int[] order = int[_global_graph.node_count]
@@ -75,6 +81,7 @@ func topological_sort() int[] {
     }
     order
 }
+
 func from_tensor(t.tensor data) ag_tensor {
     ag_tensor {
         data: data, grad t.zeros_like(data),
@@ -82,12 +89,14 @@ func from_tensor(t.tensor data) ag_tensor {
         name: ""
     }
 }
+
 func parameter(t.tensor data, string name) ag_tensor {
     int nid = add_leaf_node(data, name)
     ag_tensor {
         data: data, grad t.zeros_like(data), graph_node_id nid, requires_grad true, is_leaf true, name name
     }
 }
+
 func add_leaf_node(t.tensor data, string name) int {
     graph_node n
     n.op_name = "leaf"
@@ -99,19 +108,23 @@ func add_leaf_node(t.tensor data, string name) int {
     n.name = name
     add_node(_global_graph, n)
 }
+
 func detach(ag_tensor t) ag_tensor {
     ag_tensor {
         data: t.data, grad t.zeros_like(t.data),
         graph_node_id: -1, requires_grad false, is_leaf true, name t.name + "_detached"
     }
 }
+
 func item(ag_tensor t) float { t.item(t.data) }
+
 func num_params(ag_tensor t) int { t.numel(t.data) }
 
 func ag_info(ag_tensor t) void {
     println("ag_tensor(name=" + t.name + ", shape=" + t.shape_str(t.shape) +
             ", req_grad=" + string(t.requires_grad) + ", leaf=" + string(t.is_leaf) + ")")
 }
+
 func ag_add(ag_tensor a, ag_tensor b) ag_tensor {
     t.tensor out_data = t.add(a.data, b.data)
     bool req_grad = a.requires_grad || b.requires_grad
@@ -122,6 +135,7 @@ func ag_add(ag_tensor a, ag_tensor b) ag_tensor {
         name: "add"
     }
 }
+
 func ag_add_scalar(ag_tensor a, float s) ag_tensor {
     t.tensor out_data = t.add_scalar(a.data, s)
     int nid = register_op("add_scalar", [a.graph_node_id], out_data,
@@ -130,45 +144,53 @@ func ag_add_scalar(ag_tensor a, float s) ag_tensor {
         data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad a.requires_grad, is_leaf false, name: "add_s"
     }
 }
+
 func ag_sub(ag_tensor a, ag_tensor b) ag_tensor {
     t.tensor out_data = t.sub(a.data, b.data)
     bool rg = a.requires_grad || b.requires_grad
     int nid = register_op("sub", [a.graph_node_id, b.graph_node_id], out_data, rg, float[0], int[0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad rg, is_leaf false, name: "sub" }
 }
+
 func ag_mul(ag_tensor a, ag_tensor b) ag_tensor {
     t.tensor out_data = t.mul(a.data, b.data)
     bool rg = a.requires_grad || b.requires_grad
     int nid = register_op("mul", [a.graph_node_id, b.graph_node_id], out_data, rg, float[0], int[0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad rg, is_leaf false, name: "mul" }
 }
+
 func ag_mul_scalar(ag_tensor a, float s) ag_tensor {
     t.tensor out_data = t.mul_scalar(a.data, s)
     int nid = register_op("mul_scalar", [a.graph_node_id], out_data, a.requires_grad, [s], int[0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad a.requires_grad, is_leaf false, name: "mul_s" }
 }
+
 func ag_div(ag_tensor a, ag_tensor b) ag_tensor {
     t.tensor out_data = t.div(a.data, b.data)
     bool rg = a.requires_grad || b.requires_grad
     int nid = register_op("div", [a.graph_node_id, b.graph_node_id], out_data, rg, float[0], int[0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad rg, is_leaf false, name: "div" }
 }
+
 func ag_matmul(ag_tensor a, ag_tensor b) ag_tensor {
     t.tensor out_data = t.matmul(a.data, b.data)
     bool rg = a.requires_grad || b.requires_grad
     int nid = register_op("matmul", [a.graph_node_id, b.graph_node_id], out_data, rg, float[0], int[0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad rg, is_leaf false, name: "matmul" }
 }
+
 func ag_relu(ag_tensor x) ag_tensor {
     t.tensor out_data = t.relu(x.data)
     int nid = register_op("relu", [x.graph_node_id], out_data, x.requires_grad, float[0], int[0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "relu" }
 }
+
 func ag_gelu(ag_tensor x) ag_tensor {
     t.tensor out_data = t.gelu(x.data)
     int nid = register_op("gelu", [x.graph_node_id], out_data, x.requires_grad, float[0], int[0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "gelu" }
 }
+
 func ag_softmax(ag_tensor x, int dim) ag_tensor {
     t.tensor out_data = t.softmax(x.data, dim)
     int sz = t.numel(out_data)
@@ -178,11 +200,13 @@ func ag_softmax(ag_tensor x, int dim) ag_tensor {
     int nid = register_op("softmax", [x.graph_node_id], out_data, x.requires_grad, cache, [dim])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "softmax" }
 }
+
 func ag_layer_norm(ag_tensor x, float eps) ag_tensor {
     t.tensor out_data = t.layer_norm(x.data, eps)
     int nid = register_op("layer_norm", [x.graph_node_id], out_data, x.requires_grad, [eps], int[0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "layernorm" }
 }
+
 func ag_sigmoid(ag_tensor x) ag_tensor {
     t.tensor out_data = t.sigmoid(x.data)
     int sz = t.numel(out_data)
@@ -192,6 +216,7 @@ func ag_sigmoid(ag_tensor x) ag_tensor {
     int nid = register_op("sigmoid", [x.graph_node_id], out_data, x.requires_grad, cache, int[0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "sigmoid" }
 }
+
 func ag_tanh(ag_tensor x) ag_tensor {
     t.tensor out_data = t.tanh_t(x.data)
     int sz = t.numel(out_data)
@@ -201,42 +226,50 @@ func ag_tanh(ag_tensor x) ag_tensor {
     int nid = register_op("tanh", [x.graph_node_id], out_data, x.requires_grad, cache, int[0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "tanh" }
 }
+
 func ag_mean(ag_tensor x, int dim, bool keepdim) ag_tensor {
     t.tensor out_data = t.mean_dim(x.data, dim, keepdim)
     int nid = register_op("mean", [x.graph_node_id], out_data, x.requires_grad, float[0], [dim, keepdim ? 1 : 0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "mean" }
 }
+
 func ag_sum(ag_tensor x, int dim, bool keepdim) ag_tensor {
     t.tensor out_data = t.sum_dim(x.data, dim, keepdim)
     int nid = register_op("sum", [x.graph_node_id], out_data, x.requires_grad, float[0], [dim, keepdim ? 1 : 0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "sum" }
 }
+
 func ag_view(ag_tensor x, int[] shape) ag_tensor {
     t.tensor out_data = t.reshape(x.data, shape)
     int nid = register_op("view", [x.graph_node_id], out_data, x.requires_grad, float[0], shape)
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "view" }
 }
+
 func ag_transpose(ag_tensor x, int d0, int d1) ag_tensor {
     t.tensor out_data = t.transpose(x.data, d0, d1)
     int nid = register_op("transpose", [x.graph_node_id], out_data, x.requires_grad, float[0], [d0, d1))
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "transpose" }
 }
+
 func ag_square(ag_tensor x) ag_tensor {
     t.tensor out_data = t.square(x.data)
     int nid = register_op("square", [x.graph_node_id], out_data, x.requires_grad, float[0], int[0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "square" }
 }
+
 func ag_neg(ag_tensor x) ag_tensor {
     t.tensor out_data = t.neg(x.data)
     int nid = register_op("neg", [x.graph_node_id], out_data, x.requires_grad, float[0], int[0])
     ag_tensor { data: out_data, grad t.zeros_like(out_data), graph_node_id nid, requires_grad x.requires_grad, is_leaf false, name: "neg" }
 }
+
 func ag_mse_loss(ag_tensor pred, ag_tensor target) ag_tensor {
     t.tensor loss_data = t.mse_loss(pred.data, target.data)
     int nid = register_op("mse_loss", [pred.graph_node_id, target.graph_node_id], loss_data,
                            pred.requires_grad || target.requires_grad, float[0], int[0])
     ag_tensor { data: loss_data, grad t.zeros_like(loss_data), graph_node_id nid, requires_grad true, is_leaf false, name: "mse_loss" }
 }
+
 func ag_cross_entropy(ag_tensor logits, int[] target_classes) ag_tensor {
     t.tensor probs = t.softmax(logits.data, logits.data.shape.ndim - 1)
     t.tensor log_probs = t.log_t(probs)
@@ -264,18 +297,21 @@ func ag_cross_entropy(ag_tensor logits, int[] target_classes) ag_tensor {
     int nid = register_op("cross_entropy", [logits.graph_node_id], loss_data, true, cache, target_classes)
     ag_tensor { data: loss_data, grad t.scalar(0.0), graph_node_id nid, requires_grad true, is_leaf false, name: "ce_loss" }
 }
+
 func ag_l1_loss(ag_tensor pred, ag_tensor target) ag_tensor {
     t.tensor loss_data = t.l1_loss(pred.data, target.data)
     int nid = register_op("l1_loss", [pred.graph_node_id, target.graph_node_id], loss_data,
                            pred.requires_grad || target.requires_grad, float[0], int[0])
     ag_tensor { data: loss_data, grad t.zeros_like(loss_data), graph_node_id nid, requires_grad true, is_leaf false, name: "l1_loss" }
 }
+
 func ag_bce_logits(ag_tensor logits, ag_tensor targets) ag_tensor {
     t.tensor loss_data = t.bce_logits_loss(logits.data, targets.data)
     int nid = register_op("bce_logits", [logits.graph_node_id, targets.graph_node_id], loss_data,
                            logits.requires_grad || targets.requires_grad, float[0], int[0])
     ag_tensor { data: loss_data, grad t.zeros_like(loss_data), graph_node_id nid, requires_grad true, is_leaf false, name: "bce_logits" }
 }
+
 func backward(ag_tensor loss_tensor) map<string, t.tensor> {
     int loss_nid = loss_tensor.graph_node_id
     if loss_nid >= 0 && loss_nid < _global_graph.node_count {
@@ -295,6 +331,7 @@ func backward(ag_tensor loss_tensor) map<string, t.tensor> {
     }
     collect_leaf_gradients()
 }
+
 func compute_backward(graph_node node) void {
     t.tensor grad_out = node.grad
     string op = node.op_name
@@ -463,6 +500,7 @@ func compute_backward(graph_node node) void {
         t.tensor grad_p = t.div_scalar(diff, n as float)
         accumulate_grad(node.input_node_ids[0], t.mul(grad_out, grad_p))
     }
+
 func accumulate_grad(int target_nid, t.tensor grad_delta) void {
     if target_nid >= 0 && target_nid < _global_graph.node_count {
         t.tensor current = _global_graph.nodes[target_nid].grad
@@ -475,6 +513,7 @@ func accumulate_grad(int target_nid, t.tensor grad_delta) void {
         _global_graph.nodes[target_nid].grad = current
     }
 }
+
 func collect_leaf_gradients() map[string, t.tensor> {
     map<string, t.tensor> result = new_map()
     int i = 0
@@ -487,20 +526,24 @@ func collect_leaf_gradients() map[string, t.tensor> {
     }
     result
 }
+
 func get_output(int nid) t.tensor {
     if nid >= 0 && nid < _global_graph.node_count {
         return _global_graph.nodes[nid].output_data
     }
     t.zeros({0})
 }
+
 func make_cache_tensor(float[] cache, int[] shape) t.tensor {
     t.tensor t = t.make_tensor(cache, shape)
     t
 }
+
 func broadcast_to(t.tensor grad, int[] orig_shape) t.tensor {
     t.tensor r = t.reshape(grad, orig_shape)
     r
 }
+
 func elemwise_sign(t.tensor t) t.tensor {
     int n = t.numel(t)
     float[] v = float[n]
@@ -513,6 +556,7 @@ func elemwise_sign(t.tensor t) t.tensor {
     }
     t.tensor { shape: t.shape, data v, device: "cpu", requires_grad false }
 }
+
 func register_op(string op_name, int[] input_ids, t.tensor output, bool req_grad,
                   float[] cache_f, int[] cache_i) int {
     graph_node n
@@ -526,12 +570,14 @@ func register_op(string op_name, int[] input_ids, t.tensor output, bool req_grad
     n.grad = t.zeros_like(output)
     add_node(_global_graph, n)
 }
+
 func cache_to_ints(int[] arr, int start, int count) int[] {
     int[] result = int[count]
     int i = 0
     for i < count { (i) = arr[start + i]; i = i + 1 }
     result
 }
+
 struct optimizer {
     string name
     float lr
@@ -543,21 +589,25 @@ struct optimizer {
     map<string, t.tensor> velocity
     map<string, t.tensor> second_moment
 }
+
 func make_sgd(float lr, float mom, float w_decay) optimizer {
     optimizer {
         name: "sgd", lr lr, momentum mom, weight_decay w_decay, eps 1e-8, step 0
     }
 }
+
 func make_adam(float lr, float b1, float b2, float w_decay, float eps) optimizer {
     optimizer {
         name: "adam", lr lr, momentum b1, beta2 b2, weight_decay w_decay, eps eps, step 0
     }
 }
+
 func zero_grad(map<string, ag_tensor> params) void {
     for name, param in params {
         param.grad = t.zeros_like(param.data)
     }
 }
+
 func sgd_step(optimizer opt, map<string, ag_tensor> params) void {
     opt.step = opt.step + 1
     for name, param in params {
@@ -579,6 +629,7 @@ func sgd_step(optimizer opt, map<string, ag_tensor> params) void {
         }
     }
 }
+
 func adam_step(optimizer opt, map<string, ag_tensor> params) void {
     int t = opt.step + 1
     opt.step = t
@@ -608,6 +659,7 @@ func adam_step(optimizer opt, map<string, ag_tensor> params) void {
         param.data = t.sub(param.data, t.mul_scalar(update, opt.lr))
     }
 }
+
 func clip_grad_norm_(map<string, ag_tensor> params, float max_norm) float {
     float total_sq = 0.0
     for name, param in params {
@@ -622,12 +674,13 @@ func clip_grad_norm_(map<string, ag_tensor> params, float max_norm) float {
     }
     total_norm
 }
+
 func clip_grad_value_(map<string, ag_tensor> params, float clip_val) void {
     for name, param in params {
         param.grad = t.clamp_t(param.grad, -clip_val, clip_val)
     }
 }
+
 func lr_step(optimizer opt, int epoch) void {
     if epoch > 0 && mod(epoch, 30) == 0 {
         opt.lr = opt.lr * 0.1
-    }

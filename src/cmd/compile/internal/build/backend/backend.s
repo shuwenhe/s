@@ -8,6 +8,7 @@ import (
 func build(string path, string output, string ssa_margin, bool nostdlib) int {
     build_binary(path, output, ssa_margin, nostdlib)
 }
+
 func run(string path, string ssa_margin, bool nostdlib) int {
     temp_dir_result := std.fs.make_temp_dir("s-build-")
     if temp_dir_result.is_err() {
@@ -26,4 +27,3 @@ func run(string path, string ssa_margin, bool nostdlib) int {
         std.io.eprintln("run failed: process execution failed");
         return 1
     }
-    return 0

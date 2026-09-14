@@ -31,6 +31,7 @@ func test_elf_object_parsing(t testing.T) {
 	}
 	fmt.printf("ELF object creation test passed!\n")
 }
+
 func test_symbol_resolution(t testing.T) {
 	sm := NewSymbolManager()
 	global_sym := SymbolEntry{
@@ -72,6 +73,7 @@ func test_symbol_resolution(t testing.T) {
 	}
 	fmt.printf("Symbol resolution test passed!\n")
 }
+
 func test_relocations(t testing.T) {
 	rp := NewRelocProcessor()
 	sym := SymbolEntry{
@@ -102,6 +104,7 @@ func test_relocations(t testing.T) {
 	}
 	fmt.printf("Relocation test passed!\n")
 }
+
 func test_got_allocation(t testing.T) {
 	gm := NewGOTManager()
 	addr1 := gm.add_entry(0, RELOC_GLOB_DAT)
@@ -120,6 +123,7 @@ func test_got_allocation(t testing.T) {
 	}
 	fmt.printf("GOT allocation test passed!\n")
 }
+
 func test_plt_generation(t testing.T) {
 	pm := NewPLTManager()
 	addr1 := pm.add_entry(0, 0x3000)
@@ -136,6 +140,7 @@ func test_plt_generation(t testing.T) {
 	}
 	fmt.printf("PLT generation test passed!\n")
 }
+
 func test_tls_allocation(t testing.T) {
 	tm := NewTLSManager()
 	off1 := tm.add_variable("errno", 4, 4)
@@ -152,6 +157,7 @@ func test_tls_allocation(t testing.T) {
 	}
 	fmt.printf("TLS allocation test passed!\n")
 }
+
 func test_build_id_generation(t testing.T) {
 	bm := NewBuildIDManager(BID_SHA256)
 	data := u8[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
@@ -166,6 +172,7 @@ func test_build_id_generation(t testing.T) {
 	}
 	fmt.printf("Build-ID generation test passed: %s\n", bid_str)
 }
+
 func test_production_linker_workflow(t testing.T) {
 	config := LinkerConfig{
 		Format: FORMAT_ELF,
@@ -208,6 +215,7 @@ func test_production_linker_workflow(t testing.T) {
 	}
 	fmt.printf("Production linker workflow test passed!\n")
 }
+
 func example_complete_linker_usage() {
 	fmt.println("=== S Language Production Linker Example ===")
 	fmt.println()
@@ -267,4 +275,3 @@ func example_complete_linker_usage() {
 		fmt.printf("  Build-ID: %s\n", linker.BuildIDManager.get_build_id_string())
 	}
 	fmt.println()
-	fmt.println("=== Linking Complete ===")

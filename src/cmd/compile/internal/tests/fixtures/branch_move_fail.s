@@ -5,4 +5,3 @@ func bad(bool flag, string text) string {
     } else {
         "alt"
     };
-    text

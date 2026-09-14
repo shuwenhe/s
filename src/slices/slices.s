@@ -14,6 +14,7 @@ func grow_capacity(int old_cap, int needed) int {
     }
     old_cap
 }
+
 func copy[t](t[] dst, t[] src) int {
     copied := 0
     if len(src) > len(dst) {
@@ -28,6 +29,7 @@ func copy[t](t[] dst, t[] src) int {
     }
     copied
 }
+
 func contains[t](t[] s, t value) bool {
     for i := 0; i < len(s); i++ {
         if s[i] == value {
@@ -36,6 +38,7 @@ func contains[t](t[] s, t value) bool {
     }
     false
 }
+
 func find[t](t[] s, t value) int {
     for i := 0; i < len(s); i++ {
         if s[i] == value {
@@ -44,10 +47,12 @@ func find[t](t[] s, t value) int {
     }
     -1
 }
+
 func clear[t](t[] s) t[] {
     s.len = 0
     s
 }
+
 func reverse[t](t[] s) t[] {
     if len(s) <= 1 {
         return s
@@ -66,6 +71,7 @@ func reverse[t](t[] s) t[] {
     }
     s
 }
+
 func insert[t](t[] s, int idx, t value) (t[], string) {
     if idx < 0 || idx > len(s) {
         return s, "index out of range"
@@ -79,6 +85,7 @@ func insert[t](t[] s, int idx, t value) (t[], string) {
     s[idx] = value
     return s, ""
 }
+
 func remove[t](t[] s, int idx) (t[], string) {
     if idx < 0 || idx >= len(s) {
         return s, "index out of range"
@@ -91,6 +98,7 @@ func remove[t](t[] s, int idx) (t[], string) {
     s.len = s.len - 1
     return s, ""
 }
+
 func remove_range[t](t[] s, int start, int end) (t[], string) {
     if start < 0 || end > len(s) || start > end {
         return s, "invalid range"
@@ -105,12 +113,14 @@ func remove_range[t](t[] s, int start, int end) (t[], string) {
     s.len = s.len - removed_count
     return s, ""
 }
+
 func fill[t](t[] s, t value) t[] {
     for i := 0; i < len(s); i++ {
         s[i] = value
     }
     s
 }
+
 func clone[t](t[] s) t[] {
     if len(s) == 0 {
         return t[]{}
@@ -119,8 +129,9 @@ func clone[t](t[] s) t[] {
     copy(new_slice, s)
     new_slice
 }
+
 func slices_unit_name() string {
     "std.slices"
 }
+
 func slices_unit_ready() int {
-    1

@@ -7,6 +7,7 @@ struct dom_tree {
     int[] idom
     int[] depth
 }
+
 func dom_index(dom_tree t, int block_id) int {
     i := 0
     for i < len(t.block_ids) {
@@ -17,6 +18,7 @@ func dom_index(dom_tree t, int block_id) int {
     }
     -1
 }
+
 func run_dom(ssa_func f) dom_tree {
     ids := int[]()
     idom := int[]()
@@ -60,6 +62,7 @@ func run_dom(ssa_func f) dom_tree {
         block_ids: ids, idom idom, depth depth,
     }
 }
+
 func dominates(dom_tree t, int a, int b) bool {
     if a == b {
         return true
@@ -77,4 +80,3 @@ func dominates(dom_tree t, int a, int b) bool {
         }
         guard = guard + 1
     }
-    false

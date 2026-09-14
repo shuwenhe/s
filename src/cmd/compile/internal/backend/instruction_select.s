@@ -32,18 +32,21 @@ struct x86_operand {
     int mem_offset
     string label_name
 }
+
 struct x86_instruction {
     int instr_type
     x86_operand operand1
     x86_operand operand2
     x86_operand operand3
 }
+
 struct instruction_selector {
     ir_function ir_func
     x86_instruction[] x86_instrs
     string[] var_to_reg_map
     int stack_offset
 }
+
 func instruction_selector_new(ir_function ir_func) instruction_selector {
     selector := instruction_selector {
         ir_func: ir_func,
@@ -53,6 +56,7 @@ func instruction_selector_new(ir_function ir_func) instruction_selector {
     }
     selector
 }
+
 func instruction_selector_select(instruction_selector* selector) {
     for b_idx := 0; b_idx < selector.ir_func.blocks.len(); b_idx = b_idx + 1 {
         block := selector.ir_func.blocks[b_idx]
@@ -62,6 +66,7 @@ func instruction_selector_select(instruction_selector* selector) {
         }
     }
 }
+
 func instruction_selector_process_instruction(instruction_selector* selector, ir_instruction instr) {
     if instr.instr_type == 1 {
         selector_handle_load(selector, instr)
@@ -77,6 +82,7 @@ func instruction_selector_process_instruction(instruction_selector* selector, ir
         selector_handle_return(selector, instr)
     }
 }
+
 func selector_handle_load(instruction_selector* selector, ir_instruction instr) {
     src_reg := allocate_register(selector, instr.operands[0].var_name)
     dst_reg := allocate_register(selector, instr.result.var_name)
@@ -88,6 +94,7 @@ func selector_handle_load(instruction_selector* selector, ir_instruction instr) 
     }
     selector.x86_instrs = append(selector.x86_instrs, mov_instr)
 }
+
 func selector_handle_store(instruction_selector* selector, ir_instruction instr) {
     src_reg := allocate_register(selector, instr.operands[0].var_name)
     dst_reg := allocate_register(selector, instr.result.var_name)
@@ -99,6 +106,7 @@ func selector_handle_store(instruction_selector* selector, ir_instruction instr)
     }
     selector.x86_instrs = append(selector.x86_instrs, mov_instr)
 }
+
 func selector_handle_binop(instruction_selector* selector, ir_instruction instr) {
     left_reg := allocate_register(selector, instr.operands[0].var_name)
     right_reg := allocate_register(selector, instr.operands[1].var_name)
@@ -112,6 +120,7 @@ func selector_handle_binop(instruction_selector* selector, ir_instruction instr)
     }
     selector.x86_instrs = append(selector.x86_instrs, binop_instr)
 }
+
 func selector_handle_unop(instruction_selector* selector, ir_instruction instr) {
     operand_reg := allocate_register(selector, instr.operands[0].var_name)
     result_reg := allocate_register(selector, instr.result.var_name)
@@ -123,6 +132,7 @@ func selector_handle_unop(instruction_selector* selector, ir_instruction instr) 
     }
     selector.x86_instrs = append(selector.x86_instrs, mov_instr)
 }
+
 func selector_handle_call(instruction_selector* selector, ir_instruction instr) {
     call_instr := x86_instruction {
         instr_type: instr_call,
@@ -132,6 +142,7 @@ func selector_handle_call(instruction_selector* selector, ir_instruction instr) 
     }
     selector.x86_instrs = append(selector.x86_instrs, call_instr)
 }
+
 func selector_handle_return(instruction_selector* selector, ir_instruction instr) {
     ret_instr := x86_instruction {
         instr_type: instr_ret,
@@ -141,6 +152,7 @@ func selector_handle_return(instruction_selector* selector, ir_instruction instr
     }
     selector.x86_instrs = append(selector.x86_instrs, ret_instr)
 }
+
 func allocate_register(instruction_selector* selector, string var_name) int {
     for i := 0; i < selector.var_to_reg_map.len(); i = i + 1 {
         if selector.var_to_reg_map[i] == var_name {
@@ -151,6 +163,7 @@ func allocate_register(instruction_selector* selector, string var_name) int {
     selector.var_to_reg_map = append(selector.var_to_reg_map, var_name)
     reg_id
 }
+
 func ir_opcode_to_x86(int opcode) int {
     switch opcode {
         case 1:
@@ -163,4 +176,3 @@ func ir_opcode_to_x86(int opcode) int {
             return instr_div
         default:
             return instr_mov
-    }

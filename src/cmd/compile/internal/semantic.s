@@ -11,6 +11,7 @@ struct type_binding {
     string name
     string type_name
 }
+
 struct function_binding {
     string name
     string owner_type
@@ -20,33 +21,39 @@ struct function_binding {
     string[] param_types
     string return_type
 }
+
 struct method_binding {
     string name
     string receiver_mode
     string[] param_types
     string return_type
 }
+
 struct trait_binding {
     string name
     method_binding[] methods
 }
+
 struct const_binding {
     string name
     string type_name
     bool has_int_value
     int int_value
 }
+
 struct const_eval_int_result {
     bool ok
     int value
     string error
 }
+
 struct borrow_record {
     string name
     bool mutable
     bool moved
     bool copyable
 }
+
 struct signature_match {
     bool ok
     string return_type
@@ -56,18 +63,22 @@ struct signature_match {
     int generic_bind_count
     int unknown_arg_count
 }
+
 struct check_result {
     string type_name
     int errors
 }
+
 struct pattern_check_result {
     type_binding[] bindings
     int errors
 }
+
 struct source_pos {
     int line
     int column
 }
+
 struct semantic_error {
     string code
     string message
@@ -82,6 +93,7 @@ struct semantic_error {
     int line
     int column
 }
+
 func check_text(string source) int {
     diagnostics := check_detailed(source);
     if std.prelude.len(diagnostics) > 0 {
@@ -89,9 +101,11 @@ func check_text(string source) int {
     }
     0
 }
+
 func borrow_state_new() borrow_record[] {
     borrow_record[]()
 }
+
 func borrow_state_clone(borrow_record[] state) borrow_record[] {
     copied := borrow_record[]()
     i := 0
@@ -101,6 +115,7 @@ func borrow_state_clone(borrow_record[] state) borrow_record[] {
     }
     copied
 }
+
 func borrow_state_merge_moves(borrow_record[] target, borrow_record[] source) {
     i := 0
     for i < std.prelude.len(source) {
@@ -115,11 +130,13 @@ func borrow_state_merge_moves(borrow_record[] target, borrow_record[] source) {
         i = i + 1
     }
 }
+
 func borrow_state_push(borrow_record[] state, string name, bool mutable) {
     state.push(borrow_record {
         name: name, mutable mutable, moved: false, copyable: false,
     })
 }
+
 func borrow_state_clear(borrow_record[] state) {
     kept := borrow_record[]()
     i := 0
@@ -136,6 +153,7 @@ func borrow_state_clear(borrow_record[] state) {
         i = i + 1
     }
 }
+
 func borrow_state_has_conflict(borrow_record[] state, string name, bool mutable) bool {
     i := 0
     for i < std.prelude.len(state) {
@@ -148,6 +166,7 @@ func borrow_state_has_conflict(borrow_record[] state, string name, bool mutable)
     }
     false
 }
+
 func borrow_places_overlap(string left, string right) bool {
     if left == right { return true }
     if left == "" || right == "" { return false }
@@ -159,6 +178,7 @@ func borrow_places_overlap(string left, string right) bool {
     }
     false
 }
+
 func borrow_state_find(borrow_record[] state, string name) int {
     i := 0
     for i < std.prelude.len(state) {
@@ -167,9 +187,11 @@ func borrow_state_find(borrow_record[] state, string name) int {
     }
     -1
 }
+
 func borrow_type_is_copy(string type_name) bool {
     compile.internal.typesys.is_copy_type(type_name)
 }
+
 func borrow_state_mark_move(borrow_record[] state, string name, string type_name) {
     index := borrow_state_find(state, name)
     copyable := borrow_type_is_copy(type_name)
@@ -181,6 +203,7 @@ func borrow_state_mark_move(borrow_record[] state, string name, string type_name
         state[index].moved = true
     }
 }
+
 func check_move_value(string name, string type_name, borrow_record[] state, string source, semantic_error[] diagnostics) int {
     errors := 0
     if !borrow_type_is_copy(type_name) && borrow_state_has_conflict(state, name, true) {
@@ -189,10 +212,12 @@ func check_move_value(string name, string type_name, borrow_record[] state, stri
     borrow_state_mark_move(state, name, type_name)
     errors
 }
+
 func borrow_state_is_moved(borrow_record[] state, string name) bool {
     index := borrow_state_find(state, name)
     index >= 0 && state[index].moved
 }
+
 func borrow_place_name(expr value) string {
     switch value {
         expr::name(name_value) : name_value.name,
@@ -203,6 +228,7 @@ func borrow_place_name(expr value) string {
         _ : "",
     }
 }
+
 func check_detailed(string source) semantic_error[] {
     diagnostics := semantic_error[]()
     if !compile.internal.typesys.rules_consistent() {
@@ -227,6 +253,7 @@ func check_detailed(string source) semantic_error[] {
     }
     finalize_diagnostics(diagnostics)
 }
+
 func check_source_file(source_file file, string source) semantic_error[] {
     diagnostics := semantic_error[]()
     if !compile.internal.typesys.rules_consistent() {
@@ -244,6 +271,7 @@ func check_source_file(source_file file, string source) semantic_error[] {
     }
     finalize_diagnostics(diagnostics)
 }
+
 func run_preparse_semantic_completeness_checks(string source, semantic_error[] diagnostics) {
     ignored0 := validate_control_flow_semantics(source, diagnostics)
     ignored1 := validate_recovery_semantics(source, diagnostics)
@@ -252,6 +280,7 @@ func run_preparse_semantic_completeness_checks(string source, semantic_error[] d
     ignored4 := validate_semantic_proof_chain(source, diagnostics)
     ignored5 := validate_unsafe_boundaries(source, diagnostics)
 }
+
 func validate_unsafe_boundaries(string source, semantic_error[] diagnostics) int {
     errors := 0
     unsafe_blocks := count_token_text(source, "unsafe {")
@@ -273,6 +302,7 @@ func validate_unsafe_boundaries(string source, semantic_error[] diagnostics) int
     }
     errors
 }
+
 func validate_concurrency_semantics(string source, semantic_error[] diagnostics) int {
     errors := 0
     go_count := count_token_text(source, "\ngo(") + count_token_text(source, "\ngo ")
@@ -304,6 +334,7 @@ func validate_concurrency_semantics(string source, semantic_error[] diagnostics)
     }
     errors
 }
+
 func validate_control_flow_semantics(string source, semantic_error[] diagnostics) int {
     errors := 0
     label_defs := count_token_text(source, "label ")
@@ -322,6 +353,7 @@ func validate_control_flow_semantics(string source, semantic_error[] diagnostics
     }
     errors
 }
+
 func validate_recovery_semantics(string source, semantic_error[] diagnostics) int {
     errors := 0
     defer_count := count_token_text(source, "defer ")
@@ -344,6 +376,7 @@ func validate_recovery_semantics(string source, semantic_error[] diagnostics) in
     }
     errors
 }
+
 func validate_method_interface_semantics(string source, semantic_error[] diagnostics) int {
     errors := 0
     receiver_mut := count_token_text(source, "&")
@@ -359,6 +392,7 @@ func validate_method_interface_semantics(string source, semantic_error[] diagnos
     }
     errors
 }
+
 func validate_semantic_proof_chain(string source, semantic_error[] diagnostics) int {
     errors := 0
     defer_count := count_token_text(source, "defer ")
@@ -376,6 +410,7 @@ func validate_semantic_proof_chain(string source, semantic_error[] diagnostics) 
     }
     errors
 }
+
 func count_token_text(string text, string token) int {
     if token == "" {
         return 0
@@ -392,12 +427,14 @@ func count_token_text(string text, string token) int {
     }
     count
 }
+
 func finalize_diagnostics(semantic_error[] diagnostics) semantic_error[] {
     deduped := dedupe_diagnostics(diagnostics)
     anchored := append_anchor_summaries(deduped)
     ordered := sort_diagnostics(anchored)
     apply_diagnostic_budget(ordered)
 }
+
 func append_anchor_summaries(semantic_error[] diagnostics) semantic_error[] {
     out := semantic_error[]()
     i := 0
@@ -434,6 +471,7 @@ func append_anchor_summaries(semantic_error[] diagnostics) semantic_error[] {
     }
     out
 }
+
 func find_anchor_summary_index(semantic_error[] diagnostics, string anchor) int {
     i := 0
     for i < std.prelude.len(diagnostics) {
@@ -444,6 +482,7 @@ func find_anchor_summary_index(semantic_error[] diagnostics, string anchor) int 
     }
     0 - 1
 }
+
 func dedupe_diagnostics(semantic_error[] diagnostics) semantic_error[] {
     out := semantic_error[]()
     i := 0
@@ -462,6 +501,7 @@ func dedupe_diagnostics(semantic_error[] diagnostics) semantic_error[] {
     }
     out
 }
+
 func find_diagnostic_index(semantic_error[] diagnostics, semantic_error candidate) int {
     i := 0
     for i < std.prelude.len(diagnostics) {
@@ -475,6 +515,7 @@ func find_diagnostic_index(semantic_error[] diagnostics, semantic_error candidat
     }
     0 - 1
 }
+
 func sort_diagnostics(semantic_error[] diagnostics) semantic_error[] {
     out := semantic_error[]()
     i := 0
@@ -495,6 +536,7 @@ func sort_diagnostics(semantic_error[] diagnostics) semantic_error[] {
     }
     out
 }
+
 func insert_diagnostic(semantic_error[] diagnostics, int at, semantic_error item) {
     diagnostics = append(diagnostics, item)
     i := std.prelude.len(diagnostics) - 1
@@ -504,6 +546,7 @@ func insert_diagnostic(semantic_error[] diagnostics, int at, semantic_error item
     }
     diagnostics[at] = item
 }
+
 func diagnostic_before(semantic_error left, semantic_error right) bool {
     if left.tier != right.tier {
         return left.tier < right.tier
@@ -521,6 +564,7 @@ func diagnostic_before(semantic_error left, semantic_error right) bool {
     }
     left.code < right.code
 }
+
 func severity_rank(string severity) int {
     if severity == "fatal" {
         return 0
@@ -533,6 +577,7 @@ func severity_rank(string severity) int {
     }
     3
 }
+
 func apply_diagnostic_budget(semantic_error[] diagnostics) semantic_error[] {
     max_total := 128
     max_warnings := 24
@@ -556,6 +601,7 @@ func apply_diagnostic_budget(semantic_error[] diagnostics) semantic_error[] {
     }
     out
 }
+
 func validate_function_set(function_binding[] functions, string source, semantic_error[] diagnostics) int {
     errors := 0
     i := 0
@@ -585,6 +631,7 @@ func validate_function_set(function_binding[] functions, string source, semantic
     }
     errors
 }
+
 func same_param_types(string[] left, string[] right) bool {
     if std.prelude.len(left) != std.prelude.len(right) {
         return false
@@ -598,9 +645,11 @@ func same_param_types(string[] left, string[] right) bool {
     }
     true
 }
+
 func is_main_package(string source) bool {
     contains_token(source, "package main")
 }
+
 func collect_functions(item[] items) function_binding[] {
     out := function_binding[]()
     i := 0
@@ -614,6 +663,7 @@ func collect_functions(item[] items) function_binding[] {
     }
     out
 }
+
 func make_function_binding(function_decl function_decl) function_binding {
     generic_names := string[]()
     i := 0
@@ -638,6 +688,7 @@ func make_function_binding(function_decl function_decl) function_binding {
         receiver_mode: "value", generic_names generic_names, param_types params, return_type return_type,
     };
 }
+
 func make_receiver_method_binding(receiver_method_decl method_decl) function_binding {
     binding := make_function_binding(method_decl.method)
     params := string[]()
@@ -653,6 +704,7 @@ func make_receiver_method_binding(receiver_method_decl method_decl) function_bin
     binding.param_types = params
     binding
 }
+
 func check_item(item item, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string source, semantic_error[] diagnostics) int {
     switch item {
         item.function(function_decl) : check_function(function_decl, functions, traits, consts, source, diagnostics),
@@ -660,6 +712,7 @@ func check_item(item item, function_binding[] functions, trait_binding[] traits,
         _ : 0,
     }
 }
+
 func collect_consts(item[] items, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) const_binding[] {
     out := const_binding[]()
     type_env := type_binding[]()
@@ -720,6 +773,7 @@ func collect_consts(item[] items, function_binding[] functions, trait_binding[] 
     }
     out
 }
+
 func eval_const_int_expr(expr value, const_binding[] known_consts, int iota_value) const_eval_int_result {
     switch value {
         expr::int(int_expr) : const_eval_int_result {
@@ -795,6 +849,7 @@ func eval_const_int_expr(expr value, const_binding[] known_consts, int iota_valu
         },
     }
 }
+
 func parse_const_int_literal(string literal) int {
     text := literal
     sign := 1
@@ -813,6 +868,7 @@ func parse_const_int_literal(string literal) int {
     }
     sign * out
 }
+
 func const_digit_value(string ch) int {
     if ch == "0" {
         return 0
@@ -846,6 +902,7 @@ func const_digit_value(string ch) int {
     }
     0
 }
+
 func collect_traits(item[] items) trait_binding[] {
     out := trait_binding[]()
     i := 0
@@ -883,6 +940,7 @@ func collect_traits(item[] items) trait_binding[] {
     }
     out
 }
+
 func find_trait_binding(trait_binding[] traits, string name) option[trait_binding] {
     i := 0
     for i < std.prelude.len(traits) {
@@ -893,6 +951,7 @@ func find_trait_binding(trait_binding[] traits, string name) option[trait_bindin
     }
     option.none
 }
+
 func find_trait_method(trait_binding trait_info, string name) option[method_binding] {
     i := 0
     for i < std.prelude.len(trait_info.methods) {
@@ -903,6 +962,7 @@ func find_trait_method(trait_binding trait_info, string name) option[method_bind
     }
     option.none
 }
+
 func receiver_type_implements_trait(string receiver_type, trait_binding trait_info, function_binding[] functions) bool {
     mi := 0
     for mi < std.prelude.len(trait_info.methods) {
@@ -923,6 +983,7 @@ func receiver_type_implements_trait(string receiver_type, trait_binding trait_in
     }
     true
 }
+
 func method_binding_matches_trait(function_binding method, method_binding requirement) bool {
     if method.name != requirement.name {
         return false
@@ -939,6 +1000,7 @@ func method_binding_matches_trait(function_binding method, method_binding requir
     }
     compile.internal.typesys.same_type(method.return_type, requirement.return_type)
 }
+
 func receiver_mode_from_type(string receiver_type) string {
     if starts_with(receiver_type, "&") || starts_with(receiver_type, "*") {
         return "ref"
@@ -948,12 +1010,15 @@ func receiver_mode_from_type(string receiver_type) string {
     }
     "value"
 }
+
 func receiver_mode_from_signature(function_decl method_decl) string {
     receiver_mode_from_params(method_decl.sig.params)
 }
+
 func receiver_mode_from_param_name(param_decl[] params) string {
     receiver_mode_from_params(params)
 }
+
 func receiver_mode_from_params(param_decl[] params) string {
     if std.prelude.len(params) == 0 {
         return "value"
@@ -969,6 +1034,7 @@ func receiver_mode_from_params(param_decl[] params) string {
     }
     "value"
 }
+
 func check_receiver_method(receiver_method_decl method_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string source, semantic_error[] diagnostics) int {
     method := method_decl.method
     if method.body.is_none() {
@@ -1007,6 +1073,7 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
     }
     pre_errors + result.errors
 }
+
 func check_function(function_decl function_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string source, semantic_error[] diagnostics) int {
     if function_decl.body.is_none() {
         return 0
@@ -1043,6 +1110,7 @@ func check_function(function_decl function_decl, function_binding[] functions, t
     }
     pre_errors + result.errors
 }
+
 func validate_function_signature(function_decl function_decl, string source, semantic_error[] diagnostics) int {
     errors := 0
     switch function_decl.sig.return_type {
@@ -1097,6 +1165,7 @@ func validate_function_signature(function_decl function_decl, string source, sem
     }
     errors
 }
+
 func infer_block_expr(block_expr block, type_binding[] outer_env, borrow_record[] incoming_borrows, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) check_result {
     local_env := clone_env(outer_env)
     borrow_state := borrow_state_clone(incoming_borrows)
@@ -1121,6 +1190,7 @@ func infer_block_expr(block_expr block, type_binding[] outer_env, borrow_record[
         },
     }
 }
+
 func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) int {
     switch stmt {
         stmt.let(value) : {
@@ -1233,6 +1303,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
         }
     }
 }
+
 func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) check_result {
     switch expr {
         expr::int(_) : ok_type("int"),
@@ -1691,12 +1762,14 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
         }
     }
 }
+
 func is_borrow_expr(expr value) bool {
     switch value {
         expr::borrow(_) : true,
         _ : false,
     }
 }
+
 func check_pattern(pattern pattern, string expected_type, string source, semantic_error[] diagnostics) pattern_check_result {
     bindings := type_binding[]()
     errors := bind_pattern(pattern, expected_type, bindings, source, diagnostics)
@@ -1704,6 +1777,7 @@ func check_pattern(pattern pattern, string expected_type, string source, semanti
         bindings: bindings, errors errors,
     }
 }
+
 func bind_pattern(pattern pattern, string expected_type, type_binding[] bindings, string source, semantic_error[] diagnostics) int {
     if is_unknown(expected_type) {
         return add_error(source, diagnostics, "e2007", "pattern expected type is unknown", pattern_anchor(pattern))
@@ -1757,6 +1831,7 @@ func bind_pattern(pattern pattern, string expected_type, type_binding[] bindings
         }
     }
 }
+
 func add_binding(type_binding[] bindings, string name, string type_name, string source, semantic_error[] diagnostics) int {
     if name == "_" {
         return 0
@@ -1777,6 +1852,7 @@ func add_binding(type_binding[] bindings, string name, string type_name, string 
     ;
     0
 }
+
 func append_bindings(type_binding[] target, type_binding[] source) {
     i := 0
     for i < std.prelude.len(source) {
@@ -1784,6 +1860,7 @@ func append_bindings(type_binding[] target, type_binding[] source) {
         i = i + 1
     }
 }
+
 func pattern_duplicate(pattern[] seen, pattern current, string expected_type) bool {
     i := 0
     for i < std.prelude.len(seen) {
@@ -1794,6 +1871,7 @@ func pattern_duplicate(pattern[] seen, pattern current, string expected_type) bo
     }
     false
 }
+
 func pattern_unreachable(pattern[] seen, pattern current, string expected_type) bool {
     i := 0
     for i < std.prelude.len(seen) {
@@ -1804,9 +1882,11 @@ func pattern_unreachable(pattern[] seen, pattern current, string expected_type) 
     }
     false
 }
+
 func pattern_equivalent(pattern left, pattern right, string expected_type) bool {
     pattern_subsumes(left, right, expected_type) && pattern_subsumes(right, left, expected_type)
 }
+
 func pattern_subsumes(pattern left, pattern right, string expected_type) bool {
     if pattern_is_wild(left) {
         return true
@@ -1847,6 +1927,7 @@ func pattern_subsumes(pattern left, pattern right, string expected_type) bool {
         _ : false,
     }
 }
+
 func patterns_cover_type(pattern[] patterns, string expected_type) bool {
     i := 0
     for i < std.prelude.len(patterns) {
@@ -1864,6 +1945,7 @@ func patterns_cover_type(pattern[] patterns, string expected_type) bool {
     }
     false
 }
+
 func option_patterns_cover(pattern[] patterns, string expected_type) bool {
     seen_none := false
     some_patterns := pattern[]()
@@ -1887,6 +1969,7 @@ func option_patterns_cover(pattern[] patterns, string expected_type) bool {
     }
     patterns_cover_type(some_patterns, first_type_arg(expected_type))
 }
+
 func result_patterns_cover(pattern[] patterns, string expected_type) bool {
     ok_patterns := pattern[]()
     err_patterns := pattern[]()
@@ -1910,6 +1993,7 @@ func result_patterns_cover(pattern[] patterns, string expected_type) bool {
     }
     patterns_cover_type(err_patterns, second_type_arg(expected_type))
 }
+
 func pattern_is_wild(pattern pattern) bool {
     switch pattern {
         pattern::wildcard(_) : true,
@@ -1917,6 +2001,7 @@ func pattern_is_wild(pattern pattern) bool {
         _ : false,
     }
 }
+
 func pattern_anchor(pattern pattern) string {
     switch pattern {
         pattern::name(value) : value.name,
@@ -1925,6 +2010,7 @@ func pattern_anchor(pattern pattern) string {
         pattern::variant(value) : value.path,
     }
 }
+
 func literal_pattern_type(literal_pattern value) string {
     switch value.value {
         expr::int(_) : "int",
@@ -1933,6 +2019,7 @@ func literal_pattern_type(literal_pattern value) string {
         _ : "unknown",
     }
 }
+
 func literal_pattern_text(literal_pattern value) string {
     switch value.value {
         expr::int(v) : v.value,
@@ -1941,9 +2028,11 @@ func literal_pattern_text(literal_pattern value) string {
         _ : "<literal>",
     }
 }
+
 func literal_pattern_equals(literal_pattern left, literal_pattern right) bool {
     literal_pattern_type(left) == literal_pattern_type(right) && literal_pattern_text(left) == literal_pattern_text(right)
 }
+
 func variant_payload_type(string expected_type, string ctor) string {
     base := compile.internal.typesys.base_type_name(expected_type)
     if base == "option" {
@@ -1964,6 +2053,7 @@ func variant_payload_type(string expected_type, string ctor) string {
     }
     "unknown"
 }
+
 func infer_binary(string op, check_result left, check_result right, string source, semantic_error[] diagnostics) check_result {
     errors := left.errors + right.errors
     if op == "+" || op == "-" || op == "*" || op == "/" || op == "%" {
@@ -2007,6 +2097,7 @@ func infer_binary(string op, check_result left, check_result right, string sourc
         type_name: "unknown", errors errors,
     }
 }
+
 func lookup_functions(function_binding[] functions, string name) function_binding[] {
     out := function_binding[]()
     i := 0
@@ -2018,6 +2109,7 @@ func lookup_functions(function_binding[] functions, string name) function_bindin
     }
     out
 }
+
 func lookup_named_methods(function_binding[] functions, string receiver_type, string name) function_binding[] {
     out := function_binding[]()
     normalized_receiver := method_owner_type(receiver_type)
@@ -2030,6 +2122,7 @@ func lookup_named_methods(function_binding[] functions, string receiver_type, st
     }
     out
 }
+
 func lookup_methods(function_binding[] functions, string receiver_type, string name, expr receiver_expr) function_binding[] {
     out := function_binding[]()
     normalized_receiver := method_owner_type(receiver_type)
@@ -2044,6 +2137,7 @@ func lookup_methods(function_binding[] functions, string receiver_type, string n
     }
     out
 }
+
 func method_owner_type(string receiver_type) string {
     if starts_with(receiver_type, "&") {
         return std.prelude.slice(receiver_type, 5, std.prelude.len(receiver_type))
@@ -2053,6 +2147,7 @@ func method_owner_type(string receiver_type) string {
     }
     receiver_type
 }
+
 func receiver_allows_method(string receiver_type, expr receiver_expr, string receiver_mode) bool {
     if receiver_mode == "value" {
         return true
@@ -2071,6 +2166,7 @@ func receiver_allows_method(string receiver_type, expr receiver_expr, string rec
     }
     false
 }
+
 func is_addressable_expr(expr value) bool {
     switch value {
         expr::name(_) : true,
@@ -2079,6 +2175,7 @@ func is_addressable_expr(expr value) bool {
         _ : false,
     }
 }
+
 func method_receiver_arg_type(string receiver_type, string receiver_mode) string {
     owner_type := method_owner_type(receiver_type)
     if receiver_mode == "mut_ref" {
@@ -2089,6 +2186,7 @@ func method_receiver_arg_type(string receiver_type, string receiver_mode) string
     }
     owner_type
 }
+
 func receiver_requirement_message(string method_name, string receiver_mode) string {
     if receiver_mode == "mut_ref" {
         return "method " + method_name + " requires mutable receiver"
@@ -2098,6 +2196,7 @@ func receiver_requirement_message(string method_name, string receiver_mode) stri
     }
     "method " + method_name + " requires compatible receiver"
 }
+
 func try_match_signature(function_binding binding, string[] arg_types, function_binding[] functions, trait_binding[] traits) signature_match {
     if std.prelude.len(binding.param_types) != std.prelude.len(arg_types) {
         return signature_match {
@@ -2135,6 +2234,7 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
         ok: true, return_type instantiate_type(binding.return_type, binding.generic_names, generic_bindings), instance_name specialized_instance_name(binding, generic_bindings), type_args ordered_type_args(binding.generic_names, generic_bindings), score score, generic_bind_count std.prelude.len(generic_bindings), unknown_arg_count unknown_arg_count,
     }
 }
+
 func ordered_type_args(string[] generic_names, type_binding[] bindings) string[] {
     args := string[]()
     i := 0
@@ -2148,6 +2248,7 @@ func ordered_type_args(string[] generic_names, type_binding[] bindings) string[]
     }
     args
 }
+
 func specialized_instance_name(function_binding binding, type_binding[] bindings) string {
     if std.prelude.len(binding.generic_names) == 0 {
         return binding.name
@@ -2164,6 +2265,7 @@ func specialized_instance_name(function_binding binding, type_binding[] bindings
     }
     name
 }
+
 func mono_type_name(string type_name) string {
     out := ""
     i := 0
@@ -2179,6 +2281,7 @@ func mono_type_name(string type_name) string {
     if out == "" { return "unknown" }
     out
 }
+
 func better_match(signature_match left, signature_match right) bool {
     if left.score != right.score {
         return left.score > right.score
@@ -2191,11 +2294,13 @@ func better_match(signature_match left, signature_match right) bool {
     }
     false
 }
+
 func same_match_rank(signature_match left, signature_match right) bool {
     left.score == right.score
         && left.unknown_arg_count == right.unknown_arg_count
         && left.generic_bind_count == right.generic_bind_count
 }
+
 func match_type_pattern_ref(type_ref param_type, type_ref arg_type, string[] generic_names, type_binding[] generic_bindings) bool {
     p := param_type.canonical
     a := arg_type.canonical
@@ -2244,6 +2349,7 @@ func match_type_pattern_ref(type_ref param_type, type_ref arg_type, string[] gen
     }
     true
 }
+
 func match_specificity(type_ref expected, type_ref actual, string[] generic_names) int {
     if compile.internal.typesys.same_type_ref(expected, actual) {
         return 5
@@ -2266,6 +2372,7 @@ func match_specificity(type_ref expected, type_ref actual, string[] generic_name
     }
     score
 }
+
 func instantiate_type(string ty, string[] generic_names, type_binding[] generic_bindings) string {
     clean := compile.internal.typesys.parse_type(ty)
     if is_generic_name(generic_names, clean) {
@@ -2302,6 +2409,7 @@ func instantiate_type(string ty, string[] generic_names, type_binding[] generic_
     }
     built + "]"
 }
+
 func type_contains_generic(string ty, string[] generic_names) bool {
     clean := compile.internal.typesys.parse_type(ty)
     if is_generic_name(generic_names, clean) {
@@ -2329,6 +2437,7 @@ func type_contains_generic(string ty, string[] generic_names) bool {
     }
     false
 }
+
 func is_generic_name(string[] generic_names, string name) bool {
     i := 0
     for i < std.prelude.len(generic_names) {
@@ -2339,6 +2448,7 @@ func is_generic_name(string[] generic_names, string name) bool {
     }
     false
 }
+
 func strip_array_prefix(string ty) string {
     clean := compile.internal.typesys.parse_type(ty)
     if !starts_with(clean, "[") || starts_with(clean, "[]") {
@@ -2360,6 +2470,7 @@ func strip_array_prefix(string ty) string {
     }
     clean
 }
+
 func array_prefix_text(string ty) string {
     clean := compile.internal.typesys.parse_type(ty)
     tail := strip_array_prefix(clean)
@@ -2368,6 +2479,7 @@ func array_prefix_text(string ty) string {
     }
     std.prelude.slice(clean, 0, std.prelude.len(clean) - std.prelude.len(tail))
 }
+
 func generic_name(string raw) string {
     i := 0
     for i < std.prelude.len(raw) {
@@ -2378,6 +2490,7 @@ func generic_name(string raw) string {
     }
     trim_text(raw)
 }
+
 func clone_env(type_binding[] env) type_binding[] {
     out := type_binding[]()
     i := 0
@@ -2387,6 +2500,7 @@ func clone_env(type_binding[] env) type_binding[] {
     }
     out
 }
+
 func lookup_name_type(type_binding[] env, string name) string {
     i := std.prelude.len(env)
     for i > 0 {
@@ -2397,11 +2511,13 @@ func lookup_name_type(type_binding[] env, string name) string {
     }
     "unknown"
 }
+
 func ok_type(string type_name) check_result {
     check_result {
         type_name: compile.internal.typesys.parse_type(type_name), errors 0,
     }
 }
+
 func types_compatible(string left, string right) bool {
     if is_unknown(left) || is_unknown(right) {
         return is_unknown(left) && is_unknown(right
@@ -2417,6 +2533,7 @@ func types_compatible(string left, string right) bool {
     }
     compile.internal.typesys.assignable_type(left, right) || compile.internal.typesys.compatible_type(left, right)
 }
+
 func nil_comparable_pair(string left, string right) bool {
     if is_nil(left) {
         return is_nil(right) || is_nilable_type(right
@@ -2426,9 +2543,11 @@ func nil_comparable_pair(string left, string right) bool {
     }
     false
 }
+
 func is_nil(string type_name) bool {
     compile.internal.typesys.parse_type(type_name) == "nil"
 }
+
 func is_nilable_type(string type_name) bool {
     clean := compile.internal.typesys.parse_type(type_name)
     if clean == "fn" || clean == "map" {
@@ -2440,10 +2559,12 @@ func is_nilable_type(string type_name) bool {
     base := compile.internal.typesys.base_type_name(clean)
     base == "interface" || base == "trait"
 }
+
 func is_unknown(string type_name) bool {
     clean := compile.internal.typesys.parse_type(type_name)
     clean == "" || clean == "unknown"
 }
+
 func declared_type_is_safe(string type_name) bool {
     if is_unknown(type_name) {
         return false
@@ -2456,6 +2577,7 @@ func declared_type_is_safe(string type_name) bool {
     }
     true
 }
+
 func has_duplicate_binding(type_binding[] env, string name) bool {
     i := 0
     for i < std.prelude.len(env) {
@@ -2466,12 +2588,14 @@ func has_duplicate_binding(type_binding[] env, string name) bool {
     }
     false
 }
+
 func is_zero_int_expr(expr value) bool {
     switch value {
         expr::int(number) : number.value == "0",
         _ : false,
     }
 }
+
 func resolve_method_return(string target_type, string method_type) string {
     target_ref := compile.internal.typesys.parse_type_ref(target_type)
     if method_type == "t" {
@@ -2489,12 +2613,15 @@ func resolve_method_return(string target_type, string method_type) string {
     }
     compile.internal.typesys.parse_type(method_type)
 }
+
 func first_type_arg(string type_name) string {
     compile.internal.typesys.type_arg(compile.internal.typesys.parse_type_ref(type_name), 0)
 }
+
 func second_type_arg(string type_name) string {
     compile.internal.typesys.type_arg(compile.internal.typesys.parse_type_ref(type_name), 1)
 }
+
 func add_error(string source, semantic_error[] diagnostics, string code, string message, string anchor) int {
     recovery_anchor := resolve_recovery_anchor(source, anchor)
     chain_id := build_chain_id("semantic", code, recovery_anchor)
@@ -2510,12 +2637,15 @@ func add_error(string source, semantic_error[] diagnostics, string code, string 
     ;
     1
 }
+
 func build_chain_id(string stage, string code, string anchor) string {
     stage + ":" + code + ":" + sanitize_chain_anchor(anchor)
 }
+
 func chain_id_from_anchor(string anchor) string {
     build_chain_id("semantic", "s0001", anchor)
 }
+
 func sanitize_chain_anchor(string anchor) string {
     out := ""
     i := 0
@@ -2533,6 +2663,7 @@ func sanitize_chain_anchor(string anchor) string {
     }
     out
 }
+
 func resolve_recovery_anchor(string source, string anchor) string {
     if anchor != "" && find_substring(source, anchor) >= 0 {
         return anchor
@@ -2548,6 +2679,7 @@ func resolve_recovery_anchor(string source, string anchor) string {
     }
     "package"
 }
+
 func diagnostic_hint(string code, string anchor) string {
     if starts_with_text(code, "e100") {
         return "check overload candidates and argument types near " + anchor
@@ -2563,6 +2695,7 @@ func diagnostic_hint(string code, string anchor) string {
     }
     "review surrounding declaration near " + anchor
 }
+
 func diagnostic_severity(string code) string {
     if starts_with_text(code, "e000") {
         return "fatal"
@@ -2572,6 +2705,7 @@ func diagnostic_severity(string code) string {
     }
     "error"
 }
+
 func diagnostic_tier(string code) int {
     if starts_with_text(code, "e000") {
         return 0
@@ -2581,12 +2715,14 @@ func diagnostic_tier(string code) int {
     }
     1
 }
+
 func starts_with_text(string text, string prefix) bool {
     if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
     std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
 }
+
 func locate_anchor(string source, string anchor) source_pos {
     if anchor == "" {
         return source_pos {
@@ -2601,6 +2737,7 @@ func locate_anchor(string source, string anchor) source_pos {
     }
     index_to_pos(source, idx)
 }
+
 func find_substring(string haystack, string needle) int {
     if needle == "" {
         return 0
@@ -2617,6 +2754,7 @@ func find_substring(string haystack, string needle) int {
     }
     0 - 1
 }
+
 func index_to_pos(string source, int index) source_pos {
     line := 1
     column := 1
@@ -2634,18 +2772,21 @@ func index_to_pos(string source, int index) source_pos {
         line: line, column column,
     }
 }
+
 func starts_with(string text, string prefix) bool {
     if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
     std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
 }
+
 func contains_token(string text, string token) bool {
     if token == "" {
         return true
     }
     index_of(text, token) >= 0
 }
+
 func find_char(string text, string needle) int {
     i := 0
     for i < std.prelude.len(text) {
@@ -2656,6 +2797,7 @@ func find_char(string text, string needle) int {
     }
     0 - 1
 }
+
 func find_last_char(string text, string needle) int {
     i := std.prelude.len(text)
     for i > 0 {
@@ -2666,6 +2808,7 @@ func find_last_char(string text, string needle) int {
     }
     0 - 1
 }
+
 func last_path_segment(string path) string {
     i := std.prelude.len(path)
     for i > 0 {
@@ -2676,6 +2819,7 @@ func last_path_segment(string path) string {
     }
     path
 }
+
 func trim_text(string text) string {
     start := 0
     end := std.prelude.len(text)
@@ -2687,5 +2831,5 @@ func trim_text(string text) string {
     }
     std.prelude.slice(text, start, end)
 }
+
 func is_space(string ch) bool {
-    ch == " " || ch == "\n" || ch == "\t" || ch == "\r"

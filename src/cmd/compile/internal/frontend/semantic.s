@@ -21,27 +21,32 @@ struct symbol_table {
     scope_stack: int[]
     current_scope: int
 }
+
 struct semantic_result {
     ast* ast_node
     symbols: symbol_table
     errors: string[]
     type_info: string[]
 }
+
 func symbol_table_new() symbol_table {
     symbol_table {
         symbols: vec[symbol](), scope_stack vec[int](), current_scope 0
     }
 }
+
 func symbol_table_push_scope(st* symbol_table) {
     st.scope_stack.push(st.current_scope)
     st.current_scope = st.current_scope + 1
 }
+
 func symbol_table_pop_scope(st* symbol_table) {
     if st.scope_stack.len() > 0 {
         st.current_scope = st.scope_stack[st.scope_stack.len() - 1]
         st.scope_stack.pop()
     }
 }
+
 func symbol_table_define(st* symbol_table, string name, int kind, string type_name) int {
     for i := 0; i < st.symbols.len(); i = i + 1 {
         if st.symbols[i].name == name && st.symbols[i].scope_depth == st.current_scope {
@@ -54,6 +59,7 @@ func symbol_table_define(st* symbol_table, string name, int kind, string type_na
     st.symbols.push(sym)
     1
 }
+
 func symbol_table_lookup(st* symbol_table, string name) &symbol {
     for i := st.symbols.len() - 1; i >= 0; i = i - 1 {
         if st.symbols[i].name == name {
@@ -62,15 +68,18 @@ func symbol_table_lookup(st* symbol_table, string name) &symbol {
     }
     0
 }
+
 struct type_system {
     defined_types: string[]
     type_relations: int[][]
 }
+
 func type_system_new() type_system {
     type_system {
         defined_types: vec[string](), type_relations vec[int[]]()
     }
 }
+
 func type_is_valid(string type_name) int {
     if type_name == "int" || type_name == "float" || type_name == "string" || type_name == "bool" || type_name == "char" || type_name == "void" {
         return 1
@@ -80,12 +89,14 @@ func type_is_valid(string type_name) int {
     }
     0
 }
+
 func types_compatible(string type1, string type2) int {
     if type1 == type2 {
         return 1
     }
     0
 }
+
 struct semantic_analyzer {
     symbols: symbol_table
     types: type_system
@@ -94,14 +105,17 @@ struct semantic_analyzer {
     in_loop: int
     in_function: int
 }
+
 func semantic_analyzer_new() semantic_analyzer {
     semantic_analyzer {
         symbols: symbol_table_new(), types type_system_new(), errors vec[string](), current_function 0, in_loop 0, in_function 0
     }
 }
+
 func semantic_analyzer_add_error(ana* semantic_analyzer, string msg) {
     ana.errors.push(msg)
 }
+
 func semantic_analyze(ast_node* ast) semantic_result {
     ana := semantic_analyzer_new()
     semantic_analyze_node(&mut ana, ast)
@@ -109,6 +123,7 @@ func semantic_analyze(ast_node* ast) semantic_result {
         ast: ast, symbols ana.symbols, errors ana.errors, type_info vec[string]()
     }
 }
+
 func semantic_analyze_node(ana* semantic_analyzer, ast_node* node) {
     if node == 0 {
         return
@@ -216,4 +231,3 @@ func semantic_analyze_node(ana* semantic_analyzer, ast_node* node) {
         for i := 0; i < node.children.len(); i = i + 1 {
             semantic_analyze_node(ana, node.children[i])
         }
-    }

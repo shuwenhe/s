@@ -53,6 +53,7 @@ struct ir_value {
     string var_name
     int param_index
 }
+
 struct ir_instruction {
     int instr_type
     ir_value result
@@ -64,6 +65,7 @@ struct ir_instruction {
     int branch_target_false
     int[] branch_targets
 }
+
 struct ir_basicblock {
     int block_id
     string label
@@ -72,6 +74,7 @@ struct ir_basicblock {
     int[] predecessors
     int[] successors
 }
+
 struct ir_function {
     string name
     string return_type
@@ -79,101 +82,123 @@ struct ir_function {
     ir_basicblock[] basic_blocks
     int value_counter
 }
+
 struct ir_module {
     ir_function[] functions
     ir_value[] global_vars
 }
+
 func ir_value_const(string const_val, string type_info) ir_value {
     ir_value {
         value_type: ir_value_const, value_id 0, type_info type_info, const_value const_val, line 0, column 0
     }
 }
+
 func ir_value_var(string name, string type_info) ir_value {
     ir_value {
         value_type: ir_value_var, value_id 0, type_info type_info, var_name name, line 0, column 0
     }
 }
+
 func ir_value_param(int index, string type_info) ir_value {
     ir_value {
         value_type: ir_value_param, value_id 0, type_info type_info, param_index index, line 0, column 0
     }
 }
+
 func ir_instr_binop(int op, ir_value left, ir_value right, string result_type) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_binop, opcode op,
         operands: [left, right], result ir_value { value_type: ir_value_binop, type_info result_type }
     }
 }
+
 func ir_instr_unop(int op, ir_value operand, string result_type) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_unop, opcode op,
         operands: [operand], result ir_value { value_type: ir_value_unop, type_info result_type }
     }
 }
+
 func ir_instr_call(string func_name, ir_value[] args, string return_type) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_call, var_name func_name, operands args, result ir_value { value_type: ir_value_call, type_info return_type }
     }
 }
+
 func ir_instr_return(ir_value value) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_return,
         operands: [value]
     }
 }
+
 func ir_instr_br(int target_block_id) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_br, branch_target_true target_block_id
     }
 }
+
 func ir_instr_condbr(ir_value cond, int true_block, int false_block) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_condbr,
         operands: [cond], branch_target_true true_block, branch_target_false false_block
     }
 }
+
 func ir_instr_phi(ir_value[] operands, int[] operand_blocks) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_phi, operands operands, branch_targets operand_blocks
     }
 }
+
 func ir_basicblock_new(int block_id, string label) ir_basicblock {
     ir_basicblock {
         block_id: block_id, label label
     }
 }
+
 func ir_basicblock_add_instr(ir_basicblock* block, ir_instruction instr) {
     block.instructions = append(block.instructions, instr)
 }
+
 func ir_basicblock_set_terminator(ir_basicblock* block, ir_instruction instr) {
     block.terminator = instr
 }
+
 func ir_basicblock_add_predecessor(ir_basicblock* block, int pred_id) {
     block.predecessors = append(block.predecessors, pred_id)
 }
+
 func ir_basicblock_add_successor(ir_basicblock* block, int succ_id) {
     block.successors = append(block.successors, succ_id)
 }
+
 func ir_function_new(string name, string return_type) ir_function {
     ir_function {
         name: name, return_type return_type, value_counter 0
     }
 }
+
 func ir_function_add_param(ir_function* func, ir_value param) {
     func.parameters = append(func.parameters, param)
 }
+
 func ir_function_add_block(ir_function* func, ir_basicblock block) {
     func.basic_blocks = append(func.basic_blocks, block)
 }
+
 func ir_function_gen_value_id(ir_function* func) int {
     func.value_counter = func.value_counter + 1
     func.value_counter
 }
+
 func ir_module_new() ir_module {
     ir_module {}
 }
+
 func ir_module_add_function(ir_module* module, ir_function func) {
     module.functions = append(module.functions, func)
 }
+
 func ir_module_add_global(ir_module* module, ir_value global) {
-    module.global_vars = append(module.global_vars, global)

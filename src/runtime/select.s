@@ -14,6 +14,7 @@ struct runtime_select_case {
     int kind
     int value
 }
+
 func runtime_select_try(runtime_select_case[] cases) runtime_select_result {
     int i = 0
     for i < len(cases) {
@@ -33,6 +34,7 @@ func runtime_select_try(runtime_select_case[] cases) runtime_select_result {
     }
     runtime_select_result { index: -1, value: 0, ok: false }
 }
+
 func runtime_select_recv(raw_chan[] channels) runtime_select_result {
     int i = 0
     for i < len(channels) {
@@ -45,8 +47,9 @@ func runtime_select_recv(raw_chan[] channels) runtime_select_result {
     }
     runtime_select_result { index: -1, value: 0, ok: false }
 }
+
 func select_unit_name() string {
     "src/runtime/select"
 }
+
 func select_unit_ready() int {
-    1

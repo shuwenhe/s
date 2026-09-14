@@ -5,6 +5,7 @@ struct direct_code_generator {
     instr_selector* selector
     reg_alloc_state* alloc
 }
+
 func make_direct_code_generator() direct_code_generator {
     gen: direct_code_generator
     gen.main_code = &make_prog_list()
@@ -12,6 +13,7 @@ func make_direct_code_generator() direct_code_generator {
     gen.alloc = &make_reg_alloc_state()
     gen
 }
+
 func (gen* direct_code_generator) generate_function_prologue(string func_name, int stack_size) {
     gen.main_code.append_prog(20, ".globl " + func_name)
     gen.main_code.append_prog(20, ".type " + func_name + ", @function")
@@ -23,10 +25,12 @@ func (gen* direct_code_generator) generate_function_prologue(string func_name, i
         gen.main_code.append_prog(prog_op_sub(), instr)
     }
 }
+
 func (gen* direct_code_generator) generate_function_epilogue() {
     gen.main_code.append_prog(prog_op_pop(), "\tpopq\t%rbp")
     gen.main_code.append_prog(prog_op_ret(), "\tretq")
 }
+
 func (gen* direct_code_generator) generate_text_section() string {
     result := ".section\t.text\n"
     p := gen.main_code.first()
@@ -36,6 +40,7 @@ func (gen* direct_code_generator) generate_text_section() string {
     }
     result
 }
+
 func (gen* direct_code_generator) generate_data_section() string {
     result := ".section\t.data\n"
     p := gen.data_section.first()
@@ -45,18 +50,22 @@ func (gen* direct_code_generator) generate_data_section() string {
     }
     result
 }
+
 func (gen* direct_code_generator) generate_rodata_section() string {
     result := ".section\t.rodata\n"
     result
 }
+
 func (gen* direct_code_generator) generate_symtab() string {
     result := ".section\t.symtab\n"
     result
 }
+
 func (gen* direct_code_generator) generate_strtab() string {
     result := ".section\t.strtab\n"
     result
 }
+
 func (gen* direct_code_generator) generate_asm() string {
     asm := ""
     asm = asm + ".intel_syntax noprefix\n"
@@ -67,6 +76,7 @@ func (gen* direct_code_generator) generate_asm() string {
     asm = asm + gen.generate_rodata_section()
     asm
 }
+
 func (gen* direct_code_generator) emit_const_i64(int value, int reg) {
     reg_name := x86_64_reg_name(reg)
     if value == 0 {
@@ -77,6 +87,7 @@ func (gen* direct_code_generator) emit_const_i64(int value, int reg) {
         gen.main_code.append_prog(prog_op_mov(), instr)
     }
 }
+
 func (gen* direct_code_generator) emit_add_i64(int lhs_reg, int rhs_reg, int result_reg) {
     if lhs_reg != result_reg {
         lhs_name := x86_64_reg_name(lhs_reg)
@@ -89,5 +100,5 @@ func (gen* direct_code_generator) emit_add_i64(int lhs_reg, int rhs_reg, int res
     instr := "\taddq\t%" + rhs_name + ", %" + result_name
     gen.main_code.append_prog(prog_op_add(), instr)
 }
+
 func (gen* direct_code_generator) get_asm() string {
-    gen.generate_asm()

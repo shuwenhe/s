@@ -7,11 +7,13 @@ func test_rt_malloc() int {
     rt_assert(addr2 > addr1, "addr2 should be after addr1")
     1
 }
+
 func test_rt_panic_recovery() int {
     rt_init(1024)
     rt_assert(1 != 0, "test assertion")
     1
 }
+
 func test_rt_string_ops() int {
     rt_init(1024)
     len1 := rt_string_len("hello")
@@ -20,6 +22,7 @@ func test_rt_string_ops() int {
     rt_assert(len2 == 0, "empty string length should be 0")
     1
 }
+
 func test_rt_multiple_allocations() int {
     rt_init(4096)
     addrs := int[]()
@@ -29,6 +32,7 @@ func test_rt_multiple_allocations() int {
     }
     1
 }
+
 func test_rt_free_reuses_block() int {
     rt_init(128)
     first := rt_malloc(32)
@@ -37,6 +41,7 @@ func test_rt_free_reuses_block() int {
     rt_assert(reused == first, "free should make a block reusable")
     1
 }
+
 func run_all_runtime_tests() int {
     result := 0
     if test_rt_malloc() != 0 {
@@ -54,4 +59,3 @@ func run_all_runtime_tests() int {
     if test_rt_free_reuses_block() != 0 {
         result = result + 1
     }
-    result

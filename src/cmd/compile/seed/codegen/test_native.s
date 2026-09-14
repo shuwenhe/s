@@ -7,11 +7,13 @@ struct test_result {
     bool passed
     string message
 }
+
 struct test_suite {
     test_result[] results
     int passed_count
     int failed_count
 }
+
 func (suite* test_suite) add_result(string name, bool passed, string message) {
     test_result result = {
         name: name, passed passed, message message,
@@ -23,6 +25,7 @@ func (suite* test_suite) add_result(string name, bool passed, string message) {
         suite.failed_count = suite.failed_count + 1
     }
 }
+
 func (suite* test_suite) print_summary() {
     int total = suite.passed_count + suite.failed_count
     string status = "PASS"
@@ -45,6 +48,7 @@ func (suite* test_suite) print_summary() {
         }
     }
 }
+
 func int_to_string(int value) string {
     if value == 0 {
         "0"
@@ -62,6 +66,7 @@ func int_to_string(int value) string {
         "N"
     }
 }
+
 func test_codegen_emit_line() (bool, string) {
     codegen_context ctx = {
         assembly_lines: vec[string](), next_label_id 0,
@@ -80,6 +85,7 @@ func test_codegen_emit_line() (bool, string) {
     }
     return true, "emit_line works correctly"
 }
+
 func test_register_allocate() (bool, string) {
     register_allocator allocator = {
         next_free_register: 0, variable_map vec[string](), register_names vec[string](),
@@ -99,6 +105,7 @@ func test_register_allocate() (bool, string) {
     }
     return true, "register allocation works correctly"
 }
+
 func test_register_spillover() (bool, string) {
     register_allocator allocator = {
         next_free_register: 0, variable_map vec[string](), register_names vec[string](),
@@ -118,6 +125,7 @@ func test_register_spillover() (bool, string) {
     }
     return true, "register spillover creates negative offsets"
 }
+
 func test_stackframe_allocate() (bool, string) {
     stack_frame frame = {
         base_offset: -16,
@@ -136,6 +144,7 @@ func test_stackframe_allocate() (bool, string) {
     }
     return true, "stack frame allocation works correctly"
 }
+
 func test_stackframe_size() (bool, string) {
     stack_frame frame = {
         base_offset: 0, current_offset 0, local_variables vec[string](),
@@ -149,6 +158,7 @@ func test_stackframe_size() (bool, string) {
     }
     return true, "stack frame size calculation works"
 }
+
 func test_instruction_select_mov() (bool, string) {
     codegen_context ctx = {
         assembly_lines: vec[string](), next_label_id 0,
@@ -163,6 +173,7 @@ func test_instruction_select_mov() (bool, string) {
     }
     return true, "instruction selection for MOV works"
 }
+
 func test_instruction_select_add() (bool, string) {
     codegen_context ctx = {
         assembly_lines: vec[string](), next_label_id 0,
@@ -177,6 +188,7 @@ func test_instruction_select_add() (bool, string) {
     }
     return true, "instruction selection for ADD works"
 }
+
 func test_codegen_context_init() (bool, string) {
     codegen_context ctx = {
         assembly_lines: vec[string](), next_label_id 0,
@@ -187,6 +199,7 @@ func test_codegen_context_init() (bool, string) {
     }
     return true, "codegen context initialization works"
 }
+
 func test_multiple_functions() (bool, string) {
     codegen_context ctx = {
         assembly_lines: vec[string](), next_label_id 0,
@@ -202,6 +215,7 @@ func test_multiple_functions() (bool, string) {
     }
     return true, "multiple function generation works"
 }
+
 func run_all_tests() test_suite {
     test_suite suite = {
         results: vec[test_result](), passed_count 0, failed_count 0,
@@ -238,6 +252,6 @@ func run_all_tests() test_suite {
     suite.add_result("test_multiple_functions", passed, message)
     suite
 }
+
 func main() {
     test_suite suite = run_all_tests()
-    suite.print_summary()

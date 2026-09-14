@@ -6,16 +6,19 @@ struct line_range {
     int first
     int last
 }
+
 struct xpos_map_entry {
     int file_index
     lines line_range
     data sparse_map
 }
+
 struct xpos_map {
     xpos_map_entry[] maps
     int last_index
     int last_slot
 }
+
 func new_xpos_map(int_pair[] file_ranges) xpos_map {
     maps := xpos_map_entry[]()
     i := 0
@@ -37,6 +40,7 @@ func new_xpos_map(int_pair[] file_ranges) xpos_map {
         last_slot: -1,
     }
 }
+
 func xpos_map_slot(xpos_map m, int file_index) int_pair {
     if file_index == m.last_index && m.last_slot >= 0 {
         return make_int_pair(m.last_slot, 1
@@ -52,6 +56,7 @@ func xpos_map_slot(xpos_map m, int file_index) int_pair {
     }
     make_int_pair(0, 0)
 }
+
 func xpos_map_clear(xpos_map m) xpos_map {
     i := 0
     for i < len(m.maps) {
@@ -62,6 +67,7 @@ func xpos_map_clear(xpos_map m) xpos_map {
     m.last_slot = -1
     m
 }
+
 func xpos_map_set(xpos_map m, int file_index, int line, int value) xpos_map {
     slot := xpos_map_slot(m, file_index)
     if slot.right == 0 {
@@ -71,6 +77,7 @@ func xpos_map_set(xpos_map m, int file_index, int line, int value) xpos_map {
     m.maps[slot.left].data = sparse_map_set(m.maps[slot.left].data, line - start, value)
     m
 }
+
 func xpos_map_get(xpos_map m, int file_index, int line) int_pair {
     slot := xpos_map_slot(m, file_index)
     if slot.right == 0 {
@@ -79,10 +86,10 @@ func xpos_map_get(xpos_map m, int file_index, int line) int_pair {
     start := m.maps[slot.left].lines.first
     sparse_map_get(m.maps[slot.left].data, line - start)
 }
+
 func xpos_map_contains(xpos_map m, int file_index, int line) bool {
     slot := xpos_map_slot(m, file_index)
     if slot.right == 0 {
         return false
     }
     start := m.maps[slot.left].lines.first
-    sparse_map_contains(m.maps[slot.left].data, line - start)

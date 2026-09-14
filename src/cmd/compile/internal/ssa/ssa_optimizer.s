@@ -5,6 +5,7 @@ struct ssa_optimizer {
     int iteration_count
     int max_iterations
 }
+
 func ssa_optimizer_new(int capacity, int opt_level) ssa_optimizer {
     optimizer := ssa_optimizer {
         rule_engine: ssa_rule_engine_new(capacity),
@@ -14,6 +15,7 @@ func ssa_optimizer_new(int capacity, int opt_level) ssa_optimizer {
     }
     optimizer
 }
+
 func (optimizer* ssa_optimizer) register_constant_folding_rules() int {
     engine := optimizer.rule_engine
     engine.add_rule("add_const_const", 100)
@@ -69,6 +71,7 @@ func (optimizer* ssa_optimizer) register_constant_folding_rules() int {
     engine.add_rule("de_morgan_or", 70)
     50
 }
+
 func (optimizer* ssa_optimizer) register_algebraic_simplification_rules() int {
     engine := optimizer.rule_engine
     starting_id := engine.rule_count
@@ -101,6 +104,7 @@ func (optimizer* ssa_optimizer) register_algebraic_simplification_rules() int {
     engine.add_rule("de_morgan_or_not", 70)
     engine.rule_count - starting_id
 }
+
 func (optimizer* ssa_optimizer) optimize_value(v* ssa_value) ssa_value* {
     if v == 0 {
         return v
@@ -117,6 +121,7 @@ func (optimizer* ssa_optimizer) optimize_value(v* ssa_value) ssa_value* {
     optimizer.iteration_count = 0
     v
 }
+
 func (optimizer* ssa_optimizer) optimize_block(ssa_value*[] values) ssa_value*[] {
     optimized := ssa_value*[]()
     for i := 0; i < values.len(); i = i + 1 {
@@ -128,8 +133,8 @@ func (optimizer* ssa_optimizer) optimize_block(ssa_value*[] values) ssa_value*[]
     }
     optimized
 }
+
 func create_default_optimizer() ssa_optimizer {
     optimizer := ssa_optimizer_new(500, 2)
     optimizer.register_constant_folding_rules()
     optimizer.register_algebraic_simplification_rules()
-    optimizer

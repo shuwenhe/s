@@ -12,6 +12,7 @@ struct const_rewrite_entry {
     string string_value
     bool bool_value
 }
+
 func from_syntax(source_file src) ir_ast.package_ir {
     pkg := ir_ast.package_ir { name: src.pkg, decls ir_ast.decl_ir[]() }
     const_entries := collect_const_rewrite_entries(src)
@@ -48,6 +49,7 @@ func from_syntax(source_file src) ir_ast.package_ir {
     }
     pkg
 }
+
 func from_syntax_checked(source_file src) (ir_ast.package_ir, string) {
     pkg := from_syntax(src)
     check := validate_lowering_contract(pkg)
@@ -56,6 +58,7 @@ func from_syntax_checked(source_file src) (ir_ast.package_ir, string) {
     }
     pkg
 }
+
 func validate_lowering_contract(ir_ast.package_ir pkg) ((), string) {
     i := 0
     for i < len(pkg.decls) {
@@ -74,6 +77,7 @@ func validate_lowering_contract(ir_ast.package_ir pkg) ((), string) {
     }
     ()
 }
+
 func validate_block_contract(ir_ast.block_ir block) ((), string) {
     i := 0
     for i < len(block.statements) {
@@ -123,6 +127,7 @@ func validate_block_contract(ir_ast.block_ir block) ((), string) {
     }
     ()
 }
+
 func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
     switch expression {
         ir_ast.expr_ir::name(name) : {
@@ -191,6 +196,7 @@ func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
     }
     ()
 }
+
 func contains_text(string text, string needle) bool {
     if needle == "" {
         return true
@@ -207,6 +213,7 @@ func contains_text(string text, string needle) bool {
     }
     false
 }
+
 func convert_function(function_decl fd, const_rewrite_entry[] const_entries) ir_ast.func_decl {
     sig := ir_ast.func_sig { params: ir_ast.param[](), return_type_name option[string].none, generics fd.sig.generics }
     pi := 0
@@ -226,6 +233,7 @@ func convert_function(function_decl fd, const_rewrite_entry[] const_entries) ir_
     }
     ir_ast.func_decl { name: fd.sig.name, sig sig, body body }
 }
+
 func convert_block(block_expr b, const_rewrite_entry[] const_entries) ir_ast.block_ir {
     stmts := ir_ast.stmt_ir[]()
     si := 0
@@ -239,6 +247,7 @@ func convert_block(block_expr b, const_rewrite_entry[] const_entries) ir_ast.blo
     }
     ir_ast.block_ir { statements: stmts, final_expr final }
 }
+
 func convert_stmt(stmt s, const_rewrite_entry[] const_entries) ir_ast.stmt_ir {
     switch s {
         stmt.let(var_stmt) : {
@@ -273,6 +282,7 @@ func convert_stmt(stmt s, const_rewrite_entry[] const_entries) ir_ast.stmt_ir {
         }
     }
 }
+
 func convert_expr(expr e, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
     switch e {
         expr.int(int_expr) : {
@@ -319,9 +329,11 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
         expr.map(map_literal) : map_to_expr(map_literal, const_entries),
     }
 }
+
 func lower_main_to_mir(source_file src) (mir_graph, string) {
     return lower_package_to_mir(src
 }
+
 func lower_package_to_mir(source_file src) (mir_graph, string) {
     const_entries := collect_const_rewrite_entries(src)
     fn_count := 0
@@ -386,6 +398,7 @@ func lower_package_to_mir(source_file src) (mir_graph, string) {
     }
     graph
 }
+
 func count_const_hits_block(block_expr block, const_rewrite_entry[] const_entries) int {
     total := 0
     i := 0
@@ -398,6 +411,7 @@ func count_const_hits_block(block_expr block, const_rewrite_entry[] const_entrie
     }
     total
 }
+
 func count_const_hits_stmt(stmt s, const_rewrite_entry[] const_entries) int {
     switch s {
         stmt.let(var_stmt) : count_const_hits_expr(var_stmt.value, const_entries),
@@ -420,6 +434,7 @@ func count_const_hits_stmt(stmt s, const_rewrite_entry[] const_entries) int {
         }
     }
 }
+
 func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
     switch e {
         expr.int(_) : 0,
@@ -485,6 +500,7 @@ func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
         }
     }
 }
+
 func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
     switch s {
         stmt.let(var_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
@@ -525,9 +541,11 @@ func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
         }),
     }
 }
+
 func block_to_expr(block_expr block, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
     ir_ast.expr_ir::block(convert_block(block, const_entries))
 }
+
 func array_to_expr(array_literal lit, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
     items := ir_ast.expr_ir[]()
     i := 0
@@ -539,6 +557,7 @@ func array_to_expr(array_literal lit, const_rewrite_entry[] const_entries) ir_as
         type_name: lit.type_text, items items,
     })
 }
+
 func map_to_expr(map_literal lit, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
     entries := ir_ast.map_entry_expr[]()
     i := 0
@@ -553,6 +572,7 @@ func map_to_expr(map_literal lit, const_rewrite_entry[] const_entries) ir_ast.ex
         type_name: lit.type_text, entries entries,
     })
 }
+
 func lower_function_to_mir(function_decl fd, const_rewrite_entry[] const_entries) mir_graph {
     if fd.body.is_none() {
         empty_blocks := mir_basic_block[]()
@@ -564,6 +584,7 @@ func lower_function_to_mir(function_decl fd, const_rewrite_entry[] const_entries
     }
     return lower_block_to_mir(fd.sig.name, fd.body.unwrap(), const_entries
 }
+
 func lower_block_to_mir(string function_name, block_expr block, const_rewrite_entry[] const_entries) mir_graph {
     trace := string[]()
     stmt_texts := string[]()
@@ -648,6 +669,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
     blocks = append(blocks, make_entry_block(0, "entry", final_lines, block.statements, "return", mir_control_edge[]()))
     make_graph(function_name, blocks, trace, 0, 0)
 }
+
 func dump_expr_stmt(stmt s, const_rewrite_entry[] const_entries) string {
     switch s {
         stmt.let(var_stmt) : "let " + var_stmt.name,
@@ -660,6 +682,7 @@ func dump_expr_stmt(stmt s, const_rewrite_entry[] const_entries) string {
         stmt.c_for(c_for_stmt) : "c_for",
     }
 }
+
 func collect_const_rewrite_entries(source_file src) const_rewrite_entry[] {
     out := const_rewrite_entry[]()
     last_value := const_rewrite_entry {
@@ -697,6 +720,7 @@ func collect_const_rewrite_entries(source_file src) const_rewrite_entry[] {
     }
     out
 }
+
 func render_const_folded_entry(string name, expr value, const_rewrite_entry[] out, int iota_index) const_rewrite_entry {
     folded := eval_const_fold_value(value, out, iota_index)
     if folded.value_kind != "unknown" {
@@ -710,12 +734,14 @@ func render_const_folded_entry(string name, expr value, const_rewrite_entry[] ou
         string_value: "", bool_value false,
     }
 }
+
 struct const_fold_value {
     string value_kind
     int int_value
     string string_value
     bool bool_value
 }
+
 func eval_const_fold_value(expr value, const_rewrite_entry[] out, int iota_index) const_fold_value {
     switch value {
         expr.int(int_expr) : const_fold_value {
@@ -759,6 +785,7 @@ func eval_const_fold_value(expr value, const_rewrite_entry[] out, int iota_index
         },
     }
 }
+
 func eval_const_fold_binary(string op, const_fold_value left, const_fold_value right) const_fold_value {
     if left.value_kind == "int" && right.value_kind == "int" {
         if op == "+" {
@@ -813,6 +840,7 @@ func eval_const_fold_binary(string op, const_fold_value left, const_fold_value r
         string_value: "", bool_value false,
     }
 }
+
 func const_fold_value_text(const_fold_value value) string {
     if value.value_kind == "int" {
         return to_string(value.int_value
@@ -828,6 +856,7 @@ func const_fold_value_text(const_fold_value value) string {
     }
     ""
 }
+
 func lookup_const_entry(const_rewrite_entry[] entries, string name) option[const_rewrite_entry] {
     i := len(entries)
     for i > 0 {
@@ -838,6 +867,7 @@ func lookup_const_entry(const_rewrite_entry[] entries, string name) option[const
     }
     option.none
 }
+
 func lookup_const_expr_text(const_rewrite_entry[] entries, string name) string {
     entry := lookup_const_entry(entries, name)
     if entry.is_none() {
@@ -845,6 +875,7 @@ func lookup_const_expr_text(const_rewrite_entry[] entries, string name) string {
     }
     entry.unwrap().expr_text
 }
+
 func resolve_const_name_expr(string name, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
     entry := lookup_const_entry(const_entries, name)
     if entry.is_none() {
@@ -863,6 +894,7 @@ func resolve_const_name_expr(string name, const_rewrite_entry[] const_entries) i
     ir_ast.expr_ir::name(name)
 }
 }
+
 func substitute_const_text(string text, const_rewrite_entry[] entries) string {
     out := text
     i := 0
@@ -874,6 +906,7 @@ func substitute_const_text(string text, const_rewrite_entry[] entries) string {
     }
     out
 }
+
 func replace_ident_token(string text, string ident, string replacement) string {
     if ident == "" {
         return text
@@ -898,17 +931,20 @@ func replace_ident_token(string text, string ident, string replacement) string {
     }
     out
 }
+
 func is_ident_char(string ch) bool {
     (ch >= "a" && ch <= "z")
         || (ch >= "A" && ch <= "Z")
         || (ch >= "0" && ch <= "9")
         || ch == "_"
 }
+
 func vec1(string text) string[] {
     out := string[]()
     out = append(out, text)
     out
 }
+
 func clone_lines(string[] lines) string[] {
     out := string[]()
     i := 0
@@ -918,16 +954,19 @@ func clone_lines(string[] lines) string[] {
     }
     out
 }
+
 func make_edge(string label, int target) mir_control_edge {
     mir_control_edge {
         label: label, target target, args mir_operand[](),
     }
 }
+
 func vec1_edge(string label, int target) mir_control_edge[] {
     edges := mir_control_edge[]()
     edges = append(edges, make_edge(label, target))
     edges
 }
+
 func make_block(int id, string label, string[] lines, string term_kind, mir_control_edge[] edges) mir_basic_block {
     statements := mir_statement[]()
     i := 0
@@ -945,6 +984,7 @@ func make_block(int id, string label, string[] lines, string term_kind, mir_cont
         },
     }
 }
+
 func make_entry_block(int id, string label, string[] lines, stmt[] source_statements, string term_kind, mir_control_edge[] edges) mir_basic_block {
     statements := mir_statement[]()
     i := 0
@@ -965,8 +1005,8 @@ func make_entry_block(int id, string label, string[] lines, stmt[] source_statem
         },
     }
 }
+
 func make_graph(string function_name, mir_basic_block[] blocks, string[] trace, int entry, int exit) mir_graph {
     mir_graph {
         function_name: function_name, blocks blocks, locals mir_local_slot[](), trace trace, entry entry, exit exit,
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
-    }

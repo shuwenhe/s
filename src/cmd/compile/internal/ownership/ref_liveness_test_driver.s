@@ -47,20 +47,25 @@ func main() {
         return 1
     }
 }
+
 func analyze_test_1() string {
     return analyze_and_report(1)
 }
+
 func analyze_test_2() string {
     return analyze_and_report(2)
 }
+
 func analyze_test_3() string {
     return analyze_and_report(3)
 }
+
 func analyze_test_4() string {
     return analyze_and_report(4)
 }
+
 func analyze_test_5() string {
     return analyze_and_report(5)
 }
+
 func analyze_test_6() string {
-    return analyze_and_report(6)

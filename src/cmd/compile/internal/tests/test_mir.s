@@ -9,6 +9,7 @@ import (
 func mir_point_count(mir_graph graph) int {
     return mir.mir_point_count(graph)
 }
+
 func run_mir_suite() int {
     if mir.trace_branch("flag", "then", "else") != "branch flag |   then then |   else else" {
         return 1
@@ -172,6 +173,7 @@ func run_mir_suite() int {
     }
     0
 }
+
 func count_mir_moves(mir_graph graph) int {
     count := 0
     i := 0
@@ -188,6 +190,7 @@ func count_mir_moves(mir_graph graph) int {
     }
     count
 }
+
 func count_mir_drops(mir_graph graph) int {
     count := 0
     i := 0
@@ -204,6 +207,7 @@ func count_mir_drops(mir_graph graph) int {
     }
     count
 }
+
 func test_real_mir_source_ownership_facts() int {
     // Real S source fixture testing with actual frontend and lowering pipeline
     // Fixture: real_mir_ref_flow.s
@@ -281,6 +285,7 @@ func test_real_mir_source_ownership_facts() int {
     }
     0
 }
+
 func contains_substring(string haystack, string needle) bool {
     i := 0
     while i <= len(haystack) - len(needle) {
@@ -300,6 +305,7 @@ func contains_substring(string haystack, string needle) bool {
     }
     false
 }
+
 func test_real_mir_semantic_order() int {
     // Step 6c: Verify semantic point ordering with interleaved statements
     // Ensures ownership operations maintain source-order semantics
@@ -376,4 +382,3 @@ func test_real_mir_semantic_order() int {
     if !(borrow_point < ref_assign_point && ref_assign_point < ref_use_point) {
         return 1
     }
-    0

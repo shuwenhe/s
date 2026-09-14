@@ -8,75 +8,92 @@ struct use_decl {
     string path
     option[string] alias
 }
+
 struct field {
     string name
     string type_name
     bool is_public
 }
+
 struct param {
     string name
     string type_name
 }
+
 struct function_sig {
     string name
     string[] generics
     param[] params
     option[string] return_type
 }
+
 struct name_pattern {
     string name
 }
+
 struct wildcard_pattern {}
+
 struct variant_pattern {
     string path
     pattern[] args
 }
+
 struct literal_pattern {
     value expr
 }
+
 enum pattern {
     name(name_pattern),
     wildcard(wildcard_pattern),
     variant(variant_pattern),
     literal(literal_pattern),
 }
+
 struct int_expr {
     string value
     option[string] inferred_type
 }
+
 struct string_expr {
     string value
     option[string] inferred_type
 }
+
 struct bool_expr {
     bool value
     option[string] inferred_type
 }
+
 struct name_expr {
     string name
     option[string] inferred_type
 }
+
 struct borrow_expr {
     box[expr] target
     bool mutable
     option[string] inferred_type
 }
+
 struct binary_expr {
     box[expr] left
     string op
     box[expr] right
     option[string] inferred_type
 }
+
 struct member_expr {
     box[expr] target
     string member
     option[string] inferred_type
 }
+
 struct index_expr {
     box[expr] target
     box[expr] index
     option[string] inferred_type
 }
+
 struct call_expr {
     box[expr] callee
     expr[] args
@@ -84,21 +101,25 @@ struct call_expr {
     option[string] resolved_callee
     string[] type_args
 }
+
 struct switch_arm {
     pattern pattern
     expr expr
 }
+
 struct switch_expr {
     box[expr] subject
     switch_arm[] arms
     option[string] inferred_type
 }
+
 struct if_expr {
     box[expr] condition
     then_branch block_expr
     option[box[expr]] else_branch
     option[string] inferred_type
 }
+
 struct for_expr {
     option[box[stmt]] init
     option[box[expr]] condition
@@ -108,23 +129,28 @@ struct for_expr {
     body block_expr
     option[string] inferred_type
 }
+
 struct block_expr {
     stmt[] statements
     option[expr] final_expr
     option[string] inferred_type
 }
+
 struct array_literal {
     option[string] type_text
     expr[] items
 }
+
 struct map_entry {
     key expr
     value expr
 }
+
 struct map_literal {
     option[string] type_text
     map_entry[] entries
 }
+
 enum expr {
     int(int_expr),
     string(string_expr),
@@ -142,36 +168,45 @@ enum expr {
     array(array_literal),
     map(map_literal),
 }
+
 struct var_stmt {
     string name
     option[string] type_name
     value expr
 }
+
 struct assign_stmt {
     string name
     value expr
 }
+
 struct increment_stmt {
     string name
 }
+
 struct c_for_stmt {
     box[stmt] init
     condition expr
     box[stmt] step
     body block_expr
 }
+
 struct return_stmt {
     option[expr] value
 }
+
 struct expr_stmt {
     expr expr
 }
+
 struct defer_stmt {
     expr expr
 }
+
 struct sroutine_stmt {
     expr expr
 }
+
 enum stmt {
     let(var_stmt),
     assign(assign_stmt),
@@ -182,48 +217,57 @@ enum stmt {
     defer(defer_stmt),
     sroutine(sroutine_stmt),
 }
+
 struct function_decl {
     sig function_sig
     option[block_expr] body
     bool is_public
 }
+
 struct struct_decl {
     string name
     string[] generics
     field[] fields
     bool is_public
 }
+
 struct enum_variant {
     string name
     option[string] payload
 }
+
 struct enum_decl {
     string name
     string[] generics
     enum_variant[] variants
     bool is_public
 }
+
 struct trait_decl {
     string name
     string[] generics
     function_sig[] methods
     bool is_public
 }
+
 struct receiver_method_decl {
     string receiver_name
     string receiver_type
     method function_decl
 }
+
 struct const_decl {
     string name
     option[expr] value
     int iota_index
 }
+
 struct var_decl {
     string name
     option[string] type_name
     option[expr] value
 }
+
 enum item {
     function(function_decl),
     const(const_decl),
@@ -233,11 +277,13 @@ enum item {
     trait(trait_decl),
     method(receiver_method_decl),
 }
+
 struct source_file {
     string pkg
     use_decl[] uses
     item[] items
 }
+
 func dump_source_file(source_file source) string {
     lines := string[]()
     lines = append(lines, "package " + source.pkg);
@@ -260,6 +306,7 @@ func dump_source_file(source_file source) string {
     }
     join_lines(lines)
 }
+
 func append_item_dump(string[] lines, item item) () {
     switch item {
         item.function(value) : append_lines(lines, dump_function(value, "")),
@@ -271,12 +318,14 @@ func append_item_dump(string[] lines, item item) () {
         item.method(value) : append_lines(lines, dump_receiver_method(value)),
     }
 }
+
 func dump_const(const_decl item) string[] {
     switch item.value {
         option.some(value) : string[] { "const " + item.name + " = " + dump_expr(value) },
         option.none : string[] { "const " + item.name },
     }
 }
+
 func dump_var(var_decl item) string[] {
     decl := "var " + item.name
     switch item.type_name {
@@ -288,12 +337,14 @@ func dump_var(var_decl item) string[] {
         option.none : string[] { decl },
     }
 }
+
 func fmt_generics(string[] generics) string {
     if len(generics) == 0 {
         return ""
     }
     "[" + join_with(generics, ", ") + "]"
 }
+
 func dump_function(function_decl item, string indent) string[] {
     lines := string[]()
     params := string[]()
@@ -326,6 +377,7 @@ func dump_function(function_decl item, string indent) string[] {
     }
     lines
 }
+
 func dump_struct(struct_decl item) string[] {
     lines := string[]()
     prefix := if item.is_public { "pub " } else { "" }
@@ -339,6 +391,7 @@ func dump_struct(struct_decl item) string[] {
     }
     lines
 }
+
 func dump_enum(enum_decl item) string[] {
     lines := string[]()
     lines = append(lines, "enum " + item.name + fmt_generics(item.generics))
@@ -353,6 +406,7 @@ func dump_enum(enum_decl item) string[] {
     }
     lines
 }
+
 func dump_trait(trait_decl item) string[] {
     lines := string[]()
     prefix := if item.is_public { "pub " } else { "" }
@@ -384,6 +438,7 @@ func dump_trait(trait_decl item) string[] {
     }
     lines
 }
+
 func dump_receiver_method(receiver_method_decl item) string[] {
     lines := string[]()
     method := item.method
@@ -418,6 +473,7 @@ func dump_receiver_method(receiver_method_decl item) string[] {
     }
     lines
 }
+
 func dump_block(block_expr block, string indent) string[] {
     lines := string[]()
     _si := 0
@@ -432,6 +488,7 @@ func dump_block(block_expr block, string indent) string[] {
     }
     lines
 }
+
 func dump_stmt(stmt stmt, string indent) string[] {
     switch stmt {
         stmt.let(value) : {
@@ -476,6 +533,7 @@ func dump_stmt(stmt stmt, string indent) string[] {
         stmt.sroutine(value) : single_line(indent + "sroutine " + dump_expr(value.expr)),
     }
 }
+
 func dump_for_clause(stmt stmt) string {
     switch stmt {
         stmt.let(value) : {
@@ -493,6 +551,7 @@ func dump_for_clause(stmt stmt) string {
         stmt.sroutine(_) : "sroutine",
     }
 }
+
 func dump_expr(expr expr) string {
     switch expr {
         expr.int(value) : value.value,
@@ -537,6 +596,7 @@ func dump_expr(expr expr) string {
         }
     }
 }
+
 func dump_if_expr(if_expr value) string {
     text := "if " + dump_expr(value.condition.value) + " {...}"
     switch value.else_branch {
@@ -544,6 +604,7 @@ func dump_if_expr(if_expr value) string {
         option.none : text,
     }
 }
+
 func dump_pattern(pattern pattern) string {
     switch pattern {
         pattern.name(value) : value.name,
@@ -557,6 +618,7 @@ func dump_pattern(pattern pattern) string {
         }
     }
 }
+
 func join_exprs(expr[] values) string {
     parts := string[]()
     _iv := 0
@@ -567,12 +629,14 @@ func join_exprs(expr[] values) string {
     }
     join_with(parts, ", ")
 }
+
 func join_patterns(pattern[] values) string {
     parts := string[]()
     _pv := 0
     for _pv < len(values) { parts = append(parts, dump_pattern(values[_pv])); _pv = _pv + 1 }
     join_with(parts, ", ")
 }
+
 func join_switch_arms(switch_arm[] values) string {
     parts := string[]()
     _mv := 0
@@ -583,6 +647,7 @@ func join_switch_arms(switch_arm[] values) string {
     }
     join_with(parts, "; ")
 }
+
 func append_lines(string[] dest, string[] source) () {
     _li := 0
     for _li < len(source) {
@@ -590,14 +655,17 @@ func append_lines(string[] dest, string[] source) () {
         _li = _li + 1
     }
 }
+
 func single_line(string text) string[] {
     lines := string[]()
     lines = append(lines, text)
     lines
 }
+
 func join_lines(string[] lines) string {
     join_with(lines, "\n")
 }
+
 func join_with(string[] values, string sep) string {
     out := ""
     first := true
@@ -613,5 +681,5 @@ func join_with(string[] values, string sep) string {
     }
     out
 }
+
 func replace_once(string text, string from, string to) string {
-    text

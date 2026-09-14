@@ -9,9 +9,11 @@ struct sparse_tree_node {
     int entry
     int exit
 }
+
 struct sparse_tree {
     sparse_tree_node[] nodes
 }
+
 func new_sparse_tree(int n) sparse_tree {
     nodes := sparse_tree_node[]()
     i := 0
@@ -25,6 +27,7 @@ func new_sparse_tree(int n) sparse_tree {
     }
     sparse_tree { nodes: nodes }
 }
+
 func sparse_tree_add_edge(sparse_tree t, int parent, int child) sparse_tree {
     if parent < 0 || child < 0 || parent >= len(t.nodes) || child >= len(t.nodes) {
         return t
@@ -34,6 +37,7 @@ func sparse_tree_add_edge(sparse_tree t, int parent, int child) sparse_tree {
     t.nodes[parent].child = child
     t
 }
+
 func number_subtree(sparse_tree t, int root, int n) int_pair {
     if root < 0 || root >= len(t.nodes) {
         return make_int_pair(n, 0
@@ -51,6 +55,7 @@ func number_subtree(sparse_tree t, int root, int n) int_pair {
     t.nodes[root].exit = next
     make_int_pair(next + 2, 1)
 }
+
 func sparse_tree_is_ancestor_eq(sparse_tree t, int x, int y) bool {
     if x < 0 || y < 0 || x >= len(t.nodes) || y >= len(t.nodes) {
         return false
@@ -58,4 +63,3 @@ func sparse_tree_is_ancestor_eq(sparse_tree t, int x, int y) bool {
     if x == y {
         return true
     }
-    t.nodes[x].entry <= t.nodes[y].entry && t.nodes[y].exit <= t.nodes[x].exit

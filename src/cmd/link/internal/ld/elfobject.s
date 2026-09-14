@@ -24,6 +24,7 @@ enum elf_type {
 	et_loproc = 0xff00
 	et_hiproc = 0xffff
 }
+
 struct elf_header {
 	u32 magic
 	u8 class
@@ -46,6 +47,7 @@ struct elf_header {
 	i16 shdr_num
 	i16 shdr_str_index
 }
+
 struct section_header {
 	i32 name
 	i32 type
@@ -58,6 +60,7 @@ struct section_header {
 	i64 addr_align
 	i64 entry_size
 }
+
 struct program_header {
 	i32 type
 	i32 flags
@@ -68,6 +71,7 @@ struct program_header {
 	i64 mem_size
 	i64 align
 }
+
 struct elf_object {
 	elf_header header
 	section_header[] sections
@@ -79,6 +83,7 @@ struct elf_object {
 	i32 flags
 	int endian
 }
+
 func new_elf_object(machine i16) elf_object {
 	obj := elf_object{
 		sections: make(section_header[], 0),
@@ -102,6 +107,7 @@ func new_elf_object(machine i16) elf_object {
 	obj.header.entry = 0
 	obj
 }
+
 func (elf_object* eo) add_section(string name, sec_type i32, flags i64, data u8[]) i32 {
 	idx := i32(len(eo.sections))
 	shdr := section_header{
@@ -122,19 +128,23 @@ func (elf_object* eo) add_section(string name, sec_type i32, flags i64, data u8[
 	}
 	idx
 }
+
 func (elf_object* eo) add_symbol(sym symbol_entry) i32 {
 	idx := i32(len(eo.symbols))
 	eo.symbols = append(eo.symbols, sym)
 	idx
 }
+
 func (elf_object* eo) add_string(string s) i32 {
 	idx := i32(len(eo.string_table))
 	eo.string_table[idx] = s
 	idx
 }
+
 func (elf_object* eo) add_relocation(reloc relocation) {
 	eo.relocations = append(eo.relocations, reloc)
 }
+
 func read_elf_object(string filename) (elf_object, error) {
 	file, err := os.open(filename)
 	if err != nil {
@@ -191,6 +201,7 @@ func read_elf_object(string filename) (elf_object, error) {
 	}
 	obj, nil
 }
+
 func (elf_object* eo) write_to_file(string filename) error {
 	file, err := os.create(filename)
 	if err != nil {
@@ -288,4 +299,3 @@ const (
 	shf_group = 0x200
 	shf_tls = 0x400
 	shf_compressed = 0x800
-	shf_gnu_retain = 0x200000

@@ -9,34 +9,41 @@ struct mir_operand {
     string value
     option[string] type_name
 }
+
 struct mir_local_slot {
     int id
     string name
     option[string] type_name
 }
+
 struct mir_assign_stmt {
     int target
     string op
     string[] args
 }
+
 struct mir_eval_stmt {
     string op
     string[] args
 }
+
 enum mir_statement {
     assign(mir_assign_stmt)
     eval(mir_eval_stmt)
 }
+
 struct mir_terminator {
     string kind
     int[] targets
 }
+
 struct mir_basic_block {
     int id
     string label
     mir_statement[] statements
     terminator mir_terminator
 }
+
 struct ir_function {
     string name
     mir_local_slot[] locals
@@ -56,6 +63,7 @@ struct ir_function {
     bool liveness_computed
     bool barriers_computed
 }
+
 func new_empty_function(string name) ir_function {
     ir_function {
         name: name,
@@ -77,6 +85,7 @@ func new_empty_function(string name) ir_function {
         barriers_computed: false
     }
 }
+
 func (ir_function* f) build_cfg() {
     n := f.blocks.len()
     for i := 0; i < n; i++ {
@@ -95,6 +104,7 @@ func (ir_function* f) build_cfg() {
     f.cfg.exit_block = f.exit
     f.cfg_computed = true
 }
+
 func (ir_function* f) compute_dominators() {
     if !f.cfg_computed {
         f.build_cfg()
@@ -104,6 +114,7 @@ func (ir_function* f) compute_dominators() {
     f.cfg.compute_dominance_frontier()
     f.dominators_computed = true
 }
+
 func (ir_function* f) detect_loops() {
     if !f.cfg_computed {
         f.build_cfg()
@@ -111,6 +122,7 @@ func (ir_function* f) detect_loops() {
     f.cfg.detect_loops()
     f.cfg.compute_loop_depths()
 }
+
 func (ir_function* f) build_ssa() {
     if !f.cfg_computed {
         f.build_cfg()
@@ -147,6 +159,7 @@ func (ir_function* f) build_ssa() {
     }
     f.ssa_computed = true
 }
+
 func (ir_function* f) insert_phi_nodes() {
     if !f.dominators_computed {
         f.compute_dominators()
@@ -156,9 +169,11 @@ func (ir_function* f) insert_phi_nodes() {
         f.ssa.insert_phi_nodes(f.cfg.dominance_frontier[i])
     }
 }
+
 func (ir_function* f) rename_ssa_variables() {
     f.ssa.rename_variables()
 }
+
 func (ir_function* f) analyze_escapes() {
     n := f.locals.len()
     f.escape_analysis = escape.new_escape_analysis()
@@ -172,6 +187,7 @@ func (ir_function* f) analyze_escapes() {
     }
     f.escape_computed = true
 }
+
 func (ir_function* f) analyze_liveness() {
     n := f.cfg.blocks.len()
     f.liveness_analysis = liveness.new_liveness_analysis(n)
@@ -201,6 +217,7 @@ func (ir_function* f) analyze_liveness() {
     f.liveness_analysis.compute_live_intervals()
     f.liveness_computed = true
 }
+
 func (ir_function* f) analyze_write_barriers() {
     n := f.locals.len()
     f.write_barriers = writebarrier.new_write_barrier_analysis(n)
@@ -225,9 +242,11 @@ func (ir_function* f) analyze_write_barriers() {
     f.write_barriers.optimize_barriers()
     f.barriers_computed = true
 }
+
 func (ir_function* f) add_debug_location(int instr_id, debug_loc.source_location loc) {
     f.debug_info.set_instr_location(instr_id, loc)
 }
+
 func (ir_function* f) run_all_analyses() {
     f.build_cfg()
     f.compute_dominators()
@@ -239,35 +258,40 @@ func (ir_function* f) run_all_analyses() {
     f.analyze_liveness()
     f.analyze_write_barriers()
 }
+
 func (ir_function* f) get_cfg() cfg.control_flow_graph {
     if !f.cfg_computed {
         f.build_cfg()
     }
     f.cfg
 }
+
 func (ir_function* f) get_ssa() ssa.static_single_assignment {
     if !f.ssa_computed {
         f.build_ssa()
     }
     f.ssa
 }
+
 func (ir_function* f) get_escape_analysis() escape.escape_analysis {
     if !f.escape_computed {
         f.analyze_escapes()
     }
     f.escape_analysis
 }
+
 func (ir_function* f) get_liveness_analysis() liveness.liveness_analysis {
     if !f.liveness_computed {
         f.analyze_liveness()
     }
     f.liveness_analysis
 }
+
 func (ir_function* f) get_write_barriers() writebarrier.write_barrier_analysis {
     if !f.barriers_computed {
         f.analyze_write_barriers()
     }
     f.write_barriers
 }
+
 func (ir_function* f) get_debug_info() debug_loc.debug_info {
-    f.debug_info

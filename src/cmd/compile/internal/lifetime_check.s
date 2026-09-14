@@ -3,6 +3,7 @@ struct lifetime_scope {
     string name
     bool active
 }
+
 struct lifetime_borrow {
     string ref_name
     string owner_scope
@@ -10,30 +11,36 @@ struct lifetime_borrow {
     bool mutable
     bool active
 }
+
 struct lifetime_context {
     lifetime_scope[] scopes
     lifetime_borrow[] borrows
     string[] errors
 }
+
 struct lifetime_result {
     bool ok
     string message
 }
+
 struct dropck_field {
     string name
     string lifetime_name
     bool accessed_by_drop
 }
+
 func lifetime_context_new() lifetime_context {
     lifetime_scope[] scopes
     lifetime_borrow[] borrows
     string[] errors
     lifetime_context { scopes: scopes, borrows: borrows, errors: errors }
 }
+
 func lifetime_error(lifetime_context ctx, string message) lifetime_context {
     ctx.errors = append(ctx.errors, message)
     ctx
 }
+
 func lifetime_scope_find(lifetime_context ctx, string name) int {
     i := len(ctx.scopes) - 1
     for i >= 0 {
@@ -42,6 +49,7 @@ func lifetime_scope_find(lifetime_context ctx, string name) int {
     }
     -1
 }
+
 func lifetime_enter_scope(lifetime_context ctx, string name) lifetime_context {
     if lifetime_scope_find(ctx, name) >= 0 {
         return lifetime_error(ctx, "duplicate scope: " + name)
@@ -49,6 +57,7 @@ func lifetime_enter_scope(lifetime_context ctx, string name) lifetime_context {
     ctx.scopes = append(ctx.scopes, lifetime_scope { name: name, active: true })
     ctx
 }
+
 func lifetime_end_scope(lifetime_context ctx, string name) lifetime_context {
     index := lifetime_scope_find(ctx, name)
     if index < 0 || !ctx.scopes[index].active {
@@ -65,10 +74,12 @@ func lifetime_end_scope(lifetime_context ctx, string name) lifetime_context {
     }
     ctx
 }
+
 func lifetime_scope_active(lifetime_context ctx, string name) bool {
     index := lifetime_scope_find(ctx, name)
     index >= 0 && ctx.scopes[index].active
 }
+
 func lifetime_scope_order(lifetime_context ctx, string name) int {
     i := 0
     for i < len(ctx.scopes) {
@@ -77,6 +88,7 @@ func lifetime_scope_order(lifetime_context ctx, string name) int {
     }
     -1
 }
+
 func lifetime_borrow_find(lifetime_context ctx, string ref_name) int {
     i := 0
     for i < len(ctx.borrows) {
@@ -85,6 +97,7 @@ func lifetime_borrow_find(lifetime_context ctx, string ref_name) int {
     }
     -1
 }
+
 func lifetime_create_borrow(lifetime_context ctx, string ref_name, string owner_scope, string ref_scope, bool mutable) lifetime_context {
     if lifetime_borrow_find(ctx, ref_name) >= 0 {
         return lifetime_error(ctx, "duplicate reference: " + ref_name)
@@ -102,6 +115,7 @@ func lifetime_create_borrow(lifetime_context ctx, string ref_name, string owner_
     })
     ctx
 }
+
 func lifetime_use_ref(lifetime_context ctx, string ref_name) lifetime_context {
     index := lifetime_borrow_find(ctx, ref_name)
     if index < 0 || !ctx.borrows[index].active {
@@ -113,6 +127,7 @@ func lifetime_use_ref(lifetime_context ctx, string ref_name) lifetime_context {
     }
     ctx
 }
+
 func lifetime_end_borrow(lifetime_context ctx, string ref_name) lifetime_context {
     index := lifetime_borrow_find(ctx, ref_name)
     if index < 0 || !ctx.borrows[index].active {
@@ -121,6 +136,7 @@ func lifetime_end_borrow(lifetime_context ctx, string ref_name) lifetime_context
     ctx.borrows[index].active = false
     ctx
 }
+
 func lifetime_finish(lifetime_context ctx) lifetime_result {
     message := ""
     i := 0
@@ -130,6 +146,7 @@ func lifetime_finish(lifetime_context ctx) lifetime_result {
     }
     lifetime_result { ok: len(ctx.errors) == 0, message: message }
 }
+
 func dropck_check_fields(string type_name, dropck_field[] fields) lifetime_result {
     string[] errors
     i := 0
@@ -146,4 +163,3 @@ func dropck_check_fields(string type_name, dropck_field[] fields) lifetime_resul
         message = message + errors[j] + ";"
         j = j + 1
     }
-    lifetime_result { ok: len(errors) == 0, message: message }

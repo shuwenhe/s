@@ -15,6 +15,7 @@ func test_const_fold_add() int {
     }
     0
 }
+
 func test_add_x_zero() int {
     x := ssa_value_new_const_int(1, 42, 0)
     zero := ssa_value_new_const_int(2, 0, 0)
@@ -28,6 +29,7 @@ func test_add_x_zero() int {
     }
     0
 }
+
 func test_mul_x_zero() int {
     x := ssa_value_new_const_int(1, 42, 0)
     zero := ssa_value_new_const_int(2, 0, 0)
@@ -44,6 +46,7 @@ func test_mul_x_zero() int {
     }
     0
 }
+
 func test_mul_x_one() int {
     x := ssa_value_new_const_int(1, 42, 0)
     one := ssa_value_new_const_int(2, 1, 0)
@@ -57,6 +60,7 @@ func test_mul_x_one() int {
     }
     0
 }
+
 func test_mul_by_power_of_two() int {
     x := ssa_value_new_const_int(1, 42, 0)
     four := ssa_value_new_const_int(2, 4, 0)
@@ -70,6 +74,7 @@ func test_mul_by_power_of_two() int {
     }
     0
 }
+
 func test_div_by_power_of_two() int {
     x := ssa_value_new_const_int(1, 42, 0)
     four := ssa_value_new_const_int(2, 4, 0)
@@ -83,6 +88,7 @@ func test_div_by_power_of_two() int {
     }
     0
 }
+
 func test_neg_neg() int {
     x := ssa_value_new_const_int(1, 42, 0)
     neg1 := ssa_value_new_unary_op(2, op_neg, x, 0)
@@ -96,6 +102,7 @@ func test_neg_neg() int {
     }
     0
 }
+
 func test_and_x_x() int {
     x := ssa_value_new_const_int(1, 42, 0)
     and := ssa_value_new_binary_op(2, op_and, x, x, 0)
@@ -108,6 +115,7 @@ func test_and_x_x() int {
     }
     0
 }
+
 func test_or_x_x() int {
     x := ssa_value_new_const_int(1, 42, 0)
     or := ssa_value_new_binary_op(2, op_or, x, x, 0)
@@ -120,6 +128,7 @@ func test_or_x_x() int {
     }
     0
 }
+
 func test_xor_x_x() int {
     x := ssa_value_new_const_int(1, 42, 0)
     xor := ssa_value_new_binary_op(2, op_xor, x, x, 0)
@@ -135,6 +144,7 @@ func test_xor_x_x() int {
     }
     0
 }
+
 func test_cmp_const_const() int {
     five := ssa_value_new_const_int(1, 5, 0)
     three := ssa_value_new_const_int(2, 3, 0)
@@ -151,6 +161,7 @@ func test_cmp_const_const() int {
     }
     0
 }
+
 func test_cmp_x_x() int {
     x := ssa_value_new_const_int(1, 42, 0)
     cmp := ssa_value_new_binary_op(2, op_eq, x, x, 0)
@@ -166,6 +177,7 @@ func test_cmp_x_x() int {
     }
     0
 }
+
 func run_ssa_tests() int {
     tests := [](int) {
         test_const_fold_add,
@@ -194,4 +206,3 @@ func run_ssa_tests() int {
     if failed > 0 {
         return -failed
     }
-    passed

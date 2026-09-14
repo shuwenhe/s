@@ -7,6 +7,7 @@ struct inline_cost {
     is_leaf: int
     has_loops: int
 }
+
 struct inlining_context {
     func_id: int
     inline_threshold: int
@@ -15,6 +16,7 @@ struct inlining_context {
     inlined_count: int
     total_saved_bytes: int
 }
+
 func inline_new_context(int func_id) inlining_context {
     ctx := inlining_context {
         func_id: func_id,
@@ -26,6 +28,7 @@ func inline_new_context(int func_id) inlining_context {
     }
     return ctx
 }
+
 func inline_compute_cost(int func_size, int call_count, int is_recursive) int {
     if func_size < 0 || func_size > 100000 {
         return 100000
@@ -39,6 +42,7 @@ func inline_compute_cost(int func_size, int call_count, int is_recursive) int {
     }
     return cost
 }
+
 func inline_compute_benefit(int call_count, int caller_frequency) int {
     if call_count <= 0 {
         return 0
@@ -47,6 +51,7 @@ func inline_compute_benefit(int call_count, int caller_frequency) int {
     benefit = benefit + caller_frequency
     return benefit
 }
+
 func inline_should_inline(inlining_context* ctx, int func_size, int call_count) int {
     if ctx == 0 {
         return 0
@@ -66,6 +71,7 @@ func inline_should_inline(inlining_context* ctx, int func_size, int call_count) 
     }
     return 1
 }
+
 func inline_analyze_function(inlining_context* ctx, int func_id, int func_size) int {
     if ctx == 0 || func_id < 0 {
         return -1
@@ -79,6 +85,7 @@ func inline_analyze_function(inlining_context* ctx, int func_id, int func_size) 
     ctx.current_depth = ctx.current_depth - 1
     return base_cost
 }
+
 func inline_try_inline_call(inlining_context* ctx, int caller_id, int callee_id, int callee_size) int {
     if ctx == 0 || caller_id < 0 || callee_id < 0 {
         return -1
@@ -90,6 +97,7 @@ func inline_try_inline_call(inlining_context* ctx, int caller_id, int callee_id,
     ctx.total_saved_bytes = ctx.total_saved_bytes + (callee_size / 2)
     return 1
 }
+
 func inline_collect_call_sites(inlining_context* ctx, int* call_nodes, int call_count) int {
     if ctx == 0 || call_nodes == 0 {
         return -1
@@ -105,6 +113,7 @@ func inline_collect_call_sites(inlining_context* ctx, int* call_nodes, int call_
     }
     return processed
 }
+
 func inline_estimate_savings(inlining_context* ctx, int original_size, int inlined_size) int {
     if ctx == 0 || original_size <= 0 {
         return 0
@@ -116,6 +125,7 @@ func inline_estimate_savings(inlining_context* ctx, int original_size, int inlin
     }
     return 0
 }
+
 func inline_can_inline_recursive(int func_id, int target_func_id, int depth) int {
     if func_id == target_func_id {
         return 0
@@ -125,6 +135,7 @@ func inline_can_inline_recursive(int func_id, int target_func_id, int depth) int
     }
     return 1
 }
+
 func inline_apply_inlining(inlining_context* ctx, int caller_id, int callee_id) int {
     if ctx == 0 {
         return -1
@@ -135,6 +146,7 @@ func inline_apply_inlining(inlining_context* ctx, int caller_id, int callee_id) 
     ctx.inlined_count = ctx.inlined_count + 1
     return callee_id
 }
+
 func inline_optimize_hot_path(inlining_context* ctx, int* hot_call_sites, int count) int {
     if ctx == 0 || hot_call_sites == 0 {
         return -1
@@ -151,14 +163,15 @@ func inline_optimize_hot_path(inlining_context* ctx, int* hot_call_sites, int co
     ctx.inlined_count = ctx.inlined_count + inlined
     return inlined
 }
+
 func inline_get_inlined_count(inlining_context* ctx) int {
     if ctx == 0 {
         return 0
     }
     return ctx.inlined_count
 }
+
 func inline_get_total_savings(inlining_context* ctx) int {
     if ctx == 0 {
         return 0
     }
-    return ctx.total_saved_bytes

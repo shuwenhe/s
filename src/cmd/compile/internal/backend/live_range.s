@@ -7,16 +7,19 @@ struct live_range {
     bool spilled
     int stack_offset
 }
+
 struct interval {
     int start
     int end
 }
+
 struct reg_alloc_state {
     live_range* ranges
     int range_count
     int[] free_regs
     int next_stack_offset
 }
+
 func make_reg_alloc_state() reg_alloc_state {
     state: reg_alloc_state
     state.ranges = nil
@@ -30,11 +33,13 @@ func make_reg_alloc_state() reg_alloc_state {
     }
     state
 }
+
 func (reg_alloc_state* s) add_live_range(int value_id, int start, int end) {
     lr := &live_range { value_id, start, end, -1, false, 0 }
     s.ranges = lr
     s.range_count = s.range_count + 1
 }
+
 func (reg_alloc_state* s) allocate_register(int value_id, int position) int {
     if len(s.free_regs) > 0 {
         reg := s.free_regs[0]
@@ -54,12 +59,15 @@ func (reg_alloc_state* s) allocate_register(int value_id, int position) int {
         -1
     }
 }
+
 func (reg_alloc_state* s) free_register(int reg) {
     s.free_regs = append(s.free_regs, reg)
 }
+
 func (reg_alloc_state* s) get_stack_size() int {
     -s.next_stack_offset
 }
+
 func (reg_alloc_state* s) get_allocation(int value_id) (int, int) {
     i := 0
     for i < s.range_count {
@@ -70,6 +78,7 @@ func (reg_alloc_state* s) get_allocation(int value_id) (int, int) {
     }
     -1, 0
 }
+
 func overlap_intervals(interval a, interval b) bool {
     if a.end <= b.start {
         false
@@ -79,6 +88,7 @@ func overlap_intervals(interval a, interval b) bool {
         true
     }
 }
+
 func (reg_alloc_state* s) try_allocate_free_reg(int value_id, interval iv) int {
     reg_candidate := -1
     i := 0
@@ -100,4 +110,3 @@ func (reg_alloc_state* s) try_allocate_free_reg(int value_id, interval iv) int {
         }
         i = i + 1
     }
-    reg_candidate

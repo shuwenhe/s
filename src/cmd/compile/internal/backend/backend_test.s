@@ -23,6 +23,7 @@ func test_instruction_selector_simple_mov() {
     selector := instruction_selector_new(ir_func)
     instruction_selector_select(&selector)
 }
+
 func test_register_allocator_allocation() {
     allocator := register_allocator_new()
     instr1 := x86_instruction { instr_type: instr_mov }
@@ -36,6 +37,7 @@ func test_register_allocator_allocation() {
     register_allocator_build_interference_graph(&allocator)
     register_allocator_allocate(&allocator)
 }
+
 func test_stack_frame_allocation() {
     frame := stack_frame_new("test_func")
     arg_offset := stack_frame_add_arg(&frame, 0, 8)
@@ -43,6 +45,7 @@ func test_stack_frame_allocation() {
     spill_offset := stack_frame_add_spill(&frame, 2, 8)
     stack_size := stack_frame_compute_size(&frame)
 }
+
 func test_assembler_emission() {
     asm := assembler_new()
     mov_instr := x86_instruction {
@@ -56,6 +59,7 @@ func test_assembler_emission() {
     assembler_emit_function_end(&asm)
     output := assembler_finalize(&asm)
 }
+
 func test_x86_operand_to_asm() {
     reg_op := x86_operand { operand_type: operand_reg, reg_id: reg_rax }
     imm_op := x86_operand { operand_type: operand_imm, imm_value: "42" }
@@ -64,4 +68,3 @@ func test_x86_operand_to_asm() {
     reg_asm := x86_operand_to_asm(reg_op)
     imm_asm := x86_operand_to_asm(imm_op)
     mem_asm := x86_operand_to_asm(mem_op)
-    label_asm := x86_operand_to_asm(label_op)

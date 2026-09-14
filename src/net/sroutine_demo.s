@@ -5,6 +5,7 @@ func worker(int task_channel, int done_channel, int worker_id) int {
     chan_send(done_channel, task + worker_id);
     return 0;
 }
+
 func main() {
     task_channel := chan_make(2);
     done_channel := chan_make(2);
@@ -19,4 +20,3 @@ func main() {
         return 1;
     }
     println("sroutine demo passed");
-    return 0;

@@ -23,6 +23,7 @@ struct s_obj_section {
     int align
     u8[] data
 }
+
 struct s_obj_symbol {
     string name
     int value
@@ -32,6 +33,7 @@ struct s_obj_symbol {
     int section
     int comdat
 }
+
 struct s_obj_reloc {
     int section
     int offset
@@ -39,6 +41,7 @@ struct s_obj_reloc {
     int symbol
     int addend
 }
+
 struct s_object {
     int format
     int machine
@@ -46,6 +49,7 @@ struct s_object {
     s_obj_symbol[] symbols
     s_obj_reloc[] relocs
 }
+
 struct s_link_layout {
     int got_base
     int plt_base
@@ -54,6 +58,7 @@ struct s_link_layout {
     int plt_count
     int tls_size
 }
+
 func s_obj_empty() s_object {
     s_object {
         format: s_obj_elf,
@@ -63,37 +68,46 @@ func s_obj_empty() s_object {
         relocs: s_obj_reloc[] {}
     }
 }
+
 func s_obj_add_section(s_object* obj, string name, int kind, int flags, int align, u8[] data) int {
     index := obj.sections.len()
     obj.sections = append(obj.sections, s_obj_section { name: name, kind: kind, flags: flags, align: align, data: data })
     index
 }
+
 func s_obj_add_symbol(s_object* obj, s_obj_symbol sym) int {
     index := obj.symbols.len()
     obj.symbols = append(obj.symbols, sym)
     index
 }
+
 func s_obj_add_reloc(s_object* obj, s_obj_reloc reloc) () {
     obj.relocs = append(obj.relocs, reloc)
 }
+
 func s_obj_u16(u8[] data, int at) int {
     int(data[at]) | (int(data[at + 1]) << 8)
 }
+
 func s_obj_u32(u8[] data, int at) int {
     s_obj_u16(data, at) | (s_obj_u16(data, at + 2) << 16)
 }
+
 func s_obj_put_u16(u8[] data, int at, int value) () {
     data[at] = u8(value)
     data[at + 1] = u8(value >> 8)
 }
+
 func s_obj_put_u32(u8[] data, int at, int value) () {
     s_obj_put_u16(data, at, value)
     s_obj_put_u16(data, at + 2, value >> 16)
 }
+
 func s_obj_put_u64(u8[] data, int at, int value) () {
     s_obj_put_u32(data, at, value)
     s_obj_put_u32(data, at + 4, value >> 32)
 }
+
 func s_elf_read_rel_object(u8[] data) (s_object, int) {
     obj := s_obj_empty()
     if data.len() < 64 || data[0] != 0x7f || data[1] != 69 || data[2] != 76 || data[3] != 70 {
@@ -132,6 +146,7 @@ func s_elf_read_rel_object(u8[] data) (s_object, int) {
     }
     obj, 1
 }
+
 func s_elf_write_rel_header(int machine, int shoff, int shnum, int shstrndx) u8[] {
     u8[64] header
     header[0] = 0x7f
@@ -151,12 +166,14 @@ func s_elf_write_rel_header(int machine, int shoff, int shnum, int shstrndx) u8[
     s_obj_put_u16(header, 62, shstrndx)
     header
 }
+
 func s_obj_find_symbol(s_obj_symbol[] symbols, string name) int {
     for i := 0; i < symbols.len(); i = i + 1 {
         if symbols[i].name == name { i }
     }
     -1
 }
+
 func s_obj_merge_symbol(s_obj_symbol[] symbols, s_obj_symbol candidate) int {
     old := s_obj_find_symbol(symbols, candidate.name)
     if old < 0 { old }
@@ -170,6 +187,7 @@ func s_obj_merge_symbol(s_obj_symbol[] symbols, s_obj_symbol candidate) int {
         old
     }
 }
+
 func s_obj_merge_into(s_object* obj, s_obj_symbol candidate) int {
     old := s_obj_find_symbol(obj.symbols, candidate.name)
     if old < 0 {
@@ -186,23 +204,28 @@ func s_obj_merge_into(s_object* obj, s_obj_symbol candidate) int {
     }
     old
 }
+
 func s_obj_exportable(s_obj_symbol sym) bool {
     if sym.binding == s_sym_local || sym.visibility == s_vis_hidden || sym.visibility == s_vis_internal { false }
     true
 }
+
 func s_obj_layout_new() s_link_layout {
     s_link_layout { got_base: 0, plt_base: 0, tls_base: 0, got_count: 0, plt_count: 0, tls_size: 0 }
 }
+
 func s_obj_got_entry(s_link_layout* layout, int symbol) int {
     index := layout.got_base + layout.got_count * 8
     layout.got_count = layout.got_count + 1
     index
 }
+
 func s_obj_plt_entry(s_link_layout* layout, int symbol) int {
     index := layout.plt_base + layout.plt_count * 16
     layout.plt_count = layout.plt_count + 1
     index
 }
+
 func s_obj_tls_alloc(s_link_layout* layout, int size, int align) int {
     value := layout.tls_base + layout.tls_size
     if align > 1 {
@@ -211,6 +234,7 @@ func s_obj_tls_alloc(s_link_layout* layout, int size, int align) int {
     layout.tls_size = value + size - layout.tls_base
     value
 }
+
 func s_obj_apply_reloc(u8[] data, int offset, int kind, int symbol_value, int addend) int {
     if offset < 0 || offset + 8 > data.len() { 0 }
     value := symbol_value + addend
@@ -223,6 +247,7 @@ func s_obj_apply_reloc(u8[] data, int offset, int kind, int symbol_value, int ad
     }
     1
 }
+
 func s_obj_probe_format(u8[] data) int {
     if data.len() >= 4 && data[0] == 0x7f && data[1] == 69 && data[2] == 76 && data[3] == 70 { s_obj_elf }
     if data.len() >= 4 && data[0] == 0xcf && data[1] == 0xfa && data[2] == 0xed && data[3] == 0xfe { s_obj_macho }
@@ -230,12 +255,15 @@ func s_obj_probe_format(u8[] data) int {
     if data.len() >= 4 && data[0] == 0x00 && data[1] == 0x61 && data[2] == 0x73 && data[3] == 0x6d { s_obj_wasm }
     0
 }
+
 func s_obj_format_ready(int format) bool {
     format == s_obj_elf || format == s_obj_macho || format == s_obj_pe || format == s_obj_wasm
 }
+
 struct s_build_id {
     u8[] bytes
 }
+
 func s_build_id_for(u8[] data) s_build_id {
     a := 2166136261
     b := 16777619
@@ -250,12 +278,14 @@ func s_build_id_for(u8[] data) s_build_id {
     }
     s_build_id { bytes: result }
 }
+
 struct s_dwarf_range {
     int start
     int length
     string file
     int line
 }
+
 struct s_unwind_entry {
     int start
     int length
@@ -263,6 +293,7 @@ struct s_unwind_entry {
     int cfa_offset
     u8[] instructions
 }
+
 func s_dwarf_line_program(s_dwarf_range[] ranges) u8[] {
     data := u8[] {}
     for i := 0; i < ranges.len(); i = i + 1 {
@@ -273,10 +304,12 @@ func s_dwarf_line_program(s_dwarf_range[] ranges) u8[] {
     }
     data
 }
+
 func s_unwind_cfi(int cfa_register, int cfa_offset) u8[] {
     data := u8[] { 0x0c, u8(cfa_register), u8(cfa_offset) }
     data
 }
+
 func s_unwind_add(s_unwind_entry[] entries, int start, int length, int reg, int offset) s_unwind_entry[] {
     entries = append(entries, s_unwind_entry {
         start: start,
@@ -285,4 +318,3 @@ func s_unwind_add(s_unwind_entry[] entries, int start, int length, int reg, int 
         cfa_offset: offset,
         instructions: s_unwind_cfi(reg, offset)
     })
-    entries

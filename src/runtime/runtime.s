@@ -12,6 +12,7 @@ func runtime_init() () {
     gc_enabled = false
     gc_phase   = gc_phase_off
 }
+
 func set_max_procs(int n) int {
     old := _sched.num_p
     if n > 0 {
@@ -19,9 +20,11 @@ func set_max_procs(int n) int {
     }
     old
 }
+
 func gc() () {
     force_gc()
 }
+
 struct mem_stats {
     int alloc
     int total_alloc
@@ -29,11 +32,13 @@ struct mem_stats {
     int num_gc
     int freed
 }
+
 func read_mem_stats() mem_stats {
     mem_stats {
         alloc:       heap_alloc_bytes, total_alloc heap_alloc_bytes + gc_total_freed, sys heap_sys_bytes, num_gc gc_run_count, freed gc_total_freed,
     }
 }
+
 func num_sroutine() int {
     len(_sched.task)
 }
@@ -42,7 +47,7 @@ extern "intrinsic" func __runtime_recover() option[string]
 func panic(string msg) () {
     __runtime_panic(msg)
 }
+
 func version() string {
     runtime_version
 }
-func runtime_unit_name() string { "src/runtime/runtime" }

@@ -8,11 +8,13 @@ struct http_request {
     string[] headers
     string body
 }
+
 struct http_response {
     int status_code
     string[] headers
     string body
 }
+
 func split_http_string(string s, string sep) string[] {
     result := string[]{}
     if len(s) == 0 { return result }
@@ -34,6 +36,7 @@ func split_http_string(string s, string sep) string[] {
     }
     result
 }
+
 func parse_http_request(string raw_request) http_request {
     lines := split_http_string(raw_request, "\n")
     if len(lines) == 0 {
@@ -65,6 +68,7 @@ func parse_http_request(string raw_request) http_request {
         method: method, path path, headers headers, body body,
     }
 }
+
 func format_http_response(http_response resp) string {
     response := "HTTP/1.1 " + std.conv.int_to_string(resp.status_code) + " OK\r\n"
     response = response + "Content-Type: application/json\r\n"
@@ -74,4 +78,3 @@ func format_http_response(http_response resp) string {
         response = response + resp.headers[i] + "\r\n"
     }
     response = response + "\r\n" + resp.body
-    response

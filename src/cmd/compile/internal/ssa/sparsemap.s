@@ -6,10 +6,12 @@ struct sparse_entry {
     int key
     int value
 }
+
 struct sparse_map {
     sparse_entry[] dense
     int[] sparse
 }
+
 func new_sparse_map(int n) sparse_map {
     sparse := int[]()
     i := 0
@@ -21,6 +23,7 @@ func new_sparse_map(int n) sparse_map {
         dense: sparse_entry[](), sparse sparse,
     }
 }
+
 func sparse_map_contains(sparse_map s, int key) bool {
     if key < 0 || key >= len(s.sparse) {
         return false
@@ -28,6 +31,7 @@ func sparse_map_contains(sparse_map s, int key) bool {
     i := s.sparse[key]
     i < len(s.dense) && s.dense[i].key == key
 }
+
 func sparse_map_get(sparse_map s, int key) int_pair {
     if key < 0 || key >= len(s.sparse) {
         return make_int_pair(0, 0
@@ -38,6 +42,7 @@ func sparse_map_get(sparse_map s, int key) int_pair {
     }
     make_int_pair(0, 0)
 }
+
 func sparse_map_set(sparse_map s, int key, int value) sparse_map {
     if key < 0 || key >= len(s.sparse) {
         return s
@@ -51,6 +56,7 @@ func sparse_map_set(sparse_map s, int key, int value) sparse_map {
     s.sparse[key] = len(s.dense) - 1
     s
 }
+
 func sparse_map_remove(sparse_map s, int key) sparse_map {
     if key < 0 || key >= len(s.sparse) {
         return s
@@ -64,6 +70,6 @@ func sparse_map_remove(sparse_map s, int key) sparse_map {
     }
     s
 }
+
 func sparse_map_clear(sparse_map s) sparse_map {
     s.dense = sparse_entry[]()
-    s

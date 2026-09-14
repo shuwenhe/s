@@ -11,6 +11,7 @@ main:
     ret
 `
 }
+
 func example_ir_to_asm_patterns() string[] {
     patterns := string[]{
         "
@@ -33,6 +34,7 @@ func example_ir_to_asm_patterns() string[] {
     }
     return patterns
 }
+
 func explain_register_allocation() string {
     return `
 simple register allocation strategy for mvp:
@@ -56,11 +58,11 @@ usage:
    → call func; mov %rax, -0(%rbp)    # or -8(%rbp) for next
 `
 }
+
 func full_example_compilation() string {
     return `
 ========== example: compiling simple ir to x86-64 ==========
 input ir (compiler.ir):
-
 sseed-target-v1
 func_begin|main|_|_
 call|t0|host_args|0
@@ -71,7 +73,6 @@ func_begin|host_args|_|_
 ret|0|_|_
 func_end|host_args|_|_
 generated x86-64 assembly (compiler.s):
-
 .text
 .globl main
 .globl host_args
@@ -92,10 +93,8 @@ main:
     pop %rbp
     ret
 compilation command:
-
 gcc -no-pie -o compiler.bin compiler.s
 verification:
-
 file compiler.bin
   → elf 64-bit lsb executable
 ldd compiler.bin
@@ -108,6 +107,7 @@ echo $?
   → 0  (success!)
 `
 }
+
 func key_insight() string {
     return `
 why this works for true self-hosting:
@@ -129,4 +129,3 @@ this is how go achieved self-hosting:
 3. bootstrapped with go backend
 4. now go compiles itself entirely
 we're doing the same for s!
-`

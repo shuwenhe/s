@@ -45,6 +45,7 @@ func main() int {
     println("  - demo_hello_universal: Universal Binary")
     return 0
 }
+
 func create_test_program() {
     program := "package main\n\nfunc main() int {\n    println(\"Hello from S on macOS!\")\n    return 0\n}\n"
     result := __host_write_text_file("demo_hello.s", program)
@@ -52,6 +53,7 @@ func create_test_program() {
         println("警告: 无法创建测试文件")
     }
 }
+
 func create_universal_binary() int {
     cmd := "lipo -create demo_hello_arm64 demo_hello_x86 -output demo_hello_universal 2>/dev/null"
     ret := system(cmd)
@@ -59,4 +61,3 @@ func create_universal_binary() int {
 }
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
 extern "intrinsic" func system(string cmd) int;
-func println(string s) {

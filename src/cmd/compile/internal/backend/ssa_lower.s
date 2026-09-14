@@ -4,6 +4,7 @@ struct ssa_to_machine {
     ssa_function* func
     prog_list* progs
 }
+
 func make_ssa_to_machine(codegen_context* ctx, ssa_function* func) ssa_to_machine {
     tm: ssa_to_machine
     tm.ctx = ctx
@@ -11,6 +12,7 @@ func make_ssa_to_machine(codegen_context* ctx, ssa_function* func) ssa_to_machin
     tm.progs = &make_prog_list()
     tm
 }
+
 func (ssa_to_machine* tm) lower_block(ssa_block* b) {
     i := 0
     for i < len(b.values) {
@@ -19,6 +21,7 @@ func (ssa_to_machine* tm) lower_block(ssa_block* b) {
         i = i + 1
     }
 }
+
 func (ssa_to_machine* tm) lower_value(int value_id) {
 }
 
@@ -27,16 +30,19 @@ func (ssa_to_machine* tm) emit_alloca(int size) string {
     tm.ctx.alloc_state.next_stack_offset = offset
     "-" + to_string(-offset) + "(%rbp)"
 }
+
 func (ssa_to_machine* tm) emit_load(string addr, int reg) {
     reg_name := x86_64_reg_name(reg)
     instr := "\tmovq\t" + addr + ", %" + reg_name
     tm.progs.append_prog(prog_op_load(), instr)
 }
+
 func (ssa_to_machine* tm) emit_store(int reg, string addr) {
     reg_name := x86_64_reg_name(reg)
     instr := "\tmovq\t%" + reg_name + ", " + addr
     tm.progs.append_prog(prog_op_store(), instr)
 }
+
 func (ssa_to_machine* tm) emit_binary_op(string op, int left_reg, int right_reg, int result_reg) {
     left_name := x86_64_reg_name(left_reg)
     right_name := x86_64_reg_name(right_reg)
@@ -58,6 +64,7 @@ func (ssa_to_machine* tm) emit_binary_op(string op, int left_reg, int right_reg,
     }
     tm.progs.append_prog(1, instr)
 }
+
 func (ssa_to_machine* tm) emit_comparison(string cond, int left_reg, int right_reg) int {
     left_name := x86_64_reg_name(left_reg)
     right_name := x86_64_reg_name(right_reg)
@@ -79,6 +86,7 @@ func (ssa_to_machine* tm) emit_comparison(string cond, int left_reg, int right_r
     tm.progs.append_prog(prog_op_mov(), movz_instr)
     result_reg
 }
+
 func (ssa_to_machine* tm) generate() prog_list {
     tm.ctx.current_func = tm.func.name
     tm.ctx.emit_prologue()
@@ -89,4 +97,3 @@ func (ssa_to_machine* tm) generate() prog_list {
     }
     tm.ctx.emit_epilogue()
     tm.func.stack_size = tm.ctx.alloc_state.get_stack_size()
-    *tm.progs

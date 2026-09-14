@@ -9,15 +9,16 @@ struct optimization_pass {
     int pass_type
     string pass_name
 }
+
 struct optimization_context {
     ir_module module
     control_flow_graph cfg
     dataflow_analysis dfa
     int changes
 }
+
 func run_optimization_pipeline(ir_module* module) {
     for f_idx := 0; f_idx < module.functions.len(); f_idx = f_idx + 1 {
-
         func := module.functions[f_idx]
         cfg := cfg_new(func)
         cfg_compute_dominators(&cfg)
@@ -29,6 +30,7 @@ func run_optimization_pipeline(ir_module* module) {
         opt_global_value_numbering(&cfg)
     }
 }
+
 func opt_constant_folding(cfg* control_flow_graph) {
     for b_idx := 0; b_idx < cfg.blocks.len(); b_idx = b_idx + 1 {
         block := cfg.blocks[b_idx]
@@ -49,6 +51,7 @@ func opt_constant_folding(cfg* control_flow_graph) {
         }
     }
 }
+
 func opt_fold_constant(int op, string left, string right) string {
     left_val := 0
     right_val := 0
@@ -79,6 +82,7 @@ func opt_fold_constant(int op, string left, string right) string {
             return left
     }
 }
+
 func opt_dead_code_elimination(cfg* control_flow_graph) {
     dfa := dfa_analyze(cfg)
     for b_idx := 0; b_idx < cfg.blocks.len(); b_idx = b_idx + 1 {
@@ -117,6 +121,7 @@ func opt_dead_code_elimination(cfg* control_flow_graph) {
         block.instructions = new_instrs
     }
 }
+
 func opt_constant_propagation(cfg* control_flow_graph) {
     constants := make_string_value_map()
     for b_idx := 0; b_idx < cfg.blocks.len(); b_idx = b_idx + 1 {
@@ -138,6 +143,7 @@ func opt_constant_propagation(cfg* control_flow_graph) {
         }
     }
 }
+
 func opt_global_value_numbering(cfg* control_flow_graph) {
     value_map := make_string_instruction_map()
     for b_idx := 0; b_idx < cfg.blocks.len(); b_idx = b_idx + 1 {
@@ -159,6 +165,7 @@ func opt_global_value_numbering(cfg* control_flow_graph) {
         block.instructions = new_instrs
     }
 }
+
 func opt_compute_instruction_signature(ir_instruction instr) string {
     sig := ""
     if instr.instr_type == ir_instr_binop {
@@ -169,12 +176,15 @@ func opt_compute_instruction_signature(ir_instruction instr) string {
     }
     sig
 }
+
 func make_string_value_map() string[] {
     string[]()
 }
+
 func make_string_instruction_map() ir_instruction[] {
     ir_instruction[]()
 }
+
 func opt_licm(cfg* control_flow_graph, loop_info[] loops) {
     for loop_idx := 0; loop_idx < loops.len(); loop_idx = loop_idx + 1 {
         loop := loops[loop_idx]
@@ -210,4 +220,3 @@ func opt_licm(cfg* control_flow_graph, loop_info[] loops) {
                 header_block.instructions = append(header_block.instructions, invariant_instrs[i])
             }
         }
-    }

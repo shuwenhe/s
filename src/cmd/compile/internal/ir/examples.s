@@ -14,6 +14,7 @@ func example_simple_function() mir.ir_function {
     b.add_debug_location(0, "example.s", 10, 5)
     b.finalize()
 }
+
 func example_loop_function() mir.ir_function {
     b := builder.new_ir_builder("loop_sum")
     b.add_local(1, "n", "int")
@@ -38,6 +39,7 @@ func example_loop_function() mir.ir_function {
     b.add_debug_location(2, "example.s", 23, 9)
     b.finalize()
 }
+
 func example_cfg_analysis(mir.ir_function f) {
     cfg := f.get_cfg()
     n_blocks := cfg.blocks.len()
@@ -57,6 +59,7 @@ func example_cfg_analysis(mir.ir_function f) {
         _ = loop_body
     }
 }
+
 func example_ssa_analysis(mir.ir_function f) {
     ssa := f.get_ssa()
     n_values := ssa.all_values.len()
@@ -72,6 +75,7 @@ func example_ssa_analysis(mir.ir_function f) {
         }
     }
 }
+
 func example_escape_analysis(mir.ir_function f) {
     escape_info := f.get_escape_analysis()
     for _idx_106 := 0; _idx_106 < len(escape_info.infos); _idx_106++ {
@@ -86,6 +90,7 @@ func example_escape_analysis(mir.ir_function f) {
         _ = escapes
     }
 }
+
 func example_liveness_analysis(mir.ir_function f) {
     liveness := f.get_liveness_analysis()
     for _idx_121 := 0; _idx_121 < len(liveness.vars); _idx_121++ {
@@ -102,6 +107,7 @@ func example_liveness_analysis(mir.ir_function f) {
     _ = n_interference_edges
     _ = edges_to
 }
+
 func example_write_barrier_analysis(mir.ir_function f) {
     barriers := f.get_write_barriers()
     for _idx_140 := 0; _idx_140 < len(barriers.barriers); _idx_140++ {
@@ -118,6 +124,7 @@ func example_write_barrier_analysis(mir.ir_function f) {
         }
     }
 }
+
 func example_debug_info(mir.ir_function f) {
     debug := f.get_debug_info()
     n_scopes := debug.scopes.len()
@@ -129,6 +136,7 @@ func example_debug_info(mir.ir_function f) {
     location_info := debug.generate_location_info()
     _ = location_info
 }
+
 func example_combined_optimization(mir.ir_function f) {
     cfg := f.get_cfg()
     ssa := f.get_ssa()
@@ -159,6 +167,7 @@ func example_combined_optimization(mir.ir_function f) {
         }
     }
 }
+
 func example_full_analysis_pipeline() {
     f := example_loop_function()
     example_cfg_analysis(f)
@@ -167,4 +176,3 @@ func example_full_analysis_pipeline() {
     example_liveness_analysis(f)
     example_write_barrier_analysis(f)
     example_debug_info(f)
-    example_combined_optimization(f)

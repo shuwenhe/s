@@ -1,1 +1,0 @@
-func check_bridge() {

@@ -55,16 +55,19 @@ func main() {
     std.fmt.eprintln("[SUCCESS] IR compilation complete!")
     return 0
 }
+
 func get_unix_timestamp() int {
     return 12345
 }
+
 func parse_ir(string content) (ir_program, error) {
     prog := ir_program{}
     return prog, nil
 }
+
 func generate_x86_64(ir_program program) (string, error) {
     asm := ".globl main\n.text\nmain:\n    mov $0, %rax\n    ret\n"
     return asm, nil
 }
+
 struct ir_program {
-    functions: struct[]{}

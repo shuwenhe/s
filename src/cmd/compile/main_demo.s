@@ -6,6 +6,7 @@ func main() {
     report := generate_complete_demo_report()
     fmt.println(report)
 }
+
 func demonstrate_compiler_usage() string {
     result := "\n=== 编译器使用示例 ===\n\n"
     result = result + "1. 创建编译器:\n"
@@ -22,6 +23,7 @@ func demonstrate_compiler_usage() string {
     result = result + "   - 包含 .shstrtab 节 (节名字符串表)\n\n"
     result
 }
+
 func demonstrate_machine_code_generation() string {
     result := "\n=== 直接机器码生成过程 ===\n\n"
     result = result + "高级语言代码:\n"
@@ -47,6 +49,7 @@ func demonstrate_machine_code_generation() string {
     result = result + "  c3
     result
 }
+
 func show_go_similarities() string {
     result := "\n=== 与 Go 编译器的相似设计 ===\n\n"
     result = result + "1. 直接机器码生成\n"
@@ -69,6 +72,7 @@ func show_go_similarities() string {
     result = result + "  ✓ System V ABI 遵从\n\n"
     result
 }
+
 func show_compilation_pipeline() string {
     result := "\n=== 编译管道 ===\n\n"
     result = result + "┌────────────┐\n"
@@ -109,6 +113,7 @@ func show_compilation_pipeline() string {
     result = result + "└──────────────────┘\n\n"
     result
 }
+
 func summary() string {
     result := "\n"
     result = result + "════════════════════════════════════════════════════════════════\n"
@@ -136,4 +141,3 @@ func summary() string {
     result = result + "编译过程:\n"
     result = result + "  源代码 → Lexer → Parser → Direct Code Gen → ELF → 链接器 → 可执行文件\n\n"
     result = result + "════════════════════════════════════════════════════════════════\n\n"
-    result

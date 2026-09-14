@@ -7,6 +7,7 @@ enum symbol_bind {
     symbol_bind_global,
     symbol_bind_weak,
 }
+
 enum symbol_type {
     symbol_type_notype,
     symbol_type_object,
@@ -14,6 +15,7 @@ enum symbol_type {
     symbol_type_section,
     symbol_type_file,
 }
+
 struct symbol_entry {
     string name
     bind symbol_bind
@@ -23,16 +25,19 @@ struct symbol_entry {
     int section_index
     bool defined
 }
+
 struct symbol_table {
     symbol_entry[] entries
     string[] names
     int string_table_offset64
 }
+
 func make_symbol_table() symbol_table {
     symbol_table {
         entries: symbol_entry[](), names string[](), string_table_offset 0,
     }
 }
+
 func (symbol_table* st) add_symbol(string name, symbol_bind bind, symbol_type type, int64 value, int64 size, int section_idx) int {
     entry := symbol_entry {
         name: name, bind bind, type type, value value, size size, section_index section_idx, defined true,
@@ -41,6 +46,7 @@ func (symbol_table* st) add_symbol(string name, symbol_bind bind, symbol_type ty
     st.names = append(st.names, name)
     len(st.entries) - 1
 }
+
 func (symbol_table* st) lookup_symbol(string name) (symbol_entry*, bool) {
     i := 0
     for i < len(st.names) {
@@ -51,6 +57,7 @@ func (symbol_table* st) lookup_symbol(string name) (symbol_entry*, bool) {
     }
     nil, false
 }
+
 func (symbol_table* st) get_symbol_index(string name) (int, bool) {
     i := 0
     for i < len(st.names) {
@@ -61,9 +68,11 @@ func (symbol_table* st) get_symbol_index(string name) (int, bool) {
     }
     0, false
 }
+
 func (symbol_table* st) count_symbols() int {
     len(st.entries)
 }
+
 func (symbol_table* st) get_string_table_size() int64 {
     total := 0 as int64
     i := 0
@@ -73,6 +82,7 @@ func (symbol_table* st) get_string_table_size() int64 {
     }
     total
 }
+
 func symbol_bind_value(symbol_bind b) int8 {
     switch b {
         case symbol_bind_local: return 0 as int8
@@ -81,6 +91,7 @@ func symbol_bind_value(symbol_bind b) int8 {
     }
     0 as int8
 }
+
 func symbol_type_value(symbol_type t) int8 {
     switch t {
         case symbol_type_notype: return 0 as int8
@@ -91,11 +102,13 @@ func symbol_type_value(symbol_type t) int8 {
     }
     0 as int8
 }
+
 func (symbol_entry* se) encode_info() int8 {
     bind := symbol_bind_value(se.bind)
     type_val := symbol_type_value(se.type)
     ((bind << 4) + type_val) as int8
 }
+
 func (symbol_table* st) dump() string {
     result := "Symbol Table:\n"
     i := 0
@@ -106,6 +119,7 @@ func (symbol_table* st) dump() string {
     }
     result
 }
+
 func (symbol_table* st) encode_elf_symbols() elf_symbol[] {
     result := elf_symbol[]()()
     null_sym := elf_symbol {
@@ -122,4 +136,3 @@ func (symbol_table* st) encode_elf_symbols() elf_symbol[] {
         result = append(result, sym)
         i = i + 1
     }
-    result

@@ -33,46 +33,59 @@ const stderr_fd = 2
 func exit(int code) {
     _ := __syscall1(sys_exit, code)
 }
+
 func open_file(string path, int flags, int mode) int {
     __syscall3(sys_open, 0, flags, mode)
 }
+
 func read_from_fd(int fd, int buffer_ptr, int count) int {
     __syscall3(sys_read, fd, buffer_ptr, count)
 }
+
 func write_to_fd(int fd, int buffer_ptr, int count) int {
     __syscall3(sys_write, fd, buffer_ptr, count)
 }
+
 func close_fd(int fd) int {
     __syscall1(sys_close, fd)
 }
+
 func seek_fd(int fd, int offset, int whence) int {
     __syscall3(sys_lseek, fd, offset, whence)
 }
+
 func fork() int {
     __syscall0(sys_fork)
 }
+
 func execve(string path, string[] argv, string[] envp) int {
     __syscall3(sys_execve, 0, 0, 0)
 }
+
 func waitpid(int pid, int status_ptr, int options) int {
     __syscall3(sys_waitpid, pid, status_ptr, options)
 }
+
 func brk(int new_brk) int {
     __syscall1(sys_brk, new_brk)
 }
+
 func mmap(int addr, int length, int prot, int flags, int fd, int offset) int {
     __syscall6(sys_mmap, addr, length, prot, flags, fd, offset)
 }
+
 func stdout_write(string text) int {
     write_to_fd(stdout_fd, 0, len(text))
 }
+
 func stderr_write(string text) int {
     write_to_fd(stderr_fd, 0, len(text))
 }
+
 func println(string text) {
     _ := stdout_write(text)
     _ := stdout_write("\n")
 }
+
 func eprintln(string text) {
     _ := stderr_write(text)
-    _ := stderr_write("\n")

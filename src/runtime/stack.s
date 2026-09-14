@@ -7,11 +7,13 @@ enum stack_shrink_state {
 	shrink_in_progress = 1
 	shrink_done = 2
 }
+
 struct stack_guard {
 	u64 limit
 	u64 next_call_size
 	bool can_split
 }
+
 struct stack_frame {
 	u64 pc
 	u64 sp
@@ -19,6 +21,7 @@ struct stack_frame {
 	u64 locals_size
 	u64 args_size
 }
+
 struct stack_info {
 	u64 base
 	u64 top
@@ -62,6 +65,7 @@ func create_stack(size i32) (stack_info*, error) {
 	s.guard.can_split = true
 	return s, nil
 }
+
 func (s* stack_info) check_growth(needed u64) error {
 	if s == nil {
 		return "stack is nil"
@@ -74,6 +78,7 @@ func (s* stack_info) check_growth(needed u64) error {
 	}
 	nil
 }
+
 func grow_stack(s* stack_info, needed i32) error {
 	if s == nil {
 		return "stack is nil"
@@ -104,6 +109,7 @@ func grow_stack(s* stack_info, needed i32) error {
 	free_stack_memory(old_base, old_size)
 	nil
 }
+
 func (s* stack_info) push_frame(pc u64, locals_size u64, args_size u64) stack_frame {
 	frame := stack_frame{
 		pc: pc,
@@ -115,6 +121,7 @@ func (s* stack_info) push_frame(pc u64, locals_size u64, args_size u64) stack_fr
 	s.frame_stack = append(s.frame_stack, frame)
 	return frame
 }
+
 func (s* stack_info) pop_frame() stack_frame* {
 	if len(s.frame_stack) == 0 {
 		return nil
@@ -123,6 +130,7 @@ func (s* stack_info) pop_frame() stack_frame* {
 	s.frame_stack = s.frame_stack[:len(s.frame_stack)-1]
 	return &frame
 }
+
 func (s* stack_info) shrink_check() error {
 	if s == nil {
 		return "stack is nil"
@@ -136,6 +144,7 @@ func (s* stack_info) shrink_check() error {
 	}
 	nil
 }
+
 func shrink_stack(s* stack_info) error {
 	if s.shrink_state != shrink_idle {
 		return "shrink already in progress"
@@ -158,12 +167,15 @@ func shrink_stack(s* stack_info) error {
 	s.shrink_state = shrink_done
 	nil
 }
+
 func (s* stack_info) get_used_size() u64 {
 	return s.current_size - (s.top - s.base)
 }
+
 func (s* stack_info) get_free_size() u64 {
 	return s.top - s.base
 }
+
 func (s* stack_info) release() error {
 	if s == nil {
 		return "stack is nil"
@@ -171,9 +183,11 @@ func (s* stack_info) release() error {
 	free_stack_memory(s.base, s.current_size)
 	nil
 }
+
 func allocate_stack_memory(size i32) u64 {
 	return 0
 }
+
 func free_stack_memory(base u64, size u64) {
 }
 
@@ -191,11 +205,13 @@ func update_stack_pointers(s* stack_info, old_base u64, new_base u64, old_size u
 		}
 	}
 }
+
 struct split_stack_info {
 	stack_info* parent_stack
 	stack_info* child_stack
 	u8[] saved_context
 }
+
 func split_stack(parent* stack_info) (split_stack_info*, error) {
 	child, err := create_stack(8192)
 	if err != nil {
@@ -208,9 +224,9 @@ func split_stack(parent* stack_info) (split_stack_info*, error) {
 	}
 	return split, nil
 }
+
 func (ssi* split_stack_info) restore() error {
 	if ssi == nil {
 		return "split stack info is nil"
 	}
 	ssi.child_stack.release()
-	nil

@@ -80,6 +80,7 @@ func parse_options(string[] args)  string[] {
     }
     make_options("help", "", "", "", false)
 }
+
 func usage()  string {
     "usage:\n"
     + "  s check <path|module>\n"
@@ -98,6 +99,7 @@ func usage()  string {
     + "  Set S_PROJECT_ROOT=<dir> for neurx.* modules (strip neurx. prefix for paths).\n"
     + "  Run 's mod index' in the project to generate scripts/s-package-index.tsv for mismatched packages.\n"
 }
+
 func make_options(string command, string path, string output, string ssa_margin, bool nostdlib)  string[] {
     options := string[]()
     options = append(options, command)
@@ -109,6 +111,7 @@ func make_options(string command, string path, string output, string ssa_margin,
     }
     options
 }
+
 func has_flag(string[] args, int start_index, string flag) bool {
     i := start_index
     for i < len(args) {
@@ -119,6 +122,7 @@ func has_flag(string[] args, int start_index, string flag) bool {
     }
     false
 }
+
 func parse_optional_margin(string[] args, int start_index) string {
     if len(args) <= start_index {
         return ""
@@ -148,15 +152,18 @@ func parse_optional_margin(string[] args, int start_index) string {
     }
     "__invalid_margin__"
 }
+
 func starts_with(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
     }
     std.prelude.slice(text, 0, len(prefix)) == prefix
 }
+
 func slice_after(string text, string prefix) string {
     std.prelude.slice(text, len(prefix), len(text))
 }
+
 func is_non_negative_integer(string text) bool {
     if text == "" {
         return false
@@ -171,6 +178,7 @@ func is_non_negative_integer(string text) bool {
     }
     true
 }
+
 func is_digit_char(string ch) bool {
     if ch == "0" || ch == "1" || ch == "2" || ch == "3" || ch == "4" {
         return true
@@ -178,4 +186,3 @@ func is_digit_char(string ch) bool {
     if ch == "5" || ch == "6" || ch == "7" || ch == "8" || ch == "9" {
         return true
     }
-    false

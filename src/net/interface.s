@@ -9,4 +9,3 @@ func interface_addresses() (string[], net_error) {
         e : wrap_sc_err(e),
     }
 }
-func interface_unit_name() string { "src/net/interface" }

@@ -12,11 +12,13 @@ struct semaphore {
     int id
     int count
 }
+
 func new_semaphore(int initial) semaphore {
     semaphore {
         id:    __sema_new_id(), count initial,
     }
 }
+
 func (semaphore* self) wait() () {
         for true {
             old := __atomic_load(self.count)
@@ -29,10 +31,12 @@ func (semaphore* self) wait() () {
             }
         }
     }
+
 func (semaphore* self) signal() () {
         __atomic_add(self.count, 1)
         __sema_wakeup(self.id)
     }
+
 func (semaphore* self) try_wait() bool {
         old := __atomic_load(self.count)
         if old > 0 {
@@ -41,15 +45,18 @@ func (semaphore* self) try_wait() bool {
             false
         }
     }
+
 struct mutex {
     int state
     sem semaphore
 }
+
 func new_mutex() mutex {
     mutex {
         state: 0, sem new_semaphore(0),
     }
 }
+
 func (mutex* self) lock() () {
         if __atomic_cas(self.state, 0, 1) {
             return
@@ -61,38 +68,45 @@ func (mutex* self) lock() () {
             self.sem.wait()
         }
     }
+
 func (mutex* self) unlock() () {
         if !__atomic_cas(self.state, 1, 0) {
             return
         }
         self.sem.signal()
     }
+
 func (mutex* self) try_lock() bool {
         __atomic_cas(self.state, 0, 1)
     }
+
 struct rw_mutex {
     int readers
     int writer
     write_mu mutex
     read_sem semaphore
 }
+
 func new_rwmutex() rw_mutex {
     rw_mutex {
         readers:   0, writer 0, write_mu new_mutex(), read_sem new_semaphore(0),
     }
 }
+
 func (rw_mutex* self) rlock() () {
         for __atomic_load(self.writer) == 1 {
             self.read_sem.wait()
         }
         __atomic_add(self.readers, 1)
     }
+
 func (rw_mutex* self) runlock() () {
         prev := __atomic_add(self.readers, -1)
         if prev == 1 && __atomic_load(self.writer) == 1 {
             self.write_mu.sem.signal()
         }
     }
+
 func (rw_mutex* self) wlock() () {
         self.write_mu.lock()
         __atomic_cas(self.writer, 0, 1)
@@ -100,18 +114,22 @@ func (rw_mutex* self) wlock() () {
             self.write_mu.sem.wait()
         }
     }
+
 func (rw_mutex* self) wunlock() () {
         __atomic_cas(self.writer, 1, 0)
         self.write_mu.unlock()
         self.read_sem.signal()
     }
+
 struct once {
     int done
     mu mutex
 }
+
 func new_once() once {
     once { done: 0, mu new_mutex() }
 }
+
 func (once* self) do(func f) () {
         if __atomic_load(self.done) == 1 {
             return
@@ -123,4 +141,3 @@ func (once* self) do(func f) () {
         }
         self.mu.unlock()
     }
-func sema_unit_name() string { "src/runtime/sema" }

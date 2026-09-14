@@ -9,6 +9,7 @@ func read_unit(string path) (source_unit, noder_error) {
         err : err_unit(code_read_failed(), "failed to read source file: " + err.message, path, 0, 0),
     }
 }
+
 func read_units(string[] paths) (source_unit[], noder_error) {
     out := source_unit[]()
     i := 0
@@ -19,4 +20,3 @@ func read_units(string[] paths) (source_unit[], noder_error) {
         }
         i = i + 1
     }
-    out

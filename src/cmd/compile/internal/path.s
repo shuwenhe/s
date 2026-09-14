@@ -1,8 +1,10 @@
 package compile.internal.path
 func path_segment_kind_field() int { 0 }
+
 func path_segment_kind_index() int { 1 }
 
 func path_segment_kind_index_var() int { 2 }
+
 func path_segment_kind_deref() int { 3 }
 
 struct path_segment {
@@ -11,14 +13,17 @@ struct path_segment {
     int index_value
     string index_var
 }
+
 struct path {
     string base_var
     path_segment[] segments
 }
+
 func path_new(string base_var) path {
     path_segment[] segs
     path { base_var: base_var, segments: segs }
 }
+
 func path_field(path p, string field_name) path {
     new_seg := path_segment {
         kind: path_segment_kind_field(),
@@ -27,6 +32,7 @@ func path_field(path p, string field_name) path {
     p.segments = append(p.segments, new_seg)
     p
 }
+
 func path_index(path p, int index_value) path {
     new_seg := path_segment {
         kind: path_segment_kind_index(),
@@ -35,6 +41,7 @@ func path_index(path p, int index_value) path {
     p.segments = append(p.segments, new_seg)
     p
 }
+
 func path_index_var(path p, string var_name) path {
     new_seg := path_segment {
         kind: path_segment_kind_index_var(),
@@ -43,6 +50,7 @@ func path_index_var(path p, string var_name) path {
     p.segments = append(p.segments, new_seg)
     p
 }
+
 func path_deref(path p) path {
     new_seg := path_segment {
         kind: path_segment_kind_deref()
@@ -50,6 +58,7 @@ func path_deref(path p) path {
     p.segments = append(p.segments, new_seg)
     p
 }
+
 func path_equal(path p1, path p2) bool {
     if p1.base_var != p2.base_var { return false }
     if len(p1.segments) != len(p2.segments) { return false }
@@ -69,6 +78,7 @@ func path_equal(path p1, path p2) bool {
     }
     true
 }
+
 func path_is_prefix(path p1, path p2) bool {
     if p1.base_var != p2.base_var { return false }
     if len(p1.segments) > len(p2.segments) { return false }
@@ -88,15 +98,18 @@ func path_is_prefix(path p1, path p2) bool {
     }
     true
 }
+
 func path_len(path p) int {
     len(p.segments)
 }
+
 func path_get_segment(path p, int i) path_segment {
     if i < 0 || i >= len(p.segments) {
         return path_segment { kind: -1 }
     }
     p.segments[i]
 }
+
 func path_to_string(path p) string {
     result := p.base_var
     i := 0
@@ -119,9 +132,11 @@ func path_to_string(path p) string {
     }
     result
 }
+
 func path_parse(string s) path {
     path_new(s)
 }
+
 func path_parent(path p) path {
     if len(p.segments) == 0 {
         return path_new("")
@@ -130,6 +145,7 @@ func path_parent(path p) path {
     new_len := len(p.segments) - 1
     path { base_var: p.base_var, segments: new_segments }
 }
+
 func path_common_prefix(path p1, path p2) path {
     if p1.base_var != p2.base_var {
         return path_new("")
@@ -163,18 +179,22 @@ func path_common_prefix(path p1, path p2) path {
     }
     result
 }
+
 func path_same_base(path p1, path p2) bool {
     p1.base_var == p2.base_var
 }
+
 struct path_map {
     path[] keys
     int[] values
 }
+
 func path_map_new() path_map {
     path[] keys
     int[] values
     path_map { keys: keys, values: values }
 }
+
 func path_map_insert(path_map m, path p, int value) path_map {
     i := 0
     for i < len(m.keys) {
@@ -188,6 +208,7 @@ func path_map_insert(path_map m, path p, int value) path_map {
     m.values = append(m.values, value)
     m
 }
+
 func path_map_get(path_map m, path p) int {
     i := 0
     for i < len(m.keys) {
@@ -198,6 +219,7 @@ func path_map_get(path_map m, path p) int {
     }
     -1
 }
+
 func path_map_remove(path_map m, path p) path_map {
     found_idx := -1
     i := 0
@@ -213,13 +235,16 @@ func path_map_remove(path_map m, path p) path_map {
     new_values := m.values
     path_map { keys: new_keys, values: new_values }
 }
+
 struct path_set {
     path[] paths
 }
+
 func path_set_new() path_set {
     path[] paths
     path_set { paths: paths }
 }
+
 func path_set_add(path_set s, path p) path_set {
     i := 0
     for i < len(s.paths) {
@@ -231,6 +256,7 @@ func path_set_add(path_set s, path p) path_set {
     s.paths = append(s.paths, p)
     s
 }
+
 func path_set_contains(path_set s, path p) bool {
     i := 0
     for i < len(s.paths) {
@@ -241,5 +267,5 @@ func path_set_contains(path_set s, path p) bool {
     }
     false
 }
+
 func path_set_size(path_set s) int {
-    len(s.paths)

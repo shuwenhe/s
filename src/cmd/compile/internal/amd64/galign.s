@@ -13,11 +13,13 @@ func init_amd64(arch_info arch) arch_info {
     arch.spill_arg_reg_hook = "spill_arg_reg"
     arch
 }
+
 func link_arch_name() string {
     "amd64"
 }
+
 func stack_pointer_register() int {
     7
 }
+
 func max_width_limit() int {
-    1 << 50

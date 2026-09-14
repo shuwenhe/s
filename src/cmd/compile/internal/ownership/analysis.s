@@ -14,6 +14,7 @@ struct ownership_analysis_input {
     int outlives_count
     int loan_count
 }
+
 struct ownership_analysis {
     int[] region_live_points
     int[] loan_live_points
@@ -28,6 +29,7 @@ enum ownership_decision_kind {
     accept
     reject
 }
+
 enum ownership_operation_kind {
     move
     borrow_shared
@@ -35,23 +37,28 @@ enum ownership_operation_kind {
     use
     assign
 }
+
 enum ownership_decision_reason {
     none
     live_loan_conflict
 }
+
 struct ownership_decision {
     ownership_decision_kind kind
     ownership_operation_kind operation
     ownership_decision_reason reason
 }
+
 struct old_ownership_observation {
     ownership_decision decision
     int source_pos
 }
+
 struct shadow_ownership_observation {
     ownership_decision decision
     int mir_point_id
 }
+
 struct ownership_decision_diff {
     string operation_id
     old_ownership_observation old
@@ -82,4 +89,3 @@ func analysis_loan_live_at(
     // Representation: each loan_live_points[i] is a 32-bit integer bitmask
     // bit N set means loan i is live at point N
     mask := 1 << point_id
-    return (analysis.loan_live_points[loan_id] & mask) != 0

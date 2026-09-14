@@ -4,6 +4,7 @@ struct register_info {
     index: int
     is_available: bool
 }
+
 struct machine_code_builder {
     instructions: string[]
     machine_code: int[]
@@ -11,6 +12,7 @@ struct machine_code_builder {
     functions: string[]
     next_reg: int
 }
+
 func new_machine_code_builder() machine_code_builder {
     builder: machine_code_builder
     builder.instructions = make(string[])
@@ -20,19 +22,23 @@ func new_machine_code_builder() machine_code_builder {
     builder.next_reg = 0
     builder
 }
+
 func (machine_code_builder* b) emit_byte(int value) {
     b.machine_code = append(b.machine_code, value & 255)
 }
+
 func (machine_code_builder* b) emit_u32(int value) {
     b.emit_byte(value & 255)
     b.emit_byte((value >> 8) & 255)
     b.emit_byte((value >> 16) & 255)
     b.emit_byte((value >> 24) & 255)
 }
+
 func (machine_code_builder* b) emit_u64(int value) {
     b.emit_u32(value & 4294967295)
     b.emit_u32((value >> 32) & 4294967295)
 }
+
 func (machine_code_builder* b) reg_code(string reg) int {
     switch reg {
         case "rax" : 0,
@@ -54,6 +60,7 @@ func (machine_code_builder* b) reg_code(string reg) int {
         default : -1
     }
 }
+
 func (machine_code_builder* b) emit_rex(bool w, int r, int bbit) {
     prefix := 64
     if w {
@@ -69,13 +76,16 @@ func (machine_code_builder* b) emit_rex(bool w, int r, int bbit) {
         b.emit_byte(prefix)
     }
 }
+
 func (machine_code_builder* b) emit_text_section() {
     b.instructions = append(b.instructions, ".section\t.text")
 }
+
 func (machine_code_builder* b) emit_global_symbol( name string) {
     b.instructions = append(b.instructions, ".globl\t" + name)
     b.instructions = append(b.instructions, ".type\t" + name + ", @function")
 }
+
 func (machine_code_builder* b) emit_function_prologue( name string) {
     b.instructions = append(b.instructions, name + ":")
     b.instructions = append(b.instructions, "\tpush\t%rbp")
@@ -85,12 +95,14 @@ func (machine_code_builder* b) emit_function_prologue( name string) {
     b.emit_byte(137)
     b.emit_byte(229)
 }
+
 func (machine_code_builder* b) emit_function_epilogue() {
     b.instructions = append(b.instructions, "\tpop\t%rbp")
     b.instructions = append(b.instructions, "\tret")
     b.emit_byte(93)
     b.emit_byte(195)
 }
+
 func (machine_code_builder* b) emit_mov_immediate_to_register( value int, string reg) {
     b.instructions = append(b.instructions, "\tmov\t$" + value as string + ", %" + reg)
     reg_id := b.reg_code(reg)
@@ -100,6 +112,7 @@ func (machine_code_builder* b) emit_mov_immediate_to_register( value int, string
         b.emit_u64(value)
     }
 }
+
 func (machine_code_builder* b) emit_mov_register_to_register( src string, string dst) {
     b.instructions = append(b.instructions, "\tmov\t%" + src + ", %" + dst)
     src_id := b.reg_code(src)
@@ -110,6 +123,7 @@ func (machine_code_builder* b) emit_mov_register_to_register( src string, string
         b.emit_byte(192 + ((src_id & 7) << 3) + (dst_id & 7))
     }
 }
+
 func (machine_code_builder* b) emit_add_registers( src string, string dst) {
     b.instructions = append(b.instructions, "\tadd\t%" + src + ", %" + dst)
     src_id := b.reg_code(src)
@@ -120,6 +134,7 @@ func (machine_code_builder* b) emit_add_registers( src string, string dst) {
         b.emit_byte(192 + ((src_id & 7) << 3) + (dst_id & 7))
     }
 }
+
 func (machine_code_builder* b) emit_sub_registers( src string, string dst) {
     b.instructions = append(b.instructions, "\tsub\t%" + src + ", %" + dst)
     src_id := b.reg_code(src)
@@ -130,13 +145,16 @@ func (machine_code_builder* b) emit_sub_registers( src string, string dst) {
         b.emit_byte(192 + ((src_id & 7) << 3) + (dst_id & 7))
     }
 }
+
 func (machine_code_builder* b) emit_call( target string) {
     b.instructions = append(b.instructions, "\tcall\t" + target)
 }
+
 func (machine_code_builder* b) emit_return_value( reg string) {
     b.instructions = append(b.instructions, "\tmov\t%" + reg + ", %rax")
     b.emit_mov_register_to_register(reg, "rax")
 }
+
 func (machine_code_builder* b) get_assembly() string {
     result := ""
     i := 0
@@ -146,5 +164,5 @@ func (machine_code_builder* b) get_assembly() string {
     }
     result
 }
+
 func (machine_code_builder* b) get_machine_code() int[] {
-    b.machine_code

@@ -26,4 +26,3 @@ func run_hashdebug_tests() int {
     if match_pkg_func(hd_ex, "demo", "bad") {
         return 1
     }
-    0

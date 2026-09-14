@@ -7,11 +7,13 @@ struct register_info {
     id: int
     is_available: bool
 }
+
 struct register_allocator {
     registers: register_info[]
     var_to_reg: (string, int)[]
     spill_offset: int
 }
+
 func register_allocator_create() register_allocator {
     allocator: register_allocator
     allocator.registers = vec[]()
@@ -28,6 +30,7 @@ func register_allocator_create() register_allocator {
     allocator.registers.push((register_info { name: "r11", id 8, is_available true }))
     allocator
 }
+
 func (register_allocator* ra) allocate( var_name string) (string, int) {
     for i < ra.var_to_reg.len() {
         if ra.var_to_reg[i].0 == var_name {
@@ -45,6 +48,7 @@ func (register_allocator* ra) allocate( var_name string) (string, int) {
     ra.var_to_reg.push((var_name, -1))
     return "", ra.spill_offset
 }
+
 func (register_allocator* ra) free( var_name string) {
     for i < ra.var_to_reg.len() {
         if ra.var_to_reg[i].0 == var_name {
@@ -56,6 +60,7 @@ func (register_allocator* ra) free( var_name string) {
         }
     }
 }
+
 func (register_allocator* ra) get_register( var_name string) string {
     for i < ra.var_to_reg.len() {
         if ra.var_to_reg[i].0 == var_name {
@@ -68,6 +73,7 @@ func (register_allocator* ra) get_register( var_name string) string {
     }
     ""
 }
+
 func (register_allocator* ra) get_spill_offset( var_name string) int {
     for i < ra.var_to_reg.len() {
         if ra.var_to_reg[i].0 == var_name {
@@ -79,6 +85,7 @@ func (register_allocator* ra) get_spill_offset( var_name string) int {
     }
     0
 }
+
 func (register_allocator* ra) compute_stack_size() int {
     min_offset := 0
     for i < ra.var_to_reg.len() {
@@ -89,4 +96,3 @@ func (register_allocator* ra) compute_stack_size() int {
             }
         }
     }
-    -min_offset

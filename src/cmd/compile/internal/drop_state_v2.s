@@ -1,11 +1,14 @@
 package compile.internal.drop_state_v2
 func drop_state_kind_live() int { 0 }
+
 func drop_state_kind_moved() int { 1 }
 
 func drop_state_kind_maybe() int { 2 }
+
 func drop_state_kind_partial() int { 3 }
 
 func drop_state_kind_dropped() int { 4 }
+
 struct drop_state {
     int kind
     string reason
@@ -17,6 +20,7 @@ struct drop_state {
     }[] field_states
     int[] source_branch_ids
 }
+
 func drop_state_new_live() drop_state {
     drop_state {
         kind: drop_state_kind_live(),
@@ -27,6 +31,7 @@ func drop_state_new_live() drop_state {
         source_branch_ids: nil,
     }
 }
+
 func drop_state_new_moved(string reason, int line, int col) drop_state {
     drop_state {
         kind: drop_state_kind_moved(),
@@ -37,6 +42,7 @@ func drop_state_new_moved(string reason, int line, int col) drop_state {
         source_branch_ids: nil,
     }
 }
+
 func drop_state_new_maybe() drop_state {
     drop_state {
         kind: drop_state_kind_maybe(),
@@ -47,6 +53,7 @@ func drop_state_new_maybe() drop_state {
         source_branch_ids: nil,
     }
 }
+
 func drop_state_new_partial() drop_state {
     struct {
         string field_name
@@ -61,6 +68,7 @@ func drop_state_new_partial() drop_state {
         source_branch_ids: nil,
     }
 }
+
 func drop_state_new_dropped() drop_state {
     drop_state {
         kind: drop_state_kind_dropped(),
@@ -71,24 +79,31 @@ func drop_state_new_dropped() drop_state {
         source_branch_ids: nil,
     }
 }
+
 func drop_state_is_live(drop_state s) bool {
     s.kind == drop_state_kind_live()
 }
+
 func drop_state_is_moved(drop_state s) bool {
     s.kind == drop_state_kind_moved()
 }
+
 func drop_state_is_maybe(drop_state s) bool {
     s.kind == drop_state_kind_maybe()
 }
+
 func drop_state_is_partial(drop_state s) bool {
     s.kind == drop_state_kind_partial()
 }
+
 func drop_state_is_dropped(drop_state s) bool {
     s.kind == drop_state_kind_dropped()
 }
+
 func drop_state_needs_drop(drop_state s) bool {
     s.kind == drop_state_kind_live() || s.kind == drop_state_kind_partial()
 }
+
 func drop_state_after_move(drop_state s, string reason, int line, int col) (drop_state, string) {
     if drop_state_is_live(s) {
         return drop_state_new_moved(reason, line, col), ""
@@ -101,6 +116,7 @@ func drop_state_after_move(drop_state s, string reason, int line, int col) (drop
     }
     return s, ""
 }
+
 func drop_state_after_use(drop_state s) (drop_state, string) {
     if drop_state_is_live(s) {
         return s, ""
@@ -116,6 +132,7 @@ func drop_state_after_use(drop_state s) (drop_state, string) {
     }
     return s, ""
 }
+
 func drop_state_after_drop(drop_state s) (drop_state, string) {
     if drop_state_is_live(s) || drop_state_is_partial(s) || drop_state_is_maybe(s) {
         return drop_state_new_dropped(), ""
@@ -128,9 +145,11 @@ func drop_state_after_drop(drop_state s) (drop_state, string) {
     }
     return s, ""
 }
+
 func drop_state_after_reassign(drop_state s_old) drop_state {
     drop_state_new_live()
 }
+
 func drop_state_merge(drop_state s1, drop_state s2) drop_state {
     if s1.kind == s2.kind {
         return s1
@@ -152,6 +171,7 @@ func drop_state_merge(drop_state s1, drop_state s2) drop_state {
     }
     drop_state_new_maybe()
 }
+
 func drop_state_merge_list(drop_state[] states) drop_state {
     if len(states) == 0 {
         return drop_state_new_live()
@@ -164,9 +184,9 @@ func drop_state_merge_list(drop_state[] states) drop_state {
     }
     result
 }
+
 func drop_state_mark_field_moved(drop_state s, string field_name) drop_state {
     if !drop_state_is_partial(s) {
-
         struct {
             string field_name
             int field_state
@@ -201,6 +221,7 @@ func drop_state_mark_field_moved(drop_state s, string field_name) drop_state {
     }
     s
 }
+
 func drop_state_get_field_state(drop_state s, string field_name) int {
     if !drop_state_is_partial(s) {
         return drop_state_kind_live()
@@ -214,6 +235,7 @@ func drop_state_get_field_state(drop_state s, string field_name) int {
     }
     drop_state_kind_live()
 }
+
 func drop_state_to_string(drop_state s) string {
     if drop_state_is_live(s) {
         return "live"
@@ -232,15 +254,18 @@ func drop_state_to_string(drop_state s) string {
     }
     "unknown"
 }
+
 struct drop_state_table {
     string[] var_names
     drop_state[] states
 }
+
 func drop_state_table_new() drop_state_table {
     string[] names
     drop_state[] states
     drop_state_table { var_names: names, states: states }
 }
+
 func drop_state_table_set(drop_state_table t, string var_name, drop_state s) drop_state_table {
     i := 0
     for i < len(t.var_names) {
@@ -254,6 +279,7 @@ func drop_state_table_set(drop_state_table t, string var_name, drop_state s) dro
     t.states = append(t.states, s)
     t
 }
+
 func drop_state_table_get(drop_state_table t, string var_name) drop_state {
     i := 0
     for i < len(t.var_names) {
@@ -262,4 +288,3 @@ func drop_state_table_get(drop_state_table t, string var_name) drop_state {
         }
         i = i + 1
     }
-    drop_state_new_live()
