@@ -10,12 +10,20 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-enum { BS_EOF = 256, BS_NAME, BS_INT, BS_STRING };
+enum { BS_EOF = 256, BS_NAME, BS_INT, BS_STRING, BS_WALRUS };
+
+typedef struct {
+    char name[64];
+    int value;
+} BsLocal;
+
 typedef struct {
     char name[64];
     int is_call;
     int value;
     char callee[64];
+    BsLocal locals[256];
+    int local_count;
 } BsFunction;
 typedef struct {
     const char *source, *cursor;
@@ -81,6 +89,9 @@ static void bs_next(BsUnit *u) {
         if (isalpha((unsigned char)*p) || *p == '_') { bs_error(u, "invalid integer token"); return; }
         u->number = value;
         u->token = BS_INT;
+    } else if (p[0] == ':' && p[1] == '=') {
+        u->token = BS_WALRUS;
+        p += 2;
     } else {
         if (!strchr("(){};", *p)) { bs_error(u, "unsupported character"); return; }
         u->token = (unsigned char)*p++;
@@ -132,6 +143,51 @@ static void bs_skip_import_decl(BsUnit *u) {
     bs_expect(u, ')');
 }
 
+static int bs_local_find(BsFunction *f, const char *name) {
+    for (int i = 0; i < f->local_count; i++)
+        if (!strcmp(f->locals[i].name, name)) return i;
+    return -1;
+}
+
+static void bs_local_bind(BsFunction *f, const char *name, int value) {
+    if (f->local_count >= 256) return;
+    strcpy(f->locals[f->local_count].name, name);
+    f->locals[f->local_count].value = value;
+    f->local_count++;
+}
+
+static void bs_local_binding(BsUnit *u, BsFunction *f) {
+    /* Parse: identifier := expression
+       Binds local variable and stores its value. */
+    if (u->failed) return;
+    if (u->token != BS_NAME) { bs_error(u, "expected identifier"); return; }
+    char local_name[64];
+    strcpy(local_name, u->name);
+    bs_next(u);
+    if (u->token != BS_WALRUS) { bs_error(u, "expected :="); return; }
+    bs_next(u);
+    
+    int local_value = 0;
+    if (u->token == BS_INT) {
+        local_value = u->number;
+        bs_next(u);
+    } else if (u->token == BS_NAME) {
+        /* Reference to another local */
+        int idx = bs_local_find(f, u->name);
+        if (idx < 0) { bs_error(u, "undefined local"); return; }
+        local_value = f->locals[idx].value;
+        bs_next(u);
+    } else {
+        bs_error(u, "expected integer or identifier in binding");
+        return;
+    }
+    
+    /* Skip optional semicolon */
+    if (u->token == ';') bs_next(u);
+    
+    bs_local_bind(f, local_name, local_value);
+}
+
 static void bs_expression(BsUnit *u, BsFunction *f, int depth) {
     if (u->failed) return;
     if (u->token == '(') {
@@ -142,11 +198,22 @@ static void bs_expression(BsUnit *u, BsFunction *f, int depth) {
     } else if (u->token == BS_INT) {
         f->value = u->number;
         bs_next(u);
+    } else if (u->token == BS_NAME) {
+        /* Check if it's a local variable first */
+        int idx = bs_local_find(f, u->name);
+        if (idx >= 0) {
+            /* It's a local variable - use its value */
+            f->value = f->locals[idx].value;
+            bs_next(u);
+        } else {
+            /* It's a function call */
+            f->is_call = 1;
+            bs_identifier(u, f->callee);
+            bs_expect(u, '(');
+            bs_expect(u, ')');
+        }
     } else {
-        f->is_call = 1;
-        bs_identifier(u, f->callee);
-        bs_expect(u, '(');
-        bs_expect(u, ')');
+        bs_error(u, "expected expression");
     }
 }
 
@@ -173,10 +240,17 @@ static void bs_unit(BsUnit *u) {
         if (u->failed) return;
         if (bs_find(u, f->name) >= 0) { bs_error(u, "duplicate function"); return; }
         u->count++;
+        f->local_count = 0;  /* Initialize local variable count */
         bs_expect(u, '(');
         bs_expect(u, ')');
         bs_word(u, "int");
         bs_expect(u, '{');
+        
+        /* Parse local binding statements before return */
+        while (!u->failed && u->token != '}' && !(u->token == BS_NAME && !strcmp(u->name, "return"))) {
+            bs_local_binding(u, f);
+        }
+        
         bs_word(u, "return");
         bs_expression(u, f, 0);
         if (u->token == ';') bs_next(u);
