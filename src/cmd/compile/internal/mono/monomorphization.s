@@ -12,6 +12,8 @@ struct generic_instance_key {
 }
 
 struct mono_instance {
+    string item_kind
+    string receiver_type
     string generic_name
     string instance_name
     string[] type_args
@@ -46,6 +48,8 @@ struct monomorphize_file_result {
 }
 
 struct mono_work_item {
+    string item_kind
+    string receiver_type
     string generic_name
     string[] type_args
 }
@@ -66,8 +70,8 @@ func new_context() mono_context {
     }
 }
 
-func mono_work_key(string generic_name, string[] type_args) string {
-    key := generic_name
+func mono_work_key(string item_kind, string receiver_type, string generic_name, string[] type_args) string {
+    key := item_kind + ":" + receiver_type + ":" + generic_name
     i := 0
     for i < len(type_args) {
         key = key + ":" + type_args[i]
@@ -76,8 +80,8 @@ func mono_work_key(string generic_name, string[] type_args) string {
     key
 }
 
-func is_work_processed(mono_context ctx, string generic_name, string[] type_args) bool {
-    key := mono_work_key(generic_name, type_args)
+func is_work_processed(mono_context ctx, string item_kind, string receiver_type, string generic_name, string[] type_args) bool {
+    key := mono_work_key(item_kind, receiver_type, generic_name, type_args)
     i := 0
     for i < len(ctx.processed) {
         if ctx.processed[i] == key {
@@ -88,8 +92,8 @@ func is_work_processed(mono_context ctx, string generic_name, string[] type_args
     false
 }
 
-func mark_work_processed(mono_context ctx, string generic_name, string[] type_args) mono_context {
-    key := mono_work_key(generic_name, type_args)
+func mark_work_processed(mono_context ctx, string item_kind, string receiver_type, string generic_name, string[] type_args) mono_context {
+    key := mono_work_key(item_kind, receiver_type, generic_name, type_args)
     ctx.processed = append(ctx.processed, key)
     ctx
 }
@@ -139,10 +143,14 @@ func same_type_args(string[] left, string[] right) bool {
 }
 
 func mono_cache_lookup(mono_cache cache, string generic_name, string[] type_args) string {
+    mono_cache_lookup_item(cache, "function", "", generic_name, type_args)
+}
+
+func mono_cache_lookup_item(mono_cache cache, string item_kind, string receiver_type, string generic_name, string[] type_args) string {
     i := 0
     for i < len(cache.instances) {
         instance := cache.instances[i]
-        if instance.generic_name == generic_name && same_type_args(instance.type_args, type_args) {
+        if instance.item_kind == item_kind && instance.receiver_type == receiver_type && instance.generic_name == generic_name && same_type_args(instance.type_args, type_args) {
             return instance.instance_name
         }
         i = i + 1
@@ -155,10 +163,16 @@ func mono_cache_lookup_key(mono_cache cache, generic_instance_key key) string {
 }
 
 func mono_cache_get_or_create(mono_cache cache, string generic_name, string[] type_args) mono_cache_result {
-    existing := mono_cache_lookup(cache, generic_name, type_args)
+    mono_cache_get_or_create_item(cache, "function", "", generic_name, type_args)
+}
+
+func mono_cache_get_or_create_item(mono_cache cache, string item_kind, string receiver_type, string generic_name, string[] type_args) mono_cache_result {
+    existing := mono_cache_lookup_item(cache, item_kind, receiver_type, generic_name, type_args)
     if existing != "" { return mono_cache_result { cache: cache, instance_name: existing } }
     name := make_instance_name(generic_name, type_args)
     cache.instances = append(cache.instances, mono_instance {
+        item_kind: item_kind,
+        receiver_type: receiver_type,
         generic_name: generic_name,
         instance_name: name,
         type_args: type_args,
@@ -190,22 +204,33 @@ func monomorphize_file(source_file file) monomorphize_file_result {
         work := ctx.worklist[cursor]
         cursor = cursor + 1
 
-        if is_work_processed(ctx, work.generic_name, work.type_args) {
+        if is_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.type_args) {
             continue
         }
-        ctx = mark_work_processed(ctx, work.generic_name, work.type_args)
+        ctx = mark_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.type_args)
 
-        source := find_generic_function(file.items, work.generic_name)
-        if source.sig.name == "" {
-            continue
+        if work.item_kind == "method" {
+            method_source := find_generic_method(file.items, work.receiver_type, work.generic_name)
+            if method_source.method.sig.name == "" {
+                continue
+            }
+            method_instance := specialize_method(method_source, work.type_args)
+            ctx.generated = append(ctx.generated, method_instance.method)
+            ctx = collect_item_instances_ctx(item::method(method_instance), file.items, ctx)
+            extra_items = append(extra_items, item::method(finalize_monomorphized_method(method_instance)))
+        } else {
+            source := find_generic_function(file.items, work.generic_name)
+            if source.sig.name == "" {
+                continue
+            }
+
+            instance := specialize_function(source, work.type_args)
+            ctx.generated = append(ctx.generated, instance)
+
+            ctx = collect_item_instances_ctx(item::function(instance), file.items, ctx)
+
+            extra_items = append(extra_items, item::function(finalize_monomorphized_function(instance)))
         }
-
-        instance := specialize_function(source, work.type_args)
-        ctx.generated = append(ctx.generated, instance)
-
-        ctx = collect_item_instances_ctx(item::function(instance), file.items, ctx)
-
-        extra_items = append(extra_items, item::function(finalize_monomorphized_function(instance)))
     }
 
     stripped := item[]()
@@ -302,6 +327,7 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) 
             collect_expr_instances_ctx(v.index.value, all_items, ctx)
         }
         expr.call(v) : {
+            ctx = collect_method_call_instance_ctx(v, all_items, ctx)
             ctx = collect_call_instance_ctx(v, all_items, ctx)
             i := 0
             for i < len(v.args) {
@@ -372,12 +398,61 @@ func collect_call_instance_ctx(call_expr call, item[] all_items, mono_context ct
         return ctx
     }
 
-    existing := mono_cache_lookup(ctx.cache, generic_name, call.type_args)
-    result := mono_cache_get_or_create(ctx.cache, generic_name, call.type_args)
+    existing := mono_cache_lookup_item(ctx.cache, "function", "", generic_name, call.type_args)
+    result := mono_cache_get_or_create_item(ctx.cache, "function", "", generic_name, call.type_args)
     ctx.cache = result.cache
 
     if existing == "" {
-        ctx.worklist = append(ctx.worklist, mono_work_item { generic_name: generic_name, type_args: call.type_args })
+        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.type_args })
+    }
+
+    ctx
+}
+
+func collect_method_call_instance_ctx(call_expr call, item[] all_items, mono_context ctx) mono_context {
+    if len(call.type_args) == 0 {
+        return ctx
+    }
+
+    method_name := ""
+    receiver_type := ""
+    switch call.callee.value {
+        expr.member(member) : {
+            method_name = member.member
+            switch member.target.value {
+                expr.name(name) : {
+                    switch name.inferred_type {
+                        option.some(ty) : receiver_type = ty,
+                        option.none : (),
+                    }
+                }
+                expr.member(target_member) : {
+                    switch target_member.inferred_type {
+                        option.some(ty) : receiver_type = ty,
+                        option.none : (),
+                    }
+                }
+                _ : (),
+            }
+        }
+        _ : return ctx,
+    }
+
+    if receiver_type == "" {
+        return ctx
+    }
+
+    source := find_generic_method(all_items, receiver_type, method_name)
+    if source.method.sig.name == "" {
+        return ctx
+    }
+
+    existing := mono_cache_lookup_item(ctx.cache, "method", source.receiver_type, method_name, call.type_args)
+    result := mono_cache_get_or_create_item(ctx.cache, "method", source.receiver_type, method_name, call.type_args)
+    ctx.cache = result.cache
+
+    if existing == "" {
+        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "method", receiver_type: source.receiver_type, generic_name: method_name, type_args: call.type_args })
     }
 
     ctx
@@ -540,7 +615,7 @@ func collect_call_instance(call_expr call, item[] all_items, mono_cache cache, m
     result := mono_cache_get_or_create(cache, generic_name, call.type_args)
     cache = result.cache
     if existing == "" && result.instance_name == resolved {
-        worklist = append(worklist, mono_work_item { generic_name: generic_name, type_args call.type_args })
+        worklist = append(worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.type_args })
     }
     cache
 }
@@ -582,6 +657,25 @@ func find_generic_function(item[] items, string name) function_decl {
     empty
 }
 
+func find_generic_method(item[] items, string receiver_type, string name) receiver_method_decl {
+    target_owner := compile.internal.typesys.base_type_name(receiver_type)
+    i := 0
+    for i < len(items) {
+        switch items[i] {
+            item.method(method) : {
+                method_owner := compile.internal.typesys.base_type_name(method.receiver_type)
+                if method_owner == target_owner && method.method.sig.name == name && len(method_generic_names(method)) > 0 {
+                    return method
+                }
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    receiver_method_decl empty
+    empty
+}
+
 func verify_monomorphized_file(source_file file) int {
     errors := 0
     i := 0
@@ -611,6 +705,14 @@ func finalize_monomorphized_function(function_decl fn) function_decl {
         option.none : (),
     }
     function_decl { sig: fn.sig, body body, is_public fn.is_public }
+}
+
+func finalize_monomorphized_method(receiver_method_decl method) receiver_method_decl {
+    receiver_method_decl {
+        receiver_name: method.receiver_name,
+        receiver_type: method.receiver_type,
+        method: finalize_monomorphized_function(method.method),
+    }
 }
 
 func finalize_block(block_expr block) block_expr {
@@ -967,18 +1069,34 @@ func find_char(string text, string needle) int {
     -1
 }
 
-func specialize_function(function_decl source, string[] type_args) function_decl {
+func generic_names_from_sig(string[] generics) string[] {
     generic_names := string[] {}
     i := 0
-    for i < len(source.sig.generics) {
-        raw := source.sig.generics[i]
+    for i < len(generics) {
+        raw := generics[i]
         colon := find_char(raw, ":")
         if colon >= 0 { raw = slice(raw, 0, colon) }
         generic_names = append(generic_names, raw)
         i = i + 1
     }
+    generic_names
+}
+
+func method_generic_names(receiver_method_decl source) string[] {
+    names := generic_names_from_sig(source.method.sig.generics)
+    if len(names) > 0 {
+        return names
+    }
+    compile.internal.typesys.extract_type_args(source.receiver_type)
+}
+
+func specialize_function(function_decl source, string[] type_args) function_decl {
+    specialize_function_with_names(source, type_args, generic_names_from_sig(source.sig.generics))
+}
+
+func specialize_function_with_names(function_decl source, string[] type_args, string[] generic_names) function_decl {
     params := param[] {}
-    i = 0
+    i := 0
     for i < len(source.sig.params) {
         original := source.sig.params[i]
         params = append(params, param {
@@ -1002,6 +1120,15 @@ func specialize_function(function_decl source, string[] type_args) function_decl
         },
         body: body,
         is_public: source.is_public,
+    }
+}
+
+func specialize_method(receiver_method_decl source, string[] type_args) receiver_method_decl {
+    generic_names := method_generic_names(source)
+    receiver_method_decl {
+        receiver_name: source.receiver_name,
+        receiver_type: substitute_type(source.receiver_type, generic_names, type_args),
+        method: specialize_function_with_names(source.method, type_args, generic_names),
     }
 }
 
@@ -1068,6 +1195,11 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
                 expr.name(name) : {
                     if len(call_type_args) > 0 {
                         resolved = option.some(make_instance_name(name.name, call_type_args))
+                    }
+                }
+                expr.member(member) : {
+                    if len(call_type_args) > 0 {
+                        resolved = option.some(make_instance_name(member.member, call_type_args))
                     }
                 }
                 _ : (),
