@@ -156,9 +156,39 @@ static void bs_local_bind(BsFunction *f, const char *name, int value) {
     f->local_count++;
 }
 
+static int bs_eval_function(BsUnit *u, int func_idx, int depth);
+static int bs_find(BsUnit *u, const char *name);
+static void bs_expression(BsUnit *u, BsFunction *f, int depth);
+
+static int bs_eval_function(BsUnit *u, int func_idx, int depth) {
+    /* Recursively evaluate a function's return value by tracing the call chain.
+       Returns the constant value at the end of the chain. */
+    if (depth > 256) { 
+        if (!u->failed) bs_error(u, "function evaluation depth limit");
+        return 0; 
+    }
+    if (func_idx < 0 || func_idx >= u->count) {
+        if (!u->failed) bs_error(u, "invalid function index");
+        return 0;
+    }
+    
+    BsFunction *f = &u->functions[func_idx];
+    if (f->is_call) {
+        /* This function calls another; evaluate the callee */
+        int callee_idx = bs_find(u, f->callee);
+        if (callee_idx < 0) {
+            if (!u->failed) bs_error(u, "undefined callee in eval");
+            return 0;
+        }
+        return bs_eval_function(u, callee_idx, depth + 1);
+    }
+    /* Base case: this function returns a constant */
+    return f->value;
+}
+
 static void bs_local_binding(BsUnit *u, BsFunction *f) {
     /* Parse: identifier := expression
-       Binds local variable and stores its value. */
+       Unified RHS evaluation via bs_expression() */
     if (u->failed) return;
     if (u->token != BS_NAME) { bs_error(u, "expected identifier"); return; }
     char local_name[64];
@@ -167,19 +197,20 @@ static void bs_local_binding(BsUnit *u, BsFunction *f) {
     if (u->token != BS_WALRUS) { bs_error(u, "expected :="); return; }
     bs_next(u);
     
+    /* Unified RHS evaluation: delegate to bs_expression() */
+    bs_expression(u, f, 0);
+    if (u->failed) return;
+    
     int local_value = 0;
-    if (u->token == BS_INT) {
-        local_value = u->number;
-        bs_next(u);
-    } else if (u->token == BS_NAME) {
-        /* Reference to another local */
-        int idx = bs_local_find(f, u->name);
-        if (idx < 0) { bs_error(u, "undefined local"); return; }
-        local_value = f->locals[idx].value;
-        bs_next(u);
+    if (f->is_call) {
+        /* RHS was a function call; need to evaluate it */
+        int callee_idx = bs_find(u, f->callee);
+        if (callee_idx < 0) { bs_error(u, "undefined function"); return; }
+        local_value = bs_eval_function(u, callee_idx, 0);
+        if (u->failed) return;
     } else {
-        bs_error(u, "expected integer or identifier in binding");
-        return;
+        /* RHS was a literal or local reference; f->value already set */
+        local_value = f->value;
     }
     
     /* Skip optional semicolon */
