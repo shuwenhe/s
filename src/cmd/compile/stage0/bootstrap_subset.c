@@ -10,7 +10,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-enum { BS_EOF = 256, BS_NAME, BS_INT };
+enum { BS_EOF = 256, BS_NAME, BS_INT, BS_STRING };
 typedef struct {
     char name[64];
     int is_call;
@@ -21,6 +21,7 @@ typedef struct {
     const char *source, *cursor;
     int token, number, failed;
     char name[64];
+    char string_value[256];
     char package_name[64];
     BsFunction functions[256];
     int count, entry;
@@ -49,7 +50,20 @@ static void bs_next(BsUnit *u) {
     }
     u->cursor = p;
     if (!*p) { u->token = BS_EOF; return; }
-    if (isalpha((unsigned char)*p) || *p == '_') {
+    if (*p == '"') {
+        /* String literal */
+        size_t n = 0;
+        p++;
+        while (*p && *p != '"') {
+            if (*p == '\\' && p[1]) p++;  /* Skip escape sequences */
+            if (n == sizeof(u->string_value) - 1) { bs_error(u, "string too long"); return; }
+            u->string_value[n++] = *p++;
+        }
+        if (!*p) { u->cursor = p; bs_error(u, "unterminated string"); return; }
+        u->string_value[n] = 0;
+        p++;  /* Skip closing quote */
+        u->token = BS_STRING;
+    } else if (isalpha((unsigned char)*p) || *p == '_') {
         size_t n = 0;
         while (isalnum((unsigned char)*p) || *p == '_') {
             if (n == sizeof(u->name) - 1) { bs_error(u, "identifier too long"); return; }
@@ -102,6 +116,22 @@ static void bs_identifier(BsUnit *u, char *name) {
     bs_next(u);
 }
 
+static void bs_skip_import_decl(BsUnit *u) {
+    /* Skip import (...) declaration structurally, without semantic resolution.
+       Grammar: import "(" (string_literal)* ")" */
+    if (u->failed) return;
+    bs_word(u, "import");
+    bs_expect(u, '(');
+    while (!u->failed && u->token != ')') {
+        if (u->token == BS_STRING) {
+            bs_next(u);
+        } else {
+            bs_error(u, "expected string in import block"); return;
+        }
+    }
+    bs_expect(u, ')');
+}
+
 static void bs_expression(BsUnit *u, BsFunction *f, int depth) {
     if (u->failed) return;
     if (u->token == '(') {
@@ -131,6 +161,11 @@ static void bs_unit(BsUnit *u) {
     bs_word(u, "package");
     bs_identifier(u, u->package_name);
     while (!u->failed && u->token != BS_EOF) {
+        /* Structurally skip import declarations before parsing functions */
+        if (u->token == BS_NAME && !strcmp(u->name, "import")) {
+            bs_skip_import_decl(u);
+            continue;
+        }
         if (u->count == 256) { bs_error(u, "function count limit"); return; }
         BsFunction *f = &u->functions[u->count];
         bs_word(u, "func");
