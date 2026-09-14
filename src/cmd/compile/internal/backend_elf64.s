@@ -1925,7 +1925,7 @@ func collect_fn_param_types(function_decl fn_decl) string[] {
     out := string[]()
     i := 0
     for i < std.prelude.len(fn_decl.sig.params) {
-        out = append(out, trim_spaces(fn_decl.sig.params[i].type_name))
+        out = append(out, trim_spaces(fn_decl.sig.params[i].kindname))
         i = i + 1
     }
     out
@@ -2397,7 +2397,7 @@ func build_export_data_artifact(source_file source, string arch) string {
                 p := 0
                 for p < std.prelude.len(fn_decl.sig.params) {
                     if p > 0 { signature = signature + "," }
-                    signature = signature + fn_decl.sig.params[p].name + ":" + fn_decl.sig.params[p].type_name
+                    signature = signature + fn_decl.sig.params[p].name + ":" + fn_decl.sig.params[p].kindname
                     p = p + 1
                 }
                 result_type := ""
@@ -2418,7 +2418,7 @@ func build_export_data_artifact(source_file source, string arch) string {
                 f := 0
                 for f < std.prelude.len(st.fields) {
                     if f > 0 { fields = fields + "," }
-                    fields = fields + st.fields[f].name + ":" + st.fields[f].type_name
+                    fields = fields + st.fields[f].name + ":" + st.fields[f].kindname
                     f = f + 1
                 }
                 lines.push("struct " + st.name + " public=" + std.prelude.to_string(st.is_public as int)
@@ -2460,7 +2460,7 @@ func build_export_data_artifact(source_file source, string arch) string {
             item.const(cn) : lines.push("const " + cn.name + " iota=" + std.prelude.to_string(cn.iota_index)),
             item.var(vr) : {
                 type_name := ""
-                switch vr.type_name {
+                switch vr.kindname {
                     option.some(value) : type_name = value,
                     option.none : (),
                 }

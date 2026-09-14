@@ -53,7 +53,7 @@ func dtor_registry_register(dtor_registry registry, dtor_impl impl) dtor_registr
 func dtor_registry_find(dtor_registry registry, string type_name) int {
     i := 0
     for i < len(registry.impls) {
-        if registry.impls[i].type_name == type_name { return i }
+        if registry.impls[i].kindname == type_name { return i }
         i = i + 1
     }
     -1
@@ -75,7 +75,7 @@ func type_needs_drop(string type_name) bool {
 
 func drop_function_name(dtor_impl impl) string {
     if impl.function_name != "" { return impl.function_name }
-    "__s_drop_" + impl.type_name
+    "__s_drop_" + impl.kindname
 }
 
 func check_field_move(dtor_registry registry, string type_name, string field_name) dtor_check_result {
@@ -110,13 +110,13 @@ func emit_scope_cleanup(dtor_registry registry, string[] vars, string[] types) s
 
 func generate_c_drop_stub(dtor_impl impl) string {
     function_name := drop_function_name(impl)
-    code := "static void " + function_name + "(" + impl.type_name + " *value) {\n"
+    code := "static void " + function_name + "(" + impl.kindname + " *value) {\n"
     code = code + "    if (value == 0) return;\n"
     i := len(impl.fields) - 1
     for i >= 0 {
         field := impl.fields[i]
         if field.needs_drop {
-            code = code + "    __s_drop_" + field.type_name + "(&value->" + field.name + ");\n"
+            code = code + "    __s_drop_" + field.kindname + "(&value->" + field.name + ");\n"
         }
         i = i - 1
     }

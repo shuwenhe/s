@@ -30,8 +30,8 @@ func rule_mul_by_power_of_two_is_shift(v* ssa_value) ssa_value* {
         power = power + 1
     }
 
-    shift_amount := ssa_value_new_const_int(v.id + 2000000, power, v.type_id)
-    ssa_value_new_binary_op(v.id + 2000001, op_shl, left, shift_amount, v.type_id)
+    shift_amount := ssa_value_new_const_int(v.id + 2000000, power, v.kindid)
+    ssa_value_new_binary_op(v.id + 2000001, op_shl, left, shift_amount, v.kindid)
 }
 
 func rule_div_by_power_of_two_is_shift(v* ssa_value) ssa_value* {
@@ -64,8 +64,8 @@ func rule_div_by_power_of_two_is_shift(v* ssa_value) ssa_value* {
         power = power + 1
     }
 
-    shift_amount := ssa_value_new_const_int(v.id + 2000010, power, v.type_id)
-    ssa_value_new_binary_op(v.id + 2000011, op_shr, left, shift_amount, v.type_id)
+    shift_amount := ssa_value_new_const_int(v.id + 2000010, power, v.kindid)
+    ssa_value_new_binary_op(v.id + 2000011, op_shr, left, shift_amount, v.kindid)
 }
 
 func rule_double_neg_cancel(v* ssa_value) ssa_value* {
@@ -106,7 +106,7 @@ func rule_add_neg_is_sub(v* ssa_value) ssa_value* {
     }
 
     inner := right.args[0]
-    ssa_value_new_binary_op(v.id + 2000020, op_sub, left, inner, v.type_id)
+    ssa_value_new_binary_op(v.id + 2000020, op_sub, left, inner, v.kindid)
 }
 
 func rule_sub_neg_is_add(v* ssa_value) ssa_value* {
@@ -128,7 +128,7 @@ func rule_sub_neg_is_add(v* ssa_value) ssa_value* {
     }
 
     inner := right.args[0]
-    ssa_value_new_binary_op(v.id + 2000021, op_add, left, inner, v.type_id)
+    ssa_value_new_binary_op(v.id + 2000021, op_add, left, inner, v.kindid)
 }
 
 func rule_mul_neg_commute(v* ssa_value) ssa_value* {
@@ -150,7 +150,7 @@ func rule_mul_neg_commute(v* ssa_value) ssa_value* {
         return v
     }
 
-    swapped := ssa_value_new_binary_op(v.id + 2000030, op_mul, right, left, v.type_id)
+    swapped := ssa_value_new_binary_op(v.id + 2000030, op_mul, right, left, v.kindid)
     swapped
 }
 
@@ -318,7 +318,7 @@ func rule_xor_idempotent(v* ssa_value) ssa_value* {
     }
 
     if left.id == right.id {
-        return ssa_value_new_const_int(v.id + 2000100, 0, v.type_id)
+        return ssa_value_new_const_int(v.id + 2000100, 0, v.kindid)
     }
 
     v
@@ -351,8 +351,8 @@ func rule_add_associative_left(v* ssa_value) ssa_value* {
     }
 
     if b.op == op_const && c.op == op_const {
-        bc_sum := ssa_value_new_const_int(v.id + 2000101, b.aux_int + c.aux_int, v.type_id)
-        result := ssa_value_new_binary_op(v.id + 2000102, op_add, a, bc_sum, v.type_id)
+        bc_sum := ssa_value_new_const_int(v.id + 2000101, b.aux_int + c.aux_int, v.kindid)
+        result := ssa_value_new_binary_op(v.id + 2000102, op_add, a, bc_sum, v.kindid)
         return result
     }
 
@@ -386,8 +386,8 @@ func rule_mul_associative_left(v* ssa_value) ssa_value* {
     }
 
     if b.op == op_const && c.op == op_const {
-        bc_prod := ssa_value_new_const_int(v.id + 2000103, b.aux_int * c.aux_int, v.type_id)
-        result := ssa_value_new_binary_op(v.id + 2000104, op_mul, a, bc_prod, v.type_id)
+        bc_prod := ssa_value_new_const_int(v.id + 2000103, b.aux_int * c.aux_int, v.kindid)
+        result := ssa_value_new_binary_op(v.id + 2000104, op_mul, a, bc_prod, v.kindid)
         return result
     }
 
@@ -421,8 +421,8 @@ func rule_and_associative_left(v* ssa_value) ssa_value* {
     }
 
     if b.op == op_const && c.op == op_const {
-        bc_and := ssa_value_new_const_int(v.id + 2000105, b.aux_int & c.aux_int, v.type_id)
-        result := ssa_value_new_binary_op(v.id + 2000106, op_and, a, bc_and, v.type_id)
+        bc_and := ssa_value_new_const_int(v.id + 2000105, b.aux_int & c.aux_int, v.kindid)
+        result := ssa_value_new_binary_op(v.id + 2000106, op_and, a, bc_and, v.kindid)
         return result
     }
 
@@ -456,8 +456,8 @@ func rule_or_associative_left(v* ssa_value) ssa_value* {
     }
 
     if b.op == op_const && c.op == op_const {
-        bc_or := ssa_value_new_const_int(v.id + 2000107, b.aux_int | c.aux_int, v.type_id)
-        result := ssa_value_new_binary_op(v.id + 2000108, op_or, a, bc_or, v.type_id)
+        bc_or := ssa_value_new_const_int(v.id + 2000107, b.aux_int | c.aux_int, v.kindid)
+        result := ssa_value_new_binary_op(v.id + 2000108, op_or, a, bc_or, v.kindid)
         return result
     }
 
@@ -491,8 +491,8 @@ func rule_xor_associative_left(v* ssa_value) ssa_value* {
     }
 
     if b.op == op_const && c.op == op_const {
-        bc_xor := ssa_value_new_const_int(v.id + 2000109, b.aux_int ^ c.aux_int, v.type_id)
-        result := ssa_value_new_binary_op(v.id + 2000110, op_xor, a, bc_xor, v.type_id)
+        bc_xor := ssa_value_new_const_int(v.id + 2000109, b.aux_int ^ c.aux_int, v.kindid)
+        result := ssa_value_new_binary_op(v.id + 2000110, op_xor, a, bc_xor, v.kindid)
         return result
     }
 
@@ -559,8 +559,8 @@ func rule_shl_neg_right(v* ssa_value) ssa_value* {
     }
 
     left := v.args[0]
-    shift_amount := ssa_value_new_const_int(v.id + 2000111, -right.aux_int, v.type_id)
-    ssa_value_new_binary_op(v.id + 2000112, op_shr, left, shift_amount, v.type_id)
+    shift_amount := ssa_value_new_const_int(v.id + 2000111, -right.aux_int, v.kindid)
+    ssa_value_new_binary_op(v.id + 2000112, op_shr, left, shift_amount, v.kindid)
 }
 
 func rule_shr_neg_right(v* ssa_value) ssa_value* {
@@ -581,8 +581,8 @@ func rule_shr_neg_right(v* ssa_value) ssa_value* {
     }
 
     left := v.args[0]
-    shift_amount := ssa_value_new_const_int(v.id + 2000113, -right.aux_int, v.type_id)
-    ssa_value_new_binary_op(v.id + 2000114, op_shl, left, shift_amount, v.type_id)
+    shift_amount := ssa_value_new_const_int(v.id + 2000113, -right.aux_int, v.kindid)
+    ssa_value_new_binary_op(v.id + 2000114, op_shl, left, shift_amount, v.kindid)
 }
 
 func rule_not_by_xor_all_ones(v* ssa_value) ssa_value* {
@@ -599,8 +599,8 @@ func rule_not_by_xor_all_ones(v* ssa_value) ssa_value* {
         return v
     }
 
-    all_ones := ssa_value_new_const_int(v.id + 2000115, -1, v.type_id)
-    ssa_value_new_binary_op(v.id + 2000116, op_xor, arg, all_ones, v.type_id)
+    all_ones := ssa_value_new_const_int(v.id + 2000115, -1, v.kindid)
+    ssa_value_new_binary_op(v.id + 2000116, op_xor, arg, all_ones, v.kindid)
 }
 
 func rule_and_distribute_over_or(v* ssa_value) ssa_value* {
@@ -629,9 +629,9 @@ func rule_and_distribute_over_or(v* ssa_value) ssa_value* {
         return v
     }
 
-    ac := ssa_value_new_binary_op(v.id + 2000117, op_and, a, c, v.type_id)
-    bc := ssa_value_new_binary_op(v.id + 2000118, op_and, b, c, v.type_id)
-    ssa_value_new_binary_op(v.id + 2000119, op_or, ac, bc, v.type_id)
+    ac := ssa_value_new_binary_op(v.id + 2000117, op_and, a, c, v.kindid)
+    bc := ssa_value_new_binary_op(v.id + 2000118, op_and, b, c, v.kindid)
+    ssa_value_new_binary_op(v.id + 2000119, op_or, ac, bc, v.kindid)
 }
 
 func rule_or_distribute_over_and(v* ssa_value) ssa_value* {
@@ -660,9 +660,9 @@ func rule_or_distribute_over_and(v* ssa_value) ssa_value* {
         return v
     }
 
-    ac := ssa_value_new_binary_op(v.id + 2000120, op_or, a, c, v.type_id)
-    bc := ssa_value_new_binary_op(v.id + 2000121, op_or, b, c, v.type_id)
-    ssa_value_new_binary_op(v.id + 2000122, op_and, ac, bc, v.type_id)
+    ac := ssa_value_new_binary_op(v.id + 2000120, op_or, a, c, v.kindid)
+    bc := ssa_value_new_binary_op(v.id + 2000121, op_or, b, c, v.kindid)
+    ssa_value_new_binary_op(v.id + 2000122, op_and, ac, bc, v.kindid)
 }
 
 func rule_de_morgan_and_not(v* ssa_value) ssa_value* {
@@ -689,9 +689,9 @@ func rule_de_morgan_and_not(v* ssa_value) ssa_value* {
         return v
     }
 
-    not_a := ssa_value_new_unary_op(v.id + 2000123, op_not, a, v.type_id)
-    not_b := ssa_value_new_unary_op(v.id + 2000124, op_not, b, v.type_id)
-    ssa_value_new_binary_op(v.id + 2000125, op_or, not_a, not_b, v.type_id)
+    not_a := ssa_value_new_unary_op(v.id + 2000123, op_not, a, v.kindid)
+    not_b := ssa_value_new_unary_op(v.id + 2000124, op_not, b, v.kindid)
+    ssa_value_new_binary_op(v.id + 2000125, op_or, not_a, not_b, v.kindid)
 }
 
 func rule_de_morgan_or_not(v* ssa_value) ssa_value* {
@@ -718,9 +718,9 @@ func rule_de_morgan_or_not(v* ssa_value) ssa_value* {
         return v
     }
 
-    not_a := ssa_value_new_unary_op(v.id + 2000126, op_not, a, v.type_id)
-    not_b := ssa_value_new_unary_op(v.id + 2000127, op_not, b, v.type_id)
-    ssa_value_new_binary_op(v.id + 2000128, op_and, not_a, not_b, v.type_id)
+    not_a := ssa_value_new_unary_op(v.id + 2000126, op_not, a, v.kindid)
+    not_b := ssa_value_new_unary_op(v.id + 2000127, op_not, b, v.kindid)
+    ssa_value_new_binary_op(v.id + 2000128, op_and, not_a, not_b, v.kindid)
 }
 
 func apply_algebraic_simplifications(v* ssa_value) ssa_value* {

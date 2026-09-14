@@ -131,7 +131,7 @@ func (parser* self) parse_item() (item, parse_error) {
                     sig: parsed.sig, body parsed.body, is_public starts_with_upper(parsed.sig.name),
                 }
                 return item::method(receiver_method_decl {
-                    receiver_name: r.name, receiver_type r.type_name, method method,
+                    receiver_name: r.name, receiver_type r.kindname, method method,
                 }), parse_error{ message: "", line 0, column 0 }
             },
             option::none : {
@@ -328,7 +328,7 @@ func (parser* self) parse_struct_decl() (struct_decl, parse_error) {
             return empty, err
         }
         fields.push(field {
-            name: f.name, type_name f.type_name, is_public starts_with_upper(f.name),
+            name: f.name, type_name f.kindname, is_public starts_with_upper(f.name),
         })
         self.eat_symbol(",")
     }
@@ -527,7 +527,7 @@ func (parser* self) parse_params() (param[], parse_error) {
             return empty, err
         }
         params.push(param {
-            name: part.name, type_name part.type_name,
+            name: part.name, type_name part.kindname,
         })
         if !self.eat_symbol(",") || self.at_symbol(")") {
             break
@@ -812,7 +812,7 @@ func (parser* self) parse_typed_var_stmt(bool consume_semicolon) (var_stmt, pars
         self.eat_symbol(";")
     }
     var_stmt {
-        name: named.name, type_name option::some(named.type_name), value value,
+        name: named.name, type_name option::some(named.kindname), value value,
     }
 }
 

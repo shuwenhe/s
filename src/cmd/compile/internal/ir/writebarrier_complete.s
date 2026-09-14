@@ -37,19 +37,19 @@ func new_wb_inserter(i32 num_values) wb_inserter* {
     wbi
 }
 
-func (wb_inserter* wbi) mark_heap_allocated(i32 value_id) {
+func (wbi* wb_inserter) mark_heap_allocated(i32 value_id) {
     if value_id >= 0 && value_id < i32(len(wbi.is_heap_allocated)) {
         wbi.is_heap_allocated[value_id] = true
     }
 }
 
-func (wb_inserter* wbi) mark_pointer_type(i32 value_id) {
+func (wbi* wb_inserter) mark_pointer_type(i32 value_id) {
     if value_id >= 0 && value_id < i32(len(wbi.is_pointer_type)) {
         wbi.is_pointer_type[value_id] = true
     }
 }
 
-func (wb_inserter* wbi) needs_write_barrier(i32 target_id, i32 value_id) bool {
+func (wbi* wb_inserter) needs_write_barrier(i32 target_id, i32 value_id) bool {
     if target_id < 0 || target_id >= i32(len(wbi.is_heap_allocated)) {
         return false
     }
@@ -60,7 +60,7 @@ func (wb_inserter* wbi) needs_write_barrier(i32 target_id, i32 value_id) bool {
     return wbi.is_heap_allocated[target_id] && wbi.is_pointer_type[value_id]
 }
 
-func (wb_inserter* wbi) insert_ptr_write_barrier(i32 instr_id, i32 target_ptr, i32 value_ptr) {
+func (wbi* wb_inserter) insert_ptr_write_barrier(i32 instr_id, i32 target_ptr, i32 value_ptr) {
     if !wbi.needs_write_barrier(target_ptr, value_ptr) {
         return
     }
@@ -76,7 +76,7 @@ func (wb_inserter* wbi) insert_ptr_write_barrier(i32 instr_id, i32 target_ptr, i
     wbi.num_barriers += 1
 }
 
-func (wb_inserter* wbi) insert_slice_write_barrier(i32 instr_id, i32 slice_ptr, i32 value_ptr) {
+func (wbi* wb_inserter) insert_slice_write_barrier(i32 instr_id, i32 slice_ptr, i32 value_ptr) {
     if !wbi.needs_write_barrier(slice_ptr, value_ptr) {
         return
     }
@@ -92,7 +92,7 @@ func (wb_inserter* wbi) insert_slice_write_barrier(i32 instr_id, i32 slice_ptr, 
     wbi.num_barriers += 1
 }
 
-func (wb_inserter* wbi) insert_array_write_barrier(i32 instr_id, i32 array_ptr, i32 value_ptr) {
+func (wbi* wb_inserter) insert_array_write_barrier(i32 instr_id, i32 array_ptr, i32 value_ptr) {
     if !wbi.needs_write_barrier(array_ptr, value_ptr) {
         return
     }
@@ -108,7 +108,7 @@ func (wb_inserter* wbi) insert_array_write_barrier(i32 instr_id, i32 array_ptr, 
     wbi.num_barriers += 1
 }
 
-func (wb_inserter* wbi) insert_interface_write_barrier(i32 instr_id, i32 iface_ptr, i32 value_ptr) {
+func (wbi* wb_inserter) insert_interface_write_barrier(i32 instr_id, i32 iface_ptr, i32 value_ptr) {
     if !wbi.needs_write_barrier(iface_ptr, value_ptr) {
         return
     }
@@ -124,7 +124,7 @@ func (wb_inserter* wbi) insert_interface_write_barrier(i32 instr_id, i32 iface_p
     wbi.num_barriers += 1
 }
 
-func (wb_inserter* wbi) get_barriers_for_instruction(i32 instr_id) wb_info[] {
+func (wbi* wb_inserter) get_barriers_for_instruction(i32 instr_id) wb_info[] {
     result := wb_info[]()
     for _for_idx_128 := 0; _for_idx_128 < len(wbi.barriers); _for_idx_128++ {
         info := wbi.barriers[_for_idx_128]
@@ -135,7 +135,7 @@ func (wb_inserter* wbi) get_barriers_for_instruction(i32 instr_id) wb_info[] {
     result
 }
 
-func (wb_inserter* wbi) get_all_barriers() wb_info[] {
+func (wbi* wb_inserter) get_all_barriers() wb_info[] {
     result := wb_info[]()
     for _for_idx_138 := 0; _for_idx_138 < len(wbi.barriers); _for_idx_138++ {
         info := wbi.barriers[_for_idx_138]
@@ -144,11 +144,11 @@ func (wb_inserter* wbi) get_all_barriers() wb_info[] {
     result
 }
 
-func (wb_inserter* wbi) barrier_count() i32 {
+func (wbi* wb_inserter) barrier_count() i32 {
     return i32(len(wbi.barriers))
 }
 
-func (wb_inserter* wbi) generate_barrier_call(wb_info info) string {
+func (wbi* wb_inserter) generate_barrier_call(wb_info info) string {
     call_str := "runtime.write_barrier("
 
     switch info.kind {
@@ -170,7 +170,7 @@ func (wb_inserter* wbi) generate_barrier_call(wb_info info) string {
     call_str + ")"
 }
 
-func (wb_inserter* wbi) to_string() string {
+func (wbi* wb_inserter) to_string() string {
     s := "Write Barrier Inserter:\n"
     s += "Total barriers: " + string(wbi.num_barriers) + "\n"
     for _for_idx_173 := 0; _for_idx_173 < len(wbi.barriers); _for_idx_173++ {

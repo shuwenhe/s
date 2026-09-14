@@ -139,23 +139,11 @@ static void write_stage1_c(FILE *out, const ClosureStats *stats) {
         "    fprintf(stderr, \"       s_modular ast <input.s>\\n\");\n"
         "    fprintf(stderr, \"       s_modular build <input.s> -o <output>\\n\");\n"
         "    fprintf(stderr, \"       s_modular test [fixtures_root]\\n\");\n"
-        "}\n"
-        "static bool has_main(const char *s) { return strstr(s, \"func main(\") || strstr(s, \"func main ()\"); }\n"
-        "static int write_hello_native(const char *input, const char *output) {\n"
-        "    char template_path[256]; FILE *c; char *src = read_file(input); int status;\n"
-        "    if (!has_main(src)) { fprintf(stderr, \"compile: missing main in %s\\n\", input); free(src); return 1; }\n"
-        "    snprintf(template_path, sizeof(template_path), \"/tmp/s_modular_hello_%ld.c\", (long)getpid());\n"
-        "    c = fopen(template_path, \"wb\"); if (!c) { free(src); return 1; }\n"
-        "    fputs(\"#include <stdio.h>\\nint main(void){puts(\\\"hello from S\\\");return 0;}\\n\", c);\n"
-        "    fclose(c); free(src); status = cc(template_path, output); unlink(template_path);\n"
-        "    if (status != 0) { fprintf(stderr, \"compile: host cc failed\\n\"); return 1; }\n"
-        "    return 0;\n"
         "}\n",
         out);
     fprintf(out,
         "static int write_next_stage(const char *input, const char *output) {\n"
         "    char *src = read_file(input); FILE *c; char cpath[256]; int status;\n"
-        "    if (!strstr(src, \"package cmd\") || !strstr(src, \"modular\")) { free(src); return write_hello_native(input, output); }\n"
         "    snprintf(cpath, sizeof(cpath), \"/tmp/s_modular_next_%%ld.c\", (long)getpid());\n"
         "    c = fopen(cpath, \"wb\"); if (!c) { free(src); return 1; }\n"
         "    free(src);\n");
@@ -170,7 +158,8 @@ static void write_stage1_c(FILE *out, const ClosureStats *stats) {
         "int main(int argc, char **argv) {\n"
         "    if (argc == 2 && (!strcmp(argv[1], \"--help\") || !strcmp(argv[1], \"-h\"))) { usage(); return 0; }\n"
         "    if (argc < 2) { usage(); return 2; }\n"
-        "    if (!strcmp(argv[1], \"build\")) { if (argc != 5 || strcmp(argv[3], \"-o\")) { usage(); return 2; } return write_next_stage(argv[2], argv[4]); }\n"
+        "    if (!strcmp(argv[1], \"build\")) { if (argc != 5 || strcmp(argv[3], \"-o\")) { usage(); return 2; } return bootstrap_subset_build(argv[2], argv[4]); }\n"
+        "    if (!strcmp(argv[1], \"--emit-artifact-stage2\")) { if (argc != 5 || strcmp(argv[3], \"-o\")) return 2; fprintf(stderr, \"artifact-only: canonical-source-compilation=NOT_PROVEN\\n\"); return write_next_stage(argv[2], argv[4]); }\n"
         "    if (!strcmp(argv[1], \"check\") || !strcmp(argv[1], \"tokens\") || !strcmp(argv[1], \"ast\")) { if (argc != 3) { usage(); return 2; } free(read_file(argv[2])); fprintf(stderr, \"%s ok: %s\\n\", argv[1], argv[2]); return 0; }\n"
         "    if (!strcmp(argv[1], \"test\")) { fprintf(stderr, \"test: ok\\n\"); return 0; }\n"
         "    fprintf(stderr, \"%s closure files=%zu bytes=%zu funcs=%zu\\n\", stage, closure_files, closure_bytes, closure_funcs); usage(); return 2;\n"
@@ -225,6 +214,12 @@ int main(int argc, char **argv) {
         fprintf(stderr, "stage0: failed to write %s: %s\n", c_path, strerror(errno));
         return 1;
     }
+    char subset_path[2048];
+    snprintf(subset_path, sizeof(subset_path), "%s/src/cmd/compile/stage0/bootstrap_subset.c", root);
+    char *subset = read_file(subset_path, NULL);
+    fputs(subset, out);
+    fputc('\n', out);
+    free(subset);
     write_stage1_c(out, &stats);
     fclose(out);
     status = run_cc(c_path, output);

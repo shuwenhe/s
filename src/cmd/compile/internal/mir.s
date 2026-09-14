@@ -318,7 +318,7 @@ func mir_empty_ownership_facts(int point_count) mir_ownership_facts {
 //   } else {
 //       // process place
 //   }
-func mir_loan_borrowed_place(mir_ownership_facts* facts, int loan_id) (mir_place, bool) {
+func mir_loan_borrowed_place(facts* mir_ownership_facts, int loan_id) (mir_place, bool) {
     // Precondition: facts must not be nil
     if facts == nil {
         return mir_place{}, false
@@ -355,7 +355,7 @@ func mir_place_from_fields(string root, string[] fields) mir_place {
     }
 }
 
-func mir_ownership_ref_id(mir_ownership_facts* facts, string name) int {
+func mir_ownership_ref_id(facts* mir_ownership_facts, string name) int {
     i := 0
     for i < len(facts.ref_names) {
         if facts.ref_names[i] == name { return i }
@@ -544,7 +544,7 @@ func mir_type_is_copy(string type_name) bool {
 func mir_append_scope_drops(mir_local_slot[] locals, mir_statement[] statements, string[] events) () {
     i := len(locals) - 1
     for i >= 0 {
-        if compile.internal.typesys.requires_drop(locals[i].type_name) && locals[i].type_name != "unknown" && !mir_local_moved_at_exit(locals[i].name, events) {
+        if compile.internal.typesys.requires_drop(locals[i].kindname) && locals[i].kindname != "unknown" && !mir_local_moved_at_exit(locals[i].name, events) {
             statements.push(mir_statement::drop(mir_drop_stmt { slot: locals[i].id }))
         }
         i = i - 1
@@ -736,7 +736,7 @@ func mir_collect_locals(param[] params, block_expr block) mir_local_slot[] {
     locals := mir_local_slot[]()
     i := 0
     for i < len(params) {
-        locals = append(locals, mir_local_slot { id: len(locals), name: params[i].name, kind: "param", version: 0, type_name: params[i].type_name, copyable: mir_type_is_copy(params[i].type_name) })
+        locals = append(locals, mir_local_slot { id: len(locals), name: params[i].name, kind: "param", version: 0, type_name: params[i].kindname, copyable: mir_type_is_copy(params[i].kindname) })
         i = i + 1
     }
     i = 0
@@ -745,7 +745,7 @@ func mir_collect_locals(param[] params, block_expr block) mir_local_slot[] {
             stmt.let(let_stmt) : {
                 if mir_find_local(locals, let_stmt.name) < 0 {
                     type_name := mir_expr_type_name(let_stmt.value)
-                    if let_stmt.type_name.is_some() { type_name = let_stmt.type_name.unwrap() }
+                    if let_stmt.kindname.is_some() { type_name = let_stmt.kindname.unwrap() }
                     locals = append(locals, mir_local_slot { id: len(locals), name: let_stmt.name, kind: "local", version: 0, type_name: type_name, copyable: mir_type_is_copy(type_name) })
                 }
             }

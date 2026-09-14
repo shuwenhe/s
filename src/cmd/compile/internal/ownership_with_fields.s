@@ -85,7 +85,7 @@ func ownership_check_events_ext(string[] events) ownership_result_ext {
                     }
                 }
 
-                if available && !compile.internal.typesys.is_copy_type(slot.type_name) {
+                if available && !compile.internal.typesys.is_copy_type(slot.kindname) {
                     drops = append(drops, slot.name)
                     dropped = append(dropped, slot.name)
                 }
@@ -139,7 +139,7 @@ func ownership_check_events_ext(string[] events) ownership_result_ext {
             if ownership_contains(moved, payload) || ownership_contains(dropped, payload) {
                 errors = errors + 1
                 message = message + "move-after-move:" + payload + ";"
-            } else if compile.internal.typesys.is_copy_type(slot.type_name) {
+            } else if compile.internal.typesys.is_copy_type(slot.kindname) {
 
             } else {
                 moved = append(moved, payload)

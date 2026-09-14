@@ -31,13 +31,13 @@ func from_syntax(source_file src) ir_ast.package_ir {
                 }))
             }
             item.struct(struct_decl) : {
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir::type_decl(ir_ast.type_decl { name: struct_decl.name, type_expr: "struct" }))
+                pkg.decls = append(pkg.decls, ir_ast.decl_ir::type_decl(ir_ast.kinddecl { name: struct_decl.name, type_expr: "struct" }))
             }
             item.enum(enum_decl) : {
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir::type_decl(ir_ast.type_decl { name: enum_decl.name, type_expr: "enum" }))
+                pkg.decls = append(pkg.decls, ir_ast.decl_ir::type_decl(ir_ast.kinddecl { name: enum_decl.name, type_expr: "enum" }))
             }
             item.trait(trait_decl) : {
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir::type_decl(ir_ast.type_decl { name: trait_decl.name, type_expr: "trait" }))
+                pkg.decls = append(pkg.decls, ir_ast.decl_ir::type_decl(ir_ast.kinddecl { name: trait_decl.name, type_expr: "trait" }))
             }
             item.method(method_decl) : {
                 pkg.decls.push(ir_ast.decl_ir::method(ir_ast.method_decl {
@@ -219,7 +219,7 @@ func convert_function(function_decl fd, const_rewrite_entry[] const_entries) ir_
     pi := 0
     for pi < len(fd.sig.params) {
         p := fd.sig.params[pi]
-        sig.params = append(sig.params, ir_ast.param { name: p.name, type_name p.type_name })
+        sig.params = append(sig.params, ir_ast.param { name: p.name, type_name p.kindname })
         pi = pi + 1
     }
     ret := option[string].none
@@ -251,7 +251,7 @@ func convert_block(block_expr b, const_rewrite_entry[] const_entries) ir_ast.blo
 func convert_stmt(stmt s, const_rewrite_entry[] const_entries) ir_ast.stmt_ir {
     switch s {
         stmt.let(var_stmt) : {
-            ir_ast.stmt_ir::let(ir_ast.var_stmt { name: var_stmt.name, type_name var_stmt.type_name, value convert_expr(var_stmt.value, const_entries) })
+            ir_ast.stmt_ir::let(ir_ast.var_stmt { name: var_stmt.name, type_name var_stmt.kindname, value convert_expr(var_stmt.value, const_entries) })
         }
         stmt.assign(assign_stmt) : {
             ir_ast.stmt_ir::assign(ir_ast.assign_stmt { name: assign_stmt.name, value convert_expr(assign_stmt.value, const_entries) })
@@ -554,7 +554,7 @@ func array_to_expr(array_literal lit, const_rewrite_entry[] const_entries) ir_as
         i = i + 1
     }
     ir_ast.expr_ir::array(ir_ast.array_expr {
-        type_name: lit.type_text, items items,
+        type_name: lit.kindtext, items items,
     })
 }
 
@@ -569,7 +569,7 @@ func map_to_expr(map_literal lit, const_rewrite_entry[] const_entries) ir_ast.ex
         i = i + 1
     }
     ir_ast.expr_ir::map(ir_ast.map_expr {
-        type_name: lit.type_text, entries entries,
+        type_name: lit.kindtext, entries entries,
     })
 }
 

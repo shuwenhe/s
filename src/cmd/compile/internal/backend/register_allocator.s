@@ -45,7 +45,7 @@ func register_allocator_new() register_allocator {
     allocator
 }
 
-func register_allocator_build_intervals(allocator* register_allocator, x86_instruction[] instrs) {
+func register_allocator_build_intervals(register_allocator* allocator, x86_instruction[] instrs) {
     for i := 0; i < instrs.len(); i = i + 1 {
         instr := instrs[i]
 
@@ -61,7 +61,7 @@ func register_allocator_build_intervals(allocator* register_allocator, x86_instr
     }
 }
 
-func register_allocator_build_interference_graph(allocator* register_allocator) {
+func register_allocator_build_interference_graph(register_allocator* allocator) {
     graph_size := allocator.intervals.len()
 
     for i := 0; i < graph_size; i = i + 1 {
@@ -93,7 +93,7 @@ func intervals_interfere(i1 live_interval, i2 live_interval) int {
     }
 }
 
-func register_allocator_allocate(allocator* register_allocator) {
+func register_allocator_allocate(register_allocator* allocator) {
     for i := 0; i < allocator.intervals.len(); i = i + 1 {
         interval := allocator.intervals[i]
         assigned := -1
@@ -123,7 +123,7 @@ func register_allocator_allocate(allocator* register_allocator) {
     }
 }
 
-func get_available_registers(allocator* register_allocator) int[] {
+func get_available_registers(register_allocator* allocator) int[] {
     int[] available
 
     for reg := 0; reg < 14; reg = reg + 1 {
@@ -143,7 +143,7 @@ func get_available_registers(allocator* register_allocator) int[] {
     available
 }
 
-func register_allocator_insert_spill_code(allocator* register_allocator, x86_instruction[] instrs*) {
+func register_allocator_insert_spill_code(register_allocator* allocator, x86_instruction[] instrs*) {
     for i := 0; i < allocator.intervals.len(); i = i + 1 {
         interval := allocator.intervals[i]
 
@@ -169,7 +169,7 @@ struct spill_reload_action {
     bool reload
 }
 
-func register_allocator_spill_reload_plan(register_allocator* allocator) spill_reload_action[] {
+func register_allocator_spill_reload_plan(allocator* register_allocator) spill_reload_action[] {
     actions := spill_reload_action[]()
     for i := 0; i < allocator.intervals.len(); i = i + 1 {
         interval := allocator.intervals[i]

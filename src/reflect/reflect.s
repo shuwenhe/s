@@ -64,7 +64,7 @@ struct method {
 }
 
 func type_of(v value) type_info* {
-	return v.type_info
+	return v.kindinfo
 }
 
 func value_of(v unsafe.pointer) value {
@@ -76,15 +76,15 @@ func value_of(v unsafe.pointer) value {
 }
 
 func (v value) kind() kind {
-	if v.type_info != nil {
-		return v.type_info.kind
+	if v.kindinfo != nil {
+		return v.kindinfo.kind
 	}
 	return invalid
 }
 
 func (v value) type_name() string {
-	if v.type_info != nil {
-		return v.type_info.name
+	if v.kindinfo != nil {
+		return v.kindinfo.name
 	}
 	return ""
 }
@@ -102,7 +102,7 @@ func (v value) get_int() i64 {
 		return 0
 	}
 	ptr := unsafe.cast_to_ptr(v.data)
-	match v.type_info.kind {
+	match v.kindinfo.kind {
 	case int {
 		return unsafe.load_i64(ptr)
 	}
@@ -124,7 +124,7 @@ func (v value) get_float() f64 {
 		return 0.0
 	}
 	ptr := unsafe.cast_to_ptr(v.data)
-	match v.type_info.kind {
+	match v.kindinfo.kind {
 	case float32 {
 		return f64(unsafe.load_f32(ptr))
 	}
@@ -154,11 +154,11 @@ func (v value) get_pointer() unsafe.pointer {
 }
 
 func (v value) get_slice() value {
-	return value{type_info: v.type_info.elem_type, data: v.data, is_nil: v.is_nil}
+	return value{type_info: v.kindinfo.elem_type, data: v.data, is_nil: v.is_nil}
 }
 
 func (v value) get_array() value {
-	return value{type_info: v.type_info.elem_type, data: v.data, is_nil: v.is_nil}
+	return value{type_info: v.kindinfo.elem_type, data: v.data, is_nil: v.is_nil}
 }
 
 func (v value) get_map() value {
@@ -166,33 +166,33 @@ func (v value) get_map() value {
 }
 
 func (v value) get_channel() value {
-	return value{type_info: v.type_info.elem_type, data: v.data, is_nil: v.is_nil}
+	return value{type_info: v.kindinfo.elem_type, data: v.data, is_nil: v.is_nil}
 }
 
 func (v value) field(index i32) value {
-	if v.type_info == nil || v.type_info.kind != struct {
+	if v.kindinfo == nil || v.kindinfo.kind != struct {
 		return value{type_info: nil, data: nil, is_nil: true}
 	}
 
-	if index < 0 || index >= v.type_info.field_count {
+	if index < 0 || index >= v.kindinfo.field_count {
 		return value{type_info: nil, data: nil, is_nil: true}
 	}
 
-	field := v.type_info.fields[index]
+	field := v.kindinfo.fields[index]
 	field_ptr := unsafe.add_pointer(v.data, field.offset)
 
-	return value{type_info: field.type_info, data: field_ptr, is_nil: false}
+	return value{type_info: field.kindinfo, data: field_ptr, is_nil: false}
 }
 
 func (v value) field_count() i32 {
-	if v.type_info != nil && v.type_info.kind == struct {
-		return v.type_info.field_count
+	if v.kindinfo != nil && v.kindinfo.kind == struct {
+		return v.kindinfo.field_count
 	}
 	return 0
 }
 
 func (v value) method_count() i32 {
-	if v.type_info == nil {
+	if v.kindinfo == nil {
 		return 0
 	}
 	return 0
@@ -203,17 +203,17 @@ func (v value) method(index i32) method {
 }
 
 func (v value) elem() value {
-	if v.type_info == nil {
+	if v.kindinfo == nil {
 		return value{type_info: nil, data: nil, is_nil: true}
 	}
 
-	match v.type_info.kind {
+	match v.kindinfo.kind {
 	case pointer {
 		ptr := unsafe.load_pointer(v.data)
-		return value{type_info: v.type_info.elem_type, data: ptr, is_nil: ptr == nil}
+		return value{type_info: v.kindinfo.elem_type, data: ptr, is_nil: ptr == nil}
 	}
 	case array, slice {
-		return value{type_info: v.type_info.elem_type, data: v.data, is_nil: false}
+		return value{type_info: v.kindinfo.elem_type, data: v.data, is_nil: false}
 	}
 	default {
 		return value{type_info: nil, data: nil, is_nil: true}
@@ -223,7 +223,7 @@ func (v value) elem() value {
 }
 
 func (v value) len() i64 {
-	match v.type_info.kind {
+	match v.kindinfo.kind {
 	case string {
 		s := unsafe.load_string(v.data)
 		return i64(len(s))
@@ -247,7 +247,7 @@ func (v value) is_nil() bool {
 }
 
 func (v value) is_valid() bool {
-	return v.type_info != nil
+	return v.kindinfo != nil
 }
 
 func (ti* type_info) kind() kind {

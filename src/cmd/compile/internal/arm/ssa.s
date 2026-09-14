@@ -115,10 +115,10 @@ func ssa_gen_value(ssa_value value) string {
         return "MOVW"
     }
     if value.op == "OpLoadReg" {
-        return load_by_type(value.type_name, value.signed
+        return load_by_type(value.kindname, value.signed
     }
     if value.op == "OpStoreReg" {
-        return store_by_type(value.type_name
+        return store_by_type(value.kindname
     }
     if value.op == "OpARMADD" || value.op == "OpARMADDconst" {
         return "ADD"
