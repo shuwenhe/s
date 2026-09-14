@@ -46,12 +46,12 @@ struct ast_node {
 }
 
 struct parser {
-    tokens* token
+    token* tokens
     int token_count
     int pos
 }
 
-func parser_new(tokens* token, int token_count) parser* {
+func parser_new(token* tokens, int token_count) parser* {
     p := alloc(parser)
     p.tokens = tokens
     p.token_count = token_count
