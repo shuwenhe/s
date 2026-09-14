@@ -4,3 +4,5 @@ func pkcs1v22_unit_name() string {
 }
 
 func pkcs1v22_unit_ready() int {
+    1
+}

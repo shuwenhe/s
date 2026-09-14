@@ -4,3 +4,5 @@ func wait6_freebsd64_unit_name() string {
 }
 
 func wait6_freebsd64_unit_ready() int {
+    1
+}

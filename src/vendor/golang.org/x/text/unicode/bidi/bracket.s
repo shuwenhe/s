@@ -4,3 +4,5 @@ func bracket_unit_name() string {
 }
 
 func bracket_unit_ready() int {
+    1
+}

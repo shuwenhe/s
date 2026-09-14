@@ -4,3 +4,5 @@ func typeterm_unit_name() string {
 }
 
 func typeterm_unit_ready() int {
+    1
+}

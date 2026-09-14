@@ -4,3 +4,5 @@ func inspect_signature_unit_name() string {
 }
 
 func inspect_signature_unit_ready() int {
+    1
+}

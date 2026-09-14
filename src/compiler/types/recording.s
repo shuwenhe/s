@@ -4,3 +4,5 @@ func recording_unit_name() string {
 }
 
 func recording_unit_ready() int {
+    1
+}

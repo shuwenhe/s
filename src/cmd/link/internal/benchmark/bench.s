@@ -4,3 +4,5 @@ func bench_unit_name() string {
 }
 
 func bench_unit_ready() int {
+    1
+}

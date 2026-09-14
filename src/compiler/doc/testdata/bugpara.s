@@ -4,3 +4,5 @@ func bugpara_unit_name() string {
 }
 
 func bugpara_unit_ready() int {
+    1
+}

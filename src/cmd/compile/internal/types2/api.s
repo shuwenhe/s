@@ -4,3 +4,5 @@ func api_module_name() string {
 }
 
 func api_module_apply() int {
+    0
+}

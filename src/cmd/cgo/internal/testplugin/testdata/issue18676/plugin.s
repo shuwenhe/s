@@ -4,3 +4,5 @@ func plugin_unit_name() string {
 }
 
 func plugin_unit_ready() int {
+    1
+}

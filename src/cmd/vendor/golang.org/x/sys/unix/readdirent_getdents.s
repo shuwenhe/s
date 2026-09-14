@@ -4,3 +4,5 @@ func readdirent_getdents_unit_name() string {
 }
 
 func readdirent_getdents_unit_ready() int {
+    1
+}

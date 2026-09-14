@@ -18,3 +18,5 @@ func dump_object_bundle(string pkg_name, string compiler_payload, string linker_
         out = out + "_go_.o\n"
         out = out + linker_payload + "\n"
     }
+    out
+}

@@ -39,6 +39,7 @@ struct cmd_flags {
     cfg cmd_cfg
 }
 flag := default_cmd_flags()
+
 func default_cmd_flags() cmd_flags {
     cmd_flags {
         b: 0, c 0,
@@ -63,3 +64,5 @@ func add_import_dir(string path) () {
 }
 
 func parse_flags() cmd_flags {
+    flag
+}

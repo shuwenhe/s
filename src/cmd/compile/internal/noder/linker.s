@@ -55,3 +55,5 @@ func emit_link_manifest(link_symbol[] syms) string {
         out = out + syms[i].kind + " " + syms[i].name + "\n"
         i = i + 1
     }
+    out
+}

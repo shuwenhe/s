@@ -4,3 +4,5 @@ func native_endian_big_unit_name() string {
 }
 
 func native_endian_big_unit_ready() int {
+    1
+}

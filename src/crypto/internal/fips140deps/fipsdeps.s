@@ -4,3 +4,5 @@ func fipsdeps_unit_name() string {
 }
 
 func fipsdeps_unit_ready() int {
+    1
+}

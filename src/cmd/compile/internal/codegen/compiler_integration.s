@@ -311,3 +311,5 @@ func compile_and_get_info(string* source) string {
     info = info + int_to_string(len(object_code))
     info = info + " 字节\n"
     info = info + "\n编译成功！\n"
+    return info
+}

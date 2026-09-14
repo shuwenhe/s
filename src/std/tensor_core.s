@@ -180,6 +180,7 @@ func zeros_like(tensor t) tensor { zeros(t.shape.dims) }
 
 func ones_like(tensor t) tensor { ones(t.shape.dims) }
 var _rand_seed = 42
+
 func set_seed(int seed) void { _rand_seed = seed }
 
 func _rand_float() float {
@@ -930,3 +931,6 @@ func build_reduced_shape(tensor_shape sh, int d, bool keepdim) int[] {
         i = i + 1
     }
     out
+}
+
+func neg(tensor t) tensor { mul_scalar(t, -1.0) }

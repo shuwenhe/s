@@ -4,3 +4,5 @@ func geom_unit_name() string {
 }
 
 func geom_unit_ready() int {
+    1
+}

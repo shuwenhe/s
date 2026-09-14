@@ -4,3 +4,5 @@ func walk_module_name() string {
 }
 
 func walk_module_apply() int {
+    0
+}

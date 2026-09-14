@@ -80,3 +80,5 @@ func (ncd* native_compilation_driver) print_compilation_report() {
     println("")
     println("Generated Assembly:")
     println(ncd.assembly_output)
+    println("=== End Report ===")
+}

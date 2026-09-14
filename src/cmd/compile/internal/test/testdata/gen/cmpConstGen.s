@@ -4,3 +4,5 @@ func cmp_const_gen_case_name() string {
 }
 
 func cmp_const_gen_case_pass() int {
+    0
+}

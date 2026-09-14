@@ -4,3 +4,5 @@ func sock_bsd_unit_name() string {
 }
 
 func sock_bsd_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func mksyscall_windows_unit_name() string {
 }
 
 func mksyscall_windows_unit_ready() int {
+    1
+}

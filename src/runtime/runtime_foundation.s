@@ -2,6 +2,7 @@ package src.runtime
 import (
     "std.option"
 )
+
 const runtime_feature_gc = 1
 const runtime_feature_scheduler = 2
 const runtime_feature_channels = 4
@@ -11,7 +12,9 @@ const runtime_feature_reflect = 32
 const runtime_feature_syscall = 64
 const runtime_feature_profile = 128
 const runtime_feature_race = 256
+
 var runtime_owned_object_ids = int[]()
+
 func runtime_features() int {
     runtime_feature_gc + runtime_feature_scheduler + runtime_feature_channels +
         runtime_feature_stack + runtime_feature_panic + runtime_feature_reflect +
@@ -231,6 +234,7 @@ extern "intrinsic" func __syscall1(int nr, int a1) int;
 extern "intrinsic" func __syscall2(int nr, int a1, int a2) int;
 extern "intrinsic" func __syscall3(int nr, int a1, int a2, int a3) int;
 extern "intrinsic" func __syscall6(int nr, int a1, int a2, int a3, int a4, int a5, int a6) int;
+
 func runtime_syscall0(int nr) int { __syscall0(nr) }
 
 func runtime_syscall1(int nr, int a1) int { __syscall1(nr, a1) }
@@ -250,6 +254,7 @@ struct runtime_profile_sample {
 }
 var runtime_profile_samples = runtime_profile_sample[]()
 var runtime_profile_enabled = false
+
 func runtime_profile_start() () { runtime_profile_enabled = true }
 
 func runtime_profile_stop() () { runtime_profile_enabled = false }
@@ -277,6 +282,11 @@ func runtime_profile_snapshot() runtime_profile_sample[] {
 }
 extern "intrinsic" func __race_read(int address, int size) ();
 extern "intrinsic" func __race_write(int address, int size) ();
+
 func runtime_race_read(int address, int size) () { __race_read(address, size) }
 
 func runtime_race_write(int address, int size) () { __race_write(address, size) }
+
+func runtime_foundation_unit_name() string { "src/runtime/runtime_foundation" }
+
+func runtime_foundation_unit_ready() int { 1 }

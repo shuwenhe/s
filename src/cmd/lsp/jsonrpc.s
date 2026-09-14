@@ -274,3 +274,5 @@ func completion_kind_to_int(kind completion_item_kind) int {
         completion_item_kind::event : 23,
         completion_item_kind::operator : 24,
         completion_item_kind::type_parameter : 25,
+    }
+}

@@ -4,3 +4,5 @@ func slicepart_amd64_unit_name() string {
 }
 
 func slicepart_amd64_unit_ready() int {
+    1
+}

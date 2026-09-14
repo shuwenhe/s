@@ -4,3 +4,5 @@ func synth_unit_name() string {
 }
 
 func synth_unit_ready() int {
+    1
+}

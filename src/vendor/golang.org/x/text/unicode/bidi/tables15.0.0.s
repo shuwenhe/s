@@ -4,3 +4,5 @@ func tables15_0_0_unit_name() string {
 }
 
 func tables15_0_0_unit_ready() int {
+    1
+}

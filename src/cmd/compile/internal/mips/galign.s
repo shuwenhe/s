@@ -4,3 +4,5 @@ func galign_unit_name() string {
 }
 
 func galign_unit_ready() int {
+    1
+}

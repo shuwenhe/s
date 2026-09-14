@@ -1,0 +1,2 @@
+func hosted_frontend() {
+}

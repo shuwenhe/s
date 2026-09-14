@@ -4,3 +4,5 @@ func removeall_windows_unit_name() string {
 }
 
 func removeall_windows_unit_ready() int {
+    1
+}

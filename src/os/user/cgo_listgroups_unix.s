@@ -4,3 +4,5 @@ func cgo_listgroups_unix_unit_name() string {
 }
 
 func cgo_listgroups_unix_unit_ready() int {
+    1
+}

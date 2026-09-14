@@ -4,3 +4,5 @@ func ifaceassert_unit_name() string {
 }
 
 func ifaceassert_unit_ready() int {
+    1
+}

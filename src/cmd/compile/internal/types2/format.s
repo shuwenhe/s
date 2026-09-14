@@ -4,3 +4,5 @@ func format_module_name() string {
 }
 
 func format_module_apply() int {
+    0
+}

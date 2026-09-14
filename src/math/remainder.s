@@ -4,3 +4,5 @@ func remainder_unit_name() string {
 }
 
 func remainder_unit_ready() int {
+    1
+}

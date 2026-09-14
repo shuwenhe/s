@@ -30,3 +30,5 @@ func lower_to_ir(source_file ast) ir_node[] {
         i = i + 1
     }
     out
+}
+}

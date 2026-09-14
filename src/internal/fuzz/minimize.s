@@ -4,3 +4,5 @@ func minimize_unit_name() string {
 }
 
 func minimize_unit_ready() int {
+    1
+}

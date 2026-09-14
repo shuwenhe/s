@@ -4,3 +4,5 @@ func stringconcat_unit_name() string {
 }
 
 func stringconcat_unit_ready() int {
+    1
+}

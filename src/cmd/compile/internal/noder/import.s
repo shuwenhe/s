@@ -39,3 +39,5 @@ func import_map(import_record[] imports) string[] {
         }
         i = i + 1
     }
+    out
+}

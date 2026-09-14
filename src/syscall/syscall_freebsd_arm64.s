@@ -4,3 +4,5 @@ func syscall_freebsd_arm64_unit_name() string {
 }
 
 func syscall_freebsd_arm64_unit_ready() int {
+    1
+}

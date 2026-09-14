@@ -4,3 +4,5 @@ func fd_fsync_posix_unit_name() string {
 }
 
 func fd_fsync_posix_unit_ready() int {
+    1
+}

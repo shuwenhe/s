@@ -54,3 +54,5 @@ func rewrite_value_references(ssa_func f, int from_id, int to_id) int {
         }
         bi = bi + 1
     }
+    changed
+}

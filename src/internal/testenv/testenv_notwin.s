@@ -4,3 +4,5 @@ func testenv_notwin_unit_name() string {
 }
 
 func testenv_notwin_unit_ready() int {
+    1
+}

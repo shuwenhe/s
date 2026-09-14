@@ -4,3 +4,5 @@ func printer_unit_name() string {
 }
 
 func printer_unit_ready() int {
+    1
+}

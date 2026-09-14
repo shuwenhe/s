@@ -4,3 +4,5 @@ func go2_unit_name() string {
 }
 
 func go2_unit_ready() int {
+    1
+}

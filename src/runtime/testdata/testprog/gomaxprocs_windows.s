@@ -4,3 +4,5 @@ func gomaxprocs_windows_unit_name() string {
 }
 
 func gomaxprocs_windows_unit_ready() int {
+    1
+}

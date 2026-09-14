@@ -4,3 +4,5 @@ func copy_module_name() string {
 }
 
 func copy_module_apply() int {
+    0
+}

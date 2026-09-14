@@ -4,3 +4,5 @@ func lookup_test_case_name() string {
 }
 
 func lookup_test_case_pass() int {
+    0
+}

@@ -4,3 +4,5 @@ func unixsock_readmsg_cmsg_cloexec_unit_name() string {
 }
 
 func unixsock_readmsg_cmsg_cloexec_unit_ready() int {
+    1
+}

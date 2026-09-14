@@ -4,3 +4,5 @@ func histogram_unit_name() string {
 }
 
 func histogram_unit_ready() int {
+    1
+}

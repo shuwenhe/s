@@ -4,3 +4,5 @@ func root_noopenat_unit_name() string {
 }
 
 func root_noopenat_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func zsyscall_darwin_amd64_unit_name() string {
 }
 
 func zsyscall_darwin_amd64_unit_ready() int {
+    1
+}

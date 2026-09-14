@@ -4,3 +4,5 @@ func dct_unit_name() string {
 }
 
 func dct_unit_ready() int {
+    1
+}

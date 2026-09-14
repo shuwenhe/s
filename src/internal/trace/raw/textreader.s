@@ -4,3 +4,5 @@ func textreader_unit_name() string {
 }
 
 func textreader_unit_ready() int {
+    1
+}

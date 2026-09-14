@@ -4,3 +4,5 @@ func iter_unit_name() string {
 }
 
 func iter_unit_ready() int {
+    1
+}

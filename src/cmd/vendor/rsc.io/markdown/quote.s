@@ -4,3 +4,5 @@ func quote_unit_name() string {
 }
 
 func quote_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func semiexpanded_unit_name() string {
 }
 
 func semiexpanded_unit_ready() int {
+    1
+}

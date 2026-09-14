@@ -114,3 +114,5 @@ func encode_bitmap(int[] bits) string {
         }
         i = i + 1
     }
+    out
+}

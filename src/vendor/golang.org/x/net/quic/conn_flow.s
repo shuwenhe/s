@@ -4,3 +4,5 @@ func conn_flow_unit_name() string {
 }
 
 func conn_flow_unit_ready() int {
+    1
+}

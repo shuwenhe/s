@@ -4,3 +4,5 @@ func gcm_noasm_unit_name() string {
 }
 
 func gcm_noasm_unit_ready() int {
+    1
+}

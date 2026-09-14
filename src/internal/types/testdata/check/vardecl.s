@@ -4,3 +4,5 @@ func vardecl_unit_name() string {
 }
 
 func vardecl_unit_ready() int {
+    1
+}

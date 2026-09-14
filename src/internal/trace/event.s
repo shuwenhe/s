@@ -4,3 +4,5 @@ func event_unit_name() string {
 }
 
 func event_unit_ready() int {
+    1
+}

@@ -7,7 +7,6 @@ enum symbol_bind {
     symbol_bind_global,
     symbol_bind_weak,
 }
-
 enum symbol_type {
     symbol_type_notype,
     symbol_type_object,
@@ -136,3 +135,5 @@ func (symbol_table* st) encode_elf_symbols() elf_symbol[] {
         result = append(result, sym)
         i = i + 1
     }
+    result
+}

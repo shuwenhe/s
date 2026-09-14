@@ -4,3 +4,5 @@ func deserialize_unit_name() string {
 }
 
 func deserialize_unit_ready() int {
+    1
+}

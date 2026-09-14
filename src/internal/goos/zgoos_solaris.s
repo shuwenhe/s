@@ -4,3 +4,5 @@ func zgoos_solaris_unit_name() string {
 }
 
 func zgoos_solaris_unit_ready() int {
+    1
+}

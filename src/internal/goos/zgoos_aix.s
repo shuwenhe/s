@@ -4,3 +4,5 @@ func zgoos_aix_unit_name() string {
 }
 
 func zgoos_aix_unit_ready() int {
+    1
+}

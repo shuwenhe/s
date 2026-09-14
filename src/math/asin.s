@@ -4,3 +4,5 @@ func asin_unit_name() string {
 }
 
 func asin_unit_ready() int {
+    1
+}

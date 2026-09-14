@@ -4,3 +4,5 @@ func exe2_unit_name() string {
 }
 
 func exe2_unit_ready() int {
+    1
+}

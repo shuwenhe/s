@@ -4,3 +4,5 @@ func msan_shared_unit_name() string {
 }
 
 func msan_shared_unit_ready() int {
+    1
+}

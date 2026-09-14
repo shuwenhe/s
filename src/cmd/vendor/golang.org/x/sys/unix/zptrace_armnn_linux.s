@@ -4,3 +4,5 @@ func zptrace_armnn_linux_unit_name() string {
 }
 
 func zptrace_armnn_linux_unit_ready() int {
+    1
+}

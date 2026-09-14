@@ -4,3 +4,5 @@ func numsroutine_unit_name() string {
 }
 
 func numsroutine_unit_ready() int {
+    1
+}

@@ -141,3 +141,7 @@ func (once* self) do(func f) () {
         }
         self.mu.unlock()
     }
+
+func sema_unit_name() string { "src/runtime/sema" }
+
+func sema_unit_ready() int   { 1 }

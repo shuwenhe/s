@@ -491,3 +491,5 @@ func count_token(string text, string token) int {
             i = i + 1
         }
     }
+    total
+}

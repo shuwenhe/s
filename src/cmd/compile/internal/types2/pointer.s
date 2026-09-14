@@ -4,3 +4,5 @@ func pointer_module_name() string {
 }
 
 func pointer_module_apply() int {
+    0
+}

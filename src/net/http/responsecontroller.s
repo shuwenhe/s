@@ -4,3 +4,5 @@ func responsecontroller_unit_name() string {
 }
 
 func responsecontroller_unit_ready() int {
+    1
+}

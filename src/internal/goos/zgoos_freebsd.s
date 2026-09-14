@@ -4,3 +4,5 @@ func zgoos_freebsd_unit_name() string {
 }
 
 func zgoos_freebsd_unit_ready() int {
+    1
+}

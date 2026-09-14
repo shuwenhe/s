@@ -38,3 +38,7 @@ func sroutine_state_can_transition(int from, int to) bool {
     }
     false
 }
+
+func sroutine_abi_unit_name() string { "src/runtime/sroutine_abi" }
+
+func sroutine_abi_unit_ready() int { 1 }

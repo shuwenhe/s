@@ -4,3 +4,5 @@ func cgo_callback_unit_name() string {
 }
 
 func cgo_callback_unit_ready() int {
+    1
+}

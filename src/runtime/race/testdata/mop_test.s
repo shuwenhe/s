@@ -4,3 +4,5 @@ func mop_test_unit_name() string {
 }
 
 func mop_test_unit_ready() int {
+    1
+}

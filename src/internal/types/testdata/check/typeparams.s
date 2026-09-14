@@ -4,3 +4,5 @@ func typeparams_unit_name() string {
 }
 
 func typeparams_unit_ready() int {
+    1
+}

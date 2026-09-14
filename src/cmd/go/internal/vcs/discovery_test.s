@@ -4,3 +4,5 @@ func discovery_test_unit_name() string {
 }
 
 func discovery_test_unit_ready() int {
+    1
+}

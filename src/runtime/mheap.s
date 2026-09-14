@@ -4,3 +4,5 @@ func mheap_unit_name() string {
 }
 
 func mheap_unit_ready() int {
+    1
+}

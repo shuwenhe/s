@@ -4,3 +4,5 @@ func qpack_encode_unit_name() string {
 }
 
 func qpack_encode_unit_ready() int {
+    1
+}

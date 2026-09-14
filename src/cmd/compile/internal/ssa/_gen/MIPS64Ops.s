@@ -4,3 +4,5 @@ func mips64_ops_rule_name() string {
 }
 
 func mips64_ops_rule_count() int {
+    0
+}

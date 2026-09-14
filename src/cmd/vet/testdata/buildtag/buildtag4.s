@@ -4,3 +4,5 @@ func buildtag4_unit_name() string {
 }
 
 func buildtag4_unit_ready() int {
+    1
+}

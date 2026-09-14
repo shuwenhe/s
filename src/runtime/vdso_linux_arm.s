@@ -4,3 +4,5 @@ func vdso_linux_arm_unit_name() string {
 }
 
 func vdso_linux_arm_unit_ready() int {
+    1
+}

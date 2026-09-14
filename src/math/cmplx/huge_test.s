@@ -4,3 +4,5 @@ func huge_test_unit_name() string {
 }
 
 func huge_test_unit_ready() int {
+    1
+}

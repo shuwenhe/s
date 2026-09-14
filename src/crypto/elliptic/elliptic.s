@@ -4,3 +4,5 @@ func elliptic_unit_name() string {
 }
 
 func elliptic_unit_ready() int {
+    1
+}

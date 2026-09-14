@@ -4,3 +4,5 @@ func bytealg_bootstrap_unit_name() string {
 }
 
 func bytealg_bootstrap_unit_ready() int {
+    1
+}

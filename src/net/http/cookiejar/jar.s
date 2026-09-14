@@ -4,3 +4,5 @@ func jar_unit_name() string {
 }
 
 func jar_unit_ready() int {
+    1
+}

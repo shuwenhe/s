@@ -207,3 +207,5 @@ func htonl( host int) int {
     b2 := (host >> 16) & 0x_ff
     b3 := (host >> 8) & 0x_ff
     b4 := host & 0x_ff
+    (b4 << 24) | (b3 << 16) | (b2 << 8) | b1
+}

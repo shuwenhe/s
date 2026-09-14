@@ -21,3 +21,5 @@ func (l *tcp_listener) close() error {
 }
 
 func (l *tcp_listener) addr() addr {
+    *l.laddr
+}

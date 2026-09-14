@@ -4,3 +4,5 @@ func types_aix_unit_name() string {
 }
 
 func types_aix_unit_ready() int {
+    1
+}

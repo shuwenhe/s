@@ -65,3 +65,5 @@ func bytes_to_string_range(int[] bytes, int start, int length) string {
         result = result + string(normalize_byte(bytes[start + i]))
         i = i + 1
     }
+    return result
+}

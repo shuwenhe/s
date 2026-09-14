@@ -4,3 +4,5 @@ func pkgpath_test_unit_name() string {
 }
 
 func pkgpath_test_unit_ready() int {
+    1
+}

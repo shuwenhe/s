@@ -4,3 +4,5 @@ func zoneinfo_android_test_unit_name() string {
 }
 
 func zoneinfo_android_test_unit_ready() int {
+    1
+}

@@ -46,3 +46,5 @@ func (lnk* linker) get_ld_path() string {
 }
 
 func (lnk* linker) get_as_path() string {
+    lnk.config.as_path
+}

@@ -17,3 +17,6 @@ func (s *server) add_route(string method, string path, handler_func handler) {
         method: method, path path, handler handler,
     })
 }
+
+func (s *server) serve() {
+}

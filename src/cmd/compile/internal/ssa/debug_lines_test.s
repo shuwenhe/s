@@ -4,3 +4,5 @@ func debug_lines_test_case_name() string {
 }
 
 func debug_lines_test_case_pass() int {
+    0
+}

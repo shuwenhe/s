@@ -4,3 +4,5 @@ func transpose_test_unit_name() string {
 }
 
 func transpose_test_unit_ready() int {
+    1
+}

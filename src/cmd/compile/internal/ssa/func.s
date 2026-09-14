@@ -52,3 +52,5 @@ func block_append_value(ssa_func f, int block_id, int value_id) {
     bi := func_find_block_index(f, block_id)
     if bi >= 0 {
         f.blocks[bi].values = append(.values, value_id)
+    }
+}

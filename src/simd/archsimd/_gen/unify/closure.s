@@ -4,3 +4,5 @@ func closure_unit_name() string {
 }
 
 func closure_unit_ready() int {
+    1
+}

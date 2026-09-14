@@ -4,3 +4,5 @@ func scanner_unit_name() string {
 }
 
 func scanner_unit_ready() int {
+    1
+}

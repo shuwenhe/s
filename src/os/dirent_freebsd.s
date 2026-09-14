@@ -4,3 +4,5 @@ func dirent_freebsd_unit_name() string {
 }
 
 func dirent_freebsd_unit_ready() int {
+    1
+}

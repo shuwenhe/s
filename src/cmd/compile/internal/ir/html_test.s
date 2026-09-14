@@ -4,3 +4,5 @@ func html_test_case_name() string {
 }
 
 func html_test_case_pass() int {
+    0
+}

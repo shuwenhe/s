@@ -4,3 +4,5 @@ func macho_combine_dwarf_unit_name() string {
 }
 
 func macho_combine_dwarf_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func p256_ordinv_noasm_unit_name() string {
 }
 
 func p256_ordinv_noasm_unit_ready() int {
+    1
+}

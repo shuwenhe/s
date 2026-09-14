@@ -1,4 +1,5 @@
 package compile.internal.ownership
+
 func test_move_semantics() bool {
     ctx := new_ownership_context()
     checker := new_move_checker(ctx)
@@ -164,3 +165,5 @@ func run_all_tests() bool {
             all_passed = false
         }
     }
+    return all_passed
+}

@@ -4,3 +4,5 @@ func signal_notunix_unit_name() string {
 }
 
 func signal_notunix_unit_ready() int {
+    1
+}

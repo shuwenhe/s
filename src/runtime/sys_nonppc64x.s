@@ -4,3 +4,5 @@ func sys_nonppc64x_unit_name() string {
 }
 
 func sys_nonppc64x_unit_ready() int {
+    1
+}

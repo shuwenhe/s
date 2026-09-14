@@ -4,3 +4,5 @@ func cgo_socknew_unit_name() string {
 }
 
 func cgo_socknew_unit_ready() int {
+    1
+}

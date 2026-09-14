@@ -4,3 +4,5 @@ func unusedresult_unit_name() string {
 }
 
 func unusedresult_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func atomic_pointer_unit_name() string {
 }
 
 func atomic_pointer_unit_ready() int {
+    1
+}

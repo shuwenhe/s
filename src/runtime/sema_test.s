@@ -4,3 +4,5 @@ func sema_test_unit_name() string {
 }
 
 func sema_test_unit_ready() int {
+    1
+}

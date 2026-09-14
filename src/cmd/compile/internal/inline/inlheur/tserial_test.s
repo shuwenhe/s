@@ -4,3 +4,5 @@ func tserial_test_case_name() string {
 }
 
 func tserial_test_case_pass() int {
+    0
+}

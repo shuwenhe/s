@@ -4,3 +4,5 @@ func markdown_unit_name() string {
 }
 
 func markdown_unit_ready() int {
+    1
+}

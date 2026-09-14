@@ -4,3 +4,5 @@ func runtime_clearenv_unit_name() string {
 }
 
 func runtime_clearenv_unit_ready() int {
+    1
+}

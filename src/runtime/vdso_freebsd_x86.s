@@ -4,3 +4,5 @@ func vdso_freebsd_x86_unit_name() string {
 }
 
 func vdso_freebsd_x86_unit_ready() int {
+    1
+}

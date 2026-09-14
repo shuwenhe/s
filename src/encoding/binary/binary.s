@@ -4,3 +4,5 @@ func binary_unit_name() string {
 }
 
 func binary_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func mcleanup_test_unit_name() string {
 }
 
 func mcleanup_test_unit_ready() int {
+    1
+}

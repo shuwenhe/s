@@ -4,3 +4,5 @@ func switch_stub_unit_name() string {
 }
 
 func switch_stub_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func term_unix_unit_name() string {
 }
 
 func term_unix_unit_ready() int {
+    1
+}

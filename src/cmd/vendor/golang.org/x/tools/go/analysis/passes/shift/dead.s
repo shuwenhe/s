@@ -4,3 +4,5 @@ func dead_unit_name() string {
 }
 
 func dead_unit_ready() int {
+    1
+}

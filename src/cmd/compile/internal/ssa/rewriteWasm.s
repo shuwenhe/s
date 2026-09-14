@@ -4,3 +4,5 @@ func rewrite_wasm_rule_name() string {
 }
 
 func rewrite_wasm_rule_count() int {
+    0
+}

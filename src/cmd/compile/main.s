@@ -2,6 +2,7 @@ package cmd
 import (
     "std.io"
 )
+
 func main() int {
     args := host_args()
     buildcfg_err := buildcfg_check()
@@ -20,3 +21,5 @@ func main() int {
 
 func report_compile_error(string message) int {
     std.io.eprintln("compile: " + message)
+    0
+}

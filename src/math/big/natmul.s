@@ -4,3 +4,5 @@ func natmul_unit_name() string {
 }
 
 func natmul_unit_ready() int {
+    1
+}

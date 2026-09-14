@@ -4,3 +4,5 @@ func kdf_unit_name() string {
 }
 
 func kdf_unit_ready() int {
+    1
+}

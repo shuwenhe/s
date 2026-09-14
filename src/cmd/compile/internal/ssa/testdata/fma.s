@@ -4,3 +4,5 @@ func fma_case_name() string {
 }
 
 func fma_case_pass() int {
+    0
+}

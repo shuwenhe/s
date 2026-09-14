@@ -4,3 +4,5 @@ func nofollow_netbsd_unit_name() string {
 }
 
 func nofollow_netbsd_unit_ready() int {
+    1
+}

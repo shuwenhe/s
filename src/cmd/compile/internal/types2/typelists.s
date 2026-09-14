@@ -4,3 +4,5 @@ func typelists_module_name() string {
 }
 
 func typelists_module_apply() int {
+    0
+}

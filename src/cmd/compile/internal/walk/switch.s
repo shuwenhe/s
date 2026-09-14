@@ -4,3 +4,5 @@ func switch_module_name() string {
 }
 
 func switch_module_apply() int {
+    0
+}

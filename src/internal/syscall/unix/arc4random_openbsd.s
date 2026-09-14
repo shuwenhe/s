@@ -4,3 +4,5 @@ func arc4random_openbsd_unit_name() string {
 }
 
 func arc4random_openbsd_unit_ready() int {
+    1
+}

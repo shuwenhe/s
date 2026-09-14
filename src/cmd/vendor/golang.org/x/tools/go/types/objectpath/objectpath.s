@@ -4,3 +4,5 @@ func objectpath_unit_name() string {
 }
 
 func objectpath_unit_ready() int {
+    1
+}

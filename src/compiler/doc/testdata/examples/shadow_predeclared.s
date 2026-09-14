@@ -4,3 +4,5 @@ func shadow_predeclared_unit_name() string {
 }
 
 func shadow_predeclared_unit_ready() int {
+    1
+}

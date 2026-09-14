@@ -4,3 +4,5 @@ func skip_unit_name() string {
 }
 
 func skip_unit_ready() int {
+    1
+}

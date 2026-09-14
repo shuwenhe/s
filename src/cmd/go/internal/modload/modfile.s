@@ -4,3 +4,5 @@ func modfile_unit_name() string {
 }
 
 func modfile_unit_ready() int {
+    1
+}

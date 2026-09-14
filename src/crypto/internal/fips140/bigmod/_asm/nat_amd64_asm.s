@@ -4,3 +4,5 @@ func nat_amd64_asm_unit_name() string {
 }
 
 func nat_amd64_asm_unit_ready() int {
+    1
+}

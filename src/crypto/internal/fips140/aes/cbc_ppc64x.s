@@ -4,3 +4,5 @@ func cbc_ppc64x_unit_name() string {
 }
 
 func cbc_ppc64x_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func fipsonly_unit_name() string {
 }
 
 func fipsonly_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func obj5_unit_name() string {
 }
 
 func obj5_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func fastrand_unit_name() string {
 }
 
 func fastrand_unit_ready() int {
+    1
+}

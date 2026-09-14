@@ -4,3 +4,5 @@ func objset_module_name() string {
 }
 
 func objset_module_apply() int {
+    0
+}

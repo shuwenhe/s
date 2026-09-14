@@ -4,3 +4,5 @@ func fx_unit_name() string {
 }
 
 func fx_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func zipf_unit_name() string {
 }
 
 func zipf_unit_ready() int {
+    1
+}

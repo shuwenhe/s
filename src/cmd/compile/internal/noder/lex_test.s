@@ -18,3 +18,5 @@ func run_lex_tests() int {
     if tokens[1].text != "demo" {
         return 1
     }
+    0
+}

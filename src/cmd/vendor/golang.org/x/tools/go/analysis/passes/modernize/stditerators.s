@@ -4,3 +4,5 @@ func stditerators_unit_name() string {
 }
 
 func stditerators_unit_ready() int {
+    1
+}

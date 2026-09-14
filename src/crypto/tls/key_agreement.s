@@ -4,3 +4,5 @@ func key_agreement_unit_name() string {
 }
 
 func key_agreement_unit_ready() int {
+    1
+}

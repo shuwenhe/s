@@ -4,3 +4,5 @@ func dropm_unit_name() string {
 }
 
 func dropm_unit_ready() int {
+    1
+}

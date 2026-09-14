@@ -4,3 +4,5 @@ func pq_unit_name() string {
 }
 
 func pq_unit_ready() int {
+    1
+}

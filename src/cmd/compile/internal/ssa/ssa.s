@@ -16,3 +16,5 @@ func dump(ssa_program program) string {
 }
 
 func dump_debug(ssa_program program) string {
+    compile.internal.ssa_core.dump_debug_map(program)
+}

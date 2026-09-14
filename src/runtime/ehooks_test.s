@@ -4,3 +4,5 @@ func ehooks_test_unit_name() string {
 }
 
 func ehooks_test_unit_ready() int {
+    1
+}

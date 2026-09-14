@@ -4,3 +4,5 @@ func cpu_wasm_unit_name() string {
 }
 
 func cpu_wasm_unit_ready() int {
+    1
+}

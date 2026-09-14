@@ -4,3 +4,5 @@ func i74576c_case_name() string {
 }
 
 func i74576c_case_pass() int {
+    0
+}

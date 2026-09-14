@@ -4,3 +4,5 @@ func features_unit_name() string {
 }
 
 func features_unit_ready() int {
+    1
+}

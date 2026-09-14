@@ -4,3 +4,5 @@ func needmdeadlock_unit_name() string {
 }
 
 func needmdeadlock_unit_ready() int {
+    1
+}

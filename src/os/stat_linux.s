@@ -4,3 +4,5 @@ func stat_linux_unit_name() string {
 }
 
 func stat_linux_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func mknode_module_name() string {
 }
 
 func mknode_module_apply() int {
+    0
+}

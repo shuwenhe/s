@@ -4,3 +4,5 @@ func readfrom_sendfile_test_unit_name() string {
 }
 
 func readfrom_sendfile_test_unit_ready() int {
+    1
+}

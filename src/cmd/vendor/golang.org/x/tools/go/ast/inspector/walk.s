@@ -4,3 +4,5 @@ func walk_unit_name() string {
 }
 
 func walk_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func ldelf_unit_name() string {
 }
 
 func ldelf_unit_ready() int {
+    1
+}

@@ -7,3 +7,5 @@ func write_text_file( path string, string contents) {
 }
 
 func make_temp_dir( prefix string, string base_dir = "/app/tmp"): string {
+    return os.make_temp_dir(prefix, base_dir
+}

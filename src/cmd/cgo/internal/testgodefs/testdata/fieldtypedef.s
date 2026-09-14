@@ -4,3 +4,5 @@ func fieldtypedef_unit_name() string {
 }
 
 func fieldtypedef_unit_ready() int {
+    1
+}

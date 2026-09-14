@@ -19,3 +19,5 @@ func dump_export_data(string pkg_name, string[] exported_symbols) string {
         out = out + "- " + exported_symbols[i] + "\n"
         i = i + 1
     }
+    out
+}

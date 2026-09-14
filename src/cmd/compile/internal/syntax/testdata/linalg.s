@@ -4,3 +4,5 @@ func linalg_case_name() string {
 }
 
 func linalg_case_pass() int {
+    0
+}

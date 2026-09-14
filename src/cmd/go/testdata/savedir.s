@@ -4,3 +4,5 @@ func savedir_unit_name() string {
 }
 
 func savedir_unit_ready() int {
+    1
+}

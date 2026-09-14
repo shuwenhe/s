@@ -71,3 +71,5 @@ func emit_ssa_funcdata(string fn_name, abi_param_desc[] params, string wrapped_n
         wrap_info := emit_wrapped_func_info(fn_name, wrapped_name)
         out = append(out, "FUNCDATA_WrapInfo=" + wrap_info.symbol_name + "->" + wrap_info.wrapped_symbol)
     }
+    out
+}

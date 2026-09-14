@@ -4,3 +4,5 @@ func badlinkname_linux_unit_name() string {
 }
 
 func badlinkname_linux_unit_ready() int {
+    1
+}

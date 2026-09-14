@@ -1,4 +1,5 @@
 package compile.internal.ir.writebarrier
+
 enum barrier_type {
     barrier_none,
     barrier_store,
@@ -35,9 +36,11 @@ func new_write_barrier_analysis(int num_vars) write_barrier_analysis {
 
 func (wba* write_barrier_analysis) analyze_store(int instr_id, int target_var, int source_var, string target_type) barrier_type {
     kind := barrier_type::barrier_none
+
     if target_type == "pointer" || target_type == "interface" {
         kind = barrier_type::barrier_store
     }
+
     if kind != barrier_type::barrier_none {
         barrier := write_barrier {
             instr_id: instr_id,
@@ -50,14 +53,17 @@ func (wba* write_barrier_analysis) analyze_store(int instr_id, int target_var, i
         wba.barriers.push(barrier)
         wba.var_needs_barrier[target_var] = true
     }
+
     kind
 }
 
 func (wba* write_barrier_analysis) analyze_array_write(int instr_id, int array_var, int index_var, int value_var, string elem_type) barrier_type {
     kind := barrier_type::barrier_none
+
     if elem_type == "pointer" || elem_type == "interface" {
         kind = barrier_type::barrier_arr_write
     }
+
     if kind != barrier_type::barrier_none {
         barrier := write_barrier {
             instr_id: instr_id,
@@ -70,14 +76,17 @@ func (wba* write_barrier_analysis) analyze_array_write(int instr_id, int array_v
         wba.barriers.push(barrier)
         wba.var_needs_barrier[array_var] = true
     }
+
     kind
 }
 
 func (wba* write_barrier_analysis) analyze_slice_write(int instr_id, int slice_var, int index_var, int value_var, string elem_type) barrier_type {
     kind := barrier_type::barrier_none
+
     if elem_type == "pointer" || elem_type == "interface" {
         kind = barrier_type::barrier_slice_write
     }
+
     if kind != barrier_type::barrier_none {
         barrier := write_barrier {
             instr_id: instr_id,
@@ -90,6 +99,7 @@ func (wba* write_barrier_analysis) analyze_slice_write(int instr_id, int slice_v
         wba.barriers.push(barrier)
         wba.var_needs_barrier[slice_var] = true
     }
+
     kind
 }
 
@@ -146,9 +156,11 @@ func (wba* write_barrier_analysis) optimize_barriers() {
 
 func (wba* write_barrier_analysis) insert_barrier_code(write_barrier wb) string[] {
     code := string[]()
+
     if wb.needs_nil_check {
         code.push("if target_var != nil {")
     }
+
     switch wb.kind {
         barrier_type::barrier_store: {
             code.push("runtime.write_barrier_store(target_var, source_var)")
@@ -160,6 +172,10 @@ func (wba* write_barrier_analysis) insert_barrier_code(write_barrier wb) string[
             code.push("runtime.write_barrier_slice(slice_var, index_var, source_var)")
         }
     }
+
     if wb.needs_nil_check {
         code.push("}")
     }
+
+    code
+}

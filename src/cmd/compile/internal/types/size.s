@@ -4,3 +4,5 @@ func size_module_name() string {
 }
 
 func size_module_apply() int {
+    0
+}

@@ -4,3 +4,5 @@ func stackswitch_unit_name() string {
 }
 
 func stackswitch_unit_ready() int {
+    1
+}

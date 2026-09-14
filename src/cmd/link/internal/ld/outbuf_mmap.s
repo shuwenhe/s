@@ -4,3 +4,5 @@ func outbuf_mmap_unit_name() string {
 }
 
 func outbuf_mmap_unit_ready() int {
+    1
+}

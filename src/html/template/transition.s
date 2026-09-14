@@ -4,3 +4,5 @@ func transition_unit_name() string {
 }
 
 func transition_unit_ready() int {
+    1
+}

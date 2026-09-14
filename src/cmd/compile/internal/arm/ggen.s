@@ -69,3 +69,5 @@ func ginsnop(prog[] insns) prog[] {
         to: "R0", offset 0,
         cond: "EQ",
     })
+    out
+}

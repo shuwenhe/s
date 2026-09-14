@@ -4,3 +4,5 @@ func gen_simdrules_unit_name() string {
 }
 
 func gen_simdrules_unit_ready() int {
+    1
+}

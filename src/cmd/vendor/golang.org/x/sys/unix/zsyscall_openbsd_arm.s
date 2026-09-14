@@ -4,3 +4,5 @@ func zsyscall_openbsd_arm_unit_name() string {
 }
 
 func zsyscall_openbsd_arm_unit_ready() int {
+    1
+}

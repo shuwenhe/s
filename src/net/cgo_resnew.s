@@ -4,3 +4,5 @@ func cgo_resnew_unit_name() string {
 }
 
 func cgo_resnew_unit_ready() int {
+    1
+}

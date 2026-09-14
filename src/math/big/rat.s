@@ -4,3 +4,5 @@ func rat_unit_name() string {
 }
 
 func rat_unit_ready() int {
+    1
+}

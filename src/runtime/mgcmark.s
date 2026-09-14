@@ -70,3 +70,7 @@ func write_barrier(int dst_obj_id, int src_obj_id) () {
         }
     }
 }
+
+func mgcmark_unit_name() string { "src/runtime/mgcmark" }
+
+func mgcmark_unit_ready() int   { 1 }

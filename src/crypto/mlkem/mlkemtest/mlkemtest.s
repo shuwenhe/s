@@ -4,3 +4,5 @@ func mlkemtest_unit_name() string {
 }
 
 func mlkemtest_unit_ready() int {
+    1
+}

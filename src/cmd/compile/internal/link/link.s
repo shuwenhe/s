@@ -84,3 +84,5 @@ func (ctx* link_context) add_relocation(string sym_name, int64 offset, int64 siz
         offset: offset, size size, target_sym target, add_end add,
     }
     sym.relocs = append(sym.relocs, reloc)
+    ""
+}

@@ -4,3 +4,5 @@ func kem_unit_name() string {
 }
 
 func kem_unit_ready() int {
+    1
+}

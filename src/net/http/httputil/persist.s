@@ -4,3 +4,5 @@ func persist_unit_name() string {
 }
 
 func persist_unit_ready() int {
+    1
+}

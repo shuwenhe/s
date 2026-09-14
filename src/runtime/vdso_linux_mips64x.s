@@ -4,3 +4,5 @@ func vdso_linux_mips64x_unit_name() string {
 }
 
 func vdso_linux_mips64x_unit_ready() int {
+    1
+}

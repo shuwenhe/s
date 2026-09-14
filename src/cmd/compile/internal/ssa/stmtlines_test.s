@@ -4,3 +4,5 @@ func stmtlines_test_case_name() string {
 }
 
 func stmtlines_test_case_pass() int {
+    0
+}

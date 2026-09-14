@@ -4,3 +4,5 @@ func outbuf_nommap_unit_name() string {
 }
 
 func outbuf_nommap_unit_ready() int {
+    1
+}

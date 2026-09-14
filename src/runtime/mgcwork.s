@@ -4,3 +4,5 @@ func mgcwork_unit_name() string {
 }
 
 func mgcwork_unit_ready() int {
+    1
+}

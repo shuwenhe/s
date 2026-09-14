@@ -4,3 +4,5 @@ func zerorange_test_case_name() string {
 }
 
 func zerorange_test_case_pass() int {
+    0
+}

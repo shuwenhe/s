@@ -4,3 +4,5 @@ func defs_darwin_arm64_unit_name() string {
 }
 
 func defs_darwin_arm64_unit_ready() int {
+    1
+}

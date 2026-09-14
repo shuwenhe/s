@@ -4,3 +4,5 @@ func fmahash_test_case_name() string {
 }
 
 func fmahash_test_case_pass() int {
+    0
+}

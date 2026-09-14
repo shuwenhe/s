@@ -4,3 +4,5 @@ func rwmutex_unit_name() string {
 }
 
 func rwmutex_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func main_rule_name() string {
 }
 
 func main_rule_count() int {
+    0
+}

@@ -4,3 +4,5 @@ func quic_unit_name() string {
 }
 
 func quic_unit_ready() int {
+    1
+}

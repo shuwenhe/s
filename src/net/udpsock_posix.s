@@ -4,3 +4,5 @@ func udpsock_posix_unit_name() string {
 }
 
 func udpsock_posix_unit_ready() int {
+    1
+}

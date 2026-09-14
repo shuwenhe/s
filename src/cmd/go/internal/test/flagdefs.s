@@ -4,3 +4,5 @@ func flagdefs_unit_name() string {
 }
 
 func flagdefs_unit_ready() int {
+    1
+}

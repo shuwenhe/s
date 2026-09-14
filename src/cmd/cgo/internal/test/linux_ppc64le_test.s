@@ -4,3 +4,5 @@ func linux_ppc64le_test_unit_name() string {
 }
 
 func linux_ppc64le_test_unit_ready() int {
+    1
+}

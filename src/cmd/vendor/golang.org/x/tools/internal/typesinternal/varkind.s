@@ -4,3 +4,5 @@ func varkind_unit_name() string {
 }
 
 func varkind_unit_ready() int {
+    1
+}

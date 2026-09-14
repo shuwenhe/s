@@ -4,3 +4,5 @@ func syslog_unit_name() string {
 }
 
 func syslog_unit_ready() int {
+    1
+}

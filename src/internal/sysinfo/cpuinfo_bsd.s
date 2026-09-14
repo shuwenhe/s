@@ -4,3 +4,5 @@ func cpuinfo_bsd_unit_name() string {
 }
 
 func cpuinfo_bsd_unit_ready() int {
+    1
+}

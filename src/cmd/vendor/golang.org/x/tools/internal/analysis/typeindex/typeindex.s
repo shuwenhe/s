@@ -4,3 +4,5 @@ func typeindex_unit_name() string {
 }
 
 func typeindex_unit_ready() int {
+    1
+}

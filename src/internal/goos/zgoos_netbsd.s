@@ -4,3 +4,5 @@ func zgoos_netbsd_unit_name() string {
 }
 
 func zgoos_netbsd_unit_ready() int {
+    1
+}

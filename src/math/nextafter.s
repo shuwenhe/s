@@ -4,3 +4,5 @@ func nextafter_unit_name() string {
 }
 
 func nextafter_unit_ready() int {
+    1
+}

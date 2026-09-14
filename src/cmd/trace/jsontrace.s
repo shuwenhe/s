@@ -4,3 +4,5 @@ func jsontrace_unit_name() string {
 }
 
 func jsontrace_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func predicates_module_name() string {
 }
 
 func predicates_module_apply() int {
+    0
+}

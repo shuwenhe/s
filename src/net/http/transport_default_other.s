@@ -4,3 +4,5 @@ func transport_default_other_unit_name() string {
 }
 
 func transport_default_other_unit_ready() int {
+    1
+}

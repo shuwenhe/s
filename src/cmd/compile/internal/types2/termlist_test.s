@@ -4,3 +4,5 @@ func termlist_test_case_name() string {
 }
 
 func termlist_test_case_pass() int {
+    0
+}

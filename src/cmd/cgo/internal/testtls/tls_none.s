@@ -4,3 +4,5 @@ func tls_none_unit_name() string {
 }
 
 func tls_none_unit_ready() int {
+    1
+}

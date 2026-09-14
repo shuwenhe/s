@@ -60,7 +60,6 @@ struct versioned_text_document_identifier {
     string uri
     int version
 }
-
 enum completion_item_kind {
     text,
     method,
@@ -110,7 +109,6 @@ struct hover {
     string contents
     option[range] r
 }
-
 enum symbol_kind {
     file_k,
     module_k,
@@ -206,3 +204,5 @@ struct did_close_text_document_params {
 
 struct did_save_text_document_params {
     text_document text_document_identifier
+    option[string] text
+}

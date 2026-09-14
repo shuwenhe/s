@@ -4,3 +4,5 @@ func mutex_unit_name() string {
 }
 
 func mutex_unit_ready() int {
+    1
+}

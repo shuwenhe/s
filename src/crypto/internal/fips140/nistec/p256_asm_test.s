@@ -4,3 +4,5 @@ func p256_asm_test_unit_name() string {
 }
 
 func p256_asm_test_unit_ready() int {
+    1
+}

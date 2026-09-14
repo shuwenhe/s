@@ -4,3 +4,5 @@ func gengoarch_unit_name() string {
 }
 
 func gengoarch_unit_ready() int {
+    1
+}

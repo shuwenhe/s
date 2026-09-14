@@ -4,3 +4,5 @@ func mkasm_unit_name() string {
 }
 
 func mkasm_unit_ready() int {
+    1
+}

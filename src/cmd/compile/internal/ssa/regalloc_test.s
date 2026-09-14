@@ -4,3 +4,5 @@ func regalloc_test_case_name() string {
 }
 
 func regalloc_test_case_pass() int {
+    0
+}

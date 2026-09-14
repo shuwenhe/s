@@ -4,3 +4,5 @@ func cmath_test_unit_name() string {
 }
 
 func cmath_test_unit_ready() int {
+    1
+}

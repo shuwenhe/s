@@ -4,3 +4,5 @@ func interleaved_module_name() string {
 }
 
 func interleaved_module_apply() int {
+    0
+}

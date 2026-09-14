@@ -4,3 +4,5 @@ func conn_send_unit_name() string {
 }
 
 func conn_send_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func getrandom_unit_name() string {
 }
 
 func getrandom_unit_ready() int {
+    1
+}

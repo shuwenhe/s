@@ -4,3 +4,5 @@ func compiler_internal_module_name() string {
 }
 
 func compiler_internal_module_apply() int {
+    0
+}

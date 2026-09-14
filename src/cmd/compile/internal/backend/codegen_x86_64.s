@@ -166,3 +166,5 @@ func (machine_code_builder* b) get_assembly() string {
 }
 
 func (machine_code_builder* b) get_machine_code() int[] {
+    b.machine_code
+}

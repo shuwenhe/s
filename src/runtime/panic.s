@@ -1,10 +1,12 @@
 package src.runtime
+
 import (
 	"src/sync"
 	"src/unsafe"
 	"src/fmt"
 	"src/syscall"
 )
+
 enum panic_state {
 	panic_normal = 0
 	panic_running = 1
@@ -37,6 +39,7 @@ struct exception_context {
 	sync.mutex lock
 }
 exception_context global_exception_context
+
 func init_exception_context() error {
 	global_exception_context.panic_stack = make(panic_entry[], 0)
 	global_exception_context.defer_stack = nil
@@ -51,13 +54,16 @@ func defer_call(fn func(), arg unsafe.pointer) {
 		arg: arg,
 		next: global_exception_context.defer_stack,
 	}
+
 	global_exception_context.defer_stack = entry
 }
 
 func panic_impl(string msg) {
 	global_exception_context.lock.lock()
 	defer global_exception_context.lock.unlock()
+
 	stack_trace := capture_stack_trace()
+
 	panic_entry := panic_entry{
 		message: msg,
 		stack_trace: stack_trace,
@@ -66,10 +72,14 @@ func panic_impl(string msg) {
 		state: panic_normal,
 		defer_stack: global_exception_context.defer_stack,
 	}
+
 	global_exception_context.panic_stack = append(global_exception_context.panic_stack, panic_entry)
 	global_exception_context.current_panic = &panic_entry
+
 	panic_entry.state = panic_running
+
 	run_defer_stack(&panic_entry)
+
 	if !panic_entry.recovered {
 		abort_with_panic_message(msg, stack_trace)
 	}
@@ -77,6 +87,7 @@ func panic_impl(string msg) {
 
 func run_defer_stack(p* panic_entry) {
 	defer_entry := p.defer_stack
+
 	for defer_entry != nil {
 		if defer_entry.fn != nil {
 			defer_entry.fn()
@@ -88,19 +99,26 @@ func run_defer_stack(p* panic_entry) {
 func recover() unsafe.pointer {
 	global_exception_context.lock.lock()
 	defer global_exception_context.lock.unlock()
+
 	if len(global_exception_context.panic_stack) == 0 {
 		return nil
 	}
+
 	current := &global_exception_context.panic_stack[len(global_exception_context.panic_stack)-1]
+
 	if current.state != panic_running {
 		return nil
 	}
+
 	current.recovered = true
 	current.state = panic_recovering
+
 	if len(global_exception_context.panic_stack) > 0 {
 		global_exception_context.panic_stack = global_exception_context.panic_stack[:len(global_exception_context.panic_stack)-1]
 	}
+
 	global_exception_context.defer_stack = nil
+
 	unsafe.pointer(0)
 }
 
@@ -125,9 +143,11 @@ func capture_stack_trace() string[] {
 
 func abort_with_panic_message(string msg, string trace[]) {
 	fmt.fprintf(fmt.stderr, "panic: %s\n", msg)
+
 	for i := i32(0); i < i32(len(trace)); i += 1 {
 		fmt.fprintf(fmt.stderr, "%s\n", trace[i])
 	}
+
 	syscall.exit(2)
 }
 
@@ -150,6 +170,7 @@ func (defer_context* dc) pop() defer_entry* {
 	if dc.stack == nil {
 		return nil
 	}
+
 	entry := dc.stack
 	dc.stack = entry.next
 	dc.count -= 1
@@ -184,12 +205,16 @@ func try_catch(try_fn func(), catch_fn func(string), finally_fn func()) {
 		finally_fn: finally_fn,
 		defer_stack: global_exception_context.defer_stack,
 	}
+
 	defer_saved := global_exception_context.defer_stack
 	global_exception_context.defer_stack = nil
+
 	current_panic_count := i32(len(global_exception_context.panic_stack))
+
 	if try_fn != nil {
 		try_fn()
 	}
+
 	new_panic_count := i32(len(global_exception_context.panic_stack))
 	if new_panic_count > current_panic_count {
 		if catch_fn != nil {
@@ -198,6 +223,10 @@ func try_catch(try_fn func(), catch_fn func(string), finally_fn func()) {
 		}
 		recover()
 	}
+
 	if finally_fn != nil {
 		finally_fn()
 	}
+
+	global_exception_context.defer_stack = defer_saved
+}

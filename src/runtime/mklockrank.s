@@ -4,3 +4,5 @@ func mklockrank_unit_name() string {
 }
 
 func mklockrank_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func sample_case_name() string {
 }
 
 func sample_case_pass() int {
+    0
+}

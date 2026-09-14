@@ -4,3 +4,5 @@ func struct_module_name() string {
 }
 
 func struct_module_apply() int {
+    0
+}

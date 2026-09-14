@@ -22,3 +22,5 @@ func map_file_read(string path, int offset, int length) (string, string) {
 }
 
 func map_file(string path, int offset, int length) (string, string) {
+    map_file_read(path, offset, length)
+}

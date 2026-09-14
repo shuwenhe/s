@@ -4,3 +4,5 @@ func fcgi_test_unit_name() string {
 }
 
 func fcgi_test_unit_ready() int {
+    1
+}

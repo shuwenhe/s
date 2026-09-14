@@ -4,3 +4,5 @@ func goarch_mipsle_unit_name() string {
 }
 
 func goarch_mipsle_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func p4_unit_name() string {
 }
 
 func p4_unit_ready() int {
+    1
+}

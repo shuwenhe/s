@@ -44,3 +44,5 @@ func host_fs_make_temp_dir( prefix string, string base_dir): string {
     prefix_text := if prefix == nil { "tmp-" } else { prefix }
     root := if base_dir == nil { "/tmp" } else { base_dir }
     mkdirs_for_path(root)
+    return os.make_temp_dir(prefix_text, root
+}

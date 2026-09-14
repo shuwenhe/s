@@ -4,3 +4,5 @@ func minmax_unit_name() string {
 }
 
 func minmax_unit_ready() int {
+    1
+}

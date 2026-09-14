@@ -4,3 +4,5 @@ func port_test_unit_name() string {
 }
 
 func port_test_unit_ready() int {
+    1
+}

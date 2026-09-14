@@ -71,3 +71,5 @@ func generate_x86_64(ir_program program) (string, error) {
 }
 
 struct ir_program {
+    functions: struct[]{}
+}

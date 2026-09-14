@@ -4,3 +4,5 @@ func count_native_unit_name() string {
 }
 
 func count_native_unit_ready() int {
+    1
+}

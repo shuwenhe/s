@@ -4,3 +4,5 @@ func malloc_stubs_unit_name() string {
 }
 
 func malloc_stubs_unit_ready() int {
+    1
+}

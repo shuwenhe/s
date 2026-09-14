@@ -27,3 +27,5 @@ func write_ir_file(string path, ir_node[] ir) ((), noder_error) {
     switch std.fs.write_text_file(path, out) {
         _ : (,
         err : make_error(code_write_failed(), err.message, path, 0, 0),
+    }
+}

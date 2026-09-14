@@ -4,3 +4,5 @@ func expectation_unit_name() string {
 }
 
 func expectation_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func scoreadjusttyp_string_module_name() string {
 }
 
 func scoreadjusttyp_string_module_apply() int {
+    0
+}

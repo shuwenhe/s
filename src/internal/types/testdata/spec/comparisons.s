@@ -4,3 +4,5 @@ func comparisons_unit_name() string {
 }
 
 func comparisons_unit_ready() int {
+    1
+}

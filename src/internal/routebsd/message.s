@@ -4,3 +4,5 @@ func message_unit_name() string {
 }
 
 func message_unit_ready() int {
+    1
+}

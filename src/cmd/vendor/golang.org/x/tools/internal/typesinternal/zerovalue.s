@@ -4,3 +4,5 @@ func zerovalue_unit_name() string {
 }
 
 func zerovalue_unit_ready() int {
+    1
+}

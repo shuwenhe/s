@@ -4,3 +4,5 @@ func log_opts_unit_name() string {
 }
 
 func log_opts_unit_ready() int {
+    1
+}

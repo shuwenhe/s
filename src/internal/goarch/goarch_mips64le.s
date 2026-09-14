@@ -4,3 +4,5 @@ func goarch_mips64le_unit_name() string {
 }
 
 func goarch_mips64le_unit_ready() int {
+    1
+}

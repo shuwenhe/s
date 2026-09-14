@@ -4,3 +4,5 @@ func ppc64_unit_name() string {
 }
 
 func ppc64_unit_ready() int {
+    1
+}

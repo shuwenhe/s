@@ -4,3 +4,5 @@ func annotations_stress_unit_name() string {
 }
 
 func annotations_stress_unit_ready() int {
+    1
+}

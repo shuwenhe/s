@@ -4,3 +4,5 @@ func repo_unit_name() string {
 }
 
 func repo_unit_ready() int {
+    1
+}

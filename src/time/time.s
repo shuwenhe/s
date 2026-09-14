@@ -1,8 +1,10 @@
 package src.time
+
 import (
 	"src/syscall"
 	"src/fmt"
 )
+
 struct time_val {
 	i64 sec
 	i32 nsec
@@ -25,6 +27,7 @@ const (
 	hour = i64(3600000000000)
 	day = i64(86400000000000)
 )
+
 func now() time_val {
 	sec, usec, _ := syscall.gettimeofday()
 	return time_val{sec: sec, nsec: i32(usec * 1000)}
@@ -160,3 +163,5 @@ func (t time_t) after(u time_t) bool {
 }
 
 func (t time_t) equal(u time_t) bool {
+	return t.sec == u.sec && t.nsec == u.nsec
+}

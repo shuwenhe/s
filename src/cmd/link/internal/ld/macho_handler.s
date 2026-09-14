@@ -1,12 +1,15 @@
 package src.cmd.link.internal.ld
+
 import (
 	"src/encoding/binary"
 	"src/os"
 )
+
 const (
 	MACHO_MAGIC_64 = 0xfeedf00f
 	MACHO_MAGIC_FAT = 0xcafebabe
 )
+
 enum macho_machine {
 	CPU_TYPE_I386 = 7
 	CPU_TYPE_X86 = 7
@@ -109,6 +112,7 @@ func new_macho_object(cpuType macho_machine, filetype macho_file_type) macho_obj
 		SymbolTable: make(macho_symbol[], 0),
 		Strings: make(u8[], 0),
 	}
+
 	obj
 }
 
@@ -124,10 +128,12 @@ func (mo* macho_object) add_segment(string name, vmAddr i64, vmSize i64) {
 		Flags: 0,
 		Sections: make(macho_section[], 0),
 	}
+
 	name_bytes := u8[](name)
 	for i := i32(0); i < 16 && i < i32(len(name_bytes)); i += 1 {
 		seg.Name[i] = name_bytes[i]
 	}
+
 	mo.Segments = append(mo.Segments, seg)
 }
 
@@ -141,22 +147,27 @@ func read_macho_object(string filename) (macho_object, error) {
 		macho_object{}, err
 	}
 	defer file.close()
+
 	hdr_buf := make(u8[], 32)
 	_, err = file.read(hdr_buf)
 	if err != nil {
 		macho_object{}, err
 	}
+
 	magic := binary.LittleEndian.uint32(hdr_buf[0:4])
 	if magic != MACHO_MAGIC_64 {
 		macho_object{}, "invalid Mach-O magic"
 	}
+
 	obj := new_macho_object(macho_machine(binary.LittleEndian.uint32(hdr_buf[4:8])),
 		macho_file_type(binary.LittleEndian.uint32(hdr_buf[12:16])))
+
 	obj.Header.CpuType = i32(binary.LittleEndian.uint32(hdr_buf[4:8]))
 	obj.Header.CpuSubtype = i32(binary.LittleEndian.uint32(hdr_buf[8:12]))
 	obj.Header.NumCommands = binary.LittleEndian.uint32(hdr_buf[16:20])
 	obj.Header.CommandsSize = binary.LittleEndian.uint32(hdr_buf[20:24])
 	obj.Header.Flags = binary.LittleEndian.uint32(hdr_buf[24:28])
+
 	obj, nil
 }
 
@@ -166,7 +177,9 @@ func (macho_object* mo) write_to_file(string filename) error {
 		err
 	}
 	defer file.close()
+
 	hdr_buf := make(u8[], 32)
+
 	binary.LittleEndian.put_uint32(hdr_buf[0:4], mo.Header.Magic)
 	binary.LittleEndian.put_uint32(hdr_buf[4:8], u32(mo.Header.CpuType))
 	binary.LittleEndian.put_uint32(hdr_buf[8:12], u32(mo.Header.CpuSubtype))
@@ -175,20 +188,27 @@ func (macho_object* mo) write_to_file(string filename) error {
 	binary.LittleEndian.put_uint32(hdr_buf[20:24], mo.Header.CommandsSize)
 	binary.LittleEndian.put_uint32(hdr_buf[24:28], mo.Header.Flags)
 	binary.LittleEndian.put_uint32(hdr_buf[28:32], mo.Header.Reserved)
+
 	_, err = file.write(hdr_buf)
 	if err != nil {
 		err
 	}
+
 	for _, cmd := range mo.LoadCommands {
 		cmd_buf := make(u8[], 8)
 		binary.LittleEndian.put_uint32(cmd_buf[0:4], cmd.Cmd)
 		binary.LittleEndian.put_uint32(cmd_buf[4:8], cmd.Size)
+
 		_, err = file.write(cmd_buf)
 		if err != nil {
 			err
 		}
+
 		_, err = file.write(cmd.Data)
 		if err != nil {
 			err
 		}
 	}
+
+	nil
+}

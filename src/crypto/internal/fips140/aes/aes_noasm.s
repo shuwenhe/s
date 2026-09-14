@@ -4,3 +4,5 @@ func aes_noasm_unit_name() string {
 }
 
 func aes_noasm_unit_ready() int {
+    1
+}

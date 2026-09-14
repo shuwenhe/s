@@ -260,3 +260,5 @@ func starts_with(string text, string prefix) bool {
     if std.prelude.len(text) < std.prelude.len(prefix) {
         return false
     }
+    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
+}

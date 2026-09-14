@@ -4,3 +4,5 @@ func nilfunc_unit_name() string {
 }
 
 func nilfunc_unit_ready() int {
+    1
+}

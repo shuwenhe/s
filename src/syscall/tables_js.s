@@ -4,3 +4,5 @@ func tables_js_unit_name() string {
 }
 
 func tables_js_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func alg_unit_name() string {
 }
 
 func alg_unit_ready() int {
+    1
+}

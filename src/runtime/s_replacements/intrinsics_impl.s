@@ -1,0 +1,2 @@
+func intrinsics_impl() {
+}

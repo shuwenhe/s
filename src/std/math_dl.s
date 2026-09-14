@@ -462,3 +462,5 @@ func fmt_float(float val, int decimals) string {
             d = d + 1
         }
     }
+    result
+}

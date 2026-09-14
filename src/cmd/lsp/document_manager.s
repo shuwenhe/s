@@ -181,3 +181,5 @@ func extract_symbols_from_ast(ast s::source_file) document_symbol[] {
         }
         i = i + 1
     }
+    symbols
+}

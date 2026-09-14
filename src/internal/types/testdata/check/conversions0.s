@@ -4,3 +4,5 @@ func conversions0_unit_name() string {
 }
 
 func conversions0_unit_ready() int {
+    1
+}

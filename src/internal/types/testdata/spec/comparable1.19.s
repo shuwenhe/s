@@ -4,3 +4,5 @@ func comparable1_19_unit_name() string {
 }
 
 func comparable1_19_unit_ready() int {
+    1
+}

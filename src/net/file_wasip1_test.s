@@ -4,3 +4,5 @@ func file_wasip1_test_unit_name() string {
 }
 
 func file_wasip1_test_unit_ready() int {
+    1
+}

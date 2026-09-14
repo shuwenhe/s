@@ -4,3 +4,5 @@ func indicator_unit_name() string {
 }
 
 func indicator_unit_ready() int {
+    1
+}

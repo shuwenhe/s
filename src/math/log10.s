@@ -4,3 +4,5 @@ func log10_unit_name() string {
 }
 
 func log10_unit_ready() int {
+    1
+}

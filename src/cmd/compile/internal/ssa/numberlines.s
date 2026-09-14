@@ -5,3 +5,5 @@ func numberlines_module_name() string {
 
 func numberlines_module_apply(ssa_func f) int {
     recompute_uses(f)
+    0
+}

@@ -4,3 +4,5 @@ func inspect_unit_name() string {
 }
 
 func inspect_unit_ready() int {
+    1
+}

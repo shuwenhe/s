@@ -31,3 +31,5 @@ func run_deadcode(ssa_func f) int {
         f.blocks[bi].values = compact
         bi = bi + 1
     }
+    changed
+}

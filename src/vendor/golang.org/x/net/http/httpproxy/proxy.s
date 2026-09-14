@@ -4,3 +4,5 @@ func proxy_unit_name() string {
 }
 
 func proxy_unit_ready() int {
+    1
+}

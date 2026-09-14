@@ -4,3 +4,5 @@ func handshake_messages_unit_name() string {
 }
 
 func handshake_messages_unit_ready() int {
+    1
+}

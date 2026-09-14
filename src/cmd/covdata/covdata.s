@@ -4,3 +4,5 @@ func covdata_unit_name() string {
 }
 
 func covdata_unit_ready() int {
+    1
+}

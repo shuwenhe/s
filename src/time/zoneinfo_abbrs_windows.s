@@ -4,3 +4,5 @@ func zoneinfo_abbrs_windows_unit_name() string {
 }
 
 func zoneinfo_abbrs_windows_unit_ready() int {
+    1
+}

@@ -4,3 +4,5 @@ func index_module_name() string {
 }
 
 func index_module_apply() int {
+    0
+}

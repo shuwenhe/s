@@ -4,3 +4,5 @@ func export_debug_ppc64le_test_unit_name() string {
 }
 
 func export_debug_ppc64le_test_unit_ready() int {
+    1
+}

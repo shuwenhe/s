@@ -4,3 +4,5 @@ func ifacemethod4_unit_name() string {
 }
 
 func ifacemethod4_unit_ready() int {
+    1
+}

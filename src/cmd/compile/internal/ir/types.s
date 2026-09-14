@@ -29,3 +29,5 @@ func type_to_string(type t) string {
         type_kind::slice : "[]" + type_to_string(t.inner.unwrap()),
         type_kind::named : t.name,
         type_kind::generic : t.name,
+    }
+}

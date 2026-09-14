@@ -4,3 +4,5 @@ func ycbcr_unit_name() string {
 }
 
 func ycbcr_unit_ready() int {
+    1
+}

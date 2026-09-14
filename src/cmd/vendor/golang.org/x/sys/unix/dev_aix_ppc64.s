@@ -4,3 +4,5 @@ func dev_aix_ppc64_unit_name() string {
 }
 
 func dev_aix_ppc64_unit_ready() int {
+    1
+}

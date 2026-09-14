@@ -4,3 +4,5 @@ func godebug_unit_name() string {
 }
 
 func godebug_unit_ready() int {
+    1
+}

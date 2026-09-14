@@ -4,3 +4,5 @@ func op_string_module_name() string {
 }
 
 func op_string_module_apply() int {
+    0
+}

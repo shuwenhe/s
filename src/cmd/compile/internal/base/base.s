@@ -7,6 +7,7 @@ struct at_exit_entry {
     string name
 }
 at_exit_funcs := at_exit_entry[]()
+
 func at_exit(string name) () {
     if name == "" {
         return
@@ -27,3 +28,5 @@ func run_at_exit() string[] {
 
 func exit(int code) int {
     ignored := run_at_exit()
+    code
+}

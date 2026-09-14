@@ -4,3 +4,5 @@ func score_callresult_uses_module_name() string {
 }
 
 func score_callresult_uses_module_apply() int {
+    0
+}

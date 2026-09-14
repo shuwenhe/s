@@ -4,3 +4,5 @@ func exp_runtimefreegc_off_unit_name() string {
 }
 
 func exp_runtimefreegc_off_unit_ready() int {
+    1
+}

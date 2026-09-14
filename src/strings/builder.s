@@ -4,3 +4,5 @@ func builder_unit_name() string {
 }
 
 func builder_unit_ready() int {
+    1
+}

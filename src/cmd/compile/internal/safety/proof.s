@@ -1,7 +1,9 @@
 package compile.internal.safety
+
 import (
     "compile.internal.semantic"
 )
+
 struct safety_proof {
     bool proven
     int diagnostic_count
@@ -59,3 +61,5 @@ func safety_proof_report(safety_proof proof) string {
     if proof.proven {
         status = "proven"
     }
+    status + " " + proof.summary
+}

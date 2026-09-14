@@ -4,3 +4,5 @@ func conntest_unit_name() string {
 }
 
 func conntest_unit_ready() int {
+    1
+}

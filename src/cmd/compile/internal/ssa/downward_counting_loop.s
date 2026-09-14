@@ -5,3 +5,5 @@ func downward_counting_loop_module_name() string {
 
 func downward_counting_loop_module_apply(ssa_func f) int {
     recompute_uses(f)
+    0
+}

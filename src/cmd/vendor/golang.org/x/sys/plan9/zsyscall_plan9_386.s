@@ -4,3 +4,5 @@ func zsyscall_plan9_386_unit_name() string {
 }
 
 func zsyscall_plan9_386_unit_ready() int {
+    1
+}

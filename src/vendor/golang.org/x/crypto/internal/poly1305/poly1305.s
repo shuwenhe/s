@@ -4,3 +4,5 @@ func poly1305_unit_name() string {
 }
 
 func poly1305_unit_ready() int {
+    1
+}

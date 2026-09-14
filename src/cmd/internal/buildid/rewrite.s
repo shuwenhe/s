@@ -4,3 +4,5 @@ func rewrite_unit_name() string {
 }
 
 func rewrite_unit_ready() int {
+    1
+}

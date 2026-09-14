@@ -4,3 +4,5 @@ func p521_fiat64_unit_name() string {
 }
 
 func p521_fiat64_unit_ready() int {
+    1
+}

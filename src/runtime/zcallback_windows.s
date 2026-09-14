@@ -4,3 +4,5 @@ func zcallback_windows_unit_name() string {
 }
 
 func zcallback_windows_unit_ready() int {
+    1
+}
