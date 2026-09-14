@@ -150,7 +150,7 @@ func mono_cache_lookup_item(mono_cache cache, string item_kind, string receiver_
     i := 0
     for i < len(cache.instances) {
         instance := cache.instances[i]
-        if instance.item_kind == item_kind && instance.receiver_type == receiver_type && instance.generic_name == generic_name && same_type_args(instance.type_args, type_args) {
+        if instance.item_kind == item_kind && instance.receiver_type == receiver_type && instance.generic_name == generic_name && same_type_args(instance.kindargs, type_args) {
             return instance.instance_name
         }
         i = i + 1
@@ -159,7 +159,7 @@ func mono_cache_lookup_item(mono_cache cache, string item_kind, string receiver_
 }
 
 func mono_cache_lookup_key(mono_cache cache, generic_instance_key key) string {
-    mono_cache_lookup(cache, key.function_name, key.type_args)
+    mono_cache_lookup(cache, key.function_name, key.kindargs)
 }
 
 func mono_cache_get_or_create(mono_cache cache, string generic_name, string[] type_args) mono_cache_result {
@@ -181,7 +181,7 @@ func mono_cache_get_or_create_item(mono_cache cache, string item_kind, string re
 }
 
 func mono_cache_get_or_create_key(mono_cache cache, generic_instance_key key) mono_cache_result {
-    mono_cache_get_or_create(cache, key.function_name, key.type_args)
+    mono_cache_get_or_create(cache, key.function_name, key.kindargs)
 }
 
 func mono_cache_count(mono_cache cache) int {
@@ -204,17 +204,17 @@ func monomorphize_file(source_file file) monomorphize_file_result {
         work := ctx.worklist[cursor]
         cursor = cursor + 1
 
-        if is_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.type_args) {
+        if is_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.kindargs) {
             continue
         }
-        ctx = mark_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.type_args)
+        ctx = mark_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.kindargs)
 
         if work.item_kind == "method" {
             method_source := find_generic_method(file.items, work.receiver_type, work.generic_name)
             if method_source.method.sig.name == "" {
                 continue
             }
-            method_instance := specialize_method(method_source, work.type_args)
+            method_instance := specialize_method(method_source, work.kindargs)
             ctx.generated = append(ctx.generated, method_instance.method)
             ctx = collect_item_instances_ctx(item::method(method_instance), file.items, ctx)
             extra_items = append(extra_items, item::method(finalize_monomorphized_method(method_instance)))
@@ -224,7 +224,7 @@ func monomorphize_file(source_file file) monomorphize_file_result {
                 continue
             }
 
-            instance := specialize_function(source, work.type_args)
+            instance := specialize_function(source, work.kindargs)
             ctx.generated = append(ctx.generated, instance)
 
             ctx = collect_item_instances_ctx(item::function(instance), file.items, ctx)
@@ -377,7 +377,7 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) 
 }
 
 func collect_call_instance_ctx(call_expr call, item[] all_items, mono_context ctx) mono_context {
-    if len(call.type_args) == 0 {
+    if len(call.kindargs) == 0 {
         return ctx
     }
 
@@ -398,19 +398,19 @@ func collect_call_instance_ctx(call_expr call, item[] all_items, mono_context ct
         return ctx
     }
 
-    existing := mono_cache_lookup_item(ctx.cache, "function", "", generic_name, call.type_args)
-    result := mono_cache_get_or_create_item(ctx.cache, "function", "", generic_name, call.type_args)
+    existing := mono_cache_lookup_item(ctx.cache, "function", "", generic_name, call.kindargs)
+    result := mono_cache_get_or_create_item(ctx.cache, "function", "", generic_name, call.kindargs)
     ctx.cache = result.cache
 
     if existing == "" {
-        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.type_args })
+        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.kindargs })
     }
 
     ctx
 }
 
 func collect_method_call_instance_ctx(call_expr call, item[] all_items, mono_context ctx) mono_context {
-    if len(call.type_args) == 0 {
+    if len(call.kindargs) == 0 {
         return ctx
     }
 
@@ -447,12 +447,12 @@ func collect_method_call_instance_ctx(call_expr call, item[] all_items, mono_con
         return ctx
     }
 
-    existing := mono_cache_lookup_item(ctx.cache, "method", source.receiver_type, method_name, call.type_args)
-    result := mono_cache_get_or_create_item(ctx.cache, "method", source.receiver_type, method_name, call.type_args)
+    existing := mono_cache_lookup_item(ctx.cache, "method", source.receiver_type, method_name, call.kindargs)
+    result := mono_cache_get_or_create_item(ctx.cache, "method", source.receiver_type, method_name, call.kindargs)
     ctx.cache = result.cache
 
     if existing == "" {
-        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "method", receiver_type: source.receiver_type, generic_name: method_name, type_args: call.type_args })
+        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "method", receiver_type: source.receiver_type, generic_name: method_name, type_args: call.kindargs })
     }
 
     ctx
@@ -594,7 +594,7 @@ func collect_expr_instances(expr value, item[] all_items, mono_cache cache, mono
 }
 
 func collect_call_instance(call_expr call, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
-    if len(call.type_args) == 0 {
+    if len(call.kindargs) == 0 {
         return cache
     }
     resolved := ""
@@ -611,11 +611,11 @@ func collect_call_instance(call_expr call, item[] all_items, mono_cache cache, m
     if source.sig.name == "" {
         return cache
     }
-    existing := mono_cache_lookup(cache, generic_name, call.type_args)
-    result := mono_cache_get_or_create(cache, generic_name, call.type_args)
+    existing := mono_cache_lookup(cache, generic_name, call.kindargs)
+    result := mono_cache_get_or_create(cache, generic_name, call.kindargs)
     cache = result.cache
     if existing == "" && result.instance_name == resolved {
-        worklist = append(worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.type_args })
+        worklist = append(worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.kindargs })
     }
     cache
 }
@@ -732,7 +732,7 @@ func finalize_block(block_expr block) block_expr {
 
 func finalize_stmt(stmt value) stmt {
     switch value {
-        stmt.let(v) : stmt::let(var_stmt { name: v.name, type_name v.type_name, value finalize_expr(v.value) }),
+        stmt.let(v) : stmt::let(var_stmt { name: v.name, type_name v.kindname, value finalize_expr(v.value) }),
         stmt.assign(v) : stmt::assign(assign_stmt { name: v.name, value finalize_expr(v.value) }),
         stmt.increment(v) : stmt::increment(v),
         stmt.c_for(v) : stmt::c_for(c_for_stmt { init: std.prelude.box(finalize_stmt(v.init.value)), condition finalize_expr(v.condition), step std.prelude.box(finalize_stmt(v.step.value)), body finalize_block(v.body) }),
@@ -795,7 +795,7 @@ func finalize_expr(expr value) expr {
                 items = append(items, finalize_expr(v.items[i]))
                 i = i + 1
             }
-            expr::array(array_literal { type_text: v.type_text, items items })
+            expr::array(array_literal { type_text: v.kindtext, items items })
         }
         expr.map(v) : {
             entries := map_entry[]()
@@ -804,7 +804,7 @@ func finalize_expr(expr value) expr {
                 entries = append(entries, map_entry { key: finalize_expr(v.entries[i].key), value finalize_expr(v.entries[i].value) })
                 i = i + 1
             }
-            expr::map(map_literal { type_text: v.type_text, entries entries })
+            expr::map(map_literal { type_text: v.kindtext, entries entries })
         }
     }
 }
@@ -837,7 +837,7 @@ func verify_function_no_generics(function_decl fn) int {
     errors := 0
     i := 0
     for i < len(fn.sig.params) {
-        if looks_like_generic_residue(fn.sig.params[i].type_name) {
+        if looks_like_generic_residue(fn.sig.params[i].kindname) {
             errors = errors + 1
         }
         i = i + 1
@@ -874,7 +874,7 @@ func verify_block_no_generics(block_expr block) int {
 
 func verify_stmt_no_generics(stmt value) int {
     switch value {
-        stmt.let(v) : verify_optional_type_no_generics(v.type_name) + verify_expr_no_generics(v.value),
+        stmt.let(v) : verify_optional_type_no_generics(v.kindname) + verify_expr_no_generics(v.value),
         stmt.assign(v) : verify_expr_no_generics(v.value),
         stmt.increment(_) : 0,
         stmt.c_for(v) : verify_stmt_no_generics(v.init.value) + verify_expr_no_generics(v.condition) + verify_stmt_no_generics(v.step.value) + verify_block_no_generics(v.body),
@@ -921,7 +921,7 @@ func verify_expr_no_generics(expr value) int {
             errors
         }
         expr.array(v) : {
-            errors := verify_optional_type_no_generics(v.type_text)
+            errors := verify_optional_type_no_generics(v.kindtext)
             i := 0
             for i < len(v.items) {
                 errors = errors + verify_expr_no_generics(v.items[i])
@@ -930,7 +930,7 @@ func verify_expr_no_generics(expr value) int {
             errors
         }
         expr.map(v) : {
-            errors := verify_optional_type_no_generics(v.type_text)
+            errors := verify_optional_type_no_generics(v.kindtext)
             i := 0
             for i < len(v.entries) {
                 errors = errors + verify_expr_no_generics(v.entries[i].key)
@@ -944,7 +944,7 @@ func verify_expr_no_generics(expr value) int {
 
 func verify_call_no_generics(call_expr v) int {
     errors := verify_optional_type_no_generics(v.inferred_type)
-    if len(v.type_args) > 0 {
+    if len(v.kindargs) > 0 {
         errors = errors + 1
     }
     errors = errors + verify_expr_no_generics(v.callee.value)
@@ -1101,7 +1101,7 @@ func specialize_function_with_names(function_decl source, string[] type_args, st
         original := source.sig.params[i]
         params = append(params, param {
             name: original.name,
-            type_name: substitute_type(original.type_name, generic_names, type_args),
+            type_name: substitute_type(original.kindname, generic_names, type_args),
         })
         i = i + 1
     }
@@ -1149,7 +1149,7 @@ func substitute_block(block_expr block, string[] generic_names, string[] type_ar
 
 func substitute_stmt(stmt value, string[] generic_names, string[] type_args) stmt {
     switch value {
-        stmt.let(v) : stmt::let(var_stmt { name: v.name, type_name substitute_optional_type(v.type_name, generic_names, type_args), value substitute_expr(v.value, generic_names, type_args) }),
+        stmt.let(v) : stmt::let(var_stmt { name: v.name, type_name substitute_optional_type(v.kindname, generic_names, type_args), value substitute_expr(v.value, generic_names, type_args) }),
         stmt.assign(v) : stmt::assign(assign_stmt { name: v.name, value substitute_expr(v.value, generic_names, type_args) }),
         stmt.increment(v) : stmt::increment(increment_stmt { name: v.name }),
         stmt.c_for(v) : stmt::c_for(c_for_stmt { init: std.prelude.box(substitute_stmt(v.init.value, generic_names, type_args)), condition substitute_expr(v.condition, generic_names, type_args), step std.prelude.box(substitute_stmt(v.step.value, generic_names, type_args)), body substitute_block(v.body, generic_names, type_args) }),
@@ -1186,8 +1186,8 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
             }
             call_type_args := string[]()
             i = 0
-            for i < len(v.type_args) {
-                call_type_args = append(call_type_args, substitute_type(v.type_args[i], generic_names, type_args))
+            for i < len(v.kindargs) {
+                call_type_args = append(call_type_args, substitute_type(v.kindargs[i], generic_names, type_args))
                 i = i + 1
             }
             resolved := v.resolved_callee
@@ -1263,7 +1263,7 @@ func substitute_array_expr(array_literal v, string[] generic_names, string[] typ
         items = append(items, substitute_expr(v.items[i], generic_names, type_args))
         i = i + 1
     }
-    expr::array(array_literal { type_text: substitute_optional_type(v.type_text, generic_names, type_args), items items })
+    expr::array(array_literal { type_text: substitute_optional_type(v.kindtext, generic_names, type_args), items items })
 }
 
 func substitute_map_expr(map_literal v, string[] generic_names, string[] type_args) expr {
@@ -1273,7 +1273,7 @@ func substitute_map_expr(map_literal v, string[] generic_names, string[] type_ar
         entries = append(entries, map_entry { key: substitute_expr(v.entries[i].key, generic_names, type_args), value substitute_expr(v.entries[i].value, generic_names, type_args) })
         i = i + 1
     }
-    expr::map(map_literal { type_text: substitute_optional_type(v.type_text, generic_names, type_args), entries entries })
+    expr::map(map_literal { type_text: substitute_optional_type(v.kindtext, generic_names, type_args), entries entries })
 }
 
 func summarize_type(string type_name) mono_ownership_summary {
@@ -1289,7 +1289,7 @@ func summarize_instance(function_decl instance) mono_function_summary {
     params := mono_ownership_summary[] {}
     i := 0
     for i < len(instance.sig.params) {
-        params = append(params, summarize_type(instance.sig.params[i].type_name))
+        params = append(params, summarize_type(instance.sig.params[i].kindname))
         i = i + 1
     }
     result := summarize_type("()")
@@ -1365,7 +1365,7 @@ func verify_expr_resolved_calls(expr value) int {
         expr.call(v) : {
             errors := 0
 
-            if len(v.type_args) == 0 {
+            if len(v.kindargs) == 0 {
                 switch v.resolved_callee {
                     option.some(_) : (),
                     option.none : errors = 1,

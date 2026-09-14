@@ -133,7 +133,7 @@ func rule_add_const_const(v* ssa_value) ssa_value* {
     }
 
     result_val := left.aux_int + right.aux_int
-    result := ssa_value_new_const_int(v.id + 1000000, result_val, v.type_id)
+    result := ssa_value_new_const_int(v.id + 1000000, result_val, v.kindid)
     result
 }
 
@@ -204,7 +204,7 @@ func rule_sub_const_const(v* ssa_value) ssa_value* {
     }
 
     result_val := left.aux_int - right.aux_int
-    result := ssa_value_new_const_int(v.id + 1000001, result_val, v.type_id)
+    result := ssa_value_new_const_int(v.id + 1000001, result_val, v.kindid)
     result
 }
 
@@ -253,7 +253,7 @@ func rule_sub_zero_x(v* ssa_value) ssa_value* {
         return v
     }
 
-    neg_result := ssa_value_new_const_int(v.id + 1000002, -right.aux_int, v.type_id)
+    neg_result := ssa_value_new_const_int(v.id + 1000002, -right.aux_int, v.kindid)
     neg_result
 }
 
@@ -276,7 +276,7 @@ func rule_mul_const_const(v* ssa_value) ssa_value* {
     }
 
     result_val := left.aux_int * right.aux_int
-    result := ssa_value_new_const_int(v.id + 1000003, result_val, v.type_id)
+    result := ssa_value_new_const_int(v.id + 1000003, result_val, v.kindid)
     result
 }
 
@@ -301,7 +301,7 @@ func rule_mul_x_zero(v* ssa_value) ssa_value* {
         return v
     }
 
-    ssa_value_new_const_int(v.id + 1000004, 0, v.type_id)
+    ssa_value_new_const_int(v.id + 1000004, 0, v.kindid)
 }
 
 func rule_mul_zero_x(v* ssa_value) ssa_value* {
@@ -325,7 +325,7 @@ func rule_mul_zero_x(v* ssa_value) ssa_value* {
         return v
     }
 
-    ssa_value_new_const_int(v.id + 1000005, 0, v.type_id)
+    ssa_value_new_const_int(v.id + 1000005, 0, v.kindid)
 }
 
 func rule_mul_x_one(v* ssa_value) ssa_value* {
@@ -397,8 +397,8 @@ func rule_mul_x_two(v* ssa_value) ssa_value* {
         return v
     }
 
-    shift_val := ssa_value_new_const_int(v.id + 1000006, 1, v.type_id)
-    shift_result := ssa_value_new_binary_op(v.id + 1000007, op_shl, left, shift_val, v.type_id)
+    shift_val := ssa_value_new_const_int(v.id + 1000006, 1, v.kindid)
+    shift_result := ssa_value_new_binary_op(v.id + 1000007, op_shl, left, shift_val, v.kindid)
     shift_result
 }
 
@@ -423,8 +423,8 @@ func rule_mul_two_x(v* ssa_value) ssa_value* {
         return v
     }
 
-    shift_val := ssa_value_new_const_int(v.id + 1000008, 1, v.type_id)
-    shift_result := ssa_value_new_binary_op(v.id + 1000009, op_shl, right, shift_val, v.type_id)
+    shift_val := ssa_value_new_const_int(v.id + 1000008, 1, v.kindid)
+    shift_result := ssa_value_new_binary_op(v.id + 1000009, op_shl, right, shift_val, v.kindid)
     shift_result
 }
 
@@ -450,7 +450,7 @@ func rule_div_const_const(v* ssa_value) ssa_value* {
     }
 
     result_val := left.aux_int / right.aux_int
-    result := ssa_value_new_const_int(v.id + 1000010, result_val, v.type_id)
+    result := ssa_value_new_const_int(v.id + 1000010, result_val, v.kindid)
     result
 }
 
@@ -475,7 +475,7 @@ func rule_div_zero_x(v* ssa_value) ssa_value* {
         return v
     }
 
-    ssa_value_new_const_int(v.id + 1000011, 0, v.type_id)
+    ssa_value_new_const_int(v.id + 1000011, 0, v.kindid)
 }
 
 func rule_div_x_one(v* ssa_value) ssa_value* {
@@ -524,7 +524,7 @@ func rule_rem_const_const(v* ssa_value) ssa_value* {
     }
 
     result_val := left.aux_int % right.aux_int
-    result := ssa_value_new_const_int(v.id + 1000012, result_val, v.type_id)
+    result := ssa_value_new_const_int(v.id + 1000012, result_val, v.kindid)
     result
 }
 
@@ -549,7 +549,7 @@ func rule_rem_zero_x(v* ssa_value) ssa_value* {
         return v
     }
 
-    ssa_value_new_const_int(v.id + 1000013, 0, v.type_id)
+    ssa_value_new_const_int(v.id + 1000013, 0, v.kindid)
 }
 
 func rule_rem_x_one(v* ssa_value) ssa_value* {
@@ -573,7 +573,7 @@ func rule_rem_x_one(v* ssa_value) ssa_value* {
         return v
     }
 
-    ssa_value_new_const_int(v.id + 1000014, 0, v.type_id)
+    ssa_value_new_const_int(v.id + 1000014, 0, v.kindid)
 }
 
 func rule_and_x_zero(v* ssa_value) ssa_value* {
@@ -597,7 +597,7 @@ func rule_and_x_zero(v* ssa_value) ssa_value* {
         return v
     }
 
-    ssa_value_new_const_int(v.id + 1000015, 0, v.type_id)
+    ssa_value_new_const_int(v.id + 1000015, 0, v.kindid)
 }
 
 func rule_and_zero_x(v* ssa_value) ssa_value* {
@@ -621,7 +621,7 @@ func rule_and_zero_x(v* ssa_value) ssa_value* {
         return v
     }
 
-    ssa_value_new_const_int(v.id + 1000016, 0, v.type_id)
+    ssa_value_new_const_int(v.id + 1000016, 0, v.kindid)
 }
 
 func rule_and_x_x(v* ssa_value) ssa_value* {
@@ -761,7 +761,7 @@ func rule_or_x_minus_one(v* ssa_value) ssa_value* {
         return v
     }
 
-    ssa_value_new_const_int(v.id + 1000017, -1, v.type_id)
+    ssa_value_new_const_int(v.id + 1000017, -1, v.kindid)
 }
 
 func rule_xor_x_zero(v* ssa_value) ssa_value* {
@@ -828,7 +828,7 @@ func rule_xor_x_x(v* ssa_value) ssa_value* {
     }
 
     if left.id == right.id {
-        return ssa_value_new_const_int(v.id + 1000018, 0, v.type_id)
+        return ssa_value_new_const_int(v.id + 1000018, 0, v.kindid)
     }
 
     v
@@ -853,7 +853,7 @@ func rule_shl_const_const(v* ssa_value) ssa_value* {
     }
 
     result_val := left.aux_int << right.aux_int
-    result := ssa_value_new_const_int(v.id + 1000019, result_val, v.type_id)
+    result := ssa_value_new_const_int(v.id + 1000019, result_val, v.kindid)
     result
 }
 
@@ -900,7 +900,7 @@ func rule_shr_const_const(v* ssa_value) ssa_value* {
     }
 
     result_val := left.aux_int >> right.aux_int
-    result := ssa_value_new_const_int(v.id + 1000020, result_val, v.type_id)
+    result := ssa_value_new_const_int(v.id + 1000020, result_val, v.kindid)
     result
 }
 
@@ -946,7 +946,7 @@ func rule_neg_const(v* ssa_value) ssa_value* {
     }
 
     result_val := -arg.aux_int
-    result := ssa_value_new_const_int(v.id + 1000021, result_val, v.type_id)
+    result := ssa_value_new_const_int(v.id + 1000021, result_val, v.kindid)
     result
 }
 
@@ -992,7 +992,7 @@ func rule_not_const(v* ssa_value) ssa_value* {
     }
 
     result_val := ^arg.aux_int
-    result := ssa_value_new_const_int(v.id + 1000022, result_val, v.type_id)
+    result := ssa_value_new_const_int(v.id + 1000022, result_val, v.kindid)
     result
 }
 
@@ -1040,7 +1040,7 @@ func rule_neg_zero(v* ssa_value) ssa_value* {
         return v
     }
 
-    ssa_value_new_const_int(v.id + 1000023, 0, v.type_id)
+    ssa_value_new_const_int(v.id + 1000023, 0, v.kindid)
 }
 
 func rule_cmp_const_const(v* ssa_value) ssa_value* {
@@ -1085,7 +1085,7 @@ func rule_cmp_const_const(v* ssa_value) ssa_value* {
         result = (lv >= rv) ? 1 : 0
     }
 
-    ssa_value_new_const_int(v.id + 1000024, result, v.type_id)
+    ssa_value_new_const_int(v.id + 1000024, result, v.kindid)
 }
 
 func rule_cmp_x_x(v* ssa_value) ssa_value* {
@@ -1128,7 +1128,7 @@ func rule_cmp_x_x(v* ssa_value) ssa_value* {
         result = 1
     }
 
-    ssa_value_new_const_int(v.id + 1000025, result, v.type_id)
+    ssa_value_new_const_int(v.id + 1000025, result, v.kindid)
 }
 
 func rule_commute_add(v* ssa_value) ssa_value* {

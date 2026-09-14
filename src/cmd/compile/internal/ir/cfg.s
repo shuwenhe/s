@@ -44,7 +44,7 @@ func new_cfg() control_flow_graph {
     }
 }
 
-func (cfg* control_flow_graph) add_block(int id, string label) cfg_block {
+func (control_flow_graph* cfg) add_block(int id, string label) cfg_block {
     block := cfg_block {
         id: id,
         label: label,
@@ -58,7 +58,7 @@ func (cfg* control_flow_graph) add_block(int id, string label) cfg_block {
     block
 }
 
-func (cfg* control_flow_graph) add_edge(int from, int to, string edge_type) {
+func (control_flow_graph* cfg) add_edge(int from, int to, string edge_type) {
     edge := cfg_edge { from_block: from, to_block: to, edge_type: edge_type }
     cfg.edges.push(edge)
     if from < cfg.blocks.len() {
@@ -69,7 +69,7 @@ func (cfg* control_flow_graph) add_edge(int from, int to, string edge_type) {
     }
 }
 
-func (cfg* control_flow_graph) compute_dominators() {
+func (control_flow_graph* cfg) compute_dominators() {
     n := cfg.blocks.len()
     cfg.immediate_dominator = int[n]
     cfg.dominator_tree = int[][n]
@@ -115,7 +115,7 @@ func (cfg* control_flow_graph) compute_dominators() {
     }
 }
 
-func (cfg* control_flow_graph) intersect_dominators(int b1, int b2) int {
+func (control_flow_graph* cfg) intersect_dominators(int b1, int b2) int {
     finger1 := b1
     finger2 := b2
     for finger1 != finger2 {
@@ -129,7 +129,7 @@ func (cfg* control_flow_graph) intersect_dominators(int b1, int b2) int {
     finger1
 }
 
-func (cfg* control_flow_graph) compute_post_dominators() {
+func (control_flow_graph* cfg) compute_post_dominators() {
     n := cfg.blocks.len()
     cfg.immediate_post_dominator = int[n]
     cfg.post_dominator_tree = int[][n]
@@ -175,7 +175,7 @@ func (cfg* control_flow_graph) compute_post_dominators() {
     }
 }
 
-func (cfg* control_flow_graph) intersect_post_dominators(int b1, int b2) int {
+func (control_flow_graph* cfg) intersect_post_dominators(int b1, int b2) int {
     finger1 := b1
     finger2 := b2
     for finger1 != finger2 {
@@ -189,7 +189,7 @@ func (cfg* control_flow_graph) intersect_post_dominators(int b1, int b2) int {
     finger1
 }
 
-func (cfg* control_flow_graph) compute_dominance_frontier() {
+func (control_flow_graph* cfg) compute_dominance_frontier() {
     n := cfg.blocks.len()
     cfg.dominance_frontier = int[][n]
 
@@ -224,7 +224,7 @@ func (cfg* control_flow_graph) compute_dominance_frontier() {
     }
 }
 
-func (cfg* control_flow_graph) detect_loops() {
+func (control_flow_graph* cfg) detect_loops() {
     n := cfg.blocks.len()
     cfg.loop_headers = int[]()
 
@@ -261,7 +261,7 @@ func (cfg* control_flow_graph) detect_loops() {
     detect_loop_dfs(cfg.entry_block)
 }
 
-func (cfg* control_flow_graph) compute_loop_depths() {
+func (control_flow_graph* cfg) compute_loop_depths() {
     n := cfg.blocks.len()
     for i := 0; i < n; i++ {
         cfg.blocks[i].loop_depth = 0
@@ -282,7 +282,7 @@ func (cfg* control_flow_graph) compute_loop_depths() {
     }
 }
 
-func (cfg* control_flow_graph) get_loop_body(int loop_header) int[] {
+func (control_flow_graph* cfg) get_loop_body(int loop_header) int[] {
     body := int[]()
     body.push(loop_header)
 

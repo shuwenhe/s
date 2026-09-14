@@ -19,31 +19,31 @@ func assembler_new() assembler {
     asm
 }
 
-func assembler_emit_instruction(asm* assembler, x86_instruction instr) {
+func assembler_emit_instruction(assembler* asm, x86_instruction instr) {
     asm_text := x86_instruction_to_asm(instr)
     asm.text_section = append(asm.text_section, asm_text)
 }
 
-func assembler_emit_data(asm* assembler, string label, string data) {
+func assembler_emit_data(assembler* asm, string label, string data) {
     asm.data_section = append(asm.data_section, label + ":")
     asm.data_section = append(asm.data_section, "\t.quad " + data)
 }
 
-func assembler_emit_label(asm* assembler, string label) {
+func assembler_emit_label(assembler* asm, string label) {
     asm.text_section = append(asm.text_section, label + ":")
 }
 
-func assembler_emit_function_start(asm* assembler, string func_name) {
+func assembler_emit_function_start(assembler* asm, string func_name) {
     asm.text_section = append(asm.text_section, "")
     asm.text_section = append(asm.text_section, ".globl " + func_name)
     asm.text_section = append(asm.text_section, func_name + ":")
 }
 
-func assembler_emit_function_end(asm* assembler) {
+func assembler_emit_function_end(assembler* asm) {
     asm.text_section = append(asm.text_section, "")
 }
 
-func assembler_finalize(asm* assembler) string {
+func assembler_finalize(assembler* asm) string {
     output := ""
 
     output = output + ".section .data\n"

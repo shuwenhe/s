@@ -92,11 +92,11 @@ func new_elf_builder() elf_builder {
     }
 }
 
-func (elf_builder* builder) add_code(byte[] code) {
+func (builder* elf_builder) add_code(byte[] code) {
     builder.code_section = append_slice(builder.code_section, code)
 }
 
-func (elf_builder* builder) generate() byte[] {
+func (builder* elf_builder) generate() byte[] {
     buffer: byte[] = byte[]{}
     return buffer
 }

@@ -52,9 +52,9 @@ func opt_constant_folding(cfg* control_flow_graph) {
                     result := opt_fold_constant(instr.opcode, left.const_value, right.const_value)
 
                     new_instr := ir_instr_binop(instr.opcode,
-                                               ir_value_const(result, instr.result.type_info),
+                                               ir_value_const(result, instr.result.kindinfo),
                                                ir_value_const("0", "int"),
-                                               instr.result.type_info)
+                                               instr.result.kindinfo)
                     block.instructions[i] = new_instr
                 }
             }

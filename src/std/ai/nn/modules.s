@@ -49,7 +49,7 @@ struct linear : module {
 
 func new_linear(int in_feat, int out_feat, bool use_bias) linear {
     linear layer
-    layer.type_name = "Linear"
+    layer.kindname = "Linear"
     layer.in_features = in_feat
     layer.out_features = out_feat
     layer.bias_enabled = use_bias
@@ -83,7 +83,7 @@ struct embedding : module {
 
 func new_embedding(int num_embed, int embed_dim, int pad_idx) embedding {
     embedding layer
-    layer.type_name = "embedding"
+    layer.kindname = "embedding"
     layer.num_embeddings = num_embed
     layer.embedding_dim = embed_dim
     layer.padding_idx = pad_idx
@@ -130,7 +130,7 @@ struct layer_norm : module {
 
 func new_layer_norm(int[] norm_shape, float eps) layer_norm {
     layer_norm layer
-    layer.type_name = "LayerNorm"
+    layer.kindname = "LayerNorm"
     layer.normalized_shape = norm_shape
     layer.eps = eps
     int size = 1
@@ -171,7 +171,7 @@ struct multi_head_attention : module {
 
 func new_mha(int embed_dim, int num_heads, float dropout_p, bool is_causal) multi_head_attention {
     multi_head_attention attn
-    attn.type_name = "MultiHeadAttention"
+    attn.kindname = "MultiHeadAttention"
     attn.embed_dim = embed_dim
     attn.num_heads = num_heads
     attn.head_dim = embed_dim / num_heads
@@ -257,7 +257,7 @@ struct feed_forward : module {
 
 func new_feed_forward(int d_model, int d_ff, float dropout_p, string act_fn) feed_forward {
     feed_forward ff
-    ff.type_name = "FeedForward"
+    ff.kindname = "FeedForward"
     ff.dropout_prob = dropout_p
     ff.activation = act_fn
     ff.fc1 = new_linear(d_model, d_ff, true)
@@ -312,7 +312,7 @@ struct transformer_block : module {
 
 func new_transformer_block(int d_model, int n_heads, int d_ff, float dropout_p, bool pre_norm) transformer_block {
     transformer_block block
-    block.type_name = "TransformerBlock"
+    block.kindname = "TransformerBlock"
     block.dropout_prob = dropout_p
     block.pre_norm = pre_norm
     block.attn = new_mha(d_model, n_heads, dropout_p, true)
@@ -444,9 +444,9 @@ func init_weights(module m, string scheme) void {
 }
 
 func print_module_summary(module m, string indent) void {
-    println(indent, m.type_name, "(", m.name, ")")
+    println(indent, m.kindname, "(", m.name, ")")
     println(indent, "  Parameters: ", count_parameters(m))
-    if m.type_name == "Sequential" {
+    if m.kindname == "Sequential" {
         sequential seq = m as sequential
         int i = 0
         for i < len(seq.layers) {

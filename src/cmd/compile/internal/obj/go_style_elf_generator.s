@@ -3,9 +3,9 @@ import (
     "compile.internal"
 )
 struct go_style_elf_generator {
-    elf_writer* writer
-    symbol_table* symtab
-    relocation_context* reloc_ctx
+    writer* elf_writer
+    symtab* symbol_table
+    reloc_ctx* relocation_context
     int8[] text_section
     int8[] data_section
     int8[] rodata_section
@@ -17,7 +17,7 @@ struct go_style_elf_generator {
 func make_go_style_elf_generator(
     elf_writer* writer,
     symbol_table* symtab,
-    relocation_context* reloc_ctx
+    reloc_ctx* relocation_context
 ) go_style_elf_generator {
     go_style_elf_generator {
         writer: writer, symtab symtab, reloc_ctx reloc_ctx,
@@ -30,7 +30,7 @@ func make_go_style_elf_generator(
     }
 }
 
-func (gen* go_style_elf_generator) write_section_header(string name, int32 type, int64 flags, int64 size) int32 {
+func (go_style_elf_generator* gen) write_section_header(string name, int32 type, int64 flags, int64 size) int32 {
     name_offset := gen.add_to_string_table(name)
     section := elf_section_header {
         name: name_offset, type type, flags flags, addr 0 as int64, offset 0 as int64, size size, link 0 as int32, info 0 as int32, addralign if type == 1 as int32 { 16 as int64 } else { 1 as int64 }, entsize 0 as int64,
@@ -39,13 +39,13 @@ func (gen* go_style_elf_generator) write_section_header(string name, int32 type,
     (len(gen.sections) - 1) as int32
 }
 
-func (gen* go_style_elf_generator) add_to_string_table(string s) int32 {
+func (go_style_elf_generator* gen) add_to_string_table(string s) int32 {
     result := len(gen.string_table) as int32
     gen.string_table = gen.string_table + s + "\x00"
     result
 }
 
-func (gen* go_style_elf_generator) write_symbol(
+func (go_style_elf_generator* gen) write_symbol(
     string name,
     int64 value,
     int64 size,
@@ -62,7 +62,7 @@ func (gen* go_style_elf_generator) write_symbol(
     (len(gen.symbols) - 1) as int32
 }
 
-func (gen* go_style_elf_generator) create_standard_sections() {
+func (go_style_elf_generator* gen) create_standard_sections() {
     gen.write_section_header("", 0 as int32, 0 as int64, 0 as int64)
     gen.write_section_header(".text", 1 as int32, 6 as int64, (len(gen.text_section) as int64))
     gen.write_section_header(".data", 1 as int32, 3 as int64, (len(gen.data_section) as int64))
@@ -74,7 +74,7 @@ func (gen* go_style_elf_generator) create_standard_sections() {
     gen.write_section_header(".rel.text", 4 as int32, 0 as int64, 0 as int64)
 }
 
-func (gen* go_style_elf_generator) create_elf_header() int8[] {
+func (go_style_elf_generator* gen) create_elf_header() int8[] {
     header := int8[]()()
     header = append(header, 0x7f as int8)
     header = append(header, 'e' as int8)
@@ -135,11 +135,11 @@ func (gen* go_style_elf_generator) create_elf_header() int8[] {
     header
 }
 
-func (gen* go_style_elf_generator) add_symbol_entry(string name, int64 value, int64 size, int binding, int type) {
+func (go_style_elf_generator* gen) add_symbol_entry(string name, int64 value, int64 size, int binding, int type) {
     gen.write_symbol(name, value, size, binding as int8, type as int8, 1 as int16)
 }
 
-func (gen* go_style_elf_generator) generate_elf_object() int8[] {
+func (go_style_elf_generator* gen) generate_elf_object() int8[] {
     gen.create_standard_sections()
     gen.add_symbol_entry("", 0 as int64, 0 as int64, 0, 0)
     gen.add_symbol_entry("main", 0 as int64, 0 as int64, 1, 2)
@@ -166,7 +166,7 @@ func (gen* go_style_elf_generator) generate_elf_object() int8[] {
     result
 }
 
-func (gen* go_style_elf_generator) generate_elf_executable() int8[] {
+func (go_style_elf_generator* gen) generate_elf_executable() int8[] {
     executable := gen.generate_elf_object()
     executable
 }
