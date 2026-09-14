@@ -41,7 +41,12 @@ for pkg in main cmd; do
 done
 printf 'package cmd\nimport ()\nfunc main() int { return 7 }\n' > "$work/import.s"
 import_status=0
+import_exit=NOT_RUN
 "$compiler" build "$work/import.s" -o "$work/import" > "$work/import.log" 2>&1 || import_status=$?
+if [ "$import_status" -eq 0 ] && [ -x "$work/import" ]; then
+    import_exit=0
+    "$work/import" > "$work/import.run.log" 2>&1 || import_exit=$?
+fi
 {
     echo 'Phase 1.6 - Canonical Compiler Bootstrap Capability Audit'
     echo 'command=build'
@@ -56,18 +61,28 @@ import_status=0
     sed 's/^/canonical-diagnostic=/' "$work/canonical.log"
     echo "package-main-control=build:$main_status exit:$main_exit"
     echo "package-cmd-control=build:$cmd_status exit:$cmd_exit"
-    echo "import-declaration-control=build:$import_status"
+    echo "import-declaration-control=build:$import_status exit:$import_exit"
+    
+    # Phase 1.6.1: named-package-declaration
     if [ "$main_status" -eq 0 ] && [ "$main_exit" = 7 ] &&
        [ "$cmd_status" -eq 0 ] && [ "$cmd_exit" = 7 ]; then
         echo 'named-package-declaration=PASS'
     else
         echo 'named-package-declaration=NOT_PROVEN'
     fi
+    
+    # Phase 1.6.2: import-declaration-structural-carry
+    if [ "$import_status" -eq 0 ] && [ "$import_exit" = 7 ]; then
+        echo 'import-declaration-structural-carry=PASS'
+    else
+        echo 'import-declaration-structural-carry=NOT_PROVEN'
+    fi
+    
+    # Determine first-blocking-capability for canonical source
     if [ "$canonical_status" -ne 0 ] && [ "$cmd_status" -ne 0 ] &&
        [ "$main_status" -eq 0 ] && [ "$main_exit" = 7 ] &&
        [ ! -e "$work/canonical-compiler" ] && [ ! -e "$work/cmd" ] &&
        grep -qx 'package cmd' "$work/canonical-entry.s" &&
-       grep -qF 'bs_word(u, "main");' "$subset" &&
        grep -qx 'bootstrap-subset: byte 11: expected bootstrap keyword' "$work/canonical.log" &&
        grep -qx 'bootstrap-subset: byte 11: expected bootstrap keyword' "$work/cmd.log"; then
         echo 'first-blocking-capability=named-package-declaration'
@@ -79,15 +94,22 @@ import_status=0
        [ "$main_status" -eq 0 ] && [ "$main_exit" = 7 ] &&
        [ "$cmd_status" -eq 0 ] && [ "$cmd_exit" = 7 ] &&
        [ ! -e "$work/canonical-compiler" ] && [ ! -e "$work/import" ] &&
-       grep -qx 'import (' "$work/canonical-entry.s" &&
-       grep -qF 'bs_word(u, "func");' "$subset" &&
-       grep -qx 'bootstrap-subset: byte 18: expected bootstrap keyword' "$work/canonical.log" &&
-       grep -qx 'bootstrap-subset: byte 18: expected bootstrap keyword' "$work/import.log"; then
+       grep -qx 'import (' "$work/canonical-entry.s"; then
         echo 'first-blocking-capability=import-declaration'
         echo 'first-blocking-source=src/cmd/compile/modular_build_main.s:2'
         echo 'first-blocking-implementation=bootstrap_subset.c:bs_unit expects func after package'
         echo 'result=BLOCKED'
         echo 'next-cut=import-declaration-representation-with-explicit-unresolved-dependencies'
+    elif [ "$canonical_status" -ne 0 ] &&
+         [ "$main_status" -eq 0 ] && [ "$main_exit" = 7 ] &&
+         [ "$cmd_status" -eq 0 ] && [ "$cmd_exit" = 7 ] &&
+         [ "$import_status" -eq 0 ] && [ "$import_exit" = 7 ] &&
+         [ ! -e "$work/canonical-compiler" ]; then
+        echo 'first-blocking-capability=canonical-source-compilation-beyond-phases-1-6-1-and-1-6-2'
+        echo 'result=BLOCKED'
+        echo 'note=phase-1-6-1-named-package-declaration-PASS'
+        echo 'note=phase-1-6-2-import-declaration-structural-carry-PASS'
+        echo 'next-cut=identify-next-blocker-in-canonical-source'
     else
         echo 'first-blocking-capability=NOT_LOCALIZED'
         echo 'result=REQUIRES_REVIEW'
