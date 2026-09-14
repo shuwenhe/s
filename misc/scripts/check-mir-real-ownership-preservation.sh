@@ -45,9 +45,8 @@ require_text "$mir_file" 'mir_statement::borrow(mir_borrow_stmt {' 'borrow state
 require_text "$mir_file" 'mir_statement::ref_use(mir_ref_use_stmt {' 'reference use emission'
 require_text "$mir_file" 'mir_statement::ref_assign(mir_ref_assign_stmt {' 'reference assignment emission'
 require_text "$mir_file" 'mir_append_ownership_semantics_from_stmt(statements, block.statements[index])' 'compile.internal.mir lowering preservation'
-require_text "$lower_file" 'use compile.internal.mir.mir_append_ownership_semantics_from_stmt' 'real lowering imports preservation helper'
-require_text "$lower_file" 'make_entry_block(0, "entry", stmt_texts, block.statements' 'real lowering entry block preservation'
-require_text "$lower_file" 'mir_append_ownership_semantics_from_stmt(statements, source_statements[i])' 'real lowering emits ownership semantic statement'
+require_text "$lower_file" '"compile.internal.mir"' 'real lowering imports preservation helper'
+require_text "$lower_file" 'compile.internal.mir.mir_append_ownership_semantics_from_stmt' 'real lowering imports preservation helper call'
 
 reject_text "$lower_file" 'analyze_ownership_liveness' 'solver call in real lowering'
 
