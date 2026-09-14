@@ -4,17 +4,20 @@ struct compiler_tool {
     string version
     string path
 }
+
 struct linker_tool {
     string name
     string version
     string target
 }
+
 struct toolchain_config {
     string target
     compiler_tool compiler
     linker_tool linker
     string[] tools
 }
+
 struct build_system {
     toolchain_config config
     string build_dir
@@ -32,21 +35,27 @@ func toolchain_init(string target) {
     global_toolchain.linker.target = target
     global_toolchain.tools = string[]()
 }
+
 func toolchain_compile(string input_file, string output_file) int {
     return 0
 }
+
 func toolchain_link(string[] object_files, string output_file) int {
     return 0
 }
+
 func toolchain_assemble(string asm_file, string output_file) int {
     return 0
 }
+
 func toolchain_disassemble(string binary_file) string {
     return ""
 }
+
 func build_project(string project_dir) int {
     return 0
 }
+
 func build_clean() {
 }
 
@@ -54,6 +63,7 @@ func build_rebuild() int {
     build_clean()
     return build_project(".")
 }
+
 func create_executable(string[] sources, string output) int {
     for i := 0; i < sources.len(); i = i + 1 {
         obj_file := sources[i] + ".o"
@@ -63,6 +73,7 @@ func create_executable(string[] sources, string output) int {
     }
     return toolchain_link(sources, output)
 }
+
 func create_library(string[] sources, string output) int {
     for i := 0; i < sources.len(); i = i + 1 {
         obj_file := sources[i] + ".o"
@@ -70,4 +81,3 @@ func create_library(string[] sources, string output) int {
             return -1
         }
     }
-    return 0

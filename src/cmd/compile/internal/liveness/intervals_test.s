@@ -5,6 +5,7 @@ import (
 func intervals_test_case_name() string {
     "liveness/intervals_test.s"
 }
+
 func intervals_test_case_pass() int {
     events := live_event[]()
     events = append(events, live_event { point: 0, value_id 1, on true })
@@ -21,4 +22,3 @@ func intervals_test_case_pass() int {
     if !intervals_overlap(ivs[0], ivs[1]) {
         return 0
     }
-    1

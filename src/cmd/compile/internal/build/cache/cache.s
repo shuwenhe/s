@@ -8,6 +8,7 @@ struct dep_version_state {
     int depth
     int layer_epoch
 }
+
 struct dep_graph_state {
     int max_depth
     int epoch_acc
@@ -18,9 +19,11 @@ struct dep_graph_state {
     string direct_signature
     string pruned_signature
 }
+
 func cache_hit(string source_path, string source_text, string phase) bool {
     cache_hit_target(source_path, source_text, phase, "default")
 }
+
 func cache_hit_target(string source_path, string source_text, string phase, string target_key) bool {
     stamp_path := cache_stamp_path(source_path, phase, target_key)
     cached := std.fs.read_to_string(stamp_path)
@@ -29,6 +32,7 @@ func cache_hit_target(string source_path, string source_text, string phase, stri
     }
     cached.unwrap() == dependency_fingerprint(source_path, source_text, phase, target_key)
 }
+
 func cache_hit_explain_target(string source_path, string source_text, string phase, string target_key) string {
     stamp_path := cache_stamp_path(source_path, phase, target_key)
     cached := std.fs.read_to_string(stamp_path)
@@ -41,9 +45,11 @@ func cache_hit_explain_target(string source_path, string source_text, string pha
     }
     "miss:fingerprint-drift"
 }
+
 func update_cache(string source_path, string source_text, string phase) bool {
     update_cache_target(source_path, source_text, phase, "default")
 }
+
 func update_cache_target(string source_path, string source_text, string phase, string target_key) bool {
     stamp_path := cache_stamp_path(source_path, phase, target_key)
     domain := invalidation_domain(source_path, source_text, phase, target_key)
@@ -90,6 +96,7 @@ func update_cache_target(string source_path, string source_text, string phase, s
     version_write := std.fs.write_text_file(version_stamp, version_payload)
     !version_write.is_err()
 }
+
 func dependency_fingerprint(string source_path, string source_text, string phase, string target_key) string {
     own := fingerprint(source_text)
     pkg := package_name(source_text)
@@ -100,17 +107,21 @@ func dependency_fingerprint(string source_path, string source_text, string phase
     epoch := read_phase_epoch(phase, domain)
     phase + ":" + source_path + ":" + pkg + ":" + own + ":" + imports + ":" + exports + ":" + propagated + ":domain=" + domain + ":epoch=" + std.prelude.to_string(epoch) + ":target=" + sanitize_key(target_key)
 }
+
 func cache_stamp_path(string source_path, string phase, string target_key) string {
     source_path + "." + phase + "." + sanitize_key(target_key) + ".cache"
 }
+
 func invalidation_domain(string source_path, string source_text, string phase, string target_key) string {
     pkg := package_name(source_text)
     lane := target_parallel_lane(target_key)
     phase + ":" + pkg + ":" + sanitize_key(source_path) + ":" + sanitize_key(target_key) + ":lane" + std.prelude.to_string(lane)
 }
+
 func phase_stamp_path(string phase, string domain) string {
     ".s.cache.phase." + sanitize_key(phase) + "." + sanitize_key(domain)
 }
+
 func read_phase_epoch(string phase, string domain) int {
     stamp := std.fs.read_to_string(phase_stamp_path(phase, domain))
     if stamp.is_err() {
@@ -122,6 +133,7 @@ func read_phase_epoch(string phase, string domain) int {
     }
     value
 }
+
 func bump_phase_epoch(string phase, string domain) bool {
     current := read_phase_epoch(phase, domain)
     next := current + 1
@@ -129,6 +141,7 @@ func bump_phase_epoch(string phase, string domain) bool {
     write := std.fs.write_text_file(phase_stamp_path(phase, domain), payload)
     !write.is_err()
 }
+
 func fingerprint(string source_text) string {
     funcs := count_token(source_text, "func ")
     structs := count_token(source_text, "struct ")
@@ -137,6 +150,7 @@ func fingerprint(string source_text) string {
     pkg := package_name(source_text)
     pkg + ":" + std.prelude.to_string(std.prelude.len(source_text)) + ":" + std.prelude.to_string(funcs) + ":" + std.prelude.to_string(structs) + ":" + std.prelude.to_string(calls) + ":" + std.prelude.to_string(uses)
 }
+
 func import_signature(string source_text) string {
     sig := "imports"
     cursor := 0
@@ -154,6 +168,7 @@ func import_signature(string source_text) string {
     }
     sig
 }
+
 func export_signature(string source_text) string {
     pub_funcs := count_token(source_text, "\npub func ") + count_token(source_text, "\npub\nfunc ")
     pub_structs := count_token(source_text, "\npub struct ")
@@ -162,6 +177,7 @@ func export_signature(string source_text) string {
     pub_impls := count_token(source_text, "\npub impl ")
     "exports:" + std.prelude.to_string(pub_funcs) + ":" + std.prelude.to_string(pub_structs) + ":" + std.prelude.to_string(pub_enums) + ":" + std.prelude.to_string(pub_traits) + ":" + std.prelude.to_string(pub_impls)
 }
+
 func dependency_layer_version_signature(string source_text, string phase, string target_key) string {
     graph := dependency_graph_state(source_text, phase, target_key)
     sig := "dep-layer"
@@ -175,6 +191,7 @@ func dependency_layer_version_signature(string source_text, string phase, string
         + ":pruned_direct=" + graph.pruned_signature
     sig
 }
+
 func dependency_graph_state(string source_text, string phase, string target_key) dep_graph_state {
     max_depth := 0
     epoch_acc := 0
@@ -229,6 +246,7 @@ func dependency_graph_state(string source_text, string phase, string target_key)
         max_depth: max_depth, epoch_acc epoch_acc, dep_count dep_count, pruned_count pruned_count, minimal_invalidation_score minimal_invalidation, parallel_wave_count waves, direct_signature direct_signature, pruned_signature pruned_signature,
     }
 }
+
 func phase_depth_budget(string phase) int {
     if phase == "check" {
         return 1
@@ -238,6 +256,7 @@ func phase_depth_budget(string phase) int {
     }
     2
 }
+
 func should_prune_dependency(string dep_path, string source_pkg, dep_version_state dep_state, int depth_budget, string target_key) bool {
     if dep_state.depth > depth_budget {
         return true
@@ -253,11 +272,13 @@ func should_prune_dependency(string dep_path, string source_pkg, dep_version_sta
     }
     false
 }
+
 func same_root_package(string left, string right) bool {
     l := root_package(left)
     r := root_package(right)
     l != "" && l == r
 }
+
 func root_package(string pkg) string {
     dot := index_of(pkg, ".")
     if dot < 0 {
@@ -265,6 +286,7 @@ func root_package(string pkg) string {
     }
     std.prelude.slice(pkg, 0, dot)
 }
+
 func target_parallel_lane(string target_key) int {
     hash := 0
     i := 0
@@ -274,6 +296,7 @@ func target_parallel_lane(string target_key) int {
     }
     hash
 }
+
 func digit_fallback(string ch) int {
     if ch >= "0" && ch <= "9" {
         return digit_value(ch
@@ -286,12 +309,15 @@ func digit_fallback(string ch) int {
     }
     1
 }
+
 func export_stamp_path(string pkg_or_use_path) string {
     ".s.cache.export." + sanitize_key(pkg_or_use_path)
 }
+
 func version_stamp_path(string pkg_or_use_path) string {
     ".s.cache.version." + sanitize_key(pkg_or_use_path)
 }
+
 func read_dep_version_state(string pkg_or_use_path) dep_version_state {
     stamp := std.fs.read_to_string(version_stamp_path(pkg_or_use_path))
     if stamp.is_err() {
@@ -316,6 +342,7 @@ func read_dep_version_state(string pkg_or_use_path) dep_version_state {
         version: version, depth depth, layer_epoch layer,
     }
 }
+
 func parse_field_int(string text, string marker) int {
     start := index_of(text, marker)
     if start < 0 {
@@ -338,6 +365,7 @@ func parse_field_int(string text, string marker) int {
     }
     value
 }
+
 func digit_value(string ch) int {
     if ch == "0" { return 0 }
     if ch == "1" { return 1 }
@@ -351,6 +379,7 @@ func digit_value(string ch) int {
     if ch == "9" { return 9 }
     0
 }
+
 func sanitize_key(string text) string {
     out := ""
     i := 0
@@ -365,6 +394,7 @@ func sanitize_key(string text) string {
     }
     out
 }
+
 func use_path_from_line(string line) string {
     payload := trim_spaces(std.prelude.slice(line, 4, std.prelude.len(line)))
     as_pos := index_of(payload, " as ")
@@ -373,6 +403,7 @@ func use_path_from_line(string line) string {
     }
     trim_spaces(std.prelude.slice(payload, 0, as_pos))
 }
+
 func trim_spaces(string text) string {
     start := 0
     end := std.prelude.len(text)
@@ -392,12 +423,14 @@ func trim_spaces(string text) string {
     }
     std.prelude.slice(text, start, end)
 }
+
 func starts_with(string text, string prefix) bool {
     if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
     std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
 }
+
 func package_name(string source_text) string {
     marker := "package "
     start := index_of(source_text, marker)
@@ -415,6 +448,7 @@ func package_name(string source_text) string {
     }
     std.prelude.slice(source_text, start, end)
 }
+
 func index_of(string text, string token) int {
     if token == "" {
         return 0
@@ -428,6 +462,7 @@ func index_of(string text, string token) int {
     }
     -1
 }
+
 func index_of_from(string text, string token, int start) int {
     if token == "" {
         return start
@@ -441,6 +476,7 @@ func index_of_from(string text, string token, int start) int {
     }
     -1
 }
+
 func count_token(string text, string token) int {
     if token == "" {
         return 0
@@ -455,4 +491,3 @@ func count_token(string text, string token) int {
             i = i + 1
         }
     }
-    total

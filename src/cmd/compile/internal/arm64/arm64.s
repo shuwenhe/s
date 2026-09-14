@@ -3,4 +3,3 @@ func init() () {
 }
 
 func init_arch() arch_info {
-	init_arch_info()

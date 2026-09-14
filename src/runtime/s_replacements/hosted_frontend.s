@@ -1,1 +1,0 @@
-func hosted_frontend() {

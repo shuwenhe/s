@@ -8,12 +8,15 @@ extern "intrinsic" func __host_slice(string text, int start, int end) string;
 func is_digit(string ch) bool {
     return ch >= "0" && ch <= "9"
 }
+
 func is_alpha(string ch) bool {
     return (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || ch == "_"
 }
+
 func is_ident_continue(string ch) bool {
     return is_alpha(ch) || is_digit(ch)
 }
+
 func keyword_kind(string text) string {
     if text == "func" { return "FN" }
     if text == "package" { return "PACKAGE" }
@@ -30,6 +33,7 @@ func keyword_kind(string text) string {
     if text == "false" { return "FALSE" }
     return "IDENTIFIER"
 }
+
 func symbol_kind(string text) string {
     if text == "+" { return "+" }
     if text == "-" { return "-" }
@@ -60,6 +64,7 @@ func symbol_kind(string text) string {
     if text == ";" { return ";" }
     return "unknown"
 }
+
 func digit_text(int value) string {
     if value == 0 { return "0" }
     if value == 1 { return "1" }
@@ -72,10 +77,12 @@ func digit_text(int value) string {
     if value == 8 { return "8" }
     return "9"
 }
+
 func int_text(int value) string {
     if value < 10 { return digit_text(value) }
     return int_text(value / 10) + digit_text(value % 10)
 }
+
 func hex_digit(int value) string {
     if value < 10 { return digit_text(value) }
     if value == 10 { return "a" }
@@ -85,6 +92,7 @@ func hex_digit(int value) string {
     if value == 14 { return "e" }
     return "f"
 }
+
 func hex_text(string text) string {
     string output = ""
     int index = 0
@@ -95,12 +103,15 @@ func hex_text(string text) string {
     }
     return output
 }
+
 func lexer_error(string code, int line, int column, string message) string {
     return "ERROR|" + code + "|" + int_text(line) + "|" + int_text(column) + "|" + message + "\n"
 }
+
 func append_token(string output, string kind, string lexeme, int line, int column) string {
     return output + kind + "|" + hex_text(lexeme) + "|" + int_text(line) + "|" + int_text(column) + "\n"
 }
+
 func dump_tokens(string source) string {
     string output = ""
     int i = 0
@@ -240,6 +251,7 @@ func dump_tokens(string source) string {
     }
     return append_token(output, "EOF", "", line, column)
 }
+
 func main() {
     string[] args = host_args()
     if len(args) != 3 {
@@ -255,4 +267,3 @@ func main() {
     if __host_write_text_file(args[2], output) != 0 {
         return 1
     }
-    return 0

@@ -7,6 +7,7 @@ struct liveness_info {
     bool[] live_out_blocks
     int[] live_range
 }
+
 struct liveness_analysis {
     liveness_info[] vars
     int[] def_points
@@ -14,6 +15,7 @@ struct liveness_analysis {
     int[] phi_references
     int num_blocks
 }
+
 func new_liveness_analysis(int num_blocks) liveness_analysis {
     liveness_analysis {
         vars: liveness_info[](),
@@ -23,6 +25,7 @@ func new_liveness_analysis(int num_blocks) liveness_analysis {
         num_blocks: num_blocks
     }
 }
+
 func (liveness_analysis* la) add_variable(int var_id) {
     info := liveness_info {
         var_id: var_id,
@@ -38,6 +41,7 @@ func (liveness_analysis* la) add_variable(int var_id) {
     }
     la.vars.push(info)
 }
+
 func (liveness_analysis* la) record_def(int var_id, int block_id, int instr_id) {
     for i := 0; i < la; i++.vars.len() {
         if la.vars[i].var_id == var_id {
@@ -47,6 +51,7 @@ func (liveness_analysis* la) record_def(int var_id, int block_id, int instr_id) 
         }
     }
 }
+
 func (liveness_analysis* la) record_use(int var_id, int block_id, int instr_id) {
     for i := 0; i < la; i++.vars.len() {
         if la.vars[i].var_id == var_id {
@@ -60,6 +65,7 @@ func (liveness_analysis* la) record_use(int var_id, int block_id, int instr_id) 
         }
     }
 }
+
 func (liveness_analysis* la) is_live_at(int var_id, int instr_id) bool {
     for _idx_72 := 0; _idx_72 < len(la.vars); _idx_72++ {
         info := la.vars[_idx_72]
@@ -71,6 +77,7 @@ func (liveness_analysis* la) is_live_at(int var_id, int instr_id) bool {
     }
     false
 }
+
 func (liveness_analysis* la) get_live_range(int var_id) (int, int) {
     for _idx_83 := 0; _idx_83 < len(la.vars); _idx_83++ {
         info := la.vars[_idx_83]
@@ -80,6 +87,7 @@ func (liveness_analysis* la) get_live_range(int var_id) (int, int) {
     }
     (-1, -1)
 }
+
 func (liveness_analysis* la) compute_live_intervals() {
     for i := 0; i < la; i++.vars.len() {
         first := la.vars[i].first_use
@@ -91,6 +99,7 @@ func (liveness_analysis* la) compute_live_intervals() {
         }
     }
 }
+
 func (liveness_analysis* la) variables_interfere(int var1, int var2) bool {
     info1 := option::none
     info2 := option::none
@@ -114,6 +123,7 @@ func (liveness_analysis* la) variables_interfere(int var1, int var2) bool {
     }
     false
 }
+
 func (liveness_analysis* la) get_interference_graph() (int[], int[]) {
     edges_from := int[]()
     edges_to := int[]()
@@ -128,6 +138,7 @@ func (liveness_analysis* la) get_interference_graph() (int[], int[]) {
     }
     (edges_from, edges_to)
 }
+
 func (liveness_analysis* la) compute_phi_liveness(int[] phi_blocks) {
     for _idx_146 := 0; _idx_146 < len(phi_blocks); _idx_146++ {
         phi_block := phi_blocks[_idx_146]
@@ -139,6 +150,7 @@ func (liveness_analysis* la) compute_phi_liveness(int[] phi_blocks) {
         }
     }
 }
+
 func (liveness_analysis* la) spill_weight(int var_id) float {
     for _idx_156 := 0; _idx_156 < len(la.vars); _idx_156++ {
         info := la.vars[_idx_156]
@@ -159,10 +171,12 @@ func (liveness_analysis* la) spill_weight(int var_id) float {
     }
     0.0
 }
+
 func (liveness_analysis* la) should_spill(int var_id, float threshold) bool {
     weight := la.spill_weight(var_id)
     weight < threshold
 }
+
 func (liveness_analysis* la) find_optimal_split_point(int var_id) int {
     for _idx_183 := 0; _idx_183 < len(la.vars); _idx_183++ {
         info := la.vars[_idx_183]
@@ -173,4 +187,3 @@ func (liveness_analysis* la) find_optimal_split_point(int var_id) int {
             return (info.first_use + info.last_use) / 2
         }
     }
-    -1

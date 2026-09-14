@@ -12,6 +12,7 @@ struct sroutine {
     int stack_size
     bool system
 }
+
 struct p {
     int id
     int current_sroutine
@@ -19,12 +20,14 @@ struct p {
     int local_head
     int local_tail
 }
+
 struct m {
     int id
     int p_id
     int current_sroutine
     bool spinning
 }
+
 struct scheduler {
     sroutine[]   task
     m[]   ms
@@ -41,6 +44,7 @@ func init_scheduler() scheduler {
         task:        sroutine[](), ms m[](), ps p[](), global_q int[](), next_sroutine_id 1, next_mid 1, num_p __runtime_num_cpu(), mu new_mutex(),
     }
 }
+
 func sroutine_spawn(int entry_id, string name) int {
 	if !sroutine_abi_ready() {
 		return -1
@@ -63,6 +67,7 @@ func sroutine_spawn(int entry_id, string name) int {
     try_wakeup_idle_m()
     sroutine_id
 }
+
 func sroutine_yield() () {
     cur := __sroutine_current_id()
     if cur < 0 { return }
@@ -72,6 +77,7 @@ func sroutine_yield() () {
     _sched.mu.unlock()
     schedule()
 }
+
 func sroutine_park(int reason) () {
     cur := __sroutine_current_id()
     if cur < 0 { return }
@@ -80,6 +86,7 @@ func sroutine_park(int reason) () {
     _sched.mu.unlock()
     schedule()
 }
+
 func sroutine_ready(int sroutine_id) () {
     _sched.mu.lock()
     sroutine_transition(sroutine_id, sroutine_runnable, sroutine_park_none)
@@ -87,6 +94,7 @@ func sroutine_ready(int sroutine_id) () {
     _sched.mu.unlock()
     try_wakeup_idle_m()
 }
+
 func schedule() () {
     next_sroutine_id := find_runnable()
     if next_sroutine_id < 0 {
@@ -95,6 +103,7 @@ func schedule() () {
     }
     run_sroutine(next_sroutine_id)
 }
+
 func find_runnable() int {
     _sched.mu.lock()
     for !_sched.global_q.is_empty() {
@@ -114,11 +123,13 @@ func find_runnable() int {
     _sched.mu.unlock()
     return -1
 }
+
 func run_sroutine(int sroutine_id) () {
     cur := __sroutine_current_id()
     sroutine_transition(sroutine_id, sroutine_running, sroutine_park_none)
     __sroutine_context_switch(cur, sroutine_id)
 }
+
 func m_idle() () {
     var i = 0
     for i < 100 {
@@ -131,6 +142,7 @@ func m_idle() () {
     }
     __runtime_sleep_briefly()
 }
+
 func try_wakeup_idle_m() () {
     if len(_sched.global_q) > 0 {
         mid := _sched.next_mid
@@ -140,6 +152,7 @@ func try_wakeup_idle_m() () {
         __runtime_thread_wake(mid)
     }
 }
+
 func sroutine_transition(int sroutine_id, int status, int park_reason) bool {
     var i = 0
     for i < len(_sched.task) {
@@ -158,14 +171,17 @@ func sroutine_transition(int sroutine_id, int status, int park_reason) bool {
     }
     false
 }
+
 func num_sroutine() int {
     len(_sched.task)
 }
+
 struct sroutine_info {
     int id
     int status
     string name
 }
+
 func sroutine_list() sroutine_info[] {
     result := sroutine_info[]()
     var i = 0
@@ -180,6 +196,7 @@ func sroutine_list() sroutine_info[] {
     }
     result
 }
+
 func runtime_init() () {
     num := __runtime_num_cpu()
     var i = 0
@@ -194,4 +211,3 @@ func runtime_init() () {
     m0 := m { id: 0, p_id 0, current_sroutine: -1, spinning false }
     _sched.ms = append(_sched.ms, m0)
 }
-func proc_unit_name() string { "src/runtime/proc" }

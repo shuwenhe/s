@@ -13,6 +13,7 @@ func instruction_select_mov(ctx* codegen_context, ra* register_allocator, string
         ctx.emit_line("    mov %" + src_reg + ", %" + dst_reg)
     }
 }
+
 func instruction_select_add(ctx* codegen_context, ra* register_allocator, string op1, string op2, string result) {
     dst_reg, _ := ra.allocate(result)
     src_reg, _ := ra.allocate(op1)
@@ -25,6 +26,7 @@ func instruction_select_add(ctx* codegen_context, ra* register_allocator, string
         ctx.emit_line("    add %" + other_reg + ", %" + dst_reg)
     }
 }
+
 func instruction_select_sub(ctx* codegen_context, ra* register_allocator, string op1, string op2, string result) {
     dst_reg, _ := ra.allocate(result)
     src_reg, _ := ra.allocate(op1)
@@ -37,6 +39,7 @@ func instruction_select_sub(ctx* codegen_context, ra* register_allocator, string
         ctx.emit_line("    sub %" + other_reg + ", %" + dst_reg)
     }
 }
+
 func instruction_select_mul(ctx* codegen_context, ra* register_allocator, string op1, string op2, string result) {
     dst_reg, _ := ra.allocate(result)
     ctx.emit_line("    mov %" + dst_reg + ", %rax")
@@ -50,6 +53,7 @@ func instruction_select_mul(ctx* codegen_context, ra* register_allocator, string
     }
     ctx.emit_line("    mov %rax, %" + dst_reg)
 }
+
 func instruction_select_cmp(ctx* codegen_context, ra* register_allocator, string op1, string op2) {
     if is_numeric(op1) {
         ctx.emit_line("    mov $" + op1 + ", %rax")
@@ -64,6 +68,7 @@ func instruction_select_cmp(ctx* codegen_context, ra* register_allocator, string
         ctx.emit_line("    cmp %" + dst_reg + ", %" + src_reg)
     }
 }
+
 func instruction_select_call(ctx* codegen_context, ra* register_allocator, string fn_name, string[] args) {
     param_regs := vec[]()
     param_regs.push("rdi")
@@ -85,6 +90,7 @@ func instruction_select_call(ctx* codegen_context, ra* register_allocator, strin
     }
     ctx.emit_line("    call " + fn_name)
 }
+
 func instruction_select_ret(ctx* codegen_context, ra* register_allocator, string value) {
     if value != "" {
         if is_numeric(value) {
@@ -99,6 +105,7 @@ func instruction_select_ret(ctx* codegen_context, ra* register_allocator, string
     ctx.emit_line("    leave")
     ctx.emit_line("    ret")
 }
+
 func is_numeric(string s) bool {
     if s.len() == 0 {
         return false
@@ -111,6 +118,7 @@ func is_numeric(string s) bool {
     }
     true
 }
+
 func parse_int(string s) int {
     result := 0
     for i < s.len() {
@@ -119,4 +127,3 @@ func parse_int(string s) int {
             result = result * 10 + (c as int - '0' as int)
         }
     }
-    result

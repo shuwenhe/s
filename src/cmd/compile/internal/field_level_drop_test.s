@@ -12,6 +12,7 @@ func test_basic_declare_and_use() bool {
     if compile.internal.field_level_drop_flag.fldf_has_errors(f) { return false }
     true
 }
+
 func test_use_after_move() bool {
     f := compile.internal.field_level_drop_flag.fldf_new()
     x := compile.internal.path.path_new("x")
@@ -23,6 +24,7 @@ func test_use_after_move() bool {
     if !compile.internal.field_level_drop_flag.fldf_has_errors(f) { return false }
     true
 }
+
 func test_struct_field_move() bool {
     f := compile.internal.field_level_drop_flag.fldf_new()
     x := compile.internal.path.path_new("x")
@@ -38,6 +40,7 @@ func test_struct_field_move() bool {
     if !compile.internal.field_level_drop_flag.fldf_has_errors(f) { return false }
     true
 }
+
 func test_struct_field_drop_order() bool {
     f := compile.internal.field_level_drop_flag.fldf_new()
     x := compile.internal.path.path_new("x")
@@ -50,6 +53,7 @@ func test_struct_field_drop_order() bool {
     if len(drops) != 2 { return false }
     true
 }
+
 func test_array_element_move() bool {
     f := compile.internal.field_level_drop_flag.fldf_new()
     v := compile.internal.path.path_new("v")
@@ -65,6 +69,7 @@ func test_array_element_move() bool {
     if compile.internal.field_level_drop_flag.fldf_has_errors(f) { return false }
     true
 }
+
 func test_conditional_merge_same_state() bool {
     f_if := compile.internal.field_level_drop_flag.fldf_new()
     f_if = compile.internal.field_level_drop_flag.fldf_declare(f_if, compile.internal.path.path_new("x"), "Box")
@@ -75,6 +80,7 @@ func test_conditional_merge_same_state() bool {
     if compile.internal.field_level_drop_flag.fldf_has_errors(f_merged) { return false }
     true
 }
+
 func test_conditional_merge_different_state() bool {
     f_if := compile.internal.field_level_drop_flag.fldf_new()
     f_if = compile.internal.field_level_drop_flag.fldf_declare(f_if, compile.internal.path.path_new("x"), "Box")
@@ -86,6 +92,7 @@ func test_conditional_merge_different_state() bool {
     f_merged = compile.internal.field_level_drop_flag.fldf_use(f_merged, compile.internal.path.path_new("x"))
     true
 }
+
 func test_nested_field_access() bool {
     f := compile.internal.field_level_drop_flag.fldf_new()
     x := compile.internal.path.path_new("x")
@@ -98,6 +105,7 @@ func test_nested_field_access() bool {
     if !compile.internal.field_level_drop_flag.fldf_has_errors(f) { return false }
     true
 }
+
 func test_partial_move_two_fields() bool {
     f := compile.internal.field_level_drop_flag.fldf_new()
     p := compile.internal.path.path_new("p")
@@ -112,6 +120,7 @@ func test_partial_move_two_fields() bool {
     if len(drops) < 2 { return false }
     true
 }
+
 func test_reassignment_after_move() bool {
     f := compile.internal.field_level_drop_flag.fldf_new()
     x := compile.internal.path.path_new("x")
@@ -123,6 +132,7 @@ func test_reassignment_after_move() bool {
     if compile.internal.field_level_drop_flag.fldf_has_errors(f) { return false }
     true
 }
+
 func test_scope_lifo_drop_order() bool {
     f := compile.internal.field_level_drop_flag.fldf_new()
     x := compile.internal.path.path_new("x")
@@ -135,6 +145,7 @@ func test_scope_lifo_drop_order() bool {
     if len(drops) != 3 { return false }
     true
 }
+
 func run_field_level_drop_tests() bool {
     tests_passed := 0
     tests_total := 0
@@ -187,4 +198,3 @@ func run_field_level_drop_tests() bool {
     println("════════════════════════════════════════════")
     println("Passed: " + tests_passed + " / " + tests_total)
     println("════════════════════════════════════════════")
-    tests_passed == tests_total

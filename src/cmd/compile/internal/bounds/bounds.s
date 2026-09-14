@@ -5,6 +5,7 @@ struct bounds_proof {
     int upper_bound
     string reason
 }
+
 func bounds_prove_constant_index(int index, int length) bounds_proof {
     if length < 0 {
         return bounds_proof { safe: false, lower_bound: 0, upper_bound: length, reason: "invalid-length" }
@@ -17,6 +18,7 @@ func bounds_prove_constant_index(int index, int length) bounds_proof {
     }
     bounds_proof { safe: true, lower_bound: 0, upper_bound: length, reason: "constant-index" }
 }
+
 func bounds_prove_loop(int start, int limit, int step, int length) bounds_proof {
     if length < 0 || step <= 0 {
         return bounds_proof { safe: false, lower_bound: start, upper_bound: limit, reason: "unknown-loop-range" }
@@ -29,5 +31,5 @@ func bounds_prove_loop(int start, int limit, int step, int length) bounds_proof 
     }
     bounds_proof { safe: true, lower_bound: start, upper_bound: limit, reason: "canonical-loop" }
 }
+
 func bounds_should_eliminate(bounds_proof proof) bool {
-    proof.safe

@@ -33,6 +33,7 @@ enum pe_machine {
 	MACHINE_AMD64 = 0x8664
 	MACHINE_CHPE_X86_64 = 0x3a64
 }
+
 struct pe_file_header {
 	u16 machine
 	u16 number_of_sections
@@ -42,6 +43,7 @@ struct pe_file_header {
 	u16 size_of_optional_header
 	char u16acteristics
 }
+
 struct pe_optional_header {
 	u16 magic
 	u8 major_linker_version
@@ -74,6 +76,7 @@ struct pe_optional_header {
 	u32 loader_flags
 	u32 number_of_rva_and_sizes
 }
+
 struct pe_section_header {
 	[8]u8 name
 	u32 virtual_size
@@ -86,6 +89,7 @@ struct pe_section_header {
 	u16 number_of_linenumbers
 	char u32acteristics
 }
+
 struct pe_object {
 	[64]u8 dos_header
 	u32 pe_signature
@@ -96,6 +100,7 @@ struct pe_object {
 	pe_symbol[] symbol_table
 	pe_relocation[] relocations
 }
+
 struct pe_symbol {
 	string name
 	u32 value
@@ -104,11 +109,13 @@ struct pe_symbol {
 	u8 storage_class
 	i32 aux_symbols
 }
+
 struct pe_relocation {
 	u32 virtual_address
 	u32 symbol_index
 	u16 type
 }
+
 func new_pe_object(machine pe_machine) pe_object {
 	obj := pe_object{
 		PESignature: PE_SIGNATURE,
@@ -162,6 +169,7 @@ func new_pe_object(machine pe_machine) pe_object {
 	obj.DosHeader[1] = 0x5a
 	obj
 }
+
 func (po* pe_object) add_section(string name, data u8[]) i32 {
 	idx := i32(len(po.Sections))
 	shdr := pe_section_header{
@@ -183,12 +191,15 @@ func (po* pe_object) add_section(string name, data u8[]) i32 {
 	po.SectionData[idx] = data
 	idx
 }
+
 func (po* pe_object) add_symbol(sym pe_symbol) {
 	po.SymbolTable = append(po.SymbolTable, sym)
 }
+
 func (po* pe_object) add_relocation(reloc pe_relocation) {
 	po.Relocations = append(po.Relocations, reloc)
 }
+
 func read_pe_object(string filename) (pe_object, error) {
 	file, err := os.open(filename)
 	if err != nil {
@@ -222,6 +233,7 @@ func read_pe_object(string filename) (pe_object, error) {
 	obj.FileHeader.Characteristics = binary.LittleEndian.uint16(buf[fh_offset+18 : fh_offset+20])
 	obj, nil
 }
+
 func (pe_object* po) write_to_file(string filename) error {
 	file, err := os.create(filename)
 	if err != nil {
@@ -293,4 +305,3 @@ func (pe_object* po) write_to_file(string filename) error {
 			}
 		}
 	}
-	nil

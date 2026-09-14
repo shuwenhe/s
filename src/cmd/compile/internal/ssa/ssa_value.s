@@ -33,6 +33,7 @@ struct ssa_value {
     aux_int long
     string aux_string
 }
+
 func ssa_value_new_const_int(int id, long value, int type_id) ssa_value* {
     v := ssa_value {
         id: id,
@@ -45,6 +46,7 @@ func ssa_value_new_const_int(int id, long value, int type_id) ssa_value* {
     }
     v
 }
+
 func ssa_value_new_binary_op(int id, int op, ssa_value* left, ssa_value* right, int type_id) ssa_value* {
     v := ssa_value {
         id: id,
@@ -59,6 +61,7 @@ func ssa_value_new_binary_op(int id, int op, ssa_value* left, ssa_value* right, 
     v.args[1] = right
     v
 }
+
 func ssa_value_new_unary_op(int id, int op, ssa_value* arg, int type_id) ssa_value* {
     v := ssa_value {
         id: id,
@@ -70,4 +73,3 @@ func ssa_value_new_unary_op(int id, int op, ssa_value* arg, int type_id) ssa_val
         aux_string: "",
     }
     v.args[0] = arg
-    v

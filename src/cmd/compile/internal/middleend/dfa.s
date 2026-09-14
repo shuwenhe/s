@@ -6,26 +6,32 @@ struct dataflow_analysis {
     reaching_def_info[] reaching_defs
     use_def_chain[] use_def_chains
 }
+
 struct liveness_info {
     int block_id
     int_set live_in
     int_set live_out
 }
+
 struct reaching_def_info {
     int block_id
     int_set def_in
     int_set def_out
 }
+
 struct use_def_chain {
     int use_instr_id
     int[] def_instr_ids
 }
+
 struct int_set {
     int[] values
 }
+
 func int_set_new() int_set {
     int_set { values: int[]() }
 }
+
 func int_set_add(set* int_set, int value) {
     for i := 0; i < set.values.len(); i = i + 1 {
         if set.values[i] == value {
@@ -34,6 +40,7 @@ func int_set_add(set* int_set, int value) {
     }
     set.values = append(set.values, value)
 }
+
 func int_set_contains(set int_set, int value) int {
     for i := 0; i < set.values.len(); i = i + 1 {
         if set.values[i] == value {
@@ -42,6 +49,7 @@ func int_set_contains(set int_set, int value) int {
     }
     0
 }
+
 func int_set_union(set1 int_set, set2 int_set) int_set {
     result := set1
     for i := 0; i < set2.values.len(); i = i + 1 {
@@ -49,6 +57,7 @@ func int_set_union(set1 int_set, set2 int_set) int_set {
     }
     result
 }
+
 func int_set_intersect(set1 int_set, set2 int_set) int_set {
     result := int_set_new()
     for i := 0; i < set1.values.len(); i = i + 1 {
@@ -58,6 +67,7 @@ func int_set_intersect(set1 int_set, set2 int_set) int_set {
     }
     result
 }
+
 func int_set_difference(set1 int_set, set2 int_set) int_set {
     result := int_set_new()
     for i := 0; i < set1.values.len(); i = i + 1 {
@@ -67,6 +77,7 @@ func int_set_difference(set1 int_set, set2 int_set) int_set {
     }
     result
 }
+
 func dfa_analyze_liveness(cfg* control_flow_graph) liveness_info[] {
     liveness := liveness_info[]()
     n := cfg.blocks.len()
@@ -100,6 +111,7 @@ func dfa_analyze_liveness(cfg* control_flow_graph) liveness_info[] {
     }
     liveness
 }
+
 func dfa_compute_use_def(cfg_block block) int_set {
     use_set := int_set_new()
     for i := 0; i < block.instructions.len(); i = i + 1 {
@@ -113,6 +125,7 @@ func dfa_compute_use_def(cfg_block block) int_set {
     }
     use_set
 }
+
 func dfa_compute_def(cfg_block block) int_set {
     def_set := int_set_new()
     for i := 0; i < block.instructions.len(); i = i + 1 {
@@ -123,6 +136,7 @@ func dfa_compute_def(cfg_block block) int_set {
     }
     def_set
 }
+
 func dfa_analyze_reaching_defs(cfg* control_flow_graph) reaching_def_info[] {
     reaching_defs := reaching_def_info[]()
     n := cfg.blocks.len()
@@ -156,6 +170,7 @@ func dfa_analyze_reaching_defs(cfg* control_flow_graph) reaching_def_info[] {
     }
     reaching_defs
 }
+
 func dfa_compute_gen(cfg_block block) int_set {
     gen := int_set_new()
     for i := 0; i < block.instructions.len(); i = i + 1 {
@@ -166,6 +181,7 @@ func dfa_compute_gen(cfg_block block) int_set {
     }
     gen
 }
+
 func dfa_compute_kill(cfg_block block) int_set {
     kill := int_set_new()
     for i := 0; i < block.instructions.len(); i = i + 1 {
@@ -181,6 +197,7 @@ func dfa_compute_kill(cfg_block block) int_set {
     }
     kill
 }
+
 func dfa_build_use_def_chains(cfg* control_flow_graph, reaching_def_info[] reaching_defs) use_def_chain[] {
     chains := use_def_chain[]()
     for block_idx := 0; block_idx < cfg.blocks.len(); block_idx = block_idx + 1 {
@@ -205,6 +222,7 @@ func dfa_build_use_def_chains(cfg* control_flow_graph, reaching_def_info[] reach
     }
     chains
 }
+
 func dfa_analyze(cfg* control_flow_graph) dataflow_analysis {
     analysis := dataflow_analysis {
         cfg: cfg
@@ -212,4 +230,3 @@ func dfa_analyze(cfg* control_flow_graph) dataflow_analysis {
     analysis.liveness = dfa_analyze_liveness(&cfg)
     analysis.reaching_defs = dfa_analyze_reaching_defs(&cfg)
     analysis.use_def_chains = dfa_build_use_def_chains(&cfg, analysis.reaching_defs)
-    analysis

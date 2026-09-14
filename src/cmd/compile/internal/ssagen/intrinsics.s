@@ -4,6 +4,7 @@ struct intrinsic_rule {
     string op
     bool side_effect
 }
+
 func lookup_intrinsic(string fn_name) intrinsic_rule {
     if fn_name == "runtime.memmove" {
         return intrinsic_rule { name: fn_name, op: "MemMove", side_effect true }
@@ -19,8 +20,9 @@ func lookup_intrinsic(string fn_name) intrinsic_rule {
     }
     intrinsic_rule { name: fn_name, op: "", side_effect false }
 }
+
 func has_intrinsic(string fn_name) bool {
     lookup_intrinsic(fn_name).op != ""
 }
+
 func intrinsic_op(string fn_name) string {
-    lookup_intrinsic(fn_name).op

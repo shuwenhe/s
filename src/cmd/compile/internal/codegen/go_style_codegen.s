@@ -10,6 +10,7 @@ struct go_style_code_generator {
     int current_func_id
     int current_section_offset64
 }
+
 func make_go_style_code_generator(
     machine_code_gen* mcg,
     symbol_table* symtab,
@@ -20,6 +21,7 @@ func make_go_style_code_generator(
         mcg: mcg, symtab symtab, reloc_ctx reloc_ctx, config cfg, current_func_id 0, current_section_offset 0 as int64,
     }
 }
+
 func (go_style_code_generator* gen) gen_func_body(string func_name, int64 stack_size) string {
     prologue := encode_push_reg(5)
     prologue = append_bytes(prologue, encode_mov_reg_to_reg(5, 4))
@@ -30,6 +32,7 @@ func (go_style_code_generator* gen) gen_func_body(string func_name, int64 stack_
     gen.mcg.stream.emit_raw_bytes(prologue)
     ""
 }
+
 func (go_style_code_generator* gen) gen_func_epilogue(int64 stack_size) string {
     epilogue := int8[]()()
     if stack_size > 0 {
@@ -41,6 +44,7 @@ func (go_style_code_generator* gen) gen_func_epilogue(int64 stack_size) string {
     gen.mcg.stream.emit_raw_bytes(epilogue)
     ""
 }
+
 func (go_style_code_generator* gen) gen_call(string func_name, int arg_count) string {
     call_code := encode_call_direct(func_name)
     gen.mcg.stream.emit_raw_bytes(call_code)
@@ -54,16 +58,19 @@ func (go_style_code_generator* gen) gen_call(string func_name, int arg_count) st
     gen.current_section_offset = gen.current_section_offset + (len(call_code) as int64)
     ""
 }
+
 func (go_style_code_generator* gen) gen_owned_alloc(int64 size, int64 type_id) string {
     gen_load_const(size, 7)
     gen_load_const(type_id, 6)
     gen.gen_call("runtime_owned_alloc", 2)
     ""
 }
+
 func (go_style_code_generator* gen) gen_box_alloc(int64 size, int64 type_id) string {
     gen.gen_owned_alloc(size, type_id)
     ""
 }
+
 func (go_style_code_generator* gen) gen_owned_free(int handle_reg) string {
     if handle_reg != 7 {
         move := encode_mov_reg_to_reg(7, handle_reg)
@@ -73,17 +80,20 @@ func (go_style_code_generator* gen) gen_owned_free(int handle_reg) string {
     gen.gen_call("runtime_owned_free", 1)
     ""
 }
+
 func (go_style_code_generator* gen) gen_drop_owned_slot(int64 stack_offset) string {
     gen_load(0, stack_offset, 8)
     gen.gen_owned_free(0)
     ""
 }
+
 func (go_style_code_generator* gen) gen_load_const(int64 value, int dest_reg) string {
     code := encode_mov_imm_to_reg(value, dest_reg)
     gen.mcg.stream.emit_raw_bytes(code)
     gen.current_section_offset = gen.current_section_offset + (len(code) as int64)
     ""
 }
+
 func (go_style_code_generator* gen) gen_binop(string op, int left_reg, int right_reg, int result_reg) string {
     code := int8[]()()
     if op == "add" {
@@ -103,6 +113,7 @@ func (go_style_code_generator* gen) gen_binop(string op, int left_reg, int right
     gen.current_section_offset = gen.current_section_offset + (len(code) as int64)
     ""
 }
+
 func (go_style_code_generator* gen) gen_store(int source_reg, int64 stack_offset, int size) string {
     code := int8[]()()
     if size == 8 {
@@ -114,6 +125,7 @@ func (go_style_code_generator* gen) gen_store(int source_reg, int64 stack_offset
     gen.current_section_offset = gen.current_section_offset + (len(code) as int64)
     ""
 }
+
 func (go_style_code_generator* gen) gen_load(int dest_reg, int64 stack_offset, int size) string {
     code := int8[]()()
     if size == 8 {
@@ -125,6 +137,7 @@ func (go_style_code_generator* gen) gen_load(int dest_reg, int64 stack_offset, i
     gen.current_section_offset = gen.current_section_offset + (len(code) as int64)
     ""
 }
+
 func (go_style_code_generator* gen) gen_main_function() string {
     func_name := "main"
     gen.gen_func_body(func_name, 0 as int64)
@@ -136,15 +149,18 @@ func (go_style_code_generator* gen) gen_main_function() string {
     gen.gen_func_epilogue(0 as int64)
     ""
 }
+
 func (go_style_code_generator* gen) gen_program_entry() int8[] {
     entry_code := int8[]()()
     entry_code = encode_jmp_direct("main")
     entry_code
 }
+
 func (go_style_code_generator* gen) compile_complete_program() string {
     gen.gen_main_function()
     ""
 }
+
 func encode_sub_imm_from_reg(int reg, int64 imm) int8[] {
     result := int8[]()()
     if imm == 0 {
@@ -166,6 +182,7 @@ func encode_sub_imm_from_reg(int reg, int64 imm) int8[] {
     }
     result
 }
+
 func encode_add_imm_to_reg(int reg, int64 imm) int8[] {
     result := int8[]()()
     if imm == 0 {
@@ -184,6 +201,7 @@ func encode_add_imm_to_reg(int reg, int64 imm) int8[] {
     }
     result
 }
+
 func encode_imul_reg_reg(int dest_reg, int src_reg) int8[] {
     result := int8[]()()
     result = append(result, 0x48 as int8)
@@ -192,6 +210,7 @@ func encode_imul_reg_reg(int dest_reg, int src_reg) int8[] {
     result = append(result, ((0xc0 + ((dest_reg & 7) << 3) + (src_reg & 7)) as int8))
     result
 }
+
 func encode_cmp_reg_reg(int left_reg, int right_reg) int8[] {
     result := int8[]()()
     result = append(result, 0x48 as int8)
@@ -199,6 +218,7 @@ func encode_cmp_reg_reg(int left_reg, int right_reg) int8[] {
     result = append(result, ((0xc0 + ((right_reg & 7) << 3) + (left_reg & 7)) as int8))
     result
 }
+
 func encode_store_reg_to_memory(int src_reg, int base_reg, int64 offset) int8[] {
     result := int8[]()()
     result = append(result, 0x48 as int8)
@@ -217,6 +237,7 @@ func encode_store_reg_to_memory(int src_reg, int base_reg, int64 offset) int8[] 
     }
     result
 }
+
 func encode_store_reg_to_memory_32(int src_reg, int base_reg, int64 offset) int8[] {
     result := int8[]()()
     result = append(result, 0x89 as int8)
@@ -234,6 +255,7 @@ func encode_store_reg_to_memory_32(int src_reg, int base_reg, int64 offset) int8
     }
     result
 }
+
 func encode_load_memory_to_reg(int dest_reg, int base_reg, int64 offset) int8[] {
     result := int8[]()()
     result = append(result, 0x48 as int8)
@@ -252,6 +274,7 @@ func encode_load_memory_to_reg(int dest_reg, int base_reg, int64 offset) int8[] 
     }
     result
 }
+
 func encode_load_memory_to_reg_32(int dest_reg, int base_reg, int64 offset) int8[] {
     result := int8[]()()
     result = append(result, 0x8b as int8)
@@ -269,6 +292,7 @@ func encode_load_memory_to_reg_32(int dest_reg, int base_reg, int64 offset) int8
     }
     result
 }
+
 func encode_call_direct(string func_name) int8[] {
     result := int8[]()()
     result = append(result, 0xe8 as int8)
@@ -278,6 +302,7 @@ func encode_call_direct(string func_name) int8[] {
     result = append(result, 0x00 as int8)
     result
 }
+
 func encode_jmp_direct(string target) int8[] {
     result := int8[]()()
     result = append(result, 0xe9 as int8)
@@ -285,4 +310,3 @@ func encode_jmp_direct(string target) int8[] {
     result = append(result, 0x00 as int8)
     result = append(result, 0x00 as int8)
     result = append(result, 0x00 as int8)
-    result

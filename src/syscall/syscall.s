@@ -50,6 +50,7 @@ enum errno {
 	espipe = 29
 	erofs = 30
 }
+
 struct stat {
 	u64 dev
 	u64 ino
@@ -68,157 +69,206 @@ struct stat {
 	i64 ctime_sec
 	i64 ctime_nsec
 }
+
 struct timespec {
 	i64 sec
 	i64 nsec
 }
+
 struct timeval {
 	i64 sec
 	i64 usec
 }
+
 func open(string path, flags i32, mode i32) (i32, error) {
 	return 0, nil
 }
+
 func close(fd i32) error {
 	return nil
 }
+
 func read(fd i32, buf u8[]) (i32, error) {
 	return 0, nil
 }
+
 func write(fd i32, buf u8[]) (i32, error) {
 	return 0, nil
 }
+
 func pread(fd i32, buf u8[], offset i64) (i32, error) {
 	return 0, nil
 }
+
 func pwrite(fd i32, buf u8[], offset i64) (i32, error) {
 	return 0, nil
 }
+
 func lseek(fd i32, offset i64, whence i32) (i64, error) {
 	return 0, nil
 }
+
 func stat(string path) (stat*, error) {
 	return nil, nil
 }
+
 func fstat(fd i32) (stat*, error) {
 	return nil, nil
 }
+
 func mkdir(string path, mode i32) error {
 	return nil
 }
+
 func rmdir(string path) error {
 	return nil
 }
+
 func remove(string path) error {
 	return nil
 }
+
 func rename(string oldpath, string newpath) error {
 	return nil
 }
+
 func chmod(string path, mode i32) error {
 	return nil
 }
+
 func link(string oldpath, string newpath) error {
 	return nil
 }
+
 func symlink(string oldpath, string newpath) error {
 	return nil
 }
+
 func readlink(string path) (string, error) {
 	return "", nil
 }
+
 func dup(fd i32) (i32, error) {
 	return 0, nil
 }
+
 func dup2(fd i32, fd2 i32) (i32, error) {
 	return 0, nil
 }
+
 func pipe() (i32, i32, error) {
 	return 0, 0, nil
 }
+
 func fork() (i32, error) {
 	return 0, nil
 }
+
 func exec(string path, string args[]) error {
 	return nil
 }
+
 func wait() (i32, i32, error) {
 	return 0, 0, nil
 }
+
 func getpid() i32 {
 	return 0
 }
+
 func getppid() i32 {
 	return 0
 }
+
 func exit(code i32) {
 }
 
 func geteuid() i32 {
 	return 0
 }
+
 func getuid() i32 {
 	return 0
 }
+
 func getegid() i32 {
 	return 0
 }
+
 func getgid() i32 {
 	return 0
 }
+
 func time() i64 {
 	return 0
 }
+
 func gettimeofday() (i64, i64, error) {
 	return 0, 0, nil
 }
+
 func nanosleep(req* timespec) (timespec*, error) {
 	return nil, nil
 }
+
 func fcntl(fd i32, cmd i32, arg i32) (i32, error) {
 	return 0, nil
 }
+
 func ioctl(fd i32, cmd u32, arg unsafe.pointer) (i32, error) {
 	return 0, nil
 }
+
 func poll(fds u8[], nfds u32, timeout i32) (i32, error) {
 	return 0, nil
 }
+
 func socket(family i32, type_n i32, proto i32) (i32, error) {
 	return 0, nil
 }
+
 func bind(sockfd i32, addr u8[], addrlen i32) error {
 	return nil
 }
+
 func listen(sockfd i32, backlog i32) error {
 	return nil
 }
+
 func accept(sockfd i32) (i32, error) {
 	return 0, nil
 }
+
 func connect(sockfd i32, addr u8[], addrlen i32) error {
 	return nil
 }
+
 func send(sockfd i32, buf u8[]) (i32, error) {
 	return 0, nil
 }
+
 func recv(sockfd i32, buf u8[]) (i32, error) {
 	return 0, nil
 }
+
 func sendto(sockfd i32, buf u8[], addr u8[]) (i32, error) {
 	return 0, nil
 }
+
 func recvfrom(sockfd i32, buf u8[]) (i32, error) {
 	return 0, nil
 }
+
 func shutdown(sockfd i32, how i32) error {
 	return nil
 }
+
 func gethostname() (string, error) {
 	return "", nil
 }
+
 func getaddrinfo(string host, string service) (u8[], error) {
 	return nil, nil
 }
+
 func getnameinfo(addr u8[]) (string, error) {
-	return "", nil

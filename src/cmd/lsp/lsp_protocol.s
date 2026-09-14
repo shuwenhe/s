@@ -3,14 +3,17 @@ struct position {
     int line
     int character
 }
+
 struct range {
     start position
     end position
 }
+
 struct location {
     string uri
     r range
 }
+
 struct diagnostic {
     r range
     string message
@@ -19,37 +22,45 @@ struct diagnostic {
     option[string] source
     option[diagnostic_related_information[]] related_information
 }
+
 struct diagnostic_related_information {
     location location
     string message
 }
+
 struct version_change_event {
     string uri
     string text
 }
+
 struct text_document {
     string uri
     string language_id
     int version
     string text
 }
+
 struct text_document_item {
     string uri
     string language_id
     int version
     string text
 }
+
 struct text_document_position_params {
     string uri
     pos position
 }
+
 struct text_document_identifier {
     string uri
 }
+
 struct versioned_text_document_identifier {
     string uri
     int version
 }
+
 enum completion_item_kind {
     text,
     method,
@@ -77,6 +88,7 @@ enum completion_item_kind {
     operator,
     type_parameter,
 }
+
 struct completion_item {
     string label
     option[completion_item_kind] kind
@@ -88,14 +100,17 @@ struct completion_item {
     option[bool] deprecated
     option[int] score
 }
+
 struct completion_list {
     bool is_incomplete
     completion_item[] items
 }
+
 struct hover {
     string contents
     option[range] r
 }
+
 enum symbol_kind {
     file_k,
     module_k,
@@ -124,6 +139,7 @@ enum symbol_kind {
     operator_k,
     type_parameter_k,
 }
+
 struct document_symbol {
     string name
     kind symbol_kind
@@ -132,23 +148,28 @@ struct document_symbol {
     option[document_symbol[]] children
     option[bool] deprecated
 }
+
 struct reference_params {
     string uri
     pos position
     option[bool] include_declaration
 }
+
 struct rename_params {
     string uri
     pos position
     string new_name
 }
+
 struct text_edit {
     r range
     string new_text
 }
+
 struct workspace_edit {
     map[string, text_edit[]] changes
 }
+
 struct server_capabilities {
     bool text_document_sync
     bool completion_provider
@@ -159,24 +180,29 @@ struct server_capabilities {
     bool rename_provider
     bool workspace_symbol_provider
 }
+
 struct initialize_result {
     capabilities server_capabilities
     option[string] server_info
 }
+
 struct text_document_content_change_event {
     option[range] range_val
     string text
 }
+
 struct did_change_text_document_params {
     text_document versioned_text_document_identifier
     text_document_content_change_event[] content_changes
 }
+
 struct did_open_text_document_params {
     text_document text_document_item
 }
+
 struct did_close_text_document_params {
     text_document text_document_identifier
 }
+
 struct did_save_text_document_params {
     text_document text_document_identifier
-    option[string] text

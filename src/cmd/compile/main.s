@@ -17,6 +17,6 @@ func main() int {
     }
     return build_main(args)
 }
+
 func report_compile_error(string message) int {
     std.io.eprintln("compile: " + message)
-    0

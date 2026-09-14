@@ -9,6 +9,7 @@ struct live_range {
     int spilled
     int priority
 }
+
 struct interference_graph {
     int node_count
     int[][] adjacency
@@ -16,6 +17,7 @@ struct interference_graph {
     int[] degree
     int[] spill_cost
 }
+
 struct register_allocator {
     int num_regs
     int[] available_regs
@@ -26,6 +28,7 @@ struct register_allocator {
     int[] spill_list
     int spill_count
 }
+
 func register_allocator_new(int num_regs) register_allocator* {
     allocator := register_allocator {
         num_regs: num_regs,
@@ -44,6 +47,7 @@ func register_allocator_new(int num_regs) register_allocator* {
     allocator.reg_count = num_regs
     &allocator
 }
+
 func (allocator* register_allocator) compute_live_ranges(value[] all_values, int num_values) int {
     i := 0
     for i < num_values {
@@ -64,6 +68,7 @@ func (allocator* register_allocator) compute_live_ranges(value[] all_values, int
     }
     allocator.range_count
 }
+
 func (allocator* register_allocator) build_interference_graph() int {
     graph := interference_graph {
         node_count: allocator.range_count,
@@ -104,6 +109,7 @@ func (allocator* register_allocator) build_interference_graph() int {
     allocator.graph = graph
     0
 }
+
 func ranges_interfere(live_range* range_a, live_range* range_b) int {
     if range_a.end_block < range_b.start_block {
         return 0
@@ -119,6 +125,7 @@ func ranges_interfere(live_range* range_a, live_range* range_b) int {
     }
     1
 }
+
 func (allocator* register_allocator) color_graph() int {
     graph := allocator.graph
     int[graph.node_count] worklist
@@ -178,6 +185,7 @@ func (allocator* register_allocator) color_graph() int {
     }
     allocator.spill_count
 }
+
 func (allocator* register_allocator) assign_registers() int {
     i := 0
     for i < allocator.range_count {
@@ -192,6 +200,7 @@ func (allocator* register_allocator) assign_registers() int {
     }
     allocator.spill_count
 }
+
 func (allocator* register_allocator) perform_move_coalescing() int {
     i := 0
     for i < allocator.range_count {
@@ -208,6 +217,7 @@ func (allocator* register_allocator) perform_move_coalescing() int {
     }
     0
 }
+
 func can_coalesce(live_range* range_a, live_range* range_b) int {
     if range_a.start_block != range_b.start_block {
         return 0
@@ -217,6 +227,7 @@ func can_coalesce(live_range* range_a, live_range* range_b) int {
     }
     return 1
 }
+
 func (allocator* register_allocator) generate_spill_code(int num_stack_slots) int {
     i := 0
     for i < allocator.spill_count {
@@ -227,6 +238,7 @@ func (allocator* register_allocator) generate_spill_code(int num_stack_slots) in
     }
     allocator.spill_count
 }
+
 func (allocator* register_allocator) optimize_allocation_order() int {
     i := 0
     for i < allocator.range_count {
@@ -236,6 +248,7 @@ func (allocator* register_allocator) optimize_allocation_order() int {
     sort_by_priority(allocator.ranges, allocator.range_count)
     0
 }
+
 func compute_priority(live_range* range_obj) int {
     priority := 0
     length := range_obj.end_instr - range_obj.start_instr
@@ -244,6 +257,7 @@ func compute_priority(live_range* range_obj) int {
     }
     priority
 }
+
 func sort_by_priority(live_range[] ranges, int count) int {
     i := 0
     for i < count {
@@ -260,6 +274,7 @@ func sort_by_priority(live_range[] ranges, int count) int {
     }
     0
 }
+
 func (allocator* register_allocator) verify_coloring() int {
     i := 0
     for i < allocator.range_count {
@@ -296,4 +311,3 @@ const reg_r10 = 8
 const reg_r11 = 9
 const reg_r12 = 10
 const reg_r13 = 11
-const reg_r14 = 12

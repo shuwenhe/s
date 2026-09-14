@@ -4,12 +4,14 @@ struct live_range {
     i32 end_instr
     string reason
 }
+
 struct liveness_info {
     i32 value_id
     bool[][] live_in
     bool[][] live_out
     live_range[] ranges
 }
+
 struct liveness_analyzer {
     liveness_info[] infos
     i32 num_values
@@ -17,6 +19,7 @@ struct liveness_analyzer {
     i32[][] gen_set
     i32[][] kill_set
 }
+
 func new_liveness_analyzer(num_values i32, num_blocks i32) liveness_analyzer* {
     la := new(liveness_analyzer)
     la.infos = make(liveness_info[], num_values)
@@ -40,6 +43,7 @@ func new_liveness_analyzer(num_values i32, num_blocks i32) liveness_analyzer* {
     }
     la
 }
+
 func (la* liveness_analyzer) mark_use(block_id i32, value_id i32) {
     if block_id >= 0 && block_id < la.num_blocks && value_id >= 0 && value_id < la.num_values {
         found := false
@@ -55,6 +59,7 @@ func (la* liveness_analyzer) mark_use(block_id i32, value_id i32) {
         }
     }
 }
+
 func (la* liveness_analyzer) mark_def(block_id i32, value_id i32) {
     if block_id >= 0 && block_id < la.num_blocks && value_id >= 0 && value_id < la.num_values {
         found := false
@@ -70,6 +75,7 @@ func (la* liveness_analyzer) mark_def(block_id i32, value_id i32) {
         }
     }
 }
+
 func (la* liveness_analyzer) compute_liveness(succs i32[][]) {
     changed := true
     for changed {
@@ -133,6 +139,7 @@ func (la* liveness_analyzer) compute_liveness(succs i32[][]) {
         }
     }
 }
+
 func (la* liveness_analyzer) is_live_at_point(value_id i32, block_id i32, instr_index i32) bool {
     if value_id >= 0 && value_id < la.num_values && block_id >= 0 && block_id < la.num_blocks {
         is_used := false
@@ -150,6 +157,7 @@ func (la* liveness_analyzer) is_live_at_point(value_id i32, block_id i32, instr_
     }
     false
 }
+
 func (la* liveness_analyzer) get_live_values(block_id i32) i32[] {
     i32[] result
     if block_id >= 0 && block_id < la.num_blocks {
@@ -168,6 +176,7 @@ func (la* liveness_analyzer) get_live_values(block_id i32) i32[] {
     }
     result
 }
+
 func (la* liveness_analyzer) get_live_in(block_id i32) i32[] {
     i32[] result
     if block_id >= 0 && block_id < la.num_blocks {
@@ -179,6 +188,7 @@ func (la* liveness_analyzer) get_live_in(block_id i32) i32[] {
     }
     result
 }
+
 func (la* liveness_analyzer) get_live_out(block_id i32) i32[] {
     i32[] result
     if block_id >= 0 && block_id < la.num_blocks {
@@ -190,6 +200,7 @@ func (la* liveness_analyzer) get_live_out(block_id i32) i32[] {
     }
     result
 }
+
 func (la* liveness_analyzer) to_string() string {
     s := "Liveness Analysis:\n"
     for b := i32(0); b < la.num_blocks; b += 1 {
@@ -206,4 +217,3 @@ func (la* liveness_analyzer) to_string() string {
         }
         s += "\n"
     }
-    s

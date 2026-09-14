@@ -14,6 +14,7 @@ func ownership_system_verify() int {
     if verify_no_gc_compiler_state() != 0 { return 5 }
     0
 }
+
 func verify_ownership_and_move() int {
     ok_events := vec[string]()
     ok_events = append(ok_events, "declare:copy_value:copy")
@@ -31,6 +32,7 @@ func verify_ownership_and_move() int {
     if bad.ok { return 2 }
     0
 }
+
 func verify_borrow_rules() int {
     shared_ok := vec[string]()
     shared_ok = append(shared_ok, "declare:value")
@@ -53,6 +55,7 @@ func verify_borrow_rules() int {
     if bad_move.ok { return 3 }
     0
 }
+
 func verify_drop_flags_and_destructors() int {
     registry := compile.internal.drop_system.dtor_registry_new()
     file_impl := compile.internal.drop_system.dtor_impl_new("File", true, "__s_drop_File")
@@ -78,6 +81,7 @@ func verify_drop_flags_and_destructors() int {
     if len(cleanup) != 2 || cleanup[0] != "moved" || cleanup[1] != "right" { return 5 }
     0
 }
+
 func verify_lifetime_rules() int {
     ctx := compile.internal.lifetime_check.lifetime_context_new()
     ctx = compile.internal.lifetime_check.lifetime_enter_scope(ctx, "outer")
@@ -100,6 +104,7 @@ func verify_lifetime_rules() int {
     if compile.internal.lifetime_check.dropck_check_fields("Wrapper", fields).ok { return 4 }
     0
 }
+
 func verify_no_gc_compiler_state() int {
     state := compile.internal.no_gc_memory.no_gc_state_new()
     state = compile.internal.no_gc_memory.no_gc_register_drop(state, "File", "__s_drop_File")
@@ -108,4 +113,3 @@ func verify_no_gc_compiler_state() int {
     result := compile.internal.no_gc_memory.no_gc_finish(state)
     if !result.ok { return 1 }
     if len(result.cleanup) != 1 || result.cleanup[0] != "target" { return 2 }
-    0

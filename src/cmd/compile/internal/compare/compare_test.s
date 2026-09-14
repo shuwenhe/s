@@ -7,6 +7,7 @@ func make_field(string name, int offset, int size, bool regular_memory, string t
         name: name, offset offset, size size, alignment 1, padded false, regular_memory regular_memory, can_panic type_kind == "interface", type_kind type_kind, num_elem 0, elem_cost 1, elem_can_panic false,
     }
 }
+
 func run_compare_tests() int {
     fields := compare_field[]()
     fields = append(fields, make_field("a", 0, 4, true, "int32"))
@@ -38,4 +39,3 @@ func run_compare_tests() int {
     if md.name != "memequal" || !md.need_size {
         return 1
     }
-    0

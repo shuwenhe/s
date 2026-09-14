@@ -6,17 +6,21 @@ struct relocation_context {
     int offset
     int addend
 }
+
 struct relocation_result {
     int success
     int resolved_address
     string error_message
 }
+
 func relocation_apply_64(int symbol_value, int offset, int addend) int {
     symbol_value + addend
 }
+
 func relocation_apply_pc32(int symbol_value, int offset, int addend) int {
     (symbol_value + addend) - offset
 }
+
 func relocation_resolve(relocation_context* ctx, int symbol_value, int load_base) relocation_result {
     result := relocation_result {
         success: 1,
@@ -41,6 +45,7 @@ func relocation_resolve(relocation_context* ctx, int symbol_value, int load_base
     }
     result
 }
+
 func relocation_get_type_name(int reloc_type) string {
     switch reloc_type {
         case r_x86_64_none:
@@ -55,6 +60,7 @@ func relocation_get_type_name(int reloc_type) string {
             return "unknown"
     }
 }
+
 func relocation_is_absolute(int reloc_type) int {
     if reloc_type == r_x86_64_64 {
         return 1
@@ -64,18 +70,21 @@ func relocation_is_absolute(int reloc_type) int {
     }
     0
 }
+
 func relocation_is_relative(int reloc_type) int {
     if reloc_type == r_x86_64_pc32 {
         return 1
     }
     0
 }
+
 func relocation_is_plt(int reloc_type) int {
     if reloc_type == r_x86_64_plt32 {
         return 1
     }
     0
 }
+
 func relocation_create_entry(int offset, int symbol_index, int reloc_type) elf64_relocation {
     info := (symbol_index << 32) | reloc_type
     reloc := elf64_relocation {
@@ -85,9 +94,9 @@ func relocation_create_entry(int offset, int symbol_index, int reloc_type) elf64
     }
     reloc
 }
+
 func relocation_verify(elf64_relocation reloc, int num_symbols) int {
     sym_idx := (reloc.info >> 32) & 0xffffffff
     if sym_idx >= num_symbols {
         return 0
     }
-    1

@@ -6,15 +6,18 @@ struct document_manager {
     map[string, s::source_file] ast_cache
     map[string, parse_error[]] error_cache
 }
+
 struct parse_error {
     string message
     pos position
 }
+
 func new_document_manager() document_manager {
     document_manager {
         documents: map[string, text_document](), ast_cache map[string, s::source_file](), error_cache map[string, parse_error[]](),
     }
 }
+
 func (dm document_manager) open_document(item text_document_item) {
     doc := text_document {
         uri: item.uri, language_id item.language_id, version item.version, text item.text,
@@ -22,6 +25,7 @@ func (dm document_manager) open_document(item text_document_item) {
     dm.documents.insert(item.uri, doc)
     dm.parse_document(item.uri)
 }
+
 func (dm document_manager) update_document(string uri, string text, int version) {
     switch dm.documents.get(uri) {
         option::some(doc) : {
@@ -35,20 +39,25 @@ func (dm document_manager) update_document(string uri, string text, int version)
         }
     }
 }
+
 func (dm document_manager) close_document(string uri) {
     dm.documents.remove(uri)
     dm.ast_cache.remove(uri)
     dm.error_cache.remove(uri)
 }
+
 func (dm document_manager) get_document(string uri) option[text_document] {
     dm.documents.get(uri)
 }
+
 func (dm document_manager) get_ast(string uri) option[s::source_file] {
     dm.ast_cache.get(uri)
 }
+
 func (dm document_manager) get_errors(string uri) option[parse_error[]] {
     dm.error_cache.get(uri)
 }
+
 func (dm document_manager) parse_document(string uri) {
     switch dm.documents.get(uri) {
         option::some(doc) : {
@@ -82,6 +91,7 @@ func (dm document_manager) parse_document(string uri) {
         }
     }
 }
+
 func (dm document_manager) get_token_at_position(string uri, pos position) option[string] {
     switch dm.documents.get(uri) {
         option::some(doc) : {
@@ -112,16 +122,19 @@ func (dm document_manager) get_token_at_position(string uri, pos position) optio
         option::none() : option::none()
     }
 }
+
 func is_identifier_char(c str) bool {
     (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") ||
     (c >= "0" && c <= "9") || c == "_"
 }
+
 func (dm document_manager) get_document_symbols(string uri) option[document_symbol[]] {
     switch dm.get_ast(uri) {
         option::some(ast) : option::some(extract_symbols_from_ast(ast)),
         option::none() : option::none()
     }
 }
+
 func extract_symbols_from_ast(ast s::source_file) document_symbol[] {
     symbols := document_symbol[]()
     i := 0
@@ -168,4 +181,3 @@ func extract_symbols_from_ast(ast s::source_file) document_symbol[] {
         }
         i = i + 1
     }
-    symbols

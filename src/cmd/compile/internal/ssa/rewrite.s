@@ -11,6 +11,7 @@ func run_arch_rewrite(ssa_func f, string arch) int {
     }
     0
 }
+
 func run_rewrite(ssa_func f, string arch) int {
     total := 0
     rounds := 0
@@ -24,4 +25,3 @@ func run_rewrite(ssa_func f, string arch) int {
         }
         rounds = rounds + 1
     }
-    total

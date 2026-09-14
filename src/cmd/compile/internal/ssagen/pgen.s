@@ -7,6 +7,7 @@ struct pgen_plan {
     int stack_size
     bool has_split_check
 }
+
 func build_pgen_plan(string fn_name, int stack_size, bool need_split_check, bool emit_arginfo, bool emit_wrapinfo) pgen_plan {
     lines := string[]()
     lines = append(lines, "TEXT " + fn_name)
@@ -22,4 +23,3 @@ func build_pgen_plan(string fn_name, int stack_size, bool need_split_check, bool
     }
     pgen_plan {
         lines: lines, stack_size stack_size, has_split_check need_split_check,
-    }

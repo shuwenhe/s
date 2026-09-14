@@ -8,12 +8,14 @@ enum gc_color {
 	gc_gray = 1
 	gc_black = 2
 }
+
 enum gc_phase {
 	gc_off = 0
 	gc_mark = 1
 	gc_mark_termination = 2
 	gc_sweep = 3
 }
+
 struct gc_object {
 	u64 addr
 	u64 size
@@ -21,6 +23,7 @@ struct gc_object {
 	u32 mark_bit
 	u64 alloc_tick
 }
+
 struct gc_heap {
 	gc_object[] objects
 	u64[] gray_queue
@@ -32,6 +35,7 @@ struct gc_heap {
 	u64[] barrier_buf
 	sync.mutex lock
 }
+
 struct gc_stats {
 	u64 alloc_bytes
 	u64 freed_bytes
@@ -55,6 +59,7 @@ func gc_init() error {
 	gc_enabled = true
 	nil
 }
+
 func gc_malloc(size u64) (unsafe.pointer, error) {
 	global_heap.lock.lock()
 	defer global_heap.lock.unlock()
@@ -75,6 +80,7 @@ func gc_malloc(size u64) (unsafe.pointer, error) {
 	global_heap.total_alloc += size
 	unsafe.pointer(addr), nil
 }
+
 func gc_run() {
 	if !gc_enabled {
 		return
@@ -87,6 +93,7 @@ func gc_run() {
 	gc_stats_data.pause_ns = append(gc_stats_data.pause_ns, end-start)
 	gc_stats_data.num_collections += 1
 }
+
 func gc_mark_phase() {
 	global_heap.gc_phase = gc_mark
 	for _, root := range gc_roots {
@@ -98,6 +105,7 @@ func gc_mark_phase() {
 		gc_process_object(obj_addr)
 	}
 }
+
 func gc_mark_object(addr u64) {
 	if addr == 0 {
 		return
@@ -112,6 +120,7 @@ func gc_mark_object(addr u64) {
 		}
 	}
 }
+
 func gc_process_object(addr u64) {
 	for i := i32(0); i < i32(len(global_heap.objects)); i += 1 {
 		if global_heap.objects[i].addr == addr {
@@ -124,6 +133,7 @@ func gc_process_object(addr u64) {
 		}
 	}
 }
+
 func scan_object_for_pointers(obj unsafe.pointer, size u64) {
 	ptr_array := unsafe.cast_to_slice(obj, size/8)
 	for i := i32(0); i < i32(len(ptr_array)); i += 1 {
@@ -133,6 +143,7 @@ func scan_object_for_pointers(obj unsafe.pointer, size u64) {
 		}
 	}
 }
+
 func gc_mark_termination_phase() {
 	global_heap.gc_phase = gc_mark_termination
 	for len(global_heap.gray_queue) > 0 {
@@ -141,6 +152,7 @@ func gc_mark_termination_phase() {
 		gc_process_object(obj_addr)
 	}
 }
+
 func gc_sweep_phase() {
 	global_heap.gc_phase = gc_sweep
 	live_count := 0
@@ -160,9 +172,11 @@ func gc_sweep_phase() {
 	gc_stats_data.live_objects = i32(live_count)
 	gc_stats_data.heap_size = global_heap.total_alloc - global_heap.total_freed
 }
+
 func gc_add_root(addr u64) {
 	gc_roots = append(gc_roots, addr)
 }
+
 func gc_write_barrier(src u64, dst u64) {
 	if !gc_enabled || global_heap.gc_phase != gc_mark {
 		return
@@ -175,26 +189,32 @@ func gc_write_barrier(src u64, dst u64) {
 		global_heap.barrier_buf = make(u64[], 0)
 	}
 }
+
 func gc_get_stats() gc_stats* {
 	return &gc_stats_data
 }
+
 func gc_enable() {
 	gc_enabled = true
 }
+
 func gc_disable() {
 	gc_enabled = false
 }
+
 func gc_is_pointer(addr u64) bool {
 	return addr > 1024*1024*1024
 }
+
 func allocate_memory(size u64) u64 {
 	return 0
 }
+
 func free_memory(addr u64, size u64) {
 }
 
 func get_ticks() u64 {
 	return 0
 }
+
 func get_time_ns() i64 {
-	return 0

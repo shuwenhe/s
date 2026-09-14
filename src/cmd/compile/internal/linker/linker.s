@@ -6,6 +6,7 @@ struct object_file {
     elf64_symbol[] symbols
     elf64_relocation[] relocations
 }
+
 struct linker_context {
     string output_file
     object_file[] object_files
@@ -16,11 +17,13 @@ struct linker_context {
     int load_address
     int current_offset
 }
+
 struct link_result {
     int success
     string error_message
     string output_filename
 }
+
 func linker_context_new(string output_file) linker_context {
     ctx := linker_context {
         output_file: output_file,
@@ -34,6 +37,7 @@ func linker_context_new(string output_file) linker_context {
     }
     ctx
 }
+
 func linker_add_object_file(linker_context* ctx, string filename) int {
     obj := object_file {
         filename: filename,
@@ -45,6 +49,7 @@ func linker_add_object_file(linker_context* ctx, string filename) int {
     ctx.object_files = append(ctx.object_files, obj)
     0
 }
+
 func linker_resolve_symbols(linker_context* ctx) int {
     symbol_map := make_string_int_map()
     for i := 0; i < ctx.object_files.len(); i = i + 1 {
@@ -63,6 +68,7 @@ func linker_resolve_symbols(linker_context* ctx) int {
     }
     0
 }
+
 func linker_apply_relocations(linker_context* ctx) int {
     for i := 0; i < ctx.object_files.len(); i = i + 1 {
         obj := ctx.object_files[i]
@@ -85,6 +91,7 @@ func linker_apply_relocations(linker_context* ctx) int {
     }
     0
 }
+
 func linker_allocate_sections(linker_context* ctx) int {
     text_offset := 0x401000
     data_offset := 0x402000
@@ -100,6 +107,7 @@ func linker_allocate_sections(linker_context* ctx) int {
     }
     0
 }
+
 func linker_write_executable(linker_context* ctx) link_result {
     result := link_result {
         success: 1,
@@ -123,9 +131,11 @@ func linker_write_executable(linker_context* ctx) link_result {
     }
     result
 }
+
 func make_string_int_map() string[] {
     string[]()
 }
+
 func linker_load_object_file(string filename) object_file {
     obj := object_file {
         filename: filename,
@@ -136,9 +146,9 @@ func linker_load_object_file(string filename) object_file {
     }
     obj
 }
+
 func linker_link_files(string output_file, string[] input_files) link_result {
     ctx := linker_context_new(output_file)
     for i := 0; i < input_files.len(); i = i + 1 {
         linker_add_object_file(&ctx, input_files[i])
     }
-    linker_write_executable(&ctx)

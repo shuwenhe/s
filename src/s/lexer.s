@@ -9,17 +9,20 @@ struct lex_error {
     int line
     int column
 }
+
 struct lexer {
     string source
     int index
     int line
     int column
 }
+
 func new_lexer(string source) lexer {
     lexer {
         source: source, index 0, line 1, column 1,
     }
 }
+
 func (lexer* self) tokenize() (token[], lex_error) {
     token[] tokens = token[]()
     for !self.is_eof() {
@@ -70,6 +73,7 @@ func (lexer* self) tokenize() (token[], lex_error) {
         })
         tokens
     }
+
 func (lexer* self) skip_ignored() ((), lex_error) {
     for !self.is_eof() {
         string ch = self.peek()
@@ -98,6 +102,7 @@ func (lexer* self) skip_ignored() ((), lex_error) {
     (), lex_error empty
     return empty
 }
+
 func (lexer* self) read_identifier() (string, lex_error) {
     string out = ""
     for !self.is_eof() {
@@ -109,6 +114,7 @@ func (lexer* self) read_identifier() (string, lex_error) {
     }
     out
 }
+
 func (lexer* self) read_number() (string, lex_error) {
     string out = ""
     for !self.is_eof() {
@@ -120,6 +126,7 @@ func (lexer* self) read_number() (string, lex_error) {
     }
     out
 }
+
 func (lexer* self) read_string() (string, lex_error) {
     string out = self.advance()
     for !self.is_eof() {
@@ -138,6 +145,7 @@ func (lexer* self) read_string() (string, lex_error) {
     }
     self.error("unterminated string literal")
 }
+
 func (lexer* self) read_symbol() (string, lex_error) {
     string[] multi = string[] {
         "->",
@@ -174,18 +182,21 @@ func (lexer* self) read_symbol() (string, lex_error) {
     }
     self.error("unexpected character")
 }
+
 func (lexer* self) match_text(string text) bool {
     if self.index + std.prelude.len(text) > std.prelude.len(self.source) {
         return false
     }
     std.prelude.slice(self.source, self.index, self.index + std.prelude.len(text)) == text
 }
+
 func (lexer* self) peek() (string, lex_error) {
     if self.is_eof() {
         return self.error("unexpected eof")
     }
     std.prelude.char_at(self.source, self.index)
 }
+
 func (lexer* self) advance() (string, lex_error) {
     if self.is_eof() {
         return self.error("unexpected eof")
@@ -200,14 +211,17 @@ func (lexer* self) advance() (string, lex_error) {
     }
     ch
 }
+
 func (lexer* self) is_eof() bool {
     self.index >= std.prelude.len(self.source)
 }
+
 func (lexer* self) error(string message) lex_error {
     lex_error {
         message: message, line self.line, column self.column,
     }
 }
+
 func is_whitespace(string ch) bool {
     switch ch {
         " " : true,
@@ -217,6 +231,7 @@ func is_whitespace(string ch) bool {
         _ : false,
     }
 }
+
 func is_digit(string ch) bool {
     switch ch {
         "0" : true,
@@ -232,18 +247,22 @@ func is_digit(string ch) bool {
         _ : false,
     }
 }
+
 func is_number_continue(string ch) bool {
     is_digit(ch) || ch == "_"
 }
+
 func is_ident_start(string ch) bool {
     if ch == "_" {
         return true
     }
     is_ascii_alpha(ch)
 }
+
 func is_ident_continue(string ch) bool {
     is_ident_start(ch) || is_digit(ch)
 }
+
 func is_ascii_alpha(string ch) bool {
     switch ch {
         "a" : true,
@@ -301,6 +320,7 @@ func is_ascii_alpha(string ch) bool {
         _ : false,
     }
 }
+
 func is_single_symbol(string ch) bool {
     switch ch {
         "(" : true,
@@ -329,5 +349,5 @@ func is_single_symbol(string ch) bool {
         _ : false,
     }
 }
+
 func is_keyword(string value) bool {
-    return value == "func"

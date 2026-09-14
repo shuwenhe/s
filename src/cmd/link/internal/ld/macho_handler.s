@@ -16,6 +16,7 @@ enum macho_machine {
 	CPU_TYPE_POWERPC = 18
 	CPU_TYPE_POWERPC64 = 0x01000012
 }
+
 enum macho_file_type {
 	MH_OBJECT = 0x1
 	MH_EXECUTE = 0x2
@@ -29,6 +30,7 @@ enum macho_file_type {
 	MH_DSYM = 0xa
 	MH_KEXT_BUNDLE = 0xb
 }
+
 struct macho_header {
 	u32 magic
 	i32 cpu_type
@@ -39,11 +41,13 @@ struct macho_header {
 	u32 flags
 	u32 reserved
 }
+
 struct macho_load_command {
 	u32 cmd
 	u32 size
 	u8[] data
 }
+
 struct macho_segment {
 	[16]u8 name
 	u64 vm_addr
@@ -56,6 +60,7 @@ struct macho_segment {
 	u32 flags
 	macho_section[] sections
 }
+
 struct macho_section {
 	[16]u8 name
 	[16]u8 seg_name
@@ -70,6 +75,7 @@ struct macho_section {
 	u32 reserved2
 	u32 reserved3
 }
+
 struct macho_object {
 	macho_header header
 	macho_load_command[] load_commands
@@ -77,6 +83,7 @@ struct macho_object {
 	macho_symbol[] symbol_table
 	u8[] strings
 }
+
 struct macho_symbol {
 	string name
 	u64 value
@@ -84,6 +91,7 @@ struct macho_symbol {
 	u16 desc
 	u8 type
 }
+
 func new_macho_object(cpuType macho_machine, filetype macho_file_type) macho_object {
 	obj := macho_object{
 		Header: macho_header{
@@ -103,6 +111,7 @@ func new_macho_object(cpuType macho_machine, filetype macho_file_type) macho_obj
 	}
 	obj
 }
+
 func (mo* macho_object) add_segment(string name, vmAddr i64, vmSize i64) {
 	seg := macho_segment{
 		VmAddr: u64(vmAddr),
@@ -121,9 +130,11 @@ func (mo* macho_object) add_segment(string name, vmAddr i64, vmSize i64) {
 	}
 	mo.Segments = append(mo.Segments, seg)
 }
+
 func (mo* macho_object) add_symbol(sym macho_symbol) {
 	mo.SymbolTable = append(mo.SymbolTable, sym)
 }
+
 func read_macho_object(string filename) (macho_object, error) {
 	file, err := os.open(filename)
 	if err != nil {
@@ -148,6 +159,7 @@ func read_macho_object(string filename) (macho_object, error) {
 	obj.Header.Flags = binary.LittleEndian.uint32(hdr_buf[24:28])
 	obj, nil
 }
+
 func (macho_object* mo) write_to_file(string filename) error {
 	file, err := os.create(filename)
 	if err != nil {
@@ -180,4 +192,3 @@ func (macho_object* mo) write_to_file(string filename) error {
 			err
 		}
 	}
-	nil

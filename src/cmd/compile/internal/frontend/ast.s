@@ -52,6 +52,7 @@ struct ast_node {
     string name
     string type_name
 }
+
 func ast_new(int node_type, int line, int column) ast_node* {
     node := ast_node {
         node_type: node_type,
@@ -65,21 +66,27 @@ func ast_new(int node_type, int line, int column) ast_node* {
     }
     &node
 }
+
 func ast_add_child(ast_node* node, ast_node* child) {
     node.children.push(child)
 }
+
 func ast_set_name(ast_node* node, string name) {
     node.name = name
 }
+
 func ast_set_type_name(ast_node* node, string type_name) {
     node.type_name = type_name
 }
+
 func ast_set_string_data(ast_node* node, string data) {
     node.string_data = data
 }
+
 func ast_set_int_data(ast_node* node, int data) {
     node.int_data = data
 }
+
 func ast_node_type_name(int ast_type) string {
     switch ast_type {
     case ast_program : "program"
@@ -128,6 +135,7 @@ func ast_node_type_name(int ast_type) string {
     default : "unknown"
     }
 }
+
 func ast_dump(ast_node* node, int indent) {
     i := 0
     for i < indent {
@@ -148,4 +156,3 @@ func ast_dump(ast_node* node, int indent) {
     for i < node.children.len() {
         ast_dump(node.children[i], indent + 1)
         i = i + 1
-    }

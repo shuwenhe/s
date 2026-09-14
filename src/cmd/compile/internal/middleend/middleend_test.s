@@ -10,6 +10,7 @@ func test_ir_basic_types() {
     }
     print("✓ test_ir_basic_types passed\n")
 }
+
 func test_ir_instructions() {
     left := ir_value_const("10", "int")
     right := ir_value_const("20", "int")
@@ -24,6 +25,7 @@ func test_ir_instructions() {
     }
     print("✓ test_ir_instructions passed\n")
 }
+
 func test_ir_basicblock() {
     block := ir_basicblock_new(0, "entry")
     if block.block_id != 0 || block.label != "entry" {
@@ -39,6 +41,7 @@ func test_ir_basicblock() {
     }
     print("✓ test_ir_basicblock passed\n")
 }
+
 func test_ir_function() {
     func := ir_function_new("test_func", "int")
     if func.name != "test_func" || func.return_type != "int" {
@@ -56,6 +59,7 @@ func test_ir_function() {
     }
     print("✓ test_ir_function passed\n")
 }
+
 func test_int_set_operations() {
     set1 := int_set_new()
     set1.add(1)
@@ -85,6 +89,7 @@ func test_int_set_operations() {
     }
     print("✓ test_int_set_operations passed\n")
 }
+
 func test_cfg_construction() {
     func := ir_function_new("test", "int")
     block0 := ir_basicblock_new(0, "entry")
@@ -105,6 +110,7 @@ func test_cfg_construction() {
     }
     print("✓ test_cfg_construction passed\n")
 }
+
 func test_cfg_dominators() {
     func := ir_function_new("test", "int")
     block0 := ir_basicblock_new(0, "entry")
@@ -129,6 +135,7 @@ func test_cfg_dominators() {
     }
     print("✓ test_cfg_dominators passed\n")
 }
+
 func test_optimization_constant_folding() {
     left := ir_value_const("10", "int")
     right := ir_value_const("20", "int")
@@ -142,6 +149,7 @@ func test_optimization_constant_folding() {
     }
     print("✓ test_optimization_constant_folding passed\n")
 }
+
 func run_stage2_tests() {
     print("Running Stage 2 (Middle End) Tests...\n")
     print("=====================================\n")
@@ -158,4 +166,3 @@ func run_stage2_tests() {
     print("\n[Optimization Tests]\n")
     test_optimization_constant_folding()
     print("\n=====================================\n")
-    print("✓ All Stage 2 tests passed!\n")

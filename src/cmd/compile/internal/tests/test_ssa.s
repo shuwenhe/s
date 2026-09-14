@@ -592,6 +592,7 @@ func run_ssa_suite() int {
     }
     0
 }
+
 func contains(string text, string needle) bool {
     if needle == "" {
         return true
@@ -606,4 +607,3 @@ func contains(string text, string needle) bool {
         }
         i = i + 1
     }
-    false

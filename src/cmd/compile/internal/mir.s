@@ -15,25 +15,30 @@ enum mir_projection_kind {
     deref   // pointer dereference (value: unused)
     index   // array/slice indexing (value: index expression)
 }
+
 struct mir_operand {
     string kind
     string value
     string type_name
 }
+
 struct mir_place_projection {
     mir_projection_kind kind   // Canonical: enum, not string
     string value               // Field name or index expression (string for now)
 }
+
 struct mir_place {
     string root
     mir_place_projection[] projections
 }
+
 struct mir_flow_state {
     string[] moved
     string[] dropped
     string[] shared_borrows
     string[] mutable_borrows
 }
+
 struct mir_local_slot {
     int id
     string name
@@ -42,38 +47,47 @@ struct mir_local_slot {
     string type_name
     bool copyable
 }
+
 struct mir_assign_stmt {
     int target
     string op
     string[] args
 }
+
 struct mir_eval_stmt {
     string op
     string[] args
 }
+
 struct mir_move_stmt {
     int target
     source mir_operand
 }
+
 struct mir_copy_stmt {
     int target
     source mir_operand
 }
+
 struct mir_drop_stmt {
     int slot
 }
+
 struct mir_borrow_stmt {
     string ref_name
     mir_place place
     bool mutable
 }
+
 struct mir_ref_use_stmt {
     string ref_name
 }
+
 struct mir_ref_assign_stmt {
     string target_ref
     string source_ref
 }
+
 enum mir_statement {
     assign(mir_assign_stmt),
     eval(mir_eval_stmt),
@@ -84,21 +98,25 @@ enum mir_statement {
     ref_use(mir_ref_use_stmt),
     ref_assign(mir_ref_assign_stmt),
 }
+
 struct mir_control_edge {
     string label
     int target
     mir_operand[] args
 }
+
 struct mir_terminator {
     string kind
     mir_control_edge[] edges
 }
+
 struct mir_basic_block {
     int id
     string label
     mir_statement[] statements
     terminator mir_terminator
 }
+
 struct mir_graph {
     string function_name
     mir_basic_block[] blocks
@@ -110,10 +128,12 @@ struct mir_graph {
     int borrow_errors
     string borrow_message
 }
+
 struct mir_point {
     int block_id
     int statement_index
 }
+
 struct mir_point_map {
     mir_point[] points
 }
@@ -146,6 +166,7 @@ struct mir_ownership_facts {
     // Contract: loan_borrowed_places[i] corresponds to loan id i (see LOAN IDENTITY INVARIANT above)
     mir_place[] loan_borrowed_places
 }
+
 func build_mir_point_map(mir_graph graph) mir_point_map {
     points := mir_point[]()
     emitted_blocks := 0
@@ -173,6 +194,7 @@ func build_mir_point_map(mir_graph graph) mir_point_map {
     }
     mir_point_map { points: points }
 }
+
 func mir_point_id(mir_point_map point_map, int block_id, int statement_index) int {
     i := 0
     for i < len(point_map.points) {
@@ -183,6 +205,7 @@ func mir_point_id(mir_point_map point_map, int block_id, int statement_index) in
     }
     -1
 }
+
 func mir_point_count(mir_graph graph) int {
     count := 0
     i := 0
@@ -192,6 +215,7 @@ func mir_point_count(mir_graph graph) int {
     }
     count
 }
+
 func mir_point_text(mir_graph graph, mir_point point) string {
     label := "unknown"
     i := 0
@@ -206,6 +230,7 @@ func mir_point_text(mir_graph graph, mir_point point) string {
     }
     "BB" + std.prelude.to_string(point.block_id) + "(" + label + "):stmt" + std.prelude.to_string(point.statement_index)
 }
+
 func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_ownership_facts {
     facts := mir_empty_ownership_facts(len(points.points))
     block_index := 0
@@ -248,9 +273,11 @@ func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_o
     }
     facts
 }
+
 func build_ownership_analysis_input_from_mir(mir_graph graph, mir_point_map points) ownership_analysis_input {
     build_ownership_facts_from_mir(graph, points).input
 }
+
 func mir_empty_ownership_facts(int point_count) mir_ownership_facts {
     mir_ownership_facts {
         input: ownership_analysis_input {
@@ -282,6 +309,7 @@ func mir_empty_ownership_facts(int point_count) mir_ownership_facts {
 //   } else {
 //       // process place
 //   }
+
 func mir_loan_borrowed_place(mir_ownership_facts* facts, int loan_id) (mir_place, bool) {
     // Precondition: facts must not be nil
     if facts == nil {
@@ -314,6 +342,7 @@ func mir_place_from_fields(string root, string[] fields) mir_place {
         projections: projections,
     }
 }
+
 func mir_ownership_ref_id(mir_ownership_facts* facts, string name) int {
     i := 0
     for i < len(facts.ref_names) {
@@ -326,6 +355,7 @@ func mir_ownership_ref_id(mir_ownership_facts* facts, string name) int {
     facts.input.region_points = append(facts.input.region_points, 0)
     len(facts.ref_names) - 1
 }
+
 func mir_add_point_value(int bits, int point) int {
     if point < 0 { return bits }
     bit := 1
@@ -337,10 +367,12 @@ func mir_add_point_value(int bits, int point) int {
     if mir_point_bit_set(bits, bit) { return bits }
     bits + bit
 }
+
 func mir_point_bit_set(int bits, int bit) bool {
     value := bits / bit
     return value % 2 == 1
 }
+
 func mir_points_string(int bits) string {
     out := "{"
     first := true
@@ -357,6 +389,7 @@ func mir_points_string(int bits) string {
     }
     out + "}"
 }
+
 func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
     points := build_mir_point_map(graph)
     facts := build_ownership_facts_from_mir(graph, points)
@@ -392,6 +425,7 @@ func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
     }
     out
 }
+
 func dump_ownership_shadow_from_mir(mir_graph graph) string {
     points := build_mir_point_map(graph)
     facts := build_ownership_facts_from_mir(graph, points)
@@ -406,6 +440,7 @@ func dump_ownership_shadow_from_mir(mir_graph graph) string {
     out = out + "SharedSolverShadow(iterations=" + std.prelude.to_string(analysis.iterations) + ", converged=true)\n"
     out
 }
+
 func lower_function_graph(function_decl function) mir_graph {
     if function.body.is_some() {
         return lower_block_graph(function.sig.name, function.sig.params, function.body.unwrap())
@@ -426,6 +461,7 @@ func lower_function_graph(function_decl function) mir_graph {
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
 }
+
 func lower_block_graph(string function_name, param[] params, block_expr block) mir_graph {
     locals := mir_collect_locals(params, block)
     statements := mir_statement[]()
@@ -479,6 +515,7 @@ func lower_block_graph(string function_name, param[] params, block_expr block) m
         borrow_ok: borrow_result.ok, borrow_errors: borrow_result.errors, borrow_message: borrow_result.message,
     }
 }
+
 func mir_find_local(mir_local_slot[] locals, string name) int {
     i := 0
     for i < len(locals) {
@@ -487,9 +524,11 @@ func mir_find_local(mir_local_slot[] locals, string name) int {
     }
     -1
 }
+
 func mir_type_is_copy(string type_name) bool {
     compile.internal.typesys.is_copy_type(type_name)
 }
+
 func mir_append_scope_drops(mir_local_slot[] locals, mir_statement[] statements, string[] events) () {
     i := len(locals) - 1
     for i >= 0 {
@@ -499,6 +538,7 @@ func mir_append_scope_drops(mir_local_slot[] locals, mir_statement[] statements,
         i = i - 1
     }
 }
+
 func mir_local_moved_at_exit(string name, string[] events) bool {
     state := mir_flow_state { moved: string[](), dropped: string[](), shared_borrows: string[](), mutable_borrows: string[]() }
     i := 0
@@ -508,6 +548,7 @@ func mir_local_moved_at_exit(string name, string[] events) bool {
     }
     mir_contains(state.moved, name)
 }
+
 func mir_contains(string[] values, string value) bool {
     i := 0
     for i < len(values) {
@@ -516,6 +557,7 @@ func mir_contains(string[] values, string value) bool {
     }
     false
 }
+
 func mir_remove(string[] values, string value) string[] {
     out := string[]()
     i := 0
@@ -525,11 +567,13 @@ func mir_remove(string[] values, string value) string[] {
     }
     out
 }
+
 func mir_add_unique(string[] values, string value) string[] {
     if value == "" || mir_contains(values, value) { return values }
     values = append(values, value)
     values
 }
+
 func mir_apply_flow_event(mir_flow_state state, string event) mir_flow_state {
     if starts_with(event, "move:") {
         name := slice(event, 5, len(event))
@@ -550,6 +594,7 @@ func mir_apply_flow_event(mir_flow_state state, string event) mir_flow_state {
     }
     state
 }
+
 func mir_place_from_expr(expr value) mir_place {
     switch value {
         expr.name(name_expr) : {
@@ -568,6 +613,7 @@ func mir_place_from_expr(expr value) mir_place {
         _ : { return mir_place { root: "", projections: mir_place_projection[]() } }
     }
 }
+
 func mir_place_key(mir_place place) string {
     if place.root == "" { return "" }
     out := place.root
@@ -652,6 +698,7 @@ func mir_place_is_prefix(prefix mir_place, place mir_place) bool {
     // Prefix is a valid prefix of place
     return true
 }
+
 func mir_extend_events(string[] base, string[] extra) string[] {
     i := 0
     for i < len(extra) {
@@ -660,6 +707,7 @@ func mir_extend_events(string[] base, string[] extra) string[] {
     }
     base
 }
+
 func mir_collect_locals(param[] params, block_expr block) mir_local_slot[] {
     locals := mir_local_slot[]()
     i := 0
@@ -683,6 +731,7 @@ func mir_collect_locals(param[] params, block_expr block) mir_local_slot[] {
     }
     locals
 }
+
 func mir_expr_type_name(expr value) string {
     switch value {
         expr.int(_) : return "int"
@@ -703,6 +752,7 @@ func mir_expr_type_name(expr value) string {
     }
     "unknown"
 }
+
 func mir_expr_events(expr value, mir_local_slot[] locals, bool consume) string[] {
     events := string[]()
     switch value {
@@ -758,9 +808,11 @@ func mir_expr_events(expr value, mir_local_slot[] locals, bool consume) string[]
     }
     events
 }
+
 func mir_place_name(expr value) string {
     mir_place_key(mir_place_from_expr(value))
 }
+
 func mir_append_ownership_semantics_from_stmt(mir_statement[] statements, stmt value) () {
     switch value {
         stmt.let(let_stmt) : {
@@ -786,6 +838,7 @@ func mir_append_ownership_semantics_from_stmt(mir_statement[] statements, stmt v
         _ : { }
     }
 }
+
 func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr value, string result_name) () {
     switch value {
         expr.borrow(borrow_expr) : {
@@ -841,6 +894,7 @@ func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr v
         _ : { }
     }
 }
+
 func mir_stmt_events(stmt value, mir_local_slot[] locals) string[] {
     events := string[]()
     switch value {
@@ -867,6 +921,7 @@ func mir_stmt_events(stmt value, mir_local_slot[] locals) string[] {
     }
     events
 }
+
 func dump_graph(mir_graph graph) string {
     out := "mir " + graph.function_name
         + " blocks=" + std.prelude.to_string(len(graph.blocks))
@@ -883,13 +938,16 @@ func dump_graph(mir_graph graph) string {
     }
     out
 }
+
 func block_count(mir_graph graph) int {
     len(graph.blocks)
 }
+
 func lower_function(function_decl function) string {
     graph := lower_function_graph(function)
     return analyze_borrow_function(function.sig.name, string[](), dump_graph(graph))
 }
+
 func lower_block(block_expr block) string {
     text := "block"
     index := 0
@@ -905,21 +963,25 @@ func lower_block(block_expr block) string {
         return text + " | " + indent(1) + "yield unit"
     }
 }
+
 func trace_branch(string condition_text, string then_text, string else_text) string {
     if else_text == "" {
         return "branch " + condition_text + " | " + indent(1) + "then " + then_text + " | " + indent(1) + "else <missing>"
     }
     return "branch " + condition_text + " | " + indent(1) + "then " + then_text + " | " + indent(1) + "else " + else_text
 }
+
 func trace_loop(string loop_kind, string condition_text, string body_text) string {
     return loop_kind + " " + condition_text + " | " + indent(1) + "body " + body_text
 }
+
 func trace_switch(string subject_text, string arms_text) string {
     if arms_text == "" {
         return "switch " + subject_text
     }
     return "switch " + subject_text + " | " + arms_text
 }
+
 func indent(int depth) string {
     out := ""
     i := 0
@@ -929,6 +991,7 @@ func indent(int depth) string {
     }
     return out
 }
+
 func join_text(string[] values, string sep) string {
     out := ""
     i := 0
@@ -939,4 +1002,3 @@ func join_text(string[] values, string sep) string {
         out = out + values[i]
         i = i + 1
     }
-    return out

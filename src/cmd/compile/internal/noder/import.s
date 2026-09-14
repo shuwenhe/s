@@ -28,6 +28,7 @@ func parse_imports(source_unit unit) import_record[] {
     }
     out
 }
+
 func import_map(import_record[] imports) string[] {
     out := string[]()
     i := 0
@@ -38,4 +39,3 @@ func import_map(import_record[] imports) string[] {
         }
         i = i + 1
     }
-    out

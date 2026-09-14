@@ -8,16 +8,19 @@ struct switch_optimization {
     int min_val
     int max_val
 }
+
 struct defer_info {
     string func_name
     string[] args
     int cleanup_block
 }
+
 struct range_loop_info {
     string var_name
     string collection
     int is_map
 }
+
 func optimize_switch_statement(ir_instruction switch_instr) switch_optimization {
     case_count := switch_instr.operands.len()
     if case_count < 4 {
@@ -31,6 +34,7 @@ func optimize_switch_statement(ir_instruction switch_instr) switch_optimization 
         opt
     }
 }
+
 func generate_linear_switch(ir_instruction switch_instr) ir_instruction[] {
     result := ir_instruction[]()
     for i := 0; i < switch_instr.operands.len(); i = i + 1 {
@@ -42,14 +46,17 @@ func generate_linear_switch(ir_instruction switch_instr) ir_instruction[] {
     }
     result
 }
+
 func generate_binary_search_switch(ir_instruction switch_instr) ir_instruction[] {
     result := ir_instruction[]()
     result
 }
+
 func generate_jump_table_switch(ir_instruction switch_instr) ir_instruction[] {
     result := ir_instruction[]()
     result
 }
+
 func desugar_range_loop(ast_node loop_node) ast_node[] {
     result := ast_node[]()
     if loop_node.node_type == ast_for_range {
@@ -60,12 +67,14 @@ func desugar_range_loop(ast_node loop_node) ast_node[] {
     }
     result
 }
+
 func desugar_defer(ast_node defer_node) ir_instruction[] {
     result := ir_instruction[]()
     instr := ir_instruction { instr_type: ir_instr_defer }
     result = append(result, instr)
     result
 }
+
 func implement_defer_stack(ir_function func) {
     defer_count := 0
     for b_idx := 0; b_idx < func.blocks.len(); b_idx = b_idx + 1 {
@@ -78,25 +87,28 @@ func implement_defer_stack(ir_function func) {
         }
     }
 }
+
 func optimize_defer_open_coded(ir_function func) int {
     if func.defer_count > 8 {
         return 0
     }
     return 1
 }
+
 func desugar_type_assert(ir_instruction type_assert) ir_instruction[] {
     result := ir_instruction[]()
     check := ir_instruction { instr_type: ir_instr_typecmp }
     result = append(result, check)
     result
 }
+
 func desugar_interface_call(ir_instruction call_instr) ir_instruction[] {
     result := ir_instruction[]()
     result
 }
+
 func lower_operations(ir_module module) {
     for f_idx := 0; f_idx < module.functions.len(); f_idx = f_idx + 1 {
-
         func := module.functions[f_idx]
         for b_idx := 0; b_idx < func.blocks.len(); b_idx = b_idx + 1 {
             block := func.blocks[b_idx]
@@ -129,14 +141,17 @@ func lower_operations(ir_module module) {
         }
     }
 }
+
 func desugar_map_operations(ir_instruction map_instr) ir_instruction[] {
     result := ir_instruction[]()
     result
 }
+
 func desugar_chan_operations(ir_instruction chan_instr) ir_instruction[] {
     result := ir_instruction[]()
     result
 }
+
 func desugar_closure_capture(ir_function func) {
 }
 
@@ -149,4 +164,3 @@ func order_statements(ir_function func) {
             ordered = append(ordered, instr)
         }
         block.instructions = ordered
-    }
