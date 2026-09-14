@@ -59,20 +59,20 @@ func parser_new(token* tokens, int token_count) parser* {
     return p
 }
 
-func parser_current_token(p* parser) token* {
+func parser_current_token(parser* p) token* {
     if p.pos >= p.token_count {
         return &p.tokens[p.token_count - 1]
     }
     return &p.tokens[p.pos]
 }
 
-func parser_advance(p* parser) {
+func parser_advance(parser* p) {
     if p.pos < p.token_count - 1 {
         p.pos = p.pos + 1
     }
 }
 
-func parser_match(p* parser, int token_type) int {
+func parser_match(parser* p, int token_type) int {
     if parser_current_token(p).kind == token_type {
         parser_advance(p)
         return 1
@@ -80,7 +80,7 @@ func parser_match(p* parser, int token_type) int {
     return 0
 }
 
-func parser_skip_newlines(p* parser) {
+func parser_skip_newlines(parser* p) {
     for {
         if parser_current_token(p).kind != 86 {
             break
@@ -89,7 +89,7 @@ func parser_skip_newlines(p* parser) {
     }
 }
 
-func parser_parse_program(p* parser) ast_node* {
+func parser_parse_program(parser* p) ast_node* {
     parser_skip_newlines(p)
     prog := alloc(ast_node)
     prog.kind = ast_program
@@ -121,7 +121,7 @@ func parser_parse_program(p* parser) ast_node* {
     return prog
 }
 
-func parser_parse_func_decl(p* parser) ast_node* {
+func parser_parse_func_decl(parser* p) ast_node* {
     func_decl := alloc(ast_node)
     func_decl.kind = ast_func_decl
     func_decl.line = parser_current_token(p).line
@@ -149,7 +149,7 @@ func parser_parse_func_decl(p* parser) ast_node* {
     return func_decl
 }
 
-func parser_parse_struct_decl(p* parser) ast_node* {
+func parser_parse_struct_decl(parser* p) ast_node* {
     struct_decl := alloc(ast_node)
     struct_decl.kind = ast_struct_decl
     if !parser_match(p, 20) {
@@ -178,7 +178,7 @@ func parser_parse_struct_decl(p* parser) ast_node* {
     return struct_decl
 }
 
-func parser_parse_var_decl(p* parser) ast_node* {
+func parser_parse_var_decl(parser* p) ast_node* {
     var_decl := alloc(ast_node)
     var_decl.kind = ast_var_decl
     if !parser_match(p, 21) {
@@ -197,7 +197,7 @@ func parser_parse_var_decl(p* parser) ast_node* {
     return var_decl
 }
 
-func parser_parse_const_decl(p* parser) ast_node* {
+func parser_parse_const_decl(parser* p) ast_node* {
     const_decl := alloc(ast_node)
     const_decl.kind = ast_const_decl
     if !parser_match(p, 22) {
@@ -217,7 +217,7 @@ func parser_parse_const_decl(p* parser) ast_node* {
     return const_decl
 }
 
-func parser_parse_receiver(p* parser) {
+func parser_parse_receiver(parser* p) {
     if parser_current_token(p).kind == 24 {
         parser_advance(p)
         if parser_current_token(p).kind == 85 {
@@ -230,7 +230,7 @@ func parser_parse_receiver(p* parser) {
     }
 }
 
-func parser_parse_params(p* parser) {
+func parser_parse_params(parser* p) {
     if parser_current_token(p).kind == 24 {
         parser_advance(p)
         for parser_current_token(p).kind != 25 {
@@ -250,7 +250,7 @@ func parser_parse_params(p* parser) {
     }
 }
 
-func parser_parse_type(p* parser) ast_node* {
+func parser_parse_type(parser* p) ast_node* {
     type_node := alloc(ast_node)
     current := parser_current_token(p)
     if current.kind == 52 {
@@ -278,7 +278,7 @@ func parser_parse_type(p* parser) ast_node* {
     return type_node
 }
 
-func parser_parse_block_stmt(p* parser) ast_node* {
+func parser_parse_block_stmt(parser* p) ast_node* {
     block := alloc(ast_node)
     block.kind = ast_block_stmt
     if parser_current_token(p).kind == 28 {
@@ -296,7 +296,7 @@ func parser_parse_block_stmt(p* parser) ast_node* {
     return block
 }
 
-func parser_parse_statement(p* parser) ast_node* {
+func parser_parse_statement(parser* p) ast_node* {
     current := parser_current_token(p)
     if current.kind == 11 {
         return parser_parse_return_stmt(p)
@@ -321,7 +321,7 @@ func parser_parse_statement(p* parser) ast_node* {
     }
 }
 
-func parser_parse_return_stmt(p* parser) ast_node* {
+func parser_parse_return_stmt(parser* p) ast_node* {
     ret := alloc(ast_node)
     ret.kind = ast_return_stmt
     if parser_current_token(p).kind == 11 {
@@ -334,7 +334,7 @@ func parser_parse_return_stmt(p* parser) ast_node* {
     return ret
 }
 
-func parser_parse_if_stmt(p* parser) ast_node* {
+func parser_parse_if_stmt(parser* p) ast_node* {
     if_stmt := alloc(ast_node)
     if_stmt.kind = ast_if_stmt
     if parser_current_token(p).kind == 12 {
@@ -349,7 +349,7 @@ func parser_parse_if_stmt(p* parser) ast_node* {
     return if_stmt
 }
 
-func parser_parse_for_stmt(p* parser) ast_node* {
+func parser_parse_for_stmt(parser* p) ast_node* {
     for_stmt := alloc(ast_node)
     for_stmt.kind = ast_for_stmt
     if parser_current_token(p).kind == 13 {
@@ -362,18 +362,18 @@ func parser_parse_for_stmt(p* parser) ast_node* {
     return for_stmt
 }
 
-func parser_parse_expr_stmt(p* parser) ast_node* {
+func parser_parse_expr_stmt(parser* p) ast_node* {
     expr_stmt := alloc(ast_node)
     expr_stmt.kind = ast_expr_stmt
     parser_parse_expression(p)
     return expr_stmt
 }
 
-func parser_parse_expression(p* parser) ast_node* {
+func parser_parse_expression(parser* p) ast_node* {
     return parser_parse_assignment(p)
 }
 
-func parser_parse_assignment(p* parser) ast_node* {
+func parser_parse_assignment(parser* p) ast_node* {
     expr := parser_parse_logical_or(p)
     if parser_current_token(p).kind == 60 {
         parser_advance(p)
@@ -382,7 +382,7 @@ func parser_parse_assignment(p* parser) ast_node* {
     return expr
 }
 
-func parser_parse_logical_or(p* parser) ast_node* {
+func parser_parse_logical_or(parser* p) ast_node* {
     left := parser_parse_logical_and(p)
     for {
         if parser_current_token(p).kind == 74 {
@@ -400,7 +400,7 @@ func parser_parse_logical_or(p* parser) ast_node* {
     return left
 }
 
-func parser_parse_logical_and(p* parser) ast_node* {
+func parser_parse_logical_and(parser* p) ast_node* {
     left := parser_parse_equality(p)
     for {
         if parser_current_token(p).kind == 73 {
@@ -418,7 +418,7 @@ func parser_parse_logical_and(p* parser) ast_node* {
     return left
 }
 
-func parser_parse_equality(p* parser) ast_node* {
+func parser_parse_equality(parser* p) ast_node* {
     left := parser_parse_comparison(p)
     for {
         current_type := parser_current_token(p).kind
@@ -437,7 +437,7 @@ func parser_parse_equality(p* parser) ast_node* {
     return left
 }
 
-func parser_parse_comparison(p* parser) ast_node* {
+func parser_parse_comparison(parser* p) ast_node* {
     left := parser_parse_additive(p)
     for {
         current_type := parser_current_token(p).kind
@@ -457,7 +457,7 @@ func parser_parse_comparison(p* parser) ast_node* {
     return left
 }
 
-func parser_parse_additive(p* parser) ast_node* {
+func parser_parse_additive(parser* p) ast_node* {
     left := parser_parse_multiplicative(p)
     for {
         if parser_current_token(p).kind == 53 || parser_current_token(p).kind == 54 {
@@ -475,7 +475,7 @@ func parser_parse_additive(p* parser) ast_node* {
     return left
 }
 
-func parser_parse_multiplicative(p* parser) ast_node* {
+func parser_parse_multiplicative(parser* p) ast_node* {
     left := parser_parse_unary(p)
     for {
         current_type := parser_current_token(p).kind
@@ -494,7 +494,7 @@ func parser_parse_multiplicative(p* parser) ast_node* {
     return left
 }
 
-func parser_parse_unary(p* parser) ast_node* {
+func parser_parse_unary(parser* p) ast_node* {
     current_type := parser_current_token(p).kind
     if current_type == 54 || current_type == 52 || current_type == 75 {
         parser_advance(p)
@@ -506,7 +506,7 @@ func parser_parse_unary(p* parser) ast_node* {
     return parser_parse_postfix(p)
 }
 
-func parser_parse_postfix(p* parser) ast_node* {
+func parser_parse_postfix(parser* p) ast_node* {
     left := parser_parse_primary(p)
     for {
         if parser_current_token(p).kind == 24 {
@@ -549,7 +549,7 @@ func parser_parse_postfix(p* parser) ast_node* {
     return left
 }
 
-func parser_parse_primary(p* parser) ast_node* {
+func parser_parse_primary(parser* p) ast_node* {
     current := parser_current_token(p)
     primary := alloc(ast_node)
     if current.kind == 85 {
