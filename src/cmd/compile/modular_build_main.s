@@ -1,17 +1,21 @@
 package cmd
-import (
-    "compile.internal.backend_elf64"
-    "compile.internal.semantic"
-    "compile.internal.syntax"
-    "compile.internal.tests.test_backend_abi"
-    "compile.internal.tests.test_golden"
-    "compile.internal.tests.test_mir"
-    "compile.internal.tests.test_pipeline_regression"
-    "compile.internal.tests.test_semantic"
-    "compile.internal.tests.test_ssa"
-    "compile.internal.tests.test_typesys"
-    "std.io"
-)
+use compile.internal.backend_elf64.build as build_elf64
+use compile.internal.semantic.check_text
+use compile.internal.syntax.parse_source
+use compile.internal.syntax.read_source
+use compile.internal.syntax.tokenize
+use compile.internal.tests.test_backend_abi.run_backend_abi_suite
+use compile.internal.tests.test_golden.run_golden_suite
+use compile.internal.tests.test_mir.run_mir_suite
+use compile.internal.tests.test_pipeline_regression.run_pipeline_regression_suite
+use compile.internal.tests.test_semantic.run_semantic_suite
+use compile.internal.tests.test_ssa.run_ssa_suite
+use compile.internal.tests.test_typesys.run_typesys_suite
+use internal.buildcfg.check as buildcfg_check
+use internal.buildcfg.goarch as buildcfg_goarch
+use compile.internal.arch.dispatch_init as arch_dispatch_init
+use std.env.args as host_args
+use std.io.eprintln
 
 func main() int {
     args := host_args()
@@ -25,13 +29,13 @@ func main() int {
     }
     buildcfg_err := buildcfg_check()
     if buildcfg_err != "" {
-        std.io.eprintln("compile: " + buildcfg_err)
+        eprintln("compile: " + buildcfg_err)
         return 2
     }
     goarch := buildcfg_goarch()
     arch_err := arch_dispatch_init(goarch)
     if arch_err != "" {
-        std.io.eprintln("compile: " + arch_err)
+        eprintln("compile: " + arch_err)
         return 2
     }
     command := args[1]
@@ -74,89 +78,85 @@ func main() int {
 }
 
 func print_usage() () {
-    std.io.eprintln("usage: s_modular check <input.s>")
-    std.io.eprintln("       s_modular tokens <input.s>")
-    std.io.eprintln("       s_modular ast <input.s>")
-    std.io.eprintln("       s_modular build <input.s> -o <output>")
-    std.io.eprintln("       s_modular test [fixtures_root]")
+    eprintln("usage: s_modular check <input.s>")
+    eprintln("       s_modular tokens <input.s>")
+    eprintln("       s_modular ast <input.s>")
+    eprintln("       s_modular build <input.s> -o <output>")
+    eprintln("       s_modular test [fixtures_root]")
 }
 
 func run_check(string path) int {
-    source_result := compile.internal.syntax.read_source(path)
+    source_result := read_source(path)
     if source_result.is_err() {
         return 1
     }
     source := source_result.unwrap()
-    parsed := compile.internal.syntax.parse_source(source)
+    parsed := parse_source(source)
     if parsed.is_err() {
         return 1
     }
-    if compile.internal.semantic.check_text(source) != 0 {
+    if check_text(source) != 0 {
         return 1
     }
-    std.io.eprintln("check ok: " + path)
+    eprintln("check ok: " + path)
     return 0
 }
 
 func run_tokens(string path) int {
-    source_result := compile.internal.syntax.read_source(path)
+    source_result := read_source(path)
     if source_result.is_err() {
         return 1
     }
-    tokens := compile.internal.syntax.tokenize(source_result.unwrap())
+    tokens := tokenize(source_result.unwrap())
     if tokens.is_err() {
         return 1
     }
-    std.io.eprintln("tokens ok: " + path)
+    eprintln("tokens ok: " + path)
     return 0
 }
 
 func run_ast(string path) int {
-    source_result := compile.internal.syntax.read_source(path)
+    source_result := read_source(path)
     if source_result.is_err() {
         return 1
     }
-    parsed := compile.internal.syntax.parse_source(source_result.unwrap())
+    parsed := parse_source(source_result.unwrap())
     if parsed.is_err() {
         return 1
     }
-    std.io.eprintln("ast ok: " + path)
+    eprintln("ast ok: " + path)
     return 0
 }
 
 func run_tests(string fixtures_root) int {
-    if compile.internal.tests.test_semantic.run_semantic_suite(fixtures_root) != 0 {
-        std.io.eprintln("semantic suite failed")
+    if run_semantic_suite(fixtures_root) != 0 {
+        eprintln("semantic suite failed")
         return 1
     }
-    if compile.internal.tests.test_golden.run_golden_suite(fixtures_root) != 0 {
-        std.io.eprintln("golden suite failed")
+    if run_golden_suite(fixtures_root) != 0 {
+        eprintln("golden suite failed")
         return 1
     }
-    if compile.internal.tests.test_backend_abi.run_backend_abi_suite() != 0 {
-        std.io.eprintln("backend abi suite failed")
+    if run_backend_abi_suite() != 0 {
+        eprintln("backend abi suite failed")
         return 1
     }
-    if compile.internal.tests.test_mir.run_mir_suite() != 0 {
-        std.io.eprintln("mir suite failed")
+    if run_mir_suite() != 0 {
+        eprintln("mir suite failed")
         return 1
     }
-    if compile.internal.tests.test_ssa.run_ssa_suite() != 0 {
-        std.io.eprintln("ssa suite failed")
+    if run_ssa_suite() != 0 {
+        eprintln("ssa suite failed")
         return 1
     }
-    if compile.internal.tests.test_pipeline_regression.run_pipeline_regression_suite() != 0 {
-        std.io.eprintln("pipeline regression suite failed")
+    if run_pipeline_regression_suite() != 0 {
+        eprintln("pipeline regression suite failed")
         return 1
     }
-    if compile.internal.tests.test_typesys.run_typesys_suite() != 0 {
-        std.io.eprintln("typesys suite failed")
+    if run_typesys_suite() != 0 {
+        eprintln("typesys suite failed")
         return 1
     }
-    std.io.eprintln("test: ok")
+    eprintln("test: ok")
     return 0
-}
-
-func build_elf64(string input_path, string output_path, string ssa_margin, bool nostdlib) int {
-    compile.internal.backend_elf64.build(input_path, output_path, ssa_margin, nostdlib)
 }
