@@ -10,6 +10,7 @@ import (
 )
 use compile.internal.ownership.analysis.ownership_analysis_input
 use compile.internal.ownership.analysis.analyze_ownership_liveness
+use std.prelude.to_string
 
 // C.3.1b.2-pre.A1: Canonical projection kind
 // Structured representation of place projection operations
@@ -447,7 +448,7 @@ func dump_ownership_shadow_from_mir(mir_graph graph) string {
     out = out + "RealMIRFacts(point_count=" + std.prelude.to_string(facts.input.point_count) + ", refs=" + std.prelude.to_string(len(facts.ref_names)) + ", loans=" + std.prelude.to_string(facts.input.loan_count) + ", outlives=" + std.prelude.to_string(facts.input.outlives_count) + ")\n"
     i := 0
     for i < facts.input.loan_count {
-        out = out + "LoanLivePoints(L" + std.prelude.to_string(i) + ") = " + mir_points_string(analysis.loan_live_points[i]) + "\n"
+        out = out + "LoanLivePoints(L" + to_string(i) + ") = " + mir_points_string(analysis.loan_live_points[i]) + "\n"
         i = i + 1
     }
     out = out + "SharedSolverShadow(iterations=" + std.prelude.to_string(analysis.iterations) + ", converged=true)\n"
