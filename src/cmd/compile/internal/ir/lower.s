@@ -4,7 +4,6 @@ import (
     "s"
     "std"
 )
-use compile.internal.mir.mir_append_ownership_semantics_from_stmt
 struct const_rewrite_entry {
     string name
     string expr_text
