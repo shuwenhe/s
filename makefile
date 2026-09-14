@@ -2203,9 +2203,13 @@ parser-carry-capability-check: modular-bootstrap stage0-freeze-check
 stage1-source-execution-check: modular-bootstrap stage0-freeze-check
 	@sh misc/scripts/stage1_source_execution_check.sh "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_DIR)"
 
+.PHONY: stage1-import-carry-check
+stage1-import-carry-check: stage1-source-execution-check
+	@S_SOURCE_ROOT=$(CURDIR) sh misc/scripts/stage1_import_carry_check.sh "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_DIR)"
+
 .PHONY: production-selfhost-check
 .PHONY: canonical-bootstrap-capability-check
-canonical-bootstrap-capability-check: stage1-source-execution-check
+canonical-bootstrap-capability-check: stage1-import-carry-check
 	@S_SOURCE_ROOT=$(CURDIR) sh misc/scripts/canonical_bootstrap_capability_check.sh \
 	  "$(MODULAR_STAGE1_BIN)" "$(STAGE0_CLOSURE)" "$(MODULAR_BOOTSTRAP_DIR)"
 
