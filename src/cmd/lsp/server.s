@@ -1,14 +1,16 @@
 package main
-use "std"
-use "../lsp"
+import (
+    "std"
+    "cmd.lsp"
+)
 struct lsp_server {
-    handler: lsp::lsp_handler
+    handler: cmd.lsp.lsp_handler
     initialized: bool
 }
 
 func main() {
     server := lsp_server {
-        handler: lsp::new_lsp_handler(), initialized false,
+        handler: cmd.lsp.new_lsp_handler(), initialized false,
     }
     server.run()
 }
@@ -16,17 +18,17 @@ func main() {
 func (server lsp_server) run() {
     buf := ""
     loop {
-        switch std::read_line_from_stdin() {
+        switch std.read_line_from_stdin() {
             line : {
                 if line == "" {
                     break
                 }
                 prefix := "Content-Length: "
-                if std::starts_with(line, prefix) {
+                if std.starts_with(line, prefix) {
                     len_str := line.substring(len(prefix), len(line))
-                    switch std::parse_int(len_str) {
+                    switch std.parse_int(len_str) {
                         content_len : {
-                            switch std::read_bytes_from_stdin(content_len) {
+                            switch std.read_bytes_from_stdin(content_len) {
                                 content : {
                                     server.handle_message(content)
                                 },
@@ -46,13 +48,13 @@ func (server lsp_server) run() {
 }
 
 func (server lsp_server) handle_message(string message) {
-    switch lsp::parse_jsonrpc_message(message) {
+    switch cmd.lsp.parse_jsonrpc_message(message) {
         req : {
             switch req.method {
                 "initialize" : server.handle_initialize(req),
                 "initialized" : {},
                 "shutdown" : server.handle_shutdown(req),
-                "exit" : std::exit(0),
+                "exit" : std.exit(0),
                 "textDocument/didOpen" : server.handle_did_open(req, message),
                 "textDocument/didChange" : server.handle_did_change(req, message),
                 "textDocument/didSave" : server.handle_did_save(req, message),
@@ -66,25 +68,25 @@ func (server lsp_server) handle_message(string message) {
                 "workspace/symbol" : server.handle_workspace_symbol(req, message),
                 _ : {
                     switch req.id {
-                        option::some(id) : {
+                        option.some(id) : {
                             server.send_error(id, -32601, "Method not found")
                         },
-                        option::none() : {}
+                        option.none() : {}
                     }
                 }
             }
         },
         err : {
-            std::println("LSP Parse Error: " + err)
+            std.println("LSP Parse Error: " + err)
         }
     }
 }
 
-func (server lsp_server) handle_initialize(req lsp::jsonrpc_request) {
+func (server lsp_server) handle_initialize(req cmd.lsp.jsonrpc_request) {
     server.initialized = true
     switch req.id {
-        option::some(id) : {
-            capabilities := lsp::server_capabilities {
+        option.some(id) : {
+            capabilities := cmd.lsp.server_capabilities {
                 text_document_sync: true, completion_provider true, hover_provider true, definition_provider true, references_provider true, document_symbol_provider true, rename_provider true, workspace_symbol_provider false,
             }
             result := "{\"capabilities\":{" +
@@ -99,181 +101,181 @@ func (server lsp_server) handle_initialize(req lsp::jsonrpc_request) {
                 "}}"
             server.send_response(id, result)
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
-func (server lsp_server) handle_shutdown(req lsp::jsonrpc_request) {
+func (server lsp_server) handle_shutdown(req cmd.lsp.jsonrpc_request) {
     switch req.id {
-        option::some(id) : server.send_response(id, "null"),
-        option::none() : {}
+        option.some(id) : server.send_response(id, "null"),
+        option.none() : {}
     }
 }
 
-func (server lsp_server) handle_did_open(req lsp::jsonrpc_request, string message) {
+func (server lsp_server) handle_did_open(req cmd.lsp.jsonrpc_request, string message) {
     switch extract_text_document_item(message) {
-        option::some(item) : {
-            params := lsp::did_open_text_document_params {
+        option.some(item) : {
+            params := cmd.lsp.did_open_text_document_params {
                 text_document: item,
             }
             server.handler.on_did_open(params)
             server.send_diagnostics(item.uri)
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
-func (server lsp_server) handle_did_change(req lsp::jsonrpc_request, string message) {
+func (server lsp_server) handle_did_change(req cmd.lsp.jsonrpc_request, string message) {
     switch extract_did_change_params(message) {
-        option::some((uri, text, version)) : {
-            changes := lsp::text_document_content_change_event[]{
-                lsp::text_document_content_change_event {
-                    range_val: option::none(), text text,
+        option.some((uri, text, version)) : {
+            changes := cmd.lsp.text_document_content_change_event[]{
+                cmd.lsp.text_document_content_change_event {
+                    range_val: option.none(), text text,
                 }
             }
-            params := lsp::did_change_text_document_params {
-                text_document: lsp::versioned_text_document_identifier {
+            params := cmd.lsp.did_change_text_document_params {
+                text_document: cmd.lsp.versioned_text_document_identifier {
                     uri: uri, version version,
                 }, content_changes changes,
             }
             server.handler.on_did_change(params)
             server.send_diagnostics(uri)
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
-func (server lsp_server) handle_did_save(req lsp::jsonrpc_request, string message) {
+func (server lsp_server) handle_did_save(req cmd.lsp.jsonrpc_request, string message) {
     switch extract_text_document_identifier(message) {
-        option::some(uri) : {
-            params := lsp::did_save_text_document_params {
-                text_document: lsp::text_document_identifier { uri: uri }, text option::none(),
+        option.some(uri) : {
+            params := cmd.lsp.did_save_text_document_params {
+                text_document: cmd.lsp.text_document_identifier { uri: uri }, text option.none(),
             }
             server.handler.on_did_save(params)
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
-func (server lsp_server) handle_did_close(req lsp::jsonrpc_request, string message) {
+func (server lsp_server) handle_did_close(req cmd.lsp.jsonrpc_request, string message) {
     switch extract_text_document_identifier(message) {
-        option::some(uri) : {
-            params := lsp::did_close_text_document_params {
-                text_document: lsp::text_document_identifier { uri: uri },
+        option.some(uri) : {
+            params := cmd.lsp.did_close_text_document_params {
+                text_document: cmd.lsp.text_document_identifier { uri: uri },
             }
             server.handler.on_did_close(params)
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
-func (server lsp_server) handle_completion(req lsp::jsonrpc_request, string message) {
+func (server lsp_server) handle_completion(req cmd.lsp.jsonrpc_request, string message) {
     switch req.id {
-        option::some(id) : {
+        option.some(id) : {
             switch extract_position_params(message) {
-                option::some((uri, line, character)) : {
-                    pos := lsp::position { line: line, character character }
+                option.some((uri, line, character)) : {
+                    pos := cmd.lsp.position { line: line, character character }
                     completions := server.handler.get_completions(uri, pos)
-                    result := lsp::serialize_completion_list(completions)
+                    result := cmd.lsp.serialize_completion_list(completions)
                     server.send_response(id, result)
                 },
-                option::none() : server.send_error(id, -32700, "Invalid parameters")
+                option.none() : server.send_error(id, -32700, "Invalid parameters")
             }
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
-func (server lsp_server) handle_hover(req lsp::jsonrpc_request, string message) {
+func (server lsp_server) handle_hover(req cmd.lsp.jsonrpc_request, string message) {
     switch req.id {
-        option::some(id) : {
+        option.some(id) : {
             switch extract_position_params(message) {
-                option::some((uri, line, character)) : {
-                    pos := lsp::position { line: line, character character }
+                option.some((uri, line, character)) : {
+                    pos := cmd.lsp.position { line: line, character character }
                     switch server.handler.get_hover(uri, pos) {
-                        option::some(hover) : {
-                            result := lsp::serialize_hover(hover)
+                        option.some(hover) : {
+                            result := cmd.lsp.serialize_hover(hover)
                             server.send_response(id, result)
                         },
-                        option::none() : server.send_response(id, "null")
+                        option.none() : server.send_response(id, "null")
                     }
                 },
-                option::none() : server.send_error(id, -32700, "Invalid parameters")
+                option.none() : server.send_error(id, -32700, "Invalid parameters")
             }
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
-func (server lsp_server) handle_definition(req lsp::jsonrpc_request, string message) {
+func (server lsp_server) handle_definition(req cmd.lsp.jsonrpc_request, string message) {
     switch req.id {
-        option::some(id) : {
+        option.some(id) : {
             switch extract_position_params(message) {
-                option::some((uri, line, character)) : {
-                    pos := lsp::position { line: line, character character }
+                option.some((uri, line, character)) : {
+                    pos := cmd.lsp.position { line: line, character character }
                     switch server.handler.find_symbol_definition(uri, "") {
-                        option::some(symbol) : {
+                        option.some(symbol) : {
                             location := "{\"uri\":\"" + uri + "\",\"range\":" +
-                                lsp::serialize_range(symbol.range_val) + "}"
+                                cmd.lsp.serialize_range(symbol.range_val) + "}"
                             server.send_response(id, location)
                         },
-                        option::none() : server.send_response(id, "null")
+                        option.none() : server.send_response(id, "null")
                     }
                 },
-                option::none() : server.send_error(id, -32700, "Invalid parameters")
+                option.none() : server.send_error(id, -32700, "Invalid parameters")
             }
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
-func (server lsp_server) handle_references(req lsp::jsonrpc_request, string message) {
+func (server lsp_server) handle_references(req cmd.lsp.jsonrpc_request, string message) {
     switch req.id {
-        option::some(id) : {
+        option.some(id) : {
             server.send_response(id, "[]")
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
-func (server lsp_server) handle_document_symbol(req lsp::jsonrpc_request, string message) {
+func (server lsp_server) handle_document_symbol(req cmd.lsp.jsonrpc_request, string message) {
     switch req.id {
-        option::some(id) : {
+        option.some(id) : {
             switch extract_text_document_identifier(message) {
-                option::some(uri) : {
+                option.some(uri) : {
                     symbols := server.handler.get_document_symbols(uri)
-                    result := lsp::serialize_document_symbols(symbols)
+                    result := cmd.lsp.serialize_document_symbols(symbols)
                     server.send_response(id, result)
                 },
-                option::none() : server.send_error(id, -32700, "Invalid parameters")
+                option.none() : server.send_error(id, -32700, "Invalid parameters")
             }
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
-func (server lsp_server) handle_rename(req lsp::jsonrpc_request, string message) {
+func (server lsp_server) handle_rename(req cmd.lsp.jsonrpc_request, string message) {
     switch req.id {
-        option::some(id) : {
+        option.some(id) : {
             server.send_response(id, "{\"changes\":{}}")
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
-func (server lsp_server) handle_workspace_symbol(req lsp::jsonrpc_request, string message) {
+func (server lsp_server) handle_workspace_symbol(req cmd.lsp.jsonrpc_request, string message) {
     switch req.id {
-        option::some(id) : {
+        option.some(id) : {
             server.send_response(id, "[]")
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
 func (server lsp_server) send_diagnostics(string uri) {
     diags := server.handler.publish_diagnostics(uri)
-    diag_json := lsp::serialize_diagnostics(diags)
-    message := lsp::create_notification(
+    diag_json := cmd.lsp.serialize_diagnostics(diags)
+    message := cmd.lsp.create_notification(
         "textDocument/publishDiagnostics",
         "{\"uri\":\"" + uri + "\",\"diagnostics\":" + diag_json + "}"
     )
@@ -281,12 +283,12 @@ func (server lsp_server) send_diagnostics(string uri) {
 }
 
 func (server lsp_server) send_response(int id, string result) {
-    response := lsp::create_response(id, result)
+    response := cmd.lsp.create_response(id, result)
     server.send_message(response)
 }
 
 func (server lsp_server) send_error(int id, int code, string message) {
-    response := lsp::create_error_response(id, code, message)
+    response := cmd.lsp.create_error_response(id, code, message)
     server.send_message(response)
 }
 
@@ -295,73 +297,73 @@ func (server lsp_server) send_notification(string message) {
 }
 
 func (server lsp_server) send_message(string message) {
-    header := "Content-Length: " + std::to_string(len(message)) + "\r\n\r\n"
-    std::print(header)
-    std::print(message)
+    header := "Content-Length: " + std.to_string(len(message)) + "\r\n\r\n"
+    std.print(header)
+    std.print(message)
 }
 
-func extract_text_document_item(string message) option[lsp::text_document_item] {
+func extract_text_document_item(string message) option[cmd.lsp.text_document_item] {
     switch extract_text_document_identifier(message) {
-        option::some(uri) : {
-            option::none()
+        option.some(uri) : {
+            option.none()
         },
-        option::none() : option::none()
+        option.none() : option.none()
     }
 }
 
 func extract_text_document_identifier(string message) option[string] {
-    lsp::extract_json_string(message, "uri")
+    cmd.lsp.extract_json_string(message, "uri")
 }
 
 func extract_position_params(string message) option[(string, int, int)] {
-    switch lsp::extract_json_string(message, "uri") {
-        option::some(uri) : {
-            switch lsp::extract_json_string(message, "line") {
-                option::some(line_str) : {
-                    switch std::parse_int(line_str) {
+    switch cmd.lsp.extract_json_string(message, "uri") {
+        option.some(uri) : {
+            switch cmd.lsp.extract_json_string(message, "line") {
+                option.some(line_str) : {
+                    switch std.parse_int(line_str) {
                         line : {
-                            switch lsp::extract_json_string(message, "character") {
-                                option::some(char_str) : {
-                                    switch std::parse_int(char_str) {
+                            switch cmd.lsp.extract_json_string(message, "character") {
+                                option.some(char_str) : {
+                                    switch std.parse_int(char_str) {
                                         character : {
-                                            option::some((uri, line, character))
+                                            option.some((uri, line, character))
                                         },
-                                        _ : option::none()
+                                        _ : option.none()
                                     }
                                 },
-                                option::none() : option::none()
+                                option.none() : option.none()
                             }
                         },
-                        _ : option::none()
+                        _ : option.none()
                     }
                 },
-                option::none() : option::none()
+                option.none() : option.none()
             }
         },
-        option::none() : option::none()
+        option.none() : option.none()
     }
 }
 
 func extract_did_change_params(string message) option[(string, string, int)] {
-    switch lsp::extract_json_string(message, "uri") {
-        option::some(uri) : {
-            switch lsp::extract_json_string(message, "text") {
-                option::some(text) : {
-                    switch lsp::extract_json_string(message, "version") {
-                        option::some(version_str) : {
-                            switch std::parse_int(version_str) {
+    switch cmd.lsp.extract_json_string(message, "uri") {
+        option.some(uri) : {
+            switch cmd.lsp.extract_json_string(message, "text") {
+                option.some(text) : {
+                    switch cmd.lsp.extract_json_string(message, "version") {
+                        option.some(version_str) : {
+                            switch std.parse_int(version_str) {
                                 version : {
-                                    option::some((uri, text, version))
+                                    option.some((uri, text, version))
                                 },
-                                _ : option::none()
+                                _ : option.none()
                             }
                         },
-                        option::none() : option::none()
+                        option.none() : option.none()
                     }
                 },
-                option::none() : option::none()
+                option.none() : option.none()
             }
         },
-        option::none() : option::none()
+        option.none() : option.none()
     }
 }

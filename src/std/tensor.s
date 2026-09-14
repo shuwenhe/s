@@ -1,5 +1,7 @@
 package std.tensor
-use std.switch.{abs, sqrt, exp, log, pow, max as fmax, min as fmin, epsilon}
+import (
+    "std.switch"
+)
 struct tensor_shape {
     int[] dims
     int ndim

@@ -1,5 +1,7 @@
 package lsp
-use "std"
+import (
+    "std"
+)
 struct lsp_handler {
     doc_manager: document_manager
 }
@@ -18,11 +20,11 @@ func (h lsp_handler) on_did_change(params did_change_text_document_params) {
     uri := params.text_document.uri
     version := params.text_document.version
     switch h.doc_manager.get_document(uri) {
-        option::some(doc) : {
+        option.some(doc) : {
             new_text := apply_content_changes(doc.text, params.content_changes)
             h.doc_manager.update_document(uri, new_text, version)
         },
-        option::none() : {}
+        option.none() : {}
     }
 }
 
@@ -36,27 +38,27 @@ func (h lsp_handler) on_did_close(params did_close_text_document_params) {
 func (h lsp_handler) publish_diagnostics(string uri) diagnostic[] {
     diags := diagnostic[]()
     switch h.doc_manager.get_errors(uri) {
-        option::some(errors) : {
+        option.some(errors) : {
             i := 0
             for i < len(errors) {
                 err := errors[i]
                 diags.push(diagnostic {
                     r: range {
                         start: err.pos, end position { line: err.pos.line, character err.pos.character + 1 }
-                    }, message err.message, severity option::some(1), code option::some("S000"), source option::some("s-lsp"), related_information option::none()
+                    }, message err.message, severity option.some(1), code option.some("S000"), source option.some("s-lsp"), related_information option.none()
                 })
                 i = i + 1
             }
         },
-        option::none() : {}
+        option.none() : {}
     }
     diags
 }
 
 func (h lsp_handler) get_document_symbols(string uri) document_symbol[] {
     switch h.doc_manager.get_document_symbols(uri) {
-        option::some(symbols) : symbols,
-        option::none() : document_symbol[]()
+        option.some(symbols) : symbols,
+        option.none() : document_symbol[]()
     }
 }
 
@@ -64,17 +66,17 @@ func (h lsp_handler) get_completions(string uri, pos position) completion_list {
     completions := completion_item[]()
     completions.append(get_keyword_completions())
     switch h.doc_manager.get_document_symbols(uri) {
-        option::some(symbols) : {
+        option.some(symbols) : {
             i := 0
             for i < len(symbols) {
                 sym := symbols[i]
                 completions.push(completion_item {
-                    label: sym.name, kind option::some(symbol_kind_to_completion_kind(sym.kind)), detail option::some(format_symbol_kind(sym.kind)), documentation option::some("Defined in current file"), sort_text option::some("1_" + sym.name), filter_text option::some(sym.name), text_edit_text option::none(), deprecated option::none(), score option::some(50),
+                    label: sym.name, kind option.some(symbol_kind_to_completion_kind(sym.kind)), detail option.some(format_symbol_kind(sym.kind)), documentation option.some("Defined in current file"), sort_text option.some("1_" + sym.name), filter_text option.some(sym.name), text_edit_text option.none(), deprecated option.none(), score option.some(50),
                 })
                 i = i + 1
             }
         },
-        option::none() : {}
+        option.none() : {}
     }
     completion_list {
         is_incomplete: false, items completions,
@@ -92,7 +94,7 @@ func get_keyword_completions() completion_item[] {
     i := 0
     for i < len(keywords) {
         completions.push(completion_item {
-            label: keywords[i], kind option::some(completion_item_kind::keyword), detail option::some("Keyword"), documentation option::none(), sort_text option::some("0_" + keywords[i]), filter_text option::some(keywords[i]), text_edit_text option::none(), deprecated option::none(), score option::some(100),
+            label: keywords[i], kind option.some(completion_item_kind::keyword), detail option.some("Keyword"), documentation option.none(), sort_text option.some("0_" + keywords[i]), filter_text option.some(keywords[i]), text_edit_text option.none(), deprecated option.none(), score option.some(100),
         })
         i = i + 1
     }
@@ -101,32 +103,32 @@ func get_keyword_completions() completion_item[] {
 
 func (h lsp_handler) get_hover(string uri, pos position) option[hover] {
     switch h.doc_manager.get_token_at_position(uri, pos) {
-        option::some(token) : {
+        option.some(token) : {
             switch h.find_symbol_definition(uri, token) {
-                option::some(symbol) : {
-                    option::some(hover {
-                        contents: format_hover_contents(symbol), r option::some(range {
+                option.some(symbol) : {
+                    option.some(hover {
+                        contents: format_hover_contents(symbol), r option.some(range {
                             start: pos, end position { line: pos.line, character pos.character + len(token) }
                         })
                     })
                 },
-                option::none() : {
-                    option::some(hover {
-                        contents: "**" + token + "**", r option::some(range {
+                option.none() : {
+                    option.some(hover {
+                        contents: "**" + token + "**", r option.some(range {
                             start: pos, end position { line: pos.line, character pos.character + len(token) }
                         })
                     })
                 }
             }
         },
-        option::none() : option::none()
+        option.none() : option.none()
     }
 }
 
 func (h lsp_handler) find_symbol_definition(string uri, string name) option[document_symbol] {
     switch h.doc_manager.get_document_symbols(uri) {
-        option::some(symbols) : find_symbol_in_list(symbols, name),
-        option::none() : option::none()
+        option.some(symbols) : find_symbol_in_list(symbols, name),
+        option.none() : option.none()
     }
 }
 
@@ -134,11 +136,11 @@ func find_symbol_in_list(symbols document_symbol[], string name) option[document
     i := 0
     for i < len(symbols) {
         if symbols[i].name == name {
-            return option::some(symbols[i]
+            return option.some(symbols[i]
         }
         i = i + 1
     }
-    option::none()
+    option.none()
 }
 
 func apply_content_changes(string text, changes text_document_content_change_event[]) string {
@@ -147,15 +149,15 @@ func apply_content_changes(string text, changes text_document_content_change_eve
     for i < len(changes) {
         change := changes[i]
         switch change.range_val {
-            option::some(r) : {
-                lines := std::split(result, "\n")
+            option.some(r) : {
+                lines := std.split(result, "\n")
                 start_offset := position_to_offset(lines, r.start)
                 end_offset := position_to_offset(lines, r.end)
                 before := result.substring(0, start_offset)
                 after := result.substring(end_offset, len(result))
                 result = before + change.text + after
             },
-            option::none() : {
+            option.none() : {
                 result = change.text
             }
         }

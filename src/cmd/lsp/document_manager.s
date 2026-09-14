@@ -1,9 +1,11 @@
 package lsp
-use "std"
-use "../s"
+import (
+    "std"
+    "cmd.s"
+)
 struct document_manager {
     map[string, text_document] documents
-    map[string, s::source_file] ast_cache
+    map[string, cmd.s.source_file] ast_cache
     map[string, parse_error[]] error_cache
 }
 
@@ -14,7 +16,7 @@ struct parse_error {
 
 func new_document_manager() document_manager {
     document_manager {
-        documents: map[string, text_document](), ast_cache map[string, s::source_file](), error_cache map[string, parse_error[]](),
+        documents: map[string, text_document](), ast_cache map[string, cmd.s.source_file](), error_cache map[string, parse_error[]](),
     }
 }
 
@@ -28,14 +30,14 @@ func (dm document_manager) open_document(item text_document_item) {
 
 func (dm document_manager) update_document(string uri, string text, int version) {
     switch dm.documents.get(uri) {
-        option::some(doc) : {
+        option.some(doc) : {
             updated := text_document {
                 uri: uri, language_id doc.language_id, version version, text text,
             }
             dm.documents.insert(uri, updated)
             dm.parse_document(uri)
         },
-        option::none() : {
+        option.none() : {
         }
     }
 }
@@ -50,7 +52,7 @@ func (dm document_manager) get_document(string uri) option[text_document] {
     dm.documents.get(uri)
 }
 
-func (dm document_manager) get_ast(string uri) option[s::source_file] {
+func (dm document_manager) get_ast(string uri) option[cmd.s.source_file] {
     dm.ast_cache.get(uri)
 }
 
@@ -60,11 +62,11 @@ func (dm document_manager) get_errors(string uri) option[parse_error[]] {
 
 func (dm document_manager) parse_document(string uri) {
     switch dm.documents.get(uri) {
-        option::some(doc) : {
-            lexer := s::new_lexer(doc.text)
+        option.some(doc) : {
+            lexer := cmd.s.new_lexer(doc.text)
             switch lexer.tokenize() {
                 tokens : {
-                    switch s::parse_tokens(tokens) {
+                    switch cmd.s.parse_tokens(tokens) {
                         ast : {
                             dm.ast_cache.insert(uri, ast)
                             dm.error_cache.remove(uri)
@@ -87,15 +89,15 @@ func (dm document_manager) parse_document(string uri) {
                 }
             }
         },
-        option::none() : {
+        option.none() : {
         }
     }
 }
 
 func (dm document_manager) get_token_at_position(string uri, pos position) option[string] {
     switch dm.documents.get(uri) {
-        option::some(doc) : {
-            lines := std::split(doc.text, "\n")
+        option.some(doc) : {
+            lines := std.split(doc.text, "\n")
             if pos.line < len(lines) {
                 line := lines[pos.line]
                 if pos.character < len(line) {
@@ -108,18 +110,18 @@ func (dm document_manager) get_token_at_position(string uri, pos position) optio
                         end = end + 1
                     }
                     if start < end {
-                        option::some(line.substring(start, end))
+                        option.some(line.substring(start, end))
                     } else {
-                        option::none()
+                        option.none()
                     }
                 } else {
-                    option::none()
+                    option.none()
                 }
             } else {
-                option::none()
+                option.none()
             }
         },
-        option::none() : option::none()
+        option.none() : option.none()
     }
 }
 
@@ -130,51 +132,51 @@ func is_identifier_char(c str) bool {
 
 func (dm document_manager) get_document_symbols(string uri) option[document_symbol[]] {
     switch dm.get_ast(uri) {
-        option::some(ast) : option::some(extract_symbols_from_ast(ast)),
-        option::none() : option::none()
+        option.some(ast) : option.some(extract_symbols_from_ast(ast)),
+        option.none() : option.none()
     }
 }
 
-func extract_symbols_from_ast(ast s::source_file) document_symbol[] {
+func extract_symbols_from_ast(ast cmd.s.source_file) document_symbol[] {
     symbols := document_symbol[]()
     i := 0
     for i < len(ast.items) {
         item := ast.items[i]
         switch item {
-            s::item::function(func) : {
+            cmd.s.item::function(func) : {
                 symbols.push(document_symbol {
                     name: func.sig.name, kind symbol_kind::function_k, range_val range {
                         start: position { line: func.line, character 0 }, end position { line: func.line, character len(func.sig.name) }
                     }, selection_range range {
                         start: position { line: func.line, character 0 }, end position { line: func.line, character len(func.sig.name) }
-                    }, children option::none(), deprecated option::none()
+                    }, children option.none(), deprecated option.none()
                 })
             },
-            s::item::struct(s_decl) : {
+            cmd.s.item::struct(s_decl) : {
                 symbols.push(document_symbol {
                     name: s_decl.name, kind symbol_kind::struct_k, range_val range {
                         start: position { line: s_decl.line, character 0 }, end position { line: s_decl.line, character len(s_decl.name) }
                     }, selection_range range {
                         start: position { line: s_decl.line, character 0 }, end position { line: s_decl.line, character len(s_decl.name) }
-                    }, children option::none(), deprecated option::none()
+                    }, children option.none(), deprecated option.none()
                 })
             },
-            s::item::enum(e_decl) : {
+            cmd.s.item::enum(e_decl) : {
                 symbols.push(document_symbol {
                     name: e_decl.name, kind symbol_kind::enum_k, range_val range {
                         start: position { line: e_decl.line, character 0 }, end position { line: e_decl.line, character len(e_decl.name) }
                     }, selection_range range {
                         start: position { line: e_decl.line, character 0 }, end position { line: e_decl.line, character len(e_decl.name) }
-                    }, children option::none(), deprecated option::none()
+                    }, children option.none(), deprecated option.none()
                 })
             },
-            s::item::trait(t_decl) : {
+            cmd.s.item::trait(t_decl) : {
                 symbols.push(document_symbol {
                     name: t_decl.name, kind symbol_kind::interface_k, range_val range {
                         start: position { line: t_decl.line, character 0 }, end position { line: t_decl.line, character len(t_decl.name) }
                     }, selection_range range {
                         start: position { line: t_decl.line, character 0 }, end position { line: t_decl.line, character len(t_decl.name) }
-                    }, children option::none(), deprecated option::none()
+                    }, children option.none(), deprecated option.none()
                 })
             },
             _ : {}
