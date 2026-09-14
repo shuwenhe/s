@@ -1,5 +1,6 @@
 package cmd
 import (
+    "compile.internal.backend_elf64"
     "compile.internal.semantic"
     "compile.internal.syntax"
     "compile.internal.tests.test_backend_abi"
@@ -157,7 +158,5 @@ func run_tests(string fixtures_root) int {
 }
 
 func build_elf64(string input_path, string output_path, string ssa_margin, bool nostdlib) int {
-    std.io.eprintln("error: build_elf64 not implemented - modular compiler build feature pending")
-    std.io.eprintln("Note: Complete self-hosted compiler required for native binary generation")
-    return 1
+    compile.internal.backend_elf64.build(input_path, output_path, ssa_margin, nostdlib)
 }

@@ -2056,6 +2056,28 @@ modular-test-help: bin/s_modular
 	@S_PROJECT_ROOT=$(CURDIR) ./bin/s_modular --help
 	@echo "✓ Modular compiler help works"
 
+.PHONY: modular-native-driver-check
+modular-native-driver-check: bin/s_modular
+	@echo "Checking modular driver authority..."
+	@! grep -Eq 'SEED_COMPILER|bin/s_seed|s_seed --emit|s_seed "' ./bin/s_modular
+	@echo "Modular driver authority check passed"
+
+.PHONY: modular-generic-parse-check
+modular-generic-parse-check: modular-native-driver-check package-index
+	@echo "Checking canonical modular generic parsing..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./bin/s_modular ast test/compiler/generic_method_native_e2e.s
+
+.PHONY: modular-generic-mono-pipeline-check
+modular-generic-mono-pipeline-check: modular-generic-parse-check
+	@echo "Checking canonical generic method mono pipeline..."
+	@mkdir -p .bootstrap/generic-method-e2e
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./bin/s_modular build test/compiler/generic_method_native_e2e.s -o .bootstrap/generic-method-e2e/generic_method
+	@test -s .bootstrap/generic-method-e2e/generic_method.export
+	@grep -q 'method Box\[int\]\.get__mono_int' .bootstrap/generic-method-e2e/generic_method.export
+	@! grep -q 'method Box\[T\]\.get generics=T' .bootstrap/generic-method-e2e/generic_method.export
+
 .PHONY: modular-gate-b
 modular-gate-b: bin/s_modular package-index
 	@echo "Gate B: Testing modular compilation (simple_test.s -> native -> 42)..."
@@ -2069,6 +2091,17 @@ modular-gate-b: bin/s_modular package-index
 		echo "✓ Gate B passed: program returned 42"; \
 	 else \
 		echo "✗ Gate B failed: program returned $$EXIT_CODE (expected 42)"; \
+		exit 1; \
+	fi
+
+.PHONY: generic-method-native-e2e-check
+generic-method-native-e2e-check: modular-generic-mono-pipeline-check
+	@echo "Generic receiver method native E2E: Box[int].get() -> 42..."
+	@set +e; ./.bootstrap/generic-method-e2e/generic_method; status=$$?; set -e; \
+	 if [ $$status -eq 42 ]; then \
+		echo "Generic receiver method native E2E passed"; \
+	 else \
+		echo "Generic receiver method native E2E failed: program returned $$status (expected 42)"; \
 		exit 1; \
 	 fi
 
