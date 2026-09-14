@@ -233,7 +233,37 @@ while IFS= read -r source_path; do
 
     [ -f "$root/$rel_path" ] || continue
 
-    sed -n 's/^[[:space:]]*use[[:space:]]\([^[:space:]]*\).*/\1/p' "$root/$rel_path" |
+    awk '
+        /^[[:space:]]*use[[:space:]]/ {
+            sub(/^[[:space:]]*use[[:space:]]+/, "")
+            sub(/[[:space:]].*$/, "")
+            print
+        }
+        /^[[:space:]]*import[[:space:]]*[(][[:space:]]*$/ {
+            in_import = 1
+            next
+        }
+        in_import && /^[[:space:]]*[)][[:space:]]*$/ {
+            in_import = 0
+            next
+        }
+        in_import {
+            line = $0
+            sub(/^[[:space:]]*/, "", line)
+            sub(/[[:space:]]*$/, "", line)
+            if (line ~ /^"/) {
+                sub(/^"/, "", line)
+                sub(/".*$/, "", line)
+                print line
+            }
+        }
+        /^[[:space:]]*import[[:space:]]*"[^"]+"/ {
+            line = $0
+            sub(/^[[:space:]]*import[[:space:]]*"/, "", line)
+            sub(/".*$/, "", line)
+            print line
+        }
+    ' "$root/$rel_path" |
 
     while IFS= read -r module; do
 
