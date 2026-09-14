@@ -1,2 +1,1 @@
 func stackmap_protocol() {
-}

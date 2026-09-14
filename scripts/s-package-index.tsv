@@ -1,3 +1,8 @@
+Binary file /Users/feifei/shuwen/s/src/cmd/compile/internal/backend/elf64_gen.s matches	src/cmd/compile/internal/backend/elf64_gen.s
+Binary file /Users/feifei/shuwen/s/src/cmd/compile/internal/frontend/lexer.s matches	src/cmd/compile/internal/frontend/lexer.s
+Binary file /Users/feifei/shuwen/s/src/cmd/compile/internal/obj/go_style_elf_generator.s matches	src/cmd/compile/internal/obj/go_style_elf_generator.s
+Binary file /Users/feifei/shuwen/s/src/cmd/compile/internal/obj/output.s matches	src/cmd/compile/internal/obj/output.s
+Binary file /Users/feifei/shuwen/s/src/cmd/compile/platforms/macos/macho_backend.s matches	src/cmd/compile/platforms/macos/macho_backend.s
 _seed_probe.hello.greet	src/_seed_probe/hello/greet.s
 _seed_probe.main	src/_seed_probe/main.s
 backend	src/cmd/compile/internal/backend/assembler.s
@@ -9,7 +14,6 @@ backend	src/cmd/compile/internal/backend/codegen_x86_64.s
 backend	src/cmd/compile/internal/backend/compilation_driver.s
 backend	src/cmd/compile/internal/backend/compiler_pipeline.s
 backend	src/cmd/compile/internal/backend/direct_codegen.s
-backend	src/cmd/compile/internal/backend/elf64_gen.s
 backend	src/cmd/compile/internal/backend/end_to_end.s
 backend	src/cmd/compile/internal/backend/instr_select.s
 backend	src/cmd/compile/internal/backend/instruction_select.s
@@ -110,7 +114,6 @@ compile.internal.dwarfgen	src/cmd/compile/internal/dwarfgen/scope.s
 compile.internal.field_level_drop_flag	src/cmd/compile/internal/field_level_drop_flag.s
 compile.internal.field_virtualization	src/cmd/compile/internal/field_virtualization.s
 compile.internal.frontend	src/cmd/compile/internal/frontend/ast.s
-compile.internal.frontend	src/cmd/compile/internal/frontend/lexer.s
 compile.internal.frontend	src/cmd/compile/internal/frontend/parser.s
 compile.internal.frontend	src/cmd/compile/internal/frontend/semantic.s
 compile.internal.gc	src/cmd/compile/internal/gc/compile.s
@@ -273,8 +276,6 @@ compile.internal.noder	src/cmd/compile/internal/noder/types.s
 compile.internal.noder	src/cmd/compile/internal/noder/unified.s
 compile.internal.noder	src/cmd/compile/internal/noder/writer.s
 compile.internal.obj	src/cmd/compile/internal/obj/elf64.s
-compile.internal.obj	src/cmd/compile/internal/obj/go_style_elf_generator.s
-compile.internal.obj	src/cmd/compile/internal/obj/output.s
 compile.internal.obj	src/cmd/compile/internal/obj/symbol.s
 compile.internal.objw	src/cmd/compile/internal/objw/objw.s
 compile.internal.objw	src/cmd/compile/internal/objw/prog.s
@@ -704,7 +705,6 @@ lsp	src/cmd/lsp/document_manager.s
 lsp	src/cmd/lsp/jsonrpc.s
 lsp	src/cmd/lsp/lsp_handler.s
 lsp	src/cmd/lsp/lsp_protocol.s
-macho_backend	src/cmd/compile/platforms/macos/macho_backend.s
 macos_driver	src/cmd/compile/platforms/macos/macos_driver.s
 macos_example	src/cmd/compile/platforms/macos/macos_example.s
 main	src/cmd/compile/internal/ownership/quick_reference.s

@@ -11,52 +11,42 @@ func abs(float x) float {
     if x < 0 { return -x }
     x
 }
-
 func max(float a, float b) float {
     if a > b { a } else { b }
 }
-
 func min(float a, float b) float {
     if a < b { a } else { b }
 }
-
 func clamp(float x, float lo, float hi) float {
     if x < lo { return lo }
     if x > hi { return hi }
     x
 }
-
 func sign(float x) float {
     if x > 0 { return 1.0 }
     if x < 0 { return -1.0 }
     0.0
 }
-
 func iabs(int x) int {
     if x < 0 { return -x }
     x
 }
-
 func imax(int a, int b) int {
     if a > b { a } else { b }
 }
-
 func imin(int a, int b) int {
     if a < b { a } else { b }
 }
-
 func mod(int a, int b) int {
     if b == 0 { return 0 }
     int r = a - (a / b) * b
     if (r > 0 && b < 0) || (r < 0 && b > 0) { r = r + b }
     r
 }
-
 func fmod(float a, float b) float {
     float r = a - (a as int) / (b as int) * b
     r
 }
-
 func pow(float base, float exp) float {
     if exp == 0 { return 1.0 }
     if base == 0 { return 0.0 }
@@ -73,7 +63,6 @@ func pow(float base, float exp) float {
     if negative { return 1.0 / result }
     result
 }
-
 func sqrt(float x) float {
     if x < 0 { return 0.0 }
     if x == 0 || x == 1 { return x }
@@ -85,12 +74,10 @@ func sqrt(float x) float {
     }
     guess
 }
-
 func cbrt(float x) float {
     if x >= 0 { return pow(x, 1.0 / 3.0) }
     return -pow(-x, 1.0 / 3.0
 }
-
 func exp(float x) float {
     if x > 700 { return inf }
     if x < -700 { return 0.0 }
@@ -127,7 +114,6 @@ func exp(float x) float {
     if negative { return 1.0 / sum }
     sum
 }
-
 func log(float x) float {
     if x <= 0 { return neg_inf }
     if x == 1 { return 0.0 }
@@ -149,22 +135,18 @@ func log(float x) float {
     }
     y + guess
 }
-
 func log10(float x) float {
     log(x) / ln10
 }
-
 func log2(float x) float {
     log(x) / ln2
 }
-
 func log1p(float x) float {
     if abs(x) < 0.01 {
         return x - x*x/2.0 + x*x*x/3.0
     }
     log(1.0 + x)
 }
-
 func sin(float x) float {
     x = fmod(x, 2.0 * pi)
     if x > pi { x = x - 2.0 * pi }
@@ -187,11 +169,9 @@ func sin(float x) float {
     }
     sum
 }
-
 func cos(float x) float {
     sin(x + pi / 2.0)
 }
-
 func tan(float x) float {
     float c = cos(x)
     if abs(c) < epsilon {
@@ -199,7 +179,6 @@ func tan(float x) float {
     }
     sin(x) / c
 }
-
 func asin(float x) float {
     if x > 1.0 { x = 1.0 }
     if x < -1.0 { x = -1.0 }
@@ -215,11 +194,9 @@ func asin(float x) float {
     }
     guess
 }
-
 func acos(float x) float {
     pi / 2.0 - asin(x)
 }
-
 func atan(float x) float {
     if x > 1e10 { return pi / 2.0 }
     if x < -1e10 { return -pi / 2.0 }
@@ -245,7 +222,6 @@ func atan(float x) float {
     }
     sum
 }
-
 func atan2(float y, float x) float {
     if x > 0 { return atan(y / x) }
     if x < 0 && y >= 0 { return atan(y / x) + pi }
@@ -254,102 +230,82 @@ func atan2(float y, float x) float {
     if y < 0 { return -pi / 2.0 }
     0.0
 }
-
 func sinh(float x) float {
     (exp(x) - exp(-x)) / 2.0
 }
-
 func cosh(float x) float {
     (exp(x) + exp(-x)) / 2.0
 }
-
 func tanh(float x) float {
     float ep = exp(x)
     float em = exp(-x)
     (ep - em) / (ep + em)
 }
-
 func asinh(float x) float {
     log(x + sqrt(x*x + 1.0))
 }
-
 func acosh(float x) float {
     log(x + sqrt(x*x - 1.0))
 }
-
 func atanh(float x) float {
     log((1.0 + x) / (1.0 - x)) / 2.0
 }
-
 func ceil(float x) float {
     int ix = x as int
     if x > ix as float && x >= 0 { return (ix + 1) as float }
     if x != ix as float && x < 0 { return ix as float }
     x
 }
-
 func floor(float x) float {
     int ix = x as int
     if x < ix as float && x < 0 { return (ix - 1) as float }
     if x != ix as float && x >= 0 { return ix as float }
     x
 }
-
 func round(float x) float {
     if x >= 0 { return floor(x + 0.5) }
     return ceil(x - 0.5
 }
-
 func trunc(float x) float {
     x as int as float
 }
-
 func sigmoid(float x) float {
     if x > 500 { return 1.0 }
     if x < -500 { return 0.0 }
     float ep = exp(-x)
     1.0 / (1.0 + ep)
 }
-
 func relu(float x) float {
     if x < 0 { return 0.0 }
     x
 }
-
 func leaky_relu(float x, float negative_slope) float {
     if x < 0 { return x * negative_slope }
     x
 }
-
 func gelu(float x) float {
     float sqrt_2_over_pi = 0.7978845608028654
     float inner = sqrt_2_over_pi * (x + 0.044715 * x * x * x)
     0.5 * x * (1.0 + tanh(inner))
 }
-
 func silu(float x) float {
     x * sigmoid(x)
 }
-
 func softplus(float x) float {
     if x > 20 { return x }
     if x < -20 { return 0.0 }
     log1p(exp(x))
 }
-
 func elu(float x, float alpha) float {
     if x > 0 { return x }
     alpha * (exp(x) - 1.0)
 }
-
 func mish(float x) float {
     x * tanh(softplus(x))
 }
-
 func softmax_component(float x, float max_x, float sum_exp) float {
     exp(x - max_x) / sum_exp
 }
-
 func log_sum_exp(float[] values, int count) float {
     if count <= 0 { return 0.0 }
     float m = values[0]
@@ -366,16 +322,13 @@ func log_sum_exp(float[] values, int count) float {
     }
     m + log(s)
 }
-
 func lerp(float a, float b, float t) float {
     a + t * (b - a)
 }
-
 func smoothstep(float edge0, float edge1, float x) float {
     float t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0)
     t * t * (3.0 - 2.0 * t)
 }
-
 func erf(float x) float {
     float sign = 1.0
     if x < 0 { sign = -1.0; x = -x }
@@ -384,35 +337,27 @@ func erf(float x) float {
                 + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * exp(-x * x)
     sign * y
 }
-
 func erfc(float x) float {
     1.0 - erf(x)
 }
-
 func normal_cdf(float x) float {
     0.5 * (1.0 + erf(x / sqrt2))
 }
-
 func normal_pdf(float x) float {
     exp(-0.5 * x * x) / (sqrt2 * sqrt(pi))
 }
-
 func euclidean_distance(float a, float b) float {
     abs(a - b)
 }
-
 func l2_distance_sq(float a, float b) float {
     float d = a - b
     d * d
 }
-
 func l1_distance(float a, float b) float {
     abs(a - b)
 }
-
 func cosine_similarity(float a, float b) float {
     float norm_a = abs(a)
     float norm_b = abs(b)
     if norm_a < epsilon || norm_b < epsilon { return 0.0 }
     (a * b) / (norm_a * norm_b)
-}

@@ -36,7 +36,6 @@ func test_lexer() string {
     result = result + "════ 词法分析测试结果: 全部通过 ✓ ════\n"
     return result
 }
-
 func test_parser() string {
     result := "\n╔════════════════════════════════════════════════════════════════╗\n"
     result = result + "║              语法分析测试 (Parser Test)                      ║\n"
@@ -92,7 +91,6 @@ func test_parser() string {
     result = result + "════ 语法分析测试结果: 全部完成 ✓ ════\n"
     return result
 }
-
 func test_typecheck() string {
     result := "\n╔════════════════════════════════════════════════════════════════╗\n"
     result = result + "║              类型检查测试 (Type Check Test)                  ║\n"
@@ -126,7 +124,6 @@ func test_typecheck() string {
     result = result + "════ 类型检查测试结果: 全部通过 ✓ ════\n"
     return result
 }
-
 func test_complete_compilation() string {
     result := "\n╔════════════════════════════════════════════════════════════════╗\n"
     result = result + "║          完整编译流程测试 (Full Compilation Test)           ║\n"
@@ -144,7 +141,6 @@ func test_complete_compilation() string {
     result = result + "════ 编译流程测试结果: 完成 ✓ ════\n"
     return result
 }
-
 func run_all_tests() string {
     report := "\n"
     report = report + "╔════════════════════════════════════════════════════════════════╗\n"
@@ -173,7 +169,6 @@ func run_all_tests() string {
     report = report + "╚════════════════════════════════════════════════════════════════╝\n"
     return report
 }
-
 func int_to_string(int value) string {
     if value == 0 {
         return "0"
@@ -193,8 +188,6 @@ func int_to_string(int value) string {
     }
     result + digits
 }
-
 func main() {
     print(run_all_tests())
     return 0
-}

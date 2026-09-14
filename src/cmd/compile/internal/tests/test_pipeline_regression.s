@@ -226,7 +226,6 @@ func run_pipeline_regression_suite() int {
     }
     0
 }
-
 func count_mir_drops(mir_graph graph) int {
     count := 0
     i := 0
@@ -243,7 +242,6 @@ func count_mir_drops(mir_graph graph) int {
     }
     count
 }
-
 func count_const_decls(ir_ast.package_ir pkg) int {
     count := 0
     i := 0
@@ -256,7 +254,6 @@ func count_const_decls(ir_ast.package_ir pkg) int {
     }
     count
 }
-
 func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
     i := 0
     for i < len(pkg.decls) {
@@ -272,7 +269,6 @@ func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
     }
     false
 }
-
 func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
     i := 0
     for i < len(pkg.decls) {
@@ -297,7 +293,6 @@ func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
     }
     false
 }
-
 func collect_ir_package_features(ir_ast.package_ir pkg) int {
     features := 0
     i := 0
@@ -338,7 +333,6 @@ func collect_ir_package_features(ir_ast.package_ir pkg) int {
     }
     features
 }
-
 func collect_ir_block_features(ir_ast.block_ir block) int {
     features := 2
     i := 0
@@ -367,7 +361,6 @@ func collect_ir_block_features(ir_ast.block_ir block) int {
     }
     features
 }
-
 func collect_ir_expr_features(ir_ast.expr_ir expression) int {
     features := 0
     switch expression {
@@ -423,7 +416,6 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
     }
     features
 }
-
 func starts_with(string text, string prefix) bool {
     if prefix == "" {
         return true
@@ -433,7 +425,6 @@ func starts_with(string text, string prefix) bool {
     }
     std.prelude.slice(text, 0, len(prefix)) == prefix
 }
-
 func contains(string text, string needle) bool {
     if needle == "" {
         return true
@@ -449,4 +440,3 @@ func contains(string text, string needle) bool {
         i = i + 1
     }
     false
-}

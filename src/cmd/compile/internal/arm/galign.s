@@ -10,7 +10,6 @@ struct arch_info {
     string ssa_gen_value_hook
     string ssa_gen_block_hook
 }
-
 func init() () {
 }
 
@@ -26,7 +25,6 @@ func init_arm(arch_info arch) arch_info {
     arch.ssa_gen_block_hook = "ssa_gen_block"
     arch
 }
-
 func init_arch_info() arch_info {
     info := arch_info {
         link_arch: "", reg_sp 0, max_width 0, soft_float false,
@@ -38,15 +36,11 @@ func init_arch_info() arch_info {
     }
     init_arm(info)
 }
-
 func link_arch_name() string {
     "arm"
 }
-
 func stack_pointer_register() int {
     13
 }
-
 func max_width_limit() int {
     (1 << 32) - 1
-}

@@ -1,5 +1,4 @@
 package ownership_nll_model
-
 func nll_place_overlaps(int left, int right) bool {
     if left == right { return true }
     if left == 0 || right == 0 { return true }
@@ -7,7 +6,6 @@ func nll_place_overlaps(int left, int right) bool {
     if right == 1 && (left == 3 || left == 4) { return true }
     return false
 }
-
 func nll_bit_set(int bits, int bit) bool {
     value := bits / bit
     while value >= 2 {
@@ -15,7 +13,6 @@ func nll_bit_set(int bits, int bit) bool {
     }
     return value == 1
 }
-
 func nll_add_point(int bits, int point) int {
     bit := 1
     i := 0
@@ -26,7 +23,6 @@ func nll_add_point(int bits, int point) int {
     if nll_bit_set(bits, bit) { return bits }
     return bits + bit
 }
-
 func nll_loan_covers_point(int bits, int point) bool {
     before := false
     after := false
@@ -42,11 +38,9 @@ func nll_loan_covers_point(int bits, int point) bool {
     }
     return before && after
 }
-
 func nll_move_conflicts(int move_place, int move_point, int loan_place, int loan_points) bool {
     return nll_loan_covers_point(loan_points, move_point) && nll_place_overlaps(move_place, loan_place)
 }
-
 func ownership_nll_model_verify() int {
     loan_points := nll_add_point(0, 0)
     loan_points = nll_add_point(loan_points, 4)
@@ -54,4 +48,3 @@ func ownership_nll_model_verify() int {
     if nll_move_conflicts(2, 3, 1, loan_points) { return 2 }
     if nll_move_conflicts(1, 5, 1, loan_points) { return 3 }
     return 0
-}

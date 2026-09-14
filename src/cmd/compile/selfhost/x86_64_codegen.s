@@ -9,7 +9,6 @@ struct x86_64_gen {
     temp_allocations: map[string]string
     label_count: int
 }
-
 func new_x86_64_gen() x86_64_gen {
     return x86_64_gen{
         asm_lines: string[]{},
@@ -20,15 +19,12 @@ func new_x86_64_gen() x86_64_gen {
         }, temp_allocations map[string]string{}, label_count 0,
     }
 }
-
 func (x86_64_gen* gen) emit(string line) {
     gen.asm_lines = append(gen.asm_lines, "    " + line)
 }
-
 func (x86_64_gen* gen) emit_label(string label) {
     gen.asm_lines = append(gen.asm_lines, label + ":")
 }
-
 func (x86_64_gen* gen) allocate_register() string {
     if len(gen.register_stack) > 0 {
         reg := gen.register_stack[0]
@@ -37,11 +33,9 @@ func (x86_64_gen* gen) allocate_register() string {
     }
     return ""
 }
-
 func (x86_64_gen* gen) free_register(string reg) {
     gen.register_stack = append(gen.register_stack, reg)
 }
-
 func (x86_64_gen* gen) get_location(string variable) string {
     if loc, exists := gen.temp_allocations[variable]; exists {
         return loc
@@ -56,7 +50,6 @@ func (x86_64_gen* gen) get_location(string variable) string {
     gen.temp_allocations[variable] = stack_loc
     return stack_loc
 }
-
 func (x86_64_gen* gen) translate_instruction(instruction instr) error {
     switch instr.opcode {
         case "FUNC_BEGIN":
@@ -146,7 +139,6 @@ func (x86_64_gen* gen) translate_instruction(instruction instr) error {
             return error("unknown IR opcode: " + instr.opcode
     }
 }
-
 func generate_assembly_from_ir(instruction[] instructions) (string, error) {
     gen := new_x86_64_gen()
     gen.asm_lines = append(gen.asm_lines, ".globl main")
@@ -166,7 +158,6 @@ func generate_assembly_from_ir(instruction[] instructions) (string, error) {
     }
     return result, nil
 }
-
 func format_immediate(string value) string {
     if contains_string(value, "\"") {
         return "$0x0"
@@ -175,4 +166,3 @@ func format_immediate(string value) string {
         return "$0"
     }
     return "$" + value
-}

@@ -16,7 +16,6 @@ func build_pos_map(string source) pos_entry[] {
     }
     out
 }
-
 func offset_to_pos(pos_entry[] table, int offset) pos_entry {
     if len(table) == 0 {
         return pos_entry { offset: offset, line 1, column 1 }
@@ -33,4 +32,3 @@ func offset_to_pos(pos_entry[] table, int offset) pos_entry {
     pos_entry {
         offset: offset, line last.line, column offset - last.offset + 1,
     }
-}

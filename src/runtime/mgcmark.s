@@ -16,14 +16,12 @@ func mark_init() () {
     mark_total_count = 0
     mark_root_count  = 0
 }
-
 func mark_object(int obj_id) bool {
     if obj_id < 0 {
         return false
     }
     __gc_cas_mark(obj_id, gc_white, gc_gray)
 }
-
 func mark_roots() () {
     roots := int[]()
     __gc_scan_roots(roots)
@@ -39,7 +37,6 @@ func mark_roots() () {
         i = i + 1
     }
 }
-
 func drain_mark_queue() () {
     for !mark_gray_queue.is_empty() {
         obj_opt := mark_gray_queue.pop()
@@ -62,7 +59,6 @@ func drain_mark_queue() () {
         mark_total_count = mark_total_count + 1
     }
 }
-
 func write_barrier(int dst_obj_id, int src_obj_id) () {
     if src_obj_id >= 0 {
         if mark_object(src_obj_id) {
@@ -70,7 +66,4 @@ func write_barrier(int dst_obj_id, int src_obj_id) () {
         }
     }
 }
-
 func mgcmark_unit_name() string { "src/runtime/mgcmark" }
-
-func mgcmark_unit_ready() int   { 1 }

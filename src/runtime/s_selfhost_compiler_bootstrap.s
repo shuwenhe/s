@@ -41,7 +41,6 @@ func main() {
     }
     0
 }
-
 func parse_command(string s) int {
     if s == "check"   { return cmd_check   }
     if s == "build"   { return cmd_build   }
@@ -55,7 +54,6 @@ func parse_command(string s) int {
     if s == "-h"      { return cmd_help    }
     cmd_unknown
 }
-
 func print_usage() () {
     io.println("s compiler " + bootstrap_version)
     io.println("")
@@ -71,4 +69,3 @@ func print_usage() () {
     io.println("  --dump-tokens   Print lexer output")
     io.println("  --dump-ast      Print parser output")
     io.println("  --verbose       Verbose compilation output")
-}

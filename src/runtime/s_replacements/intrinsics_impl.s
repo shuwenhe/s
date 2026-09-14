@@ -1,2 +1,1 @@
 func intrinsics_impl() {
-}

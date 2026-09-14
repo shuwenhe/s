@@ -33,7 +33,6 @@ enum ast_node_type {
     ast_chan_type = 51,
     ast_pointer_type = 52,
 }
-
 struct ast_node {
     type_* int
     int line
@@ -44,13 +43,11 @@ struct ast_node {
     child* ast_node
     next* ast_node
 }
-
 struct parser {
     tokens* token
     int token_count
     int pos
 }
-
 func parser_new(tokens* token, int token_count) parser* {
     p := alloc(parser)
     p.tokens = tokens
@@ -58,20 +55,17 @@ func parser_new(tokens* token, int token_count) parser* {
     p.pos = 0
     return p
 }
-
 func parser_current_token(p* parser) token* {
     if p.pos >= p.token_count {
         return &p.tokens[p.token_count - 1]
     }
     return &p.tokens[p.pos]
 }
-
 func parser_advance(p* parser) {
     if p.pos < p.token_count - 1 {
         p.pos = p.pos + 1
     }
 }
-
 func parser_match(p* parser, int token_type) int {
     if parser_current_token(p).type_ == token_type {
         parser_advance(p)
@@ -79,7 +73,6 @@ func parser_match(p* parser, int token_type) int {
     }
     return 0
 }
-
 func parser_skip_newlines(p* parser) {
     for {
         if parser_current_token(p).type_ != 86 {
@@ -88,7 +81,6 @@ func parser_skip_newlines(p* parser) {
         parser_advance(p)
     }
 }
-
 func parser_parse_program(p* parser) ast_node* {
     parser_skip_newlines(p)
     prog := alloc(ast_node)
@@ -120,7 +112,6 @@ func parser_parse_program(p* parser) ast_node* {
     }
     return prog
 }
-
 func parser_parse_func_decl(p* parser) ast_node* {
     func_decl := alloc(ast_node)
     func_decl.type_ = ast_func_decl
@@ -148,7 +139,6 @@ func parser_parse_func_decl(p* parser) ast_node* {
     }
     return func_decl
 }
-
 func parser_parse_struct_decl(p* parser) ast_node* {
     struct_decl := alloc(ast_node)
     struct_decl.type_ = ast_struct_decl
@@ -177,7 +167,6 @@ func parser_parse_struct_decl(p* parser) ast_node* {
     }
     return struct_decl
 }
-
 func parser_parse_var_decl(p* parser) ast_node* {
     var_decl := alloc(ast_node)
     var_decl.type_ = ast_var_decl
@@ -196,7 +185,6 @@ func parser_parse_var_decl(p* parser) ast_node* {
     }
     return var_decl
 }
-
 func parser_parse_const_decl(p* parser) ast_node* {
     const_decl := alloc(ast_node)
     const_decl.type_ = ast_const_decl
@@ -216,7 +204,6 @@ func parser_parse_const_decl(p* parser) ast_node* {
     }
     return const_decl
 }
-
 func parser_parse_receiver(p* parser) {
     if parser_current_token(p).type_ == 24 {
         parser_advance(p)
@@ -229,7 +216,6 @@ func parser_parse_receiver(p* parser) {
         }
     }
 }
-
 func parser_parse_params(p* parser) {
     if parser_current_token(p).type_ == 24 {
         parser_advance(p)
@@ -249,7 +235,6 @@ func parser_parse_params(p* parser) {
         }
     }
 }
-
 func parser_parse_type(p* parser) ast_node* {
     type_node := alloc(ast_node)
     current := parser_current_token(p)
@@ -277,7 +262,6 @@ func parser_parse_type(p* parser) ast_node* {
     }
     return type_node
 }
-
 func parser_parse_block_stmt(p* parser) ast_node* {
     block := alloc(ast_node)
     block.type_ = ast_block_stmt
@@ -295,7 +279,6 @@ func parser_parse_block_stmt(p* parser) ast_node* {
     }
     return block
 }
-
 func parser_parse_statement(p* parser) ast_node* {
     current := parser_current_token(p)
     if current.type_ == 11 {
@@ -320,7 +303,6 @@ func parser_parse_statement(p* parser) ast_node* {
         return parser_parse_expr_stmt(p)
     }
 }
-
 func parser_parse_return_stmt(p* parser) ast_node* {
     ret := alloc(ast_node)
     ret.type_ = ast_return_stmt
@@ -333,7 +315,6 @@ func parser_parse_return_stmt(p* parser) ast_node* {
     }
     return ret
 }
-
 func parser_parse_if_stmt(p* parser) ast_node* {
     if_stmt := alloc(ast_node)
     if_stmt.type_ = ast_if_stmt
@@ -348,7 +329,6 @@ func parser_parse_if_stmt(p* parser) ast_node* {
     }
     return if_stmt
 }
-
 func parser_parse_for_stmt(p* parser) ast_node* {
     for_stmt := alloc(ast_node)
     for_stmt.type_ = ast_for_stmt
@@ -361,18 +341,15 @@ func parser_parse_for_stmt(p* parser) ast_node* {
     parser_parse_block_stmt(p)
     return for_stmt
 }
-
 func parser_parse_expr_stmt(p* parser) ast_node* {
     expr_stmt := alloc(ast_node)
     expr_stmt.type_ = ast_expr_stmt
     parser_parse_expression(p)
     return expr_stmt
 }
-
 func parser_parse_expression(p* parser) ast_node* {
     return parser_parse_assignment(p)
 }
-
 func parser_parse_assignment(p* parser) ast_node* {
     expr := parser_parse_logical_or(p)
     if parser_current_token(p).type_ == 60 {
@@ -381,7 +358,6 @@ func parser_parse_assignment(p* parser) ast_node* {
     }
     return expr
 }
-
 func parser_parse_logical_or(p* parser) ast_node* {
     left := parser_parse_logical_and(p)
     for {
@@ -399,7 +375,6 @@ func parser_parse_logical_or(p* parser) ast_node* {
     }
     return left
 }
-
 func parser_parse_logical_and(p* parser) ast_node* {
     left := parser_parse_equality(p)
     for {
@@ -417,7 +392,6 @@ func parser_parse_logical_and(p* parser) ast_node* {
     }
     return left
 }
-
 func parser_parse_equality(p* parser) ast_node* {
     left := parser_parse_comparison(p)
     for {
@@ -436,7 +410,6 @@ func parser_parse_equality(p* parser) ast_node* {
     }
     return left
 }
-
 func parser_parse_comparison(p* parser) ast_node* {
     left := parser_parse_additive(p)
     for {
@@ -456,7 +429,6 @@ func parser_parse_comparison(p* parser) ast_node* {
     }
     return left
 }
-
 func parser_parse_additive(p* parser) ast_node* {
     left := parser_parse_multiplicative(p)
     for {
@@ -474,7 +446,6 @@ func parser_parse_additive(p* parser) ast_node* {
     }
     return left
 }
-
 func parser_parse_multiplicative(p* parser) ast_node* {
     left := parser_parse_unary(p)
     for {
@@ -493,7 +464,6 @@ func parser_parse_multiplicative(p* parser) ast_node* {
     }
     return left
 }
-
 func parser_parse_unary(p* parser) ast_node* {
     current_type := parser_current_token(p).type_
     if current_type == 54 || current_type == 52 || current_type == 75 {
@@ -505,7 +475,6 @@ func parser_parse_unary(p* parser) ast_node* {
     }
     return parser_parse_postfix(p)
 }
-
 func parser_parse_postfix(p* parser) ast_node* {
     left := parser_parse_primary(p)
     for {
@@ -548,7 +517,6 @@ func parser_parse_postfix(p* parser) ast_node* {
     }
     return left
 }
-
 func parser_parse_primary(p* parser) ast_node* {
     current := parser_current_token(p)
     primary := alloc(ast_node)
@@ -570,4 +538,3 @@ func parser_parse_primary(p* parser) ast_node* {
         }
     }
     return primary
-}

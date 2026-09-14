@@ -2,13 +2,11 @@ package backend
 struct instr_selector {
     codegen_context* ctx
 }
-
 func make_instr_selector(codegen_context* ctx) instr_selector {
     is: instr_selector
     is.ctx = ctx
     is
 }
-
 func (instr_selector* is) select_const_i64(int value, int target_reg) {
     reg_name := x86_64_reg_name(target_reg)
     if value == 0 {
@@ -19,13 +17,11 @@ func (instr_selector* is) select_const_i64(int value, int target_reg) {
         is.ctx.progs.append_prog(prog_op_mov(), instr)
     }
 }
-
 func (instr_selector* is) select_const_i32(int value, int target_reg) {
     reg_name := x86_64_reg_name(target_reg)
     instr := "\tmovl\t$" + to_string(value) + ", %" + reg_name
     is.ctx.progs.append_prog(prog_op_mov(), instr)
 }
-
 func (instr_selector* is) select_add_i64(int left_reg, int right_reg, int result_reg) {
     if left_reg != result_reg {
         left_name := x86_64_reg_name(left_reg)
@@ -38,7 +34,6 @@ func (instr_selector* is) select_add_i64(int left_reg, int right_reg, int result
     instr := "\taddq\t%" + right_name + ", %" + result_name
     is.ctx.progs.append_prog(prog_op_add(), instr)
 }
-
 func (instr_selector* is) select_sub_i64(int left_reg, int right_reg, int result_reg) {
     if left_reg != result_reg {
         left_name := x86_64_reg_name(left_reg)
@@ -51,7 +46,6 @@ func (instr_selector* is) select_sub_i64(int left_reg, int right_reg, int result
     instr := "\tsubq\t%" + right_name + ", %" + result_name
     is.ctx.progs.append_prog(prog_op_sub(), instr)
 }
-
 func (instr_selector* is) select_mul_i64(int left_reg, int right_reg, int result_reg) {
     if left_reg != result_reg {
         left_name := x86_64_reg_name(left_reg)
@@ -64,7 +58,6 @@ func (instr_selector* is) select_mul_i64(int left_reg, int right_reg, int result
     instr := "\timulq\t%" + right_name + ", %" + result_name
     is.ctx.progs.append_prog(prog_op_mul(), instr)
 }
-
 func (instr_selector* is) select_div_i64(int left_reg, int right_reg, int result_reg) {
     if left_reg != 0 {
         left_name := x86_64_reg_name(left_reg)
@@ -82,7 +75,6 @@ func (instr_selector* is) select_div_i64(int left_reg, int right_reg, int result
         is.ctx.progs.append_prog(prog_op_mov(), instr)
     }
 }
-
 func (instr_selector* is) select_mod_i64(int left_reg, int right_reg, int result_reg) {
     if left_reg != 0 {
         left_name := x86_64_reg_name(left_reg)
@@ -100,24 +92,20 @@ func (instr_selector* is) select_mod_i64(int left_reg, int right_reg, int result
         is.ctx.progs.append_prog(prog_op_mov(), instr)
     }
 }
-
 func (instr_selector* is) select_load_i64(string addr, int target_reg) {
     reg_name := x86_64_reg_name(target_reg)
     instr := "\tmovq\t" + addr + ", %" + reg_name
     is.ctx.progs.append_prog(prog_op_load(), instr)
 }
-
 func (instr_selector* is) select_store_i64(int source_reg, string addr) {
     reg_name := x86_64_reg_name(source_reg)
     instr := "\tmovq\t%" + reg_name + ", " + addr
     is.ctx.progs.append_prog(prog_op_store(), instr)
 }
-
 func (instr_selector* is) select_call(string target, int[] clobber_regs) {
     instr := "\tcall\t" + target
     is.ctx.progs.append_prog(prog_op_call(), instr)
 }
-
 func (instr_selector* is) select_return(int value_reg) {
     if value_reg != 0 {
         value_name := x86_64_reg_name(value_reg)
@@ -128,4 +116,3 @@ func (instr_selector* is) select_return(int value_reg) {
     is.ctx.progs.append_prog(prog_op_pop(), instr)
     instr = "\tretq"
     is.ctx.progs.append_prog(prog_op_ret(), instr)
-}

@@ -31,7 +31,6 @@ func recompute_uses(ssa_func f) {
         bi = bi + 1
     }
 }
-
 func rewrite_value_references(ssa_func f, int from_id, int to_id) int {
     changed := 0
     i := 0
@@ -55,4 +54,3 @@ func rewrite_value_references(ssa_func f, int from_id, int to_id) int {
         bi = bi + 1
     }
     changed
-}

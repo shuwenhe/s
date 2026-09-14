@@ -6,20 +6,17 @@ struct jsonrpc_request {
     option[map[string, string]] params
     option[int] id
 }
-
 struct jsonrpc_response {
     string jsonrpc
     option[string] result
     option[string] error_msg
     option[int] id
 }
-
 struct jsonrpc_notification {
     string jsonrpc
     string method
     option[map[string, string]] params
 }
-
 func parse_jsonrpc_message(string raw) (jsonrpc_request, string) {
     switch extract_json_string(raw, "method") {
         option::some(method) : {
@@ -44,20 +41,16 @@ func parse_jsonrpc_message(string raw) (jsonrpc_request, string) {
         }
     }
 }
-
 func create_response(int id, string result) string {
     "{\"jsonrpc\":\"2.0\",\"id\":" + std::to_string(id) + ",\"result\":" + result + "}"
 }
-
 func create_error_response(int id, int code, string message) string {
     "{\"jsonrpc\":\"2.0\",\"id\":" + std::to_string(id) +
     ",\"error\":{\"code\":" + std::to_string(code) + ",\"message\":\"" + escape_json_string(message) + "\"}}"
 }
-
 func create_notification(string method, string params) string {
     "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params + "}"
 }
-
 func serialize_diagnostics(diags diagnostic[]) string {
     var result = "["
     var i = 0
@@ -71,13 +64,11 @@ func serialize_diagnostics(diags diagnostic[]) string {
     result = result + "]"
     result
 }
-
 func serialize_diagnostic(d diagnostic) string {
     "{\"range\":" + serialize_range(d.r) +
     ",\"message\":\"" + escape_json_string(d.message) +
     "\",\"severity\":" + serialize_severity(d.severity) + "}"
 }
-
 func serialize_document_symbols(symbols document_symbol[]) string {
     var result = "["
     var i = 0
@@ -91,14 +82,12 @@ func serialize_document_symbols(symbols document_symbol[]) string {
     result = result + "]"
     result
 }
-
 func serialize_document_symbol(symbol document_symbol) string {
     "{\"name\":\"" + escape_json_string(symbol.name) +
     "\",\"kind\":" + std::to_string(symbol_kind_to_int(symbol.kind)) +
     ",\"range\":" + serialize_range(symbol.range_val) +
     ",\"selectionRange\":" + serialize_range(symbol.selection_range) + "}"
 }
-
 func serialize_completion_list(list completion_list) string {
     var result = "{\"isIncomplete\":" + (if list.is_incomplete { "true" } else { "false" })
     result = result + ",\"items\":["
@@ -113,7 +102,6 @@ func serialize_completion_list(list completion_list) string {
     result = result + "]}"
     result
 }
-
 func serialize_completion_item(item completion_item) string {
     var result = "{\"label\":\"" + escape_json_string(item.label) + "\""
     switch item.kind {
@@ -135,26 +123,21 @@ func serialize_completion_item(item completion_item) string {
     result = result + "}"
     result
 }
-
 func serialize_hover(h hover) string {
     "{\"contents\":\"" + escape_json_string(h.contents) + "\"}"
 }
-
 func serialize_range(r range) string {
     "{\"start\":" + serialize_position(r.start) + ",\"end\":" + serialize_position(r.end) + "}"
 }
-
 func serialize_position(p position) string {
     "{\"line\":" + std::to_string(p.line) + ",\"character\":" + std::to_string(p.character) + "}"
 }
-
 func serialize_severity(severity option[int]) string {
     switch severity {
         option::some(s) : std::to_string(s),
         option::none() : "4"
     }
 }
-
 func extract_json_string(string json, string key) option[string] {
     search_key := "\"" + key + "\":"
     switch std::find_substring(json, search_key) {
@@ -192,7 +175,6 @@ func extract_json_string(string json, string key) option[string] {
         option::none() : option::none()
     }
 }
-
 func escape_json_string(string s) string {
     var result = ""
     var i = 0
@@ -215,7 +197,6 @@ func escape_json_string(string s) string {
     }
     result
 }
-
 func symbol_kind_to_int(kind symbol_kind) int {
     switch kind {
         symbol_kind::file_k : 1,
@@ -246,7 +227,6 @@ func symbol_kind_to_int(kind symbol_kind) int {
         symbol_kind::type_parameter_k : 26,
     }
 }
-
 func completion_kind_to_int(kind completion_item_kind) int {
     switch kind {
         completion_item_kind::text : 1,
@@ -275,4 +255,3 @@ func completion_kind_to_int(kind completion_item_kind) int {
         completion_item_kind::operator : 24,
         completion_item_kind::type_parameter : 25,
     }
-}

@@ -1,2 +1,1 @@
 func hosted_frontend() {
-}

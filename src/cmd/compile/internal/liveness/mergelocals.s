@@ -9,12 +9,10 @@ struct local_slot {
     int align
     int offset
 }
-
 struct merged_locals {
     local_slot[] slots
     int frame_size
 }
-
 func merge_locals(local_slot[] a, local_slot[] b) merged_locals {
     slots := local_slot[]()
     append_unique_slots(slots, a)
@@ -35,7 +33,6 @@ func merge_locals(local_slot[] a, local_slot[] b) merged_locals {
         slots: slots, frame_size align_up(cursor, 8),
     }
 }
-
 func append_unique_slots(local_slot[] dst, local_slot[] src) () {
     i := 0
     for i < len(src) {
@@ -56,7 +53,6 @@ func append_unique_slots(local_slot[] dst, local_slot[] src) () {
         i = i + 1
     }
 }
-
 func find_slot_index(local_slot[] slots, string name) int {
     i := 0
     for i < len(slots) {
@@ -67,10 +63,8 @@ func find_slot_index(local_slot[] slots, string name) int {
     }
     -1
 }
-
 func align_up(int value, int align) int {
     if align <= 1 {
         return value
     }
     ((value + align - 1) / align) * align
-}
