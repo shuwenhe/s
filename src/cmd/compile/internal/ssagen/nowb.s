@@ -11,6 +11,7 @@ func is_nowritebarrier_fn(string fn_name) bool {
     }
     false
 }
+
 func should_emit_writebarrier(string fn_name, bool has_heap_ptr_store, bool global_store) bool {
     if !has_heap_ptr_store {
         return false
@@ -21,4 +22,3 @@ func should_emit_writebarrier(string fn_name, bool has_heap_ptr_store, bool glob
     if global_store {
         return true
     }
-    true

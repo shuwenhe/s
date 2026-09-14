@@ -32,4 +32,3 @@ func dump_func(ssa_func f) string {
         }
         bi = bi + 1
     }
-    out

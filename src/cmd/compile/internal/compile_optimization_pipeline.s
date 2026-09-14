@@ -7,6 +7,7 @@ struct compilation_stats {
     hoisted_invariants: int
     total_optimizations: int
 }
+
 func compile_initialize_optimization_pipeline() compilation_stats {
     stats := compilation_stats {
         escape_stack_allocs: 0,
@@ -18,36 +19,43 @@ func compile_initialize_optimization_pipeline() compilation_stats {
     }
     return stats
 }
+
 func compile_phase_1_escape_analysis(int func_id) int {
     eprintln("[COMPILE] Phase 1: Escape Analysis for func_")
     eprintln(func_id)
     eprintln("\n")
     return func_id
 }
+
 func compile_phase_2_inlining(int func_id) int {
     eprintln("[COMPILE] Phase 2: Function Inlining for func_")
     eprintln(func_id)
     eprintln("\n")
     return func_id
 }
+
 func compile_phase_3_loop_optimization(int func_id) int {
     eprintln("[COMPILE] Phase 3: Loop Invariant Hoisting for func_")
     eprintln(func_id)
     eprintln("\n")
     return func_id
 }
+
 func compile_phase_4_ssa_optimization() int {
     eprintln("[COMPILE] Phase 4: SSA Optimization (existing)\n")
     return 0
 }
+
 func compile_phase_5_regalloc() int {
     eprintln("[COMPILE] Phase 5: Register Allocation (existing)\n")
     return 0
 }
+
 func compile_phase_6_codegen() int {
     eprintln("[COMPILE] Phase 6: Code Generation (existing)\n")
     return 0
 }
+
 func compile_optimize_function(int func_id) compilation_stats {
     stats := compile_initialize_optimization_pipeline()
     compile_phase_1_escape_analysis(func_id)
@@ -63,6 +71,7 @@ func compile_optimize_function(int func_id) compilation_stats {
     stats.total_optimizations = stats.escape_stack_allocs + stats.inlined_functions + stats.hoisted_invariants
     return stats
 }
+
 func compile_print_stats(compilation_stats stats) int {
     eprintln("\n========== COMPILATION STATISTICS ==========\n")
     eprintln("Escape Analysis Results:\n")
@@ -86,8 +95,8 @@ func compile_print_stats(compilation_stats stats) int {
     eprintln("==========================================\n")
     return 0
 }
+
 func compile_full_pipeline(int func_id) int {
     eprintln("\n[COMPILER] Starting Full Optimization Pipeline\n")
     compilation_stats stats = compile_optimize_function(func_id)
     compile_print_stats(stats)
-    return 0

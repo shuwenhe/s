@@ -7,6 +7,7 @@ enum addr_type {
     addr_type_branch,
     addr_type_special,
 }
+
 struct addr {
     type addr_type
     int reg
@@ -16,36 +17,43 @@ struct addr {
     string sym
     int symoff64
 }
+
 func make_addr_const(int64 offset) addr {
     addr {
         type: addr_type_const, offset offset,
     }
 }
+
 func make_addr_reg(int reg) addr {
     addr {
         type: addr_type_reg, reg reg,
     }
 }
+
 func make_addr_mem(int base_reg, int64 offset) addr {
     addr {
         type: addr_type_mem, reg base_reg, offset offset,
     }
 }
+
 func make_addr_indexed(int base_reg, int index_reg, int scale, int64 offset) addr {
     addr {
         type: addr_type_mem, reg base_reg, index index_reg, scale scale, offset offset,
     }
 }
+
 func make_addr_sym(string sym, int64 offset) addr {
     addr {
         type: addr_type_mem, sym sym, symoff offset,
     }
 }
+
 func make_addr_branch(string label) addr {
     addr {
         type: addr_type_branch, sym label,
     }
 }
+
 func (addr* a) string_repr() string {
     switch a.type {
         case addr_type_const: return a.offset as string
@@ -69,4 +77,3 @@ func (addr* a) string_repr() string {
         case addr_type_branch: return "label:" + a.sym
         case addr_type_special: return "special:" + a.sym
     }
-    "unknown"

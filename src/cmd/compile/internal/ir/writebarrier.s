@@ -7,6 +7,7 @@ enum barrier_type {
     barrier_arr_write,
     barrier_slice_write
 }
+
 struct write_barrier {
     int instr_id
     int target_var
@@ -15,12 +16,14 @@ struct write_barrier {
     bool needs_nil_check
     bool needs_bounds_check
 }
+
 struct write_barrier_analysis {
     write_barrier[] barriers
     int[] gc_safe_points
     bool[] var_needs_barrier
     int num_vars
 }
+
 func new_write_barrier_analysis(int num_vars) write_barrier_analysis {
     write_barrier_analysis {
         barriers: write_barrier[](),
@@ -29,6 +32,7 @@ func new_write_barrier_analysis(int num_vars) write_barrier_analysis {
         num_vars: num_vars
     }
 }
+
 func (wba* write_barrier_analysis) analyze_store(int instr_id, int target_var, int source_var, string target_type) barrier_type {
     kind := barrier_type::barrier_none
     if target_type == "pointer" || target_type == "interface" {
@@ -48,6 +52,7 @@ func (wba* write_barrier_analysis) analyze_store(int instr_id, int target_var, i
     }
     kind
 }
+
 func (wba* write_barrier_analysis) analyze_array_write(int instr_id, int array_var, int index_var, int value_var, string elem_type) barrier_type {
     kind := barrier_type::barrier_none
     if elem_type == "pointer" || elem_type == "interface" {
@@ -67,6 +72,7 @@ func (wba* write_barrier_analysis) analyze_array_write(int instr_id, int array_v
     }
     kind
 }
+
 func (wba* write_barrier_analysis) analyze_slice_write(int instr_id, int slice_var, int index_var, int value_var, string elem_type) barrier_type {
     kind := barrier_type::barrier_none
     if elem_type == "pointer" || elem_type == "interface" {
@@ -86,15 +92,18 @@ func (wba* write_barrier_analysis) analyze_slice_write(int instr_id, int slice_v
     }
     kind
 }
+
 func (wba* write_barrier_analysis) needs_barrier(int var_id) bool {
     if var_id < wba.num_vars {
         return wba.var_needs_barrier[var_id]
     }
     false
 }
+
 func (wba* write_barrier_analysis) record_gc_safe_point(int instr_id) {
     wba.gc_safe_points.push(instr_id)
 }
+
 func (wba* write_barrier_analysis) is_gc_safe_point(int instr_id) bool {
     for _idx_117 := 0; _idx_117 < len(wba.gc_safe_points); _idx_117++ {
         sp := wba.gc_safe_points[_idx_117]
@@ -104,6 +113,7 @@ func (wba* write_barrier_analysis) is_gc_safe_point(int instr_id) bool {
     }
     false
 }
+
 func (wba* write_barrier_analysis) get_barriers_in_range(int start, int end) write_barrier[] {
     result := write_barrier[]()
     for _idx_127 := 0; _idx_127 < len(wba.barriers); _idx_127++ {
@@ -114,6 +124,7 @@ func (wba* write_barrier_analysis) get_barriers_in_range(int start, int end) wri
     }
     result
 }
+
 func (wba* write_barrier_analysis) optimize_barriers() {
     i := 0
     for i < wba.barriers.len() {
@@ -132,6 +143,7 @@ func (wba* write_barrier_analysis) optimize_barriers() {
         i = i + 1
     }
 }
+
 func (wba* write_barrier_analysis) insert_barrier_code(write_barrier wb) string[] {
     code := string[]()
     if wb.needs_nil_check {
@@ -151,4 +163,3 @@ func (wba* write_barrier_analysis) insert_barrier_code(write_barrier wb) string[
     if wb.needs_nil_check {
         code.push("}")
     }
-    code

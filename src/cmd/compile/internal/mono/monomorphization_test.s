@@ -149,6 +149,7 @@ func run_monomorphization_test() int {
     }
     0
 }
+
 func run_e2e_transitive_monomorphization_test() int {
     baz_return := expr::name(name_expr { name: "x", inferred_type option::some("T") })
     baz := function_decl {
@@ -257,6 +258,7 @@ func run_e2e_transitive_monomorphization_test() int {
     }
     0
 }
+
 func run_generic_receiver_method_monomorphization_test() int {
     get_call_int := expr::call(call_expr {
         callee: std.prelude.box(expr::member(member_expr {
@@ -391,6 +393,7 @@ func run_generic_receiver_method_monomorphization_test() int {
     }
     0
 }
+
 func run_recursive_generic_method_monomorphization_test() int {
     wrap := function_decl {
         sig: function_sig {
@@ -472,6 +475,7 @@ func run_recursive_generic_method_monomorphization_test() int {
     }
     compile.internal.mono.verify_monomorphized_file_with_details(mono_file.file)
 }
+
 func count_method_named(source_file file, string name) int {
     count := 0
     i := 0
@@ -488,6 +492,7 @@ func count_method_named(source_file file, string name) int {
     }
     count
 }
+
 func count_function_named(source_file file, string name) int {
     count := 0
     i := 0
@@ -502,4 +507,3 @@ func count_function_named(source_file file, string name) int {
         }
         i = i + 1
     }
-    count

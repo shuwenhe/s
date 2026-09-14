@@ -170,4 +170,3 @@ func run_b1_3_tests() int {
     }
     s.println("")
     s.println("B1.3 Tests: " + std.prelude.to_string(tests_passed) + "/" + std.prelude.to_string(tests_total) + " passed")
-    if tests_passed == tests_total { 0 } else { 1 }

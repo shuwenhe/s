@@ -20,4 +20,3 @@ func main() int {
     } else {
         rt_exit(1)
     }
-    0

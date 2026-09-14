@@ -13,6 +13,7 @@ func at_exit(string name) () {
     }
     at_exit_funcs = append(at_exit_funcs, at_exit_entry { name: name })
 }
+
 func run_at_exit() string[] {
     out := string[]()
     i := len(at_exit_funcs)
@@ -23,6 +24,6 @@ func run_at_exit() string[] {
     at_exit_funcs = at_exit_entry[]()
     out
 }
+
 func exit(int code) int {
     ignored := run_at_exit()
-    code

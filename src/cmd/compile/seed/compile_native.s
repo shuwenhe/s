@@ -13,6 +13,7 @@ struct compiler_native {
     codegen: codegen_context
     toolchain: compiler_toolchain
 }
+
 func compiler_native_create(string source_file, string output_file) compiler_native {
     compiler: compiler_native
     compiler.source_file = source_file
@@ -23,6 +24,7 @@ func compiler_native_create(string source_file, string output_file) compiler_nat
     compiler.toolchain = toolchain_create()
     compiler
 }
+
 func (compiler* compiler_native) generate_assembly(program* runtime_program) (int, string) {
     codegen_emit_preamble(&compiler.codegen)
     for i < program.function_count {
@@ -31,6 +33,7 @@ func (compiler* compiler_native) generate_assembly(program* runtime_program) (in
     }
     0, ""
 }
+
 func (compiler* compiler_native) generate_function(fn* runtime_function) {
     codegen_emit_function_prologue(&compiler.codegen, fn.name, fn.param_count)
     allocator := register_allocator_create()
@@ -42,6 +45,7 @@ func (compiler* compiler_native) generate_function(fn* runtime_function) {
     }
     codegen_emit_function_epilogue(&compiler.codegen)
 }
+
 func (compiler* compiler_native) generate_instruction(ra* register_allocator, sf* stack_frame, ins* runtime_ins) {
     if ins.op == "MOV" {
         instruction_select_mov(&compiler.codegen, ra, ins.op1, ins.result)
@@ -63,9 +67,11 @@ func (compiler* compiler_native) generate_instruction(ra* register_allocator, sf
         compiler.codegen.emit_line("    jne " + ins.result)
     }
 }
+
 func (compiler* compiler_native) write_assembly_file() (int, string) {
     codegen_write_to_file(&compiler.codegen, compiler.asm_file)
 }
+
 func (compiler* compiler_native) compile_to_executable() (int, string) {
     exit_code, msg := compiler.write_assembly_file()
     if exit_code != 0 {
@@ -83,6 +89,6 @@ func (compiler* compiler_native) compile_to_executable() (int, string) {
     }
     0, ""
 }
+
 func compiler_compile_native(string source, string output) (int, string) {
     compiler := compiler_native_create(source, output)
-    compiler.compile_to_executable()

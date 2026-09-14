@@ -7,6 +7,7 @@ struct hash_mask {
     string suffix
     bool exclude
 }
+
 struct hash_debug {
     string name
     string raw
@@ -25,6 +26,7 @@ variable_make_hash := new_hash_debug("variablemakehash", "")
 func has_debug_hash() bool {
     hash_debug_default.raw != ""
 }
+
 func new_hash_debug(string name, string raw) hash_debug {
     out := hash_debug {
         name: name, raw raw, file_suffix_only false, inline_suffix_only false, matches hash_mask[](),
@@ -59,13 +61,16 @@ func new_hash_debug(string name, string raw) hash_debug {
     }
     out
 }
+
 func set_inline_suffix_only(hash_debug hd, bool on) hash_debug {
     hd.inline_suffix_only = on
     hd
 }
+
 func debug_hash_match_pkg_func(string pkg, string fn_name) bool {
     match_pkg_func(hash_debug_default, pkg, fn_name)
 }
+
 func match_pkg_func(hash_debug hd, string pkg, string fn_name) bool {
     if hd.raw == "" {
         return true
@@ -92,6 +97,7 @@ func match_pkg_func(hash_debug hd, string pkg, string fn_name) bool {
     }
     included
 }
+
 func split(string text, string sep) string[] {
     out := string[]()
     if sep == "" {
@@ -112,14 +118,15 @@ func split(string text, string sep) string[] {
     out = append(out, slice(text, start, len(text)))
     out
 }
+
 func starts_with(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
     }
     return slice(text, 0, len(prefix)) == prefix
 }
+
 func ends_with(string text, string suffix) bool {
     if len(text) < len(suffix) {
         return false
     }
-    return slice(text, len(text) - len(suffix), len(text)) == suffix

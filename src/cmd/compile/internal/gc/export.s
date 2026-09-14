@@ -11,6 +11,7 @@ func dump_asm_header(string pkg_name, string[] symbols) string {
     }
     out
 }
+
 func dump_export_data(string pkg_name, string[] exported_symbols) string {
     out := "package " + pkg_name + "\nexports:\n"
     i := 0
@@ -18,4 +19,3 @@ func dump_export_data(string pkg_name, string[] exported_symbols) string {
         out = out + "- " + exported_symbols[i] + "\n"
         i = i + 1
     }
-    out

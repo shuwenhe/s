@@ -8,4 +8,3 @@ func splice_file(int input_fd, int output_fd, int count) (int, net_error) {
         e : wrap_sc_err(e),
     }
 }
-func splice_linux_unit_name() string { "src/net/splice_linux" }

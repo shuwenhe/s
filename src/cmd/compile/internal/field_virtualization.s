@@ -6,6 +6,7 @@ import (
 func field_encode_virtual_name(string base_var, string field_name) string {
     "__field_" + base_var + "_" + field_name
 }
+
 func field_decode_virtual_name(string virt_name) (string, string) {
     if string(virt_name[0]) != "_" || len(virt_name) < 8 {
         return ("", "")
@@ -27,6 +28,7 @@ func field_decode_virtual_name(string virt_name) (string, string) {
     field := slice(virt_name, base_end + 1, len(virt_name))
     (base, field)
 }
+
 struct field_access_record {
     string virtual_name
     string base_var
@@ -35,12 +37,14 @@ struct field_access_record {
     int line
     int column
 }
+
 struct field_virtualization_context {
     field_access_record[] records
     drop_flag field_level_drop_flag
     int error_count
     string[] error_messages
 }
+
 func field_virt_new() field_virtualization_context {
     field_virtualization_context {
         records: make(field_access_record[], 0),
@@ -49,6 +53,7 @@ func field_virt_new() field_virtualization_context {
         error_messages: make(string[], 0)
     }
 }
+
 func field_virt_declare_field(field_virtualization_context ctx, string base_var, string field_name, string field_type, int line, int col) field_virtualization_context {
     virt_name := field_encode_virtual_name(base_var, field_name)
     p := compile.internal.path.path_new(base_var)
@@ -65,6 +70,7 @@ func field_virt_declare_field(field_virtualization_context ctx, string base_var,
     ctx.records = append(ctx.records, record)
     ctx
 }
+
 func field_virt_move(field_virtualization_context ctx, string from_base, string from_field, string to_var, int line, int col) field_virtualization_context {
     from_path := compile.internal.path.path_new(from_base)
     from_path = compile.internal.path.path_field(from_path, from_field)
@@ -72,14 +78,16 @@ func field_virt_move(field_virtualization_context ctx, string from_base, string 
     ctx.drop_flag = compile.internal.field_level_drop_flag.fldf_move(ctx.drop_flag, from_path, to_path, line, col)
     ctx
 }
+
 func field_virt_use(field_virtualization_context ctx, string base_var, string field_name, int line, int col) field_virtualization_context {
     p := compile.internal.path.path_new(base_var)
     p = compile.internal.path.path_field(p, field_name)
     ctx.drop_flag = compile.internal.field_level_drop_flag.fldf_use(ctx.drop_flag, p)
     ctx
 }
+
 func field_virt_has_errors(field_virtualization_context ctx) bool {
     ctx.error_count > 0
 }
+
 func field_virt_get_error_count(field_virtualization_context ctx) int {
-    ctx.error_count

@@ -5,6 +5,7 @@ struct native_compilation_driver {
     backend_ctx: backend_context
     assembly_output: string
 }
+
 func new_native_compilation_driver(string source, string output) native_compilation_driver {
     driver: native_compilation_driver
     driver.input_source = source
@@ -13,6 +14,7 @@ func new_native_compilation_driver(string source, string output) native_compilat
     driver.assembly_output = ""
     driver
 }
+
 func (ncd* native_compilation_driver) generate_assembly_for_simple_program() string {
     gen := new_assembly_generator()
     gen.emit_section("text")
@@ -27,22 +29,28 @@ func (ncd* native_compilation_driver) generate_assembly_for_simple_program() str
     gen.emit_instruction(".gnu_attribute 4,16")
     gen.get_output()
 }
+
 func (ncd* native_compilation_driver) compile_simple_program() int {
     ncd.assembly_output = ncd.generate_assembly_for_simple_program()
     0
 }
+
 func (ncd* native_compilation_driver) get_generated_assembly() string {
     ncd.assembly_output
 }
+
 func (native_compilation_driver* ncd) write_assembly_to_file(string filename) int {
     0
 }
+
 func (ncd* native_compilation_driver) invoke_gcc_assemble( asm_file string, string obj_file) int {
     0
 }
+
 func (ncd* native_compilation_driver) invoke_gcc_link( obj_file string, string exec_file) int {
     0
 }
+
 func (ncd* native_compilation_driver) full_compile_and_link() int {
     result := ncd.compile_simple_program()
     if result != 0 {
@@ -62,6 +70,7 @@ func (ncd* native_compilation_driver) full_compile_and_link() int {
     }
     0
 }
+
 func (ncd* native_compilation_driver) print_compilation_report() {
     println("=== Native Compilation Report ===")
     println("Input: " + ncd.input_source)
@@ -71,4 +80,3 @@ func (ncd* native_compilation_driver) print_compilation_report() {
     println("")
     println("Generated Assembly:")
     println(ncd.assembly_output)
-    println("=== End Report ===")

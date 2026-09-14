@@ -133,6 +133,7 @@ func token_precedence(int tok_type) int {
     default : prec_lowest
     }
 }
+
 func parser_new(lexer lex) parser {
     p := parser {
         lexer: lex, current_token: token { token_type: 0, value: "", line: 0, column: 0 }, peek_token: token { token_type: 0, value: "", line: 0, column: 0 }, errors: vec[string]()
@@ -141,16 +142,20 @@ func parser_new(lexer lex) parser {
     parser_next_token(p*)
     p
 }
+
 func parser_next_token(p* parser) {
     p.current_token = p.peek_token
     p.peek_token = lexer_next_token(p.lexer*)
 }
+
 func parser_current_token_is(p* parser, int tok_type) bool {
     return p.current_token.token_type == tok_type
 }
+
 func parser_peek_token_is(p* parser, int tok_type) bool {
     return p.peek_token.token_type == tok_type
 }
+
 func parser_expect_peek(p* parser, int tok_type) int {
     if parser_peek_token_is(p, tok_type) {
         parser_next_token(p)
@@ -160,14 +165,17 @@ func parser_expect_peek(p* parser, int tok_type) int {
         return 0
     }
 }
+
 func parser_add_error(p* parser, string msg) {
     p.errors.push(msg)
 }
+
 func parser_skip_newlines(p* parser) {
     for parser_current_token_is(p, token_newline) {
         parser_next_token(p)
     }
 }
+
 func parser_parse_program(p* parser) ast_node* {
     program := ast_new(ast_program, 1, 0)
     for !parser_current_token_is(p, token_eof) {
@@ -200,6 +208,7 @@ func parser_parse_program(p* parser) ast_node* {
     }
     program
 }
+
 func parser_parse_package(p* parser) ast_node* {
     pkg := ast_new(ast_package, p.current_token.line, p.current_token.column)
     if !parser_expect_peek(p, token_ident) {
@@ -209,6 +218,7 @@ func parser_parse_package(p* parser) ast_node* {
     parser_next_token(p)
     pkg
 }
+
 func parser_parse_import(p* parser) ast_node* {
     imp := ast_new(ast_import, p.current_token.line, p.current_token.column)
     if !parser_expect_peek(p, token_ident) {
@@ -226,6 +236,7 @@ func parser_parse_import(p* parser) ast_node* {
     ast_set_string_data(imp, path)
     imp
 }
+
 func parser_parse_func_decl(p* parser) ast_node* {
     func_decl := ast_new(ast_func_decl, p.current_token.line, p.current_token.column)
     parser_next_token(p)
@@ -256,6 +267,7 @@ func parser_parse_func_decl(p* parser) ast_node* {
     }
     func_decl
 }
+
 func parser_parse_receiver(p* parser) ast_node* {
     receiver := ast_new(ast_var_decl, p.current_token.line, p.current_token.column)
     parser_next_token(p)
@@ -275,6 +287,7 @@ func parser_parse_receiver(p* parser) ast_node* {
     }
     receiver
 }
+
 func parser_parse_parameters(p* parser) ast_node* {
     params := ast_new(ast_block_stmt, p.current_token.line, p.current_token.column)
     parser_next_token(p)
@@ -302,6 +315,7 @@ func parser_parse_parameters(p* parser) ast_node* {
     }
     params
 }
+
 func parser_parse_return_types(p* parser) ast_node* {
     ret_types := ast_new(ast_block_stmt, p.current_token.line, p.current_token.column)
     if parser_current_token_is(p, token_lparen) {
@@ -322,6 +336,7 @@ func parser_parse_return_types(p* parser) ast_node* {
     }
     ret_types
 }
+
 func parser_parse_type(p* parser) ast_node* {
     type_node := ast_new(ast_type_ident, p.current_token.line, p.current_token.column)
     if parser_current_token_is(p, token_ident) {
@@ -344,6 +359,7 @@ func parser_parse_type(p* parser) ast_node* {
     }
     type_node
 }
+
 func parser_parse_struct_decl(p* parser) ast_node* {
     struct_decl := ast_new(ast_struct_decl, p.current_token.line, p.current_token.column)
     parser_next_token(p)
@@ -375,6 +391,7 @@ func parser_parse_struct_decl(p* parser) ast_node* {
     }
     struct_decl
 }
+
 func parser_parse_enum_decl(p* parser) ast_node* {
     enum_decl := ast_new(ast_enum_decl, p.current_token.line, p.current_token.column)
     parser_next_token(p)
@@ -401,6 +418,7 @@ func parser_parse_enum_decl(p* parser) ast_node* {
     }
     enum_decl
 }
+
 func parser_parse_var_decl(p* parser) ast_node* {
     var_decl := ast_new(ast_var_decl, p.current_token.line, p.current_token.column)
     parser_next_token(p)
@@ -422,6 +440,7 @@ func parser_parse_var_decl(p* parser) ast_node* {
     }
     var_decl
 }
+
 func parser_parse_const_decl(p* parser) ast_node* {
     const_decl := ast_new(ast_const_decl, p.current_token.line, p.current_token.column)
     parser_next_token(p)
@@ -442,6 +461,7 @@ func parser_parse_const_decl(p* parser) ast_node* {
     }
     const_decl
 }
+
 func parser_parse_block(p* parser) ast_node* {
     block := ast_new(ast_block_stmt, p.current_token.line, p.current_token.column)
     if !parser_expect_peek(p, token_lbrace) {
@@ -459,6 +479,7 @@ func parser_parse_block(p* parser) ast_node* {
     }
     block
 }
+
 func parser_parse_statement(p* parser) ast_node* {
     if parser_current_token_is(p, token_if) {
         parser_parse_if_stmt(p)
@@ -486,6 +507,7 @@ func parser_parse_statement(p* parser) ast_node* {
         expr
     }
 }
+
 func parser_parse_if_stmt(p* parser) ast_node* {
     if_stmt := ast_new(ast_if_stmt, p.current_token.line, p.current_token.column)
     parser_next_token(p)
@@ -507,6 +529,7 @@ func parser_parse_if_stmt(p* parser) ast_node* {
     }
     if_stmt
 }
+
 func parser_parse_for_stmt(p* parser) ast_node* {
     for_stmt := ast_new(ast_for_stmt, p.current_token.line, p.current_token.column)
     parser_next_token(p)
@@ -522,6 +545,7 @@ func parser_parse_for_stmt(p* parser) ast_node* {
     }
     for_stmt
 }
+
 func parser_parse_while_stmt(p* parser) ast_node* {
     while_stmt := ast_new(ast_while_stmt, p.current_token.line, p.current_token.column)
     parser_next_token(p)
@@ -533,6 +557,7 @@ func parser_parse_while_stmt(p* parser) ast_node* {
     }
     while_stmt
 }
+
 func parser_parse_return_stmt(p* parser) ast_node* {
     return_stmt := ast_new(ast_return_stmt, p.current_token.line, p.current_token.column)
     parser_next_token(p)
@@ -542,6 +567,7 @@ func parser_parse_return_stmt(p* parser) ast_node* {
     }
     return_stmt
 }
+
 func parser_parse_switch_stmt(p* parser) ast_node* {
     switch_stmt := ast_new(ast_switch_stmt, p.current_token.line, p.current_token.column)
     parser_next_token(p)
@@ -587,9 +613,11 @@ func parser_parse_switch_stmt(p* parser) ast_node* {
     }
     switch_stmt
 }
+
 func parser_parse_expression(p* parser, int precedence) ast_node* {
     parser_parse_infix_expression(p, parser_parse_primary_expression(p), precedence)
 }
+
 func parser_parse_primary_expression(p* parser) ast_node* {
     if parser_current_token_is(p, token_ident) {
         ident := ast_new(ast_ident, p.current_token.line, p.current_token.column)
@@ -640,6 +668,7 @@ func parser_parse_primary_expression(p* parser) ast_node* {
         ast_new(ast_ident, p.current_token.line, p.current_token.column)
     }
 }
+
 func parser_parse_infix_expression(p* parser, left* ast_node, int precedence) ast_node* {
     for precedence < token_precedence(p.current_token.token_type) {
         if parser_current_token_is(p, token_lparen) {
@@ -695,4 +724,3 @@ func parser_parse_infix_expression(p* parser, left* ast_node, int precedence) as
             return left
         }
     }
-    left

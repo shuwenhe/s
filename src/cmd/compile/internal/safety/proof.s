@@ -12,6 +12,7 @@ struct safety_proof {
     int unsafe_errors
     string summary
 }
+
 func classify_safety_error(semantic_error diagnostic, safety_proof* proof) () {
     code := diagnostic.code
     if code == "e3055" || code == "e3056" || code == "e3057" || code == "e3058" {
@@ -26,6 +27,7 @@ func classify_safety_error(semantic_error diagnostic, safety_proof* proof) () {
         proof.type_errors = proof.type_errors + 1
     }
 }
+
 func prove_safety(string source) safety_proof {
     diagnostics := compile.internal.semantic.check_detailed(source)
     proof := safety_proof {
@@ -51,9 +53,9 @@ func prove_safety(string source) safety_proof {
         + " diagnostics=" + (proof.diagnostic_count as string)
     proof
 }
+
 func safety_proof_report(safety_proof proof) string {
     status := "rejected"
     if proof.proven {
         status = "proven"
     }
-    status + " " + proof.summary

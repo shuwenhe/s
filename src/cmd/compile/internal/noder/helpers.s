@@ -9,12 +9,14 @@ func starts_with(string text, string prefix) bool {
     }
     std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
 }
+
 func ends_with(string text, string suffix) bool {
     if std.prelude.len(text) < std.prelude.len(suffix) {
         return false
     }
     std.prelude.slice(text, std.prelude.len(text) - std.prelude.len(suffix), std.prelude.len(text)) == suffix
 }
+
 func trim_spaces(string text) string {
     start := 0
     end := std.prelude.len(text)
@@ -36,6 +38,7 @@ func trim_spaces(string text) string {
     }
     std.prelude.slice(text, start, end)
 }
+
 func split_lines(string text) string[] {
     out := string[]()
     start := 0
@@ -50,6 +53,7 @@ func split_lines(string text) string[] {
     out = append(out, std.prelude.slice(text, start, std.prelude.len(text)))
     out
 }
+
 func split_words(string line) string[] {
     out := string[]()
     current := ""
@@ -71,6 +75,7 @@ func split_words(string line) string[] {
     }
     out
 }
+
 func normalize_import_path(string raw) string {
     text := trim_spaces(raw)
     if starts_with(text, "\"") && ends_with(text, "\"") && std.prelude.len(text) >= 2 {
@@ -78,6 +83,7 @@ func normalize_import_path(string raw) string {
     }
     text
 }
+
 func join_path(string[] parts) string {
     if std.prelude.len(parts) == 0 {
         return ""
@@ -90,6 +96,7 @@ func join_path(string[] parts) string {
     }
     out
 }
+
 func ident_or_default(string name, string fallback) string {
     t := trim_spaces(name)
     if t == "" {
@@ -97,5 +104,5 @@ func ident_or_default(string name, string fallback) string {
     }
     t
 }
+
 func fmt_pos(string path, int line, int column) string {
-    path + ":" + std.prelude.to_string(line) + ":" + std.prelude.to_string(column)

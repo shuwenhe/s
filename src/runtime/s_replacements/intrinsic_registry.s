@@ -1,1 +1,0 @@
-func intrinsic_registry() {

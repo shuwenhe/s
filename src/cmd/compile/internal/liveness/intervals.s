@@ -7,11 +7,13 @@ struct live_interval {
     int start
     int end
 }
+
 struct live_event {
     int point
     int value_id
     bool on
 }
+
 func build_live_intervals(live_event[] events) live_interval[] {
     out := live_interval[]()
     i := 0
@@ -33,12 +35,14 @@ func build_live_intervals(live_event[] events) live_interval[] {
     }
     out
 }
+
 func interval_length(live_interval iv) int {
     if iv.end < iv.start {
         return 0
     }
     iv.end - iv.start + 1
 }
+
 func intervals_overlap(live_interval a, live_interval b) bool {
     if a.end < b.start {
         return false
@@ -48,6 +52,7 @@ func intervals_overlap(live_interval a, live_interval b) bool {
     }
     true
 }
+
 func merge_intervals(live_interval a, live_interval b) live_interval {
     start := a.start
     if b.start < start {
@@ -59,6 +64,7 @@ func merge_intervals(live_interval a, live_interval b) live_interval {
     }
     live_interval { value_id: a.value_id, start start, end end }
 }
+
 func find_interval_index(live_interval[] ivs, int value_id) int {
     i := 0
     for i < len(ivs) {
@@ -67,4 +73,3 @@ func find_interval_index(live_interval[] ivs, int value_id) int {
         }
         i = i + 1
     }
-    -1

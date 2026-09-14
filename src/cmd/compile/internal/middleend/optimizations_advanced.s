@@ -15,14 +15,17 @@ struct inline_candidate {
     int call_count
     int is_recursive
 }
+
 struct escape_node {
     string var_name
     int escapes
     int depth
 }
+
 struct escape_graph {
     escape_node[] nodes
 }
+
 func estimate_inline_cost(ir_function func) int {
     cost := 0
     for b_idx := 0; b_idx < func.blocks.len(); b_idx = b_idx + 1 {
@@ -44,6 +47,7 @@ func estimate_inline_cost(ir_function func) int {
     }
     cost
 }
+
 func is_inline_candidate(ir_function func) int {
     cost := estimate_inline_cost(func)
     if cost > inline_threshold_small {
@@ -54,6 +58,7 @@ func is_inline_candidate(ir_function func) int {
     }
     return 1
 }
+
 func inline_function_call(ir_module module, ir_instruction call_instr, ir_function callee) ir_instruction[] {
     result := ir_instruction[]()
     for i := 0; i < callee.blocks.len(); i = i + 1 {
@@ -69,9 +74,9 @@ func inline_function_call(ir_module module, ir_instruction call_instr, ir_functi
     }
     result
 }
+
 func perform_inlining(ir_module module) {
     for f_idx := 0; f_idx < module.functions.len(); f_idx = f_idx + 1 {
-
         func := module.functions[f_idx]
         for b_idx := 0; b_idx < func.blocks.len(); b_idx = b_idx + 1 {
             block := func.blocks[b_idx]
@@ -97,6 +102,7 @@ func perform_inlining(ir_module module) {
         }
     }
 }
+
 func escape_analyze_var(ir_function func, string var_name) int {
     escapes := 0
     for b_idx := 0; b_idx < func.blocks.len(); b_idx = b_idx + 1 {
@@ -118,6 +124,7 @@ func escape_analyze_var(ir_function func, string var_name) int {
     }
     escapes
 }
+
 func build_escape_graph(ir_function func) escape_graph {
     graph := escape_graph { nodes: escape_node[]() }
     for b_idx := 0; b_idx < func.blocks.len(); b_idx = b_idx + 1 {
@@ -134,9 +141,9 @@ func build_escape_graph(ir_function func) escape_graph {
     }
     graph
 }
+
 func perform_escape_analysis(ir_module module) {
     for f_idx := 0; f_idx < module.functions.len(); f_idx = f_idx + 1 {
-
         func := module.functions[f_idx]
         graph := build_escape_graph(func)
         for i := 0; i < graph.nodes.len(); i = i + 1 {
@@ -146,6 +153,7 @@ func perform_escape_analysis(ir_module module) {
         }
     }
 }
+
 func find_function(ir_module module, string name) ir_function {
     for i := 0; i < module.functions.len(); i = i + 1 {
         if module.functions[i].name == name {
@@ -154,12 +162,13 @@ func find_function(ir_module module, string name) ir_function {
     }
     ir_function { name: "invalid" }
 }
+
 func devirtualize_interface_call(ir_instruction call_instr, string type_name) ir_instruction {
     call_instr
 }
+
 func perform_devirtualization(ir_module module) {
     for f_idx := 0; f_idx < module.functions.len(); f_idx = f_idx + 1 {
-
         func := module.functions[f_idx]
         for b_idx := 0; b_idx < func.blocks.len(); b_idx = b_idx + 1 {
             block := func.blocks[b_idx]
@@ -171,7 +180,7 @@ func perform_devirtualization(ir_module module) {
         }
     }
 }
+
 func ir_instr_assign(ir_value result, ir_value value) ir_instruction {
     instr := ir_instruction { instr_type: ir_instr_assign, result: result }
     instr.operands = append(instr.operands, value)
-    instr

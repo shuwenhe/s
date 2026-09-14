@@ -13,6 +13,7 @@ struct ownership_slot_ext {
     string field_name
     bool is_virtual_field
 }
+
 struct ownership_result_ext {
     bool ok
     int errors
@@ -20,6 +21,7 @@ struct ownership_result_ext {
     string[] drops
     string[] field_moves
 }
+
 func ownership_find_slot_ext(ownership_slot_ext[] slots, string name) int {
     i := 0
     for i < len(slots) {
@@ -28,6 +30,7 @@ func ownership_find_slot_ext(ownership_slot_ext[] slots, string name) int {
     }
     -1
 }
+
 func ownership_event_colon(string event) int {
     i := 0
     for i < len(event) {
@@ -36,6 +39,7 @@ func ownership_event_colon(string event) int {
     }
     -1
 }
+
 func ownership_contains(string[] names, string name) bool {
     i := 0
     for i < len(names) {
@@ -44,13 +48,16 @@ func ownership_contains(string[] names, string name) bool {
     }
     false
 }
+
 func field_move_key(string base_var, string field_name) string {
     base_var + "." + field_name
 }
+
 func is_field_moved(string[] field_moves, string base_var, string field_name) bool {
     key := field_move_key(base_var, field_name)
     ownership_contains(field_moves, key)
 }
+
 func ownership_check_events_ext(string[] events) ownership_result_ext {
     ownership_slot_ext[] slots
     string[] moved
@@ -154,4 +161,3 @@ func ownership_check_events_ext(string[] events) ownership_result_ext {
         message: message,
         drops: drops,
         field_moves: field_moves
-    }

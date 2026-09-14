@@ -6,15 +6,18 @@ struct cfg_block {
     vec[string] uses
     vec[string] defs
 }
+
 struct cfg {
     vec[cfg_block] blocks
     map[int]cfg_block block_by_id
 }
+
 struct block_liveness {
     int block_id
     map[string]bool live_in
     map[string]bool live_out
 }
+
 func build_cfg_test1() cfg {
     c := cfg{}
     block0 := cfg_block{
@@ -29,6 +32,7 @@ func build_cfg_test1() cfg {
     c.block_by_id[0] = block0
     return c
 }
+
 func build_cfg_test2() cfg {
     c := cfg{}
     block0 := cfg_block{
@@ -43,6 +47,7 @@ func build_cfg_test2() cfg {
     c.block_by_id[0] = block0
     return c
 }
+
 func build_cfg_test3() cfg {
     c := cfg{}
     block0 := cfg_block{
@@ -81,6 +86,7 @@ func build_cfg_test3() cfg {
     c.block_by_id[3] = block3
     return c
 }
+
 func build_cfg_test4() cfg {
     c := cfg{}
     block0 := cfg_block{
@@ -119,6 +125,7 @@ func build_cfg_test4() cfg {
     c.block_by_id[3] = block3
     return c
 }
+
 func build_cfg_test5() cfg {
     c := cfg{}
     block0 := cfg_block{
@@ -157,6 +164,7 @@ func build_cfg_test5() cfg {
     c.block_by_id[3] = block3
     return c
 }
+
 func build_cfg_test6() cfg {
     c := cfg{}
     block0 := cfg_block{
@@ -171,6 +179,7 @@ func build_cfg_test6() cfg {
     c.block_by_id[0] = block0
     return c
 }
+
 func compute_liveness(c cfg) map[int]block_liveness {
     result := map[int]block_liveness{}
     for i := 0; i < len(c.blocks); i = i + 1 {
@@ -226,6 +235,7 @@ func compute_liveness(c cfg) map[int]block_liveness {
     }
     return result
 }
+
 func maps_equal_bool(m1 map[string]bool, m2 map[string]bool) bool {
     for key, val := range m1 {
         if m2[key] != val {
@@ -239,6 +249,7 @@ func maps_equal_bool(m1 map[string]bool, m2 map[string]bool) bool {
     }
     return true
 }
+
 func validate_test(test_id int, liveness map[int]block_liveness) string {
     if test_id == 1 {
         return validate_test1(liveness)
@@ -255,6 +266,7 @@ func validate_test(test_id int, liveness map[int]block_liveness) string {
     }
     return "ERROR"
 }
+
 func validate_test1(liveness map[int]block_liveness) string {
     block0 := liveness[0]
     if block0.live_out["r"] {
@@ -262,6 +274,7 @@ func validate_test1(liveness map[int]block_liveness) string {
     }
     return "ALLOW"
 }
+
 func validate_test2(liveness map[int]block_liveness) string {
     block0 := liveness[0]
     if block0.live_in["r"] {
@@ -269,6 +282,7 @@ func validate_test2(liveness map[int]block_liveness) string {
     }
     return "ALLOW"
 }
+
 func validate_test3(liveness map[int]block_liveness) string {
     block3 := liveness[3]
     if block3.live_in["r"] {
@@ -276,6 +290,7 @@ func validate_test3(liveness map[int]block_liveness) string {
     }
     return "ALLOW"
 }
+
 func validate_test4(liveness map[int]block_liveness) string {
     block3 := liveness[3]
     if block3.live_in["r"] {
@@ -283,6 +298,7 @@ func validate_test4(liveness map[int]block_liveness) string {
     }
     return "ALLOW"
 }
+
 func validate_test5(liveness map[int]block_liveness) string {
     block3 := liveness[3]
     if block3.live_in["r"] {
@@ -290,9 +306,11 @@ func validate_test5(liveness map[int]block_liveness) string {
     }
     return "ALLOW"
 }
+
 func validate_test6(liveness map[int]block_liveness) string {
     return "ALLOW"
 }
+
 func analyze_and_report(test_id int) string {
     cfg := simple_cfg{}
     if test_id == 1 {
@@ -309,4 +327,3 @@ func analyze_and_report(test_id int) string {
         cfg = build_cfg_test6()
     }
     liveness := compute_liveness(cfg)
-    return validate_test(test_id, liveness)

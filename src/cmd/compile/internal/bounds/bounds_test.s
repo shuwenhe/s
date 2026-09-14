@@ -20,4 +20,3 @@ func run_bounds_test() int {
     if compile.internal.bounds.bounds_should_eliminate(compile.internal.bounds.bounds_prove_loop(0, 16, 0, 16)) {
         return 5
     }
-    0

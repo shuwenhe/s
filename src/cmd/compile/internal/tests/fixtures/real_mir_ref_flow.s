@@ -11,4 +11,3 @@ func test_ref_flow(int owner) int {
     other := reader        // stmt 3: ownership::RefAssign -> Pa
     z := y + 1             // stmt 4: regular eval (no ownership)
     x := *other            // stmt 5: ownership::RefUse -> Pu
-    x                      // stmt 6: return

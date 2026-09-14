@@ -8,6 +8,7 @@ func test_escape_analysis() int {
     eprintln("All escape analysis tests passed!\n")
     return 0
 }
+
 func test_function_inlining() int {
     eprintln("\n=== TEST: Function Inlining ===\n")
     eprintln("Test Case 1: Small leaf function (should inline)\n")
@@ -17,6 +18,7 @@ func test_function_inlining() int {
     eprintln("All inlining tests passed!\n")
     return 0
 }
+
 func test_loop_invariant_hoisting() int {
     eprintln("\n=== TEST: Loop Invariant Hoisting ===\n")
     eprintln("Test Case 1: Constant expression in loop (should hoist)\n")
@@ -26,6 +28,7 @@ func test_loop_invariant_hoisting() int {
     eprintln("All loop optimization tests passed!\n")
     return 0
 }
+
 func test_all_optimizations() int {
     eprintln("\n================================================\n")
     eprintln("  S COMPILER: CORE OPTIMIZATION SUITE TESTS\n")
@@ -36,4 +39,3 @@ func test_all_optimizations() int {
     eprintln("\n================================================\n")
     eprintln("  ✅ ALL OPTIMIZATION TESTS COMPLETED\n")
     eprintln("================================================\n")
-    return 0

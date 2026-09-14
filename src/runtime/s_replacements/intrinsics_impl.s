@@ -1,1 +1,0 @@
-func intrinsics_impl() {

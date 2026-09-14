@@ -5,6 +5,7 @@ struct compilation_phase {
     int stats_time
     int stats_changes
 }
+
 struct optimization_stats {
     int total_phases
     int total_time
@@ -14,12 +15,14 @@ struct optimization_stats {
     int instr_count_before
     int instr_count_after
 }
+
 struct optimization_pipeline {
     int phase_count
     compilation_phase[] phases
     stats optimization_stats
     int debug_enabled
 }
+
 func optimization_pipeline_new() optimization_pipeline* {
     pipeline := optimization_pipeline {
         phase_count: 0,
@@ -37,6 +40,7 @@ func optimization_pipeline_new() optimization_pipeline* {
     }
     &pipeline
 }
+
 func (pipeline* optimization_pipeline) register_phase(int phase_id, string phase_name) int {
     idx := pipeline.phase_count
     pipeline.phase_count = pipeline.phase_count + 1
@@ -49,6 +53,7 @@ func (pipeline* optimization_pipeline) register_phase(int phase_id, string phase
     pipeline.phases[idx] = &phase
     idx
 }
+
 func (pipeline* optimization_pipeline) execute_pipeline(value[] all_values, block[] all_blocks, int num_blocks) int {
     pipeline.stats.code_size_before = compute_code_size(all_values)
     pipeline.stats.instr_count_before = len(all_values)
@@ -63,6 +68,7 @@ func (pipeline* optimization_pipeline) execute_pipeline(value[] all_values, bloc
     pipeline.stats.instr_count_after = len(all_values)
     0
 }
+
 func execute_optimization_phase(compilation_phase* phase, value[] all_values, block[] all_blocks, int num_blocks) int {
     if phase.phase_id == phase_ssa_construction {
         return execute_ssa_construction(all_values, all_blocks)
@@ -113,9 +119,11 @@ func execute_optimization_phase(compilation_phase* phase, value[] all_values, bl
     }
     return 0
 }
+
 func execute_ssa_construction(value[] all_values, block[] all_blocks) int {
     return len(all_values)
 }
+
 func execute_constant_folding(value[] all_values) int {
     changes := 0
     i := 0
@@ -128,6 +136,7 @@ func execute_constant_folding(value[] all_values) int {
     }
     changes
 }
+
 func execute_dead_code_elim(value[] all_values, block[] all_blocks) int {
     changes := 0
     i := 0
@@ -140,6 +149,7 @@ func execute_dead_code_elim(value[] all_values, block[] all_blocks) int {
     }
     changes
 }
+
 func execute_cse(value[] all_values) int {
     changes := 0
     i := 0
@@ -155,6 +165,7 @@ func execute_cse(value[] all_values) int {
     }
     changes
 }
+
 func execute_algebraic_simp(value[] all_values) int {
     changes := 0
     i := 0
@@ -164,10 +175,12 @@ func execute_algebraic_simp(value[] all_values) int {
     }
     changes
 }
+
 func execute_licm(value[] all_values, block[] all_blocks) int {
     changes := 0
     return changes
 }
+
 func execute_strength_reduction(value[] all_values) int {
     changes := 0
     i := 0
@@ -180,6 +193,7 @@ func execute_strength_reduction(value[] all_values) int {
     }
     changes
 }
+
 func execute_inlining(value[] all_values) int {
     changes := 0
     i := 0
@@ -191,10 +205,12 @@ func execute_inlining(value[] all_values) int {
     }
     changes
 }
+
 func execute_escape_analysis(value[] all_values) int {
     changes := 0
     return changes
 }
+
 func execute_devirtualization(value[] all_values) int {
     changes := 0
     i := 0
@@ -206,12 +222,15 @@ func execute_devirtualization(value[] all_values) int {
     }
     changes
 }
+
 func execute_liveness_analysis(block[] all_blocks) int {
     return len(all_blocks)
 }
+
 func execute_register_allocation(value[] all_values) int {
     return len(all_values)
 }
+
 func compute_code_size(value[] all_values) int {
     size := 0
     i := 0
@@ -221,6 +240,7 @@ func compute_code_size(value[] all_values) int {
     }
     size
 }
+
 func estimate_instr_size(int op) int {
     if op == op_const {
         return 8
@@ -243,6 +263,7 @@ func estimate_instr_size(int op) int {
     }
     return 4
 }
+
 func (pipeline* optimization_pipeline) print_stats() int {
     return 0
 }
@@ -269,4 +290,3 @@ const op_xor = 10
 const op_load = 13
 const op_store = 14
 const op_call = 15
-const op_branch = 17

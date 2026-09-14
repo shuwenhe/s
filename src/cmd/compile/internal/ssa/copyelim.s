@@ -17,4 +17,3 @@ func run_copyelim(ssa_func f) int {
     if changed > 0 {
         recompute_uses(f)
     }
-    changed

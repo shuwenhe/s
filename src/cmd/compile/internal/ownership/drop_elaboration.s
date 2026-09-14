@@ -2,11 +2,13 @@ package compile.internal.ownership
 struct drop_elaborator {
     ownership_context* ctx
 }
+
 func new_drop_elaborator(ownership_context* ctx) drop_elaborator* {
     return drop_elaborator*{
         ctx: ctx,
     }
 }
+
 func (drop_elaborator* de) elaborate_drops(stmts interface{}[]) interface{}[] {
     var result interface{}[]
     for _, stmt := range stmts {
@@ -14,6 +16,7 @@ func (drop_elaborator* de) elaborate_drops(stmts interface{}[]) interface{}[] {
     }
     return result
 }
+
 func (drop_elaborator* de) elaborate_statement(stmt interface{}) interface{} {
     switch s := stmt.(type) {
 case block_stmt*:
@@ -28,6 +31,7 @@ case loop_stmt*:
         return stmt
     }
 }
+
 func (drop_elaborator* de) elaborate_block(block_stmt* block) block_stmt* {
     var stmts interface{}[]
     for _, stmt := range block.statements {
@@ -44,6 +48,7 @@ func (drop_elaborator* de) elaborate_block(block_stmt* block) block_stmt* {
         statements: stmts,
     }
 }
+
 func (drop_elaborator* de) elaborate_return(return_stmt* ret) interface{} {
     drops_needed := de.collect_drops_for_return()
     var result interface{}[]
@@ -58,6 +63,7 @@ func (drop_elaborator* de) elaborate_return(return_stmt* ret) interface{} {
         statements: result,
     }
 }
+
 func (drop_elaborator* de) elaborate_if(if_stmt* if_stmt) if_stmt* {
     elaborated_then := de.elaborate_statement(if_stmt.then_branch)
     var elaborated_else interface{}
@@ -70,6 +76,7 @@ func (drop_elaborator* de) elaborate_if(if_stmt* if_stmt) if_stmt* {
         else_branch:  elaborated_else,
     }
 }
+
 func (drop_elaborator* de) elaborate_loop(loop_stmt* loop) loop_stmt* {
     elaborated_body := de.elaborate_statement(loop.body)
     return loop_stmt*{
@@ -77,14 +84,17 @@ func (drop_elaborator* de) elaborate_loop(loop_stmt* loop) loop_stmt* {
         body:      elaborated_body,
     }
 }
+
 func (drop_elaborator* de) collect_drops_for_block(block_stmt* block) string[] {
     var drops string[]
     return drops
 }
+
 func (drop_elaborator* de) collect_drops_for_return() string[] {
     var drops string[]
     return drops
 }
+
 func (drop_elaborator* de) verify_exactly_once_drop(elaborated interface{}[]) bool {
     drop_counts := make(map[string]int)
     de.count_drops(elaborated, drop_counts)
@@ -101,6 +111,7 @@ func (drop_elaborator* de) verify_exactly_once_drop(elaborated interface{}[]) bo
     }
     return !de.ctx.has_errors()
 }
+
 func (drop_elaborator* de) count_drops(stmts interface{}[], counts map[string]int) {
     for _, stmt := range stmts {
         switch s := stmt.(type) {
@@ -111,10 +122,12 @@ case block_stmt*:
         }
     }
 }
+
 func (drop_elaborator* de) verify_no_use_after_drop(stmts interface{}[]) bool {
     dropped_vars := make(map[string]bool)
     return de.check_use_after_drop(stmts, dropped_vars)
 }
+
 func (drop_elaborator* de) check_use_after_drop(stmts interface{}[],
     dropped_vars map[string]bool) bool {
     for _, stmt := range stmts {
@@ -142,9 +155,11 @@ case block_stmt*:
     }
     return true
 }
+
 func (drop_elaborator* de) verify_partial_move_drops(stmts interface{}[]) bool {
     return true
 }
+
 func (drop_elaborator* de) get_drop_order(string type_name) string[] {
     type_class := de.ctx.classify_type(type_name)
     result := make(string[], len(type_class.drop_order))
@@ -153,28 +168,34 @@ func (drop_elaborator* de) get_drop_order(string type_name) string[] {
     }
     return result
 }
+
 struct block_stmt {
     interface{}[] statements
 }
+
 struct if_stmt {
     interface{} condition
     interface{} then_branch
     interface{} else_branch
 }
+
 struct loop_stmt {
     interface{} condition
     interface{} body
 }
+
 struct drop_call {
     string variable
     string kind
 }
+
 struct drop_summary {
     string[] must_drop
     string[] may_drop
     string[] drop_order
     map[string]string[] field_drops
 }
+
 func (drop_elaborator* de) generate_drop_summary(block_stmt* block) drop_summary* {
     summary := drop_summary*{
         must_drop:   make(string[], 0),
@@ -182,4 +203,3 @@ func (drop_elaborator* de) generate_drop_summary(block_stmt* block) drop_summary
         drop_order:  make(string[], 0),
         field_drops: make(map[string]string[]),
     }
-    return summary

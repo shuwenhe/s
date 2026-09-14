@@ -22,6 +22,7 @@ extern "intrinsic" func __runtime_sleep_briefly() ()
 func sroutine_abi_ready() bool {
     __sroutine_abi_version() == sroutine_abi_version
 }
+
 func sroutine_state_can_transition(int from, int to) bool {
     if from == sroutine_idle {
         return to == sroutine_runnable
@@ -37,4 +38,3 @@ func sroutine_state_can_transition(int from, int to) bool {
     }
     false
 }
-func sroutine_abi_unit_name() string { "src/runtime/sroutine_abi" }

@@ -4,6 +4,7 @@ struct bootstrap_stage {
     string name
     int is_complete
 }
+
 struct bootstrap_chain {
     bootstrap_stage[] stages
     int current_stage
@@ -19,6 +20,7 @@ func bootstrap_init() {
     s3 := bootstrap_stage { stage_num: 3, name: "stage2_compiler", is_complete: 1 }
     bootstrap_chain_global.stages = append(bootstrap_chain_global.stages, s3)
 }
+
 func bootstrap_stage_seed_compiler(string source_dir) int {
     bootstrap_chain_global.current_stage = 1
     if source_dir == "" {
@@ -28,6 +30,7 @@ func bootstrap_stage_seed_compiler(string source_dir) int {
     bootstrap_chain_global.stages[0].is_complete = 1
     return 0
 }
+
 func bootstrap_stage_compile_compiler() int {
     if len(bootstrap_chain_global.stages) < 1 {
         return 1
@@ -36,6 +39,7 @@ func bootstrap_stage_compile_compiler() int {
     bootstrap_chain_global.stages[1].is_complete = 1
     return 0
 }
+
 func bootstrap_stage_verify_compiler() int {
     if len(bootstrap_chain_global.stages) < 2 {
         return 1
@@ -44,24 +48,28 @@ func bootstrap_stage_verify_compiler() int {
     bootstrap_chain_global.stages[2].is_complete = 1
     return 0
 }
+
 func bootstrap_verify_identical_output(string out1, string out2) int {
     if out1 == out2 {
         return 0
     }
     return 1
 }
+
 func bootstrap_compile_s_source(string input_file, string output_file) int {
     if input_file == "" || output_file == "" {
         return 1
     }
     return 0
 }
+
 func bootstrap_run_test_suite() int {
     if bootstrap_check_integrity() == 0 {
         return 1
     }
     return 0
 }
+
 func bootstrap_check_integrity() int {
     if len(bootstrap_chain_global.stages) != 3 {
         return 0
@@ -81,4 +89,3 @@ func bootstrap_check_integrity() int {
             return 0
         }
     }
-    return 1

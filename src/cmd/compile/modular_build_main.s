@@ -71,6 +71,7 @@ func main() int {
     print_usage()
     return 2
 }
+
 func print_usage() () {
     std.io.eprintln("usage: s_modular check <input.s>")
     std.io.eprintln("       s_modular tokens <input.s>")
@@ -78,6 +79,7 @@ func print_usage() () {
     std.io.eprintln("       s_modular build <input.s> -o <output>")
     std.io.eprintln("       s_modular test [fixtures_root]")
 }
+
 func run_check(string path) int {
     source_result := compile.internal.syntax.read_source(path)
     if source_result.is_err() {
@@ -94,6 +96,7 @@ func run_check(string path) int {
     std.io.eprintln("check ok: " + path)
     return 0
 }
+
 func run_tokens(string path) int {
     source_result := compile.internal.syntax.read_source(path)
     if source_result.is_err() {
@@ -106,6 +109,7 @@ func run_tokens(string path) int {
     std.io.eprintln("tokens ok: " + path)
     return 0
 }
+
 func run_ast(string path) int {
     source_result := compile.internal.syntax.read_source(path)
     if source_result.is_err() {
@@ -118,6 +122,7 @@ func run_ast(string path) int {
     std.io.eprintln("ast ok: " + path)
     return 0
 }
+
 func run_tests(string fixtures_root) int {
     if compile.internal.tests.test_semantic.run_semantic_suite(fixtures_root) != 0 {
         std.io.eprintln("semantic suite failed")
@@ -150,5 +155,5 @@ func run_tests(string fixtures_root) int {
     std.io.eprintln("test: ok")
     return 0
 }
+
 func build_elf64(string input_path, string output_path, string ssa_margin, bool nostdlib) int {
-    compile.internal.backend_elf64.build(input_path, output_path, ssa_margin, nostdlib)

@@ -20,16 +20,19 @@ struct live_interval {
     int spilled
     int assigned_reg
 }
+
 struct interference_graph {
     int[] nodes
     int[][] edges
 }
+
 struct register_allocator {
     live_interval[] intervals
     int grapherference_graph
     int spill_count
     int reserved_regs
 }
+
 func register_allocator_new() register_allocator {
     allocator := register_allocator {
         intervals: live_interval[] {},
@@ -39,6 +42,7 @@ func register_allocator_new() register_allocator {
     }
     allocator
 }
+
 func register_allocator_build_intervals(allocator* register_allocator, x86_instruction[] instrs) {
     for i := 0; i < instrs.len(); i = i + 1 {
         instr := instrs[i]
@@ -52,6 +56,7 @@ func register_allocator_build_intervals(allocator* register_allocator, x86_instr
         allocator.intervals = append(allocator.intervals, interval)
     }
 }
+
 func register_allocator_build_interference_graph(allocator* register_allocator) {
     graph_size := allocator.intervals.len()
     for i := 0; i < graph_size; i = i + 1 {
@@ -72,6 +77,7 @@ func register_allocator_build_interference_graph(allocator* register_allocator) 
         }
     }
 }
+
 func intervals_interfere(i1 live_interval, i2 live_interval) int {
     if i1.start > i2.end || i2.start > i1.end {
         0
@@ -79,6 +85,7 @@ func intervals_interfere(i1 live_interval, i2 live_interval) int {
         1
     }
 }
+
 func register_allocator_allocate(allocator* register_allocator) {
     for i := 0; i < allocator.intervals.len(); i = i + 1 {
         interval := allocator.intervals[i]
@@ -106,6 +113,7 @@ func register_allocator_allocate(allocator* register_allocator) {
         allocator.intervals[i] = interval
     }
 }
+
 func get_available_registers(allocator* register_allocator) int[] {
     int[] available
     for reg := 0; reg < 14; reg = reg + 1 {
@@ -121,6 +129,7 @@ func get_available_registers(allocator* register_allocator) int[] {
     }
     available
 }
+
 func register_allocator_insert_spill_code(allocator* register_allocator, x86_instruction[] instrs*) {
     for i := 0; i < allocator.intervals.len(); i = i + 1 {
         interval := allocator.intervals[i]
@@ -136,12 +145,14 @@ func register_allocator_insert_spill_code(allocator* register_allocator, x86_ins
         }
     }
 }
+
 struct spill_reload_action {
     int value_id
     int stack_offset
     int instruction_index
     bool reload
 }
+
 func register_allocator_spill_reload_plan(register_allocator* allocator) spill_reload_action[] {
     actions := spill_reload_action[]()
     for i := 0; i < allocator.intervals.len(); i = i + 1 {
@@ -152,4 +163,3 @@ func register_allocator_spill_reload_plan(register_allocator* allocator) spill_r
             actions.push(spill_reload_action { value_id: interval.var_id, stack_offset: offset, instruction_index: interval.end, reload: true })
         }
     }
-    actions

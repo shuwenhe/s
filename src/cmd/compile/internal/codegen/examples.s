@@ -9,6 +9,7 @@ struct compilation_session {
     reloc_ctx relocation_context
     codegen_pipeline* pipeline
 }
+
 func make_compilation_session() compilation_session {
     link_ctx := &(link_make_link_context())
     mcg := &(make_machine_code_gen(link_ctx))
@@ -19,6 +20,7 @@ func make_compilation_session() compilation_session {
         link_ctx: link_ctx, mcg mcg, symtab symtab, reloc_ctx make_relocation_context(), pipeline pipeline,
     }
 }
+
 func (session* compilation_session) compile_program() string {
     code, err := session.pipeline.generate_all()
     if err != "" {
@@ -26,11 +28,13 @@ func (session* compilation_session) compile_program() string {
     }
     ""
 }
+
 func (session* compilation_session) generate_object_file(string output_path) string {
     err := session.pipeline.ctx.generate_object_file(output_path)
     if err != "" { return err }
     "direct machine-code ELF written to " + output_path
 }
+
 func (session* compilation_session) dump_compilation_info() string {
     result := "\n=== S Compiler Direct Machine Code Generation ===\n"
     result = result + "\n" + session.pipeline.dump_stats()
@@ -39,6 +43,7 @@ func (session* compilation_session) dump_compilation_info() string {
     result = result + "\n" + session.reloc_ctx.dump()
     result
 }
+
 func compile_simple_program() string {
     session := make_compilation_session()
     err := session.compile_program()
@@ -47,6 +52,7 @@ func compile_simple_program() string {
     }
     session.dump_compilation_info()
 }
+
 func compile_with_output(string output_file) (string, string) {
     session := make_compilation_session()
     err := session.compile_program()
@@ -57,6 +63,7 @@ func compile_with_output(string output_file) (string, string) {
     info := session.dump_compilation_info()
     return info, obj_info
 }
+
 func demonstrate_instruction_encoding() string {
     result := "=== Instruction Encoding Demonstration ===\n\n"
     result = result + "MOV reg to reg encoding:\n"
@@ -107,6 +114,7 @@ func demonstrate_instruction_encoding() string {
     result = result + "\n\n"
     result
 }
+
 func demonstrate_linking() string {
     result := "=== Linking Demonstration ===\n\n"
     ctx := make_link_context()
@@ -127,6 +135,7 @@ func demonstrate_linking() string {
     result = result + "Data Section Size: " + (ctx.data_size as string) + " bytes\n"
     result
 }
+
 func demonstrate_elf_generation() string {
     result := "=== ELF64 Generation Demonstration ===\n\n"
     writer := make_elf_writer(elf_machine_x86_64)
@@ -149,6 +158,7 @@ func demonstrate_elf_generation() string {
     result = result + "\n"
     result
 }
+
 func run_all_demonstrations() string {
     result := "\n========================================\n"
     result = result + "S LANGUAGE COMPILER - DIRECT MACHINE CODE GENERATION\n"
@@ -158,4 +168,3 @@ func run_all_demonstrations() string {
     result = result + demonstrate_linking()
     result = result + demonstrate_elf_generation()
     result = result + compile_simple_program()
-    result
