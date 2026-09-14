@@ -1,6 +1,8 @@
 package cmd
-use compile.internal.dispatch.main as dispatch_main
-use std.env.args as host_args
+import (
+    "compile.internal.dispatch"
+    "std.env"
+)
 func main() {
-    return dispatch_main(host_args())
+    return compile.internal.dispatch.main(std.env.args())
 }
