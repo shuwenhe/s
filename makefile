@@ -26,11 +26,23 @@ MODULAR_BOOTSTRAP_IR ?= $(MODULAR_BOOTSTRAP_DIR)/s_modular.ir
 
 MODULAR_BOOTSTRAP_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-report.txt
 
+PRODUCTION_AUTHORITY_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/production-authority-report.txt
+
+PARSER_AUTHORITY_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/parser-authority-report.txt
+
 MODULAR_BOOTSTRAP_COMPAT_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-compat-audit.txt
 
 MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-stage-discovery.txt
 
 MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-root-audit.txt
+
+STAGE0_BIN ?= $(MODULAR_BOOTSTRAP_DIR)/s_stage0
+
+STAGE0_CLOSURE ?= $(MODULAR_BOOTSTRAP_DIR)/canonical-closure.txt
+
+MODULAR_STAGE1_BIN ?= $(MODULAR_BOOTSTRAP_DIR)/s_modular-stage1
+
+MODULAR_STAGE2_BIN ?= $(MODULAR_BOOTSTRAP_DIR)/s_modular-stage2
 
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
 
@@ -1431,7 +1443,7 @@ selfhost-runtime-check:
 
 
 
-.PHONY: benchmark help no-gc-mvp no-gc-mvp-check target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check s-syntax-check s-semantic-check s-compiler-integration-check s-e2e-check s-validation-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test darwin-arm64-hosted-compiler darwin-arm64-slice-check test-quick test-full build-parallel selfhost-full
+.PHONY: benchmark help no-gc-mvp no-gc-mvp-check target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check s-syntax-check s-semantic-check s-compiler-integration-check s-e2e-check s-validation-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test darwin-arm64-hosted-compiler darwin-arm64-slice-check test-quick test-full build-parallel selfhost-full stage0-build stage0-closure-check modular-selfhost-check production-selfhost-check
 
 
 
@@ -2115,27 +2127,68 @@ modular-bootstrap-root-audit: modular-bootstrap-stage-discovery
 	@echo "Modular bootstrap root audit report: $(MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT)"
 
 .PHONY: modular-bootstrap
-modular-bootstrap: seed-compiler-bin package-index
-	@echo "Bootstrapping canonical modular compiler..."
+modular-bootstrap: stage0-build stage0-closure-check
+	@echo "Bootstrapping canonical modular compiler with explicit C Stage0..."
 	@mkdir -p "$(MODULAR_BOOTSTRAP_DIR)"
 	@{ \
 	  echo "source=src/cmd/compile/modular_build_main.s"; \
-	  echo "producer=bin/s_seed"; \
-	  echo "role=bootstrap-producer-only"; \
-	  echo "status=attempting-seed-ir"; \
+	  echo "producer=$(STAGE0_BIN)"; \
+	  echo "role=explicit-c-stage0"; \
+	  echo "closure=$(STAGE0_CLOSURE)"; \
+	  echo "status=attempting-stage0"; \
 	} > "$(MODULAR_BOOTSTRAP_REPORT)"
-	@if ./bin/s_seed src/cmd/compile/modular_build_main.s "$(MODULAR_BOOTSTRAP_IR)" >>"$(MODULAR_BOOTSTRAP_REPORT)" 2>&1; then \
-	  echo "status=seed-ir-ok" >>"$(MODULAR_BOOTSTRAP_REPORT)"; \
-	else \
-	  echo "status=blocked-bootstrap-compatibility" >>"$(MODULAR_BOOTSTRAP_REPORT)"; \
-	  echo "modular bootstrap blocked: s_seed cannot compile src/cmd/compile/modular_build_main.s" >&2; \
-	  echo "see $(MODULAR_BOOTSTRAP_REPORT)" >&2; \
-	  exit 1; \
-	fi
-	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) \
-	  ./bin/s_seed --emit-bin "$(MODULAR_BOOTSTRAP_IR)" "$(MODULAR_BOOTSTRAP_BIN)" >>"$(MODULAR_BOOTSTRAP_REPORT)" 2>&1
-	@chmod +x "$(MODULAR_BOOTSTRAP_BIN)"
+	@S_SOURCE_ROOT=$(CURDIR) "$(STAGE0_BIN)" "$(CURDIR)" "$(STAGE0_CLOSURE)" "$(MODULAR_STAGE1_BIN)" >>"$(MODULAR_BOOTSTRAP_REPORT)" 2>&1
+	@cp "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_BIN)"
+	@chmod +x "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_BIN)"
 	@echo "status=bootstrap-ok" >>"$(MODULAR_BOOTSTRAP_REPORT)"
+
+.PHONY: stage0-build
+stage0-build:
+	@echo "Building explicit C Stage0..."
+	@mkdir -p "$(MODULAR_BOOTSTRAP_DIR)"
+	@cc -std=c11 -O2 -Wall -Wextra -Werror -o "$(STAGE0_BIN)" src/cmd/compile/stage0/stage0.c
+	@echo "Stage0 ready: $(STAGE0_BIN)"
+
+.PHONY: stage0-closure-check
+stage0-closure-check: package-index
+	@echo "Freezing canonical modular compiler source closure..."
+	@mkdir -p "$(MODULAR_BOOTSTRAP_DIR)"
+	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/source_closure.sh \
+	  src/cmd/compile/modular_build_main.s "$(STAGE0_CLOSURE)"
+	@chmod +x misc/scripts/stage0_closure_check.sh
+	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/stage0_closure_check.sh \
+	  src/cmd/compile/modular_build_main.s "$(STAGE0_CLOSURE)"
+
+.PHONY: stage0-freeze-check
+stage0-freeze-check: stage0-build
+	@chmod +x misc/scripts/stage0_freeze_check.sh
+	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/stage0_freeze_check.sh
+
+.PHONY: modular-selfhost-check
+modular-selfhost-check: modular-bootstrap
+	@echo "Checking stage1 -> stage2 and stage2 -> hello..."
+	@"$(MODULAR_STAGE1_BIN)" build src/cmd/compile/modular_build_main.s -o "$(MODULAR_STAGE2_BIN)"
+	@test -x "$(MODULAR_STAGE2_BIN)"
+	@"$(MODULAR_STAGE2_BIN)" build test/cli/hello.s -o "$(MODULAR_BOOTSTRAP_DIR)/hello"
+	@test -x "$(MODULAR_BOOTSTRAP_DIR)/hello"
+	@"$(MODULAR_BOOTSTRAP_DIR)/hello" >"$(MODULAR_BOOTSTRAP_DIR)/hello.out"
+	@grep -qx "hello from S" "$(MODULAR_BOOTSTRAP_DIR)/hello.out"
+	@echo "Modular selfhost check passed"
+
+.PHONY: parser-authority-check
+parser-authority-check: modular-bootstrap stage0-freeze-check
+	@echo "Checking parser authority execution path..."
+	@chmod +x misc/scripts/parser_authority_check.sh
+	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/parser_authority_check.sh \
+	  "$(MODULAR_STAGE1_BIN)" "$(PARSER_AUTHORITY_REPORT)"
+
+.PHONY: production-selfhost-check
+production-selfhost-check: modular-selfhost-check parser-authority-check
+	@echo "Auditing production compiler authority..."
+	@chmod +x misc/scripts/production_selfhost_authority_audit.sh
+	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/production_selfhost_authority_audit.sh \
+	  "$(PRODUCTION_AUTHORITY_REPORT)" "$(STAGE0_CLOSURE)" "$(MODULAR_BOOTSTRAP_REPORT)" "$(PARSER_AUTHORITY_REPORT)"
+	@grep -qx "production-authority=NOT_YET_PROVEN" "$(PRODUCTION_AUTHORITY_REPORT)"
 
 .PHONY: modular-bootstrap-check
 modular-bootstrap-check: modular-bootstrap
