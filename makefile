@@ -26,6 +26,10 @@ MODULAR_BOOTSTRAP_IR ?= $(MODULAR_BOOTSTRAP_DIR)/s_modular.ir
 
 MODULAR_BOOTSTRAP_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-report.txt
 
+MODULAR_BOOTSTRAP_COMPAT_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-compat-audit.txt
+
+MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-stage-discovery.txt
+
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
 
 S_HOST_OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
@@ -2079,6 +2083,23 @@ bin/s_modular: seed-compiler-bin package-index
 	  printf '%s\n' 'esac'; \
 	} > ./bin/s_modular
 	@chmod +x ./bin/s_modular
+
+.PHONY: modular-bootstrap-compat-audit
+modular-bootstrap-compat-audit: seed-compiler-bin package-index
+	@echo "Auditing modular bootstrap compatibility..."
+	@chmod +x misc/scripts/modular_bootstrap_compat_audit.sh
+	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/modular_bootstrap_compat_audit.sh \
+	  src/cmd/compile/modular_build_main.s "$(MODULAR_BOOTSTRAP_COMPAT_REPORT)" >/dev/null
+	@echo "Modular bootstrap compatibility report: $(MODULAR_BOOTSTRAP_COMPAT_REPORT)"
+
+.PHONY: modular-bootstrap-stage-discovery
+modular-bootstrap-stage-discovery: modular-bootstrap-compat-audit
+	@echo "Discovering modular bootstrap stages..."
+	@chmod +x misc/scripts/modular_bootstrap_stage_discovery.sh
+	@S_SOURCE_ROOT=$(CURDIR) S_BOOTSTRAP_COMPAT_REPORT="$(MODULAR_BOOTSTRAP_COMPAT_REPORT)" \
+	  misc/scripts/modular_bootstrap_stage_discovery.sh \
+	  src/cmd/compile/modular_build_main.s "$(MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT)" >/dev/null
+	@echo "Modular bootstrap stage discovery report: $(MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT)"
 
 .PHONY: modular-bootstrap
 modular-bootstrap: seed-compiler-bin package-index

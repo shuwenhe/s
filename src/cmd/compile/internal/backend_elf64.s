@@ -3203,7 +3203,7 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
         }
         block := block_result.unwrap()
         si := 0
-        for si < std.prelude.len(block.statements) {
+        for si < len(block.statements) {
             stmt_result := execute_mir_statement(block.statements[si], writes)
             if stmt_result.is_err() {
                 return stmt_result.unwrap_err()
