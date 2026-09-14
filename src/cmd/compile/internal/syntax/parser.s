@@ -1,4 +1,5 @@
 package compile.internal.syntax
+
 enum ast_node_type {
     ast_program = 1,
     ast_package = 2,
