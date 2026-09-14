@@ -37,7 +37,6 @@ struct register_allocator {
     int reg_count
     int current_temp
 }
-
 func make_register_allocator() register_allocator {
     free_regs := int[]()
     free_regs = append(free_regs, reg_rax)
@@ -56,7 +55,6 @@ func make_register_allocator() register_allocator {
         free_regs: free_regs, allocated int[](), reg_count 12, current_temp 0,
     }
 }
-
 struct amd64_code_gen {
     machine_code_gen* mcg
     symbol_table* symtab
@@ -70,7 +68,6 @@ struct amd64_code_gen {
     int label_counter
     int64[] temp_locations
 }
-
 func make_amd64_code_gen(
     machine_code_gen* mcg,
     symbol_table* symtab,
@@ -82,7 +79,6 @@ func make_amd64_code_gen(
         current_func_name: "", stack_depth 0 as int64, max_stack_depth 0 as int64, function_start_offset 0 as int64, label_counter 0, temp_locations int64[](),
     }
 }
-
 func (gen* amd64_code_gen) alloc_reg() int {
     if gen.reg_alloc.reg_count > 0 {
         reg := gen.reg_alloc.free_regs[0]
@@ -92,14 +88,12 @@ func (gen* amd64_code_gen) alloc_reg() int {
     }
     return -1
 }
-
 func (gen* amd64_code_gen) free_reg(int reg) {
     if reg >= 0 {
         gen.reg_alloc.free_regs = append(gen.reg_alloc.free_regs, reg)
         gen.reg_alloc.reg_count = gen.reg_alloc.reg_count + 1
     }
 }
-
 func encode_mov_imm64_to_r64(int reg, int64 value) int8[] {
     code := int8[]()
     if reg >= reg_r8 {
@@ -124,7 +118,6 @@ func encode_mov_imm64_to_r64(int reg, int64 value) int8[] {
     code = append(code, ((value >> 56) & 0x_ff) as int8)
     code
 }
-
 func encode_mov_r64_to_r64(int dst, int src) int8[] {
     code := int8[]()
     rex := 0x48 as int8
@@ -142,7 +135,6 @@ func encode_mov_r64_to_r64(int dst, int src) int8[] {
     code = append(code, modrm)
     code
 }
-
 func encode_push_r64(int reg) int8[] {
     code := int8[]()
     if reg >= reg_r8 {
@@ -152,7 +144,6 @@ func encode_push_r64(int reg) int8[] {
     code = append(code, (0x50 + base) as int8)
     code
 }
-
 func encode_pop_r64(int reg) int8[] {
     code := int8[]()
     if reg >= reg_r8 {
@@ -162,7 +153,6 @@ func encode_pop_r64(int reg) int8[] {
     code = append(code, (0x58 + base) as int8)
     code
 }
-
 func encode_add_imm32_to_r64(int reg, int32 value) int8[] {
     code := int8[]()
     rex := 0x48 as int8
@@ -185,7 +175,6 @@ func encode_add_imm32_to_r64(int reg, int32 value) int8[] {
     code = append(code, ((value >> 24) & 0x_ff) as int8)
     code
 }
-
 func encode_sub_imm32_from_r64(int reg, int32 value) int8[] {
     code := int8[]()
     rex := 0x48 as int8
@@ -202,13 +191,11 @@ func encode_sub_imm32_from_r64(int reg, int32 value) int8[] {
     code = append(code, ((value >> 24) & 0x_ff) as int8)
     code
 }
-
 func encode_ret() int8[] {
     code := int8[]()
     code = append(code, 0x_c3 as int8)
     code
 }
-
 func encode_call_rel32(int32 rel_offset) int8[] {
     code := int8[]()
     code = append(code, 0x_e8 as int8)
@@ -218,7 +205,6 @@ func encode_call_rel32(int32 rel_offset) int8[] {
     code = append(code, ((rel_offset >> 24) & 0x_ff) as int8)
     code
 }
-
 func encode_jmp_rel32(int32 rel_offset) int8[] {
     code := int8[]()
     code = append(code, 0x_e9 as int8)
@@ -228,7 +214,6 @@ func encode_jmp_rel32(int32 rel_offset) int8[] {
     code = append(code, ((rel_offset >> 24) & 0x_ff) as int8)
     code
 }
-
 func encode_cmp_r64_r64(int dst, int src) int8[] {
     code := int8[]()
     rex := 0x48 as int8
@@ -244,7 +229,6 @@ func encode_cmp_r64_r64(int dst, int src) int8[] {
     code = append(code, modrm)
     code
 }
-
 func (gen* amd64_code_gen) gen_prologue(int64 stack_size) {
     code := encode_push_r64(reg_rbp)
     gen.mcg.stream.emit_raw_bytes(code)
@@ -258,7 +242,6 @@ func (gen* amd64_code_gen) gen_prologue(int64 stack_size) {
     gen.stack_depth = 0 as int64
     gen.max_stack_depth = aligned_stack
 }
-
 func (gen* amd64_code_gen) gen_epilogue() {
     if gen.max_stack_depth > 0 {
         code := encode_add_imm32_to_r64(reg_rsp, (gen.max_stack_depth & 0x_ffffffff) as int32)
@@ -269,7 +252,6 @@ func (gen* amd64_code_gen) gen_epilogue() {
     code = encode_ret()
     gen.mcg.stream.emit_raw_bytes(code)
 }
-
 func (gen* amd64_code_gen) gen_func_from_ast(ast_func_decl* func) {
     gen.current_func_name = func.name
     gen.function_start_offset = gen.mcg.get_current_offset()
@@ -280,7 +262,6 @@ func (gen* amd64_code_gen) gen_func_from_ast(ast_func_decl* func) {
     }
     gen.gen_epilogue()
 }
-
 func (gen* amd64_code_gen) gen_block_from_ast(ast_block* block) {
     if block == nil {
         return
@@ -290,7 +271,6 @@ func (gen* amd64_code_gen) gen_block_from_ast(ast_block* block) {
         gen.gen_stmt_from_ast(stmt)
     }
 }
-
 func (gen* amd64_code_gen) gen_stmt_from_ast(ast_stmt* stmt) {
     if stmt == nil {
         return
@@ -309,7 +289,6 @@ func (gen* amd64_code_gen) gen_stmt_from_ast(ast_stmt* stmt) {
         gen.gen_var_decl(stmt)
     }
 }
-
 func (gen* amd64_code_gen) gen_return_stmt(ast_stmt* stmt) {
     if stmt.expression != nil {
         result_reg := gen.gen_expr_from_ast(stmt.expression)
@@ -324,7 +303,6 @@ func (gen* amd64_code_gen) gen_return_stmt(ast_stmt* stmt) {
     }
     gen.gen_epilogue()
 }
-
 func (gen* amd64_code_gen) gen_if_stmt(ast_stmt* stmt) {
     gen.label_counter = gen.label_counter + 1
     else_label := gen.label_counter
@@ -345,7 +323,6 @@ func (gen* amd64_code_gen) gen_if_stmt(ast_stmt* stmt) {
         gen.gen_block_from_ast(stmt.else_branch)
     }
 }
-
 func (gen* amd64_code_gen) gen_for_stmt(ast_stmt* stmt) {
     gen.label_counter = gen.label_counter + 1
     loop_label := gen.label_counter
@@ -369,7 +346,6 @@ func (gen* amd64_code_gen) gen_for_stmt(ast_stmt* stmt) {
         gen.free_reg(cond_reg)
     }
 }
-
 func (gen* amd64_code_gen) gen_expr_from_ast(ast_expr* expr) int {
     if expr == nil {
         return -1
@@ -395,7 +371,6 @@ func (gen* amd64_code_gen) gen_expr_from_ast(ast_expr* expr) int {
     }
     return -1
 }
-
 func (gen* amd64_code_gen) gen_var_decl(ast_stmt* stmt) {
     if stmt.name != "" {
         gen.stack_depth = gen.stack_depth + 8 as int64
@@ -404,7 +379,6 @@ func (gen* amd64_code_gen) gen_var_decl(ast_stmt* stmt) {
         }
     }
 }
-
 func (gen* amd64_code_gen) gen_from_ast_program(ast_program* prog) string {
     if prog == nil {
         return "error: null program"
@@ -422,4 +396,3 @@ func (gen* amd64_code_gen) gen_from_ast_program(ast_program* prog) string {
         gen.gen_func_from_ast(func)
     }
     ""
-}

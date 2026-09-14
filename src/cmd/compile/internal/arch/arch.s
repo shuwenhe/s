@@ -6,7 +6,6 @@ struct arch_dispatch_entry {
     string goarch
     string init_name
 }
-
 func dispatch_init(string arch) string {
     init_name := lookup_init_name(arch)
     if init_name == "" {
@@ -14,11 +13,9 @@ func dispatch_init(string arch) string {
     }
     run_arch_init(init_name)
 }
-
 func init(string arch) string {
     return dispatch_init(arch)
 }
-
 func lookup_init_name(string arch) string {
     table := arch_inits()
     i := 0
@@ -30,7 +27,6 @@ func lookup_init_name(string arch) string {
     }
     ""
 }
-
 func arch_inits() arch_dispatch_entry[] {
     entries := arch_dispatch_entry[]()
     entries = append(entries, arch_dispatch_entry { goarch: "386", init_name: "x86_init" })
@@ -50,7 +46,6 @@ func arch_inits() arch_dispatch_entry[] {
     entries = append(entries, arch_dispatch_entry { goarch: "wasm", init_name: "wasm_init" })
     entries
 }
-
 func run_arch_init(string init_name) string {
     if init_name == "x86_init" {
         return x86_init()
@@ -90,55 +85,41 @@ func run_arch_init(string init_name) string {
     }
     "unknown architecture init \"" + init_name + "\""
 }
-
 func amd64_init() string {
     ""
 }
-
 func x86_init() string {
     not_wired("386")
 }
-
 func arm_init() string {
     ""
 }
-
 func arm64_init() string {
     "arm64 backend: aarch64 registers, stack ABI, and relocation hooks"
 }
-
 func loong64_init() string {
     not_wired("loong64")
 }
-
 func mips_init() string {
     not_wired("mips/mipsle")
 }
-
 func mips64_init() string {
     not_wired("mips64/mips64le")
 }
-
 func ppc64_init() string {
     not_wired("ppc64/ppc64le")
 }
-
 func riscv64_init() string {
     ""
 }
-
 func amd64p32_init() string {
     ""
 }
-
 func s390x_init() string {
     ""
 }
-
 func wasm_init() string {
     "wasm backend: value stack ABI and linear-memory relocation hooks"
 }
-
 func not_wired(string arch) string {
     return "architecture \"" + arch + "\" is recognized but not wired to backend yet"
-}

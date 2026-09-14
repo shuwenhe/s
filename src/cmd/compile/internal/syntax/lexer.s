@@ -89,14 +89,12 @@ enum token_type {
     tok_newline = 86,
     tok_error = 87,
 }
-
 struct token {
     type_* int
     value* string
     int line
     int col
 }
-
 struct lexer {
     source* string
     int pos
@@ -106,7 +104,6 @@ struct lexer {
     int token_count
     int token_capacity
 }
-
 func lexer_new(string* source) lexer* {
     l := alloc(lexer)
     l.source = source
@@ -118,14 +115,12 @@ func lexer_new(string* source) lexer* {
     l.token_count = 0
     return l
 }
-
 func lexer_current_char(l* lexer) int {
     if l.pos >= len(l.source) {
         return 0
     }
     return l.source[l.pos]
 }
-
 func lexer_peek_char(l* lexer, int offset) int {
     pos := l.pos + offset
     if pos >= len(l.source) {
@@ -133,7 +128,6 @@ func lexer_peek_char(l* lexer, int offset) int {
     }
     return l.source[pos]
 }
-
 func lexer_advance(l* lexer) {
     if l.pos < len(l.source) {
         if l.source[l.pos] == 10 {
@@ -145,7 +139,6 @@ func lexer_advance(l* lexer) {
         l.pos = l.pos + 1
     }
 }
-
 func lexer_skip_whitespace(l* lexer) {
     for {
         ch := lexer_current_char(l)
@@ -155,7 +148,6 @@ func lexer_skip_whitespace(l* lexer) {
         lexer_advance(l)
     }
 }
-
 func lexer_skip_line_comment(l* lexer) {
     for {
         ch := lexer_current_char(l)
@@ -165,7 +157,6 @@ func lexer_skip_line_comment(l* lexer) {
         lexer_advance(l)
     }
 }
-
 func lexer_skip_block_comment(l* lexer) {
     lexer_advance(l)
     lexer_advance(l)
@@ -182,21 +173,17 @@ func lexer_skip_block_comment(l* lexer) {
         lexer_advance(l)
     }
 }
-
 func is_letter(int ch) int {
     return (ch >= 97 && ch <= 122) ||
            (ch >= 65 && ch <= 90) ||
            ch == 95
 }
-
 func is_digit(int ch) int {
     return ch >= 48 && ch <= 57
 }
-
 func is_alphanum(int ch) int {
     return is_letter(ch) || is_digit(ch) || ch == 95
 }
-
 func lexer_read_ident(l* lexer) token {
     start := l.pos
     start_col := l.col
@@ -218,7 +205,6 @@ func lexer_read_ident(l* lexer) token {
     }
     return *tok
 }
-
 func lexer_keyword_type(string* s) int {
     if s == nil {
         return 0
@@ -303,7 +289,6 @@ func lexer_keyword_type(string* s) int {
     }
     return 0
 }
-
 func lexer_read_number(l* lexer) token {
     start := l.pos
     start_col := l.col
@@ -345,7 +330,6 @@ func lexer_read_number(l* lexer) token {
     tok.value = value
     return *tok
 }
-
 func lexer_read_string(l* lexer) token {
     start_col := l.col
     quote := lexer_current_char(l)
@@ -378,7 +362,6 @@ func lexer_read_string(l* lexer) token {
     tok.value = value
     return *tok
 }
-
 func lexer_add_token(l* lexer, tok* token) {
     if l.token_count >= l.token_capacity {
         new_capacity := l.token_capacity * 2
@@ -390,7 +373,6 @@ func lexer_add_token(l* lexer, tok* token) {
     l.tokens[l.token_count] = *tok
     l.token_count = l.token_count + 1
 }
-
 func lexer_tokenize(l* lexer) {
     for {
         lexer_skip_whitespace(l)
@@ -594,11 +576,8 @@ func lexer_tokenize(l* lexer) {
     eof_tok.col = l.col
     lexer_add_token(l, eof_tok)
 }
-
 func lexer_get_tokens(l* lexer) token* {
     return l.tokens
 }
-
 func lexer_get_token_count(l* lexer) int {
     return l.token_count
-}

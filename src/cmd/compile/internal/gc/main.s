@@ -10,7 +10,6 @@ func compile_main(string[] args) int {
     result := compile_package(args)
     return result.status
 }
-
 func init_compile_environment() string {
     cfg_err := buildcfg_check()
     if cfg_err != "" {
@@ -21,4 +20,3 @@ func init_compile_environment() string {
         return arch_err
     }
     ""
-}

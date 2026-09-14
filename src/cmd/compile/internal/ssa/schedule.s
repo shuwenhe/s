@@ -25,4 +25,3 @@ func run_schedule(ssa_func f) int {
         bi = bi + 1
     }
     changed
-}

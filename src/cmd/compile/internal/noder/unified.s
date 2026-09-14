@@ -24,4 +24,3 @@ func run_unified(string path, string[] quirks) (noder_output, noder_error) {
     noder_output {
         unit: unit, tokens tokens, imports imports, ast ast, ir ir, exports exports, notes notes,
     }
-}

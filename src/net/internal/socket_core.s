@@ -9,7 +9,6 @@ func new_raw_socket( family int, int socktype, int protocol) (*raw_socket, error
         fd: fd, family family, socktype socktype, protocol protocol, blocking false, read_deadline_ns 0, write_deadline_ns 0,
     }, nil
 }
-
 func (raw_socket* s) close() error {
     if s.fd < 0 {
         return new_socket_error(ebadf, "close"
@@ -21,7 +20,6 @@ func (raw_socket* s) close() error {
     s.fd = -1
     nil
 }
-
 func (raw_socket* s) bind( addr_str string, int port) error {
     if s.fd < 0 {
         return new_socket_error(ebadf, "bind"
@@ -35,7 +33,6 @@ func (raw_socket* s) bind( addr_str string, int port) error {
     }
     nil
 }
-
 func (raw_socket* s) listen( backlog int) error {
     if s.fd < 0 {
         return new_socket_error(ebadf, "listen"
@@ -46,7 +43,6 @@ func (raw_socket* s) listen( backlog int) error {
     }
     nil
 }
-
 func (raw_socket* s) accept() (*raw_socket, error) {
     if s.fd < 0 {
         return nil, new_socket_error(ebadf, "accept"
@@ -61,7 +57,6 @@ func (raw_socket* s) accept() (*raw_socket, error) {
         fd: client_fd, family s.family, socktype sock_stream, protocol ipproto_tcp, blocking false, read_deadline_ns 0, write_deadline_ns 0,
     }, nil
 }
-
 func (raw_socket* s) connect( addr_str string, int port, int timeout_ms) error {
     if s.fd < 0 {
         return new_socket_error(ebadf, "connect"
@@ -93,7 +88,6 @@ func (raw_socket* s) connect( addr_str string, int port, int timeout_ms) error {
     }
     nil
 }
-
 func (raw_socket* s) udp_bind( addr_str string, int port) error {
     if s.fd < 0 {
         return new_socket_error(ebadf, "bind"
@@ -107,7 +101,6 @@ func (raw_socket* s) udp_bind( addr_str string, int port) error {
     }
     nil
 }
-
 func (raw_socket* s) send_to(buf: byte[], string addr_str, int port) (int, error) {
     if s.fd < 0 {
         return 0, new_socket_error(ebadf, "sendto"
@@ -134,7 +127,6 @@ func (raw_socket* s) send_to(buf: byte[], string addr_str, int port) (int, error
     }
     nsent, nil
 }
-
 func (raw_socket* s) recv_from(buf: byte[]) (int, string, int, error) {
     if s.fd < 0 {
         return 0, "", 0, new_socket_error(ebadf, "recvfrom"
@@ -161,7 +153,6 @@ func (raw_socket* s) recv_from(buf: byte[]) (int, string, int, error) {
     src_port := ntohs(src_addr.sin_port)
     nread, "", src_port, nil
 }
-
 func (raw_socket* s) read(buf: byte[]) (int, error) {
     if s.fd < 0 {
         return 0, new_socket_error(ebadf, "read"
@@ -188,7 +179,6 @@ func (raw_socket* s) read(buf: byte[]) (int, error) {
     }
     nread, nil
 }
-
 func (raw_socket* s) write(buf: byte[]) (int, error) {
     if s.fd < 0 {
         return 0, new_socket_error(ebadf, "write"
@@ -212,17 +202,14 @@ func (raw_socket* s) write(buf: byte[]) (int, error) {
     }
     nwritten, nil
 }
-
 func (raw_socket* s) set_read_deadline( deadline_ns i64) error {
     s.read_deadline_ns = deadline_ns
     nil
 }
-
 func (raw_socket* s) set_write_deadline( deadline_ns i64) error {
     s.write_deadline_ns = deadline_ns
     nil
 }
-
 func calculate_timeout_ms( deadline_ns i64) int {
     if deadline_ns == 0 {
         return -1
@@ -241,7 +228,6 @@ func calculate_timeout_ms( deadline_ns i64) int {
         remaining_ms
     }
 }
-
 func (raw_socket* s) set_reuse_addr( on bool) error {
     val: int = if on { 1 } else { 0 }
     errno := sys_setsockopt(s.fd, sol_socket, so_reuseaddr, (*byte)(*val), 4)
@@ -250,7 +236,6 @@ func (raw_socket* s) set_reuse_addr( on bool) error {
     }
     nil
 }
-
 func (raw_socket* s) set_reuse_port( on bool) error {
     val: int = if on { 1 } else { 0 }
     errno := sys_setsockopt(s.fd, sol_socket, so_reuseport, (*byte)(*val), 4)
@@ -259,7 +244,6 @@ func (raw_socket* s) set_reuse_port( on bool) error {
     }
     nil
 }
-
 func (raw_socket* s) set_tcp_no_delay( on bool) error {
     if s.protocol != ipproto_tcp {
         return new_socket_error(einval, "setsockopt"
@@ -271,7 +255,6 @@ func (raw_socket* s) set_tcp_no_delay( on bool) error {
     }
     nil
 }
-
 func (raw_socket* s) set_send_buffer_size( size int) error {
     errno := sys_setsockopt(s.fd, sol_socket, so_sndbuf, (*byte)(*size), 4)
     if errno != 0 {
@@ -279,7 +262,6 @@ func (raw_socket* s) set_send_buffer_size( size int) error {
     }
     nil
 }
-
 func (raw_socket* s) set_recv_buffer_size( size int) error {
     errno := sys_setsockopt(s.fd, sol_socket, so_rcvbuf, (*byte)(*size), 4)
     if errno != 0 {
@@ -287,7 +269,6 @@ func (raw_socket* s) set_recv_buffer_size( size int) error {
     }
     nil
 }
-
 func (raw_socket* s) get_local_addr() (string, int, error) {
     if s.fd < 0 {
         return "", 0, new_socket_error(ebadf, "getsockname"
@@ -300,7 +281,6 @@ func (raw_socket* s) get_local_addr() (string, int, error) {
     }
     "", ntohs(addr.sin_port), nil
 }
-
 func (raw_socket* s) get_remote_addr() (string, int, error) {
     if s.fd < 0 {
         return "", 0, new_socket_error(ebadf, "getpeername"
@@ -313,15 +293,12 @@ func (raw_socket* s) get_remote_addr() (string, int, error) {
     }
     "", ntohs(addr.sin_port), nil
 }
-
 func ntohs( net int) int {
     ((net & 0x_ff00) >> 8) | ((net & 0x00_ff) << 8)
 }
-
 func ntohl( net int) int {
     b1 := (net >> 24) & 0x_ff
     b2 := (net >> 16) & 0x_ff
     b3 := (net >> 8) & 0x_ff
     b4 := net & 0x_ff
     (b4 << 24) | (b3 << 16) | (b2 << 8) | b1
-}

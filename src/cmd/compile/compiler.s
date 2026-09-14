@@ -4,7 +4,6 @@ extern "intrinsic" func __host_read_to_string(string path) string;
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
 extern "intrinsic" func __host_char_at(string text, int index) string;
 extern "intrinsic" func __host_slice(string text, int start, int end) string;
-
 struct compiler_state {
     string source
     int pos
@@ -72,7 +71,6 @@ struct compiler_state {
     int[] method_returns
     int method_count
 }
-
 struct ownership_decision {
     bool allowed
     int loan_id
@@ -80,7 +78,6 @@ struct ownership_decision {
     int conflict_place
     bool legacy_allowed
 }
-
 struct ownership_analysis_input {
     int point_count
     int[] ref_seen
@@ -92,26 +89,21 @@ struct ownership_analysis_input {
     int outlives_count
     int loan_count
 }
-
 struct ownership_analysis {
     int[] region_live_points
     int[] loan_live_points
     int iterations
     bool converged
 }
-
 func compiler_number(int n) string {
     string digits = "0123456789"
     if n < 10 { return __host_char_at(digits, n) }
     return compiler_number(n / 10) + __host_char_at(digits, n % 10)
 }
-
 func compiler_digit(string c) bool { return c != "" && c >= "0" && c <= "9" }
-
 func compiler_alpha(string c) bool {
     return c != "" && ((c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c == "_")
 }
-
 func compiler_ident(string t) bool {
     if !compiler_alpha(__host_char_at(t, 0)) { return false }
     int i = 1
@@ -122,7 +114,6 @@ func compiler_ident(string t) bool {
     }
     return true
 }
-
 func compiler_contains_text(string source, string needle) bool {
     if needle == "" { return true }
     i := 0
@@ -139,17 +130,14 @@ func compiler_contains_text(string source, string needle) bool {
     }
     return false
 }
-
 func compiler_fail(compiler_state initial, string message) compiler_state {
     s := initial
     if s.error == "" { s.error = "compiler:" + compiler_number(s.line) + ": " + message }
     return s
 }
-
 func compiler_subset_fail(compiler_state initial, string feature) compiler_state {
     return compiler_fail(initial, "unsupported in no-GC compiler subset: " + feature)
 }
-
 func compiler_unsupported_token_message(string token) string {
     if token == "use" || token == "import" { return "imports and multi-package resolution" }
     if token == "enum" { return "enum declarations" }
@@ -163,7 +151,6 @@ func compiler_unsupported_token_message(string token) string {
     if token == "struct" { return "only two-field owned box structs are currently supported" }
     return ""
 }
-
 func compiler_next(compiler_state initial) compiler_state {
     s := initial
     if s.error != "" { return s }
@@ -229,27 +216,22 @@ func compiler_next(compiler_state initial) compiler_state {
     s.token = "" + __host_slice(s.source, start, s.pos)
     return s
 }
-
 func compiler_expect(compiler_state initial, string token) compiler_state {
     s := initial
     if s.token != token { return compiler_fail(s, "expected '" + token + "', found '" + s.token + "'") }
     return compiler_next(s)
 }
-
 func compiler_optional_semicolon(compiler_state initial) compiler_state {
     s := initial
     if s.token == ";" { return compiler_next(s) }
     return s
 }
-
 func compiler_is_string_literal(string token) bool {
     return len(token) >= 2 && __host_char_at(token, 0) == "\""
 }
-
 func compiler_is_struct_type(string token) bool {
     return compiler_ident(token) && __host_char_at(token, 0) >= "A" && __host_char_at(token, 0) <= "Z"
 }
-
 func compiler_type_kind(string token) int {
     if token == "int" { return 1 }
     if token == "bool" { return 1 }
@@ -262,12 +244,10 @@ func compiler_type_kind(string token) int {
     if token == "string" { return 17 }
     return 0
 }
-
 func compiler_struct_c_name(compiler_state initial, int struct_id) string {
     s := initial
     "S_" + s.struct_names[struct_id]
 }
-
 func compiler_c_type_for_kind(compiler_state initial, int kind, int struct_id) string {
     s := initial
     if kind == 2 || kind == 4 { return "int64_t *" }
@@ -287,22 +267,18 @@ func compiler_c_type_for_kind(compiler_state initial, int kind, int struct_id) s
     if kind == 17 { return "const char *" }
     "int64_t "
 }
-
 func compiler_is_borrow_kind(int kind) bool {
     if kind == 3 || kind == 4 { return true }
     if kind == 18 || kind == 19 { return true }
     return false
 }
-
 func compiler_is_mutable_borrow_kind(int kind) bool {
     if kind == 4 || kind == 19 { return true }
     return false
 }
-
 func compiler_is_struct_access_kind(int kind) bool {
     return kind == 5 || kind == 20
 }
-
 func compiler_drop_field_code(compiler_state initial, string target, int kind, int struct_id) string {
     s := initial
     if kind == 2 { return "if (" + target + " != NULL) { compiler_drop(&" + target + "); }\n" }
@@ -313,7 +289,6 @@ func compiler_drop_field_code(compiler_state initial, string target, int kind, i
     if kind == 9 { return "if (" + target + " != NULL) { compiler_slice_drop(&" + target + "); }\n" }
     ""
 }
-
 func compiler_find_struct(compiler_state initial, string name) int {
     s := initial
     int i = s.struct_count - 1
@@ -323,7 +298,6 @@ func compiler_find_struct(compiler_state initial, string name) int {
     }
     return -1
 }
-
 func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "struct")
@@ -407,7 +381,6 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     s.function_param_total = s.function_param_total + field_count
     return compiler_optional_semicolon(s)
 }
-
 func compiler_find(compiler_state initial, string name) int {
     s := initial
     int i = s.count - 1
@@ -417,14 +390,11 @@ func compiler_find(compiler_state initial, string name) int {
     }
     return -1
 }
-
 func compiler_var(int slot) string { return "s_v" + compiler_number(slot) }
-
 func compiler_field_name(int field) string {
     if field == 0 { return "left" }
     return "right"
 }
-
 func compiler_field_index(compiler_state initial, int struct_id, string field_name) int {
     s := initial
     if struct_id >= 0 {
@@ -441,25 +411,21 @@ func compiler_field_index(compiler_state initial, int struct_id, string field_na
     if field_name == "right" { return 1 }
     return -1
 }
-
 func compiler_struct_field_name(compiler_state initial, int struct_id, int field) string {
     s := initial
     if struct_id >= 0 { return s.struct_field_names[s.struct_field_starts[struct_id] + field] }
     compiler_field_name(field)
 }
-
 func compiler_struct_field_kind(compiler_state initial, int struct_id, int field) int {
     s := initial
     if struct_id >= 0 { return s.struct_field_kinds[s.struct_field_starts[struct_id] + field] }
     2
 }
-
 func compiler_struct_field_struct(compiler_state initial, int struct_id, int field) int {
     s := initial
     if struct_id >= 0 { return s.struct_field_structs[s.struct_field_starts[struct_id] + field] }
     -1
 }
-
 func compiler_field_live(compiler_state initial, int slot, int field) int {
     s := initial
     idx := slot * 8 + field
@@ -468,7 +434,6 @@ func compiler_field_live(compiler_state initial, int slot, int field) int {
     }
     return 1
 }
-
 func compiler_set_field_moved(compiler_state initial, int slot, int field) compiler_state {
     s := initial
     idx := slot * 8 + field
@@ -477,11 +442,9 @@ func compiler_set_field_moved(compiler_state initial, int slot, int field) compi
     }
     return s
 }
-
 func compiler_nested_field_index(int slot, int parent_field, int field) int {
     return slot * 64 + parent_field * 8 + field
 }
-
 func compiler_nested_field_live(compiler_state initial, int slot, int parent_field, int field) int {
     s := initial
     idx := compiler_nested_field_index(slot, parent_field, field)
@@ -490,7 +453,6 @@ func compiler_nested_field_live(compiler_state initial, int slot, int parent_fie
     }
     return 1
 }
-
 func compiler_set_nested_field_moved(compiler_state initial, int slot, int parent_field, int field) compiler_state {
     s := initial
     idx := compiler_nested_field_index(slot, parent_field, field)
@@ -499,7 +461,6 @@ func compiler_set_nested_field_moved(compiler_state initial, int slot, int paren
     }
     return s
 }
-
 func compiler_clear_nested_field_state(compiler_state initial, int slot, int parent_field) compiler_state {
     s := initial
     field := 0
@@ -512,12 +473,10 @@ func compiler_clear_nested_field_state(compiler_state initial, int slot, int par
     }
     return s
 }
-
 func compiler_merge_ownership_state(int left, int right) int {
     if left == right { return left }
     return 2
 }
-
 func compiler_field_borrow_count(compiler_state initial, int slot, int field) int {
     s := initial
     idx := slot * 8 + field
@@ -526,7 +485,6 @@ func compiler_field_borrow_count(compiler_state initial, int slot, int field) in
     }
     return 0
 }
-
 func compiler_field_has_borrow(compiler_state initial, int slot, int field) bool {
     s := initial
     if field >= 0 { return compiler_field_borrow_count(s, slot, field) > 0 }
@@ -537,7 +495,6 @@ func compiler_field_has_borrow(compiler_state initial, int slot, int field) bool
     }
     return false
 }
-
 func compiler_add_field_borrow(compiler_state initial, int slot, int field) compiler_state {
     s := initial
     idx := slot * 8 + field
@@ -546,7 +503,6 @@ func compiler_add_field_borrow(compiler_state initial, int slot, int field) comp
     }
     return s
 }
-
 func compiler_drop_field_borrow(compiler_state initial, int slot, int field) compiler_state {
     s := initial
     idx := slot * 8 + field
@@ -555,7 +511,6 @@ func compiler_drop_field_borrow(compiler_state initial, int slot, int field) com
     }
     return s
 }
-
 func compiler_nested_field_borrow_count(compiler_state initial, int slot, int parent_field, int field) int {
     s := initial
     idx := compiler_nested_field_index(slot, parent_field, field)
@@ -564,7 +519,6 @@ func compiler_nested_field_borrow_count(compiler_state initial, int slot, int pa
     }
     return 0
 }
-
 func compiler_nested_field_has_borrow(compiler_state initial, int slot, int parent_field, int field) bool {
     s := initial
     if field >= 0 { return compiler_nested_field_borrow_count(s, slot, parent_field, field) > 0 }
@@ -575,7 +529,6 @@ func compiler_nested_field_has_borrow(compiler_state initial, int slot, int pare
     }
     return false
 }
-
 func compiler_add_nested_field_borrow(compiler_state initial, int slot, int parent_field, int field) compiler_state {
     s := initial
     idx := compiler_nested_field_index(slot, parent_field, field)
@@ -584,7 +537,6 @@ func compiler_add_nested_field_borrow(compiler_state initial, int slot, int pare
     }
     return s
 }
-
 func compiler_drop_nested_field_borrow(compiler_state initial, int slot, int parent_field, int field) compiler_state {
     s := initial
     idx := compiler_nested_field_index(slot, parent_field, field)
@@ -593,13 +545,11 @@ func compiler_drop_nested_field_borrow(compiler_state initial, int slot, int par
     }
     return s
 }
-
 func compiler_field_unavailable_message(int state) string {
     if state == 0 { return "use of moved owned struct field" }
     if state == 2 { return "use of conditionally moved owned struct field" }
     return ""
 }
-
 func compiler_has_moved_field(compiler_state initial, int slot) bool {
     s := initial
     if slot < 0 || slot >= len(s.names) { return false }
@@ -615,7 +565,6 @@ func compiler_has_moved_field(compiler_state initial, int slot) bool {
     }
     return false
 }
-
 func compiler_has_moved_nested_field(compiler_state initial, int slot, int parent_field) bool {
     s := initial
     field := 0
@@ -625,7 +574,6 @@ func compiler_has_moved_nested_field(compiler_state initial, int slot, int paren
     }
     return false
 }
-
 func compiler_merge_field_states(compiler_state initial, compiler_state yes, compiler_state no, int limit) compiler_state {
     merged := no
     slot := 0
@@ -646,7 +594,6 @@ func compiler_merge_field_states(compiler_state initial, compiler_state yes, com
     }
     return merged
 }
-
 func compiler_merge_nested_field_states(compiler_state initial, compiler_state yes, compiler_state no, int limit) compiler_state {
     merged := no
     slot := 0
@@ -671,7 +618,6 @@ func compiler_merge_nested_field_states(compiler_state initial, compiler_state y
     }
     return merged
 }
-
 func compiler_merge_field_borrow_states(compiler_state initial, compiler_state yes, compiler_state no, int limit) compiler_state {
     merged := no
     slot := 0
@@ -696,7 +642,6 @@ func compiler_merge_field_borrow_states(compiler_state initial, compiler_state y
     }
     return merged
 }
-
 func compiler_merge_nested_field_borrow_states(compiler_state initial, compiler_state yes, compiler_state no, int limit) compiler_state {
     merged := no
     slot := 0
@@ -725,7 +670,6 @@ func compiler_merge_nested_field_borrow_states(compiler_state initial, compiler_
     }
     return merged
 }
-
 func compiler_move_field_expr(compiler_state initial, int origin, int field, int kind, int struct_id) string {
     s := initial
     if s.struct_ids[origin] < 0 { return "compiler_pair_move_field(" + compiler_var(origin) + "," + compiler_number(field) + ")" }
@@ -735,7 +679,6 @@ func compiler_move_field_expr(compiler_state initial, int origin, int field, int
     if kind == 9 { return "compiler_slice_move(&" + target + ")" }
     return target
 }
-
 func compiler_move_nested_field_expr(compiler_state initial, int origin, int parent_field, int field, int kind, int struct_id) string {
     s := initial
     parent_name := compiler_struct_field_name(s, s.struct_ids[origin], parent_field)
@@ -746,7 +689,6 @@ func compiler_move_nested_field_expr(compiler_state initial, int origin, int par
     if kind == 9 { return "compiler_slice_move(&" + target + ")" }
     return target
 }
-
 func compiler_move_value_field_expr(compiler_state initial) compiler_state {
     s := initial
     origin := s.value_slot
@@ -770,7 +712,6 @@ func compiler_move_value_field_expr(compiler_state initial) compiler_state {
     s.value = compiler_move_field_expr(s, origin, s.value_field, s.value_kind, s.value_struct_id)
     return s
 }
-
 func compiler_array_length(compiler_state initial, int slot) string {
     s := initial
     if s.kinds[slot] == 9 { return compiler_var(slot) + "->len" }
@@ -778,7 +719,6 @@ func compiler_array_length(compiler_state initial, int slot) string {
     if s.array_lengths[slot] >= 0 { return compiler_number(s.array_lengths[slot]) }
     return compiler_var(slot) + "_len"
 }
-
 func compiler_find_func(compiler_state initial, string name) int {
     s := initial
     int i = s.function_count - 1
@@ -788,19 +728,16 @@ func compiler_find_func(compiler_state initial, string name) int {
     }
     return -1
 }
-
 func compiler_generic_instance_name(string generic_name, int kind) string {
     if kind == 1 { return generic_name + "__mono_int" }
     if kind == 2 { return generic_name + "__mono_box" }
     return generic_name + "__mono_unknown"
 }
-
 func compiler_explicit_type_arg_kind(string token) int {
     if token == "int" { return 1 }
     if token == "box" { return 2 }
     return 0
 }
-
 func compiler_find_method(compiler_state initial, int struct_id, string name) int {
     s := initial
     int i = s.method_count - 1
@@ -810,12 +747,10 @@ func compiler_find_method(compiler_state initial, int struct_id, string name) in
     }
     return -1
 }
-
 func compiler_method_c_name(compiler_state initial, int method_index) string {
     s := initial
     return "method_" + s.struct_names[s.method_structs[method_index]] + "_" + s.method_names[method_index]
 }
-
 func compiler_conflict_at(compiler_state initial, int owner, int field, bool exclusive) bool {
     s := initial
     int i = 0
@@ -829,11 +764,9 @@ func compiler_conflict_at(compiler_state initial, int owner, int field, bool exc
     if exclusive && compiler_field_has_borrow(s, owner, field) { return true }
     return false
 }
-
 func compiler_conflict(compiler_state initial, int owner, bool exclusive) bool {
     return compiler_conflict_at(initial, owner, -1, exclusive)
 }
-
 func compiler_child_conflict(compiler_state initial, int parent, bool exclusive) bool {
     s := initial
     int i = 0
@@ -843,7 +776,6 @@ func compiler_child_conflict(compiler_state initial, int parent, bool exclusive)
     }
     return false
 }
-
 func compiler_has_future_token(string source, int pos, string name) bool {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -855,7 +787,6 @@ func compiler_has_future_token(string source, int pos, string name) bool {
     }
     return false
 }
-
 func compiler_end_borrow_if_last_use(compiler_state initial, int slot) compiler_state {
     s := initial
     if slot < 0 || slot >= s.count { return s }
@@ -867,7 +798,6 @@ func compiler_end_borrow_if_last_use(compiler_state initial, int slot) compiler_
     s.live[slot] = 0
     return s
 }
-
 func compiler_end_last_use_borrows(compiler_state initial) compiler_state {
     s := initial
     i := 0
@@ -879,17 +809,14 @@ func compiler_end_last_use_borrows(compiler_state initial) compiler_state {
     }
     return s
 }
-
 func compiler_force_solver_live(compiler_state initial, int slot) bool {
     s := initial
     return compiler_contains_text(s.source, "nll_solver_force_live " + s.names[slot])
 }
-
 func compiler_force_solver_dead(compiler_state initial, int slot) bool {
     s := initial
     return compiler_contains_text(s.source, "nll_solver_force_dead " + s.names[slot])
 }
-
 func compiler_ownership_decision_message(ownership_decision decision) string {
     text := "ownership move/borrow: OwnershipAuthority(solver) "
     if decision.allowed { text = text + "SolverDecision(OK) " }
@@ -901,13 +828,11 @@ func compiler_ownership_decision_message(ownership_decision decision) string {
     }
     return text
 }
-
 func compiler_place_id(int parent_field, int field) int {
     if parent_field >= 0 { return 10 + parent_field * 8 + field }
     if field >= 0 { return field + 1 }
     return -1
 }
-
 func compiler_place_same_or_overlap(int move_place, int loan_parent_field, int loan_field) bool {
     if move_place < 0 { return true }
     if move_place >= 10 {
@@ -920,7 +845,6 @@ func compiler_place_same_or_overlap(int move_place, int loan_parent_field, int l
     if loan_parent_field >= 0 { return loan_field < 0 || loan_parent_field == move_field }
     return loan_field < 0 || loan_field == move_field
 }
-
 func compiler_place_name_for_decision(int place) string {
     if place >= 10 {
         parent := (place - 10) / 8
@@ -929,7 +853,6 @@ func compiler_place_name_for_decision(int place) string {
     }
     return compiler_place_borrow_place_name(place)
 }
-
 func compiler_legacy_conflict_for_place(compiler_state initial, int slot, int place) bool {
     s := initial
     if place < 0 { return compiler_conflict(s, slot, true) }
@@ -939,7 +862,6 @@ func compiler_legacy_conflict_for_place(compiler_state initial, int slot, int pl
     }
     return compiler_conflict_at(s, slot, place - 1, true)
 }
-
 func compiler_check_move_at_point(compiler_state initial, int slot, int place) ownership_decision {
     s := initial
     decision := ownership_decision { allowed: true, loan_id: -1, point_id: s.pos, conflict_place: place, legacy_allowed: !compiler_legacy_conflict_for_place(s, slot, place) }
@@ -964,7 +886,6 @@ func compiler_check_move_at_point(compiler_state initial, int slot, int place) o
     }
     return decision
 }
-
 func compiler_release_dead_solver_loans(compiler_state initial, int slot, int place) compiler_state {
     s := initial
     i := 0
@@ -980,14 +901,12 @@ func compiler_release_dead_solver_loans(compiler_state initial, int slot, int pl
     }
     return s
 }
-
 func compiler_available(compiler_state initial, int slot) compiler_state {
     s := initial
     if slot < 0 { return compiler_fail(s, "unknown variable") }
     if s.live[slot] != 1 { return compiler_fail(s, "use of moved, dropped or conditionally initialized value: " + s.names[slot]) }
     return s
 }
-
 func compiler_consume(compiler_state initial, int slot) compiler_state {
     s := initial
     s = compiler_available(s, slot)
@@ -1000,7 +919,6 @@ func compiler_consume(compiler_state initial, int slot) compiler_state {
     s.live[slot] = 0
     return s
 }
-
 func compiler_cleanup(compiler_state initial, int floor) string {
     s := initial
     string code = ""
@@ -1011,7 +929,6 @@ func compiler_cleanup(compiler_state initial, int floor) string {
     }
     return code
 }
-
 func compiler_drop_owner(compiler_state initial, int slot) string {
     s := initial
     if s.kinds[slot] == 2 { return "compiler_drop(&" + compiler_var(slot) + ");\n" }
@@ -1025,20 +942,17 @@ func compiler_drop_owner(compiler_state initial, int slot) string {
     if s.kinds[slot] == 9 { return "compiler_slice_drop(&" + compiler_var(slot) + ");\n" }
     ""
 }
-
 func compiler_overwrite_old_owner(compiler_state initial, int slot) string {
     s := initial
     if s.live[slot] == 0 { return "" }
     compiler_drop_owner(s, slot)
 }
-
 func compiler_drop_field_owner_code(compiler_state initial, int slot, int field, int kind, int struct_id) string {
     s := initial
     target := compiler_var(slot) + "->" + compiler_struct_field_name(s, s.struct_ids[slot], field)
     if compiler_field_live(s, slot, field) != 1 { return "" }
     return compiler_drop_field_code(s, target, kind, struct_id)
 }
-
 func compiler_precedence(string op) int {
     if op == "||" { return 1 }
     if op == "&&" { return 2 }
@@ -1048,7 +962,6 @@ func compiler_precedence(string op) int {
     if op == "*" || op == "/" || op == "%" { return 6 }
     return 0
 }
-
 func compiler_atom(compiler_state initial) compiler_state {
     s := initial
     if s.error != "" { return s }
@@ -1058,7 +971,6 @@ func compiler_atom(compiler_state initial) compiler_state {
     s.expr_depth = s.expr_depth - 1
     return s
 }
-
 func compiler_atom_inner(compiler_state initial) compiler_state {
     s := initial
     string t = s.token
@@ -1598,7 +1510,6 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     s.value_struct_id = s.struct_ids[slot]
     return s
 }
-
 func compiler_expression(compiler_state initial, int minimum) compiler_state {
     s := initial
     s = compiler_atom(s)
@@ -1639,7 +1550,6 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
     }
     return s
 }
-
 func compiler_bind(compiler_state initial, string name, bool declaration) compiler_state {
     s := initial
     int slot = compiler_find(s, name)
@@ -1728,7 +1638,6 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if declaration { s.count = s.count + 1 }
     return s
 }
-
 func compiler_declare_int_locals(compiler_state initial) compiler_state {
     s := compiler_next(initial)
     int decl_line = initial.line
@@ -1763,7 +1672,6 @@ func compiler_declare_int_locals(compiler_state initial) compiler_state {
     }
     return s
 }
-
 func compiler_block(compiler_state initial) compiler_state {
     s := initial
     int floor = s.count
@@ -1782,7 +1690,6 @@ func compiler_block(compiler_state initial) compiler_state {
     s.depth = s.depth - 1
     return s
 }
-
 func compiler_statement(compiler_state initial) compiler_state {
     s := initial
     string unsupported = compiler_unsupported_token_message(s.token)
@@ -2184,7 +2091,6 @@ func compiler_statement(compiler_state initial) compiler_state {
     s = compiler_bind(s, name, declaration)
     return compiler_optional_semicolon(s)
 }
-
 func compiler_parse_helper(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "func")
@@ -2262,7 +2168,6 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     if s.return_kind == 3 || s.return_kind == 4 || s.return_kind == 5 || s.return_kind == 9 { s = compiler_next(s) }
     s.parameter_count = param_count
     s.return_param = -1
-
     int start = s.function_param_total
     s.function_names[s.function_count] = name
     s.function_counts[s.function_count] = param_count
@@ -2278,7 +2183,6 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     }
     s.function_param_total = s.function_param_total + param_count
     s.function_count = s.function_count + 1
-
     string signature = "static int64_t " + name + "("
     if s.return_kind == 0 { signature = "static void " + name + "(" }
     if s.return_kind == 2 || s.return_kind == 4 { signature = "static int64_t *" + name + "(" }
@@ -2294,7 +2198,6 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         pi = pi + 1
     }
     signature = signature + ")\n"
-
     s.count = 0
     s.depth = 0
     s.loop_floor = -1
@@ -2342,7 +2245,6 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     s.code = s.code + "}\n"
     return s
 }
-
 func compiler_register_generated_function(compiler_state initial, string name, int param_kind, int return_kind) compiler_state {
     s := initial
     if s.function_count >= len(s.function_names) { return compiler_fail(s, "too many functions") }
@@ -2359,7 +2261,6 @@ func compiler_register_generated_function(compiler_state initial, string name, i
     s.function_count = s.function_count + 1
     s
 }
-
 func compiler_parse_generic_identity_helper(compiler_state initial, string name) compiler_state {
     s := initial
     s = compiler_expect(s, "[")
@@ -2389,7 +2290,6 @@ func compiler_parse_generic_identity_helper(compiler_state initial, string name)
     s.code = s.code + "static int64_t *" + box_name + "(int64_t *p0)\n{\nint64_t *s_v0 = p0;\n(void)s_v0;\nint64_t *compiler_result = compiler_move(&s_v0);\nreturn compiler_result;\n}\n"
     return s
 }
-
 func compiler_parse_receiver_method(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "func")
@@ -2471,7 +2371,6 @@ func compiler_parse_receiver_method(compiler_state initial) compiler_state {
     s.code = s.code + "}\n"
     return s
 }
-
 func compiler_parse_drop_method(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "func")
@@ -2495,7 +2394,6 @@ func compiler_parse_drop_method(compiler_state initial) compiler_state {
     if s.token != "{" { return compiler_fail(s, "drop method must not return a value") }
     return compiler_parse_drop_body(s, type_name, struct_id, receiver)
 }
-
 func compiler_parse_drop_impl(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "impl")
@@ -2526,7 +2424,6 @@ func compiler_parse_drop_impl(compiler_state initial) compiler_state {
     s = compiler_expect(s, "}")
     return s
 }
-
 func compiler_parse_drop_body(compiler_state initial, string type_name, int struct_id, string receiver) compiler_state {
     s := initial
     s.struct_custom_drops[struct_id] = 1
@@ -2556,7 +2453,6 @@ func compiler_parse_drop_body(compiler_state initial, string type_name, int stru
     s.code = s.code + "}\n"
     s
 }
-
 func compiler_emit_default_drop_hooks(compiler_state initial) compiler_state {
     s := initial
     i := 0
@@ -2569,14 +2465,12 @@ func compiler_emit_default_drop_hooks(compiler_state initial) compiler_state {
     }
     s
 }
-
 func compiler_parse_function_like(compiler_state initial) compiler_state {
     s := initial
     look := compiler_next(s)
     if look.token == "(" { return compiler_parse_receiver_method(s) }
     compiler_parse_helper(s)
 }
-
 func compiler_compile(string source) compiler_state {
     names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
     kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -2679,7 +2573,6 @@ func compiler_compile(string source) compiler_state {
     if s.token != "" { s = compiler_fail(s, "unexpected declaration after main") }
     return s
 }
-
 func compiler_mir_find(string[] names, int count, string name) int {
     i := 0
     while i < count {
@@ -2688,11 +2581,9 @@ func compiler_mir_find(string[] names, int count, string name) int {
     }
     return -1
 }
-
 func compiler_mir_value(int id) string {
     return "_" + compiler_number(id)
 }
-
 func compiler_mir_has_live_borrow(int[] live, int[] kinds, int[] roots, int count, int owner) bool {
     i := 0
     while i < count {
@@ -2703,7 +2594,6 @@ func compiler_mir_has_live_borrow(int[] live, int[] kinds, int[] roots, int coun
     }
     return false
 }
-
 func compiler_mir_has_shared_borrow(int[] live, int[] kinds, int[] roots, int count, int owner) bool {
     i := 0
     while i < count {
@@ -2714,7 +2604,6 @@ func compiler_mir_has_shared_borrow(int[] live, int[] kinds, int[] roots, int co
     }
     return false
 }
-
 func compiler_mir_has_mut_borrow(int[] live, int[] kinds, int[] roots, int count, int owner) bool {
     i := 0
     while i < count {
@@ -2725,7 +2614,6 @@ func compiler_mir_has_mut_borrow(int[] live, int[] kinds, int[] roots, int count
     }
     return false
 }
-
 func compiler_mir_drop_live(string out, int[] live, int[] value_ids, int[] kinds, int count, bool elaborate_drop) string {
     result := out
     if !elaborate_drop { return result }
@@ -2739,7 +2627,6 @@ func compiler_mir_drop_live(string out, int[] live, int[] value_ids, int[] kinds
     }
     return result
 }
-
 func compiler_emit_mir(string source, bool elaborate_drop) string {
     empty_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -3014,7 +2901,6 @@ func compiler_emit_mir(string source, bool elaborate_drop) string {
     }
     return "mir main blocks=" + compiler_number(block_count) + " entry=0 exit=" + compiler_number(exit_block) + "\n" + out
 }
-
 func compiler_emit_mir_place(string source) string {
     empty_names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -3053,14 +2939,12 @@ func compiler_emit_mir_place(string source) string {
     if s.error != "" { return "mir-error " + s.error + "\n" }
     return out
 }
-
 func compiler_movepath_state_name(int state) string {
     if state == 0 { return "LIVE" }
     if state == 1 { return "MOVED" }
     if state == 2 { return "PARTIALLY_MOVED" }
     return "UNKNOWN"
 }
-
 func compiler_movepath_emit(string place, int parent, string[] children, int child_count, int state) string {
     out := "MovePath(place=" + place + ", parent="
     if parent < 0 { out = out + "none" }
@@ -3075,7 +2959,6 @@ func compiler_movepath_emit(string place, int parent, string[] children, int chi
     out = out + "], state=" + compiler_movepath_state_name(state) + ")\n"
     return out
 }
-
 func compiler_emit_mir_movepath(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3127,19 +3010,16 @@ func compiler_emit_mir_movepath(string source) string {
     out = out + compiler_movepath_emit("Field(_1,1)", 0, no_children, 0, state_f1)
     return out
 }
-
 func compiler_partial_move_status(string place, int state) string {
     if state == 1 { return "mir-error use of moved place " + place + "\n" }
     if state == 2 { return "mir-error use of partially moved place " + place + "\n" }
     return "Use(" + place + ") OK\n"
 }
-
 func compiler_recompute_parent_state(int left, int right) int {
     if left == 0 && right == 0 { return 0 }
     if left == 1 && right == 1 { return 1 }
     return 2
 }
-
 func compiler_emit_mir_partial_move(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3234,11 +3114,9 @@ func compiler_emit_mir_partial_move(string source) string {
     if s.error != "" { return "mir-error " + s.error + "\n" }
     return out
 }
-
 func compiler_emit_mir_reinit(string source) string {
     return compiler_emit_mir_partial_move(source)
 }
-
 func compiler_place_borrow_place_name(int place) string {
     if place == 0 { return "Local(_1)" }
     if place == 1 { return "Field(_1, 0)" }
@@ -3247,7 +3125,6 @@ func compiler_place_borrow_place_name(int place) string {
     if place == 4 { return "Field(Field(_1, 0), 1)" }
     return "Unknown"
 }
-
 func compiler_place_borrow_overlaps(int left, int right) bool {
     if left == right { return true }
     if left == 0 || right == 0 { return true }
@@ -3255,7 +3132,6 @@ func compiler_place_borrow_overlaps(int left, int right) bool {
     if right == 1 && (left == 3 || left == 4) { return true }
     return false
 }
-
 func compiler_place_borrow_conflict(int target, int[] shared, int[] mut, bool mutable) int {
     i := 0
     while i < 5 {
@@ -3267,7 +3143,6 @@ func compiler_place_borrow_conflict(int target, int[] shared, int[] mut, bool mu
     }
     return 0
 }
-
 func compiler_place_borrow_result(int target, bool mutable, int[] shared, int[] mut) string {
     conflict := compiler_place_borrow_conflict(target, shared, mut, mutable)
     if conflict == 1 { return "mir-error mutable borrow while shared borrowed " + compiler_place_borrow_place_name(target) + "\n" }
@@ -3279,11 +3154,9 @@ func compiler_place_borrow_result(int target, bool mutable, int[] shared, int[] 
     if mutable { mode = "mut" }
     return "Borrow(" + mode + ", " + compiler_place_borrow_place_name(target) + ") OK\n"
 }
-
 func compiler_place_borrow_success(int target, bool mutable, int[] shared, int[] mut) bool {
     return compiler_place_borrow_conflict(target, shared, mut, mutable) == 0
 }
-
 func compiler_emit_mir_place_borrow(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3352,7 +3225,6 @@ func compiler_emit_mir_place_borrow(string source) string {
     if s.error != "" { return "mir-error " + s.error + "\n" }
     return out
 }
-
 func compiler_reference_liveness_conflict(int target, int[] loan_places, int[] loan_mut, int[] loan_live, int loan_count, bool exclusive) int {
     i := 0
     while i < loan_count {
@@ -3364,7 +3236,6 @@ func compiler_reference_liveness_conflict(int target, int[] loan_places, int[] l
     }
     return 0
 }
-
 func compiler_reference_liveness_find(string[] names, int count, string name) int {
     i := 0
     while i < count {
@@ -3373,7 +3244,6 @@ func compiler_reference_liveness_find(string[] names, int count, string name) in
     }
     return -1
 }
-
 func compiler_loan_liveness_use_counts(string source, string[] use_names, int[] use_counts) int {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3396,7 +3266,6 @@ func compiler_loan_liveness_use_counts(string source, string[] use_names, int[] 
     }
     return count
 }
-
 func compiler_loan_liveness_has_future_use(string source, int pos, string ref_name) bool {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3411,7 +3280,6 @@ func compiler_loan_liveness_has_future_use(string source, int pos, string ref_na
     }
     return false
 }
-
 func compiler_reference_liveness_borrow(string ref_name, int target, bool mutable, string[] loan_names, int[] loan_places, int[] loan_mut, int[] loan_live, int loan_count) string {
     conflict := compiler_reference_liveness_conflict(target, loan_places, loan_mut, loan_live, loan_count, mutable)
     if conflict == 1 { return "mir-error mutable borrow while shared borrowed " + compiler_place_borrow_place_name(target) + "\n" }
@@ -3423,7 +3291,6 @@ func compiler_reference_liveness_borrow(string ref_name, int target, bool mutabl
     if mutable { mode = "mut" }
     return ref_name + " = Borrow(" + mode + ", " + compiler_place_borrow_place_name(target) + ")\n"
 }
-
 func compiler_emit_mir_reference_liveness(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3513,7 +3380,6 @@ func compiler_emit_mir_reference_liveness(string source) string {
     if s.error != "" { return "mir-error " + s.error + "\n" }
     return out
 }
-
 func compiler_emit_mir_loan_liveness(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3606,7 +3472,6 @@ func compiler_emit_mir_loan_liveness(string source) string {
     if s.error != "" { return "mir-error " + s.error + "\n" }
     return out
 }
-
 func compiler_region_ref_find(string[] names, int count, string name) int {
     i := 0
     while i < count {
@@ -3615,15 +3480,12 @@ func compiler_region_ref_find(string[] names, int count, string name) int {
     }
     return -1
 }
-
 func compiler_region_name(string ref_name) string {
     return "'r_" + ref_name
 }
-
 func compiler_region_loan_name(int loan_id) string {
     return "L" + compiler_number(loan_id)
 }
-
 func compiler_region_fixed_ref_index(string name) int {
     if name == "p" { return 0 }
     if name == "q" { return 1 }
@@ -3631,7 +3493,6 @@ func compiler_region_fixed_ref_index(string name) int {
     if name == "s" { return 3 }
     return -1
 }
-
 func compiler_region_fixed_ref_name(int idx) string {
     if idx == 0 { return "p" }
     if idx == 1 { return "q" }
@@ -3639,11 +3500,9 @@ func compiler_region_fixed_ref_name(int idx) string {
     if idx == 3 { return "s" }
     return "unknown"
 }
-
 func compiler_region_point_name(int point) string {
     return "P" + compiler_number(point)
 }
-
 func compiler_region_has_future_loan_use(string source, int pos, int loan_id, string[] ref_names, int[] ref_loans, int ref_count) bool {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3659,7 +3518,6 @@ func compiler_region_has_future_loan_use(string source, int pos, int loan_id, st
     }
     return false
 }
-
 func compiler_region_conflict(int target, int[] loan_places, int[] loan_mut, int[] loan_live, int loan_count, bool exclusive) int {
     i := 0
     while i < loan_count {
@@ -3671,7 +3529,6 @@ func compiler_region_conflict(int target, int[] loan_places, int[] loan_mut, int
     }
     return 0
 }
-
 func compiler_emit_mir_region_constraints(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3810,7 +3667,6 @@ func compiler_emit_mir_region_constraints(string source) string {
     if s.error != "" { return "mir-error " + s.error + "\n" }
     return out
 }
-
 func compiler_region_bit_set(int bits, int bit) bool {
     value := bits / bit
     while value >= 2 {
@@ -3818,7 +3674,6 @@ func compiler_region_bit_set(int bits, int bit) bool {
     }
     return value == 1
 }
-
 func compiler_region_add_point_value(int bits, int point) int {
     bit := 1
     i := 0
@@ -3829,7 +3684,6 @@ func compiler_region_add_point_value(int bits, int point) int {
     if compiler_region_bit_set(bits, bit) { return bits }
     return bits + bit
 }
-
 func compiler_region_points_string(int bits) string {
     out := "{"
     point := 0
@@ -3847,7 +3701,6 @@ func compiler_region_points_string(int bits) string {
     out = out + "}"
     return out
 }
-
 func compiler_region_union_value(int target_bits, int source_bits) int {
     result := target_bits
     point := 0
@@ -3861,7 +3714,6 @@ func compiler_region_union_value(int target_bits, int source_bits) int {
     }
     return result
 }
-
 func analyze_ownership_liveness(ownership_analysis_input input) ownership_analysis {
     region_points := input.region_points
     loan_points := input.loan_points
@@ -3892,7 +3744,6 @@ func analyze_ownership_liveness(ownership_analysis_input input) ownership_analys
     }
     ownership_analysis { region_live_points: region_points, loan_live_points: loan_points, iterations: iterations, converged: !changed }
 }
-
 func compiler_emit_mir_region_solver(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -3970,7 +3821,6 @@ func compiler_emit_mir_region_solver(string source) string {
     out = out + "RegionSolver(iterations=" + compiler_number(analysis.iterations) + ", converged=true)\n"
     return out
 }
-
 func compiler_emit_ownership_solver_check() string {
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
     ref_seen := empty_ints
@@ -3994,7 +3844,6 @@ func compiler_emit_ownership_solver_check() string {
     out = out + "OwnershipAnalysis(iterations=" + compiler_number(analysis.iterations) + ", converged=true)\n"
     return out
 }
-
 func compiler_region_point_live(int bits, int point) bool {
     bit := 1
     i := 0
@@ -4004,7 +3853,6 @@ func compiler_region_point_live(int bits, int point) bool {
     }
     return compiler_region_bit_set(bits, bit)
 }
-
 func compiler_region_has_point_before_or_at(int bits, int point) bool {
     i := 0
     bit := 1
@@ -4015,7 +3863,6 @@ func compiler_region_has_point_before_or_at(int bits, int point) bool {
     }
     return false
 }
-
 func compiler_region_has_point_after_or_at(int bits, int point) bool {
     i := 0
     bit := 1
@@ -4030,11 +3877,9 @@ func compiler_region_has_point_after_or_at(int bits, int point) bool {
     }
     return false
 }
-
 func compiler_region_loan_covers_point(int bits, int point) bool {
     return compiler_region_has_point_before_or_at(bits, point) && compiler_region_has_point_after_or_at(bits, point)
 }
-
 func compiler_emit_mir_nll_borrow_check(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -4152,7 +3997,6 @@ func compiler_emit_mir_nll_borrow_check(string source) string {
     out = out + "NLLBorrowCheck(iterations=" + compiler_number(analysis.iterations) + ", converged=true)\n"
     return out
 }
-
 func compiler_emit_mir_nll_shadow(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -4285,7 +4129,6 @@ func compiler_emit_mir_nll_shadow(string source) string {
     shadow = shadow + "NLLShadowCheck(loans=" + compiler_number(loan_count) + ", move_points=" + compiler_number(move_count) + ", comparisons=" + compiler_number(comparisons) + ", mismatches=" + compiler_number(mismatches) + ", legacy=authoritative, solver=shadow)\n"
     return shadow
 }
-
 func compiler_emit_mir_nll_real_cfg(string source) string {
     out := "mir-nll-real-cfg main\n"
     has_if := compiler_has_future_token(source, 0, "if")
@@ -4342,7 +4185,6 @@ func compiler_emit_mir_nll_real_cfg(string source) string {
     out = out + "NLLRealCFGCheck(points=3, edges=0, backedges=0, converged=true)\n"
     return out
 }
-
 func compiler_nll_conflicts(int place, int point, int[] loan_points, int[] loan_places, int loan_count) bool {
     loan := 0
     while loan < loan_count {
@@ -4353,7 +4195,6 @@ func compiler_nll_conflicts(int place, int point, int[] loan_points, int[] loan_
     }
     return false
 }
-
 func compiler_emit_mir_nll_ownership(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -4503,7 +4344,6 @@ func compiler_emit_mir_nll_ownership(string source) string {
     out = out + "NLLOwnership(iterations=" + compiler_number(analysis.iterations) + ", converged=true)\n"
     return out
 }
-
 func compiler_emit_partial_drop_field0(int state_f0, int state_f0_0, int state_f0_1) string {
     if state_f0 == 0 { return "Drop(Field(_1, 0))\n" }
     if state_f0 == 1 { return "" }
@@ -4512,7 +4352,6 @@ func compiler_emit_partial_drop_field0(int state_f0, int state_f0_0, int state_f
     if state_f0_0 == 0 { out = out + "Drop(Field(Field(_1, 0), 0))\n" }
     return out
 }
-
 func compiler_emit_mir_partial_drop(string source) string {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
@@ -4601,7 +4440,6 @@ func compiler_emit_mir_partial_drop(string source) string {
     }
     return out
 }
-
 func main() {
     args := host_args()
     if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
@@ -4678,4 +4516,3 @@ func main() {
     if result.error != "" { eprintln(result.error); return 1 }
     if __host_write_text_file(args[3], result.code) != 0 { eprintln("compiler: cannot write output"); return 1 }
     return 0
-}

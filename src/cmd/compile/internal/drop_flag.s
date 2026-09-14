@@ -1,15 +1,11 @@
 package compile.internal.drop_flag
-
 import (
     "compile.internal.drop_system"
 )
-
 func drop_state_unknown() int { 0 }
-
 func drop_state_present() int { 1 }
 
 func drop_state_absent() int { 2 }
-
 func drop_state_partial() int { 3 }
 
 struct dflag_entry {
@@ -18,25 +14,21 @@ struct dflag_entry {
     int state
     int scope_depth
 }
-
 struct dflag_map {
     dflag_entry[] entries
     int scope_depth
     string[] errors
 }
-
 struct dflag_result {
     bool ok
     string message
     string[] cleanup
 }
-
 func drop_flag_new() dflag_map {
     dflag_entry[] entries
     string[] errors
     dflag_map { entries: entries, scope_depth: 0, errors: errors }
 }
-
 func drop_flag_find(dflag_map flags, string name) int {
     i := len(flags.entries) - 1
     for i >= 0 {
@@ -45,12 +37,10 @@ func drop_flag_find(dflag_map flags, string name) int {
     }
     -1
 }
-
 func drop_flag_error(dflag_map flags, string message) dflag_map {
     flags.errors = append(flags.errors, message)
     flags
 }
-
 func drop_flag_declare(dflag_map flags, string name, string type_name) dflag_map {
     if drop_flag_find(flags, name) >= 0 {
         return drop_flag_error(flags, "duplicate variable: " + name)
@@ -60,14 +50,12 @@ func drop_flag_declare(dflag_map flags, string name, string type_name) dflag_map
     })
     flags
 }
-
 func drop_flag_mark_present(dflag_map flags, string name) dflag_map {
     index := drop_flag_find(flags, name)
     if index < 0 { return drop_flag_error(flags, "unknown variable: " + name) }
     flags.entries[index].state = drop_state_present()
     flags
 }
-
 func drop_flag_mark_absent(dflag_map flags, string name, string reason) dflag_map {
     index := drop_flag_find(flags, name)
     if index < 0 { return drop_flag_error(flags, "unknown variable: " + name) }
@@ -77,7 +65,6 @@ func drop_flag_mark_absent(dflag_map flags, string name, string reason) dflag_ma
     flags.entries[index].state = drop_state_absent()
     flags
 }
-
 func drop_flag_use(dflag_map flags, string name) dflag_map {
     index := drop_flag_find(flags, name)
     if index < 0 { return drop_flag_error(flags, "unknown variable: " + name) }
@@ -86,7 +73,6 @@ func drop_flag_use(dflag_map flags, string name) dflag_map {
     }
     flags
 }
-
 func drop_flag_move(dflag_map flags, string from_name, string to_name) dflag_map {
     index := drop_flag_find(flags, from_name)
     if index < 0 { return drop_flag_error(flags, "unknown variable: " + from_name) }
@@ -95,16 +81,13 @@ func drop_flag_move(dflag_map flags, string from_name, string to_name) dflag_map
     if len(flags.errors) > 0 { return flags }
     drop_flag_declare(flags, to_name, type_name)
 }
-
 func drop_flag_drop(dflag_map flags, string name) dflag_map {
     drop_flag_mark_absent(flags, name, "drop")
 }
-
 func drop_flag_enter_scope(dflag_map flags) dflag_map {
     flags.scope_depth = flags.scope_depth + 1
     flags
 }
-
 func drop_flag_exit_scope(dflag_map flags, dtor_registry registry) dflag_result {
     string[] cleanup
     i := len(flags.entries) - 1
@@ -126,7 +109,6 @@ func drop_flag_exit_scope(dflag_map flags, dtor_registry registry) dflag_result 
     }
     dflag_result { ok: len(flags.errors) == 0, message: message, cleanup: cleanup }
 }
-
 func drop_flag_cleanup_names(dflag_map flags, dtor_registry registry) string[] {
     string[] cleanup
     i := len(flags.entries) - 1
@@ -138,4 +120,3 @@ func drop_flag_cleanup_names(dflag_map flags, dtor_registry registry) string[] {
         i = i - 1
     }
     cleanup
-}

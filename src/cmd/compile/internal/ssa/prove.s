@@ -7,13 +7,11 @@ struct prove_fact {
     bool known_zero
     bool known_non_zero
 }
-
 func fact_for(int id, bool z, bool nz) prove_fact {
     prove_fact {
         value_id: id, known_zero z, known_non_zero nz,
     }
 }
-
 func find_fact(prove_fact[] facts, int id) int {
     i := 0
     for i < len(facts) {
@@ -24,17 +22,14 @@ func find_fact(prove_fact[] facts, int id) int {
     }
     -1
 }
-
 func fact_zero(prove_fact[] facts, int id) bool {
     i := find_fact(facts, id)
     i >= 0 && facts[i].known_zero
 }
-
 func fact_non_zero(prove_fact[] facts, int id) bool {
     i := find_fact(facts, id)
     i >= 0 && facts[i].known_non_zero
 }
-
 func run_prove(ssa_func f) prove_fact[] {
     facts := prove_fact[]()
     i := 0
@@ -57,4 +52,3 @@ func run_prove(ssa_func f) prove_fact[] {
         i = i + 1
     }
     facts
-}

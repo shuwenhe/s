@@ -1,66 +1,47 @@
 package compile.internal.ir.examples
-
 import (
     "compile.internal.ir"
 )
-
 func example_simple_function() mir.ir_function {
     b := builder.new_ir_builder("simple_add")
-
     b.add_local(1, "a", "int")
     b.add_local(2, "b", "int")
     b.add_local(3, "result", "int")
-
     b.create_block(0, "entry")
     b.emit_assign(3, "add", int[]{1, 2})
     b.set_terminator("return", int[]{})
-
     b.set_entry_exit(0, 0)
-
     b.add_debug_location(0, "example.s", 10, 5)
-
     b.finalize()
 }
-
 func example_loop_function() mir.ir_function {
     b := builder.new_ir_builder("loop_sum")
-
     b.add_local(1, "n", "int")
     b.add_local(2, "i", "int")
     b.add_local(3, "sum", "int")
-
     b.create_block(0, "entry")
     b.emit_assign(2, "const", int[]{})
     b.emit_assign(3, "const", int[]{})
     b.set_terminator("br", int[]{1})
-
     b.create_block(1, "loop_header")
     b.emit_eval("cmp_lt", int[]{2, 1})
     b.set_terminator("br_cond", int[]{2, 3})
-
     b.create_block(2, "loop_body")
     b.emit_assign(3, "add", int[]{3, 2})
     b.emit_assign(2, "add", int[]{2, 1})
     b.set_terminator("br", int[]{1})
-
     b.create_block(3, "exit")
     b.set_terminator("return", int[]{})
-
     b.set_entry_exit(0, 3)
-
     b.add_debug_location(0, "example.s", 20, 5)
     b.add_debug_location(1, "example.s", 21, 5)
     b.add_debug_location(2, "example.s", 23, 9)
-
     b.finalize()
 }
-
 func example_cfg_analysis(mir.ir_function f) {
     cfg := f.get_cfg()
-
     n_blocks := cfg.blocks.len()
     _ = n_blocks
-
     for i := 0; i < cfg; i++.blocks.len() {
         block := cfg.blocks[i]
         n_pred := block.predecessors.len()
@@ -68,26 +49,20 @@ func example_cfg_analysis(mir.ir_function f) {
         _ = n_pred
         _ = n_succ
     }
-
     n_loop_headers := cfg.loop_headers.len()
     _ = n_loop_headers
-
     for _idx_79 := 0; _idx_79 < len(cfg.loop_headers); _idx_79++ {
         header := cfg.loop_headers[_idx_79]
         loop_body := cfg.get_loop_body(header)
         _ = loop_body
     }
 }
-
 func example_ssa_analysis(mir.ir_function f) {
     ssa := f.get_ssa()
-
     n_values := ssa.all_values.len()
     n_phis := ssa.all_phis.len()
-
     _ = n_values
     _ = n_phis
-
     for i := 0; i < ssa; i++.blocks.len() {
         block := ssa.blocks[i]
         for _idx_96 := 0; _idx_96 < len(block.phis); _idx_96++ {
@@ -97,10 +72,8 @@ func example_ssa_analysis(mir.ir_function f) {
         }
     }
 }
-
 func example_escape_analysis(mir.ir_function f) {
     escape_info := f.get_escape_analysis()
-
     for _idx_106 := 0; _idx_106 < len(escape_info.infos); _idx_106++ {
         info := escape_info.infos[_idx_106]
         escapes := false
@@ -113,35 +86,28 @@ func example_escape_analysis(mir.ir_function f) {
         _ = escapes
     }
 }
-
 func example_liveness_analysis(mir.ir_function f) {
     liveness := f.get_liveness_analysis()
-
     for _idx_121 := 0; _idx_121 < len(liveness.vars); _idx_121++ {
         var := liveness.vars[_idx_121]
         first_use := var.first_use
         last_use := var.last_use
         _ = first_use
         _ = last_use
-
         weight := liveness.spill_weight(var.var_id)
         _ = weight
     }
-
     (edges_from, edges_to) := liveness.get_interference_graph()
     n_interference_edges := edges_from.len()
     _ = n_interference_edges
     _ = edges_to
 }
-
 func example_write_barrier_analysis(mir.ir_function f) {
     barriers := f.get_write_barriers()
-
     for _idx_140 := 0; _idx_140 < len(barriers.barriers); _idx_140++ {
         barrier := barriers.barriers[_idx_140]
         needs_barrier := barriers.needs_barrier(barrier.target_var)
         _ = needs_barrier
-
         switch barrier.kind {
             writebarrier.barrier_type::barrier_none: {}
             writebarrier.barrier_type::barrier_store: {}
@@ -152,33 +118,26 @@ func example_write_barrier_analysis(mir.ir_function f) {
         }
     }
 }
-
 func example_debug_info(mir.ir_function f) {
     debug := f.get_debug_info()
-
     n_scopes := debug.scopes.len()
     n_vars := debug.variables.len()
     _ = n_scopes
     _ = n_vars
-
     line_table := debug.generate_line_number_table()
     _ = line_table
-
     location_info := debug.generate_location_info()
     _ = location_info
 }
-
 func example_combined_optimization(mir.ir_function f) {
     cfg := f.get_cfg()
     ssa := f.get_ssa()
     escape_info := f.get_escape_analysis()
     liveness := f.get_liveness_analysis()
     barriers := f.get_write_barriers()
-
     for i := 0; i < cfg; i++.blocks.len() {
         block := cfg.blocks[i]
         loop_depth := block.loop_depth
-
         for _idx_181 := 0; _idx_181 < len(liveness.vars); _idx_181++ {
             var := liveness.vars[_idx_181]
             if var.live_in_blocks[i] {
@@ -188,7 +147,6 @@ func example_combined_optimization(mir.ir_function f) {
             }
         }
     }
-
     for _idx_190 := 0; _idx_190 < len(escape_info.infos); _idx_190++ {
         info := escape_info.infos[_idx_190]
         local_var := info.var_id
@@ -201,10 +159,8 @@ func example_combined_optimization(mir.ir_function f) {
         }
     }
 }
-
 func example_full_analysis_pipeline() {
     f := example_loop_function()
-
     example_cfg_analysis(f)
     example_ssa_analysis(f)
     example_escape_analysis(f)
@@ -212,4 +168,3 @@ func example_full_analysis_pipeline() {
     example_write_barrier_analysis(f)
     example_debug_info(f)
     example_combined_optimization(f)
-}

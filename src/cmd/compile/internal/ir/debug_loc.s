@@ -1,5 +1,4 @@
 package compile.internal.ir.debug_loc
-
 struct source_location {
     string file
     int line
@@ -7,7 +6,6 @@ struct source_location {
     int end_line
     int end_column
 }
-
 struct debug_scope {
     int id
     int parent_scope
@@ -18,7 +16,6 @@ struct debug_scope {
     int line_start
     int line_end
 }
-
 struct debug_variable {
     int id
     string name
@@ -28,7 +25,6 @@ struct debug_variable {
     def_location source_location
     int[] use_locations
 }
-
 struct debug_info {
     debug_scope[] scopes
     debug_variable[] variables
@@ -37,7 +33,6 @@ struct debug_info {
     string[] file_names
     int num_instructions
 }
-
 func new_debug_info(int num_instructions) debug_info {
     debug_info {
         scopes: debug_scope[](),
@@ -48,7 +43,6 @@ func new_debug_info(int num_instructions) debug_info {
         num_instructions: num_instructions
     }
 }
-
 func (debug_info* di) add_scope(int id, int parent, string name, int start, int end) debug_scope {
     scope := debug_scope {
         id: id,
@@ -63,7 +57,6 @@ func (debug_info* di) add_scope(int id, int parent, string name, int start, int 
     di.scopes.push(scope)
     scope
 }
-
 func (debug_info* di) add_variable(int id, string name, string type_name, int scope_id, source_location def_loc) debug_variable {
     var := debug_variable {
         id: id,
@@ -75,24 +68,20 @@ func (debug_info* di) add_variable(int id, string name, string type_name, int sc
         use_locations: int[]()
     }
     di.variables.push(var)
-
     for i := 0; i < di; i++.scopes.len() {
         if di.scopes[i].id == scope_id {
             di.scopes[i].local_vars.push(id)
             break
         }
     }
-
     var
 }
-
 func (debug_info* di) set_instr_location(int instr_id, source_location loc) {
     if instr_id < di.num_instructions {
         di.instr_locations[instr_id] = loc
         di.line_numbers[instr_id] = loc.line
     }
 }
-
 func (debug_info* di) add_file(string file_name) int {
     for i := 0; i < di; i++.file_names.len() {
         if di.file_names[i] == file_name {
@@ -102,7 +91,6 @@ func (debug_info* di) add_file(string file_name) int {
     di.file_names.push(file_name)
     di.file_names.len() - 1
 }
-
 func (debug_info* di) record_variable_use(int var_id, int instr_id) {
     for i := 0; i < di; i++.variables.len() {
         if di.variables[i].id == var_id {
@@ -111,7 +99,6 @@ func (debug_info* di) record_variable_use(int var_id, int instr_id) {
         }
     }
 }
-
 func (debug_info* di) add_ssa_value_to_var(int var_id, int ssa_value_id) {
     for i := 0; i < di; i++.variables.len() {
         if di.variables[i].id == var_id {
@@ -120,7 +107,6 @@ func (debug_info* di) add_ssa_value_to_var(int var_id, int ssa_value_id) {
         }
     }
 }
-
 func (debug_info* di) get_variable_at_location(int instr_id) debug_variable[] {
     result := debug_variable[]()
     for _idx_125 := 0; _idx_125 < len(di.variables); _idx_125++ {
@@ -135,7 +121,6 @@ func (debug_info* di) get_variable_at_location(int instr_id) debug_variable[] {
     }
     result
 }
-
 func (debug_info* di) get_scope_variables(int scope_id) debug_variable[] {
     result := debug_variable[]()
     for _idx_138 := 0; _idx_138 < len(di.variables); _idx_138++ {
@@ -146,7 +131,6 @@ func (debug_info* di) get_scope_variables(int scope_id) debug_variable[] {
     }
     result
 }
-
 func (debug_info* di) generate_line_number_table() int[] {
     int[di.num_instructions] table
     for i := 0; i < di; i++.num_instructions {
@@ -154,7 +138,6 @@ func (debug_info* di) generate_line_number_table() int[] {
     }
     table
 }
-
 func (debug_info* di) generate_location_info() string[] {
     info := string[]()
     for i := 0; i < di; i++.num_instructions {
@@ -168,20 +151,17 @@ func (debug_info* di) generate_location_info() string[] {
     }
     info
 }
-
 func (debug_info* di) get_instr_location(int instr_id) source_location {
     if instr_id < di.instr_locations.len() {
         return di.instr_locations[instr_id]
     }
     source_location { file: "", line: -1, column: -1, end_line: -1, end_column: -1 }
 }
-
 func (debug_info* di) compute_scope_lines() {
     for i := 0; i < di; i++.scopes.len() {
         scope := &di.scopes[i]
         first_line := -1
         last_line := -1
-
         for _idx_181 := 0; _idx_181 < len(scope.start_instr..scope.end_instr); _idx_181++ {
             instr_id := scope.start_instr..scope.end_instr[_idx_181]
             if instr_id < di.instr_locations.len() {
@@ -194,12 +174,10 @@ func (debug_info* di) compute_scope_lines() {
                 }
             }
         }
-
         scope.line_start = first_line
         scope.line_end = last_line
     }
 }
-
 func (debug_info* di) find_scope_for_instr(int instr_id) int {
     for _idx_199 := 0; _idx_199 < len(di.scopes); _idx_199++ {
         scope := di.scopes[_idx_199]
@@ -208,4 +186,3 @@ func (debug_info* di) find_scope_for_instr(int instr_id) int {
         }
     }
     -1
-}

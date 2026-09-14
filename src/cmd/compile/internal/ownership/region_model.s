@@ -1,5 +1,4 @@
 package ownership_region_model
-
 func ownership_region_bit_set(int bits, int bit) bool {
     value := bits / bit
     while value >= 2 {
@@ -7,7 +6,6 @@ func ownership_region_bit_set(int bits, int bit) bool {
     }
     return value == 1
 }
-
 func ownership_region_add_point(int bits, int point) int {
     bit := 1
     i := 0
@@ -18,7 +16,6 @@ func ownership_region_add_point(int bits, int point) int {
     if ownership_region_bit_set(bits, bit) { return bits }
     return bits + bit
 }
-
 func ownership_region_union(int target_bits, int source_bits) int {
     result := target_bits
     point := 0
@@ -32,7 +29,6 @@ func ownership_region_union(int target_bits, int source_bits) int {
     }
     return result
 }
-
 func ownership_region_covers_point(int bits, int point) bool {
     before := false
     after := false
@@ -48,7 +44,6 @@ func ownership_region_covers_point(int bits, int point) bool {
     }
     return before && after
 }
-
 func ownership_region_model_verify() int {
     a := ownership_region_add_point(0, 0)
     a = ownership_region_add_point(a, 3)
@@ -60,4 +55,3 @@ func ownership_region_model_verify() int {
     if !ownership_region_covers_point(u, 4) { return 4 }
     if ownership_region_covers_point(a, 5) { return 5 }
     return 0
-}

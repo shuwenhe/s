@@ -115,7 +115,6 @@ struct sockaddr_inet {
     u32 sin_addr
     byte[] sin_zero
 }
-
 struct sockaddr_inet6 {
     u16 sin6_family
     u16 sin6_port
@@ -123,18 +122,15 @@ struct sockaddr_inet6 {
     byte[] sin6_addr
     u32 sin6_scope_id
 }
-
 struct sockaddr {
     u16 sa_family
     byte[] sa_data
 }
-
 struct pollfd {
     int fd
     i16 events
     i16 revents
 }
-
 struct raw_socket {
     int fd
     int family
@@ -144,34 +140,28 @@ struct raw_socket {
     i64 read_deadline_ns
     i64 write_deadline_ns
 }
-
 struct tcp_conn_state {
     sock raw_socket
     byte[] local_addr
     byte[] remote_addr
 }
-
 struct udp_conn_state {
     sock raw_socket
     byte[] local_addr
     byte[] remote_addr
 }
-
 struct tcp_listener_state {
     sock raw_socket
     byte[] addr
 }
-
 struct socket_error {
     int errno
     string message
     string syscall_name
 }
-
 func (socket_error* e) error() string {
     e.syscall_name + ": " + e.message
 }
-
 func new_socket_error( errno int, string syscall_name) *socket_error {
     var msg string
     case errno {
@@ -199,11 +189,8 @@ func new_socket_error( errno int, string syscall_name) *socket_error {
         errno: errno, message msg, syscall_name syscall_name,
     }
 }
-
 func is_temporary_error( errno int) bool {
     errno == eagain || errno == ewouldblock || errno == eintr
 }
-
 func is_timeout_error( errno int) bool {
     errno == etimedout
-}

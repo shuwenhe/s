@@ -4,4 +4,3 @@ func bad(int value, string text) string {
     unique := *value
     moved := text
     text
-}

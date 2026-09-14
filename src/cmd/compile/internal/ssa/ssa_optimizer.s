@@ -1,12 +1,10 @@
 package internal.ssa
-
 struct ssa_optimizer {
     rule_engine ssa_rule_engine
     int optimization_level
     int iteration_count
     int max_iterations
 }
-
 func ssa_optimizer_new(int capacity, int opt_level) ssa_optimizer {
     optimizer := ssa_optimizer {
         rule_engine: ssa_rule_engine_new(capacity),
@@ -16,10 +14,8 @@ func ssa_optimizer_new(int capacity, int opt_level) ssa_optimizer {
     }
     optimizer
 }
-
 func (optimizer* ssa_optimizer) register_constant_folding_rules() int {
     engine := optimizer.rule_engine
-
     engine.add_rule("add_const_const", 100)
     engine.add_rule("add_x_zero", 95)
     engine.add_rule("add_zero_x", 95)
@@ -71,15 +67,11 @@ func (optimizer* ssa_optimizer) register_constant_folding_rules() int {
     engine.add_rule("and_or_dist", 60)
     engine.add_rule("de_morgan_and", 70)
     engine.add_rule("de_morgan_or", 70)
-
     50
 }
-
 func (optimizer* ssa_optimizer) register_algebraic_simplification_rules() int {
     engine := optimizer.rule_engine
-
     starting_id := engine.rule_count
-
     engine.add_rule("mul_by_power_of_two_is_shift", 85)
     engine.add_rule("div_by_power_of_two_is_shift", 85)
     engine.add_rule("double_neg_cancel", 80)
@@ -107,35 +99,26 @@ func (optimizer* ssa_optimizer) register_algebraic_simplification_rules() int {
     engine.add_rule("or_distribute_over_and", 65)
     engine.add_rule("de_morgan_and_not", 70)
     engine.add_rule("de_morgan_or_not", 70)
-
     engine.rule_count - starting_id
 }
-
 func (optimizer* ssa_optimizer) optimize_value(v* ssa_value) ssa_value* {
     if v == 0 {
         return v
     }
-
     for optimizer.iteration_count < optimizer.max_iterations {
         old_id := v.id
-
         v = optimizer.rule_engine.apply_all(v)
         v = apply_algebraic_simplifications(v)
-
         if v.id == old_id {
             break
         }
-
         optimizer.iteration_count = optimizer.iteration_count + 1
     }
-
     optimizer.iteration_count = 0
     v
 }
-
 func (optimizer* ssa_optimizer) optimize_block(ssa_value*[] values) ssa_value*[] {
     optimized := ssa_value*[]()
-
     for i := 0; i < values.len(); i = i + 1 {
         v := values[i]
         if v != 0 {
@@ -143,13 +126,10 @@ func (optimizer* ssa_optimizer) optimize_block(ssa_value*[] values) ssa_value*[]
             optimized = append(optimized, v)
         }
     }
-
     optimized
 }
-
 func create_default_optimizer() ssa_optimizer {
     optimizer := ssa_optimizer_new(500, 2)
     optimizer.register_constant_folding_rules()
     optimizer.register_algebraic_simplification_rules()
     optimizer
-}

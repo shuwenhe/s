@@ -3,4 +3,3 @@ interface listener {
     accept() conn
     close() error
     addr() addr
-}

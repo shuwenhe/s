@@ -419,7 +419,6 @@ func run_semantic_suite(string fixtures_root) int {
     }
     0
 }
-
 func has_code(semantic_error[] diagnostics, string code) bool {
     i := 0
     for i < len(diagnostics) {
@@ -429,4 +428,3 @@ func has_code(semantic_error[] diagnostics, string code) bool {
         i = i + 1
     }
     false
-}

@@ -32,4 +32,3 @@ func run_deadcode(ssa_func f) int {
         bi = bi + 1
     }
     changed
-}

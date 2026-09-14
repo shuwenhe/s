@@ -10,7 +10,6 @@ const (
     state_dropped
     state_maybe_moved
 )
-
 func (s ownership_state) string() string {
     switch s {
     case state_undefined:
@@ -33,7 +32,6 @@ func (s ownership_state) string() string {
         return "unknown"
     }
 }
-
 struct ownership_info {
     ownership_state state
     bool is_owned
@@ -49,14 +47,12 @@ struct borrow_info {
     string source
     string lifetime_name
 }
-
 struct type_classification {
     bool needs_ownership
     bool is_copy
     string[] owned_fields
     string[] drop_order
 }
-
 struct ownership_context {
     map[int]*ownership_info state_at_pc
     map[string]*type_classification type_classes
@@ -64,7 +60,6 @@ struct ownership_context {
     map[string]*borrow_info[] borrow_stack
     string[] errors
 }
-
 func new_ownership_context() ownership_context* {
     return ownership_context*{
         state_at_pc:   make(map[int]*ownership_info),
@@ -73,7 +68,6 @@ func new_ownership_context() ownership_context* {
         errors:      make(string[], 0),
     }
 }
-
 func (ownership_context* ctx) get_state_at(int pc, string var_name) ownership_state {
     info, ok := ctx.state_at_pc[pc]
     if !ok {
@@ -81,7 +75,6 @@ func (ownership_context* ctx) get_state_at(int pc, string var_name) ownership_st
     }
     return info.state
 }
-
 func (ownership_context* ctx) set_state_at(int pc, string var_name, state ownership_state) {
     if _, ok := ctx.state_at_pc[pc]; !ok {
         ctx.state_at_pc[pc] = ownership_info*{
@@ -93,15 +86,12 @@ func (ownership_context* ctx) set_state_at(int pc, string var_name, state owners
         ctx.state_at_pc[pc].state = state
     }
 }
-
 func (ownership_context* ctx) add_error(string msg) {
     ctx.errors = append(ctx.errors, msg)
 }
-
 func (ownership_context* ctx) has_errors() bool {
     return len(ctx.errors) > 0
 }
-
 func (ownership_context* ctx) classify_type(string type_name) type_classification* {
     if class, ok := ctx.type_classes[type_name]; ok {
         return class
@@ -115,7 +105,6 @@ func (ownership_context* ctx) classify_type(string type_name) type_classificatio
     ctx.type_classes[type_name] = class
     return class
 }
-
 func is_primitive_type(string type_name) bool {
     switch type_name {
     case "int", "bool", "u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64":
@@ -123,4 +112,3 @@ func is_primitive_type(string type_name) bool {
     default:
         return false
     }
-}

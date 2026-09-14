@@ -44,4 +44,3 @@ func run_rewrite_amd64(ssa_func f) int {
         recompute_uses(f)
     }
     changed
-}

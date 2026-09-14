@@ -6,7 +6,6 @@ struct pass_stat {
     string name
     int changed
 }
-
 struct compile_report {
     f ssa_func
     pass_stat[] stats
@@ -16,7 +15,6 @@ struct compile_report {
     int check_code
     string dump
 }
-
 func optimize(ssa_func f, ssa_config cfg) pass_stat[] {
     stats := pass_stat[]()
     if cfg.enable_rewrite {
@@ -36,7 +34,6 @@ func optimize(ssa_func f, ssa_config cfg) pass_stat[] {
     }
     stats
 }
-
 func compile_func(ssa_func f, ssa_config cfg) compile_report {
     stats := optimize(f, cfg)
     facts := prove_fact[]()
@@ -59,4 +56,3 @@ func compile_func(ssa_func f, ssa_config cfg) compile_report {
     compile_report {
         f: f, stats stats, prove_facts facts, dom dominfo, regalloc regs, check_code code, dump dump_func(f),
     }
-}

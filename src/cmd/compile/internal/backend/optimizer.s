@@ -3,14 +3,12 @@ struct optimizer {
     prog_list* prog
     int pass_count
 }
-
 func make_optimizer(prog_list* prog) optimizer {
     opt: optimizer
     opt.prog = prog
     opt.pass_count = 0
     opt
 }
-
 func (opt* optimizer) remove_dead_code() {
     changed := true
     for changed {
@@ -27,7 +25,6 @@ func (opt* optimizer) remove_dead_code() {
     }
     opt.pass_count = opt.pass_count + 1
 }
-
 func (opt* optimizer) combine_redundant_moves() {
     p := opt.prog.first()
     for p != nil && p.next != nil {
@@ -42,7 +39,6 @@ func (opt* optimizer) combine_redundant_moves() {
     }
     opt.pass_count = opt.pass_count + 1
 }
-
 func (opt* optimizer) remove_redundant_pushes() {
     p := opt.prog.first()
     for p != nil && p.next != nil {
@@ -56,7 +52,6 @@ func (opt* optimizer) remove_redundant_pushes() {
     }
     opt.pass_count = opt.pass_count + 1
 }
-
 func (opt* optimizer) optimize_constant_folding() {
     p := opt.prog.first()
     for p != nil {
@@ -66,7 +61,6 @@ func (opt* optimizer) optimize_constant_folding() {
     }
     opt.pass_count = opt.pass_count + 1
 }
-
 func (opt* optimizer) optimize_register_moves() {
     p := opt.prog.first()
     for p != nil && p.next != nil {
@@ -78,7 +72,6 @@ func (opt* optimizer) optimize_register_moves() {
     }
     opt.pass_count = opt.pass_count + 1
 }
-
 func (opt* optimizer) run_optimization_passes() {
     opt.remove_dead_code()
     opt.combine_redundant_moves()
@@ -86,7 +79,5 @@ func (opt* optimizer) run_optimization_passes() {
     opt.optimize_constant_folding()
     opt.optimize_register_moves()
 }
-
 func (opt* optimizer) get_optimized_prog() prog_list {
     *opt.prog
-}

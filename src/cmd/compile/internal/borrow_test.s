@@ -2,7 +2,6 @@ package compile.internal.borrow_test
 import (
     "compile.internal.borrow"
 )
-
 func run_borrow_checker_test() int {
     shared_ok := string[] { "declare:x", "shared:x", "shared:x", "read:x", "end_shared:x", "end_shared:x", "write:x" }
     if compile.internal.borrow.borrow_check_events(shared_ok).ok == false {
@@ -26,7 +25,6 @@ func run_borrow_checker_test() int {
     }
     0
 }
-
 func run_lifetime_checker_test() int {
     valid := string[] { "scope:outer", "scope:inner", "borrow:r:outer:inner", "use_ref:r", "end_borrow:r", "end_scope:inner", "end_scope:outer" }
     if compile.internal.borrow.lifetime_check_events(valid).ok == false {
@@ -50,7 +48,6 @@ func run_lifetime_checker_test() int {
     }
     0
 }
-
 func run_ownership_checker_test() int {
     copy_ok := string[] { "declare:n:copy", "copy:n", "use:n", "drop:n" }
     if compile.internal.borrow.ownership_check_events(copy_ok).ok == false {
@@ -73,4 +70,3 @@ func run_ownership_checker_test() int {
         return 5
     }
     0
-}

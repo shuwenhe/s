@@ -10,7 +10,6 @@ func estimate_inline_sites(string mir_text) int {
     }
     calls / 2
 }
-
 func estimate_inline_sites_graph(mir_graph graph) int {
     call_sites := count_token(compile.internal.mir.dump_graph(graph), "call")
     if call_sites <= 0 {
@@ -18,7 +17,6 @@ func estimate_inline_sites_graph(mir_graph graph) int {
     }
     call_sites / 2
 }
-
 func count_token(string text, string token) int {
     if token == "" {
         return 0
@@ -35,12 +33,10 @@ func count_token(string text, string token) int {
     }
     total
 }
-
 struct inline_result {
     graph mir_graph
     int inlined_count
 }
-
 func can_inline_leaf(mir_graph callee) bool {
     if len(callee.blocks) != 1 || len(callee.blocks[0].statements) > 8 {
         return false
@@ -50,7 +46,6 @@ func can_inline_leaf(mir_graph callee) bool {
     }
     true
 }
-
 func inline_leaf_calls(mir_graph caller, mir_graph callee) inline_result {
     result := inline_result { graph: caller, inlined_count: 0 }
     if !can_inline_leaf(callee) || caller.function_name == callee.function_name {
@@ -78,4 +73,3 @@ func inline_leaf_calls(mir_graph caller, mir_graph callee) inline_result {
         block_index = block_index + 1
     }
     result
-}

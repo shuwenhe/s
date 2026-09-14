@@ -11,7 +11,6 @@ struct s_compiler_full {
     go_style_elf_generator* elf_gen
     config codegen_config
 }
-
 func make_s_compiler_full() s_compiler_full {
     link_ctx := make_link_context()
     mcg := make_machine_code_gen(link_ctx*)
@@ -30,7 +29,6 @@ func make_s_compiler_full() s_compiler_full {
         elf_gen* elf_gen, config config,
     }
 }
-
 func (compiler* s_compiler_full) compile_and_generate_object() int8[] {
     compiler.codegen.gen_main_function()
     machine_code := compiler.mcg.stream.get_code()
@@ -38,7 +36,6 @@ func (compiler* s_compiler_full) compile_and_generate_object() int8[] {
     elf_object := compiler.elf_gen.generate_elf_object()
     elf_object
 }
-
 func (compiler* s_compiler_full) compile_and_generate_executable() int8[] {
     compiler.codegen.gen_main_function()
     machine_code := compiler.mcg.stream.get_code()
@@ -46,7 +43,6 @@ func (compiler* s_compiler_full) compile_and_generate_executable() int8[] {
     elf_exec := compiler.elf_gen.generate_elf_executable()
     elf_exec
 }
-
 func (compiler* s_compiler_full) dump_compilation_info() string {
     result := "\n=== S 语言编译器 - 参考 Go 的直接机器码生成 ===\n"
     result = result + "\n编译目标架构: " + compiler.config.target_arch
@@ -58,7 +54,6 @@ func (compiler* s_compiler_full) dump_compilation_info() string {
     result = result + compiler.reloc_ctx.dump()
     result
 }
-
 func demo_direct_machine_code_generation() string {
     result := "\n=== 直接机器码生成演示 ===\n\n"
     result = result + "1. AMD64 指令编码示例\n"
@@ -95,7 +90,6 @@ func demo_direct_machine_code_generation() string {
     result = result + "\n\n"
     result
 }
-
 func demo_complete_compilation() string {
     result := "\n=== 完整编译过程演示 ===\n\n"
     compiler := make_s_compiler_full()
@@ -110,7 +104,6 @@ func demo_complete_compilation() string {
     result = result + "\n" + compiler.dump_compilation_info()
     result
 }
-
 func demo_go_style_design() string {
     result := "\n=== 参考 Go 编译器的设计模式 ===\n\n"
     result = result + "1. 直接机器码生成\n"
@@ -131,7 +124,6 @@ func demo_go_style_design() string {
     result = result + "   - 栈帧结构\n\n"
     result
 }
-
 func generate_complete_demo_report() string {
     report := "\n"
     report = report + "╔════════════════════════════════════════════════════════════════╗\n"
@@ -172,7 +164,6 @@ func generate_complete_demo_report() string {
     report = report + "✓ 参考 Go 编译器的架构和设计模式\n\n"
     report
 }
-
 func byte_array_to_hex(int8[] data) string {
     result := ""
     i := 0
@@ -197,7 +188,6 @@ func byte_array_to_hex(int8[] data) string {
     }
     result
 }
-
 func int_to_string(int value) string {
     if value == 0 {
         return "0"
@@ -217,7 +207,6 @@ func int_to_string(int value) string {
     }
     result + digits
 }
-
 func compile_s_source(string* source) int8[] {
     lexer* := lexer_new(source)
     lexer_tokenize(lexer)
@@ -241,7 +230,6 @@ func compile_s_source(string* source) int8[] {
     object_code := compiler.compile_and_generate_object()
     return object_code
 }
-
 func compile_s_to_executable(string* source) int8[] {
     lexer* := lexer_new(source)
     lexer_tokenize(lexer)
@@ -265,7 +253,6 @@ func compile_s_to_executable(string* source) int8[] {
     executable := compiler.compile_and_generate_executable()
     return executable
 }
-
 func compile_and_get_info(string* source) string {
     lexer* := lexer_new(source)
     lexer_tokenize(lexer)
@@ -312,4 +299,3 @@ func compile_and_get_info(string* source) string {
     info = info + " 字节\n"
     info = info + "\n编译成功！\n"
     return info
-}

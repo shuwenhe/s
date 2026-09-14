@@ -32,7 +32,6 @@ struct elf_header {
     section_header_count: u16
     section_header_string_index: u16
 }
-
 struct program_header {
     type_: u32
     flags: u32
@@ -43,7 +42,6 @@ struct program_header {
     memsz: u64
     align: u64
 }
-
 struct section_header {
     name: u32
     type_: u32
@@ -67,7 +65,6 @@ const sht_rela = 4
 const shf_write = 0x1
 const shf_alloc = 0x2
 const shf_execinstr = 0x4
-
 struct elf_builder {
     header: elf_header
     program_headers: program_header[]
@@ -77,7 +74,6 @@ struct elf_builder {
     string_table: byte[]
     symbol_table: byte[]
 }
-
 func new_elf_builder() elf_builder {
     return elf_builder{
         header: elf_header{
@@ -91,16 +87,12 @@ func new_elf_builder() elf_builder {
         symbol_table: byte[]{},
     }
 }
-
 func (elf_builder* builder) add_code(byte[] code) {
     builder.code_section = append_slice(builder.code_section, code)
 }
-
 func (elf_builder* builder) generate() byte[] {
     buffer: byte[] = byte[]{}
     return buffer
 }
-
 func generate_elf_from_x86_64_asm(string asm_source, string output_binary) error {
     return nil
-}

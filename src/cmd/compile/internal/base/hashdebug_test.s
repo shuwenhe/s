@@ -27,4 +27,3 @@ func run_hashdebug_tests() int {
         return 1
     }
     0
-}

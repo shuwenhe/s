@@ -653,7 +653,6 @@ func run_backend_abi_suite() int {
     }
     0
 }
-
 func contains(string text, string needle) bool {
     if needle == "" {
         return true
@@ -670,7 +669,6 @@ func contains(string text, string needle) bool {
     }
     false
 }
-
 func contains_all(string text, string[] needles) bool {
     i := 0
     for i < len(needles) {
@@ -681,7 +679,6 @@ func contains_all(string text, string[] needles) bool {
     }
     true
 }
-
 func read_artifact_or_empty(string path) string {
     content := std.fs.read_to_string(path)
     if content.is_err() {
@@ -689,7 +686,6 @@ func read_artifact_or_empty(string path) string {
     }
     content.unwrap()
 }
-
 func require_artifact_markers(string path, string[] markers) string {
     content := read_artifact_or_empty(path)
     if content == "" {
@@ -700,7 +696,6 @@ func require_artifact_markers(string path, string[] markers) string {
     }
     content
 }
-
 func validate_emitted_artifacts(string out_path) bool {
     opt := require_artifact_markers(out_path + ".opt", string[]("midend-opt version=1", "scheduler_opt sroutine_sites=1", "select_timeout_sites=1", "select_send_sites=1"))
     if opt == "" || compile.internal.backend_elf64.validate_midend_opt_artifact(opt).is_err() {
@@ -744,4 +739,3 @@ func validate_emitted_artifacts(string out_path) bool {
         return false
     }
     true
-}

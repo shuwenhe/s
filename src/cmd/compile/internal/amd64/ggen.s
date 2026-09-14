@@ -27,7 +27,6 @@ func zerorange(prog[] insns, int off, int cnt) prog[] {
     }
     out
 }
-
 func ginsnop(prog[] insns) prog[] {
     out := insns
     out.push(prog {
@@ -36,4 +35,3 @@ func ginsnop(prog[] insns) prog[] {
         to: "AX", offset 0,
     })
     out
-}

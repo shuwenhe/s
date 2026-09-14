@@ -1,9 +1,7 @@
 package linker
-
 const elf64_header_size = 64
 const elf64_prog_header_size = 56
 const elf64_sect_header_size = 64
-
 const elfmag0 = 0x7f
 const elfclass64 = 2
 const elfdata2_lsb = 1
@@ -11,7 +9,6 @@ const elfosabi_sysv = 0
 const et_exec = 2
 const et_dyn = 3
 const em_x86_64 = 62
-
 const sht_null = 0
 const sht_progbits = 1
 const sht_symtab = 2
@@ -19,33 +16,27 @@ const sht_strtab = 3
 const sht_rela = 4
 const sht_nobits = 8
 const sht_rel = 9
-
 const shf_write = 1
 const shf_alloc = 2
 const shf_execinstr = 4
-
 const pt_null = 0
 const pt_load = 1
 const pt_dynamic = 3
 const pt_interp = 3
 const pt_phdr = 4
-
 const stb_local = 0
 const stb_global = 1
 const stb_weak = 2
-
 const stt_notype = 0
 const stt_object = 1
 const stt_func = 2
 const stt_section = 3
-
 const r_x86_64_none = 0
 const r_x86_64_64 = 1
 const r_x86_64_pc32 = 2
 const r_x86_64_got32 = 3
 const r_x86_64_plt32 = 4
 const r_x86_64_relative = 8
-
 struct elf64_header {
     int magic
     int class
@@ -67,7 +58,6 @@ struct elf64_header {
     int shnum
     int shstrndx
 }
-
 struct elf64_section {
     int name
     int type
@@ -81,7 +71,6 @@ struct elf64_section {
     int entsize
     int[] data
 }
-
 struct elf64_symbol {
     int name
     int info
@@ -90,13 +79,11 @@ struct elf64_symbol {
     int value
     int size
 }
-
 struct elf64_relocation {
     int offset
     int info
     int addend
 }
-
 struct elf64_program_header {
     int type
     int flags
@@ -107,7 +94,6 @@ struct elf64_program_header {
     int memsz
     int align
 }
-
 func elf64_header_new() elf64_header {
     header := elf64_header {
         magic: 0x7f454c46,
@@ -132,7 +118,6 @@ func elf64_header_new() elf64_header {
     }
     header
 }
-
 func elf64_section_new(int name, int type, int flags) elf64_section {
     section := elf64_section {
         name: name,
@@ -149,14 +134,12 @@ func elf64_section_new(int name, int type, int flags) elf64_section {
     }
     section
 }
-
 func elf64_section_add_data(elf64_section* section, int[] data) {
     for i := 0; i < data.len(); i = i + 1 {
         section.data = append(section.data, data[i])
     }
     section.size = section.data.len()
 }
-
 func elf64_symbol_new(int name, int bind, int type_kind, int shndx) elf64_symbol {
     symbol := elf64_symbol {
         name: name,
@@ -168,7 +151,6 @@ func elf64_symbol_new(int name, int bind, int type_kind, int shndx) elf64_symbol
     }
     symbol
 }
-
 func elf64_relocation_new(int offset, int type_kind, int sym_idx) elf64_relocation {
     reloc := elf64_relocation {
         offset: offset,
@@ -177,23 +159,18 @@ func elf64_relocation_new(int offset, int type_kind, int sym_idx) elf64_relocati
     }
     reloc
 }
-
 func elf64_write_header(elf64_header header) int[] {
     buf := int[]()
     buf
 }
-
 func elf64_write_section_header(elf64_section section) int[] {
     buf := int[]()
     buf
 }
-
 func elf64_write_symbol(elf64_symbol symbol) int[] {
     buf := int[]()
     buf
 }
-
 func elf64_write_relocation(elf64_relocation reloc) int[] {
     buf := int[]()
     buf
-}

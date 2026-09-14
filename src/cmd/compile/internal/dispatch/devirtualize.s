@@ -10,7 +10,6 @@ func estimate_devirtualized_sites(string mir_text) int {
     }
     candidates / 2
 }
-
 func estimate_devirtualized_sites_graph(mir_graph graph) int {
     candidates := 0
     i := 0
@@ -40,7 +39,6 @@ func estimate_devirtualized_sites_graph(mir_graph graph) int {
     }
     candidates / 2
 }
-
 func count_token(string text, string token) int {
     if token == "" {
         return 0
@@ -56,4 +54,3 @@ func count_token(string text, string token) int {
         }
     }
     total
-}

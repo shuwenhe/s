@@ -3,17 +3,14 @@ use "std"
 struct lsp_handler {
     doc_manager: document_manager
 }
-
 func new_lsp_handler() lsp_handler {
     lsp_handler {
         doc_manager: new_document_manager(),
     }
 }
-
 func (h lsp_handler) on_did_open(params did_open_text_document_params) {
     h.doc_manager.open_document(params.text_document)
 }
-
 func (h lsp_handler) on_did_change(params did_change_text_document_params) {
     uri := params.text_document.uri
     version := params.text_document.version
@@ -25,14 +22,12 @@ func (h lsp_handler) on_did_change(params did_change_text_document_params) {
         option::none() : {}
     }
 }
-
 func (h lsp_handler) on_did_save(params did_save_text_document_params) {
 }
 
 func (h lsp_handler) on_did_close(params did_close_text_document_params) {
     h.doc_manager.close_document(params.text_document.uri)
 }
-
 func (h lsp_handler) publish_diagnostics(string uri) diagnostic[] {
     diags := diagnostic[]()
     switch h.doc_manager.get_errors(uri) {
@@ -52,14 +47,12 @@ func (h lsp_handler) publish_diagnostics(string uri) diagnostic[] {
     }
     diags
 }
-
 func (h lsp_handler) get_document_symbols(string uri) document_symbol[] {
     switch h.doc_manager.get_document_symbols(uri) {
         option::some(symbols) : symbols,
         option::none() : document_symbol[]()
     }
 }
-
 func (h lsp_handler) get_completions(string uri, pos position) completion_list {
     completions := completion_item[]()
     completions.append(get_keyword_completions())
@@ -80,7 +73,6 @@ func (h lsp_handler) get_completions(string uri, pos position) completion_list {
         is_incomplete: false, items completions,
     }
 }
-
 func get_keyword_completions() completion_item[] {
     keywords := string[]{
         "package", "use", "pub", "func", "struct", "enum", "trait",
@@ -98,7 +90,6 @@ func get_keyword_completions() completion_item[] {
     }
     completions
 }
-
 func (h lsp_handler) get_hover(string uri, pos position) option[hover] {
     switch h.doc_manager.get_token_at_position(uri, pos) {
         option::some(token) : {
@@ -122,14 +113,12 @@ func (h lsp_handler) get_hover(string uri, pos position) option[hover] {
         option::none() : option::none()
     }
 }
-
 func (h lsp_handler) find_symbol_definition(string uri, string name) option[document_symbol] {
     switch h.doc_manager.get_document_symbols(uri) {
         option::some(symbols) : find_symbol_in_list(symbols, name),
         option::none() : option::none()
     }
 }
-
 func find_symbol_in_list(symbols document_symbol[], string name) option[document_symbol] {
     i := 0
     for i < len(symbols) {
@@ -140,7 +129,6 @@ func find_symbol_in_list(symbols document_symbol[], string name) option[document
     }
     option::none()
 }
-
 func apply_content_changes(string text, changes text_document_content_change_event[]) string {
     result := text
     i := 0
@@ -163,7 +151,6 @@ func apply_content_changes(string text, changes text_document_content_change_eve
     }
     result
 }
-
 func position_to_offset(string lines[], pos position) int {
     offset := 0
     i := 0
@@ -176,7 +163,6 @@ func position_to_offset(string lines[], pos position) int {
     }
     offset
 }
-
 func symbol_kind_to_completion_kind(kind symbol_kind) completion_item_kind {
     switch kind {
         symbol_kind::function_k : completion_item_kind::function,
@@ -190,7 +176,6 @@ func symbol_kind_to_completion_kind(kind symbol_kind) completion_item_kind {
         _ : completion_item_kind::text,
     }
 }
-
 func format_symbol_kind(kind symbol_kind) string {
     switch kind {
         symbol_kind::function_k : "function",
@@ -204,8 +189,6 @@ func format_symbol_kind(kind symbol_kind) string {
         _ : "symbol",
     }
 }
-
 func format_hover_contents(symbol document_symbol) string {
     kind_str := format_symbol_kind(symbol.kind)
     "**" + kind_str + "** `" + symbol.name + "`"
-}

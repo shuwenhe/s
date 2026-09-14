@@ -4,4 +4,3 @@ import (
 )
 func build(string input, string output) int {
     compile.internal.backend_elf64.build(input, output)
-}

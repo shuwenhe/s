@@ -4,4 +4,3 @@ import (
 )
 func load(string path) string {
     return compile.internal.check.load_frontend(path
-}

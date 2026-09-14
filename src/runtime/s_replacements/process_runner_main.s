@@ -2,7 +2,6 @@ func usage(): int {
     eprint("usage: process_runner run-argv <program> [arg ...] | run-shell <command>")
     return 1
 }
-
 func main(args: [string]): int {
     if len(args) < 2 {
         return usage(
@@ -20,4 +19,3 @@ func main(args: [string]): int {
         return process_runner_run_shell(args[2]
     }
     return usage(
-}

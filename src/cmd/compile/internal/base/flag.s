@@ -8,7 +8,6 @@ struct cmd_cfg {
     bool spectre_index
     bool instrumenting
 }
-
 struct cmd_flags {
     int b
     int c
@@ -39,7 +38,6 @@ struct cmd_flags {
     cfg cmd_cfg
 }
 flag := default_cmd_flags()
-
 func default_cmd_flags() cmd_flags {
     cmd_flags {
         b: 0, c 0,
@@ -55,14 +53,11 @@ func default_cmd_flags() cmd_flags {
         },
     }
 }
-
 func add_import_dir(string path) () {
     if path == "" {
         return
     }
     flag.cfg.import_dirs = append(flag.cfg.import_dirs, path)
 }
-
 func parse_flags() cmd_flags {
     flag
-}

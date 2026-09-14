@@ -7,7 +7,6 @@ struct native_compiler {
     selector: instruction_selector
     builder: machine_code_builder
 }
-
 func new_native_compiler(string input, string output) native_compiler {
     compiler: native_compiler
     compiler.input_file = input
@@ -18,7 +17,6 @@ func new_native_compiler(string input, string output) native_compiler {
     compiler.builder = new_machine_code_builder()
     compiler
 }
-
 func (native_compiler* nc) compile_to_assembly() int {
     nc.builder.emit_text_section()
     nc.builder.emit_global_symbol("main")
@@ -27,15 +25,12 @@ func (native_compiler* nc) compile_to_assembly() int {
     nc.builder.emit_function_epilogue()
     0
 }
-
 func (native_compiler* nc) assemble_to_object() int {
     0
 }
-
 func (native_compiler* nc) link_to_executable() int {
     0
 }
-
 func (native_compiler* nc) compile() int {
     result := nc.compile_to_assembly()
     if result != 0 {
@@ -51,11 +46,8 @@ func (native_compiler* nc) compile() int {
     }
     0
 }
-
 func (native_compiler* nc) get_assembly() string {
     nc.builder.get_assembly()
 }
-
 func (native_compiler* nc) get_machine_code() int[] {
     nc.builder.get_machine_code()
-}

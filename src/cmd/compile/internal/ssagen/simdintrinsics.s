@@ -5,7 +5,6 @@ struct simd_intrinsic_rule {
     int lanes
     bool supported
 }
-
 func lookup_simd_intrinsic(string arch, string fn_name) simd_intrinsic_rule {
     has_simd := arch_has_simd(arch)
     if fn_name == "runtime.addv4i32" {
@@ -16,7 +15,5 @@ func lookup_simd_intrinsic(string arch, string fn_name) simd_intrinsic_rule {
     }
     simd_intrinsic_rule { name: fn_name, op: "", lanes 0, supported false }
 }
-
 func has_simd_intrinsic(string arch, string fn_name) bool {
     lookup_simd_intrinsic(arch, fn_name).supported
-}

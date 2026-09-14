@@ -5,11 +5,9 @@ import (
 struct bv_set {
     int[][]] rows
 }
-
 func new_bv_set() bv_set {
     bv_set { rows: int[][]]() }
 }
-
 func bvset_add(int[][]] rows, int[] bits) int[][]] {
     normalized := normalize_bits(bits)
     i := 0
@@ -22,11 +20,9 @@ func bvset_add(int[][]] rows, int[] bits) int[][]] {
     rows = append(rows, normalized)
     rows
 }
-
 func bvset_extract_unique(bv_set set) int[][]] {
     set.rows
 }
-
 func normalize_bits(int[] bits) int[] {
     out := int[]()
     i := 0
@@ -40,7 +36,6 @@ func normalize_bits(int[] bits) int[] {
     }
     out
 }
-
 func bitmap_equal(int[] left, int[] right) bool {
     if len(left) != len(right) {
         return false
@@ -53,4 +48,3 @@ func bitmap_equal(int[] left, int[] right) bool {
         i = i + 1
     }
     true
-}

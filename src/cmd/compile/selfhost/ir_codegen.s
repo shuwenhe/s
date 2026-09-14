@@ -7,7 +7,6 @@ struct ir_program {
     globals: global[]
     metadata: metadata
 }
-
 struct function {
     name: string
     is_exported: bool
@@ -15,7 +14,6 @@ struct function {
     locals: local[]
     max_temp: int
 }
-
 struct instruction {
     opcode: string
     dest: string
@@ -23,31 +21,26 @@ struct instruction {
     src2: string
     src3: string
 }
-
 struct local {
     name: string
     type_str: string
     size: int
 }
-
 struct global {
     name: string
     value: string
     is_const: bool
 }
-
 struct metadata {
     target: string
     version: string
 }
-
 struct x86_64_code_gen {
     program: ir_program
     buffer: byte[]
     label_counter: int
     register_map: map[string]int
 }
-
 func parse_ir(string content) (ir_program, error) {
     lines := split_string(content, "\n")
     prog := ir_program{}
@@ -97,7 +90,6 @@ func parse_ir(string content) (ir_program, error) {
     }
     return prog, nil
 }
-
 func generate_x86_64(ir_program program) (string, error) {
     codegen := x86_64_code_gen{
         program: program,
@@ -128,7 +120,6 @@ func generate_x86_64(ir_program program) (string, error) {
     }
     return asm, nil
 }
-
 func generate_instruction(Instruction instr) (string, error) {
     switch instr.opcode {
         case "mov":
@@ -151,7 +142,6 @@ func generate_instruction(Instruction instr) (string, error) {
             return "", error("unknown opcode: " + instr.opcode
     }
 }
-
 func ir_compile_to_elf(string ir_path, string output_path) error {
     ir_content, read_err := io_read_all(ir_path)
     if read_err != nil {
@@ -173,4 +163,3 @@ func ir_compile_to_elf(string ir_path, string output_path) error {
     io_write(asm_file, byte[](asm_code))
     asm_file.close()
     return nil
-}

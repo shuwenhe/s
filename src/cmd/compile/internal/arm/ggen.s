@@ -9,7 +9,6 @@ struct prog {
     int offset
     string cond
 }
-
 func zerorange(prog[] insns, int off, int cnt, bool r0_ready) prog[] {
     if cnt <= 0 {
         return insns
@@ -60,7 +59,6 @@ func zerorange(prog[] insns, int off, int cnt, bool r0_ready) prog[] {
     }
     out
 }
-
 func ginsnop(prog[] insns) prog[] {
     out := insns
     out.push(prog {
@@ -70,4 +68,3 @@ func ginsnop(prog[] insns) prog[] {
         cond: "EQ",
     })
     out
-}

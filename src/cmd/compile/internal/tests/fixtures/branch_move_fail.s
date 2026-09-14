@@ -6,4 +6,3 @@ func bad(bool flag, string text) string {
         "alt"
     };
     text
-}

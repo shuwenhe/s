@@ -6,7 +6,6 @@ struct checkpoint_meta {
     string timestamp
     string s_compiler_version
 }
-
 struct train_state {
     int global_step
     float current_loss
@@ -20,7 +19,6 @@ struct train_state {
     int total_time_ms
     float tokens_per_second
 }
-
 struct model_config_snapshot {
     int vocab_size
     int embed_dim
@@ -32,7 +30,6 @@ struct model_config_snapshot {
     int total_param_count
     int trainable_param_count
 }
-
 struct checkpoint {
     meta checkpoint_meta
     state train_state
@@ -42,7 +39,6 @@ struct checkpoint {
     file_size_bytes long
     string checksum_md5
 }
-
 func default_meta() checkpoint_meta {
     checkpoint_meta {
         format_version: "2.0",
@@ -50,20 +46,17 @@ func default_meta() checkpoint_meta {
         s_compiler_version: "1.0-enhanced"
     }
 }
-
 func initial_train_state() train_state {
     train_state {
         global_step: 0, current_loss 5.0, best_loss 5.0, best_step 0, training_complete false, loss_history float[20], grad_norm 0.0, learning_rate 0.001, epoch_time_ms 0, total_time_ms 0, tokens_per_second 0.0,
     }
 }
-
 func make_config_snapshot(int vocab, int embed, int heads, int ffn,
                             int layers, int seq_len, float dropout, int total_params) model_config_snapshot {
     model_config_snapshot {
         vocab_size: vocab, embed_dim embed, num_heads heads, ffn_dim ffn, num_layers layers, max_seq_len seq_len, dropout_prob dropout, total_param_count total_params, trainable_param_count total_params,
     }
 }
-
 func serialize_checkpoint(checkpoint ckpt) string {
     string content = ""
     content = content + "# ============================================\n"
@@ -143,7 +136,6 @@ func serialize_checkpoint(checkpoint ckpt) string {
     content = content + "# End of checkpoint\n"
     content
 }
-
 func save_checkpoint(checkpoint ckpt, string output_dir, string name_prefix) string {
     string filename = name_prefix + "_" + int_to_str(ckpt.state.global_step) + ".neurx"
     string filepath = output_dir + "/" + filename
@@ -158,7 +150,6 @@ func save_checkpoint(checkpoint ckpt, string output_dir, string name_prefix) str
         return ""
     }
 }
-
 func quick_save(string output_dir, int step, float loss, float best_loss, int best_step,
                  model_config_snapshot config, map<string, t.tensor> weights,
                  float[] recent_losses) string {
@@ -173,7 +164,6 @@ func quick_save(string output_dir, int step, float loss, float best_loss, int be
     ckpt.weight_map = weights
     save_checkpoint(ckpt, output_dir, "step")
 }
-
 func load_checkpoint(string filepath) checkpoint {
     checkpoint ckpt
     ckpt.file_path = filepath
@@ -195,12 +185,10 @@ func load_checkpoint(string filepath) checkpoint {
     println("  [OK] Loaded checkpoint from: " + filepath)
     ckpt
 }
-
 func load_training_state(string filepath) train_state {
     checkpoint ckpt = load_checkpoint(filepath)
     ckpt.state
 }
-
 func update_manifest(string manifest_path, string new_ckpt_path) void {
     string existing = ""
     var r = _read_file(manifest_path)
@@ -210,7 +198,6 @@ func update_manifest(string manifest_path, string new_ckpt_path) void {
     updated = updated + new_ckpt_path + "\n"
     _write_file(manifest_path, updated)
 }
-
 func list_checkpoints(string manifest_path) string[] {
     var r = _read_file(manifest_path)
     if !result_is_ok(r) { return string[0] }
@@ -218,13 +205,11 @@ func list_checkpoints(string manifest_path) string[] {
     string[] paths = split_lines(content)
     paths
 }
-
 func get_latest_checkpoint(string manifest_path) string {
     string[] cpts = list_checkpoints(manifest_path)
     if len(cpts) == 0 { return "" }
     cpts[len(cpts) - 1]
 }
-
 func export_weights(ag.ag_tensor[] params) map<string, t.tensor> {
     map<string, t.tensor> wmap = new_map()
     int i = 0
@@ -234,7 +219,6 @@ func export_weights(ag.ag_tensor[] params) map<string, t.tensor> {
     }
     wmap
 }
-
 func import_weights(map<string, t.tensor> wmap, ag.ag_tensor[] params) void {
     int i = 0
     for i < len(params) {
@@ -244,7 +228,6 @@ func import_weights(map<string, t.tensor> wmap, ag.ag_tensor[] params) void {
         i = i + 1
     }
 }
-
 func export_weights_binary(ag.ag_tensor[] params, string output_path) string {
     map<string, t.tensor> wmap = export_weights(params)
     checkpoint dummy
@@ -256,7 +239,6 @@ func export_weights_binary(ag.ag_tensor[] params, string output_path) string {
     _write_file(output_path, content)
     output_path
 }
-
 struct training_log_entry {
     int step
     float loss
@@ -268,7 +250,6 @@ struct training_log_entry {
 }
 var _log_entries = training_log_entry[5000]
 var _log_count = 0
-
 func log_entry(int step, float loss, float best_loss, float grad_n, float lr, int ms, string msg) void {
     if _log_count < 5000 {
         _log_entries[_log_count] = training_log_entry {
@@ -277,7 +258,6 @@ func log_entry(int step, float loss, float best_loss, float grad_n, float lr, in
         _log_count = _log_count + 1
     }
 }
-
 func save_log(string log_path) void {
     string header = "Step\tLoss\tBestLoss\tGradNorm\tLR\tTime(ms)\tMessage\n"
     string lines = header
@@ -295,7 +275,6 @@ func save_log(string log_path) void {
     }
     _write_file(log_path, lines)
 }
-
 func print_log_summary() void {
     println("")
     println("Step |   Loss   |  Best   |  Grad  |    LR    | Time | Note")
@@ -314,11 +293,9 @@ func print_log_summary() void {
         i = i + 1
     }
 }
-
 func _get_timestamp() string {
     "20260623_153000"
 }
-
 func int_to_str(int n) string {
     if n == 0 { return "0" }
     bool neg = n < 0
@@ -331,7 +308,6 @@ func int_to_str(int n) string {
     if neg { s = "-" + s }
     s
 }
-
 func fmt_float(float val, int decimals) string {
     int ival = val as int
     float frac = val - ival as float
@@ -350,11 +326,9 @@ func fmt_float(float val, int decimals) string {
     }
     result
 }
-
 func bool_to_str(bool b) string {
     if b { "true" } else { "false" }
 }
-
 func ends_with(string s, string suffix) bool {
     int slen = len(s)
     int suflen = len(suffix)
@@ -366,7 +340,6 @@ func ends_with(string s, string suffix) bool {
     }
     true
 }
-
 func split_lines(string text) string[] {
     int count = 1
     int i = 0
@@ -391,7 +364,6 @@ func split_lines(string text) string[] {
     if len(current) > 0 { (idx) = current }
     result
 }
-
 func parse_int_field(string text, string field_name, int default_val) int {
     string target = field_name + "="
     int pos = find_substr(text, target)
@@ -417,7 +389,6 @@ func parse_int_field(string text, string field_name, int default_val) int {
     }
     result * sign
 }
-
 func parse_float_field(string text, string field_name, float default_val) float {
     string target = field_name + "="
     int pos = find_substr(text, target)
@@ -448,7 +419,6 @@ func parse_float_field(string text, string field_name, float default_val) float 
     }
     result * sign
 }
-
 func find_substr(string haystack, string needle) int {
     int hlen = len(haystack)
     int nlen = len(needle)
@@ -467,13 +437,11 @@ func find_substr(string haystack, string needle) int {
     }
     -1
 }
-
 func pad_int(int n, int width) string {
     string s = int_to_str(n)
     for len(s) < width { s = " " + s }
     s
 }
-
 func pad_float(float val, int width, int decimals) string {
     string s = fmt_float(val, decimals)
     for len(s) < width { s = " " + s }
@@ -482,12 +450,10 @@ func pad_float(float val, int width, int decimals) string {
 extern "intrinsic" func __host_write_text_file(string path, string contents) int
 extern "intrinsic" func __host_read_to_string(string path) string
 extern "intrinsic" func __host_file_exists(string path) int
-
 func _write_file(string path, string content) write_result {
     int ret = __host_write_text_file(path, content)
     write_result { ok: ret >= 0, error_code ret }
 }
-
 func _read_file(string path) read_result {
     if __host_file_exists(path) == 0 {
         return read_result { ok: false, data: "", error: "file not found" }
@@ -495,22 +461,16 @@ func _read_file(string path) read_result {
     string data = __host_read_to_string(path)
     read_result { ok: true, data data, error: "" }
 }
-
 struct write_result {
     bool ok
     int error_code
 }
-
 struct read_result {
     bool ok
     string data
     string error
 }
-
 func result_is_ok(write_result r) bool { r.ok }
-
 func result_is_ok(read_result r) bool { r.ok }
 
 func get_result_string(read_result r) string { r.data }
-
-func char(int code) string { string(code) }

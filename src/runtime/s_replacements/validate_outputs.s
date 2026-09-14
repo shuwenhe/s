@@ -1,2 +1,1 @@
 func validate_outputs() {
-}

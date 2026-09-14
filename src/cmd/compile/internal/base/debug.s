@@ -24,7 +24,6 @@ struct debug_flags {
     bool concurrent_ok
 }
 debug := default_debug_flags()
-
 func default_debug_flags() debug_flags {
     debug_flags {
         align_hot: 1, append 0,
@@ -34,10 +33,8 @@ func default_debug_flags() debug_flags {
         loop_var_hash: "", merge_locals 1, panic 0, pgo_inline 1, pgo_devirtualize 2, range_func_check 1, variable_make_threshold 32, zero_copy 1, concurrent_ok true,
     }
 }
-
 func debug_ssa(string phase, string flag, int value, string value_string) string {
     if phase == "" || flag == "" {
         return "invalid ssa debug option"
     }
     ""
-}
