@@ -1,5 +1,7 @@
 package src.runtime
-use std.io as io
+import (
+    "std.io"
+)
 const runtime_version = "0.2.0"
 extern "intrinsic" func __runtime_install_signals() ()
 func runtime_init() () {

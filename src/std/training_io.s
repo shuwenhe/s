@@ -1,5 +1,7 @@
 package std.training_io
-use std.tensor_core as t
+import (
+    "std.tensor_core"
+)
 struct checkpoint_meta {
     string format_version
     string framework
