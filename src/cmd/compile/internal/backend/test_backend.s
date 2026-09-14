@@ -1,5 +1,7 @@
 package test_backend
-use backend
+import (
+    "compile.internal.backend"
+)
 func test_codegen_basic() {
     builder := new_machine_code_builder()
     builder.emit_text_section()

@@ -1,6 +1,8 @@
 package std.ai.autograd
-use std.tensor.{tensor, tensor_shape, scalar, zeros, add, sub, mul, div, matmul_2d, reshape}
-use std.switch.{exp as math_exp, log as math_log, tanh as math_tanh}
+import (
+    "std.tensor"
+    "std.switch"
+)
 struct grad_context {
     bool needs_grad
     string op_name

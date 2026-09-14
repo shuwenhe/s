@@ -1,5 +1,7 @@
 package lsp
-use "std"
+import (
+    "std"
+)
 struct jsonrpc_request {
     string jsonrpc
     string method
@@ -22,36 +24,36 @@ struct jsonrpc_notification {
 
 func parse_jsonrpc_message(string raw) (jsonrpc_request, string) {
     switch extract_json_string(raw, "method") {
-        option::some(method) : {
+        option.some(method) : {
             id_str := extract_json_string(raw, "id")
             params := extract_json_string(raw, "params")
-            id_opt := option::none()
+            id_opt := option.none()
             switch id_str {
-                option::some(id_val) : {
-                    switch std::parse_int(id_val) {
-                        id_num : id_opt = option::some(id_num),
+                option.some(id_val) : {
+                    switch std.parse_int(id_val) {
+                        id_num : id_opt = option.some(id_num),
                         _ : {}
                     }
                 },
-                option::none() : {}
+                option.none() : {}
             }
             jsonrpc_request {
-                jsonrpc: "2.0", method method, params option::none(), id id_opt,
+                jsonrpc: "2.0", method method, params option.none(), id id_opt,
             }
         },
-        option::none() : {
+        option.none() : {
             "No method field in request"
         }
     }
 }
 
 func create_response(int id, string result) string {
-    "{\"jsonrpc\":\"2.0\",\"id\":" + std::to_string(id) + ",\"result\":" + result + "}"
+    "{\"jsonrpc\":\"2.0\",\"id\":" + std.to_string(id) + ",\"result\":" + result + "}"
 }
 
 func create_error_response(int id, int code, string message) string {
-    "{\"jsonrpc\":\"2.0\",\"id\":" + std::to_string(id) +
-    ",\"error\":{\"code\":" + std::to_string(code) + ",\"message\":\"" + escape_json_string(message) + "\"}}"
+    "{\"jsonrpc\":\"2.0\",\"id\":" + std.to_string(id) +
+    ",\"error\":{\"code\":" + std.to_string(code) + ",\"message\":\"" + escape_json_string(message) + "\"}}"
 }
 
 func create_notification(string method, string params) string {
@@ -94,7 +96,7 @@ func serialize_document_symbols(symbols document_symbol[]) string {
 
 func serialize_document_symbol(symbol document_symbol) string {
     "{\"name\":\"" + escape_json_string(symbol.name) +
-    "\",\"kind\":" + std::to_string(symbol_kind_to_int(symbol.kind)) +
+    "\",\"kind\":" + std.to_string(symbol_kind_to_int(symbol.kind)) +
     ",\"range\":" + serialize_range(symbol.range_val) +
     ",\"selectionRange\":" + serialize_range(symbol.selection_range) + "}"
 }
@@ -117,20 +119,20 @@ func serialize_completion_list(list completion_list) string {
 func serialize_completion_item(item completion_item) string {
     var result = "{\"label\":\"" + escape_json_string(item.label) + "\""
     switch item.kind {
-        option::some(k) : result = result + ",\"kind\":" + std::to_string(completion_kind_to_int(k)),
-        option::none() : {}
+        option.some(k) : result = result + ",\"kind\":" + std.to_string(completion_kind_to_int(k)),
+        option.none() : {}
     }
     switch item.detail {
-        option::some(d) : result = result + ",\"detail\":\"" + escape_json_string(d) + "\"",
-        option::none() : {}
+        option.some(d) : result = result + ",\"detail\":\"" + escape_json_string(d) + "\"",
+        option.none() : {}
     }
     switch item.documentation {
-        option::some(doc) : result = result + ",\"documentation\":\"" + escape_json_string(doc) + "\"",
-        option::none() : {}
+        option.some(doc) : result = result + ",\"documentation\":\"" + escape_json_string(doc) + "\"",
+        option.none() : {}
     }
     switch item.sort_text {
-        option::some(st) : result = result + ",\"sortText\":\"" + escape_json_string(st) + "\"",
-        option::none() : {}
+        option.some(st) : result = result + ",\"sortText\":\"" + escape_json_string(st) + "\"",
+        option.none() : {}
     }
     result = result + "}"
     result
@@ -145,20 +147,20 @@ func serialize_range(r range) string {
 }
 
 func serialize_position(p position) string {
-    "{\"line\":" + std::to_string(p.line) + ",\"character\":" + std::to_string(p.character) + "}"
+    "{\"line\":" + std.to_string(p.line) + ",\"character\":" + std.to_string(p.character) + "}"
 }
 
 func serialize_severity(severity option[int]) string {
     switch severity {
-        option::some(s) : std::to_string(s),
-        option::none() : "4"
+        option.some(s) : std.to_string(s),
+        option.none() : "4"
     }
 }
 
 func extract_json_string(string json, string key) option[string] {
     search_key := "\"" + key + "\":"
-    switch std::find_substring(json, search_key) {
-        option::some(pos) : {
+    switch std.find_substring(json, search_key) {
+        option.some(pos) : {
             start := pos + len(search_key)
             for start < len(json) && (json[start] == " " || json[start] == "\t") {
                 start = start + 1
@@ -174,22 +176,22 @@ func extract_json_string(string json, string key) option[string] {
                         }
                     }
                     if end < len(json) {
-                        option::some(json.substring(start + 1, end))
+                        option.some(json.substring(start + 1, end))
                     } else {
-                        option::none()
+                        option.none()
                     }
                 } else {
                     end := start
                     for end < len(json) && json[end] != "," && json[end] != "}" && json[end] != "]" {
                         end = end + 1
                     }
-                    option::some(json.substring(start, end))
+                    option.some(json.substring(start, end))
                 }
             } else {
-                option::none()
+                option.none()
             }
         },
-        option::none() : option::none()
+        option.none() : option.none()
     }
 }
 
