@@ -5,4 +5,3 @@ import (
 )
 func main() {
     return compile.internal.compiler.main(std.env.args())
-}

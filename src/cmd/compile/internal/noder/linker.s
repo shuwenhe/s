@@ -7,7 +7,6 @@ struct link_symbol {
     string name
     string kind
 }
-
 func build_link_symbols(string pkg_name, export_record[] exports) link_symbol[] {
     out := link_symbol[]()
     i := 0
@@ -19,7 +18,6 @@ func build_link_symbols(string pkg_name, export_record[] exports) link_symbol[] 
     }
     out
 }
-
 func emit_link_manifest(link_symbol[] syms) string {
     out := "link-manifest version=1\n"
     i := 0
@@ -29,13 +27,11 @@ func emit_link_manifest(link_symbol[] syms) string {
     }
     out
 }
-
 struct link_symbol {
     string pkg
     string name
     string kind
 }
-
 func build_link_symbols(string pkg_name, export_record[] exports) link_symbol[] {
     out := link_symbol[]()
     i := 0
@@ -47,7 +43,6 @@ func build_link_symbols(string pkg_name, export_record[] exports) link_symbol[] 
     }
     out
 }
-
 func emit_link_manifest(link_symbol[] syms) string {
     out := "link-manifest version=1\n"
     i := 0
@@ -56,4 +51,3 @@ func emit_link_manifest(link_symbol[] syms) string {
         i = i + 1
     }
     out
-}

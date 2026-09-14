@@ -1,12 +1,10 @@
 package compile.internal.frontend
-
 struct token {
     token_type: int
     value: string
     line: int
     column: int
 }
-
 struct lexer {
     source: string
     position: int
@@ -18,7 +16,6 @@ struct lexer {
 }
 const token_eof = 0
 const token_error = 1
-
 const token_ident = 10
 const token_int = 11
 const token_float = 12
@@ -26,7 +23,6 @@ const token_string = 13
 const token_char = 14
 const token_true = 15
 const token_false = 16
-
 const token_package = 20
 const token_use = 21
 const token_func = 22
@@ -47,7 +43,6 @@ const token_const = 36
 const token_as = 37
 const token_new = 38
 const token_delete = 39
-
 const token_plus = 40
 const token_minus = 41
 const token_star = 42
@@ -79,7 +74,6 @@ const token_rshift_assign = 67
 const token_and_assign = 68
 const token_or_assign = 69
 const token_xor_assign = 70
-
 const token_lparen = 80
 const token_rparen = 81
 const token_lbrace = 82
@@ -92,9 +86,7 @@ const token_colon = 88
 const token_semicolon = 89
 const token_arrow = 90
 const token_question = 91
-
 const token_newline = 99
-
 func keyword_to_token(string kw) int {
     switch kw {
     case "package" : token_package
@@ -122,19 +114,15 @@ func keyword_to_token(string kw) int {
     default : token_ident
     }
 }
-
 func is_letter(string c) bool {
     return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c == "_"
 }
-
 func is_digit(string c) bool {
     return c >= "0" && c <= "9"
 }
-
 func is_whitespace(string c) bool {
     return c == " " || c == "\t" || c == "\r"
 }
-
 func lexer_new(string source) lexer {
     lex := lexer {
         source: source, position: 0, read_position: 0,
@@ -143,7 +131,6 @@ func lexer_new(string source) lexer {
     lexer_read_char(lex*)
     lex
 }
-
 func lexer_read_char(lex* lexer) {
     if lex.read_position >= lex.source.len() {
         lex.current_char = '\0'
@@ -152,7 +139,6 @@ func lexer_read_char(lex* lexer) {
     }
     lex.position = lex.read_position
     lex.read_position = lex.read_position + 1
-
     if lex.current_char == '\n' {
         lex.line = lex.line + 1
         lex.column = 0
@@ -160,7 +146,6 @@ func lexer_read_char(lex* lexer) {
         lex.column = lex.column + 1
     }
 }
-
 func lexer_peek_char(lex* lexer) string {
     if lex.read_position >= lex.source.len() {
         return '\0'
@@ -168,13 +153,11 @@ func lexer_peek_char(lex* lexer) string {
         return lex.source[lex.read_position]
     }
 }
-
 func lexer_skip_whitespace(lex* lexer) {
     for is_whitespace(lex.current_char) {
         lexer_read_char(lex)
     }
 }
-
 func lexer_read_ident(lex* lexer) string {
     start := lex.position
     for is_letter(lex.current_char) || is_digit(lex.current_char) {
@@ -182,7 +165,6 @@ func lexer_read_ident(lex* lexer) string {
     }
     lexer_slice(lex.source, start, lex.position)
 }
-
 func lexer_slice(string source, int start, int end) string {
     result := ""
     i := start
@@ -192,18 +174,15 @@ func lexer_slice(string source, int start, int end) string {
     }
     result
 }
-
 func lexer_read_number(lex* lexer) (string, int) {
     start := lex.position
     has_dot := 0
-
     for is_digit(lex.current_char) || (lex.current_char == '.' && !has_dot) {
         if lex.current_char == '.' {
             has_dot = 1
         }
         lexer_read_char(lex)
     }
-
     num_str := lexer_slice(lex.source, start, lex.position)
     if has_dot {
         return num_str, token_float
@@ -211,35 +190,29 @@ func lexer_read_number(lex* lexer) (string, int) {
         return num_str, token_int
     }
 }
-
 func lexer_read_string(lex* lexer, string quote) string {
     lexer_read_char(lex)
     start := lex.position
-
     for lex.current_char != quote && lex.current_char != '\0' {
         if lex.current_char == '\\' {
             lexer_read_char(lex)
         }
         lexer_read_char(lex)
     }
-
     str := lexer_slice(lex.source, start, lex.position)
     if lex.current_char == quote {
         lexer_read_char(lex)
     }
     return str
 }
-
 func lexer_skip_line_comment(lex* lexer) {
     for lex.current_char != '\n' && lex.current_char != '\0' {
         lexer_read_char(lex)
     }
 }
-
 func lexer_skip_block_comment(lex* lexer) {
     lexer_read_char(lex)
     lexer_read_char(lex)
-
     for lex.current_char != '\0' {
         if lex.current_char == '*' && lexer_peek_char(lex) == '/' {
             lexer_read_char(lex)
@@ -249,17 +222,13 @@ func lexer_skip_block_comment(lex* lexer) {
         lexer_read_char(lex)
     }
 }
-
 func lexer_next_token(lex* lexer) token {
     lexer_skip_whitespace(lex)
-
     lex.start_column = lex.column
     line := lex.line
     column := lex.column
-
     tok_type := token_eof
     tok_value := ""
-
     switch lex.current_char {
     case '\0' :
         tok_type = token_eof
@@ -499,12 +468,10 @@ func lexer_next_token(lex* lexer) token {
             lexer_read_char(lex)
         }
     }
-
     token {
         token_type: tok_type, value: tok_value, line: line, column: column
     }
 }
-
 func token_type_name(int tok_type) string {
     switch tok_type {
     case token_eof : "EOF"
@@ -582,4 +549,3 @@ func token_type_name(int tok_type) string {
     case token_newline : "NEWLINE"
     default : "unknown"
     }
-}

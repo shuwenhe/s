@@ -1,31 +1,24 @@
 package macho_backend
-
 const (
     MACHO_MAGIC_64 = 0xfeedf00d
     MACHO_MAGIC_ARM64 = 0xfeedf00d
     MACHO_CIGAM_64 = 0xcefaedfe
-
     CPU_TYPE_X86_64 = 7
     CPU_TYPE_ARM64 = 0x0100000c
-
     CPU_SUBTYPE_X86_64_ALL = 3
     CPU_SUBTYPE_ARM64_ALL = 0
-
     MH_EXECUTE = 2
     MH_OBJECT = 1
-
     LC_SEGMENT = 0x1
     LC_SEGMENT_64 = 0x19
     LC_MAIN = 0x28
     LC_DYLD_INFO_ONLY = 0x22
     LC_SYMTAB = 0x2
     LC_DYSYMTAB = 0xb
-
     VM_PROT_READ = 1
     VM_PROT_WRITE = 2
     VM_PROT_EXECUTE = 4
 )
-
 struct macho_header {
     magic uint
     cpu_type uint
@@ -36,7 +29,6 @@ struct macho_header {
     flags uint
     reserved uint
 }
-
 struct macho_segment_64 {
     cmd uint
     cmd_size uint
@@ -50,7 +42,6 @@ struct macho_segment_64 {
     n_sections uint
     flags uint
 }
-
 struct macho_section_64 {
     string sect_name
     string seg_name
@@ -64,7 +55,6 @@ struct macho_section_64 {
     reserved1 uint
     reserved2 uint
 }
-
 struct macho_symtab_cmd {
     cmd uint
     cmd_size uint
@@ -73,14 +63,12 @@ struct macho_symtab_cmd {
     stroff uint
     strsize uint
 }
-
 struct macho_main_cmd {
     cmd uint
     cmd_size uint
     entry_off uint64
     stack_size uint64
 }
-
 struct macho_builder {
     string arch
     string[] code_text
@@ -92,7 +80,6 @@ struct macho_builder {
     string[] symbols
     int symbol_count
 }
-
 func macho_builder_new() macho_builder* {
     builder := macho_builder {
         arch: "arm64",
@@ -107,20 +94,16 @@ func macho_builder_new() macho_builder* {
     }
     return &builder
 }
-
 func (b* macho_builder) set_arch(string arch) {
     b.arch = arch
 }
-
 func (b* macho_builder) add_code(string asm) {
     if b.code_offset < len(b.code_text) {
         b.code_text[b.code_offset] = asm
         b.code_offset = b.code_offset + 1
     }
 }
-
 func (b* macho_builder) add_function_arm64(string name, string body) {
-
     func_asm := ".globl _" + name + "\n"
     func_asm = func_asm + "_" + name + ":\n"
     func_asm = func_asm + "    sub sp, sp, #16\n"
@@ -129,9 +112,7 @@ func (b* macho_builder) add_function_arm64(string name, string body) {
     func_asm = func_asm + "    ret\n"
     b.add_code(func_asm)
 }
-
 func (b* macho_builder) add_function_x86_64(string name, string body) {
-
     func_asm := ".globl _" + name + "\n"
     func_asm = func_asm + "_" + name + ":\n"
     func_asm = func_asm + "    push rbp\n"
@@ -141,7 +122,6 @@ func (b* macho_builder) add_function_x86_64(string name, string body) {
     func_asm = func_asm + "    ret\n"
     b.add_code(func_asm)
 }
-
 func (b* macho_builder) add_symbol(string name) int {
     if b.symbol_count < len(b.symbols) {
         b.symbols[b.symbol_count] = name
@@ -151,25 +131,19 @@ func (b* macho_builder) add_symbol(string name) int {
     }
     return -1
 }
-
 func macho_uint32_to_bytes(uint val) string {
-
     byte1 := val % 256
     byte2 := (val / 256) % 256
     byte3 := (val / 65536) % 256
     byte4 := (val / 16777216) % 256
     return chr(byte1) + chr(byte2) + chr(byte3) + chr(byte4)
 }
-
 func macho_uint64_to_bytes(uint64 val) string {
-
     low := uint(val % 4294967296)
     high := uint(val / 4294967296)
     return macho_uint32_to_bytes(low) + macho_uint32_to_bytes(high)
 }
-
 func chr(int b) string {
-
     if b < 0 || b > 255 { return "\x00" }
     chars := "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f" +
              "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f" +
@@ -189,9 +163,7 @@ func chr(int b) string {
              "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff"
     return chars[b:b+1]
 }
-
 func (b* macho_builder) pad_string(string s, int len) string {
-
     current_len := len(s)
     if current_len >= len { return s }
     padding := len - current_len
@@ -203,13 +175,9 @@ func (b* macho_builder) pad_string(string s, int len) string {
     }
     return s + pad
 }
-
 func (b* macho_builder) write_mach_header(string arch) string {
-
     header := ""
-
     header = header + macho_uint32_to_bytes(0xcefaedfe)
-
     if arch == "arm64" {
         header = header + macho_uint32_to_bytes(0x0100000c)
         header = header + macho_uint32_to_bytes(0)
@@ -217,34 +185,21 @@ func (b* macho_builder) write_mach_header(string arch) string {
         header = header + macho_uint32_to_bytes(7)
         header = header + macho_uint32_to_bytes(3)
     }
-
     header = header + macho_uint32_to_bytes(2)
-
     header = header + macho_uint32_to_bytes(3)
-
     header = header + macho_uint32_to_bytes(200)
-
     header = header + macho_uint32_to_bytes(0x200085)
-
     header = header + macho_uint32_to_bytes(0)
-
     return header
 }
-
 func (b* macho_builder) generate_arm64_binary() string {
-
     binary := b.write_mach_header("arm64")
-
     return binary
 }
-
 func (b* macho_builder) generate_x86_64_binary() string {
-
     binary := b.write_mach_header("x86_64")
-
     return binary
 }
-
 func (b* macho_builder) generate_macho() string {
     if b.arch == "arm64" {
         return b.generate_arm64_binary()
@@ -252,4 +207,3 @@ func (b* macho_builder) generate_macho() string {
         return b.generate_x86_64_binary()
     }
     return ""
-}

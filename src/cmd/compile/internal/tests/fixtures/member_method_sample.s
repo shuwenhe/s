@@ -10,7 +10,5 @@ trait measure {
 func ( p point) size() int {
     p.x + p.y
 }
-
 func total(point p, int[] items, int index) int {
     p.size() + items[index]
-}

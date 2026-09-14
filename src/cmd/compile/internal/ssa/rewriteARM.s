@@ -36,4 +36,3 @@ func run_rewrite_arm(ssa_func f) int {
         recompute_uses(f)
     }
     changed
-}

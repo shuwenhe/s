@@ -29,4 +29,3 @@ func run_versions_test_suite() int {
         return 1
     }
     0
-}

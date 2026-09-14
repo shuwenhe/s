@@ -11,19 +11,16 @@ struct ssa_value {
     string type_name
     bool signed
 }
-
 struct ssa_block {
     string kind
     int[] succs
     int likely
 }
-
 struct bfc_result {
     bool ok
     int lsb
     int width
 }
-
 func ssa_mark_moves() () {
 }
 
@@ -48,7 +45,6 @@ func load_by_type(string type_name, bool signed) string {
     }
     "MOVW"
 }
-
 func store_by_type(string type_name) string {
     if type_name == "float32" {
         return "MOVF"
@@ -64,7 +60,6 @@ func store_by_type(string type_name) string {
     }
     "MOVW"
 }
-
 func makeshift(int reg, int typ, int amount) int {
     if amount < 0 {
         return 0
@@ -74,11 +69,9 @@ func makeshift(int reg, int typ, int amount) int {
     }
     return (reg & 0xf) + typ + ((amount & 31) << 7
 }
-
 func makeregshift(int r1, int typ, int r2) int {
     return (r1 & 0xf) + typ + ((r2 & 0xf) << 8) + (1 << 4
 }
-
 func get_bfc(int v) bfc_result {
     if v == 0 {
         return bfc_result { ok: false, lsb: -1, width 0 }
@@ -109,7 +102,6 @@ func get_bfc(int v) bfc_result {
     }
     bfc_result { ok: true, lsb lsb, width width }
 }
-
 func ssa_gen_value(ssa_value value) string {
     if value.op == "OpCopy" || value.op == "OpARMMOVWreg" {
         return "MOVW"
@@ -143,7 +135,6 @@ func ssa_gen_value(ssa_value value) string {
     }
     "GENERIC"
 }
-
 func ssa_gen_block(string kind, int next_succ, int likely) string[] {
     out := string[]()
     if kind == "BlockPlain" || kind == "BlockDefer" {
@@ -185,7 +176,6 @@ func ssa_gen_block(string kind, int next_succ, int likely) string[] {
     out = append(out, "UNIMPL")
     out
 }
-
 func starts_with(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
@@ -198,4 +188,3 @@ func starts_with(string text, string prefix) bool {
         i = i + 1
     }
     true
-}

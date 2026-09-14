@@ -10,7 +10,6 @@ struct syntax_error {
     int line
     int column
 }
-
 func read_source(string path) (string, syntax_error) {
     switch std.fs.read_to_string(path) {
         source : source,
@@ -19,7 +18,6 @@ func read_source(string path) (string, syntax_error) {
         },
     }
 }
-
 func tokenize(string source) (token[], syntax_error) {
     switch s.new_lexer(source).tokenize() {
         tokens : tokens,
@@ -28,7 +26,6 @@ func tokenize(string source) (token[], syntax_error) {
         },
     }
 }
-
 func parse_source(string source) (source_file, syntax_error) {
     switch tokenize(source) {
         tokens : parse_tokens(tokens),
@@ -37,7 +34,6 @@ func parse_source(string source) (source_file, syntax_error) {
         },
     }
 }
-
 func parse_tokens(token[] tokens) (source_file, syntax_error) {
     switch parse_s_tokens(tokens) {
         ast : ast,
@@ -46,11 +42,8 @@ func parse_tokens(token[] tokens) (source_file, syntax_error) {
         },
     }
 }
-
 func dump_tokens_text(token[] tokens) string {
     s.dump_tokens(tokens)
 }
-
 func dump_source_text(source_file source) string {
     s.dump_source_file(source)
-}

@@ -2,7 +2,6 @@ package compile.internal.bounds_test
 import (
     "compile.internal.bounds"
 )
-
 func run_bounds_test() int {
     constant := compile.internal.bounds.bounds_prove_constant_index(3, 8)
     if !compile.internal.bounds.bounds_should_eliminate(constant) {
@@ -22,4 +21,3 @@ func run_bounds_test() int {
         return 5
     }
     0
-}

@@ -1,5 +1,19 @@
 # Thin Bootstrap Bridge Design
 
+## Status
+
+Status: BLOCKED — Bootstrap Root Required
+
+Stage1 Construction Spike:
+
+```text
+architecture-verdict=NOT_FEASIBLE
+blocking-boundary=B2/B3
+next=reopen-bootstrap-architecture
+```
+
+This design must not be implemented until a legal bootstrap root capable of producing `s_modular.stage1` is established. The stage1 to stage2 checks, canonical gates, atomic promotion, and final `s_modular` authority model remain useful after that root exists.
+
 ## Problem
 
 The user-facing modular compiler path is intended to use the canonical compiler pipeline:

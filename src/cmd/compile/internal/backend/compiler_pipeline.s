@@ -3,14 +3,12 @@ struct compiler_pipeline {
     direct_code_generator* codegen
     prog_list* all_code
 }
-
 func make_compiler_pipeline() compiler_pipeline {
     pipeline: compiler_pipeline
     pipeline.codegen = &make_direct_code_generator()
     pipeline.all_code = &make_prog_list()
     pipeline
 }
-
 func (compiler_pipeline* cp) compile_simple_function() string {
     cp.codegen.generate_function_prologue("add", 0)
     cp.codegen.emit_const_i64(10, 0)
@@ -19,7 +17,6 @@ func (compiler_pipeline* cp) compile_simple_function() string {
     cp.codegen.generate_function_epilogue()
     cp.codegen.get_asm()
 }
-
 func (compiler_pipeline* cp) compile_with_stack() string {
     stack_size := 32
     cp.codegen.generate_function_prologue("compute", stack_size)
@@ -28,7 +25,6 @@ func (compiler_pipeline* cp) compile_with_stack() string {
     cp.codegen.generate_function_epilogue()
     cp.codegen.get_asm()
 }
-
 func (compiler_pipeline* cp) compile_branching() string {
     cp.codegen.generate_function_prologue("branching", 0)
     cp.codegen.emit_const_i64(5, 0)
@@ -44,7 +40,6 @@ func (compiler_pipeline* cp) compile_branching() string {
     cp.codegen.generate_function_epilogue()
     cp.codegen.get_asm()
 }
-
 func (compiler_pipeline* cp) compile_loop() string {
     cp.codegen.generate_function_prologue("loop_func", 0)
     cp.codegen.emit_const_i64(0, 0)
@@ -60,7 +55,6 @@ func (compiler_pipeline* cp) compile_loop() string {
     cp.codegen.generate_function_epilogue()
     cp.codegen.get_asm()
 }
-
 func (compiler_pipeline* cp) compile_multiple_functions() string {
     result := ".intel_syntax noprefix\n"
     result = result + ".section\t.text\n"
@@ -76,4 +70,3 @@ func (compiler_pipeline* cp) compile_multiple_functions() string {
         p = p.next
     }
     result
-}

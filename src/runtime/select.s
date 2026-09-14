@@ -2,7 +2,6 @@ package src.runtime
 import (
     "std.option"
 )
-
 struct runtime_select_result {
     int index
     int value
@@ -10,13 +9,11 @@ struct runtime_select_result {
 }
 const runtime_select_receive = 0
 const runtime_select_send = 1
-
 struct runtime_select_case {
     channel raw_chan
     int kind
     int value
 }
-
 func runtime_select_try(runtime_select_case[] cases) runtime_select_result {
     int i = 0
     for i < len(cases) {
@@ -36,7 +33,6 @@ func runtime_select_try(runtime_select_case[] cases) runtime_select_result {
     }
     runtime_select_result { index: -1, value: 0, ok: false }
 }
-
 func runtime_select_recv(raw_chan[] channels) runtime_select_result {
     int i = 0
     for i < len(channels) {
@@ -49,11 +45,8 @@ func runtime_select_recv(raw_chan[] channels) runtime_select_result {
     }
     runtime_select_result { index: -1, value: 0, ok: false }
 }
-
 func select_unit_name() string {
     "src/runtime/select"
 }
-
 func select_unit_ready() int {
     1
-}

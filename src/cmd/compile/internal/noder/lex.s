@@ -15,7 +15,6 @@ func classify_token(string token) string {
     }
     "ident"
 }
-
 func lex_source(source_unit unit) (token_item[], noder_error) {
     out := token_item[]()
     lines := split_lines(unit.text)
@@ -38,4 +37,3 @@ func lex_source(source_unit unit) (token_item[], noder_error) {
         li = li + 1
     }
     out
-}

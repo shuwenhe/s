@@ -5,18 +5,14 @@ struct route_entry {
     string path
     handler handler_func
 }
-
 struct server {
     string host
     int port
     route_entry[] routes
 }
-
 func (s *server) add_route(string method, string path, handler_func handler) {
     s.routes.push(route_entry {
         method: method, path path, handler handler,
     })
 }
-
 func (s *server) serve() {
-}

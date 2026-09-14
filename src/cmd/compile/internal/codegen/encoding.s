@@ -31,11 +31,9 @@ enum amd64_opcode {
     op_imul,
     op_idiv,
 }
-
 struct amd64_operand {
     operand addr
 }
-
 struct amd64_instr {
     opcode amd64_opcode
     int prefix_count
@@ -52,14 +50,12 @@ struct amd64_instr {
     int operand_size
     int address_size
 }
-
 func make_amd64_instr(amd64_opcode op) amd64_instr {
     amd64_instr {
         opcode: op, prefix_count 0,
         prefixes: int8[]()(), rex_byte 0, opcode_byte1 0, opcode_byte2 0, modrm_byte 0, sib_byte 0, immediate 0, has_immediate false, has_modrm false, has_sib false, operand_size 0, address_size 64,
     }
 }
-
 func (instr* amd64_instr) set_operand_size(int size) {
     instr.operand_size = size
     if size == 16 {
@@ -67,7 +63,6 @@ func (instr* amd64_instr) set_operand_size(int size) {
         instr.prefix_count = instr.prefix_count + 1
     }
 }
-
 func (instr* amd64_instr) set_rex_byte(int w, int r, int x, int b) {
     instr.rex_byte = 0x40
     if w != 0 {
@@ -83,22 +78,18 @@ func (instr* amd64_instr) set_rex_byte(int w, int r, int x, int b) {
         instr.rex_byte = instr.rex_byte + 0x01
     }
 }
-
 func (instr* amd64_instr) set_modrm(int mod, int reg, int rm) {
     instr.modrm_byte = ((mod & 3) << 6) + ((reg & 7) << 3) + (rm & 7)
     instr.has_modrm = true
 }
-
 func (instr* amd64_instr) set_sib(int scale, int index, int base) {
     instr.sib_byte = ((scale & 3) << 6) + ((index & 7) << 3) + (base & 7)
     instr.has_sib = true
 }
-
 func (instr* amd64_instr) set_immediate(int64 imm, int size) {
     instr.immediate = imm
     instr.has_immediate = true
 }
-
 func encode_mov_reg_to_reg(int dest_reg, int src_reg) int8[] {
     result := int8[]()()
     instr := make_amd64_instr(op_mov)
@@ -112,7 +103,6 @@ func encode_mov_reg_to_reg(int dest_reg, int src_reg) int8[] {
     result = append(result, (instr.modrm_byte as int8))
     result
 }
-
 func encode_mov_imm_to_reg(int64 imm, int dest_reg) int8[] {
     result := int8[]()()
     instr := make_amd64_instr(op_mov)
@@ -131,7 +121,6 @@ func encode_mov_imm_to_reg(int64 imm, int dest_reg) int8[] {
     }
     result
 }
-
 func encode_add_reg_to_reg(int dest_reg, int src_reg) int8[] {
     result := int8[]()()
     instr := make_amd64_instr(op_add)
@@ -145,7 +134,6 @@ func encode_add_reg_to_reg(int dest_reg, int src_reg) int8[] {
     result = append(result, (instr.modrm_byte as int8))
     result
 }
-
 func encode_sub_reg_from_reg(int dest_reg, int src_reg) int8[] {
     result := int8[]()()
     instr := make_amd64_instr(op_sub)
@@ -159,7 +147,6 @@ func encode_sub_reg_from_reg(int dest_reg, int src_reg) int8[] {
     result = append(result, (instr.modrm_byte as int8))
     result
 }
-
 func encode_jmp(int64 offset) int8[] {
     result := int8[]()()
     instr := make_amd64_instr(op_jmp)
@@ -174,7 +161,6 @@ func encode_jmp(int64 offset) int8[] {
     }
     result
 }
-
 func encode_call(int64 offset) int8[] {
     result := int8[]()()
     instr := make_amd64_instr(op_call)
@@ -189,20 +175,17 @@ func encode_call(int64 offset) int8[] {
     }
     result
 }
-
 func encode_ret() int8[] {
     result := int8[]()()
     result = append(result, 0xc3 as int8)
     result
 }
-
 func encode_syscall() int8[] {
     result := int8[]()()
     result = append(result, 0x0f as int8)
     result = append(result, 0x05 as int8)
     result
 }
-
 func encode_push_reg(int reg) int8[] {
     result := int8[]()()
     instr := make_amd64_instr(op_push)
@@ -214,7 +197,6 @@ func encode_push_reg(int reg) int8[] {
     result = append(result, (instr.opcode_byte1 as int8))
     result
 }
-
 func encode_pop_reg(int reg) int8[] {
     result := int8[]()()
     instr := make_amd64_instr(op_pop)
@@ -226,13 +208,11 @@ func encode_pop_reg(int reg) int8[] {
     result = append(result, (instr.opcode_byte1 as int8))
     result
 }
-
 func encode_nop() int8[] {
     result := int8[]()()
     result = append(result, 0x90 as int8)
     result
 }
-
 func append_bytes(int8[] dest, int8[] src) int8[] {
     result := dest
     i := 0
@@ -242,7 +222,6 @@ func append_bytes(int8[] dest, int8[] src) int8[] {
     }
     result
 }
-
 func opcode_name(amd64_opcode op) string {
     switch op {
         case op_nop: return "nop"
@@ -274,4 +253,3 @@ func opcode_name(amd64_opcode op) string {
         case op_idiv: return "idiv"
     }
     "unknown"
-}

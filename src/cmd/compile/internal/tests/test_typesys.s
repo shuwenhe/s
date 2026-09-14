@@ -76,4 +76,3 @@ func run_typesys_suite() int {
         return 1
     }
     0
-}

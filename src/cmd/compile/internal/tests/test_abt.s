@@ -69,4 +69,3 @@ func run_abt_suite() int {
         return 1
     }
     0
-}

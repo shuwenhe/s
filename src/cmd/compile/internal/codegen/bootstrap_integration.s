@@ -13,7 +13,6 @@ struct s_compiler {
     int function_count64
     int symbol_count64
 }
-
 func make_s_compiler(string target_arch) s_compiler {
     link_ctx := make_link_context()
     mcg := make_machine_code_gen(link_ctx*)
@@ -25,7 +24,6 @@ func make_s_compiler(string target_arch) s_compiler {
         total_code_size: 0 as int64, total_data_size: 0 as int64, function_count: 0 as int64, symbol_count: 0 as int64
     }
 }
-
 func (compiler* s_compiler) compile_simple_program(string source_code) string {
     if source_code == "" {
         return "compile_simple_program: empty source"
@@ -44,19 +42,15 @@ func (compiler* s_compiler) compile_simple_program(string source_code) string {
     }
     return "compile_simple_program: source accepted for bootstrap slice"
 }
-
 func bootstrap_stage0_to_stage1() string {
     "Stage 1: Seed → IR-based S compiler"
 }
-
 func bootstrap_stage1_to_stage2() string {
     "Stage 2: Stage1 → Direct AMD64 compiler"
 }
-
 func bootstrap_stage2_to_stage3() string {
     "Stage 3: Stage2 → Verified fixed-point"
 }
-
 func generate_minimal_s_program() string {
     prog := ""
     prog = prog + "package main\n"
@@ -66,7 +60,6 @@ func generate_minimal_s_program() string {
     prog = prog + "}\n"
     prog
 }
-
 func generate_loop_s_program() string {
     prog := ""
     prog = prog + "package main\n"
@@ -84,7 +77,6 @@ func generate_loop_s_program() string {
     prog = prog + "}\n"
     prog
 }
-
 func compile_s_source_to_object(string source_file, string output_file) int {
     source := read_file(source_file)
     if !source.ok {
@@ -92,7 +84,6 @@ func compile_s_source_to_object(string source_file, string output_file) int {
     }
     return backend_build_object(source_file, output_file, "")
 }
-
 func compile_s_source_to_executable(string source_file, string output_file) int {
     source := read_file(source_file)
     if !source.ok {
@@ -100,19 +91,16 @@ func compile_s_source_to_executable(string source_file, string output_file) int 
     }
     return backend_build(source_file, output_file, "", false)
 }
-
 func make_bootstrap_compiler_config() codegen_config {
     codegen_config {
         target_arch "x86-64", code_section_align 4096 as int64, data_section_align 8 as int64, emit_debug_info false, optimize_size true
     }
 }
-
 func make_debug_compiler_config() codegen_config {
     codegen_config {
         target_arch "x86-64", code_section_align 16 as int64, data_section_align 8 as int64, emit_debug_info true, optimize_size false
     }
 }
-
 func (compiler* s_compiler) print_compilation_stats() string {
     report := ""
     report = report + "=== S Compiler Compilation Statistics ===\n"
@@ -123,7 +111,6 @@ func (compiler* s_compiler) print_compilation_stats() string {
     report = report + "Total size: " + ((compiler.total_code_size + compiler.total_data_size) as string) + " bytes\n"
     report
 }
-
 func verify_bootstrap_convergence(string stage2_path, string stage3_path) bool {
     stage2 := read_file(stage2_path)
     stage3 := read_file(stage3_path)
@@ -132,7 +119,6 @@ func verify_bootstrap_convergence(string stage2_path, string stage3_path) bool {
     }
     return stage2.data == stage3.data
 }
-
 func verify_no_seed_dependency(string binary_path) bool {
     binary := read_file(binary_path)
     if !binary.ok {
@@ -149,19 +135,16 @@ func verify_no_seed_dependency(string binary_path) bool {
     }
     return true
 }
-
 func test_minimal_program_compilation() string {
     source := generate_minimal_s_program()
     compiler := make_s_compiler("x86-64")
     "test_minimal_program_compilation: passed"
 }
-
 func test_loop_program_compilation() string {
     source := generate_loop_s_program()
     compiler := make_s_compiler("x86-64")
     "test_loop_program_compilation: passed"
 }
-
 func test_full_bootstrap() string {
     result := ""
     result = result + "Starting bootstrap test...\n"
@@ -182,10 +165,8 @@ func test_full_bootstrap() string {
     }
     result
 }
-
 func contains_text(string haystack, string needle) bool {
     if needle == "" {
         return true
     }
     return std.training_io.find_substr(haystack, needle) >= 0
-}

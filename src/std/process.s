@@ -6,13 +6,11 @@ struct process {
     pid: int
     status: int
 }
-
 struct process_result {
     exit_code: int
     stdout: string
     stderr: string
 }
-
 func run_command(string cmd_line) (int, string) {
     argv := parse_command_line(cmd_line)
     if len(argv) == 0 {
@@ -29,15 +27,12 @@ func run_command(string cmd_line) (int, string) {
     exit_code := wait_for_process(pid)
     return exit_code, ""
 }
-
 func run_command_capture(string cmd_line) (int, string) {
     0, ""
 }
-
 func run_command_io(string cmd_line, string stdin_data) (int, string, string) {
     0, "", ""
 }
-
 func wait_for_process(int pid) int {
     status_ptr := 0
     ret := syscall.waitpid(pid, status_ptr, 0)
@@ -46,15 +41,12 @@ func wait_for_process(int pid) int {
     }
     0
 }
-
 func parse_command_line(string cmd_line) string[] {
     string[]{}
 }
-
 func find_in_path(string program) (string, bool) {
     "", false
 }
-
 func compile_to_ir(string compiler_bin, string source_file, string output_ir) (int, string) {
     cmd := compiler_bin + " " + source_file + " " + output_ir
     exit_code, err := run_command(cmd)
@@ -63,7 +55,6 @@ func compile_to_ir(string compiler_bin, string source_file, string output_ir) (i
     }
     return 0, ""
 }
-
 func emit_ir_binary(string ir_codegen_bin, string input_ir, string output_bin) (int, string) {
     cmd := ir_codegen_bin + " --emit-bin " + input_ir + " -o " + output_bin
     exit_code, err := run_command(cmd)
@@ -72,7 +63,5 @@ func emit_ir_binary(string ir_codegen_bin, string input_ir, string output_bin) (
     }
     return 0, ""
 }
-
 func pipe_commands(string cmd1, string cmd2) (int, string) {
     0, ""
-}

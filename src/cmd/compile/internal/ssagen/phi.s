@@ -6,14 +6,12 @@ struct phi_input {
     int pred
     int value
 }
-
 struct lowered_phi {
     int target
     int[] incoming
     bool trivial
     int chosen
 }
-
 func lower_phi(int target, phi_input[] inputs) lowered_phi {
     incoming := int[]()
     i := 0
@@ -40,7 +38,5 @@ func lower_phi(int target, phi_input[] inputs) lowered_phi {
         target: target, incoming incoming, trivial trivial, chosen chosen,
     }
 }
-
 func phi_is_trivial(lowered_phi p) bool {
     p.trivial
-}

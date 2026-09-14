@@ -11,14 +11,12 @@ enum token_kind {
     symbol,
     eof,
 }
-
 struct token {
     kind token_kind
     string value
     int line
     int column
 }
-
 func token_kind_name(token_kind kind) string {
     switch kind {
         token_kind::ident : "ident",
@@ -29,7 +27,6 @@ func token_kind_name(token_kind kind) string {
         token_kind::eof : "eof",
     }
 }
-
 func dump_tokens(token[] tokens) string {
     out := ""
     for _for_idx_31 := 0; _for_idx_31 < len(tokens); _for_idx_31++ {
@@ -49,7 +46,6 @@ func dump_tokens(token[] tokens) string {
     }
     out
 }
-
 func is_keyword(string text) bool {
     switch text {
         "package" : true,
@@ -84,4 +80,3 @@ func is_keyword(string text) bool {
         "in" : true,
         _ : false,
     }
-}

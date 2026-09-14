@@ -1,5 +1,4 @@
 package compile.internal.ownership
-
 func test_move_semantics() bool {
     ctx := new_ownership_context()
     checker := new_move_checker(ctx)
@@ -25,7 +24,6 @@ func test_move_semantics() bool {
     }
     return true
 }
-
 func test_borrow_semantics() bool {
     ctx := new_ownership_context()
     checker := new_borrow_checker(ctx)
@@ -61,7 +59,6 @@ func test_borrow_semantics() bool {
     }
     return true
 }
-
 func test_drop_elaboration() bool {
     ctx := new_ownership_context()
     elaborator := new_drop_elaborator(ctx)
@@ -85,7 +82,6 @@ case drop_call*:
     }
     return true
 }
-
 func test_ownership_state_transitions() bool {
     ctx := new_ownership_context()
     ctx.set_state_at(0, "x", state_owned)
@@ -102,7 +98,6 @@ func test_ownership_state_transitions() bool {
     }
     return true
 }
-
 func test_control_flow_merge() bool {
     ctx := new_ownership_context()
     checker := new_move_checker(ctx)
@@ -118,7 +113,6 @@ func test_control_flow_merge() bool {
     }
     return true
 }
-
 func test_partial_move() bool {
     ctx := new_ownership_context()
     ctx.set_state_at(0, "s.a", state_moved)
@@ -129,7 +123,6 @@ func test_partial_move() bool {
     }
     return true
 }
-
 func test_complete_ownership_pipeline() bool {
     oa := new_ownership_analysis()
     test_stmts := interface{}[]{
@@ -145,7 +138,6 @@ func test_complete_ownership_pipeline() bool {
     }
     return true
 }
-
 func run_all_tests() bool {
     tests := []struct {
         name string
@@ -166,4 +158,3 @@ func run_all_tests() bool {
         }
     }
     return all_passed
-}

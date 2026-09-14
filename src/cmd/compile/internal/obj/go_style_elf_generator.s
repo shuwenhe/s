@@ -13,7 +13,6 @@ struct go_style_elf_generator {
     elf_symbol[] symbols
     string string_table
 }
-
 func make_go_style_elf_generator(
     elf_writer* writer,
     symbol_table* symtab,
@@ -29,7 +28,6 @@ func make_go_style_elf_generator(
         string_table: "",
     }
 }
-
 func (gen* go_style_elf_generator) write_section_header(string name, int32 type, int64 flags, int64 size) int32 {
     name_offset := gen.add_to_string_table(name)
     section := elf_section_header {
@@ -38,13 +36,11 @@ func (gen* go_style_elf_generator) write_section_header(string name, int32 type,
     gen.sections = append(gen.sections, section)
     (len(gen.sections) - 1) as int32
 }
-
 func (gen* go_style_elf_generator) add_to_string_table(string s) int32 {
     result := len(gen.string_table) as int32
     gen.string_table = gen.string_table + s + "\x00"
     result
 }
-
 func (gen* go_style_elf_generator) write_symbol(
     string name,
     int64 value,
@@ -61,7 +57,6 @@ func (gen* go_style_elf_generator) write_symbol(
     gen.symbols = append(gen.symbols, sym)
     (len(gen.symbols) - 1) as int32
 }
-
 func (gen* go_style_elf_generator) create_standard_sections() {
     gen.write_section_header("", 0 as int32, 0 as int64, 0 as int64)
     gen.write_section_header(".text", 1 as int32, 6 as int64, (len(gen.text_section) as int64))
@@ -73,7 +68,6 @@ func (gen* go_style_elf_generator) create_standard_sections() {
     gen.write_section_header(".shstrtab", 3 as int32, 0 as int64, (len(gen.string_table) as int64))
     gen.write_section_header(".rel.text", 4 as int32, 0 as int64, 0 as int64)
 }
-
 func (gen* go_style_elf_generator) create_elf_header() int8[] {
     header := int8[]()()
     header = append(header, 0x7f as int8)
@@ -134,11 +128,9 @@ func (gen* go_style_elf_generator) create_elf_header() int8[] {
     header = append(header, 0 as int8)
     header
 }
-
 func (gen* go_style_elf_generator) add_symbol_entry(string name, int64 value, int64 size, int binding, int type) {
     gen.write_symbol(name, value, size, binding as int8, type as int8, 1 as int16)
 }
-
 func (gen* go_style_elf_generator) generate_elf_object() int8[] {
     gen.create_standard_sections()
     gen.add_symbol_entry("", 0 as int64, 0 as int64, 0, 0)
@@ -165,12 +157,10 @@ func (gen* go_style_elf_generator) generate_elf_object() int8[] {
     result = append_bytes_into_result(result, strtab)
     result
 }
-
 func (gen* go_style_elf_generator) generate_elf_executable() int8[] {
     executable := gen.generate_elf_object()
     executable
 }
-
 func append_bytes_into_result(int8[] result, int8[] bytes) int8[] {
     res := result
     i := 0
@@ -180,7 +170,6 @@ func append_bytes_into_result(int8[] result, int8[] bytes) int8[] {
     }
     res
 }
-
 func section_header_to_bytes(elf_section_header sec) int8[] {
     result := int8[]()()
     name_bytes := int32_to_bytes(sec.name)
@@ -205,7 +194,6 @@ func section_header_to_bytes(elf_section_header sec) int8[] {
     result = append_bytes_into_result(result, entsize_bytes)
     result
 }
-
 func symbol_to_bytes(elf_symbol sym) int8[] {
     result := int8[]()()
     name_bytes := int32_to_bytes(sym.name)
@@ -220,7 +208,6 @@ func symbol_to_bytes(elf_symbol sym) int8[] {
     result = append_bytes_into_result(result, size_bytes)
     result
 }
-
 func string_table_to_bytes(string strtab) int8[] {
     result := int8[]()()
     i := 0
@@ -230,7 +217,6 @@ func string_table_to_bytes(string strtab) int8[] {
     }
     result
 }
-
 func int32_to_bytes(int32 value) int8[] {
     result := int8[]()()
     result = append(result, (value as int8))
@@ -239,14 +225,12 @@ func int32_to_bytes(int32 value) int8[] {
     result = append(result, ((value >> 24) as int8))
     result
 }
-
 func int16_to_bytes(int16 value) int8[] {
     result := int8[]()()
     result = append(result, (value as int8))
     result = append(result, ((value >> 8) as int8))
     result
 }
-
 func int64_to_bytes(int64 value) int8[] {
     result := int8[]()()
     i := 0
@@ -255,4 +239,3 @@ func int64_to_bytes(int64 value) int8[] {
         i = i + 1
     }
     result
-}

@@ -1,2 +1,1 @@
 func intrinsic_dispatch() {
-}
