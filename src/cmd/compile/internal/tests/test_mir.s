@@ -7,6 +7,10 @@ import (
     "std.io"
 )
 
+func mir_point_count(mir_graph graph) int {
+    return mir.mir_point_count(graph)
+}
+
 func run_mir_suite() int {
     if mir.trace_branch("flag", "then", "else") != "branch flag |   then then |   else else" {
         return 1
@@ -116,10 +120,10 @@ func run_mir_suite() int {
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
     point_map := mir.build_mir_point_map(diamond)
-    if mir.mir_point_count(diamond) != 8 {
+    if mir_point_count(diamond) != 8 {
         return 1
     }
-    if len(point_map.points) != mir.mir_point_count(diamond) {
+    if len(point_map.points) != mir_point_count(diamond) {
         return 1
     }
     if mir.mir_point_text(diamond, point_map.points[0]) != "BB0(entry):stmt0" { return 1 }
