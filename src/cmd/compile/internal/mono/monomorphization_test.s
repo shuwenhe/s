@@ -318,7 +318,7 @@ func run_generic_receiver_method_monomorphization_test() int {
                 params: param[] {},
                 return_type: option::some("T"),
             },
-            body: option::some(block_expr { statements: stmt[] {}, final_expr option::some(expr::member(member_expr {
+            body: option::some(block_expr { statements: stmt[] {}, final_expr: option::some(expr::member(member_expr {
                 target: std.prelude.box(expr::name(name_expr { name: "b", inferred_type: option::some("Box[T]") })),
                 member: "value",
                 inferred_type: option::some("T"),
@@ -443,7 +443,7 @@ func run_recursive_generic_method_monomorphization_test() int {
                 params: param[] {},
                 return_type: option::some("T"),
             },
-            body: option::some(block_expr { statements: stmt[] {}, final_expr option::some(wrap_call), inferred_type option::some("T") }),
+            body: option::some(block_expr { statements: stmt[] {}, final_expr: option::some(wrap_call), inferred_type: option::some("T") }),
             is_public: false,
         },
     }
