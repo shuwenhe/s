@@ -9,6 +9,7 @@ struct generic_instance_key {
     string function_name
     string[] type_args
 }
+
 struct mono_instance {
     string item_kind
     string receiver_type
@@ -16,41 +17,49 @@ struct mono_instance {
     string instance_name
     string[] type_args
 }
+
 struct mono_cache {
     mono_instance[] instances
 }
+
 struct mono_cache_result {
     mono_cache cache
     string instance_name
 }
+
 struct mono_ownership_summary {
     string type_name
     string ownership
     bool copy
     bool drop
 }
+
 struct mono_function_summary {
     string instance_name
     mono_ownership_summary[] params
     mono_ownership_summary result
 }
+
 struct monomorphize_file_result {
     file source_file
     mono_cache cache
     int invariant_errors
 }
+
 struct mono_work_item {
     string item_kind
     string receiver_type
     string generic_name
     string[] type_args
 }
+
 struct mono_context {
     mono_cache cache
     mono_work_item[] worklist
     string[] processed
     function_decl[] generated
 }
+
 func new_context() mono_context {
     mono_context {
         cache: new_cache(),
@@ -59,6 +68,7 @@ func new_context() mono_context {
         generated: function_decl[] {},
     }
 }
+
 func mono_work_key(string item_kind, string receiver_type, string generic_name, string[] type_args) string {
     key := item_kind + ":" + receiver_type + ":" + generic_name
     i := 0
@@ -68,6 +78,7 @@ func mono_work_key(string item_kind, string receiver_type, string generic_name, 
     }
     key
 }
+
 func is_work_processed(mono_context ctx, string item_kind, string receiver_type, string generic_name, string[] type_args) bool {
     key := mono_work_key(item_kind, receiver_type, generic_name, type_args)
     i := 0
@@ -79,17 +90,21 @@ func is_work_processed(mono_context ctx, string item_kind, string receiver_type,
     }
     false
 }
+
 func mark_work_processed(mono_context ctx, string item_kind, string receiver_type, string generic_name, string[] type_args) mono_context {
     key := mono_work_key(item_kind, receiver_type, generic_name, type_args)
     ctx.processed = append(ctx.processed, key)
     ctx
 }
+
 func new_cache() mono_cache {
     mono_cache { instances: mono_instance[] {} }
 }
+
 func make_instance_key(string generic_name, string[] type_args) generic_instance_key {
     generic_instance_key { function_name: generic_name, type_args: type_args }
 }
+
 func make_instance_name(string generic_name, string[] type_args) string {
     name := generic_name + "__mono"
     i := 0
@@ -99,6 +114,7 @@ func make_instance_name(string generic_name, string[] type_args) string {
     }
     name
 }
+
 func encode_type(string type_name) string {
     out := ""
     i := 0
@@ -114,6 +130,7 @@ func encode_type(string type_name) string {
     if out == "" { return "unknown" }
     out
 }
+
 func same_type_args(string[] left, string[] right) bool {
     if len(left) != len(right) { return false }
     i := 0
@@ -123,9 +140,11 @@ func same_type_args(string[] left, string[] right) bool {
     }
     true
 }
+
 func mono_cache_lookup(mono_cache cache, string generic_name, string[] type_args) string {
     mono_cache_lookup_item(cache, "function", "", generic_name, type_args)
 }
+
 func mono_cache_lookup_item(mono_cache cache, string item_kind, string receiver_type, string generic_name, string[] type_args) string {
     i := 0
     for i < len(cache.instances) {
@@ -137,12 +156,15 @@ func mono_cache_lookup_item(mono_cache cache, string item_kind, string receiver_
     }
     ""
 }
+
 func mono_cache_lookup_key(mono_cache cache, generic_instance_key key) string {
     mono_cache_lookup(cache, key.function_name, key.type_args)
 }
+
 func mono_cache_get_or_create(mono_cache cache, string generic_name, string[] type_args) mono_cache_result {
     mono_cache_get_or_create_item(cache, "function", "", generic_name, type_args)
 }
+
 func mono_cache_get_or_create_item(mono_cache cache, string item_kind, string receiver_type, string generic_name, string[] type_args) mono_cache_result {
     existing := mono_cache_lookup_item(cache, item_kind, receiver_type, generic_name, type_args)
     if existing != "" { return mono_cache_result { cache: cache, instance_name: existing } }
@@ -156,12 +178,15 @@ func mono_cache_get_or_create_item(mono_cache cache, string item_kind, string re
     })
     mono_cache_result { cache: cache, instance_name: name }
 }
+
 func mono_cache_get_or_create_key(mono_cache cache, generic_instance_key key) mono_cache_result {
     mono_cache_get_or_create(cache, key.function_name, key.type_args)
 }
+
 func mono_cache_count(mono_cache cache) int {
     len(cache.instances)
 }
+
 func monomorphize_file(source_file file) monomorphize_file_result {
     ctx := new_context()
     extra_items := item[]()
@@ -214,6 +239,7 @@ func monomorphize_file(source_file file) monomorphize_file_result {
     }
     monomorphize_file_result { file: file, cache: ctx.cache, invariant_errors: verify_monomorphized_file(file) }
 }
+
 func should_keep_after_monomorphization(item value) bool {
     switch value {
         item.function(fn) : len(fn.sig.generics) == 0,
@@ -221,6 +247,7 @@ func should_keep_after_monomorphization(item value) bool {
         _ : true,
     }
 }
+
 func collect_item_instances_ctx(item value, item[] all_items, mono_context ctx) mono_context {
     switch value {
         item.function(fn) : {
@@ -238,6 +265,7 @@ func collect_item_instances_ctx(item value, item[] all_items, mono_context ctx) 
         _ : ctx,
     }
 }
+
 func collect_block_instances_ctx(block_expr block, item[] all_items, mono_context ctx) mono_context {
     i := 0
     for i < len(block.statements) {
@@ -250,6 +278,7 @@ func collect_block_instances_ctx(block_expr block, item[] all_items, mono_contex
     }
     ctx
 }
+
 func collect_stmt_instances_ctx(stmt value, item[] all_items, mono_context ctx) mono_context {
     switch value {
         stmt.let(v) : collect_expr_instances_ctx(v.value, all_items, ctx),
@@ -272,6 +301,7 @@ func collect_stmt_instances_ctx(stmt value, item[] all_items, mono_context ctx) 
         stmt.sroutine(v) : collect_expr_instances_ctx(v.expr, all_items, ctx),
     }
 }
+
 func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) mono_context {
     switch value {
         expr.borrow(v) : collect_expr_instances_ctx(v.target.value, all_items, ctx),
@@ -333,6 +363,7 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) 
         _ : ctx,
     }
 }
+
 func collect_call_instance_ctx(call_expr call, item[] all_items, mono_context ctx) mono_context {
     if len(call.type_args) == 0 {
         return ctx
@@ -359,6 +390,7 @@ func collect_call_instance_ctx(call_expr call, item[] all_items, mono_context ct
     }
     ctx
 }
+
 func collect_method_call_instance_ctx(call_expr call, item[] all_items, mono_context ctx) mono_context {
     if len(call.type_args) == 0 {
         return ctx
@@ -401,6 +433,7 @@ func collect_method_call_instance_ctx(call_expr call, item[] all_items, mono_con
     }
     ctx
 }
+
 func collect_for_instances_ctx(for_expr v, item[] all_items, mono_context ctx) mono_context {
     switch v.init {
         option.some(s) : ctx = collect_stmt_instances_ctx(s.value, all_items, ctx),
@@ -420,6 +453,7 @@ func collect_for_instances_ctx(for_expr v, item[] all_items, mono_context ctx) m
     }
     collect_block_instances_ctx(v.body, all_items, ctx)
 }
+
 func collect_item_instances(item value, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
     switch value {
         item.function(fn) : {
@@ -437,6 +471,7 @@ func collect_item_instances(item value, item[] all_items, mono_cache cache, mono
         _ : cache,
     }
 }
+
 func collect_block_instances(block_expr block, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
     i := 0
     for i < len(block.statements) {
@@ -449,6 +484,7 @@ func collect_block_instances(block_expr block, item[] all_items, mono_cache cach
     }
     cache
 }
+
 func collect_stmt_instances(stmt value, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
     switch value {
         stmt.let(v) : collect_expr_instances(v.value, all_items, cache, worklist),
@@ -471,6 +507,7 @@ func collect_stmt_instances(stmt value, item[] all_items, mono_cache cache, mono
         stmt.sroutine(v) : collect_expr_instances(v.expr, all_items, cache, worklist),
     }
 }
+
 func collect_expr_instances(expr value, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
     switch value {
         expr.borrow(v) : collect_expr_instances(v.target.value, all_items, cache, worklist),
@@ -531,6 +568,7 @@ func collect_expr_instances(expr value, item[] all_items, mono_cache cache, mono
         _ : cache,
     }
 }
+
 func collect_call_instance(call_expr call, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
     if len(call.type_args) == 0 {
         return cache
@@ -557,6 +595,7 @@ func collect_call_instance(call_expr call, item[] all_items, mono_cache cache, m
     }
     cache
 }
+
 func collect_for_instances(for_expr v, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
     switch v.init {
         option.some(s) : cache = collect_stmt_instances(s.value, all_items, cache, worklist),
@@ -576,6 +615,7 @@ func collect_for_instances(for_expr v, item[] all_items, mono_cache cache, mono_
     }
     collect_block_instances(v.body, all_items, cache, worklist)
 }
+
 func find_generic_function(item[] items, string name) function_decl {
     i := 0
     for i < len(items) {
@@ -592,6 +632,7 @@ func find_generic_function(item[] items, string name) function_decl {
     function_decl empty
     empty
 }
+
 func find_generic_method(item[] items, string receiver_type, string name) receiver_method_decl {
     target_owner := compile.internal.typesys.base_type_name(receiver_type)
     i := 0
@@ -610,6 +651,7 @@ func find_generic_method(item[] items, string receiver_type, string name) receiv
     receiver_method_decl empty
     empty
 }
+
 func verify_monomorphized_file(source_file file) int {
     errors := 0
     i := 0
@@ -631,6 +673,7 @@ func verify_monomorphized_file(source_file file) int {
     }
     errors
 }
+
 func finalize_monomorphized_function(function_decl fn) function_decl {
     body := option.none
     switch fn.body {
@@ -639,6 +682,7 @@ func finalize_monomorphized_function(function_decl fn) function_decl {
     }
     function_decl { sig: fn.sig, body body, is_public fn.is_public }
 }
+
 func finalize_monomorphized_method(receiver_method_decl method) receiver_method_decl {
     receiver_method_decl {
         receiver_name: method.receiver_name,
@@ -646,6 +690,7 @@ func finalize_monomorphized_method(receiver_method_decl method) receiver_method_
         method: finalize_monomorphized_function(method.method),
     }
 }
+
 func finalize_block(block_expr block) block_expr {
     stmts := stmt[]()
     i := 0
@@ -660,6 +705,7 @@ func finalize_block(block_expr block) block_expr {
     }
     block_expr { statements: stmts, final_expr final_expr, inferred_type block.inferred_type }
 }
+
 func finalize_stmt(stmt value) stmt {
     switch value {
         stmt.let(v) : stmt::let(var_stmt { name: v.name, type_name v.type_name, value finalize_expr(v.value) }),
@@ -679,6 +725,7 @@ func finalize_stmt(stmt value) stmt {
         stmt.sroutine(v) : stmt::sroutine(sroutine_stmt { expr: finalize_expr(v.expr) }),
     }
 }
+
 func finalize_expr(expr value) expr {
     switch value {
         expr.int(v) : expr::int(v),
@@ -737,6 +784,7 @@ func finalize_expr(expr value) expr {
         }
     }
 }
+
 func finalize_for_expr(for_expr v) expr {
     init := option.none
     switch v.init {
@@ -760,6 +808,7 @@ func finalize_for_expr(for_expr v) expr {
     }
     expr::for(for_expr { init: init, condition condition, post post, names v.names, iterable iterable, body finalize_block(v.body), inferred_type v.inferred_type })
 }
+
 func verify_function_no_generics(function_decl fn) int {
     errors := 0
     i := 0
@@ -783,6 +832,7 @@ func verify_function_no_generics(function_decl fn) int {
     }
     errors
 }
+
 func verify_block_no_generics(block_expr block) int {
     errors := 0
     i := 0
@@ -797,6 +847,7 @@ func verify_block_no_generics(block_expr block) int {
     errors = errors + verify_optional_type_no_generics(block.inferred_type)
     errors
 }
+
 func verify_stmt_no_generics(stmt value) int {
     switch value {
         stmt.let(v) : verify_optional_type_no_generics(v.type_name) + verify_expr_no_generics(v.value),
@@ -814,6 +865,7 @@ func verify_stmt_no_generics(stmt value) int {
         stmt.sroutine(v) : verify_expr_no_generics(v.expr),
     }
 }
+
 func verify_expr_no_generics(expr value) int {
     switch value {
         expr.int(v) : verify_optional_type_no_generics(v.inferred_type),
@@ -865,6 +917,7 @@ func verify_expr_no_generics(expr value) int {
         }
     }
 }
+
 func verify_call_no_generics(call_expr v) int {
     errors := verify_optional_type_no_generics(v.inferred_type)
     if len(v.type_args) > 0 {
@@ -878,6 +931,7 @@ func verify_call_no_generics(call_expr v) int {
     }
     errors
 }
+
 func verify_for_no_generics(for_expr v) int {
     errors := verify_optional_type_no_generics(v.inferred_type)
     switch v.init {
@@ -898,6 +952,7 @@ func verify_for_no_generics(for_expr v) int {
     }
     errors + verify_block_no_generics(v.body)
 }
+
 func verify_optional_type_no_generics(option[string] type_name) int {
     switch type_name {
         option.some(ty) : {
@@ -907,6 +962,7 @@ func verify_optional_type_no_generics(option[string] type_name) int {
         option.none : 0,
     }
 }
+
 func looks_like_generic_residue(string type_name) bool {
     clean := compile.internal.typesys.parse_type(type_name)
     if clean == "T" || clean == "U" || clean == "V" {
@@ -914,6 +970,7 @@ func looks_like_generic_residue(string type_name) bool {
     }
     contains_generic_atom(clean, "T") || contains_generic_atom(clean, "U") || contains_generic_atom(clean, "V")
 }
+
 func contains_generic_atom(string text, string atom) bool {
     i := 0
     for i < len(text) {
@@ -928,9 +985,11 @@ func contains_generic_atom(string text, string atom) bool {
     }
     false
 }
+
 func is_ident_char(string ch) bool {
     (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || (ch >= "0" && ch <= "9") || ch == "_"
 }
+
 func substitute_type(string type_name, string[] generic_names, string[] type_args) string {
     clean := compile.internal.typesys.parse_type(type_name)
     i := 0
@@ -969,12 +1028,14 @@ func substitute_type(string type_name, string[] generic_names, string[] type_arg
     }
     built + "]"
 }
+
 func substitute_optional_type(option[string] type_name, string[] generic_names, string[] type_args) option[string] {
     switch type_name {
         option.some(value) : option.some(substitute_type(value, generic_names, type_args)),
         option.none : option.none,
     }
 }
+
 func find_char(string text, string needle) int {
     i := 0
     for i < len(text) {
@@ -983,6 +1044,7 @@ func find_char(string text, string needle) int {
     }
     -1
 }
+
 func generic_names_from_sig(string[] generics) string[] {
     generic_names := string[] {}
     i := 0
@@ -995,6 +1057,7 @@ func generic_names_from_sig(string[] generics) string[] {
     }
     generic_names
 }
+
 func method_generic_names(receiver_method_decl source) string[] {
     names := generic_names_from_sig(source.method.sig.generics)
     if len(names) > 0 {
@@ -1002,9 +1065,11 @@ func method_generic_names(receiver_method_decl source) string[] {
     }
     compile.internal.typesys.extract_type_args(source.receiver_type)
 }
+
 func specialize_function(function_decl source, string[] type_args) function_decl {
     specialize_function_with_names(source, type_args, generic_names_from_sig(source.sig.generics))
 }
+
 func specialize_function_with_names(function_decl source, string[] type_args, string[] generic_names) function_decl {
     params := param[] {}
     i := 0
@@ -1033,6 +1098,7 @@ func specialize_function_with_names(function_decl source, string[] type_args, st
         is_public: source.is_public,
     }
 }
+
 func specialize_method(receiver_method_decl source, string[] type_args) receiver_method_decl {
     generic_names := method_generic_names(source)
     receiver_method_decl {
@@ -1041,6 +1107,7 @@ func specialize_method(receiver_method_decl source, string[] type_args) receiver
         method: specialize_function_with_names(source.method, type_args, generic_names),
     }
 }
+
 func substitute_block(block_expr block, string[] generic_names, string[] type_args) block_expr {
     stmts := stmt[]()
     i := 0
@@ -1055,6 +1122,7 @@ func substitute_block(block_expr block, string[] generic_names, string[] type_ar
     }
     block_expr { statements: stmts, final_expr final_expr, inferred_type substitute_optional_type(block.inferred_type, generic_names, type_args) }
 }
+
 func substitute_stmt(stmt value, string[] generic_names, string[] type_args) stmt {
     switch value {
         stmt.let(v) : stmt::let(var_stmt { name: v.name, type_name substitute_optional_type(v.type_name, generic_names, type_args), value substitute_expr(v.value, generic_names, type_args) }),
@@ -1074,6 +1142,7 @@ func substitute_stmt(stmt value, string[] generic_names, string[] type_args) stm
         stmt.sroutine(v) : stmt::sroutine(sroutine_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
     }
 }
+
 func substitute_expr(expr value, string[] generic_names, string[] type_args) expr {
     switch value {
         expr.int(v) : expr::int(v),
@@ -1128,6 +1197,7 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
         expr.map(v) : substitute_map_expr(v, generic_names, type_args),
     }
 }
+
 func substitute_for_expr(for_expr v, string[] generic_names, string[] type_args) expr {
     init := option.none
     switch v.init {
@@ -1151,6 +1221,7 @@ func substitute_for_expr(for_expr v, string[] generic_names, string[] type_args)
     }
     expr::for(for_expr { init: init, condition condition, post post, names v.names, iterable iterable, body substitute_block(v.body, generic_names, type_args), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) })
 }
+
 func substitute_switch(switch_expr v, string[] generic_names, string[] type_args) switch_expr {
     arms := switch_arm[]()
     i := 0
@@ -1160,6 +1231,7 @@ func substitute_switch(switch_expr v, string[] generic_names, string[] type_args
     }
     switch_expr { subject: std.prelude.box(substitute_expr(v.subject.value, generic_names, type_args)), arms arms, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }
 }
+
 func substitute_array_expr(array_literal v, string[] generic_names, string[] type_args) expr {
     items := expr[]()
     i := 0
@@ -1169,6 +1241,7 @@ func substitute_array_expr(array_literal v, string[] generic_names, string[] typ
     }
     expr::array(array_literal { type_text: substitute_optional_type(v.type_text, generic_names, type_args), items items })
 }
+
 func substitute_map_expr(map_literal v, string[] generic_names, string[] type_args) expr {
     entries := map_entry[]()
     i := 0
@@ -1178,6 +1251,7 @@ func substitute_map_expr(map_literal v, string[] generic_names, string[] type_ar
     }
     expr::map(map_literal { type_text: substitute_optional_type(v.type_text, generic_names, type_args), entries entries })
 }
+
 func summarize_type(string type_name) mono_ownership_summary {
     mono_ownership_summary {
         type_name: type_name,
@@ -1186,6 +1260,7 @@ func summarize_type(string type_name) mono_ownership_summary {
         drop: compile.internal.typesys.requires_drop(type_name),
     }
 }
+
 func summarize_instance(function_decl instance) mono_function_summary {
     params := mono_ownership_summary[] {}
     i := 0
@@ -1199,6 +1274,7 @@ func summarize_instance(function_decl instance) mono_function_summary {
     }
     mono_function_summary { instance_name: instance.sig.name, params: params, result: result }
 }
+
 func verify_monomorphized_file_with_details(source_file file) int {
     errors := verify_monomorphized_file(file)
     i := 0
@@ -1215,6 +1291,7 @@ func verify_monomorphized_file_with_details(source_file file) int {
     }
     errors
 }
+
 func verify_function_resolved_calls(function_decl fn) int {
     errors := 0
     switch fn.body {
@@ -1223,6 +1300,7 @@ func verify_function_resolved_calls(function_decl fn) int {
     }
     errors
 }
+
 func verify_block_resolved_calls(block_expr block) int {
     errors := 0
     i := 0
@@ -1236,6 +1314,7 @@ func verify_block_resolved_calls(block_expr block) int {
     }
     errors
 }
+
 func verify_stmt_resolved_calls(stmt value) int {
     switch value {
         stmt.let(v) : verify_expr_resolved_calls(v.value),
@@ -1253,6 +1332,7 @@ func verify_stmt_resolved_calls(stmt value) int {
         stmt.sroutine(v) : verify_expr_resolved_calls(v.expr),
     }
 }
+
 func verify_expr_resolved_calls(expr value) int {
     switch value {
         expr.call(v) : {
@@ -1333,4 +1413,3 @@ func verify_expr_resolved_calls(expr value) int {
             errors
         }
         _ : 0,
-    }

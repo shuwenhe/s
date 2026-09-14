@@ -1,1 +1,0 @@
-func python_bridge() {

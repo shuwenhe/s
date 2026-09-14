@@ -8,6 +8,7 @@ func ssa_gen_simd_value(ssa_value v) bool {
     }
     false
 }
+
 func simd_opcode_class(string op) string {
     if starts_with(op, "OpAMD64VAES") {
         return "aes"
@@ -29,6 +30,7 @@ func simd_opcode_class(string op) string {
     }
     "non-simd"
 }
+
 func starts_with(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
@@ -40,4 +42,3 @@ func starts_with(string text, string prefix) bool {
         }
         i = i + 1
     }
-    true

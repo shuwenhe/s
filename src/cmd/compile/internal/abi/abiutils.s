@@ -6,17 +6,20 @@ struct reg_amounts {
     int int_regs
     int float_regs
 }
+
 struct abi_config {
     int offset_for_locals
     reg_amounts reg_amounts
     int which
 }
+
 struct abi_param_assignment {
     string type_name
     string name
     int[] registers
     int offset
 }
+
 struct abi_param_result_info {
     abi_param_assignment[] inparams
     abi_param_assignment[] outparams
@@ -26,20 +29,24 @@ struct abi_param_result_info {
     int out_registers_used
     config abi_config
 }
+
 struct register_layout {
     string[] types
     int[] offsets
 }
+
 struct assign_state {
     r_total reg_amounts
     r_used reg_amounts
     int stack_offset
     int spill_offset
 }
+
 struct reg_alloc_result {
     bool ok
     int[] regs
 }
+
 func new_abi_config(int i_regs_count, int f_regs_count, int offset_for_locals, int which) abi_config {
     abi_config {
         offset_for_locals: offset_for_locals, reg_amounts reg_amounts {
@@ -47,48 +54,62 @@ func new_abi_config(int i_regs_count, int f_regs_count, int offset_for_locals, i
         }, which which,
     }
 }
+
 func config_which(abi_config config) int {
     config.which
 }
+
 func locals_offset(abi_config config) int {
     config.offset_for_locals
 }
+
 func float_index_for(abi_config config, int r) int {
     r - config.reg_amounts.int_regs
 }
+
 func in_params(abi_param_result_info info) abi_param_assignment[] {
     info.inparams
 }
+
 func out_params(abi_param_result_info info) abi_param_assignment[] {
     info.outparams
 }
+
 func in_param(abi_param_result_info info, int index) abi_param_assignment {
     info.inparams[index]
 }
+
 func out_param(abi_param_result_info info, int index) abi_param_assignment {
     info.outparams[index]
 }
+
 func spill_area_offset(abi_param_result_info info) int {
     info.offset_to_spill_area
 }
+
 func spill_area_size(abi_param_result_info info) int {
     info.spill_area_size
 }
+
 func in_registers_used(abi_param_result_info info) int {
     info.in_registers_used
 }
+
 func out_registers_used(abi_param_result_info info) int {
     info.out_registers_used
 }
+
 func arg_width(abi_param_result_info info) int {
     info.spill_area_size + info.offset_to_spill_area - locals_offset(info.config)
 }
+
 func abi_param_offset(abi_param_assignment assignment) int {
     if len(assignment.registers) > 0 {
         return -1
     }
     assignment.offset
 }
+
 func frame_offset(abi_param_assignment assignment, abi_param_result_info info) int {
     if assignment.offset < 0 {
         return -1
@@ -98,6 +119,7 @@ func frame_offset(abi_param_assignment assignment, abi_param_result_info info) i
     }
     assignment.offset + spill_area_offset(info) - locals_offset(info.config)
 }
+
 func reg_string(reg_amounts amounts, int r) string {
     if r < amounts.int_regs {
         return "I" + to_string(r
@@ -107,6 +129,7 @@ func reg_string(reg_amounts amounts, int r) string {
     }
     "<?>" + to_string(r)
 }
+
 func assignment_string(abi_param_assignment assignment, abi_config config, bool extra) string {
     regs := "R{"
     offname := "spilloffset"
@@ -127,6 +150,7 @@ func assignment_string(abi_param_assignment assignment, abi_config config, bool 
     }
     regs + " } " + offname + ": " + to_string(assignment.offset) + " typ: " + assignment.type_name
 }
+
 func info_string(abi_param_result_info info) string {
     out := ""
     i := 0
@@ -141,6 +165,7 @@ func info_string(abi_param_result_info info) string {
     }
     out + "offsetToSpillArea: " + to_string(info.offset_to_spill_area) + " spillAreaSize: " + to_string(info.spill_area_size)
 }
+
 func num_param_regs(abi_config config, string type_name) int {
     need := reg_amounts_for_type(type_name)
     if need.int_regs > config.reg_amounts.int_regs || need.float_regs > config.reg_amounts.float_regs {
@@ -148,6 +173,7 @@ func num_param_regs(abi_config config, string type_name) int {
     }
     need.int_regs + need.float_regs
 }
+
 func abi_analyze_types(abi_config config, string[] params, string[] results) abi_param_result_info {
     state := assign_state {
         r_total: config.reg_amounts, r_used reg_amounts { int_regs: 0, float_regs 0 }, stack_offset config.offset_for_locals, spill_offset 0,
@@ -171,6 +197,7 @@ func abi_analyze_types(abi_config config, string[] params, string[] results) abi
         inparams: inparams, outparams outparams, offset_to_spill_area align_to(state.stack_offset, reg_size()), spill_area_size align_to(state.spill_offset, reg_size()), in_registers_used in_regs_used, out_registers_used state.r_used.int_regs + state.r_used.float_regs, config config,
     }
 }
+
 func register_types(abi_param_assignment[] assignments) string[] {
     rts := string[]()
     i := 0
@@ -182,6 +209,7 @@ func register_types(abi_param_assignment[] assignments) string[] {
     }
     rts
 }
+
 func register_types_and_offsets(abi_param_assignment assignment) register_layout {
     if len(assignment.registers) == 0 {
         return register_layout {
@@ -194,6 +222,7 @@ func register_types_and_offsets(abi_param_assignment assignment) register_layout
         types: types, offsets pair.offsets,
     }
 }
+
 func compute_padding(abi_param_assignment assignment, int slots) int[] {
     padding := int[]()
     i := 0
@@ -216,10 +245,12 @@ func compute_padding(abi_param_assignment assignment, int slots) int[] {
     }
     padding
 }
+
 struct offset_result {
     int[] offsets
     int next
 }
+
 func append_param_offsets(int[] offsets, int at, string type_name) offset_result {
     size := type_size(type_name)
     if size == 0 {
@@ -234,6 +265,7 @@ func append_param_offsets(int[] offsets, int at, string type_name) offset_result
     offsets = append(offsets, at)
     offset_result { offsets: offsets, next at + size }
 }
+
 func append_param_types(string[] rts, string type_name) string[] {
     if type_size(type_name) == 0 {
         return rts
@@ -271,6 +303,7 @@ func append_param_types(string[] rts, string type_name) string[] {
     rts = append(rts, type_name)
     rts
 }
+
 func assign_param(assign_state state, string type_name, string name, bool is_result) abi_param_assignment {
     alloc := try_alloc_regs(state, type_name)
     offset := -1
@@ -285,6 +318,7 @@ func assign_param(assign_state state, string type_name, string name, bool is_res
         type_name: type_name, name name, registers alloc.regs, offset offset,
     }
 }
+
 func try_alloc_regs(assign_state state, string type_name) reg_alloc_result {
     if type_size(type_name) == 0 {
         return reg_alloc_result { ok: false, regs int[]() }
@@ -311,9 +345,11 @@ func try_alloc_regs(assign_state state, string type_name) reg_alloc_result {
     state.r_used.float_regs = state.r_used.float_regs + need.float_regs
     reg_alloc_result { ok: true, regs regs }
 }
+
 func next_slot(int offset, string type_name) int {
     align_to(offset, alignment_for_type(type_name))
 }
+
 func reg_amounts_for_type(string type_name) reg_amounts {
     if is_zero_size_type(type_name) {
         return reg_amounts { int_regs: 0, float_regs 0 }
@@ -339,9 +375,11 @@ func reg_amounts_for_type(string type_name) reg_amounts {
     }
     reg_amounts { int_regs: words, float_regs 0 }
 }
+
 func reg_size() int {
     8
 }
+
 func type_size(string type_name) int {
     if is_zero_size_type(type_name) {
         return 0
@@ -384,6 +422,7 @@ func type_size(string type_name) int {
     }
     8
 }
+
 func alignment_for_type(string type_name) int {
     size := type_size(type_name)
     if size <= 1 {
@@ -397,6 +436,7 @@ func alignment_for_type(string type_name) int {
     }
     8
 }
+
 func align_to(int value, int to) int {
     if to <= 0 {
         return value
@@ -407,27 +447,35 @@ func align_to(int value, int to) int {
     }
     value + to - m
 }
+
 func is_zero_size_type(string type_name) bool {
     type_name == "" || type_name == "()" || type_name == "unit" || type_name == "struct{}"
 }
+
 func is_float_type(string type_name) bool {
     type_name == "float32" || type_name == "float64" || type_name == "float"
 }
+
 func is_complex_type(string type_name) bool {
     type_name == "complex64" || type_name == "complex128"
 }
+
 func is_simd_type(string type_name) bool {
     starts_with(type_name, "simd")
 }
+
 func is_string_type(string type_name) bool {
     type_name == "string"
 }
+
 func is_slice_type(string type_name) bool {
     starts_with(type_name, "[]")
 }
+
 func is_interface_type(string type_name) bool {
     type_name == "iface" || type_name == "interface" || type_name == "any"
 }
+
 func starts_with(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
@@ -439,4 +487,3 @@ func starts_with(string text, string prefix) bool {
         }
         i = i + 1
     }
-    true

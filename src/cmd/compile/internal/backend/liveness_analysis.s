@@ -4,6 +4,7 @@ struct liveness_set {
     int[] live_out
     int num_vars
 }
+
 struct liveness_analyzer {
     int block_count
     int instr_count
@@ -12,6 +13,7 @@ struct liveness_analyzer {
     int[][] block_killed
     int[][] block_used
 }
+
 struct stack_frame {
     int total_size
     int spill_area_offset
@@ -54,6 +56,7 @@ func liveness_analyzer_new(int block_count, int var_count) liveness_analyzer* {
     }
     &analyzer
 }
+
 func (analyzer* liveness_analyzer) compute_block_gen_kill(block[] blocks, int block_id) int {
     block := blocks[block_id]
     i := 0
@@ -76,6 +79,7 @@ func (analyzer* liveness_analyzer) compute_block_gen_kill(block[] blocks, int bl
     }
     0
 }
+
 func (analyzer* liveness_analyzer) compute_live_ranges_iterative(block[] blocks) int {
     changed := 1
     for changed == 1 {
@@ -128,6 +132,7 @@ func (analyzer* liveness_analyzer) compute_live_ranges_iterative(block[] blocks)
     }
     0
 }
+
 func (analyzer* liveness_analyzer) analyze(block[] blocks) int {
     i := 0
     for i < analyzer.block_count {
@@ -137,6 +142,7 @@ func (analyzer* liveness_analyzer) analyze(block[] blocks) int {
     analyzer.compute_live_ranges_iterative(blocks)
     0
 }
+
 func (analyzer* liveness_analyzer) is_live_at_point(int var_id, int block_id, int instr_id) int {
     if analyzer.block_liveness[block_id].live_in[var_id] == 1 {
         return 1
@@ -146,6 +152,7 @@ func (analyzer* liveness_analyzer) is_live_at_point(int var_id, int block_id, in
     }
     return 0
 }
+
 func stack_frame_new(int num_spills, int num_locals, int num_args) stack_frame* {
     frame := stack_frame {
         total_size: 0,
@@ -166,9 +173,11 @@ func stack_frame_new(int num_spills, int num_locals, int num_args) stack_frame* 
     frame.total_size = align_to_16(frame.total_size)
     &frame
 }
+
 func count_callee_saved_regs() int {
     return 6
 }
+
 func align_to_16(int size) int {
     remainder := size & 15
     if remainder != 0 {
@@ -176,6 +185,7 @@ func align_to_16(int size) int {
     }
     return size
 }
+
 func (frame* stack_frame) get_var_stack_location(int var_id) int {
     i := 0
     for i < frame.slot_count {
@@ -189,6 +199,7 @@ func (frame* stack_frame) get_var_stack_location(int var_id) int {
     frame.slot_count = frame.slot_count + 1
     slot_offset
 }
+
 func (frame* stack_frame) eliminate_dead_slots() int {
     int[256] live_vars
     i := 0
@@ -207,17 +218,19 @@ func (frame* stack_frame) eliminate_dead_slots() int {
     frame.total_size = align_to_16(frame.total_size)
     0
 }
+
 func (frame* stack_frame) omit_frame_pointer() int {
     if frame.total_size <= 128 {
         return 1
     }
     return 0
 }
+
 func (frame* stack_frame) compute_cfi_directives() string {
     return ""
 }
+
 func (frame* stack_frame) verify_alignment() int {
     if frame.total_size & 15 == 0 {
         return 1
     }
-    return 0

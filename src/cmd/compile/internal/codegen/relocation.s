@@ -9,6 +9,7 @@ enum reloc_type {
     reloc_type_pltoff64,
     reloc_type_pltgot,
 }
+
 struct relocation_entry {
     int offset64
     type reloc_type
@@ -16,15 +17,18 @@ struct relocation_entry {
     int addend64
     int rel_size32
 }
+
 struct relocation_context {
     relocation_entry[] relocations
     string[] processed_symbols
 }
+
 func make_relocation_context() relocation_context {
     relocation_context {
         relocations: relocation_entry[](), processed_symbols string[](),
     }
 }
+
 func (ctx* relocation_context) find_relocation(int64 offset) (relocation_entry*, bool) {
     i := 0
     for i < len(ctx.relocations) {
@@ -35,6 +39,7 @@ func (ctx* relocation_context) find_relocation(int64 offset) (relocation_entry*,
     }
     nil, false
 }
+
 func (ctx* relocation_context) add_relocation(int64 offset, reloc_type type, string symbol, int64 addend, int32 size) string {
     existing, found := ctx.find_relocation(offset)
     if found {
@@ -46,6 +51,7 @@ func (ctx* relocation_context) add_relocation(int64 offset, reloc_type type, str
     ctx.relocations = append(ctx.relocations, rel)
     ""
 }
+
 func (rel* relocation_entry) encode_info(int32 sym_index) int64 {
     info := (sym_index as int64) << 32
     switch rel.type {
@@ -60,6 +66,7 @@ func (rel* relocation_entry) encode_info(int32 sym_index) int64 {
     }
     info + 1
 }
+
 func reloc_type_name(reloc_type type) string {
     switch type {
         case reloc_type_abs: return "R_X86_64_64"
@@ -73,6 +80,7 @@ func reloc_type_name(reloc_type type) string {
     }
     "unknown"
 }
+
 func (ctx* relocation_context) has_symbol_relocation(string symbol) bool {
     i := 0
     for i < len(ctx.relocations) {
@@ -83,6 +91,7 @@ func (ctx* relocation_context) has_symbol_relocation(string symbol) bool {
     }
     false
 }
+
 func (ctx* relocation_context) get_symbol_relocations(string symbol) relocation_entry[] {
     result := relocation_entry[]()
     i := 0
@@ -94,6 +103,7 @@ func (ctx* relocation_context) get_symbol_relocations(string symbol) relocation_
     }
     result
 }
+
 func (ctx* relocation_context) dump() string {
     result := "Relocations:\n"
     i := 0
@@ -102,4 +112,3 @@ func (ctx* relocation_context) dump() string {
         result = result + "  " + (rel.offset as string) + ": " + reloc_type_name(rel.type) + " -> " + rel.symbol + "\n"
         i = i + 1
     }
-    result

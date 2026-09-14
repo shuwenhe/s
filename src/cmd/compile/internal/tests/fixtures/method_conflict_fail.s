@@ -12,8 +12,9 @@ trait measure_b {
 func ( p point) size() int {
     p.x
 }
+
 func ( p point) size() int {
     p.x
 }
+
 func bad(point p) int {
-    p.size()

@@ -8,6 +8,7 @@ struct compiler_toolchain {
     ld_path: string
     as_path: string
 }
+
 func toolchain_create() compiler_toolchain {
     tc: compiler_toolchain
     tc.gcc_path = "gcc"
@@ -15,11 +16,13 @@ func toolchain_create() compiler_toolchain {
     tc.as_path = "as"
     tc
 }
+
 func (compiler_toolchain* tc) assemble( asm_file string, string obj_file) (int, string) {
     cmd := tc.gcc_path + " -c " + asm_file + " -o " + obj_file
     exit_code, output := std.process.run_command(cmd)
     exit_code, output
 }
+
 func (compiler_toolchain* tc) link_executable(obj_files* string[], string output) (int, string) {
     cmd := tc.gcc_path + " "
     for i < obj_files.len() {
@@ -29,6 +32,7 @@ func (compiler_toolchain* tc) link_executable(obj_files* string[], string output
     exit_code, output := std.process.run_command(cmd)
     exit_code, output
 }
+
 func (compiler_toolchain* tc) compile_to_executable( asm_file string, string obj_file, string output_exe) (int, string) {
     exit_code, msg := tc.assemble(asm_file, obj_file)
     if exit_code != 0 {
@@ -42,5 +46,5 @@ func (compiler_toolchain* tc) compile_to_executable( asm_file string, string obj
     }
     0, ""
 }
+
 func (compiler_toolchain* tc) add_stdlib_objects(obj_files* string[]) {
-    obj_files.push("libc.so.6")

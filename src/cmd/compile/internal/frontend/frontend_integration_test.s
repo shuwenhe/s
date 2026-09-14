@@ -21,6 +21,7 @@ func test_frontend_simple_function() int {
     }
     0
 }
+
 func test_frontend_struct_with_fields() int {
     source := "struct Point {
     x: int
@@ -47,6 +48,7 @@ func test_frontend_struct_with_fields() int {
     }
     0
 }
+
 func test_frontend_package_and_import() int {
     source := "package main
 import (
@@ -76,6 +78,7 @@ func test() {
     }
     0
 }
+
 func test_frontend_variable_declaration() int {
     source := "x := 10
 y: int = 20"
@@ -94,6 +97,7 @@ y: int = 20"
     }
     0
 }
+
 func test_frontend_binary_expressions() int {
     source := "func test() {
     a := 10 + 20
@@ -108,6 +112,7 @@ func test_frontend_binary_expressions() int {
     }
     0
 }
+
 func test_frontend_if_statement() int {
     source := "func test() {
     if x > 0 {
@@ -124,6 +129,7 @@ func test_frontend_if_statement() int {
     }
     0
 }
+
 func test_frontend_for_loop() int {
     source := "func test() {
     for i := 0; i < 10; i = i + 1 {
@@ -138,6 +144,7 @@ func test_frontend_for_loop() int {
     }
     0
 }
+
 func test_frontend_method_with_receiver() int {
     source := "func (m: &MyType) name() string {
     return m.name
@@ -153,6 +160,7 @@ func test_frontend_method_with_receiver() int {
     }
     0
 }
+
 func test_frontend_enum_declaration() int {
     source := "enum Color {
     Red,
@@ -177,6 +185,7 @@ func test_frontend_enum_declaration() int {
     }
     0
 }
+
 func test_frontend_complex_expression() int {
     source := "func test() {
     x := (a + b) * c - d / e
@@ -191,6 +200,7 @@ func test_frontend_complex_expression() int {
     }
     0
 }
+
 func test_frontend_switch_statement() int {
     source := "func test( x int) int {
     switch x {
@@ -207,6 +217,7 @@ func test_frontend_switch_statement() int {
     }
     0
 }
+
 func run_frontend_integration_tests() int {
     tests_passed := 0
     tests_failed := 0
@@ -269,4 +280,3 @@ func run_frontend_integration_tests() int {
         0
     } else {
         1
-    }

@@ -6,6 +6,7 @@ struct block {
     value[] values
     int kind
 }
+
 struct value {
     int id
     int op
@@ -15,15 +16,18 @@ struct value {
     int line
     int aux
 }
+
 struct phi {
     int value_id
     int[] edges
 }
+
 struct var_version {
     int var_id
     int version
     int value_id
 }
+
 struct ssa_builder {
     int block_count
     int value_count
@@ -33,6 +37,7 @@ struct ssa_builder {
     var_version[] var_versions
     int[] var_stack
 }
+
 func ssa_builder_new() ssa_builder* {
     builder := ssa_builder {
         block_count: 0,
@@ -45,6 +50,7 @@ func ssa_builder_new() ssa_builder* {
     }
     &builder
 }
+
 func (builder* ssa_builder) new_block(int kind) int {
     id := builder.block_count
     builder.block_count = builder.block_count + 1
@@ -58,6 +64,7 @@ func (builder* ssa_builder) new_block(int kind) int {
     builder.blocks[id] = &block
     id
 }
+
 func (builder* ssa_builder) add_value(int op, int type_id, int[] args, int block_id) int {
     value_id := builder.value_count
     builder.value_count = builder.value_count + 1
@@ -75,6 +82,7 @@ func (builder* ssa_builder) add_value(int op, int type_id, int[] args, int block
     block.values = append(block.values, &v)
     value_id
 }
+
 func (builder* ssa_builder) add_phi(int value_id, int[] edges) int {
     phi := phi {
         value_id: value_id,
@@ -83,6 +91,7 @@ func (builder* ssa_builder) add_phi(int value_id, int[] edges) int {
     &phi
     0
 }
+
 func (builder* ssa_builder) connect_blocks(int pred_id, int succ_id) int {
     pred_block := builder.blocks[pred_id]
     succ_block := builder.blocks[succ_id]
@@ -90,6 +99,7 @@ func (builder* ssa_builder) connect_blocks(int pred_id, int succ_id) int {
     succ_block.preds = append(succ_block.preds, pred_id)
     0
 }
+
 func (builder* ssa_builder) define_var(int var_id, int version, int value_id) int {
     idx := var_id * 1024 + version
     builder.var_versions[idx].var_id = var_id
@@ -97,10 +107,12 @@ func (builder* ssa_builder) define_var(int var_id, int version, int value_id) in
     builder.var_versions[idx].value_id = value_id
     0
 }
+
 func (builder* ssa_builder) get_var_version(int var_id, int version) int {
     idx := var_id * 1024 + version
     builder.var_versions[idx].value_id
 }
+
 func compute_dominators(block[] blocks, int num_blocks) int[] {
     int[num_blocks * num_blocks] dominators
     i := 0
@@ -150,6 +162,7 @@ func compute_dominators(block[] blocks, int num_blocks) int[] {
     }
     dominators
 }
+
 func compute_dominance_frontier(block[] blocks, int num_blocks, int[] dominators) int[] {
     int[num_blocks * num_blocks] frontier
     i := 0
@@ -189,6 +202,7 @@ func compute_dominance_frontier(block[] blocks, int num_blocks, int[] dominators
     }
     frontier
 }
+
 func insert_phis_for_var(value[] all_values, int var_id, int[] definitions, int[] dominance_frontier, int num_blocks) int {
     int[num_blocks] work_list
     work_list_size := 0
@@ -219,6 +233,7 @@ func insert_phis_for_var(value[] all_values, int var_id, int[] definitions, int[
     }
     0
 }
+
 func rename_variables(block[] blocks, int block_id, var_version[] var_stack) int {
     block := blocks[block_id]
     i := 0
@@ -275,4 +290,3 @@ func (builder* ssa_builder) verify_ssa() int {
         }
         i = i + 1
     }
-    1

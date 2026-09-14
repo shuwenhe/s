@@ -10,6 +10,7 @@ enum object_format {
 	format_wasm = 3
 	format_xcoff = 4
 }
+
 struct linker_config {
 	object_format format
 	i16 machine
@@ -24,6 +25,7 @@ struct linker_config {
 	bool pie
 	bool pie_library
 }
+
 struct production_linker {
 	linker_config config
 	elf_object[] elf_objects
@@ -40,6 +42,7 @@ struct production_linker {
 	dynamic_reloc_manager dynamic_reloc_manager
 	map[string]section sections
 }
+
 func new_production_linker(config linker_config) production_linker {
 	linker := production_linker{
 		Config: config,
@@ -59,6 +62,7 @@ func new_production_linker(config linker_config) production_linker {
 	}
 	linker
 }
+
 func (production_linker* pl) load_object_file(string filename) error {
 	fmt.printf("Loading %s...\n", filename)
 	file, err := os.open(filename)
@@ -95,6 +99,7 @@ func (production_linker* pl) load_object_file(string filename) error {
 	}
 	nil
 }
+
 func (pl* production_linker) link() error {
 	fmt.printf("Linking %d object files...\n", len(pl.Config.InputFiles))
 	for _, input_file := range pl.Config.InputFiles {
@@ -118,6 +123,7 @@ func (pl* production_linker) link() error {
 	fmt.printf("Linking successful! Output: %s\n", pl.Config.OutputFile)
 	nil
 }
+
 func (pl* production_linker) merge_symbols() error {
 	for _, obj := range pl.elf_objects {
 		for _, sym := range obj.Symbols {
@@ -130,6 +136,7 @@ func (pl* production_linker) merge_symbols() error {
 	pl.symbol_manager.apply_visibility()
 	nil
 }
+
 func (pl* production_linker) process_relocations() error {
 	for objIdx, obj := range pl.elf_objects {
 		for _, reloc := range obj.Relocations {
@@ -154,6 +161,7 @@ func (pl* production_linker) process_relocations() error {
 	}
 	nil
 }
+
 func (pl* production_linker) generate_output() error {
 	switch pl.Config.Format {
 	case format_elf:
@@ -176,6 +184,7 @@ func (pl* production_linker) generate_output() error {
 	}
 	nil
 }
+
 func (pl* production_linker) generate_elf_output() error {
 	output := NewELFObject(0x3e)
 	text_data := make(u8[], 0)
@@ -209,6 +218,7 @@ func (pl* production_linker) generate_elf_output() error {
 	}
 	nil
 }
+
 func (pl* production_linker) generate_macho_output() error {
 	output := NewMachoObject(CPU_TYPE_X86_64, MH_OBJECT)
 	output.add_segment("__TEXT", 0, 0x1000)
@@ -219,6 +229,7 @@ func (pl* production_linker) generate_macho_output() error {
 	}
 	nil
 }
+
 func (pl* production_linker) generate_pe_output() error {
 	output := NewPEObject(MACHINE_AMD64)
 	code_data := make(u8[], 0)
@@ -231,6 +242,7 @@ func (pl* production_linker) generate_pe_output() error {
 	}
 	nil
 }
+
 func (pl* production_linker) validate() error {
 	err := pl.reloc_processor.validate_relocations()
 	if err != nil {
@@ -241,4 +253,3 @@ func (pl* production_linker) validate() error {
 			fmt.printf("Warning: Undefined symbol: %s\n", sym.Name)
 		}
 	}
-	nil

@@ -14,6 +14,7 @@ func get_name_from_expr(expr value) option[string] {
         _ : option::none,
     }
 }
+
 func append_unique(string[] names, string value) () {
     if value == "" || value == "_" {
         return
@@ -27,6 +28,7 @@ func append_unique(string[] names, string value) () {
     }
     names = append(names, value)
 }
+
 func collect_call_arg_names(call_expr call_value) string[] {
     out := string[]()
     i := 0
@@ -39,6 +41,7 @@ func collect_call_arg_names(call_expr call_value) string[] {
     }
     out
 }
+
 func collect_keep_alive_names(stmt value) string[] {
     out := string[]()
     switch value {
@@ -62,6 +65,7 @@ func collect_keep_alive_names(stmt value) string[] {
     }
     out
 }
+
 func keep_alive_stmt(string name_value) stmt {
     args := expr[]()
     args.push(expr::name(name_expr {
@@ -76,6 +80,7 @@ func keep_alive_stmt(string name_value) stmt {
         }),
     })
 }
+
 func preserve_stmt(stmt value) stmt[] {
     out := stmt[]()
     names := collect_keep_alive_names(value)
@@ -86,6 +91,7 @@ func preserve_stmt(stmt value) stmt[] {
     }
     out
 }
+
 func is_testing_bloop_expr(expr value) bool {
     switch value {
         expr.call(call_value) : {
@@ -105,6 +111,7 @@ func is_testing_bloop_expr(expr value) bool {
         _ : false,
     }
 }
+
 func edit_expr(expr value, bool in_bloop) expr {
     switch value {
         expr.borrow(borrow_value) : expr::borrow(borrow_expr {
@@ -166,6 +173,7 @@ func edit_expr(expr value, bool in_bloop) expr {
         _ : value,
     }
 }
+
 func edit_stmt(stmt value, bool in_bloop) stmt {
     switch value {
         stmt.c_for(loop_value) : {
@@ -183,6 +191,7 @@ func edit_stmt(stmt value, bool in_bloop) stmt {
         _ : value,
     }
 }
+
 func edit_block(block_expr block_value, bool in_bloop) block_expr {
     out_stmts := stmt[]()
     i := 0
@@ -208,6 +217,7 @@ func edit_block(block_expr block_value, bool in_bloop) block_expr {
         statements: out_stmts, final_expr final_expr, inferred_type block_value.inferred_type,
     }
 }
+
 func has_testing_import(source_file pkg) bool {
     i := 0
     for i < std.prelude.len(pkg.uses) {
@@ -218,6 +228,7 @@ func has_testing_import(source_file pkg) bool {
     }
     false
 }
+
 func walk(source_file pkg) source_file {
     if !has_testing_import(pkg) {
         return pkg
@@ -244,8 +255,8 @@ func walk(source_file pkg) source_file {
         pkg: pkg.pkg, uses pkg.uses, items out_items,
     }
 }
+
 func starts_with(string text, string prefix) bool {
     if std.prelude.len(text) < std.prelude.len(prefix) {
         return false
     }
-    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix

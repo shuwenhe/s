@@ -7,11 +7,13 @@ struct abi_location {
     string place
     int stack_offset
 }
+
 struct abi_layout {
     abi_location[] params
     abi_location[] results
     int spill_size
 }
+
 func assign_abi_layout(string arch, int params, int results) abi_layout {
     int_regs := arch_int_arg_regs(arch)
     out_params := abi_location[]()
@@ -41,8 +43,8 @@ func assign_abi_layout(string arch, int params, int results) abi_layout {
         params: out_params, results out_results, spill_size align_stack(stack_off, arch_stack_align(arch)),
     }
 }
+
 func align_stack(int size, int align) int {
     if align <= 1 {
         return size
     }
-    ((size + align - 1) / align) * align

@@ -6,12 +6,14 @@ struct rule {
     transformer func
     int priority
 }
+
 struct rules_engine {
     rule[] rules
     map[string]rule[] rules_by_opcode
     int[] match_count
     int[] transform_count
 }
+
 func (engine* rules_engine) init() void {
     engine.rules = vec()
     engine.rules_by_opcode = map()
@@ -19,6 +21,7 @@ func (engine* rules_engine) init() void {
     engine.register_algebraic_rules()
     engine.register_expr_rules()
 }
+
 func (engine* rules_engine) register_const_fold_rules() void {
     engine.add_rule(rule {
         id: "const_add_fold",
@@ -78,6 +81,7 @@ func (engine* rules_engine) register_const_fold_rules() void {
         priority: 0
     })
 }
+
 func (engine* rules_engine) register_algebraic_rules() void {
     engine.add_rule(rule {
         id: "mul_by_zero",
@@ -154,6 +158,7 @@ func (engine* rules_engine) register_algebraic_rules() void {
         priority: 2
     })
 }
+
 func (engine* rules_engine) register_expr_rules() void {
     engine.add_rule(rule {
         id: "and_self",
@@ -196,9 +201,11 @@ func (engine* rules_engine) register_expr_rules() void {
         priority: 2
     })
 }
+
 func (engine* rules_engine) add_rule(r rule) void {
     engine.rules.push(r)
 }
+
 func (engine* rules_engine) apply_block(block* basic_block) int {
     let total_transforms := 0
     let max_iterations := 100
@@ -230,6 +237,7 @@ func (engine* rules_engine) apply_block(block* basic_block) int {
     }
     return total_transforms
 }
+
 func (engine* rules_engine) apply_func(func* ir_func) int {
     let total := 0
     for _for_idx_280 := 0; _for_idx_280 < len(func.blocks); _for_idx_280++ {
@@ -238,6 +246,7 @@ func (engine* rules_engine) apply_func(func* ir_func) int {
     }
     return total
 }
+
 func ir_equals(a, b IR) bool {
     if a.opcode != b.opcode {
         return false
@@ -247,6 +256,7 @@ func ir_equals(a, b IR) bool {
     }
     return a.id == b.id
 }
+
 func replace_instruction(block* basic_block, old_instr, new_instr IR) void {
     for i := 0; i < len(block.instructions); i++ {
         instr := block.instructions[i]
@@ -256,6 +266,7 @@ func replace_instruction(block* basic_block, old_instr, new_instr IR) void {
         }
     }
 }
+
 func main() void {
     let engine := rules_engine{}
     engine.init()
@@ -270,4 +281,3 @@ func main() void {
     }
     let transformed_count := engine.apply_block(&block)
     print("Transformed: ${transformed_count} instructions")
-    print("Result: ${block.instructions[0]}")

@@ -11,6 +11,7 @@ struct bootstrap_compiler {
     int line_count
     int error_count
 }
+
 func bootstrap_compiler_new() bootstrap_compiler* {
     bc* := alloc(bootstrap_compiler)
     bc.name = "S Compiler"
@@ -20,12 +21,15 @@ func bootstrap_compiler_new() bootstrap_compiler* {
     bc.error_count = 0
     return bc
 }
+
 func bootstrap_compiler_compile_file(bc* bootstrap_compiler, string* filename) int {
     return 0
 }
+
 func bootstrap_compiler_compile_program(bc* bootstrap_compiler, string* source) int {
     return 0
 }
+
 func bootstrap_compiler_info(bc* bootstrap_compiler) {
     print("=== S 语言自举编译器 ===\n")
     print("名称: ")
@@ -37,6 +41,7 @@ func bootstrap_compiler_info(bc* bootstrap_compiler) {
     print("后端: 代码生成 → ELF 生成\n")
     print("状态: 实现中...\n")
 }
+
 func bootstrap_demo_main() {
     print("════════════════════════════════════════════════════════════════\n")
     print("           S 语言编译器自举演示\n")
@@ -118,4 +123,3 @@ func bootstrap_demo_main() {
     print("  2. 优化通过\n")
     print("  3. 调试信息 (DWARF)\n")
     print("  4. 标准库\n\n")
-    print("════════════════════════════════════════════════════════════════\n")

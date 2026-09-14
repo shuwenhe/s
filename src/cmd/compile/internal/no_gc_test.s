@@ -16,6 +16,7 @@ func run_drop_trait_test() int {
     if move_check.ok { return 2 }
     0
 }
+
 func run_drop_flag_test() int {
     registry := compile.internal.drop_system.dtor_registry_new()
     registry = compile.internal.drop_system.dtor_registry_register(registry, compile.internal.drop_system.dtor_impl_new("File", true, "__s_drop_File"))
@@ -37,6 +38,7 @@ func run_drop_flag_test() int {
     if len(cleanup) != 2 || cleanup[0] != "moved" || cleanup[1] != "right" { return 3 }
     0
 }
+
 func run_lifetime_test() int {
     ctx := compile.internal.lifetime_check.lifetime_context_new()
     ctx = compile.internal.lifetime_check.lifetime_enter_scope(ctx, "outer")
@@ -54,6 +56,7 @@ func run_lifetime_test() int {
     if compile.internal.lifetime_check.dropck_check_fields("Wrapper", fields).ok { return 3 }
     0
 }
+
 func run_no_gc_memory_test() int {
     state := compile.internal.no_gc_memory.no_gc_state_new()
     state = compile.internal.no_gc_memory.no_gc_register_drop(state, "File", "__s_drop_File")
@@ -69,10 +72,10 @@ func run_no_gc_memory_test() int {
     if dynamic.strategy != compile.internal.no_gc_memory.alloc_heap() { return 4 }
     0
 }
+
 func run_no_gc_tests() int {
     if compile.internal.ownership_system.ownership_system_verify() != 0 { return 5 }
     if run_drop_trait_test() != 0 { return 1 }
     if run_drop_flag_test() != 0 { return 2 }
     if run_lifetime_test() != 0 { return 3 }
     if run_no_gc_memory_test() != 0 { return 4 }
-    0

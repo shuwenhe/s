@@ -6,18 +6,21 @@ struct source_location {
     i32 end_line
     i32 end_column
 }
+
 struct debug_loc_info {
     i32 instr_id
     loc source_location
     string var_name
     string scope
 }
+
 struct debug_loc_propagator {
     debug_loc_info[] loc_infos
     source_location[] file_locations
     string[] scope_stack
     i32 current_depth
 }
+
 func new_debug_loc_propagator() debug_loc_propagator* {
     dlp := new(debug_loc_propagator)
     dlp.loc_infos = debug_loc_info[]()
@@ -26,17 +29,20 @@ func new_debug_loc_propagator() debug_loc_propagator* {
     dlp.current_depth = 0
     dlp
 }
+
 func (dlp* debug_loc_propagator) enter_scope(string scope_name) {
     if dlp.current_depth < i32(len(dlp.scope_stack)) {
         dlp.scope_stack[dlp.current_depth] = scope_name
         dlp.current_depth += 1
     }
 }
+
 func (dlp* debug_loc_propagator) exit_scope() {
     if dlp.current_depth > 0 {
         dlp.current_depth -= 1
     }
 }
+
 func (dlp* debug_loc_propagator) get_current_scope() string {
     scope := ""
     for i := i32(0); i < dlp.current_depth; i += 1 {
@@ -47,6 +53,7 @@ func (dlp* debug_loc_propagator) get_current_scope() string {
     }
     scope
 }
+
 func (debug_loc_propagator* dlp) set_location(i32 instr_id, string filename, i32 line, i32 column) {
     loc := source_location{
         filename: filename,
@@ -63,6 +70,7 @@ func (debug_loc_propagator* dlp) set_location(i32 instr_id, string filename, i32
     }
     dlp.loc_infos = append(dlp.loc_infos, info)
 }
+
 func (debug_loc_propagator* dlp) set_location_with_range(i32 instr_id, string filename, i32 line, i32 col, i32 end_line, i32 end_col) {
     loc := source_location{
         filename: filename,
@@ -79,6 +87,7 @@ func (debug_loc_propagator* dlp) set_location_with_range(i32 instr_id, string fi
     }
     dlp.loc_infos = append(dlp.loc_infos, info)
 }
+
 func (debug_loc_propagator* dlp) set_variable_location(i32 instr_id, string var_name, string filename, i32 line, i32 column) {
     loc := source_location{
         filename: filename,
@@ -95,6 +104,7 @@ func (debug_loc_propagator* dlp) set_variable_location(i32 instr_id, string var_
     }
     dlp.loc_infos = append(dlp.loc_infos, info)
 }
+
 func (dlp* debug_loc_propagator) propagate_locations(instr_ids i32[]) {
     for i := i32(0); i < i32(len(instr_ids)); i += 1 {
         if i == 0 {
@@ -128,6 +138,7 @@ func (dlp* debug_loc_propagator) propagate_locations(instr_ids i32[]) {
         }
     }
 }
+
 func (dlp* debug_loc_propagator) get_location(instr_id i32) source_location {
     for _for_idx_152 := 0; _for_idx_152 < len(dlp.loc_infos); _for_idx_152++ {
         info := dlp.loc_infos[_for_idx_152]
@@ -137,6 +148,7 @@ func (dlp* debug_loc_propagator) get_location(instr_id i32) source_location {
     }
     source_location{}
 }
+
 func (debug_loc_propagator* dlp) get_locations_by_file(string filename) debug_loc_info[] {
     result := debug_loc_info[]()
     for _for_idx_162 := 0; _for_idx_162 < len(dlp.loc_infos); _for_idx_162++ {
@@ -147,6 +159,7 @@ func (debug_loc_propagator* dlp) get_locations_by_file(string filename) debug_lo
     }
     result
 }
+
 func (dlp* debug_loc_propagator) get_locations_by_scope(string scope) debug_loc_info[] {
     result := debug_loc_info[]()
     for _for_idx_172 := 0; _for_idx_172 < len(dlp.loc_infos); _for_idx_172++ {
@@ -157,6 +170,7 @@ func (dlp* debug_loc_propagator) get_locations_by_scope(string scope) debug_loc_
     }
     result
 }
+
 func (dlp* debug_loc_propagator) get_location_info(instr_id i32) debug_loc_info {
     for _for_idx_181 := 0; _for_idx_181 < len(dlp.loc_infos); _for_idx_181++ {
         info := dlp.loc_infos[_for_idx_181]
@@ -166,6 +180,7 @@ func (dlp* debug_loc_propagator) get_location_info(instr_id i32) debug_loc_info 
     }
     debug_loc_info{}
 }
+
 func (dlp* debug_loc_propagator) compute_line_maps() map[string]i32[] {
     line_map := make(map[string]i32[])
     for _for_idx_192 := 0; _for_idx_192 < len(dlp.loc_infos); _for_idx_192++ {
@@ -177,6 +192,7 @@ func (dlp* debug_loc_propagator) compute_line_maps() map[string]i32[] {
     }
     line_map
 }
+
 func (dlp* debug_loc_propagator) emit_dwarf_debug_info() string {
     s := ".section .debug_info\n"
     for _for_idx_205 := 0; _for_idx_205 < len(dlp.loc_infos); _for_idx_205++ {
@@ -188,6 +204,7 @@ func (dlp* debug_loc_propagator) emit_dwarf_debug_info() string {
     }
     s
 }
+
 func (dlp* debug_loc_propagator) to_string() string {
     s := "Debug Location Map:\n"
     for _for_idx_217 := 0; _for_idx_217 < len(dlp.loc_infos); _for_idx_217++ {
@@ -199,4 +216,3 @@ func (dlp* debug_loc_propagator) to_string() string {
         }
         s += " [scope: " + info.scope + "]\n"
     }
-    s

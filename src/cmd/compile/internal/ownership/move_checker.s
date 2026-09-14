@@ -2,17 +2,20 @@ package compile.internal.ownership
 struct move_checker {
     ownership_context* ctx
 }
+
 func new_move_checker(ownership_context* ctx) move_checker* {
     return move_checker*{
         ctx: ctx,
     }
 }
+
 func (move_checker* mc) check_move_semantics(stmts interface{}[]) {
     mc.initialize_variable_states(stmts)
     for i, stmt := range stmts {
         mc.check_statement(i, stmt)
     }
 }
+
 func (move_checker* mc) initialize_variable_states(stmts interface{}[]) {
 }
 
@@ -28,6 +31,7 @@ func (move_checker* mc) check_statement(int pc, stmt interface{}) {
         mc.check_if_statement(pc, s)
     }
 }
+
 func (move_checker* mc) check_assignment(int pc, assign* assignment_stmt) {
     if assign.rhs != nil {
         mc.check_use(pc, assign.rhs, "read")
@@ -55,6 +59,7 @@ func (move_checker* mc) check_assignment(int pc, assign* assignment_stmt) {
     }
     mc.ctx.set_state_at(pc, assign.lhs, state_owned)
 }
+
 func (move_checker* mc) check_function_call(int pc, call* call_stmt) {
     for i, arg := range call.args {
         arg_state := mc.ctx.get_state_at(pc, arg.string())
@@ -67,6 +72,7 @@ func (move_checker* mc) check_function_call(int pc, call* call_stmt) {
         }
     }
 }
+
 func (move_checker* mc) check_return(int pc, ret* return_stmt) {
     if ret.value == nil {
         return
@@ -80,18 +86,21 @@ func (move_checker* mc) check_return(int pc, ret* return_stmt) {
             ret.value, pc))
     }
 }
+
 func (move_checker* mc) check_if_statement(int pc, if_stmt* if_stmt) {
     mc.check_use(pc, if_stmt.condition, "read")
     then_states := mc.analyze_branch(pc, if_stmt.then_body)
     else_states := mc.analyze_branch(pc, if_stmt.else_body)
     mc.merge_branch_states(pc, then_states, else_states)
 }
+
 func (move_checker* mc) analyze_branch(int pc, stmts interface{}[]) map[string]ownership_state {
     states := make(map[string]ownership_state)
     for _, stmt := range stmts {
     }
     return states
 }
+
 func (move_checker* mc) merge_branch_states(int pc,
     then_states map[string]ownership_state,
     else_states map[string]ownership_state) {
@@ -114,6 +123,7 @@ func (move_checker* mc) merge_branch_states(int pc,
         }
     }
 }
+
 func (move_checker* mc) check_use(int pc, expr interface{}, string use_kind) {
     expr_str := expr.(interface{}).string()
     state := mc.ctx.get_state_at(pc, expr_str)
@@ -133,6 +143,7 @@ func (move_checker* mc) check_use(int pc, expr interface{}, string use_kind) {
         }
     }
 }
+
 func (move_checker* mc) has_borrow(string var_name) bool {
     if len(mc.ctx.borrow_stack) > 0 {
         borrows := mc.ctx.borrow_stack[len(mc.ctx.borrow_stack)-1]
@@ -141,24 +152,29 @@ func (move_checker* mc) has_borrow(string var_name) bool {
     }
     return false
 }
+
 struct assignment_stmt {
     string lhs
     rhs    interface{}
     bool is_move
     bool is_copy
 }
+
 struct call_stmt {
     string func
     Args interface{}[]
 }
+
 struct return_stmt {
     Value interface{}
 }
+
 struct if_stmt {
     Condition interface{}
     then_body  interface{}[]
     else_body  interface{}[]
 }
+
 func errorf(string format, args ...interface{}) string {
     result := format
     for _, arg := range args {
@@ -166,10 +182,10 @@ func errorf(string format, args ...interface{}) string {
     }
     return result
 }
+
 func replace_first(string s, string old, string new) string {
     for i := 0; i < len(s); i++ {
         if i+len(old) <= len(s) && s[i:i+len(old)] == old {
             return s[:i] + new + s[i+len(old):]
         }
     }
-    return s

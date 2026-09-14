@@ -7,10 +7,12 @@ struct time_val {
 	i64 sec
 	i32 nsec
 }
+
 struct time_zone {
 	string name
 	i32 offset
 }
+
 struct duration {
 	i64 nanoseconds
 }
@@ -27,53 +29,68 @@ func now() time_val {
 	sec, usec, _ := syscall.gettimeofday()
 	return time_val{sec: sec, nsec: i32(usec * 1000)}
 }
+
 func now_ns() i64 {
 	tv := now()
 	return tv.sec*second + i64(tv.nsec)
 }
+
 func now_unix() i64 {
 	tv := now()
 	return tv.sec
 }
+
 func (tv time_val) unix() i64 {
 	return tv.sec
 }
+
 func (tv time_val) unix_ns() i64 {
 	return tv.sec*second + i64(tv.nsec)
 }
+
 func (tv time_val) unix_ms() i64 {
 	return tv.sec*1000 + i64(tv.nsec)/1000000
 }
+
 func (tv time_val) format(string layout) string {
 	return fmt.sprintf("%d-%02d-%02d %02d:%02d:%02d", 2024, 1, 1, 0, 0, i32(tv.sec%60))
 }
+
 func since(t time_val) duration {
 	now_t := now()
 	ns := (now_t.sec-t.sec)*second + i64(now_t.nsec-t.nsec)
 	return duration{nanoseconds: ns}
 }
+
 func (d duration) nanoseconds() i64 {
 	return d.nanoseconds
 }
+
 func (d duration) microseconds() i64 {
 	return d.nanoseconds / 1000
 }
+
 func (d duration) milliseconds() i64 {
 	return d.nanoseconds / 1000000
 }
+
 func (d duration) seconds() f64 {
 	return f64(d.nanoseconds) / f64(second)
 }
+
 func (d duration) string() string {
 	return ""
 }
+
 struct timer {
 	bool fired
 	channel* c
 }
+
 func after_func(d duration, f func()) timer* {
 	return nil
 }
+
 func sleep(d duration) {
 	ts := syscall.timespec{
 		sec: d.nanoseconds / second,
@@ -81,35 +98,44 @@ func sleep(d duration) {
 	}
 	syscall.nanosleep(&ts)
 }
+
 func tick(d duration) channel* {
 	return nil
 }
+
 struct location {
 	string name
 	time_zone[] zone
 }
 var utc_location location = location{name: "UTC"}
 var local_location location = location{name: "Local"}
+
 func utc() location* {
 	return &utc_location
 }
+
 func local() location* {
 	return &local_location
 }
+
 func load_location(string name) (location*, error) {
 	return &utc_location, nil
 }
+
 struct time_t {
 	i64 sec
 	i32 nsec
 	location* zone
 }
+
 func (t time_t) string() string {
 	return fmt.sprintf("%d-%02d-%02d", 2024, 1, 1)
 }
+
 func (t time_t) format(string layout) string {
 	return ""
 }
+
 func (t time_t) add(d duration) time_t {
 	ns := t.nsec + i32((d.nanoseconds%second))
 	s := t.sec + (d.nanoseconds / second)
@@ -119,15 +145,18 @@ func (t time_t) add(d duration) time_t {
 	}
 	return time_t{sec: s, nsec: ns, zone: t.zone}
 }
+
 func (t time_t) sub(u time_t) duration {
 	ns := (t.sec-u.sec)*second + i64(t.nsec-u.nsec)
 	return duration{nanoseconds: ns}
 }
+
 func (t time_t) before(u time_t) bool {
 	return t.sec < u.sec || (t.sec == u.sec && t.nsec < u.nsec)
 }
+
 func (t time_t) after(u time_t) bool {
 	return t.sec > u.sec || (t.sec == u.sec && t.nsec > u.nsec)
 }
+
 func (t time_t) equal(u time_t) bool {
-	return t.sec == u.sec && t.nsec == u.nsec

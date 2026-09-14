@@ -5,6 +5,7 @@ struct ownership_analysis {
 borrowChecker borrow_checker*
 dropElaborator drop_elaborator*
 }
+
 func new_ownership_analysis() ownership_analysis* {
     ctx := new_ownership_context()
     return ownership_analysis*{
@@ -14,6 +15,7 @@ func new_ownership_analysis() ownership_analysis* {
         dropElaborator: new_drop_elaborator(ctx),
     }
 }
+
 func (ownership_analysis* oa) analyze_function(string funcName, stmts interface{}[]) (interface{}[], bool) {
     oa.moveChecker.check_move_semantics(stmts)
     if oa.ctx.has_errors() {
@@ -35,18 +37,23 @@ func (ownership_analysis* oa) analyze_function(string funcName, stmts interface{
     }
     return elaborated, true
 }
+
 func (ownership_analysis* oa) get_errors() string[] {
     return oa.ctx.errors
 }
+
 func (ownership_analysis* oa) has_errors() bool {
     return oa.ctx.has_errors()
 }
+
 func (ownership_analysis* oa) classify_type(string type_name) type_classification* {
     return oa.ctx.classify_type(type_name)
 }
+
 func (ownership_analysis* oa) set_type_classification(string type_name, class* type_classification) {
     oa.ctx.type_classes[type_name] = class
 }
+
 func (ownership_analysis* oa) set_variable_type(string var_name, string type_name) {
 }
 
@@ -62,6 +69,7 @@ struct analysis_report {
     int moves_verified
     elaborated_stmts interface{}[]
 }
+
 func (ownership_analysis* oa) generate_report(string funcName, elaborated interface{}) analysis_report* {
     report := analysis_report*{
         function_name: funcName,
@@ -83,6 +91,7 @@ func (ownership_analysis* oa) generate_report(string funcName, elaborated interf
     report.elaborated_stmts = elaborated
     return report
 }
+
 func contains(string s, string substr) bool {
     for i := 0; i <= len(s)-len(substr); i++ {
         if s[i:i+len(substr)] == substr {
@@ -91,6 +100,7 @@ func contains(string s, string substr) bool {
     }
     return false
 }
+
 func count_drop_calls(stmts interface{}[]) int {
     count := 0
     for _, stmt := range stmts {
@@ -103,11 +113,13 @@ case block_stmt*:
     }
     return count
 }
+
 struct ownership_hints {
     map[string]*type_classification type_classes
     map[string]string variable_types
     map[string]string param_ownership
 }
+
 func (ownership_analysis* oa) apply_ownership_hints(ownership_hints* hints) {
     if hints == nil {
         return
@@ -116,6 +128,7 @@ func (ownership_analysis* oa) apply_ownership_hints(ownership_hints* hints) {
         oa.ctx.type_classes[type_name] = class
     }
 }
+
 func (ownership_analysis* oa) print_errors() {
     report := analysis_report*{
         function_name: "analysis",
@@ -137,4 +150,3 @@ func (ownership_analysis* oa) print_errors() {
     if len(report.borrow_errors) > 0 {
     }
     if len(report.drop_errors) > 0 {
-    }

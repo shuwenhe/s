@@ -58,6 +58,7 @@ struct elf64_header {
     int shnum
     int shstrndx
 }
+
 struct elf64_section {
     int name
     int type
@@ -71,6 +72,7 @@ struct elf64_section {
     int entsize
     int[] data
 }
+
 struct elf64_symbol {
     int name
     int info
@@ -79,11 +81,13 @@ struct elf64_symbol {
     int value
     int size
 }
+
 struct elf64_relocation {
     int offset
     int info
     int addend
 }
+
 struct elf64_program_header {
     int type
     int flags
@@ -94,6 +98,7 @@ struct elf64_program_header {
     int memsz
     int align
 }
+
 func elf64_header_new() elf64_header {
     header := elf64_header {
         magic: 0x7f454c46,
@@ -118,6 +123,7 @@ func elf64_header_new() elf64_header {
     }
     header
 }
+
 func elf64_section_new(int name, int type, int flags) elf64_section {
     section := elf64_section {
         name: name,
@@ -134,12 +140,14 @@ func elf64_section_new(int name, int type, int flags) elf64_section {
     }
     section
 }
+
 func elf64_section_add_data(elf64_section* section, int[] data) {
     for i := 0; i < data.len(); i = i + 1 {
         section.data = append(section.data, data[i])
     }
     section.size = section.data.len()
 }
+
 func elf64_symbol_new(int name, int bind, int type_kind, int shndx) elf64_symbol {
     symbol := elf64_symbol {
         name: name,
@@ -151,6 +159,7 @@ func elf64_symbol_new(int name, int bind, int type_kind, int shndx) elf64_symbol
     }
     symbol
 }
+
 func elf64_relocation_new(int offset, int type_kind, int sym_idx) elf64_relocation {
     reloc := elf64_relocation {
         offset: offset,
@@ -159,18 +168,21 @@ func elf64_relocation_new(int offset, int type_kind, int sym_idx) elf64_relocati
     }
     reloc
 }
+
 func elf64_write_header(elf64_header header) int[] {
     buf := int[]()
     buf
 }
+
 func elf64_write_section_header(elf64_section section) int[] {
     buf := int[]()
     buf
 }
+
 func elf64_write_symbol(elf64_symbol symbol) int[] {
     buf := int[]()
     buf
 }
+
 func elf64_write_relocation(elf64_relocation reloc) int[] {
     buf := int[]()
-    buf

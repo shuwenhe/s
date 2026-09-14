@@ -4,4 +4,3 @@ func choose(bool flag, int[] items, int index) int {
         items[index]
     } else {
         0
-    }

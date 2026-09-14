@@ -9,12 +9,14 @@ struct prog {
     int offset
     string cond
 }
+
 func padframe(int frame) int {
     if (frame % 16) != 0 {
         frame = frame + (16 - (frame % 16))
     }
     frame
 }
+
 func zerorange(prog[] insns, int off, int cnt, bool ignored) prog[] {
     if (cnt % 8) != 0 {
         return insns
@@ -44,6 +46,7 @@ func zerorange(prog[] insns, int off, int cnt, bool ignored) prog[] {
     }
     out
 }
+
 func ginsnop(prog[] insns) prog[] {
     out := insns
     out.push(prog {
@@ -52,4 +55,3 @@ func ginsnop(prog[] insns) prog[] {
         to: "", offset 0,
         cond: "",
     })
-    out

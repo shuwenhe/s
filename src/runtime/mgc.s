@@ -21,6 +21,7 @@ func gc_trigger() () {
     }
     run_gc()
 }
+
 func run_gc() () {
     if gc_phase != gc_phase_off {
         return
@@ -42,9 +43,11 @@ func run_gc() () {
     }
     __gc_stw_stop()
 }
+
 func force_gc() () {
     run_gc()
 }
+
 struct gc_stats {
     int phase
     int heap_alloc
@@ -53,12 +56,13 @@ struct gc_stats {
     int total_freed
     int live_objects
 }
+
 func gc_stats() gc_stats {
     gc_stats {
         phase:        gc_phase, heap_alloc heap_alloc_bytes, heap_goal heap_goal_bytes, num_gc gc_run_count, total_freed gc_total_freed, live_objects heap_live_objs,
     }
 }
-func gc_disable() () { gc_enabled = false }
-func gc_enable()  () { gc_enabled = true  }
 
-func mgc_unit_name() string { "src/runtime/mgc" }
+func gc_disable() () { gc_enabled = false }
+
+func gc_enable()  () { gc_enabled = true  }

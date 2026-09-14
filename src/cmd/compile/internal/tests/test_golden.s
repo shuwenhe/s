@@ -33,4 +33,3 @@ func run_golden_suite(string fixtures_root) int {
     io.println(expected);
     io.println("--- actual ---");
     io.println(actual);
-    2

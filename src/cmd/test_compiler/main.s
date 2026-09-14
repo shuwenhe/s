@@ -18,6 +18,7 @@ func default_fixtures_root() string {
     }
     "cmd/compile/internal/tests/fixtures"
 }
+
 func main() {
     args := host_args()
     if len(args) >= 2 {
@@ -72,4 +73,3 @@ func main() {
         return mono_result
     }
     std.io.println("test_compiler: ok");
-    0

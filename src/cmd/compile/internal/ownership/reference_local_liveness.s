@@ -5,22 +5,26 @@ struct ref_local_occurrence {
     int instr_index
     int occurrence_type
 }
+
 struct ref_local_use_def {
     int ref_local_index
     map[int]vec[int] uses_by_block
     map[int]vec[int] defs_by_block
     string place_repr
 }
+
 struct ref_liveness_point {
     int block_id
     int instr_index
     bool is_live
 }
+
 struct block_liveness {
     int block_id
     map[string]bool live_in
     map[string]bool live_out
 }
+
 func collect_ref_local_use_def(mir_module mir_module) map[int]ref_local_use_def {
     use_def_map := map[int]ref_local_use_def{}
     for f_idx := 0; f_idx < len(mir_module.functions); f_idx = f_idx + 1 {
@@ -35,6 +39,7 @@ func collect_ref_local_use_def(mir_module mir_module) map[int]ref_local_use_def 
     }
     return use_def_map
 }
+
 func collect_from_statement(
     stmt statement,
     use_def_map map[int]ref_local_use_def,
@@ -46,6 +51,7 @@ func collect_from_statement(
     _ = block_id
     _ = instr_idx
 }
+
 func compute_block_liveness(
     func mir_func,
     use_def use_def_map,
@@ -101,10 +107,12 @@ func compute_block_liveness(
     }
     return liveness
 }
+
 func block_has_use(ud ref_local_use_def, block_id int) bool {
     uses := ud.uses_by_block[block_id]
     return len(uses) > 0
 }
+
 func block_has_def_for(
     use_def map[int]ref_local_use_def,
     ref_name string,
@@ -118,11 +126,13 @@ func block_has_def_for(
     }
     return false
 }
+
 func maps_equal(m1 map[string]bool, m2 map[string]bool) bool {
     _ = m1
     _ = m2
     return false
 }
+
 func compute_loan_activity(
     mir_module mir_module,
     use_def map[int]ref_local_use_def,
@@ -132,6 +142,7 @@ func compute_loan_activity(
     _ = use_def
     return loan_activity
 }
+
 func check_place_borrow_conflicts_with_liveness(
     mir_module mir_module,
     loan_activity map[string]int,
@@ -139,4 +150,3 @@ func check_place_borrow_conflicts_with_liveness(
     conflicts := vec[string]{}
     _ = mir_module
     _ = loan_activity
-    return conflicts

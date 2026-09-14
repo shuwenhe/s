@@ -11,6 +11,7 @@ struct ssa_value {
     string type_name
     bool signed
 }
+
 func ssa_mark_moves() () {
 }
 
@@ -41,6 +42,7 @@ func load_by_type(string type_name, bool signed) string {
     }
     "MOVD"
 }
+
 func store_by_type(string type_name) string {
     if type_name == "float32" {
         return "FMOVS"
@@ -59,6 +61,7 @@ func store_by_type(string type_name) string {
     }
     "MOVD"
 }
+
 func load_by_type2(string type_name) string {
     if type_name == "float32" {
         return "FLDPS"
@@ -74,6 +77,7 @@ func load_by_type2(string type_name) string {
     }
     ""
 }
+
 func store_by_type2(string type_name) string {
     if type_name == "float32" {
         return "FSTPS"
@@ -89,12 +93,14 @@ func store_by_type2(string type_name) string {
     }
     ""
 }
+
 func makeshift(int reg, int typ, int amount) int {
     if amount < 0 || amount >= 64 {
         return 0
     }
     ((reg & 31) << 16) + typ + ((amount & 63) << 10)
 }
+
 func gen_indexed_operand(string op, int base, int idx) string {
     if op == "MOVDloadidx8" || op == "MOVDstoreidx8" || op == "FMOVDloadidx8" || op == "FMOVDstoreidx8" {
         return "[R" + to_string(base) + "+(R" + to_string(idx) + "<<3)]"
@@ -107,6 +113,7 @@ func gen_indexed_operand(string op, int base, int idx) string {
     }
     return "[R" + to_string(base) + "+R" + to_string(idx) + "]"
 }
+
 func ssa_gen_value(ssa_value value) string {
     if value.op == "OpCopy" || value.op == "OpARM64MOVDreg" {
         return "MOVD"
@@ -161,6 +168,7 @@ func ssa_gen_value(ssa_value value) string {
     }
     "GENERIC"
 }
+
 func ssa_gen_block(string kind, int next_succ, int likely) string[] {
     out := string[]()
     if kind == "BlockPlain" || kind == "BlockDefer" {
@@ -186,6 +194,7 @@ func ssa_gen_block(string kind, int next_succ, int likely) string[] {
     out = append(out, "UNIMPL")
     out
 }
+
 func load_reg_result(string type_name) string {
     if type_name == "float32" || type_name == "float64" || type_name == "float" {
         return "F0"
@@ -195,9 +204,11 @@ func load_reg_result(string type_name) string {
     }
     "R0"
 }
+
 func spill_arg_reg(int index) string {
     return "spill+" + to_string(index * 8
 }
+
 func starts_with(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
@@ -209,4 +220,3 @@ func starts_with(string text, string prefix) bool {
         }
         i = i + 1
     }
-    true

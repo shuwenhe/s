@@ -46,6 +46,7 @@ func malloc(int size, int type_id) int {
     heap_live_objs   = heap_live_objs + 1
     obj_id
 }
+
 func free_obj(int obj_id) () {
     hdr := __mem_obj_read_header(obj_id)
     heap_alloc_bytes = heap_alloc_bytes - hdr.size
@@ -59,11 +60,13 @@ func free_obj(int obj_id) () {
     heap_dead_objs = heap_dead_objs + 1
     __mem_os_free(obj_id)
 }
+
 func alloc_stats() malloc_stats {
     malloc_stats {
         alloc_bytes: heap_alloc_bytes, sys_bytes heap_sys_bytes, live_objs heap_live_objs, dead_objs heap_dead_objs, goal_bytes heap_goal_bytes,
     }
 }
+
 struct malloc_stats {
     int alloc_bytes
     int sys_bytes
@@ -71,7 +74,7 @@ struct malloc_stats {
     int dead_objs
     int goal_bytes
 }
+
 func heap_all_objects() int[] {
     __mem_heap_list_all()
 }
-func malloc_unit_name() string { "src/runtime/malloc" }
