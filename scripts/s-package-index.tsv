@@ -285,6 +285,7 @@ compile.internal.ownership	src/cmd/compile/internal/ownership/move_checker.s
 compile.internal.ownership	src/cmd/compile/internal/ownership/ownership_analysis.s
 compile.internal.ownership	src/cmd/compile/internal/ownership/ownership_drop_closure.s
 compile.internal.ownership	src/cmd/compile/internal/ownership/ownership_state.s
+compile.internal.ownership.analysis	src/cmd/compile/internal/ownership/analysis.s
 compile.internal.ownership_system	src/cmd/compile/internal/ownership_system.s
 compile.internal.ownership_with_fields	src/cmd/compile/internal/ownership_with_fields.s
 compile.internal.path	src/cmd/compile/internal/path.s
@@ -533,6 +534,8 @@ compile.internal.test.testdata.reproducible	src/cmd/compile/internal/test/testda
 compile.internal.test.testdata.reproducible	src/cmd/compile/internal/test/testdata/reproducible/issue27013.s
 compile.internal.test.testdata.reproducible	src/cmd/compile/internal/test/testdata/reproducible/issue30202.s
 compile.internal.test.testdata.reproducible	src/cmd/compile/internal/test/testdata/reproducible/issue38068.s
+compile.internal.tests	src/cmd/compile/internal/tests/test_b1_2_nested_place.s
+compile.internal.tests	src/cmd/compile/internal/tests/test_b1_3_loan_query.s
 compile.internal.tests.test_abt	src/cmd/compile/internal/tests/test_abt.s
 compile.internal.tests.test_backend_abi	src/cmd/compile/internal/tests/test_backend_abi.s
 compile.internal.tests.test_golden	src/cmd/compile/internal/tests/test_golden.s
@@ -681,6 +684,7 @@ demo.flow	src/cmd/compile/internal/tests/fixtures/control_flow_sample.s
 demo.generic	src/cmd/compile/internal/tests/fixtures/generic_bound_fail.s
 demo.matching	src/cmd/compile/internal/tests/fixtures/match_sample.s
 demo.member	src/cmd/compile/internal/tests/fixtures/member_method_sample.s
+demo.ownership_ref_flow	src/cmd/compile/internal/tests/fixtures/real_mir_ref_flow.s
 demo.prelude	src/cmd/compile/internal/tests/fixtures/prelude_methods_ok.s
 demo.receiver	src/cmd/compile/internal/tests/fixtures/receiver_auto_borrow_ok.s
 desugaring	src/cmd/compile/internal/middleend/desugaring.s
