@@ -1,5 +1,7 @@
 package compile.internal.dispatch
-use compile.internal.compiler.main as compiler_main
+import (
+    "compile.internal.compiler"
+)
 func main(string[] args) int {
-    return compiler_main(args)
+    return compile.internal.compiler.main(args)
 }

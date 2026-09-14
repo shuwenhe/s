@@ -1,6 +1,8 @@
 package runtime.runner
-use compile.internal.compiler.main as compiler_main
-use std.env.args as host_args
+import (
+    "compile.internal.compiler"
+    "std.env"
+)
 func main() {
-    return compiler_main(host_args())
+    return compile.internal.compiler.main(std.env.args())
 }

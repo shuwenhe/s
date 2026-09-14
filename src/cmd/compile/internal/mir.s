@@ -8,9 +8,6 @@ import (
     "std.option"
     "std.prelude"
 )
-use compile.internal.ownership.analysis.ownership_analysis_input
-use compile.internal.ownership.analysis.analyze_ownership_liveness
-use std.prelude.to_string
 
 // C.3.1b.2-pre.A1: Canonical projection kind
 // Structured representation of place projection operations
@@ -92,6 +89,7 @@ struct mir_ref_assign_stmt {
     string target_ref
     string source_ref
 }
+
 enum mir_statement {
     assign(mir_assign_stmt),
     eval(mir_eval_stmt),
@@ -443,12 +441,12 @@ func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
 func dump_ownership_shadow_from_mir(mir_graph graph) string {
     points := build_mir_point_map(graph)
     facts := build_ownership_facts_from_mir(graph, points)
-    analysis := analyze_ownership_liveness(facts.input)
+    analysis := compile.internal.ownership.analysis.analyze_ownership_liveness(facts.input)
     out := "RealMIROwnershipShadow\n"
     out = out + "RealMIRFacts(point_count=" + std.prelude.to_string(facts.input.point_count) + ", refs=" + std.prelude.to_string(len(facts.ref_names)) + ", loans=" + std.prelude.to_string(facts.input.loan_count) + ", outlives=" + std.prelude.to_string(facts.input.outlives_count) + ")\n"
     i := 0
     for i < facts.input.loan_count {
-        out = out + "LoanLivePoints(L" + to_string(i) + ") = " + mir_points_string(analysis.loan_live_points[i]) + "\n"
+        out = out + "LoanLivePoints(L" + std.prelude.to_string(i) + ") = " + mir_points_string(analysis.loan_live_points[i]) + "\n"
         i = i + 1
     }
     out = out + "SharedSolverShadow(iterations=" + std.prelude.to_string(analysis.iterations) + ", converged=true)\n"
