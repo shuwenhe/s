@@ -18,6 +18,14 @@ NATIVE_BOOTSTRAP_DIR := $(SELFHOST_DIR)/native
 
 NATIVE_BOOTSTRAP_STAMP := $(NATIVE_BOOTSTRAP_DIR)/.complete
 
+MODULAR_BOOTSTRAP_DIR ?= $(CURDIR)/.bootstrap/modular
+
+MODULAR_BOOTSTRAP_BIN ?= $(MODULAR_BOOTSTRAP_DIR)/s_modular
+
+MODULAR_BOOTSTRAP_IR ?= $(MODULAR_BOOTSTRAP_DIR)/s_modular.ir
+
+MODULAR_BOOTSTRAP_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-report.txt
+
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
 
 S_HOST_OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
@@ -2044,11 +2052,67 @@ package-index:
 .PHONY: bin/s_modular
 bin/s_modular: seed-compiler-bin package-index
 	@echo "Building modular compiler..."
-	@mkdir -p .bootstrap
-	@echo "Note: modular compiler build requires complete self-hosted implementation"
-	@echo "Placeholder: build command not yet fully implemented"
-	@touch ./bin/s_modular
+	@mkdir -p ./bin .bootstrap
+	@{ \
+	  printf '%s\n' '#!/bin/bash'; \
+	  printf '%s\n' 'set -e'; \
+	  printf '%s\n' 'S_PROJECT_ROOT="$${S_PROJECT_ROOT:-.}"'; \
+	  printf '%s\n' 'S_SOURCE_ROOT="$${S_SOURCE_ROOT:-./src}"'; \
+	  printf '%s\n' 'MODULAR_NATIVE="$${S_MODULAR_NATIVE:-$${S_PROJECT_ROOT}/.bootstrap/modular/s_modular}"'; \
+	  printf '%s\n' 'usage() {'; \
+	  printf '%s\n' '  echo "usage: s_modular check <input.s>" >&2'; \
+	  printf '%s\n' '  echo "       s_modular tokens <input.s>" >&2'; \
+	  printf '%s\n' '  echo "       s_modular ast <input.s>" >&2'; \
+	  printf '%s\n' '  echo "       s_modular build <input.s> -o <output>" >&2'; \
+	  printf '%s\n' '  echo "       s_modular test [fixtures_root]" >&2'; \
+	  printf '%s\n' '}'; \
+	  printf '%s\n' 'if [ "$$#" -eq 1 ] && { [ "$$1" = "--help" ] || [ "$$1" = "-h" ]; }; then usage; exit 0; fi'; \
+	  printf '%s\n' 'if [ -x "$$MODULAR_NATIVE" ]; then exec "$$MODULAR_NATIVE" "$$@"; fi'; \
+	  printf '%s\n' 'if [ "$$#" -lt 1 ]; then usage; exit 2; fi'; \
+	  printf '%s\n' 'case "$$1" in'; \
+	  printf '%s\n' '  check|tokens|ast|build|test)'; \
+	  printf '%s\n' '    echo "error: canonical modular compiler binary not found: $$MODULAR_NATIVE" >&2'; \
+	  printf '%s\n' '    echo "hint: run make modular-bootstrap; this wrapper will not delegate semantics to s_seed" >&2'; \
+	  printf '%s\n' '    exit 1'; \
+	  printf '%s\n' '    ;;'; \
+	  printf '%s\n' '  *) usage; exit 2 ;;'; \
+	  printf '%s\n' 'esac'; \
+	} > ./bin/s_modular
 	@chmod +x ./bin/s_modular
+
+.PHONY: modular-bootstrap
+modular-bootstrap: seed-compiler-bin package-index
+	@echo "Bootstrapping canonical modular compiler..."
+	@mkdir -p "$(MODULAR_BOOTSTRAP_DIR)"
+	@{ \
+	  echo "source=src/cmd/compile/modular_build_main.s"; \
+	  echo "producer=bin/s_seed"; \
+	  echo "role=bootstrap-producer-only"; \
+	  echo "status=attempting-seed-ir"; \
+	} > "$(MODULAR_BOOTSTRAP_REPORT)"
+	@if ./bin/s_seed src/cmd/compile/modular_build_main.s "$(MODULAR_BOOTSTRAP_IR)" >>"$(MODULAR_BOOTSTRAP_REPORT)" 2>&1; then \
+	  echo "status=seed-ir-ok" >>"$(MODULAR_BOOTSTRAP_REPORT)"; \
+	else \
+	  echo "status=blocked-bootstrap-compatibility" >>"$(MODULAR_BOOTSTRAP_REPORT)"; \
+	  echo "modular bootstrap blocked: s_seed cannot compile src/cmd/compile/modular_build_main.s" >&2; \
+	  echo "see $(MODULAR_BOOTSTRAP_REPORT)" >&2; \
+	  exit 1; \
+	fi
+	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) \
+	  ./bin/s_seed --emit-bin "$(MODULAR_BOOTSTRAP_IR)" "$(MODULAR_BOOTSTRAP_BIN)" >>"$(MODULAR_BOOTSTRAP_REPORT)" 2>&1
+	@chmod +x "$(MODULAR_BOOTSTRAP_BIN)"
+	@echo "status=bootstrap-ok" >>"$(MODULAR_BOOTSTRAP_REPORT)"
+
+.PHONY: modular-bootstrap-check
+modular-bootstrap-check: modular-bootstrap
+	@echo "Checking canonical modular bootstrap artifact..."
+	@test -x "$(MODULAR_BOOTSTRAP_BIN)"
+	@test ! -L "$(MODULAR_BOOTSTRAP_BIN)"
+	@! file "$(MODULAR_BOOTSTRAP_BIN)" | grep -Eiq 'shell script|text executable'
+	@! cmp -s "$(MODULAR_BOOTSTRAP_BIN)" ./bin/s_seed
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src "$(MODULAR_BOOTSTRAP_BIN)" --help >/dev/null
+	@strings "$(MODULAR_BOOTSTRAP_BIN)" | grep -Eq 's_modular|compile.internal.syntax|backend_elf64'
+	@echo "Modular bootstrap check passed"
 
 .PHONY: modular-test-help
 modular-test-help: bin/s_modular
