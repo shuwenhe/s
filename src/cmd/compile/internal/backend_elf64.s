@@ -21,51 +21,41 @@ import (
 struct backend_error {
     string message
 }
-
 func ok_function(function_decl value) (function_decl, backend_error) {
     result.ok(value);
 }
-
 func fail_function(string message) (function_decl, backend_error) {
     result.err(backend_error {
         message: message,
     });
 }
-
 func ok_write_ops(write_op[] value) (write_op[], backend_error) {
     result.ok(value);
 }
-
 func fail_write_ops(string message) (write_op[], backend_error) {
     result.err(backend_error {
         message: message,
     });
 }
-
 func ok_value(value value) (value, backend_error) {
     result.ok(value);
 }
-
 func fail_value(string message) (value, backend_error) {
     result.err(backend_error {
         message: message,
     });
 }
-
 func ok_unit() ((), backend_error) {
     result.ok(());
 }
-
 func fail_unit(string message) ((), backend_error) {
     result.err(backend_error {
         message: message,
     });
 }
-
 func ok_int(int value) (int, backend_error) {
     result.ok(value);
 }
-
 func fail_int(string message) (int, backend_error) {
     result.err(backend_error {
         message: message,
@@ -74,24 +64,19 @@ func fail_int(string message) (int, backend_error) {
 control_panic_active := "@panic.active"
 control_panic_payload := "@panic.payload"
 control_in_defer := "@defer.active"
-
 struct unit_value {}
-
 struct fn_map_entry_value {
     string key
     string func_name
 }
-
 struct channel_handle_value {
     int id
 }
-
 struct owned_box_value {
     int id
     payload value
     bool live
 }
-
 struct channel_runtime_state {
     int id
     int capacity
@@ -100,19 +85,16 @@ struct channel_runtime_state {
     int sends
     int recvs
 }
-
 struct captured_binding {
     string name
     value value
 }
-
 struct sroutine_task {
     string fn_name
     value[] args
     captured_binding[] captured_env
     string origin
 }
-
 struct runtime_state {
     sroutine_task[] runq
     channel_runtime_state[] channels
@@ -129,7 +111,6 @@ struct runtime_state {
     int select_default_fallbacks
     int select_timeouts
 }
-
 struct runtime_metrics {
     int sroutine_scheduled
     int sroutine_completed
@@ -154,35 +135,29 @@ enum value {
     fn_map(fn_map_entry_value[]),
     owned_box(owned_box_value),
 }
-
 struct binding {
     string name
     value value
 }
-
 struct write_op {
     int fd
     string text
 }
-
 struct mir_execution_result {
     write_op[] writes
     int exit_code
     runtime runtime_metrics
 }
-
 struct midend_result {
     string optimized_mir_text
     string report
 }
-
 struct stackmap_function_entry {
     string name
     int slots
     string bitmap
     int callee_saved
 }
-
 struct abi_behavior_entry {
     string name
     int param_count
@@ -195,7 +170,6 @@ struct abi_behavior_entry {
     int abi_arg_width
     string abi_summary
 }
-
 func build_object(string path, string output, string ssa_margin_override) int {
     source_result := std.fs.read_to_string(path)
     if source_result.is_err() {
@@ -272,7 +246,6 @@ func build_object(string path, string output, string ssa_margin_override) int {
     }
     0
 }
-
 func build(string path, string output, string ssa_margin_override, bool nostdlib) int {
     source_result := std.fs.read_to_string(path)
     if source_result.is_err() {
@@ -483,7 +456,6 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     }
     0
 }
-
 func run_midend_pipeline(mir_graph graph) midend_result {
     pass := apply_midend_pass_pipeline(graph)
     rewritten_graph := pass.graph
@@ -570,7 +542,6 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         optimized_mir_text: rewritten, report report,
     }
 }
-
 func estimate_sroutine_sites_graph(mir_graph graph) int {
     total := 0
     i := 0
@@ -582,7 +553,6 @@ func estimate_sroutine_sites_graph(mir_graph graph) int {
     }
     total
 }
-
 func estimate_trace_call_sites_graph(mir_graph graph, string marker) int {
     total := 0
     i := 0
@@ -594,7 +564,6 @@ func estimate_trace_call_sites_graph(mir_graph graph, string marker) int {
     }
     total
 }
-
 func estimate_const_fold_hits_graph(mir_graph graph) int {
     prefix := "constfold.hits="
     i := 0
@@ -607,7 +576,6 @@ func estimate_const_fold_hits_graph(mir_graph graph) int {
     }
     0
 }
-
 func parse_non_negative_int(string raw) int {
     text := trim_spaces(raw)
     if text == "" {
@@ -626,7 +594,6 @@ func parse_non_negative_int(string raw) int {
     }
     value
 }
-
 struct midend_pass_result {
     graph mir_graph
     int simplified_jump_to_return
@@ -635,7 +602,6 @@ struct midend_pass_result {
     int removed_unreachable_blocks
     int folded_redundant_branches
 }
-
 func apply_midend_pass_pipeline(mir_graph graph) midend_pass_result {
     rewritten := graph
     unreachable := remove_unreachable_blocks_pass(rewritten)
@@ -652,7 +618,6 @@ func apply_midend_pass_pipeline(mir_graph graph) midend_pass_result {
         graph: rewritten, simplified_jump_to_return simplified.count, removed_unit_lines trimmed.count, dedup_lines deduped.count, removed_unreachable_blocks unreachable.count, folded_redundant_branches folded.count,
     }
 }
-
 func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     reachable := int[]()
@@ -707,7 +672,6 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     }
     graph_pass_count_result { graph: rewritten, count removed }
 }
-
 func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     changed := 0
@@ -738,7 +702,6 @@ func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
     }
     graph_pass_count_result { graph: rewritten, count changed }
 }
-
 func contains_int32(int[] values, int needle) bool {
     i := 0
     for i < std.prelude.len(values) {
@@ -749,12 +712,10 @@ func contains_int32(int[] values, int needle) bool {
     }
     false
 }
-
 struct graph_pass_count_result {
     graph mir_graph
     int count
 }
-
 func simplify_jump_to_return_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     changed := 0
@@ -777,7 +738,6 @@ func simplify_jump_to_return_pass(mir_graph graph) graph_pass_count_result {
     }
     graph_pass_count_result { graph: rewritten, count changed }
 }
-
 func trim_unit_line_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     changed := 0
@@ -808,7 +768,6 @@ func trim_unit_line_pass(mir_graph graph) graph_pass_count_result {
     }
     graph_pass_count_result { graph: rewritten, count changed }
 }
-
 func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     changed := 0
@@ -846,7 +805,6 @@ func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
     }
     graph_pass_count_result { graph: rewritten, count changed }
 }
-
 func find_block_index_by_id(mir_graph graph, int id) int {
     i := 0
     for i < std.prelude.len(graph.blocks) {
@@ -857,7 +815,6 @@ func find_block_index_by_id(mir_graph graph, int id) int {
     }
     0 - 1
 }
-
 func validate_ssa_abi_contracts(string arch, string ssa_text) ((), backend_error) {
     spills := parse_number_after(ssa_text, "spills=")
     reloads := parse_number_after(ssa_text, "reloads=")
@@ -885,7 +842,6 @@ func validate_ssa_abi_contracts(string arch, string ssa_text) ((), backend_error
     }
     ()
 }
-
 func validate_callsite_preservation(string ssa_text) ((), backend_error) {
     clobber := parse_number_after(ssa_text, "callee_saved_clobber=")
     if clobber > 0 {
@@ -900,7 +856,6 @@ func validate_callsite_preservation(string ssa_text) ((), backend_error) {
     }
     ()
 }
-
 func build_cfi_artifact(string arch, string ssa_text, string debug_map) string {
     lines := string[]()
     lines = append(lines, "cfi version=1 arch=" + arch)
@@ -912,7 +867,6 @@ func build_cfi_artifact(string arch, string ssa_text, string debug_map) string {
     lines = append(lines, ".cfi_endproc")
     join_lines(lines)
 }
-
 func validate_cfi_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "cfi version=1") {
         return backend_error { message: "backend error: cfi header missing" }
@@ -925,7 +879,6 @@ func validate_cfi_artifact(string payload) ((), backend_error) {
     }
     ()
 }
-
 func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int inlined) int {
     imports := 0
     i := 0
@@ -941,7 +894,6 @@ func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int inlined) int {
     }
     score
 }
-
 func estimate_const_prop_sites_graph(mir_graph graph) int {
     constants := 0
     i := 0
@@ -972,21 +924,18 @@ func estimate_const_prop_sites_graph(mir_graph graph) int {
     }
     constants
 }
-
 func build_wasm_toolchain_plan(string c_path, string obj_path, string output) string {
     return "clang --target=wasm32-wasi -c " + c_path
         + " -o " + obj_path
         + " && wasm-ld --no-entry --export=_start --allow-undefined " + obj_path
         + " -o " + output
 }
-
 func build_wasm_binary_probe_plan(string output) string {
     return "wasm-objdump -x " + output + " | grep -q wasi_snapshot_preview1"
         + " && wasm-objdump -x " + output + " | grep -q fd_write"
         + " && wasm-objdump -x " + output + " | grep -q proc_exit"
         + " && wasm-objdump -x " + output + " | grep -q _start"
 }
-
 func validate_wasi_binary_artifact(string output) ((), backend_error) {
     probe := string[]()
     probe = append(probe, "sh")
@@ -1000,7 +949,6 @@ func validate_wasi_binary_artifact(string output) ((), backend_error) {
     }
     ()
 }
-
 func build_wasm_object_chain(string temp_dir, string output, write_op[] writes, int exit_code) ((), backend_error) {
     c_path := temp_dir + "/out_wasm.c"
     obj_path := temp_dir + "/out_wasm.o"
@@ -1042,7 +990,6 @@ func build_wasm_object_chain(string temp_dir, string output, write_op[] writes, 
     }
     ()
 }
-
 func validate_wasi_contract_source(string source) ((), backend_error) {
     if !has_substring(source, "__import_module__(\"wasi_snapshot_preview1\")") {
         return backend_error { message: "backend error: wasi import module annotation missing" }
@@ -1061,7 +1008,6 @@ func validate_wasi_contract_source(string source) ((), backend_error) {
     }
     ()
 }
-
 func emit_wasm_c_source(write_op[] writes, int exit_code) string {
     lines := string[]()
     lines = append(lines, "typedef unsigned int u32;")
@@ -1090,7 +1036,6 @@ func emit_wasm_c_source(write_op[] writes, int exit_code) string {
     lines = append(lines, "}")
     join_lines(lines) + "\n"
 }
-
 func estimate_ipo_synergy(int inlined, int escaped, int devirt, int cross_pkg_inline, int const_prop) int {
     score := inlined + devirt + cross_pkg_inline + const_prop
     if escaped > 0 {
@@ -1101,7 +1046,6 @@ func estimate_ipo_synergy(int inlined, int escaped, int devirt, int cross_pkg_in
     }
     score
 }
-
 func build_abi_machine_matrix_artifact(string arch, source_file source, string ssa_text) string {
     lines := string[]()
     lines = append(lines, "abi-matrix version=1 arch=" + arch)
@@ -1118,7 +1062,6 @@ func build_abi_machine_matrix_artifact(string arch, source_file source, string s
     lines = append(lines, "cross_arch_consistency=" + abi_cross_arch_consistency_status(arch, spills, functions))
     join_lines(lines)
 }
-
 func abi_cross_arch_consistency_status(string arch, int spills, int functions) string {
     score := functions * 4 - spills
     if arch == "arm64" {
@@ -1132,7 +1075,6 @@ func abi_cross_arch_consistency_status(string arch, int spills, int functions) s
     }
     "fragile"
 }
-
 func validate_abi_machine_matrix(string payload) ((), backend_error) {
     if !has_substring(payload, "abi-matrix version=1") {
         return backend_error { message: "backend error: ABI matrix header missing" }
@@ -1151,7 +1093,6 @@ func validate_abi_machine_matrix(string payload) ((), backend_error) {
     }
     ()
 }
-
 func build_toolchain_compat_artifact(source_file source, string arch) string {
     lines := string[]()
     lines = append(lines, "toolchain-compat version=1 arch=" + arch)
@@ -1165,7 +1106,6 @@ func build_toolchain_compat_artifact(source_file source, string arch) string {
     lines = append(lines, "go_equiv module=planned build_tags=planned test=partial cover=partial profile=planned")
     join_lines(lines)
 }
-
 func validate_toolchain_compat_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "toolchain-compat version=1") {
         return backend_error { message: "backend error: toolchain compatibility header missing" }
@@ -1196,7 +1136,6 @@ func validate_toolchain_compat_artifact(string payload) ((), backend_error) {
     }
     ()
 }
-
 func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
     lines := string[]()
     lines = append(lines, "go-asm version=1 arch=" + arch + " syntax=plan9")
@@ -1211,7 +1150,6 @@ func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
     lines = append(lines, "gas_preview=" + flatten_multiline(translated.unwrap()))
     join_lines(lines)
 }
-
 func validate_go_asm_bridge_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "go-asm version=1") {
         return backend_error { message: "backend error: go asm artifact header missing" }
@@ -1227,7 +1165,6 @@ func validate_go_asm_bridge_artifact(string payload) ((), backend_error) {
     }
     ()
 }
-
 func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backend_error) {
     input_lines := split_lines_local(plan9_source)
     output_lines := string[]()
@@ -1282,7 +1219,6 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
     }
     join_lines(output_lines)
 }
-
 func parse_go_text_symbol(string line) (string, backend_error) {
     after := trim_spaces(std.prelude.slice(line, std.prelude.len("TEXT "), std.prelude.len(line)))
     comma := index_of(after, ",")
@@ -1299,7 +1235,6 @@ func parse_go_text_symbol(string line) (string, backend_error) {
     }
     symbol
 }
-
 func translate_go_instruction_line(string line, string arch) (string, backend_error) {
     first_space := index_of(line, " ")
     op := line
@@ -1335,7 +1270,6 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
     }
     "    " + gas_op + " " + left.unwrap() + ", " + right.unwrap()
 }
-
 func map_go_opcode(string op) string {
     if op == "MOVQ" {
         return "movq"
@@ -1408,7 +1342,6 @@ func map_go_opcode(string op) string {
     }
     ""
 }
-
 func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) {
     operand := trim_spaces(raw)
     if operand == "" {
@@ -1450,7 +1383,6 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
     }
     normalize_go_symbol(operand)
 }
-
 func map_go_register(string reg, string arch) string {
     if arch != "amd64" && arch != "amd64p32" {
         return ""
@@ -1508,7 +1440,6 @@ func map_go_register(string reg, string arch) string {
     }
     ""
 }
-
 func parse_go_disp(string text) string {
     disp := trim_spaces(text)
     if disp == "" {
@@ -1524,7 +1455,6 @@ func parse_go_disp(string text) string {
     }
     disp
 }
-
 func normalize_go_symbol(string text) string {
     out := trim_spaces(text)
     if starts_with_local(out, "*") {
@@ -1532,7 +1462,6 @@ func normalize_go_symbol(string text) string {
     }
     out
 }
-
 func strip_go_asm_comment(string line) string {
     out := line
     slash := index_of(out, "//")
@@ -1545,7 +1474,6 @@ func strip_go_asm_comment(string line) string {
     }
     out
 }
-
 func split_lines_local(string text) string[] {
     lines := string[]()
     start := 0
@@ -1562,7 +1490,6 @@ func split_lines_local(string text) string[] {
     }
     lines
 }
-
 func flatten_multiline(string text) string {
     lines := split_lines_local(text)
     out := string[]()
@@ -1576,7 +1503,6 @@ func flatten_multiline(string text) string {
     }
     join_with(out, " | ")
 }
-
 func build_stackmap_artifact(string arch, source_file source, string ssa_text, string debug_map) string {
     entries := collect_function_stackmaps(arch, source, ssa_text)
     header := "stackmap version=2 arch=" + arch + " functions=" + std.prelude.to_string(std.prelude.len(entries))
@@ -1596,7 +1522,6 @@ func build_stackmap_artifact(string arch, source_file source, string ssa_text, s
     lines = append(lines, "meta " + debug_map)
     join_lines(lines)
 }
-
 func estimate_stack_slots(string ssa_text) int {
     spills := parse_number_after(ssa_text, "spills=")
     if spills < 0 {
@@ -1604,7 +1529,6 @@ func estimate_stack_slots(string ssa_text) int {
     }
     spills
 }
-
 func collect_function_stackmaps(string arch, source_file source, string ssa_text) stackmap_function_entry[] {
     out := stackmap_function_entry[]()
     i := 0
@@ -1629,7 +1553,6 @@ func collect_function_stackmaps(string arch, source_file source, string ssa_text
     }
     out
 }
-
 func estimate_function_stack_slots(function_decl fn_decl, string ssa_text) int {
     if fn_decl.sig.name == "main" {
         main_slots := estimate_stack_slots(ssa_text)
@@ -1647,7 +1570,6 @@ func estimate_function_stack_slots(function_decl fn_decl, string ssa_text) int {
     }
     slots
 }
-
 func build_slot_bitmap(string function_name, int slots) string {
     if slots <= 0 {
         return "0"
@@ -1664,7 +1586,6 @@ func build_slot_bitmap(string function_name, int slots) string {
     }
     out
 }
-
 func build_abi_behavior_artifact(string arch, source_file source) string {
     entries := collect_abi_behavior(arch, source)
     lines := string[]()
@@ -1688,7 +1609,6 @@ func build_abi_behavior_artifact(string arch, source_file source) string {
     }
     join_lines(lines)
 }
-
 func build_abi_emit_plan(string arch, source_file source) string {
     lines := string[]()
     lines = append(lines, "abi-emit version=1 arch=" + arch)
@@ -1735,7 +1655,6 @@ func build_abi_emit_plan(string arch, source_file source) string {
     }
     join_lines(lines)
 }
-
 func abi_param_location(string arch, int index) string {
     reg := abi_int_arg_reg(arch, index)
     if reg == "" {
@@ -1743,7 +1662,6 @@ func abi_param_location(string arch, int index) string {
     }
     reg
 }
-
 func abi_float_param_location(string arch, int index) string {
     reg := abi_float_arg_reg(arch, index)
     if reg == "" {
@@ -1751,14 +1669,12 @@ func abi_float_param_location(string arch, int index) string {
     }
     reg
 }
-
 func abi_emit_ret_location(string arch, int aggregate_size) string {
     if aggregate_size > 16 {
         return "sret:" + abi_sret_reg(arch
     }
     abi_int_ret_reg(arch)
 }
-
 func abi_emit_aggregate_size_hint(int param_count, string ret_type) int {
     size := param_count * 8
     parts := count_top_level_type_parts(ret_type)
@@ -1773,7 +1689,6 @@ func abi_emit_aggregate_size_hint(int param_count, string ret_type) int {
     }
     size
 }
-
 func abi_emit_aggregate_mode(string ret_type, int ret_parts, int aggregate_size) string {
     if ret_type == "" {
         return "void"
@@ -1792,7 +1707,6 @@ func abi_emit_aggregate_mode(string ret_type, int ret_parts, int aggregate_size)
     }
     "scalar"
 }
-
 func abi_emit_ret_plan(string arch, string ret_type, int ret_parts, int aggregate_size) string {
     if ret_type == "" {
         return "ret->void"
@@ -1808,7 +1722,6 @@ func abi_emit_ret_plan(string arch, string ret_type, int ret_parts, int aggregat
     }
     "ret->" + abi_int_ret_reg(arch)
 }
-
 func abi_second_int_ret_reg(string arch) string {
     if arch == "arm64" {
         return "x1"
@@ -1824,14 +1737,12 @@ func abi_second_int_ret_reg(string arch) string {
     }
     "%rdx"
 }
-
 func abi_stack_alignment(string arch) int {
     if arch == "arm64" || arch == "riscv64" || arch == "s390x" || arch == "wasm" {
         return 16
     }
     16
 }
-
 func abi_caller_saved_count(string arch) int {
     if arch == "arm64" {
         return 18
@@ -1847,7 +1758,6 @@ func abi_caller_saved_count(string arch) int {
     }
     9
 }
-
 func abi_call_sequence_mode(string arch, bool variadic, int ret_parts, int aggregate_size) string {
     mode := "normal"
     if variadic {
@@ -1864,7 +1774,6 @@ func abi_call_sequence_mode(string arch, bool variadic, int ret_parts, int aggre
     }
     mode + "+sysv"
 }
-
 func count_top_level_type_parts(string type_text) int {
     t := trim_spaces(type_text)
     if t == "" {
@@ -1895,7 +1804,6 @@ func count_top_level_type_parts(string type_text) int {
     }
     count
 }
-
 func collect_abi_behavior(string arch, source_file source) abi_behavior_entry[] {
     out := abi_behavior_entry[]()
     i := 0
@@ -1920,7 +1828,6 @@ func collect_abi_behavior(string arch, source_file source) abi_behavior_entry[] 
     }
     out
 }
-
 func collect_fn_param_types(function_decl fn_decl) string[] {
     out := string[]()
     i := 0
@@ -1930,14 +1837,12 @@ func collect_fn_param_types(function_decl fn_decl) string[] {
     }
     out
 }
-
 func collect_fn_result_types(function_decl fn_decl) string[] {
     switch fn_decl.sig.return_type {
         option.some(value) : return split_signature_types(trim_spaces(value)),
         option.none : return string[](),
     }
 }
-
 func split_signature_types(string type_text) string[] {
     t := trim_spaces(type_text)
     if t == "" {
@@ -1977,21 +1882,18 @@ func split_signature_types(string type_text) string[] {
     out = append(out, trim_spaces(std.prelude.slice(t, start, std.prelude.len(t))))
     out
 }
-
 func abi_text_starts_with(string text, string prefix) bool {
     if std.prelude.len(text) < std.prelude.len(prefix) {
         return false
     }
     return std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
 }
-
 func abi_text_ends_with(string text, string suffix) bool {
     if std.prelude.len(text) < std.prelude.len(suffix) {
         return false
     }
     return std.prelude.slice(text, std.prelude.len(text) - std.prelude.len(suffix), std.prelude.len(text)) == suffix
 }
-
 func abi_float_param_reg_limit(string arch) int {
     if arch == "arm64" {
         return 8
@@ -2007,7 +1909,6 @@ func abi_float_param_reg_limit(string arch) int {
     }
     return 8
 }
-
 func build_dwarf_like_artifact(source_file source, string ssa_text, string debug_map) string {
     lines := string[]()
     lines = append(lines, "dwarf-lite version=1")
@@ -2039,7 +1940,6 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
     lines = append(lines, build_dwarf_regression_gate(ssa_text, debug_map))
     join_lines(lines)
 }
-
 func build_dwarf_continuity_metric(string ssa_text, string debug_map) string {
     lines := parse_number_after(ssa_text, "dbg_lines=")
     if lines < 1 {
@@ -2055,7 +1955,6 @@ func build_dwarf_continuity_metric(string ssa_text, string debug_map) string {
     }
     "metric location_continuity=" + std.prelude.to_string(continuity)
 }
-
 func build_dwarf_budget_policy(string ssa_text) string {
     budget := parse_number_after(ssa_text, "dbg_budget=")
     if budget < 0 {
@@ -2070,7 +1969,6 @@ func build_dwarf_budget_policy(string ssa_text) string {
     }
     "policy debug_budget_mode=" + mode + " rolling_window=30 failure_threshold=3"
 }
-
 func build_dwarf_regression_gate(string ssa_text, string debug_map) string {
     budget := parse_number_after(ssa_text, "dbg_budget=")
     if budget < 0 {
@@ -2088,7 +1986,6 @@ func build_dwarf_regression_gate(string ssa_text, string debug_map) string {
         + " budget=" + std.prelude.to_string(budget)
         + " locs=" + std.prelude.to_string(locs)
 }
-
 func append_debug_loc_section(string[] lines, string debug_map) () {
     marker := "let v"
     cursor := 0
@@ -2113,7 +2010,6 @@ func append_debug_loc_section(string[] lines, string debug_map) () {
         lines = append(lines, "  loc#0 pc=[0,0) let none")
     }
 }
-
 func append_debug_ranges_section(string[] lines, source_file source, string ssa_text) () {
     dbg_lines := parse_number_after(ssa_text, "dbg_lines=")
     if dbg_lines < 1 {
@@ -2153,7 +2049,6 @@ func append_debug_ranges_section(string[] lines, source_file source, string ssa_
         lines = append(lines, "  fn=none range=[0,0)")
     }
 }
-
 func dwarf_inline_depth_hint(string fn_name, string ssa_text) int {
     loops := parse_number_after(ssa_text, "loops=")
     if loops < 0 {
@@ -2167,7 +2062,6 @@ func dwarf_inline_depth_hint(string fn_name, string ssa_text) int {
     }
     0
 }
-
 func build_drop_metadata_artifact(string arch, source_file source, string ssa_text) string {
     lines := string[]()
     spills := estimate_stack_slots(ssa_text)
@@ -2192,7 +2086,6 @@ func build_drop_metadata_artifact(string arch, source_file source, string ssa_te
     lines = append(lines, "proof rollback=" + std.prelude.to_string(parse_number_after(ssa_text, "rollback=")) + " proof_fail=" + std.prelude.to_string(parse_number_after(ssa_text, "proof_fail=")))
     join_lines(lines)
 }
-
 func validate_dwarf_consumability(string dwarf_payload, string ssa_text) ((), backend_error) {
     if !has_substring(dwarf_payload, "section .debug_info") {
         return backend_error { message: "backend error: dwarf consumability gate missing .debug_info" }
@@ -2224,7 +2117,6 @@ func validate_dwarf_consumability(string dwarf_payload, string ssa_text) ((), ba
     }
     ()
 }
-
 func validate_drop_contract_chain(string drop_payload, source_file source, string ssa_text) ((), backend_error) {
     if !has_substring(drop_payload, "dropmap version=1") {
         return backend_error { message: "backend error: drop contract missing dropmap header" }
@@ -2249,7 +2141,6 @@ func validate_drop_contract_chain(string drop_payload, source_file source, strin
     }
     ()
 }
-
 func build_backend_perf_baseline_artifact(string arch, string ssa_text, string midend_report, string runtime_report) string {
     lines := string[]()
     lines = append(lines, "perf-baseline version=1 arch=" + arch)
@@ -2276,7 +2167,6 @@ func build_backend_perf_baseline_artifact(string arch, string ssa_text, string m
     lines = append(lines, "regression_gate_arch amd64=watch arm64=watch tail_cases=watch")
     join_lines(lines)
 }
-
 func validate_backend_perf_baseline(string payload) ((), backend_error) {
     if !has_substring(payload, "perf-baseline version=1") {
         return backend_error { message: "backend error: perf baseline header missing" }
@@ -2307,7 +2197,6 @@ func validate_backend_perf_baseline(string payload) ((), backend_error) {
     }
     ()
 }
-
 func build_midend_opt_artifact(string midend_report) string {
     lines := string[]()
     lines = append(lines, "midend-opt version=1")
@@ -2333,7 +2222,6 @@ func build_midend_opt_artifact(string midend_report) string {
         + " ipo_synergy=" + std.prelude.to_string(parse_number_after(midend_report, "ipo_synergy=")))
     join_lines(lines)
 }
-
 func validate_midend_opt_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "midend-opt version=1") {
         return backend_error { message: "backend error: midend opt artifact header missing" }
@@ -2361,7 +2249,6 @@ func validate_midend_opt_artifact(string payload) ((), backend_error) {
     }
     ()
 }
-
 func function_item_count(source_file source) int {
     out := 0
     i := 0
@@ -2374,7 +2261,6 @@ func function_item_count(source_file source) int {
     }
     out
 }
-
 func build_export_data_artifact(source_file source, string arch) string {
     lines := string[]()
     lines = append(lines, "export-data version=2 arch=" + arch + " package=" + source.pkg)
@@ -2472,21 +2358,18 @@ func build_export_data_artifact(source_file source, string arch) string {
     }
     join_lines(lines)
 }
-
 func starts_with_local(string text, string prefix) bool {
     if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
     std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
 }
-
 func ends_with_local(string text, string suffix) bool {
     if std.prelude.len(suffix) > std.prelude.len(text) {
         return false
     }
     std.prelude.slice(text, std.prelude.len(text) - std.prelude.len(suffix), std.prelude.len(text)) == suffix
 }
-
 func load_source_graph(string path, string source) (source_file, backend_error) {
     parsed_result := compile.internal.syntax.parse_source(source)
     if parsed_result.is_err() {
@@ -2512,7 +2395,6 @@ func load_source_graph(string path, string source) (source_file, backend_error) 
     }
     combined
 }
-
 func append_dependency_items(source_file combined, use_decl[] uses, string[] visited) ((), backend_error) {
     i := 0
     for i < std.prelude.len(uses) {
@@ -2542,7 +2424,6 @@ func append_dependency_items(source_file combined, use_decl[] uses, string[] vis
     }
     ()
 }
-
 func append_source_items(source_file combined, source_file dep) () {
     i := 0
     for i < std.prelude.len(dep.items) {
@@ -2550,7 +2431,6 @@ func append_source_items(source_file combined, source_file dep) () {
         i = i + 1
     }
 }
-
 func string_vec_contains(string[] values, string value) bool {
     i := 0
     for i < std.prelude.len(values) {
@@ -2561,14 +2441,12 @@ func string_vec_contains(string[] values, string value) bool {
     }
     false
 }
-
 func should_skip_semantic_check(string path) bool {
     has_substring(path, "/src/cmd/compile/internal/")
         || starts_with_local(path, "src/cmd/compile/internal/")
         || ends_with_local(path, "/src/cmd/compile/main.s")
         || path == "src/cmd/compile/main.s"
 }
-
 func resolve_module_source_path(string module) option[string] {
     indexed := lookup_package_index(module)
     if indexed.is_some() {
@@ -2586,7 +2464,6 @@ func resolve_module_source_path(string module) option[string] {
     }
     option::none
 }
-
 func lookup_package_index(string module) option[string] {
     paths := package_index_candidate_paths()
     pi := 0
@@ -2606,7 +2483,6 @@ func lookup_package_index(string module) option[string] {
     }
     option::none
 }
-
 func package_index_candidate_paths() string[] {
     paths := string[]()
     switch env_get("s_package_index") {
@@ -2625,7 +2501,6 @@ func package_index_candidate_paths() string[] {
     }
     paths
 }
-
 func lookup_module_in_package_index_text(string text, string module) option[string] {
     lines := split_lines_local(text)
     project := resolve_project_root()
@@ -2648,7 +2523,6 @@ func lookup_module_in_package_index_text(string text, string module) option[stri
     }
     option::none
 }
-
 func normalize_package_index_path(string project, string path) string {
     if path == "" {
         return path
@@ -2661,7 +2535,6 @@ func normalize_package_index_path(string project, string path) string {
     }
     project + "/" + path
 }
-
 func find_tab_index(string text) int {
     i := 0
     for i < std.prelude.len(text) {
@@ -2672,7 +2545,6 @@ func find_tab_index(string text) int {
     }
     -1
 }
-
 func add_module_candidates(string[] candidates, string module) () {
     roots := module_search_roots()
     i := 0
@@ -2681,7 +2553,6 @@ func add_module_candidates(string[] candidates, string module) () {
         i = i + 1
     }
 }
-
 func add_module_candidates_in_root(string[] candidates, string root, string module) () {
     if root == "" {
         return
@@ -2709,7 +2580,6 @@ func add_module_candidates_in_root(string[] candidates, string root, string modu
     candidates = append(candidates, root + "/" + dot_to_slash(module) + ".s")
     candidates = append(candidates, root + "/" + dot_to_slash(module) + "/" + last_segment(module) + ".s")
 }
-
 func add_neurx_module_candidates(string[] candidates, string root, string tail) () {
     add_std_layout_candidates(candidates, root, tail)
     if has_dot_local(tail) {
@@ -2720,7 +2590,6 @@ func add_neurx_module_candidates(string[] candidates, string root, string tail) 
     candidates = append(candidates, root + "/app/" + dot_to_slash(tail) + ".s")
     candidates = append(candidates, root + "/platform/" + dot_to_slash(tail) + ".s")
 }
-
 func has_dot_local(string text) bool {
     i := 0
     for i < std.prelude.len(text) {
@@ -2731,7 +2600,6 @@ func has_dot_local(string text) bool {
     }
     false
 }
-
 func add_compile_module_candidates(string[] candidates, string root, string tail) () {
     candidates = append(candidates, root + "/src/cmd/compile/" + dot_to_slash(tail) + ".s")
     candidates = append(candidates, root + "/src/cmd/compile/" + dot_to_slash(tail) + "/" + last_segment(tail) + ".s")
@@ -2744,7 +2612,6 @@ func add_compile_module_candidates(string[] candidates, string root, string tail
         candidates = append(candidates, root + "/src/cmd/compile/internal/abi/abiutils.s")
     }
 }
-
 func add_std_module_candidates(string[] candidates, string root, string tail) () {
     if starts_with_local(tail, "prelude.") {
         candidates = append(candidates, root + "/src/prelude/prelude.s")
@@ -2757,7 +2624,6 @@ func add_std_module_candidates(string[] candidates, string root, string tail) ()
     candidates = append(candidates, root + "/src/" + dot_to_slash(pkg) + ".s")
     candidates = append(candidates, root + "/src/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
 }
-
 func add_std_layout_candidates(string[] candidates, string root, string tail) () {
     slash_path := dot_to_slash(tail)
     candidates = append(candidates, root + "/" + slash_path + ".s")
@@ -2769,7 +2635,6 @@ func add_std_layout_candidates(string[] candidates, string root, string tail) ()
         candidates = append(candidates, root + "/" + pkg_slash + "/" + last_segment(pkg) + ".s")
     }
 }
-
 func add_s_module_candidates(string[] candidates, string root, string symbol) () {
     if symbol == "parse_source" || symbol == "parse_tokens" {
         candidates = append(candidates, root + "/src/s/parser.s")
@@ -2785,7 +2650,6 @@ func add_s_module_candidates(string[] candidates, string root, string symbol) ()
     candidates = append(candidates, root + "/src/s/lexer.s")
     candidates = append(candidates, root + "/src/s/tokens.s")
 }
-
 func module_search_roots() string[] {
     roots := string[]()
     push_module_search_root(roots, resolve_s_root())
@@ -2794,7 +2658,6 @@ func module_search_roots() string[] {
     push_module_search_root(roots, "/app/s")
     roots
 }
-
 func push_workspace_roots(string[] roots) () {
     switch env_get("s_work_file") {
         option.some(path) : {
@@ -2808,7 +2671,6 @@ func push_workspace_roots(string[] roots) () {
         option.none : (),
     }
 }
-
 func append_workspace_roots(string[] roots, string text) () {
     lines := split_lines_local(text)
     i := 0
@@ -2824,7 +2686,6 @@ func append_workspace_roots(string[] roots, string text) () {
         i = i + 1
     }
 }
-
 func resolve_s_root() string {
     switch env_get("S_ROOT") {
         option.some(value) : {
@@ -2836,7 +2697,6 @@ func resolve_s_root() string {
     }
     "/app/s"
 }
-
 func resolve_project_root() string {
     switch env_get("S_PROJECT_ROOT") {
         option.some(value) : {
@@ -2848,7 +2708,6 @@ func resolve_project_root() string {
     }
     ""
 }
-
 func push_module_search_root(string[] roots, string root) () {
     if root == "" {
         return
@@ -2858,7 +2717,6 @@ func push_module_search_root(string[] roots, string root) () {
     }
     roots = append(roots, root)
 }
-
 func find_quote_from(string text, int start) int {
     i := start
     for i < std.prelude.len(text) {
@@ -2869,7 +2727,6 @@ func find_quote_from(string text, int start) int {
     }
     -1
 }
-
 func dot_to_slash(string text) string {
     out := ""
     i := 0
@@ -2884,7 +2741,6 @@ func dot_to_slash(string text) string {
     }
     out
 }
-
 func drop_last_segment(string text) string {
     last := last_dot_index(text)
     if last < 0 {
@@ -2892,7 +2748,6 @@ func drop_last_segment(string text) string {
     }
     std.prelude.slice(text, 0, last)
 }
-
 func last_segment(string text) string {
     last := last_dot_index(text)
     if last < 0 {
@@ -2900,7 +2755,6 @@ func last_segment(string text) string {
     }
     std.prelude.slice(text, last + 1, std.prelude.len(text))
 }
-
 func last_dot_index(string text) int {
     i := std.prelude.len(text)
     for i > 0 {
@@ -2911,7 +2765,6 @@ func last_dot_index(string text) int {
     }
     -1
 }
-
 func is_compiler_runtime_entry(string path, string source) bool {
     if ends_with_local(path, "src/runtime/s_selfhost_compiler_bootstrap.s") {
         return true
@@ -2922,7 +2775,6 @@ func is_compiler_runtime_entry(string path, string source) bool {
     has_substring(source, "use compile.internal.compiler.main as compiler_main")
         && has_substring(source, "compiler_main(host_args())")
 }
-
 func build_compiler_runtime_launcher(string output) int {
     base_compiler := resolve_bootstrap_base_compiler()
     if output == base_compiler {
@@ -2963,7 +2815,6 @@ func build_compiler_runtime_launcher(string output) int {
     }
     0
 }
-
 func resolve_bootstrap_base_compiler() string {
     switch env_get("s_bootstrap_base_compiler") {
         option.some(value) : {
@@ -2983,7 +2834,6 @@ func resolve_bootstrap_base_compiler() string {
     }
     "/app/s/bin/s_arm64"
 }
-
 func emit_runtime_launcher_asm(string base_compiler) (string, backend_error) {
     arch := buildcfg_goarch()
     if arch == "arm64" {
@@ -2994,7 +2844,6 @@ func emit_runtime_launcher_asm(string base_compiler) (string, backend_error) {
     }
     backend_error { message: "unsupported architecture for compiler launcher: " + arch }
 }
-
 func emit_runtime_launcher_asm_arm64(string base_compiler) string {
     ".section .rodata\n"
         + "base_compiler_path:\n"
@@ -3015,7 +2864,6 @@ func emit_runtime_launcher_asm_arm64(string base_compiler) string {
         + "    mov x8, #93\n"
         + "    svc #0\n"
 }
-
 func emit_runtime_launcher_asm_amd64(string base_compiler) string {
     ".section .rodata\n"
         + "base_compiler_path:\n"
@@ -3035,7 +2883,6 @@ func emit_runtime_launcher_asm_amd64(string base_compiler) string {
         + "    mov $127, %rdi\n"
         + "    syscall\n"
 }
-
 func parse_name_after(string text, string marker) string {
     at := index_of(text, marker)
     if at < 0 {
@@ -3048,20 +2895,17 @@ func parse_name_after(string text, string marker) string {
     }
     std.prelude.slice(text, start, end)
 }
-
 func bool_string(bool value) string {
     if value {
         return "true"
     }
     "false"
 }
-
 func make_runtime_state() runtime_state {
     runtime_state {
         runq: sroutine_task[](), channels channel_runtime_state[](), owned_boxes owned_box_value[](), next_owned_box_id 1, next_channel_id 1, select_rr_cursor 0, sroutine_scheduled 0, sroutine_completed 0, sroutine_panics 0, sroutine_recovered 0, sroutine_yields 0, select_attempts 0, select_default_fallbacks 0, select_timeouts 0,
     }
 }
-
 func collect_runtime_metrics(runtime_state runtime) runtime_metrics {
     sends := 0
     recvs := 0
@@ -3079,7 +2923,6 @@ func collect_runtime_metrics(runtime_state runtime) runtime_metrics {
         sroutine_scheduled: runtime.sroutine_scheduled, sroutine_completed runtime.sroutine_completed, sroutine_panics runtime.sroutine_panics, sroutine_recovered runtime.sroutine_recovered, sroutine_yields runtime.sroutine_yields, select_attempts runtime.select_attempts, select_default_fallbacks runtime.select_default_fallbacks, select_timeouts runtime.select_timeouts, channels std.prelude.len(runtime.channels), channel_sends sends, channel_recvs recvs, channel_closed closed,
     }
 }
-
 func runtime_metrics_text(runtime_metrics metrics) string {
     "runtime_sched"
         + " sroutine_scheduled=" + std.prelude.to_string(metrics.sroutine_scheduled)
@@ -3096,7 +2939,6 @@ func runtime_metrics_text(runtime_metrics metrics) string {
         + " channel_closed=" + std.prelude.to_string(metrics.channel_closed)
         + " memory_strategy=ownership+explicit-drop"
 }
-
 func snapshot_captured_bindings(binding[] env) captured_binding[] {
     out := captured_binding[]()
     i := 0
@@ -3106,7 +2948,6 @@ func snapshot_captured_bindings(binding[] env) captured_binding[] {
     }
     out
 }
-
 func restore_captured_bindings(captured_binding[] captured) binding[] {
     out := binding[]()
     i := 0
@@ -3116,7 +2957,6 @@ func restore_captured_bindings(captured_binding[] captured) binding[] {
     }
     out
 }
-
 func compile_writes(source_file source, mir_graph graph) (write_op[], backend_error) {
     if std.prelude.len(graph.blocks) == 0 {
         return fail_write_ops("backend error: mir graph has no blocks"
@@ -3131,7 +2971,6 @@ func compile_writes(source_file source, mir_graph graph) (write_op[], backend_er
     }
     exec_result.unwrap().writes
 }
-
 func compile_exit_code(source_file source, mir_graph graph) (int, backend_error) {
     if std.prelude.len(graph.blocks) == 0 {
         return fail_int("backend error: mir graph has no blocks"
@@ -3146,7 +2985,6 @@ func compile_exit_code(source_file source, mir_graph graph) (int, backend_error)
     }
     exec_result.unwrap().exit_code
 }
-
 func compile_runtime_metrics(source_file source, mir_graph graph) (runtime_metrics, backend_error) {
     if std.prelude.len(graph.blocks) == 0 {
         return backend_error { message: "backend error: mir graph has no blocks" }
@@ -3161,7 +2999,6 @@ func compile_runtime_metrics(source_file source, mir_graph graph) (runtime_metri
     }
     exec_result.unwrap().runtime
 }
-
 func execute_source_main(source_file source) (mir_execution_result, backend_error) {
     main_result := find_main(source)
     if main_result.is_err() {
@@ -3190,7 +3027,6 @@ func execute_source_main(source_file source) (mir_execution_result, backend_erro
         writes: writes, exit_code code_result.unwrap(), runtime collect_runtime_metrics(runtime),
     }
 }
-
 func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
     writes := write_op[]()
     current := graph.entry
@@ -3238,7 +3074,6 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
     }
     backend_error { message: "backend error: mir execution exceeded step limit" }
 }
-
 func find_mir_block(mir_graph graph, int id) (mir_basic_block, backend_error) {
     i := 0
     for i < std.prelude.len(graph.blocks) {
@@ -3249,7 +3084,6 @@ func find_mir_block(mir_graph graph, int id) (mir_basic_block, backend_error) {
     }
     backend_error { message: "backend error: missing mir block id " + std.prelude.to_string(id) }
 }
-
 func execute_mir_statement(mir_statement statement, write_op[] writes) ((), backend_error) {
     switch statement {
         mir_statement.eval(eval_stmt) : {
@@ -3261,7 +3095,6 @@ func execute_mir_statement(mir_statement statement, write_op[] writes) ((), back
         _ : (,
     }
 }
-
 func emit_print_from_line(string line, write_op[] writes) () {
     if has_substring(line, "std.io.eprintln(") {
         emit_call_line_to_write(line, "std.io.eprintln(", 2, writes)
@@ -3272,7 +3105,6 @@ func emit_print_from_line(string line, write_op[] writes) () {
         return
     }
 }
-
 func emit_call_line_to_write(string line, string callee, int fd, write_op[] writes) () {
     arg_opt := extract_call_arg(line, callee)
     if arg_opt.is_none() {
@@ -3283,7 +3115,6 @@ func emit_call_line_to_write(string line, string callee, int fd, write_op[] writ
         fd: fd, text rendered + "\n",
     })
 }
-
 func render_literal_text(string raw_arg) string {
     arg := trim_spaces(raw_arg)
     if is_quoted_literal(arg) {
@@ -3294,7 +3125,6 @@ func render_literal_text(string raw_arg) string {
     }
     return std.prelude.to_string(parse_int_literal(arg))
 }
-
 func extract_call_arg(string line, string callee) option[string] {
     call_index := index_of(line, callee)
     if call_index < 0 {
@@ -3307,14 +3137,12 @@ func extract_call_arg(string line, string callee) option[string] {
     }
     option.some(std.prelude.slice(line, start, end))
 }
-
 func is_quoted_literal(string text) bool {
     if std.prelude.len(text) < 2 {
         return false
     }
     std.prelude.char_at(text, 0) == "\"" && std.prelude.char_at(text, std.prelude.len(text) - 1) == "\""
 }
-
 func trim_spaces(string text) string {
     start := 0
     end := std.prelude.len(text)
@@ -3326,19 +3154,15 @@ func trim_spaces(string text) string {
     }
     std.prelude.slice(text, start, end)
 }
-
 func is_space(string ch) bool {
     ch == " " || ch == "\t" || ch == "\n" || ch == "\r"
 }
-
 func has_substring(string text, string needle) bool {
     index_of(text, needle) >= 0
 }
-
 func index_of(string text, string needle) int {
     index_of_from(text, needle, 0)
 }
-
 func index_of_from(string text, string needle, int start) int {
     if std.prelude.len(needle) == 0 {
         return start
@@ -3356,7 +3180,6 @@ func index_of_from(string text, string needle, int start) int {
     }
     -1
 }
-
 func parse_number_after(string text, string marker) int {
     start := index_of(text, marker)
     if start < 0 {
@@ -3379,7 +3202,6 @@ func parse_number_after(string text, string marker) int {
     }
     value
 }
-
 func select_branch_target(mir_control_edge[] edges) int {
     if std.prelude.len(edges) == 0 {
         return -1
@@ -3393,7 +3215,6 @@ func select_branch_target(mir_control_edge[] edges) int {
     }
     edges[0].target
 }
-
 func find_main(source_file source) (function_decl, backend_error) {
     i := 0
     for i < std.prelude.len(source.items) {
@@ -3409,12 +3230,10 @@ func find_main(source_file source) (function_decl, backend_error) {
     }
     fail_function("backend error: entry function main not found")
 }
-
 func call_function(source_file source, string name, value[] args, binding[] caller_env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     captured := captured_binding[]()
     call_function_with_capture(source, name, args, caller_env, writes, runtime, captured)
 }
-
 func call_function_with_capture(
     source_file source,
     string name,
@@ -3466,12 +3285,10 @@ func call_function_with_capture(
     copy_control_bindings(env, caller_env)
     ok_value(body_result.unwrap())
 }
-
 func find_function(source_file source, string name) (function_decl, backend_error) {
     visited := string[]()
     return find_function_in_source_graph(source, name, visited
 }
-
 func find_function_in_source_graph(source_file source, string name, string[] visited) (function_decl, backend_error) {
     if string_vec_contains(visited, source.pkg) {
         return backend_error { message: "backend error: unknown function " + name }
@@ -3503,7 +3320,6 @@ func find_function_in_source_graph(source_file source, string name, string[] vis
     }
     backend_error { message: "backend error: unknown function " + name }
 }
-
 func execute_block(block_expr block, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     local_env := copy_bindings(env)
     result := execute_block_in_place(block, source, local_env, writes, runtime)
@@ -3512,7 +3328,6 @@ func execute_block(block_expr block, source_file source, binding[] env, write_op
     }
     result.unwrap()
 }
-
 func execute_block_in_place(block_expr block, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     local_start := std.prelude.len(env)
     deferred := expr[]()
@@ -3605,7 +3420,6 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
     cleanup_scope_owned_values(env, local_start, final_value, runtime)
     final_value
 }
-
 func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
     switch stmt {
         stmt.let(value) : {
@@ -3668,7 +3482,6 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
         stmt.sroutine(value) : execute_sroutine_stmt(value, source, env, writes, runtime),
     }
 }
-
 func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
     switch value.expr {
         expr.call(call_expr) : {
@@ -3701,7 +3514,6 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] en
         _ : backend_error { message: "backend error: sroutine expects a call expression" },
     }
 }
-
 func execute_c_for(c_for_stmt value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
     loop_env := copy_bindings(env)
     init_result := execute_stmt(value.init.value, source, loop_env, writes, runtime)
@@ -3734,7 +3546,6 @@ func execute_c_for(c_for_stmt value, source_file source, binding[] env, write_op
     propagate_bindings(env, loop_env)
     ()
 }
-
 func eval_expr(expr expr, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     switch expr {
         expr.int(value) : value.int(parse_int_literal(value.value)),
@@ -3755,7 +3566,6 @@ func eval_expr(expr expr, source_file source, binding[] env, write_op[] writes, 
         expr.map(value) : eval_map_literal(value, source, env, writes, runtime),
     }
 }
-
 func eval_binary(binary_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     left_result := eval_expr(value.left.value, source, env, writes, runtime)
     if left_result.is_err() {
@@ -3784,7 +3594,6 @@ func eval_binary(binary_expr value, source_file source, binding[] env, write_op[
         _ : backend_error { message: "backend error: unsupported binary operator " + value.op },
     }
 }
-
 func eval_call(call_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     switch value.callee.value {
         expr.name(callee_name) : {
@@ -3861,7 +3670,6 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
         _ : backend_error { message: "backend error: unsupported call target" },
     }
 }
-
 func eval_box_new_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if std.prelude.len(args) != 1 {
         return fail_value("backend error: box expects exactly one value")
@@ -3876,14 +3684,12 @@ func eval_box_new_call(expr[] args, source_file source, binding[] env, write_op[
     runtime.owned_boxes.push(owned)
     value.owned_box(owned)
 }
-
 func eval_copy_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if std.prelude.len(args) != 1 {
         return fail_value("backend error: copy expects exactly one value")
     }
     eval_expr(args[0], source, env, writes, runtime)
 }
-
 func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if std.prelude.len(args) != 1 {
         return fail_value("backend error: box_free expects exactly one value")
@@ -3910,7 +3716,6 @@ func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op
         _ : fail_value("backend error: box_free requires a box value"),
     }
 }
-
 func cleanup_scope_owned_values(binding[] env, int local_start, value keep, runtime_state runtime) () {
     keep_id := -1
     switch keep {
@@ -3923,7 +3728,6 @@ func cleanup_scope_owned_values(binding[] env, int local_start, value keep, runt
         i = i - 1
     }
 }
-
 func release_owned_value(value candidate, runtime_state runtime, int keep_id) () {
     switch candidate {
         value.owned_box(handle) : {
@@ -3944,7 +3748,6 @@ func release_owned_value(value candidate, runtime_state runtime, int keep_id) ()
         _ : { }
     }
 }
-
 func eval_member_expr(member member_expr, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     target_result := eval_expr(member.target.value, source, env, writes, runtime)
     if target_result.is_err() {
@@ -3973,7 +3776,6 @@ func eval_member_expr(member member_expr, source_file source, binding[] env, wri
         _ : fail_value("backend error: member access is not supported for this value"),
     }
 }
-
 func eval_panic_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if std.prelude.len(args) != 1 {
         return backend_error { message: "backend error: panic expects exactly one argument" }
@@ -3984,7 +3786,6 @@ func eval_panic_call(expr[] args, source_file source, binding[] env, write_op[] 
     }
     return panic_error(stringify_value(arg_result.unwrap()))
 }
-
 func eval_recover_call(binding[] env, runtime_state runtime) (value, backend_error) {
     if !control_in_defer_mode(env) {
         return value.unit(unit_value {}))
@@ -3998,7 +3799,6 @@ func eval_recover_call(binding[] env, runtime_state runtime) (value, backend_err
     runtime.sroutine_recovered = runtime.sroutine_recovered + 1
     value.string(payload)
 }
-
 func eval_chan_make_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if std.prelude.len(args) != 1 {
         return backend_error { message: "backend error: chan_make expects one capacity argument" }
@@ -4023,7 +3823,6 @@ func eval_chan_make_call(expr[] args, source_file source, binding[] env, write_o
     })
     value.channel(channel_handle_value { id: id })
 }
-
 func eval_chan_send_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if std.prelude.len(args) != 2 {
         return backend_error { message: "backend error: chan_send expects channel and value" }
@@ -4052,7 +3851,6 @@ func eval_chan_send_call(expr[] args, source_file source, binding[] env, write_o
     runtime.channels.set(idx, ch_state)
     value.unit(unit_value {})
 }
-
 func eval_chan_recv_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime, bool is_select) (value, backend_error) {
     if std.prelude.len(args) == 0 {
         return backend_error { message: "backend error: chan_recv/select_recv expects at least one channel argument" }
@@ -4089,7 +3887,6 @@ func eval_chan_recv_call(expr[] args, source_file source, binding[] env, write_o
     }
     value.unit(unit_value {})
 }
-
 func eval_select_recv_weighted_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if std.prelude.len(args) < 2 || (std.prelude.len(args) % 2) != 0 {
         return backend_error { message: "backend error: select_recv_weighted expects channel/weight pairs" }
@@ -4135,7 +3932,6 @@ func eval_select_recv_weighted_call(expr[] args, source_file source, binding[] e
     }
     return backend_error { message: "backend error: select_recv_weighted has no ready channel" }
 }
-
 func eval_select_recv_timeout_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if std.prelude.len(args) < 2 {
         return backend_error { message: "backend error: select_recv_timeout expects channels followed by timeout ticks" }
@@ -4161,7 +3957,6 @@ func eval_select_recv_timeout_call(expr[] args, source_file source, binding[] en
     runtime.select_timeouts = runtime.select_timeouts + 1
     value.unit(unit_value {})
 }
-
 func eval_select_send_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if std.prelude.len(args) < 2 || (std.prelude.len(args) % 2) != 0 {
         return backend_error { message: "backend error: select_send expects channel/value pairs" }
@@ -4198,7 +3993,6 @@ func eval_select_send_call(expr[] args, source_file source, binding[] env, write
     runtime.channels.set(idx, ch_state)
     value.unit(unit_value {})
 }
-
 func eval_select_send_default_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     sent := eval_select_send_call(args, source, env, writes, runtime)
     if sent.is_ok() {
@@ -4207,7 +4001,6 @@ func eval_select_send_default_call(expr[] args, source_file source, binding[] en
     runtime.select_default_fallbacks = runtime.select_default_fallbacks + 1
     value.unit(unit_value {})
 }
-
 func eval_select_send_timeout_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if std.prelude.len(args) < 3 || ((std.prelude.len(args) - 1) % 2) != 0 {
         return backend_error { message: "backend error: select_send_timeout expects channel/value pairs followed by timeout ticks" }
@@ -4233,7 +4026,6 @@ func eval_select_send_timeout_call(expr[] args, source_file source, binding[] en
     runtime.select_timeouts = runtime.select_timeouts + 1
     value.unit(unit_value {})
 }
-
 func choose_ready_channel(runtime_state runtime, value[] channels) option[int] {
     if std.prelude.len(channels) == 0 {
         return option.none
@@ -4254,7 +4046,6 @@ func choose_ready_channel(runtime_state runtime, value[] channels) option[int] {
     }
     option.none
 }
-
 func choose_closed_channel(runtime_state runtime, value[] channels) option[int] {
     if std.prelude.len(channels) == 0 {
         return option.none
@@ -4274,7 +4065,6 @@ func choose_closed_channel(runtime_state runtime, value[] channels) option[int] 
     }
     option.none
 }
-
 func choose_sendable_channel(runtime_state runtime, value[] channels) option[int] {
     if std.prelude.len(channels) == 0 {
         return option.none
@@ -4296,7 +4086,6 @@ func choose_sendable_channel(runtime_state runtime, value[] channels) option[int
     }
     option.none
 }
-
 func drain_selected_channel(runtime_state runtime, int idx) (value, backend_error) {
     if idx < 0 {
         return backend_error { message: "backend error: recv target is not channel" }
@@ -4317,7 +4106,6 @@ func drain_selected_channel(runtime_state runtime, int idx) (value, backend_erro
     runtime.channels.set(idx, ch_state)
     first
 }
-
 func eval_select_recv_default_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     recv := eval_chan_recv_call(args, source, env, writes, runtime, true)
     if recv.is_ok() {
@@ -4326,7 +4114,6 @@ func eval_select_recv_default_call(expr[] args, source_file source, binding[] en
     runtime.select_default_fallbacks = runtime.select_default_fallbacks + 1
     value.unit(unit_value {})
 }
-
 func eval_chan_close_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if std.prelude.len(args) != 1 {
         return backend_error { message: "backend error: chan_close expects one channel argument" }
@@ -4347,7 +4134,6 @@ func eval_chan_close_call(expr[] args, source_file source, binding[] env, write_
     runtime.channels.set(idx, ch_state)
     value.unit(unit_value {})
 }
-
 func find_channel_index(runtime_state runtime, value v) int {
     id := -1
     switch v {
@@ -4363,7 +4149,6 @@ func find_channel_index(runtime_state runtime, value v) int {
     }
     -1
 }
-
 func execute_deferred(expr[] deferred, source_file source, binding[] env, write_op[] writes, runtime_state runtime, string panic_payload_text) ((), backend_error) {
     if panic_payload_text != "" {
         set_control(env, control_panic_active, value.bool(true))
@@ -4388,7 +4173,6 @@ func execute_deferred(expr[] deferred, source_file source, binding[] env, write_
     set_control(env, control_in_defer, value.bool(false))
     ()
 }
-
 func run_sroutine_scheduler_step(source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
     if std.prelude.len(runtime.runq) == 0 {
         return
@@ -4416,7 +4200,6 @@ func run_sroutine_scheduler_step(source_file source, binding[] env, write_op[] w
     runtime.sroutine_completed = runtime.sroutine_completed + 1
     ()
 }
-
 func run_sroutine_scheduler_flush(source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
     for std.prelude.len(runtime.runq) > 0 {
         step := run_sroutine_scheduler_step(source, env, writes, runtime)
@@ -4426,28 +4209,23 @@ func run_sroutine_scheduler_flush(source_file source, binding[] env, write_op[] 
     }
     ()
 }
-
 func panic_error(string payload) backend_error {
     backend_error { message: "panic:" + payload }
 }
-
 func is_panic_error(backend_error err) bool {
     starts_with_local(err.message, "panic:")
 }
-
 func panic_payload(backend_error err) string {
     if !is_panic_error(err) {
         return ""
     }
     std.prelude.slice(err.message, 6, std.prelude.len(err.message))
 }
-
 func copy_control_bindings(binding[] from_env, binding[] to_env) () {
     copy_control_binding(from_env, to_env, control_panic_active)
     copy_control_binding(from_env, to_env, control_panic_payload)
     copy_control_binding(from_env, to_env, control_in_defer)
 }
-
 func copy_control_binding(binding[] from_env, binding[] to_env, string name) () {
     source_index := find_binding_index(from_env, name)
     if source_index < 0 {
@@ -4455,7 +4233,6 @@ func copy_control_binding(binding[] from_env, binding[] to_env, string name) () 
     }
     set_control(to_env, name, from_env[source_index].value)
 }
-
 func set_control(binding[] env, string name, value v) () {
     index := find_binding_index(env, name)
     if index >= 0 {
@@ -4464,7 +4241,6 @@ func set_control(binding[] env, string name, value v) () {
     }
     env = append(env, binding { name: name, value v });
 }
-
 func control_in_defer_mode(binding[] env) bool {
     index := find_binding_index(env, control_in_defer)
     if index < 0 {
@@ -4475,7 +4251,6 @@ func control_in_defer_mode(binding[] env) bool {
         _ : false,
     }
 }
-
 func control_panic_is_active(binding[] env) bool {
     index := find_binding_index(env, control_panic_active)
     if index < 0 {
@@ -4486,7 +4261,6 @@ func control_panic_is_active(binding[] env) bool {
         _ : false,
     }
 }
-
 func control_panic_payload_text(binding[] env) string {
     index := find_binding_index(env, control_panic_payload)
     if index < 0 {
@@ -4499,7 +4273,6 @@ func control_panic_payload_text(binding[] env) string {
         _ : "",
     }
 }
-
 func collect_const_bindings(source_file source) (binding[], backend_error) {
     out := binding[]()
     visited := string[]()
@@ -4509,7 +4282,6 @@ func collect_const_bindings(source_file source) (binding[], backend_error) {
     }
     out
 }
-
 func collect_const_bindings_in_source(source_file source, binding[] out, string[] visited) ((), backend_error) {
     if string_vec_contains(visited, source.pkg) {
         return
@@ -4561,7 +4333,6 @@ func collect_const_bindings_in_source(source_file source, binding[] out, string[
     }
     ()
 }
-
 func load_source_graph_for_use(string module_path) (source_file, backend_error) {
     module_result := resolve_module_source_path(module_path)
     if module_result.is_none() {
@@ -4577,7 +4348,6 @@ func load_source_graph_for_use(string module_path) (source_file, backend_error) 
     }
     dep_parsed_result.unwrap()
 }
-
 func eval_const_value_expr(expr value, binding[] const_env, int iota_value) (value, backend_error) {
     switch value {
         expr.int(int_expr) : value.int(parse_int_literal(int_expr.value)),
@@ -4622,7 +4392,6 @@ func eval_const_value_expr(expr value, binding[] const_env, int iota_value) (val
         _ : backend_error { message: "unsupported const expression kind" },
     }
 }
-
 func lookup_name_or_function(binding[] env, source_file source, string name) (value, backend_error) {
     if name == "nil" {
         return value.unit(unit_value {}))
@@ -4637,7 +4406,6 @@ func lookup_name_or_function(binding[] env, source_file source, string name) (va
     }
     backend_error { message: "backend error: unknown name " + name }
 }
-
 func eval_map_literal(map_literal value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     entries := fn_map_entry_value[]()
     i := 0
@@ -4662,7 +4430,6 @@ func eval_map_literal(map_literal value, source_file source, binding[] env, writ
     }
     value.fn_map(entries)
 }
-
 func eval_index_expr(index_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     target_result := eval_expr(value.target.value, source, env, writes, runtime)
     if target_result.is_err() {
@@ -4687,7 +4454,6 @@ func eval_index_expr(index_expr value, source_file source, binding[] env, write_
         _ : backend_error { message: "backend error: index target is not a function map" },
     }
 }
-
 func eval_print_call(string name, expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     if std.prelude.len(args) > 1 {
         backend_error { message: "backend error: " + name + " expects at most one argument" }
@@ -4708,7 +4474,6 @@ func eval_print_call(string name, expr[] args, source_file source, binding[] env
     }
     value.unit(unit_value {})
 }
-
 func eval_if_expr(if_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     cond_result := eval_expr(value.condition.value, source, env, writes, runtime)
     if cond_result.is_err() {
@@ -4728,7 +4493,6 @@ func eval_if_expr(if_expr value, source_file source, binding[] env, write_op[] w
         _ : backend_error { message: "backend error: if condition must be bool" },
     }
 }
-
 func eval_while_expr(while_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     for true {
         cond_result := eval_expr(value.condition.value, source, env, writes, runtime)
@@ -4750,7 +4514,6 @@ func eval_while_expr(while_expr value, source_file source, binding[] env, write_
     }
     value.unit(unit_value {})
 }
-
 func lookup_value(binding[] env, string name) (value, backend_error) {
     index := find_binding_index(env, name)
     if index < 0 {
@@ -4758,7 +4521,6 @@ func lookup_value(binding[] env, string name) (value, backend_error) {
     }
     env[index].value
 }
-
 func add_values(value left, value right) (value, backend_error) {
     switch left {
         value.int(left_int) : {
@@ -4776,7 +4538,6 @@ func add_values(value left, value right) (value, backend_error) {
         _ : backend_error { message: "backend error: unsupported + operands" },
     }
 }
-
 func numeric_binary(value left, value right, string op) (value, backend_error) {
     switch left {
         value.int(left_int) : {
@@ -4808,7 +4569,6 @@ func numeric_binary(value left, value right, string op) (value, backend_error) {
         _ : backend_error { message: "backend error: numeric operator expects int operands" },
     }
 }
-
 func compare_values(value left, value right, bool equal) (value, backend_error) {
     same := false
     switch left {
@@ -4858,7 +4618,6 @@ func compare_values(value left, value right, bool equal) (value, backend_error) 
         value.bool(!same)
     }
 }
-
 func ordered_compare(value left, value right, string op) (value, backend_error) {
     switch left {
         value.int(left_int) : {
@@ -4882,7 +4641,6 @@ func ordered_compare(value left, value right, string op) (value, backend_error) 
         _ : backend_error { message: "backend error: ordered comparison expects int operands" },
     }
 }
-
 func logical_binary(value left, value right, bool and_op) (value, backend_error) {
     switch left {
         value.bool(left_bool) : {
@@ -4900,7 +4658,6 @@ func logical_binary(value left, value right, bool and_op) (value, backend_error)
         _ : backend_error { message: "backend error: logical operator expects bool operands" },
     }
 }
-
 func value_to_exit_code(value value) (int, backend_error) {
     switch value {
         value.int(number) : number,
@@ -4912,7 +4669,6 @@ func value_to_exit_code(value value) (int, backend_error) {
         value.fn_map(_) : backend_error { message: "backend error: main cannot return function map" },
     }
 }
-
 func stringify_value(value value) string {
     switch value {
         value.int(number) : std.prelude.to_string(number),
@@ -4924,7 +4680,6 @@ func stringify_value(value value) string {
         value.fn_map(entries) : "<func-map:" + std.prelude.to_string(std.prelude.len(entries)) + ">",
     }
 }
-
 func parse_int_literal(string literal) int {
     value := literal
     sign := 1
@@ -4947,7 +4702,6 @@ func parse_int_literal(string literal) int {
     }
     sign * out
 }
-
 func parse_ssa_margin_override(string text) (int, backend_error) {
     if text == "" {
         return ok_int(-1
@@ -4962,7 +4716,6 @@ func parse_ssa_margin_override(string text) (int, backend_error) {
     }
     return ok_int(parse_int_literal(text))
 }
-
 func digit_value(string ch) int {
     if ch == "0" {
         return 0
@@ -4996,7 +4749,6 @@ func digit_value(string ch) int {
     }
     -1
 }
-
 func decode_string_literal(string literal) string {
     text := literal
     if std.prelude.len(text) < 2 {
@@ -5033,7 +4785,6 @@ func decode_string_literal(string literal) string {
     }
     out
 }
-
 func emit_asm(write_op[] writes, int exit_code) string {
     arch := buildcfg_goarch()
     if arch == "arm64" {
@@ -5050,7 +4801,6 @@ func emit_asm(write_op[] writes, int exit_code) string {
     }
     return emit_asm_amd64(writes, exit_code
 }
-
 func validate_abi_coverage(string arch) ((), backend_error) {
     i := 0
     for i < 8 {
@@ -5097,7 +4847,6 @@ func validate_abi_coverage(string arch) ((), backend_error) {
     }
     ()
 }
-
 func abi_sret_reg(string arch) string {
     if arch == "arm64" {
         return "x8"
@@ -5113,7 +4862,6 @@ func abi_sret_reg(string arch) string {
     }
     "%rdi"
 }
-
 func abi_variadic_gp_limit(string arch) int {
     if arch == "arm64" {
         return 8
@@ -5129,7 +4877,6 @@ func abi_variadic_gp_limit(string arch) int {
     }
     6
 }
-
 func abi_variadic_fp_limit(string arch) int {
     if arch == "arm64" {
         return 8
@@ -5145,7 +4892,6 @@ func abi_variadic_fp_limit(string arch) int {
     }
     8
 }
-
 func abi_aggregate_pass_mode(string arch, int size_bytes) string {
     if size_bytes <= 0 {
         return ""
@@ -5161,7 +4907,6 @@ func abi_aggregate_pass_mode(string arch, int size_bytes) string {
     }
     "indirect"
 }
-
 func abi_return_mode(string arch, string type_class, int size_bytes) string {
     if type_class == "int" {
         return "reg:" + abi_int_ret_reg(arch
@@ -5177,7 +4922,6 @@ func abi_return_mode(string arch, string type_class, int size_bytes) string {
     }
     ""
 }
-
 func abi_int_arg_reg(string arch, int index) string {
     if arch == "arm64" {
         if index == 0 { return "x0" }
@@ -5233,7 +4977,6 @@ func abi_int_arg_reg(string arch, int index) string {
     if index == 7 { return "stack+8" }
     ""
 }
-
 func abi_float_arg_reg(string arch, int index) string {
     if arch == "arm64" {
         if index == 0 { return "v0" }
@@ -5289,7 +5032,6 @@ func abi_float_arg_reg(string arch, int index) string {
     if index == 7 { return "%xmm7" }
     ""
 }
-
 func abi_int_ret_reg(string arch) string {
     if arch == "arm64" {
         return "x0"
@@ -5305,7 +5047,6 @@ func abi_int_ret_reg(string arch) string {
     }
     "%rax"
 }
-
 func abi_float_ret_reg(string arch) string {
     if arch == "arm64" {
         return "v0"
@@ -5321,7 +5062,6 @@ func abi_float_ret_reg(string arch) string {
     }
     "%xmm0"
 }
-
 func abi_callee_saved_count(string arch) int {
     if arch == "arm64" {
         return 12
@@ -5337,7 +5077,6 @@ func abi_callee_saved_count(string arch) int {
     }
     6
 }
-
 func emit_asm_amd64(write_op[] writes, int exit_code) string {
     data_lines := string[]()
     text_lines := string[]()
@@ -5368,7 +5107,6 @@ func emit_asm_amd64(write_op[] writes, int exit_code) string {
     text_lines = append(text_lines, "    ret")
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
-
 func emit_asm_arm64(write_op[] writes, int exit_code) string {
     data_lines := string[]()
     text_lines := string[]()
@@ -5396,7 +5134,6 @@ func emit_asm_arm64(write_op[] writes, int exit_code) string {
     text_lines = append(text_lines, "    ret")
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
-
 func emit_asm_riscv64(write_op[] writes, int exit_code) string {
     data_lines := string[]()
     text_lines := string[]()
@@ -5425,7 +5162,6 @@ func emit_asm_riscv64(write_op[] writes, int exit_code) string {
     text_lines = append(text_lines, "    ret")
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
-
 func emit_asm_s390x(write_op[] writes, int exit_code) string {
     data_lines := string[]()
     text_lines := string[]()
@@ -5450,7 +5186,6 @@ func emit_asm_s390x(write_op[] writes, int exit_code) string {
     text_lines = append(text_lines, "    br %r14")
     join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
 }
-
 func append_write_op(string[] data_lines, string[] text_lines, write_op op, int index) () {
     label := "message_" + std.prelude.to_string(index)
     data_lines = append(data_lines, label + ":")
@@ -5461,7 +5196,6 @@ func append_write_op(string[] data_lines, string[] text_lines, write_op op, int 
     text_lines = append(text_lines, "    mov $" + std.prelude.to_string(std.prelude.len(op.text)) + ", %rdx")
     text_lines = append(text_lines, "    syscall")
 }
-
 func append_write_op_arm64(string[] data_lines, string[] text_lines, write_op op, int index) () {
     label := "message_" + std.prelude.to_string(index)
     data_lines = append(data_lines, label + ":")
@@ -5473,7 +5207,6 @@ func append_write_op_arm64(string[] data_lines, string[] text_lines, write_op op
     text_lines = append(text_lines, "    ldr x2, =" + std.prelude.to_string(std.prelude.len(op.text)))
     text_lines = append(text_lines, "    svc #0")
 }
-
 func append_write_op_riscv64(string[] data_lines, string[] text_lines, write_op op, int index) () {
     label := "message_" + std.prelude.to_string(index)
     data_lines = append(data_lines, label + ":")
@@ -5484,7 +5217,6 @@ func append_write_op_riscv64(string[] data_lines, string[] text_lines, write_op 
     text_lines = append(text_lines, "    li a2, " + std.prelude.to_string(std.prelude.len(op.text)))
     text_lines = append(text_lines, "    ecall")
 }
-
 func append_write_op_s390x(string[] data_lines, string[] text_lines, write_op op, int index) () {
     label := "message_" + std.prelude.to_string(index)
     data_lines = append(data_lines, label + ":")
@@ -5495,7 +5227,6 @@ func append_write_op_s390x(string[] data_lines, string[] text_lines, write_op op
     text_lines = append(text_lines, "    lghi %r4, " + std.prelude.to_string(std.prelude.len(op.text)))
     text_lines = append(text_lines, "    svc 0")
 }
-
 func escape_asm_string(string text) string {
     out := ""
     i := 0
@@ -5518,7 +5249,6 @@ func escape_asm_string(string text) string {
     }
     out
 }
-
 func copy_bindings(binding[] source) binding[] {
     out := binding[]()
     i := 0
@@ -5528,7 +5258,6 @@ func copy_bindings(binding[] source) binding[] {
     }
     out
 }
-
 func find_binding_index(binding[] env, string name) int {
     i := std.prelude.len(env)
     for i > 0 {
@@ -5539,7 +5268,6 @@ func find_binding_index(binding[] env, string name) int {
     }
     -1
 }
-
 func propagate_bindings(binding[] outer, binding[] inner) () {
     i := 0
     for i < std.prelude.len(inner) {
@@ -5550,11 +5278,9 @@ func propagate_bindings(binding[] outer, binding[] inner) () {
         i = i + 1
     }
 }
-
 func join_lines(string[] lines) string {
     join_with(lines, "\n")
 }
-
 func count_occurrences(string text, string token) int {
     if token == "" {
         return 0
@@ -5571,7 +5297,6 @@ func count_occurrences(string text, string token) int {
     }
     total
 }
-
 func join_with(string[] values, string sep) string {
     out := ""
     first := true
@@ -5586,8 +5311,6 @@ func join_with(string[] values, string sep) string {
     }
     out
 }
-
 func report_failure(string message) int {
     std.io.eprintln("backend error: " + message)
     1
-}

@@ -98,7 +98,6 @@ func run(string[] options) int {
     }
     return 1
 }
-
 func run_test_command(string[] options) int {
     fixtures_root := resolve_fixtures_root(options[1])
     semantic_result := compile.internal.tests.test_semantic.run_semantic_suite(fixtures_root)
@@ -139,7 +138,6 @@ func run_test_command(string[] options) int {
     std.io.println("test: ok")
     return 0
 }
-
 func resolve_fixtures_root(string override) string {
     if override != "" {
         return override
@@ -150,7 +148,6 @@ func resolve_fixtures_root(string override) string {
     }
     "cmd/compile/internal/tests/fixtures"
 }
-
 func run_mod_command(string[] options) int {
     if options[1] == "init" {
         return run_mod_init(options[2]
@@ -164,7 +161,6 @@ func run_mod_command(string[] options) int {
     std.io.eprintln("mod command is not supported")
     return 1
 }
-
 func run_mod_index(string dir) int {
     if dir == "" {
         std.io.eprintln("mod index failed: directory path required")
@@ -193,7 +189,6 @@ func run_mod_index(string dir) int {
     std.io.println("mod index: generated scripts/s-package-index.tsv")
     0
 }
-
 func run_mod_init(string module_name) int {
     if !is_valid_module_name(module_name) {
         std.io.eprintln("mod init failed: invalid module name")
@@ -217,7 +212,6 @@ func run_mod_init(string module_name) int {
     std.io.println("mod init: created s.mod")
     return 0
 }
-
 func run_mod_tidy() int {
     read_result := std.fs.read_to_string("s.mod")
     if read_result.is_err() {
@@ -227,7 +221,6 @@ func run_mod_tidy() int {
     std.io.println("mod tidy: ok")
     return 0
 }
-
 func is_valid_module_name(string name) bool {
     if name == "" {
         return false
@@ -242,7 +235,6 @@ func is_valid_module_name(string name) bool {
     }
     true
 }
-
 func is_module_name(string path) bool {
     if path == "" {
         return false
@@ -268,4 +260,3 @@ func is_module_name(string path) bool {
         }
     }
     true
-}

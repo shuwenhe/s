@@ -8,18 +8,15 @@ struct ir_instruction {
     src1: string
     src2: string
 }
-
 struct ir_function {
     name: string
     instructions: ir_instruction[]
 }
-
 struct ir_module {
     target: string
     version: string
     functions: ir_function[]
 }
-
 func parse_ir(string content) (ir_module, error) {
     lines := split_string(content, "\n")
     module := ir_module{
@@ -75,7 +72,6 @@ func parse_ir(string content) (ir_module, error) {
     }
     return module, nil
 }
-
 func get_ir_stats(ir_module module) map[string]int {
     stats := map[string]int{}
     stats["total_functions"] = len(module.functions)
@@ -96,7 +92,6 @@ func get_ir_stats(ir_module module) map[string]int {
     stats["total_instructions"] = total_instrs
     return stats
 }
-
 func verify_ir(ir_module module) error {
     if len(module.functions) == 0 {
         return error("no functions in IR"
@@ -109,11 +104,9 @@ func verify_ir(ir_module module) error {
     }
     return nil
 }
-
 func instruction_to_string(ir_instruction instr) string {
     s := instr.opcode
     s += "|" + instr.dest
     s += "|" + instr.src1
     s += "|" + instr.src2
     return s
-}

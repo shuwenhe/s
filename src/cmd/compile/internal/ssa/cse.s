@@ -26,4 +26,3 @@ func run_cse(ssa_func f) int {
         recompute_uses(f)
     }
     changed
-}

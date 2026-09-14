@@ -25,7 +25,6 @@ func test_socket_create(t *testing.t) {
         t.errorf("Failed to close socket: %v", err)
     }
 }
-
 func test_socket_create_udp(t *testing.t) {
     sock, err := new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
@@ -41,7 +40,6 @@ func test_socket_create_udp(t *testing.t) {
     }
     sock.close()
 }
-
 func test_socket_close(t *testing.t) {
     sock, _ := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     err := sock.close()
@@ -53,7 +51,6 @@ func test_socket_close(t *testing.t) {
         t.error("Expected error on second close")
     }
 }
-
 func test_set_reuse_addr(t *testing.t) {
     sock, _ := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     defer sock.close()
@@ -66,7 +63,6 @@ func test_set_reuse_addr(t *testing.t) {
         t.errorf("Failed to unset SO_REUSEADDR: %v", err)
     }
 }
-
 func test_set_tcp_no_delay(t *testing.t) {
     sock, _ := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     defer sock.close()
@@ -75,7 +71,6 @@ func test_set_tcp_no_delay(t *testing.t) {
         t.errorf("Failed to set TCP_NODELAY: %v", err)
     }
 }
-
 func test_set_buffer_size(t *testing.t) {
     sock, _ := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     defer sock.close()
@@ -88,17 +83,14 @@ func test_set_buffer_size(t *testing.t) {
         t.errorf("Failed to set recv buffer size: %v", err)
     }
 }
-
 func test_set_read_deadline(t *testing.t) {
     sock, _ := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     defer sock.close()
 }
-
 func test_set_write_deadline(t *testing.t) {
     sock, _ := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     defer sock.close()
 }
-
 func test_htons(t *testing.t) {
     result := htons(0x1234)
     expected := 0x3412
@@ -106,7 +98,6 @@ func test_htons(t *testing.t) {
         t.errorf("htons(0x1234) = 0x%04x, expected 0x%04x", result, expected)
     }
 }
-
 func test_ntohs(t *testing.t) {
     result := ntohs(0x3412)
     expected := 0x1234
@@ -114,7 +105,6 @@ func test_ntohs(t *testing.t) {
         t.errorf("ntohs(0x3412) = 0x%04x, expected 0x%04x", result, expected)
     }
 }
-
 func test_socket_error(t *testing.t) {
     err := new_socket_error(econnrefused, "connect")
     if err == nil {
@@ -128,7 +118,6 @@ func test_socket_error(t *testing.t) {
         t.errorf("Expected syscall name 'connect', got '%s'", err.syscall_name)
     }
 }
-
 func test_is_temporary_error(t *testing.t) {
     if !is_temporary_error(eagain) {
         t.error("EAGAIN should be temporary error")
@@ -140,7 +129,6 @@ func test_is_temporary_error(t *testing.t) {
         t.error("ECONNREFUSED should not be temporary error")
     }
 }
-
 func test_is_timeout_error(t *testing.t) {
     if !is_timeout_error(etimedout) {
         t.error("ETIMEDOUT should be timeout error")
@@ -149,12 +137,10 @@ func test_is_timeout_error(t *testing.t) {
         t.error("EAGAIN should not be timeout error")
     }
 }
-
 struct test_server {
     *tcp_listener listener
     int port
 }
-
 func (test_server* ts) start(int port) error {
     listener, err := listen_tcp("127.0.0.1", port)
     if err != nil {
@@ -164,14 +150,12 @@ func (test_server* ts) start(int port) error {
     ts.port = port
     nil
 }
-
 func (test_server* ts) stop() error {
     if ts.listener != nil {
         ts.listener.close()
     }
     nil
 }
-
 func test_tcp_server_client_integration(t *testing.t) {
     server_sock, err := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     if err != nil {
@@ -234,7 +218,6 @@ func test_tcp_server_client_integration(t *testing.t) {
         }
     }
 }
-
 func test_udp_communication(t *testing.t) {
     server_sock, err := new_raw_socket(af_inet, sock_dgram, ipproto_udp)
     if err != nil {
@@ -285,7 +268,6 @@ func test_udp_communication(t *testing.t) {
         }
     }
 }
-
 func test_timeout_handling(t *testing.t) {
     sock, err := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     if err != nil {
@@ -306,7 +288,6 @@ func test_timeout_handling(t *testing.t) {
         t.error("Timeout handling failed")
     }
 }
-
 func test_concurrent_connections(t *testing.t) {
     server_sock, err := new_raw_socket(af_inet, sock_stream, ipproto_tcp)
     if err != nil {
@@ -356,4 +337,3 @@ func test_concurrent_connections(t *testing.t) {
         clients[k].close()
         k = k + 1
     }
-}

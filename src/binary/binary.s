@@ -16,7 +16,6 @@ func u64_le_bytes(int[] bytes, int offset) int {
     }
     return value
 }
-
 func u64_le_string(string data, int offset) int {
     if offset < 0 || offset + 8 > len(data) {
         return 0
@@ -31,7 +30,6 @@ func u64_le_string(string data, int offset) int {
     }
     return value
 }
-
 func i32_le_string(string data, int offset) int {
     if offset < 0 || offset + 4 > len(data) {
         return 0
@@ -46,7 +44,6 @@ func i32_le_string(string data, int offset) int {
     }
     return value
 }
-
 func parse_int_at_bytes(int[] bytes, int pos) int {
     if pos < 0 || pos >= len(bytes) {
         return 0
@@ -62,4 +59,3 @@ func parse_int_at_bytes(int[] bytes, int pos) int {
         cursor = cursor + 1
     }
     return value
-}

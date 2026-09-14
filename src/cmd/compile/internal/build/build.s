@@ -30,17 +30,14 @@ func main(string[] args)  int {
     }
     0
 }
-
 func report_error_local(string message)  () {
     report_error(message)
 }
-
 func emit_target_log(string command) () {
     if command == "check" || command == "build" {
         std.io.println("buildcfg: target=" + buildcfg_goos() + "/" + buildcfg_goarch())
     }
 }
-
 func has_native_flag(string[] options) bool {
     i := 0
     for i < len(options) {
@@ -51,7 +48,6 @@ func has_native_flag(string[] options) bool {
     }
     false
 }
-
 func build_with_backend(string path, string output, string ssa_margin, bool use_native) int {
     if use_native {
         return exec_run_native(path, output)
@@ -59,7 +55,6 @@ func build_with_backend(string path, string output, string ssa_margin, bool use_
         return exec_run(make_build_options(path, output, ssa_margin))
     }
 }
-
 func make_build_options(string path, string output, string ssa_margin) string[] {
     options := string[]()
     options = append(options, "build")
@@ -68,7 +63,6 @@ func make_build_options(string path, string output, string ssa_margin) string[] 
     options = append(options, ssa_margin)
     options
 }
-
 func exec_run_native(string path, string output) int {
     std.io.println("Native compilation: " + path + " -> " + output)
     driver := new_native_compilation_driver(path, output)
@@ -100,4 +94,3 @@ func exec_run_native(string path, string output) int {
     }
     std.io.println("✓ Native compilation successful: " + output)
     0
-}

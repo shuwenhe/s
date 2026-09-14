@@ -5,7 +5,6 @@ struct backend_context {
     target_arch: string
     target_os: string
 }
-
 func new_backend_context(string input, string output, bool native) backend_context {
     ctx: backend_context
     ctx.compiler = new_native_compiler(input, output)
@@ -14,7 +13,6 @@ func new_backend_context(string input, string output, bool native) backend_conte
     ctx.target_os = "linux"
     ctx
 }
-
 func (backend_context* bc) compile_native() int {
     if !bc.native_enabled {
         return -1
@@ -33,7 +31,5 @@ func (backend_context* bc) compile_native() int {
     }
     0
 }
-
 func (backend_context* bc) get_assembly_output() string {
     bc.compiler.get_assembly()
-}

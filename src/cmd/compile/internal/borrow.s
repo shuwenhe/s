@@ -5,7 +5,6 @@ import (
 func analyze_block() int {
     return 0
 }
-
 func analyze_trace(string scope, string[] type_env, string block_text) string {
     plan := make_plan_trace(type_env)
     text := "borrow " + scope
@@ -17,18 +16,15 @@ func analyze_trace(string scope, string[] type_env, string block_text) string {
     }
     return text + " | plan " + join_text(plan, ", ")
 }
-
 func analyze_function(string name, string[] type_env, string body_text) string {
     return analyze_trace(name, type_env, body_text)
 }
-
 func analyze_expr(string scope, string expr_text) string {
     if expr_text == "" {
         return "expr " + scope + " | <empty>"
     }
     return "expr " + scope + " | " + expr_text
 }
-
 func join_text(string[] values, string sep) string {
     out := ""
     i := 0
@@ -41,7 +37,6 @@ func join_text(string[] values, string sep) string {
     }
     return out
 }
-
 func make_plan_trace(string[] type_env) string[] {
     string[] plan
     i := 0
@@ -58,7 +53,6 @@ func make_plan_trace(string[] type_env) string[] {
     }
     return plan
 }
-
 func starts_with(string text, string prefix) bool {
     prefix_len := len(prefix)
     if prefix_len > len(text) {
@@ -66,33 +60,28 @@ func starts_with(string text, string prefix) bool {
     }
     return slice(text, 0, prefix_len) == prefix
 }
-
 struct borrow_slot {
     string name
     int shared_count
     bool mutable_borrowed
     bool moved
 }
-
 struct borrow_check_result {
     bool ok
     int errors
     string message
 }
-
 struct ownership_slot {
     string name
     bool copyable
     bool moved
     bool dropped
 }
-
 struct ownership_check_result {
     bool ok
     int errors
     string message
 }
-
 func ownership_find_slot(ownership_slot[] slots, string name) int {
     i := 0
     for i < len(slots) {
@@ -101,11 +90,9 @@ func ownership_find_slot(ownership_slot[] slots, string name) int {
     }
     -1
 }
-
 func ownership_event_payload(string event, int first) string {
     slice(event, first + 1, len(event))
 }
-
 func ownership_next_colon(string text, int start) int {
     i := start
     for i < len(text) {
@@ -114,7 +101,6 @@ func ownership_next_colon(string text, int start) int {
     }
     -1
 }
-
 func ownership_check_events(string[] events) ownership_check_result {
     ownership_slot[] slots
     errors := 0
@@ -131,7 +117,6 @@ func ownership_check_events(string[] events) ownership_check_result {
         }
         kind := slice(event, 0, first)
         payload := ownership_event_payload(event, first)
-
         if kind == "declare" {
             second := ownership_next_colon(payload, 0)
             if second <= 0 {
@@ -156,7 +141,6 @@ func ownership_check_events(string[] events) ownership_check_result {
             i = i + 1
             continue
         }
-
         slot_id := ownership_find_slot(slots, payload)
         if slot_id < 0 {
             errors = errors + 1
@@ -200,7 +184,6 @@ func ownership_check_events(string[] events) ownership_check_result {
     }
     ownership_check_result { ok: errors == 0, errors: errors, message: message }
 }
-
 func borrow_find_slot(borrow_slot[] slots, string name) int {
     i := 0
     for i < len(slots) {
@@ -209,7 +192,6 @@ func borrow_find_slot(borrow_slot[] slots, string name) int {
     }
     -1
 }
-
 func borrow_check_events(string[] events) borrow_check_result {
     borrow_slot[] slots
     errors := 0
@@ -296,7 +278,6 @@ func borrow_check_events(string[] events) borrow_check_result {
     }
     borrow_check_result { ok: errors == 0, errors: errors, message: message }
 }
-
 func find_event_colon(string event) int {
     i := 0
     for i < len(event) {
@@ -305,19 +286,16 @@ func find_event_colon(string event) int {
     }
     -1
 }
-
 struct lifetime_reference {
     string reference_name
     string owner_name
     string scope_name
 }
-
 struct lifetime_check_result {
     bool ok
     int errors
     string message
 }
-
 func lifetime_find_reference(lifetime_reference[] refs, string name) int {
     i := 0
     for i < len(refs) {
@@ -326,7 +304,6 @@ func lifetime_find_reference(lifetime_reference[] refs, string name) int {
     }
     -1
 }
-
 func lifetime_contains(string[] names, string name) bool {
     i := 0
     for i < len(names) {
@@ -335,7 +312,6 @@ func lifetime_contains(string[] names, string name) bool {
     }
     false
 }
-
 func lifetime_index(string[] names, string name) int {
     i := 0
     for i < len(names) {
@@ -344,7 +320,6 @@ func lifetime_index(string[] names, string name) int {
     }
     -1
 }
-
 func lifetime_second_colon(string text, int first) int {
     i := first + 1
     for i < len(text) {
@@ -353,7 +328,6 @@ func lifetime_second_colon(string text, int first) int {
     }
     -1
 }
-
 func lifetime_check_events(string[] events) lifetime_check_result {
     lifetime_reference[] refs
     string[] active_scopes
@@ -437,4 +411,3 @@ func lifetime_check_events(string[] events) lifetime_check_result {
         i = i + 1
     }
     lifetime_check_result { ok: errors == 0, errors: errors, message: message }
-}

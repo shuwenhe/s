@@ -43,7 +43,6 @@ func collect_exports(source_file ast) export_record[] {
     }
     out
 }
-
 func emit_export_payload(export_record[] exports) string {
     out := "export-data version=1\n"
     i := 0
@@ -52,4 +51,3 @@ func emit_export_payload(export_record[] exports) string {
         i = i + 1
     }
     out
-}

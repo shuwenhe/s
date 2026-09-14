@@ -1,5 +1,4 @@
 package internal.ssa
-
 const op_const = 1
 const op_add = 2
 const op_sub = 3
@@ -25,7 +24,6 @@ const op_call = 22
 const op_return = 23
 const op_if = 24
 const op_phi = 25
-
 struct ssa_value {
     int id
     int op
@@ -35,7 +33,6 @@ struct ssa_value {
     aux_int long
     string aux_string
 }
-
 func ssa_value_new_const_int(int id, long value, int type_id) ssa_value* {
     v := ssa_value {
         id: id,
@@ -48,7 +45,6 @@ func ssa_value_new_const_int(int id, long value, int type_id) ssa_value* {
     }
     v
 }
-
 func ssa_value_new_binary_op(int id, int op, ssa_value* left, ssa_value* right, int type_id) ssa_value* {
     v := ssa_value {
         id: id,
@@ -63,7 +59,6 @@ func ssa_value_new_binary_op(int id, int op, ssa_value* left, ssa_value* right, 
     v.args[1] = right
     v
 }
-
 func ssa_value_new_unary_op(int id, int op, ssa_value* arg, int type_id) ssa_value* {
     v := ssa_value {
         id: id,
@@ -76,4 +71,3 @@ func ssa_value_new_unary_op(int id, int op, ssa_value* arg, int type_id) ssa_val
     }
     v.args[0] = arg
     v
-}

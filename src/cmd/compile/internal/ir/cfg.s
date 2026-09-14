@@ -1,11 +1,9 @@
 package compile.internal.ir.cfg
-
 struct cfg_edge {
     int from_block
     int to_block
     string edge_type
 }
-
 struct cfg_block {
     int id
     string label
@@ -15,7 +13,6 @@ struct cfg_block {
     bool is_loop_header
     bool is_exception_handler
 }
-
 struct control_flow_graph {
     cfg_block[] blocks
     cfg_edge[] edges
@@ -28,7 +25,6 @@ struct control_flow_graph {
     int[] immediate_post_dominator
     int[][] dominance_frontier
 }
-
 func new_cfg() control_flow_graph {
     control_flow_graph {
         blocks: cfg_block[](),
@@ -43,7 +39,6 @@ func new_cfg() control_flow_graph {
         dominance_frontier: int[][]()
     }
 }
-
 func (cfg* control_flow_graph) add_block(int id, string label) cfg_block {
     block := cfg_block {
         id: id,
@@ -57,7 +52,6 @@ func (cfg* control_flow_graph) add_block(int id, string label) cfg_block {
     cfg.blocks.push(block)
     block
 }
-
 func (cfg* control_flow_graph) add_edge(int from, int to, string edge_type) {
     edge := cfg_edge { from_block: from, to_block: to, edge_type: edge_type }
     cfg.edges.push(edge)
@@ -68,21 +62,17 @@ func (cfg* control_flow_graph) add_edge(int from, int to, string edge_type) {
         cfg.blocks[to].predecessors.push(from)
     }
 }
-
 func (cfg* control_flow_graph) compute_dominators() {
     n := cfg.blocks.len()
     cfg.immediate_dominator = int[n]
     cfg.dominator_tree = int[][n]
-
     for i := 0; i < n; i++ {
         cfg.dominator_tree[i] = int[]()
     }
-
     for i := 0; i < n; i++ {
         cfg.immediate_dominator[i] = -1
     }
     cfg.immediate_dominator[cfg.entry_block] = cfg.entry_block
-
     changed := true
     for changed {
         changed = false
@@ -107,14 +97,12 @@ func (cfg* control_flow_graph) compute_dominators() {
             }
         }
     }
-
     for i := 0; i < n; i++ {
         if cfg.immediate_dominator[i] != -1 && cfg.immediate_dominator[i] != i {
             cfg.dominator_tree[cfg.immediate_dominator[i]].push(i)
         }
     }
 }
-
 func (cfg* control_flow_graph) intersect_dominators(int b1, int b2) int {
     finger1 := b1
     finger2 := b2
@@ -128,21 +116,17 @@ func (cfg* control_flow_graph) intersect_dominators(int b1, int b2) int {
     }
     finger1
 }
-
 func (cfg* control_flow_graph) compute_post_dominators() {
     n := cfg.blocks.len()
     cfg.immediate_post_dominator = int[n]
     cfg.post_dominator_tree = int[][n]
-
     for i := 0; i < n; i++ {
         cfg.post_dominator_tree[i] = int[]()
     }
-
     for i := 0; i < n; i++ {
         cfg.immediate_post_dominator[i] = -1
     }
     cfg.immediate_post_dominator[cfg.exit_block] = cfg.exit_block
-
     changed := true
     for changed {
         changed = false
@@ -167,14 +151,12 @@ func (cfg* control_flow_graph) compute_post_dominators() {
             }
         }
     }
-
     for i := 0; i < n; i++ {
         if cfg.immediate_post_dominator[i] != -1 && cfg.immediate_post_dominator[i] != i {
             cfg.post_dominator_tree[cfg.immediate_post_dominator[i]].push(i)
         }
     }
 }
-
 func (cfg* control_flow_graph) intersect_post_dominators(int b1, int b2) int {
     finger1 := b1
     finger2 := b2
@@ -188,15 +170,12 @@ func (cfg* control_flow_graph) intersect_post_dominators(int b1, int b2) int {
     }
     finger1
 }
-
 func (cfg* control_flow_graph) compute_dominance_frontier() {
     n := cfg.blocks.len()
     cfg.dominance_frontier = int[][n]
-
     for i := 0; i < n; i++ {
         cfg.dominance_frontier[i] = int[]()
     }
-
     for x := 0; x < n; x++ {
         if cfg.blocks[x].predecessors.len() >= 2 {
             for _idx_199 := 0; _idx_199 < len(cfg.blocks[x].predecessors); _idx_199++ {
@@ -223,16 +202,13 @@ func (cfg* control_flow_graph) compute_dominance_frontier() {
         }
     }
 }
-
 func (cfg* control_flow_graph) detect_loops() {
     n := cfg.blocks.len()
     cfg.loop_headers = int[]()
-
     bool[n] visited
     for i := 0; i < n; i++ {
         visited[i] = false
     }
-
     func detect_loop_dfs(int block) {
         visited[block] = true
         for _idx_233 := 0; _idx_233 < len(cfg.blocks[block].successors); _idx_233++ {
@@ -257,16 +233,13 @@ func (cfg* control_flow_graph) detect_loops() {
             }
         }
     }
-
     detect_loop_dfs(cfg.entry_block)
 }
-
 func (cfg* control_flow_graph) compute_loop_depths() {
     n := cfg.blocks.len()
     for i := 0; i < n; i++ {
         cfg.blocks[i].loop_depth = 0
     }
-
     changed := true
     for changed {
         changed = false
@@ -281,22 +254,18 @@ func (cfg* control_flow_graph) compute_loop_depths() {
         }
     }
 }
-
 func (cfg* control_flow_graph) get_loop_body(int loop_header) int[] {
     body := int[]()
     body.push(loop_header)
-
     worklist := int[]()
     for _idx_282 := 0; _idx_282 < len(cfg.blocks[loop_header].successors); _idx_282++ {
         succ := cfg.blocks[loop_header].successors[_idx_282]
         worklist.push(succ)
     }
-
     for worklist.len() > 0 {
         block := worklist[0]
         worklist[0] = worklist[worklist.len() - 1]
         worklist = worklist[0..worklist.len() - 1]
-
         found := false
         for _idx_292 := 0; _idx_292 < len(body); _idx_292++ {
             b := body[_idx_292]
@@ -305,7 +274,6 @@ func (cfg* control_flow_graph) get_loop_body(int loop_header) int[] {
                 break
             }
         }
-
         if !found {
             body.push(block)
             for _idx_301 := 0; _idx_301 < len(cfg.blocks[block].successors); _idx_301++ {
@@ -314,6 +282,4 @@ func (cfg* control_flow_graph) get_loop_body(int loop_header) int[] {
             }
         }
     }
-
     body
-}

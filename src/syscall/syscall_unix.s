@@ -70,14 +70,12 @@ extern "intrinsic" func __sys_poller_create() int
 extern "intrinsic" func __sys_poller_add(int poller_fd, int fd, int events) int
 extern "intrinsic" func __sys_poller_del(int poller_fd, int fd) int
 extern "intrinsic" func __sys_poller_wait(int poller_fd, int max, int timeout_ms) int[]
-
 func make_net_error(string msg) net_error {
     code := __sys_errno()
     net_error {
         message:    msg + ": " + __sys_strerror(code), errno_code code,
     }
 }
-
 func socket(int domain, int typ, int proto) (int, net_error) {
     fd := __sys_socket(domain, typ, proto)
     if fd < 0 {
@@ -86,7 +84,6 @@ func socket(int domain, int typ, int proto) (int, net_error) {
         fd
     }
 }
-
 func bind(int sockfd, string ip, int port, int family) ((), net_error) {
     r := __sys_bind(sockfd, ip, port, family)
     if r < 0 {
@@ -95,7 +92,6 @@ func bind(int sockfd, string ip, int port, int family) ((), net_error) {
         ()
     }
 }
-
 func listen(int sockfd, int backlog) ((), net_error) {
     r := __sys_listen(sockfd, backlog)
     if r < 0 {
@@ -104,7 +100,6 @@ func listen(int sockfd, int backlog) ((), net_error) {
         ()
     }
 }
-
 func accept(int sockfd) (int, net_error) {
     newfd := __sys_accept(sockfd)
     if newfd < 0 {
@@ -113,7 +108,6 @@ func accept(int sockfd) (int, net_error) {
         newfd
     }
 }
-
 func accept_addr(int sockfd) (accept_result, net_error) {
     newfd := __sys_accept(sockfd)
     if newfd < 0 {
@@ -124,19 +118,15 @@ func accept_addr(int sockfd) (accept_result, net_error) {
         }
     }
 }
-
 struct accept_result {
     int fd
     string ip
     int port
 }
-
 func local_ip(int fd) string { __sys_local_ip(fd) }
-
 func local_port(int fd) int { __sys_local_port(fd) }
 
 func peer_ip(int fd) string { __sys_peer_ip(fd) }
-
 func peer_port(int fd) int { __sys_peer_port(fd) }
 
 func connect(int sockfd, string ip, int port, int family) ((), net_error) {
@@ -147,7 +137,6 @@ func connect(int sockfd, string ip, int port, int family) ((), net_error) {
         ()
     }
 }
-
 func connect_deadline(int sockfd, string host, int port, int family, int timeout_ms) ((), net_error) {
     r := __sys_connect_deadline(sockfd, host, port, family, timeout_ms)
     if r < 0 {
@@ -156,7 +145,6 @@ func connect_deadline(int sockfd, string host, int port, int family, int timeout
         ()
     }
 }
-
 func resolve_ip(string host, int family) (string[], net_error) {
     addresses := __sys_resolve_ip(host, family)
     if len(addresses) == 0 && __sys_errno() != 0 {
@@ -165,7 +153,6 @@ func resolve_ip(string host, int family) (string[], net_error) {
         addresses
     }
 }
-
 func read_string(int fd, int max_bytes) (string, net_error) {
     data := __sys_read_string(fd, max_bytes)
     if data == "" {
@@ -179,7 +166,6 @@ func read_string(int fd, int max_bytes) (string, net_error) {
         data
     }
 }
-
 func write_string(int fd, string data) (int, net_error) {
     n := __sys_write_string(fd, data)
     if n < 0 {
@@ -188,7 +174,6 @@ func write_string(int fd, string data) (int, net_error) {
         n
     }
 }
-
 func sendto_string(int fd, string data, string ip, int port, int family) (int, net_error) {
     n := __sys_sendto_string(fd, data, ip, port, family)
     if n < 0 {
@@ -197,13 +182,11 @@ func sendto_string(int fd, string data, string ip, int port, int family) (int, n
         n
     }
 }
-
 struct recvfrom_result {
     string data
     string ip
     int port
 }
-
 func recvfrom_string(int fd, int max_bytes) (recvfrom_result, net_error) {
     data := __sys_recvfrom_string(fd, max_bytes)
     code := __sys_errno()
@@ -215,17 +198,14 @@ func recvfrom_string(int fd, int max_bytes) (recvfrom_result, net_error) {
         }
     }
 }
-
 func sendfile(int out_fd, int in_fd, int offset, int count) (int, net_error) {
     n := __sys_sendfile(out_fd, in_fd, offset, count)
     if n < 0 { make_net_error("sendfile") } else { n }
 }
-
 func splice(int in_fd, int out_fd, int count) (int, net_error) {
     n := __sys_splice(in_fd, out_fd, count)
     if n < 0 { make_net_error("splice") } else { n }
 }
-
 func interface_addresses() (string[], net_error) {
     addresses := __sys_interface_addresses()
     if len(addresses) == 0 && __sys_errno() != 0 {
@@ -234,7 +214,6 @@ func interface_addresses() (string[], net_error) {
         addresses
     }
 }
-
 func close(int fd) ((), net_error) {
     r := __sys_close(fd)
     if r < 0 {
@@ -243,7 +222,6 @@ func close(int fd) ((), net_error) {
         ()
     }
 }
-
 func set_nonblocking(int fd) ((), net_error) {
     flags := __sys_fcntl(fd, f_getfl, 0)
     if flags < 0 {
@@ -256,7 +234,6 @@ func set_nonblocking(int fd) ((), net_error) {
         ()
     }
 }
-
 func set_reuseaddr(int fd) ((), net_error) {
     r := __sys_setsockopt(fd, sol_socket, so_reuseaddr, 1)
     if r < 0 {
@@ -265,7 +242,6 @@ func set_reuseaddr(int fd) ((), net_error) {
         ()
     }
 }
-
 func set_tcp_nodelay(int fd) ((), net_error) {
     r := __sys_setsockopt(fd, ipproto_tcp, tcp_nodelay, 1)
     if r < 0 {
@@ -274,7 +250,6 @@ func set_tcp_nodelay(int fd) ((), net_error) {
         ()
     }
 }
-
 func set_deadline_ms(int fd, int read_timeout_ms, int write_timeout_ms) ((), net_error) {
     r := __sys_set_deadline_ms(fd, read_timeout_ms, write_timeout_ms)
     if r < 0 {
@@ -283,7 +258,6 @@ func set_deadline_ms(int fd, int read_timeout_ms, int write_timeout_ms) ((), net
         ()
     }
 }
-
 func shutdown(int fd, int how) ((), net_error) {
     r := __sys_shutdown(fd, how)
     if r < 0 {
@@ -292,7 +266,6 @@ func shutdown(int fd, int how) ((), net_error) {
         ()
     }
 }
-
 func poll_ready(int fd, int events, int timeout_ms) (int, net_error) {
     r := __sys_poll_ready(fd, events, timeout_ms)
     if r < 0 {
@@ -301,7 +274,6 @@ func poll_ready(int fd, int events, int timeout_ms) (int, net_error) {
         r
     }
 }
-
 func poller_create() (int, net_error) {
     pfd := __sys_poller_create()
     if pfd < 0 {
@@ -310,7 +282,6 @@ func poller_create() (int, net_error) {
         pfd
     }
 }
-
 func poller_add(int poller_fd, int fd, int events) ((), net_error) {
     r := __sys_poller_add(poller_fd, fd, events)
     if r < 0 {
@@ -319,7 +290,6 @@ func poller_add(int poller_fd, int fd, int events) ((), net_error) {
         ()
     }
 }
-
 func poller_del(int poller_fd, int fd) ((), net_error) {
     r := __sys_poller_del(poller_fd, fd)
     if r < 0 {
@@ -328,7 +298,6 @@ func poller_del(int poller_fd, int fd) ((), net_error) {
         ()
     }
 }
-
 func poller_wait(int poller_fd, int max, int timeout_ms) (int[], net_error) {
     ready := __sys_poller_wait(poller_fd, max, timeout_ms)
     if __sys_errno() != 0 {
@@ -337,7 +306,4 @@ func poller_wait(int poller_fd, int max, int timeout_ms) (int[], net_error) {
         ready
     }
 }
-
 func syscall_unix_unit_name() string { "src/syscall/syscall_unix" }
-
-func syscall_unix_unit_ready() int   { 1 }

@@ -1,2 +1,1 @@
 func check_bridge() {
-}

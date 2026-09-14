@@ -7,7 +7,6 @@ extern "intrinsic" func __host_byte_at(string text, int index) int;
 extern "intrinsic" func __host_byte_string(int value) string;
 extern "intrinsic" func __host_make_executable(string path) int;
 extern "intrinsic" func __host_slice(string text, int start, int end) string;
-
 func digit_text(int value) string {
     if value == 0 { return "0" }
     if value == 1 { return "1" }
@@ -20,17 +19,14 @@ func digit_text(int value) string {
     if value == 8 { return "8" }
     return "9"
 }
-
 func int_text(int value) string {
     if value < 10 { return digit_text(value) }
     return int_text(value / 10) + digit_text(value % 10)
 }
-
 func signed_int_text(int value) string {
     if value < 0 { return "-" + int_text(0 - value) }
     return int_text(value)
 }
-
 func source_line_at(string source, int position) int {
     int line = 1
     int index = 0
@@ -40,18 +36,15 @@ func source_line_at(string source, int position) int {
     }
     return line
 }
-
 func unsupported_item(string source, int position, string phase, string construct, string detail) string {
     if position < 0 { return "" }
     return phase + "|" + int_text(source_line_at(source, position)) + "|" + construct + "|" + detail + "\n"
 }
-
 func second_function_at(string source) int {
     int first = find_function_from(source, 0)
     if first < 0 { return -1 }
     return find_function_from(source, first + 4)
 }
-
 func first_stack_argument_function_at(string source) int {
     int index = 0
     for index < len(source) {
@@ -66,7 +59,6 @@ func first_stack_argument_function_at(string source) int {
     }
     return -1
 }
-
 func find_code_word_from(string source, string word, int start) int {
     int index = start
     for index + len(word) <= len(source) {
@@ -102,15 +94,12 @@ func find_code_word_from(string source, string word, int start) int {
     }
     return -1
 }
-
 func find_code_word(string source, string word) int {
     return find_code_word_from(source, word, 0)
 }
-
 func unsupported_report(string source) string {
     string report = "S-BOOTSTRAP-UNSUPPORTED-V1\n"
     report = report + "phase|line|construct|detail\n"
-
     int for_at = find_code_word(source, "for")
     if for_at >= 0 {
         report = report + unsupported_item(source, for_at, "semantic", "for-loop",
@@ -123,7 +112,6 @@ func unsupported_report(string source) string {
     }
     return report
 }
-
 func parse_package_name(string source) string {
     int start = skip_trivia(source, 0)
     if !matches_at(source, start, "package") { return "" }
@@ -143,7 +131,6 @@ func parse_package_name(string source) string {
     if cursor < len(source) && !is_space(__host_char_at(source, cursor)) { return "" }
     return __host_slice(source, name_start, cursor)
 }
-
 func intrinsic_declaration_count(string source) int {
     int count = 0
     int cursor = 0
@@ -172,7 +159,6 @@ func intrinsic_declaration_count(string source) int {
     }
     return count
 }
-
 func known_intrinsic_id(string name) int {
     if name == "__host_byte_at" { return 1 }
     if name == "__host_slice" { return 2 }
@@ -180,7 +166,6 @@ func known_intrinsic_id(string name) int {
     if name == "__host_byte_string" { return 4 }
     return 0
 }
-
 func resolve_intrinsic_id(string source, string name) int {
     int wanted = known_intrinsic_id(name)
     if wanted == 0 { return 0 }
@@ -195,7 +180,6 @@ func resolve_intrinsic_id(string source, string name) int {
     }
     return 0
 }
-
 func emit_intrinsic_machine(int intrinsic_id) string {
     if intrinsic_id == 1 {
         return __host_byte_string(49) + __host_byte_string(192)
@@ -220,23 +204,18 @@ func emit_intrinsic_machine(int intrinsic_id) string {
     }
     return ""
 }
-
 func is_space(string ch) bool {
     return ch == " " || ch == "\t" || ch == "\r" || ch == "\n"
 }
-
 func is_digit(string ch) bool {
     return ch >= "0" && ch <= "9"
 }
-
 func is_alpha(string ch) bool {
     return (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || ch == "_"
 }
-
 func is_ident_continue(string ch) bool {
     return is_alpha(ch) || is_digit(ch)
 }
-
 func skip_space(string source, int start) int {
     int index = start
     for index < len(source) && is_space(__host_char_at(source, index)) {
@@ -244,7 +223,6 @@ func skip_space(string source, int start) int {
     }
     return index
 }
-
 func skip_trivia(string source, int start) int {
     int index = start
     for index < len(source) {
@@ -271,7 +249,6 @@ func skip_trivia(string source, int start) int {
     }
     return index
 }
-
 func matches_at(string source, int index, string needle) bool {
     if index + len(needle) > len(source) { return false }
     int i = 0
@@ -283,7 +260,6 @@ func matches_at(string source, int index, string needle) bool {
     }
     return true
 }
-
 func find_word(string source, string word) int {
     int i = 0
     for i + len(word) <= len(source) {
@@ -294,7 +270,6 @@ func find_word(string source, string word) int {
     }
     return -1
 }
-
 func find_word_from(string source, string word, int start) int {
     int index = start
     for index + len(word) <= len(source) {
@@ -305,7 +280,6 @@ func find_word_from(string source, string word, int start) int {
     }
     return -1
 }
-
 func find_function_from(string source, int start) int {
     int index = start
     int mode = 0
@@ -351,7 +325,6 @@ func find_function_from(string source, int start) int {
     }
     return -1
 }
-
 func function_declaration(string source, string name) int {
     int index = 0
     for index < len(source) {
@@ -366,7 +339,6 @@ func function_declaration(string source, string name) int {
     }
     return -1
 }
-
 func function_body(string source, string name) int {
     int declaration = function_declaration(source, name)
     if declaration < 0 { return -1 }
@@ -380,7 +352,6 @@ func function_body(string source, string name) int {
     if scan < len(source) { return scan }
     return -1
 }
-
 func function_parameter_at(string source, string name, int wanted) string {
     int declaration = function_declaration(source, name)
     if declaration < 0 { return "" }
@@ -408,11 +379,9 @@ func function_parameter_at(string source, string name, int wanted) string {
     }
     return ""
 }
-
 func function_parameter(string source, string name) string {
     return function_parameter_at(source, name, 0)
 }
-
 func function_parameter_index(string source, string name, string wanted) int {
     int declaration = function_declaration(source, name)
     if declaration < 0 { return -1 }
@@ -440,7 +409,6 @@ func function_parameter_index(string source, string name, string wanted) int {
     }
     return -1
 }
-
 func function_parameter_type_kind_at(string source, string name, int wanted) int {
     int declaration = function_declaration(source, name)
     if declaration < 0 { return -1 }
@@ -469,7 +437,6 @@ func function_parameter_type_kind_at(string source, string name, int wanted) int
     }
     return -1
 }
-
 func parse_type_kind(string name) int {
     if name == "void" || name == "()" { return 0 }
     if name == "int" { return 1 }
@@ -479,13 +446,11 @@ func parse_type_kind(string name) int {
     if name == "slice" { return 5 }
     return -1
 }
-
 func type_abi_words(int kind) int {
     if kind == 3 || kind == 5 { return 2 }
     if kind >= 0 { return 1 }
     return 0
 }
-
 func function_parameter_abi_offset(string source, string name, int wanted) int {
     int ordinal = 0
     int offset = 0
@@ -498,7 +463,6 @@ func function_parameter_abi_offset(string source, string name, int wanted) int {
     if function_parameter_type_kind_at(source, name, wanted) < 0 { return -1 }
     return offset
 }
-
 func function_parameter_abi_words(string source, string name) int {
     int ordinal = 0
     int words = 0
@@ -510,7 +474,6 @@ func function_parameter_abi_words(string source, string name) int {
     }
     return words
 }
-
 func function_return_type_kind(string source, string name) int {
     int declaration = function_declaration(source, name)
     if declaration < 0 { return -1 }
@@ -526,7 +489,6 @@ func function_return_type_kind(string source, string name) int {
     if result_end == result_at { return -1 }
     return parse_type_kind(__host_slice(source, result_at, result_end))
 }
-
 func identifier_matches(string source, int start, int end, string wanted) bool {
     if end - start != len(wanted) { return false }
     int offset = 0
@@ -538,7 +500,6 @@ func identifier_matches(string source, int start, int end, string wanted) bool {
     }
     return true
 }
-
 func function_symbol_count(string source, string wanted) int {
     int count = 0
     int index = 0
@@ -553,7 +514,6 @@ func function_symbol_count(string source, string wanted) int {
     }
     return count
 }
-
 func validate_function_symbols(string source) bool {
     int index = 0
     int main_count = function_symbol_count(source, "main")
@@ -584,7 +544,6 @@ func validate_function_symbols(string source) bool {
     }
     return true
 }
-
 func function_body_end(string source, int body) int {
     if body < 1 || body >= len(source) { return -1 }
     int index = body
@@ -617,7 +576,6 @@ func function_body_end(string source, int body) int {
     }
     return -1
 }
-
 func parse_uint(string source, int start) int {
     int value = 0
     int index = start
@@ -637,7 +595,6 @@ func parse_uint(string source, int start) int {
     }
     return value
 }
-
 func skip_uint(string source, int start) int {
     int index = start
     for index < len(source) && is_digit(__host_char_at(source, index)) {
@@ -645,7 +602,6 @@ func skip_uint(string source, int start) int {
     }
     return index
 }
-
 func skip_identifier(string source, int start) int {
     int index = start
     for index < len(source) && is_ident_continue(__host_char_at(source, index)) {
@@ -653,7 +609,6 @@ func skip_identifier(string source, int start) int {
     }
     return index
 }
-
 func skip_quoted(string source, int start, int end) int {
     int index = start + 1
     for index < end {
@@ -664,7 +619,6 @@ func skip_quoted(string source, int start, int end) int {
     }
     return end
 }
-
 func expression_end(string source, int start) int {
     int index = start
     int depth = 0
@@ -697,7 +651,6 @@ func expression_end(string source, int start) int {
     }
     return -1
 }
-
 func matching_paren(string source, int start, int end) int {
     int index = start
     int depth = 0
@@ -713,7 +666,6 @@ func matching_paren(string source, int start, int end) int {
     }
     return -1
 }
-
 func matching_square(string source, int start, int end) int {
     int depth = 0
     int index = start
@@ -729,7 +681,6 @@ func matching_square(string source, int start, int end) int {
     }
     return -1
 }
-
 func factor_end(string source, int start, int end) int {
     int index = skip_space(source, start)
     if index >= end { return -1 }
@@ -752,7 +703,6 @@ func factor_end(string source, int start, int end) int {
     }
     return -1
 }
-
 func resolve_identifier(string source, string name, int scope_start, int before, string parameter_name, int parameter_value) int {
     int index = scope_start
     int value = -1
@@ -778,7 +728,6 @@ func resolve_identifier(string source, string name, int scope_start, int before,
     if value < 0 && parameter_name != "" && name == parameter_name { return parameter_value }
     return value
 }
-
 func resolve_function(string source, string name, bool has_argument, int argument) int {
     int body = function_body(source, name)
     if body < 0 { return -1 }
@@ -789,7 +738,6 @@ func resolve_function(string source, string name, bool has_argument, int argumen
     if body_end < 0 { return -1 }
     return evaluate_block(source, body, body_end, body, parameter, argument)
 }
-
 func factor_value(string source, int start, int next, int scope_start, string parameter_name, int parameter_value) int {
     string ch = __host_char_at(source, start)
     if ch == "(" { return evaluate_expression(source, start + 1, next - 1, scope_start, parameter_name, parameter_value) }
@@ -810,7 +758,6 @@ func factor_value(string source, int start, int next, int scope_start, string pa
     }
     return -1
 }
-
 func compile_local_constant_value(string source, int scope_start, int before, string name) int {
     int index = scope_start
     int value = -1
@@ -887,7 +834,6 @@ func compile_local_constant_value(string source, int scope_start, int before, st
     }
     return value
 }
-
 func evaluate_arithmetic_expression(string source, int start, int end, int scope_start, string parameter_name, int parameter_value) int {
     int index = skip_space(source, start)
     int next = factor_end(source, index, end)
@@ -934,7 +880,6 @@ func evaluate_arithmetic_expression(string source, int start, int end, int scope
     }
     return -1
 }
-
 func comparison_at(string source, int start, int end) int {
     int index = start
     int depth = 0
@@ -950,7 +895,6 @@ func comparison_at(string source, int start, int end) int {
     }
     return -1
 }
-
 func logical_at(string source, int start, int end, string operator) int {
     int index = start
     int depth = 0
@@ -964,7 +908,6 @@ func logical_at(string source, int start, int end, string operator) int {
     }
     return -1
 }
-
 func evaluate_expression(string source, int start, int end, int scope_start, string parameter_name, int parameter_value) int {
     int logical = logical_at(source, start, end, "||")
     if logical >= 0 {
@@ -1033,7 +976,6 @@ func evaluate_expression(string source, int start, int end, int scope_start, str
     }
     return -1
 }
-
 func evaluate_block(string source, int block_start, int block_end, int scope_start, string parameter_name, int parameter_value) int {
     int index = block_start
     for index < block_end {
@@ -1085,7 +1027,6 @@ func evaluate_block(string source, int block_start, int block_end, int scope_sta
     }
     return -1
 }
-
 func evaluate_main_expression(string source) int {
     int body = function_body(source, "main")
     if body < 0 { return -1 }
@@ -1093,58 +1034,46 @@ func evaluate_main_expression(string source) int {
     if body_end < 0 { return -1 }
     return evaluate_block(source, body + 1, body_end, body + 1, "", 0)
 }
-
 func compile_main_expression(string source) string {
     int value = evaluate_main_expression(source)
     if value < 0 { return "" }
     return "SSEED-TARGET-V1\nFUNC_BEGIN|main|_|_\nRET|" + int_text(value) + "|_|_\nFUNC_END|main|_|_\n"
 }
-
 func little16(int input) string {
     int value = input
     return __host_byte_string(value % 256) + __host_byte_string((value / 256) % 256)
 }
-
 func little32(int input) string {
     int value = input
     return little16(value % 65536) + little16((value / 65536) % 65536)
 }
-
 func little32_signed(int input) string {
     int value = input
     if value < 0 { value = value + 4294967296 }
     return little32(value)
 }
-
 func little64(int input) string {
     int value = input
     return little32(value) + little32(0)
 }
-
 func machine_test_rax() string {
     return __host_byte_string(72) + __host_byte_string(133) + __host_byte_string(192)
 }
-
 func machine_jump_zero(int displacement) string {
     return __host_byte_string(15) + __host_byte_string(132) + little32_signed(displacement)
 }
-
 func machine_jump_not_zero(int displacement) string {
     return __host_byte_string(15) + __host_byte_string(133) + little32_signed(displacement)
 }
-
 func machine_jump(int displacement) string {
     return __host_byte_string(233) + little32_signed(displacement)
 }
-
 func continue_marker() string {
     return __host_byte_string(1) + __host_byte_string(2) + __host_byte_string(3) + __host_byte_string(4) + __host_byte_string(5)
 }
-
 func break_marker() string {
     return __host_byte_string(6) + __host_byte_string(7) + __host_byte_string(8) + __host_byte_string(9) + __host_byte_string(10)
 }
-
 func rewrite_loop_jumps(string body, int prefix_len, string continue_jump, string break_jump) string {
     string continue_tag = continue_marker()
     string break_tag = break_marker()
@@ -1169,7 +1098,6 @@ func rewrite_loop_jumps(string body, int prefix_len, string continue_jump, strin
     }
     return output
 }
-
 func machine_while(string condition, string body) string {
     string test = machine_test_rax()
     string exit_jump = machine_jump_zero(len(body) + 5)
@@ -1178,7 +1106,6 @@ func machine_while(string condition, string body) string {
     string rewritten_body = rewrite_loop_jumps(body, len(condition) + len(test) + len(exit_jump), continue_jump, "")
     return condition + test + exit_jump + rewritten_body + machine_jump(back)
 }
-
 func zeroes(int count) string {
     string output = ""
     int i = 0
@@ -1188,7 +1115,6 @@ func zeroes(int count) string {
     }
     return output
 }
-
 func emit_elf_image(string code) string {
     int image_base = 4194304
     int code_offset = 120
@@ -1204,17 +1130,14 @@ func emit_elf_image(string code) string {
     elf = elf + little64(file_size) + little64(file_size) + little64(4096)
     return elf + code
 }
-
 func exit_sequence() string {
     return __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(192) + little32(60)
         + __host_byte_string(15) + __host_byte_string(5)
 }
-
 func emit_exit_elf(int exit_code) string {
     string code = __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(199) + little32(exit_code)
     return emit_elf_image(code + exit_sequence())
 }
-
 func trim_space_end(string source, int start, int end) int {
     int result = end
     for result > start && is_space(__host_char_at(source, result - 1)) {
@@ -1222,7 +1145,6 @@ func trim_space_end(string source, int start, int end) int {
     }
     return result
 }
-
 func arithmetic_operator_at(string source, int start, int end, bool product) int {
     int index = start
     int depth = 0
@@ -1240,7 +1162,6 @@ func arithmetic_operator_at(string source, int start, int end, bool product) int
     }
     return result
 }
-
 func arithmetic_machine_op(string operator) string {
     if operator == "+" {
         return __host_byte_string(72) + __host_byte_string(1) + __host_byte_string(200)
@@ -1258,7 +1179,6 @@ func arithmetic_machine_op(string operator) string {
     }
     return divide
 }
-
 func plain_uint_value(string source, int start, int end) int {
     int trimmed_start = skip_space(source, start)
     int trimmed_end = trim_space_end(source, trimmed_start, end)
@@ -1273,7 +1193,6 @@ func plain_uint_value(string source, int start, int end) int {
     if number_end != trimmed_end { return -1 }
     return parse_uint(source, trimmed_start)
 }
-
 func fold_binary_uint_value(int left, int right, string operator) int {
     if operator == "+" { return left + right }
     if operator == "-" { return left - right }
@@ -1288,7 +1207,6 @@ func fold_binary_uint_value(int left, int right, string operator) int {
     }
     return -1
 }
-
 func simplify_binary_uint(string source, int start, int operator_at, int end) string {
     int left_trimmed = skip_space(source, start)
     int right_trimmed = skip_space(source, operator_at + 1)
@@ -1321,14 +1239,12 @@ func simplify_binary_uint(string source, int start, int operator_at, int end) st
     if operator == "%" && right_value == 1 { return __host_byte_string(184) + little32(0) }
     return ""
 }
-
 func machine_binary(string left, string right, string operator) string {
     if left == "" || right == "" { return "" }
     return left + __host_byte_string(80) + right
         + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(193)
         + __host_byte_string(88) + arithmetic_machine_op(operator)
 }
-
 func emit_arithmetic_machine(string source, int raw_start, int raw_end) string {
     int start = skip_space(source, raw_start)
     int end = trim_space_end(source, start, raw_end)
@@ -1352,7 +1268,6 @@ func emit_arithmetic_machine(string source, int raw_start, int raw_end) string {
     if number_end != end { return "" }
     return __host_byte_string(184) + little32(parse_uint(source, start))
 }
-
 func comparison_machine_op(string operator) string {
     if operator == "==" { return __host_byte_string(15) + __host_byte_string(148) + __host_byte_string(192) }
     if operator == "!=" { return __host_byte_string(15) + __host_byte_string(149) + __host_byte_string(192) }
@@ -1361,7 +1276,6 @@ func comparison_machine_op(string operator) string {
     if operator == ">" { return __host_byte_string(15) + __host_byte_string(159) + __host_byte_string(192) }
     return __host_byte_string(15) + __host_byte_string(157) + __host_byte_string(192)
 }
-
 func fold_compare_uint_value(int left, int right, string operator) int {
     if operator == "==" { if left == right { return 1 } return 0 }
     if operator == "!=" { if left != right { return 1 } return 0 }
@@ -1371,7 +1285,6 @@ func fold_compare_uint_value(int left, int right, string operator) int {
     if left >= right { return 1 }
     return 0
 }
-
 func fold_logical_uint_value(int left, int right, string operator) int {
     if operator == "||" {
         if left != 0 || right != 0 { return 1 }
@@ -1380,7 +1293,6 @@ func fold_logical_uint_value(int left, int right, string operator) int {
     if left != 0 && right != 0 { return 1 }
     return 0
 }
-
 func simplify_logical_uint(string source, int start, int operator_at, int end) string {
     int left_value = plain_uint_value(source, start, operator_at)
     int right_value = plain_uint_value(source, operator_at + 2, end)
@@ -1399,7 +1311,6 @@ func simplify_logical_uint(string source, int start, int operator_at, int end) s
     }
     return ""
 }
-
 func emit_multi_condition_constant(string source, int start, int end) int {
     int trimmed_start = skip_space(source, start)
     int trimmed_end = trim_space_end(source, trimmed_start, end)
@@ -1458,7 +1369,6 @@ func emit_multi_condition_constant(string source, int start, int end) int {
     }
     return -1
 }
-
 func machine_compare(string left, string right, string operator) string {
     if left == "" || right == "" { return "" }
     return left + __host_byte_string(80) + right
@@ -1468,7 +1378,6 @@ func machine_compare(string left, string right, string operator) string {
         + comparison_machine_op(operator)
         + __host_byte_string(72) + __host_byte_string(15) + __host_byte_string(182) + __host_byte_string(192)
 }
-
 func emit_condition_machine(string source, int start, int end) string {
     int compare = comparison_at(source, start, end)
     if compare < 0 { return emit_arithmetic_machine(source, start, end) }
@@ -1485,7 +1394,6 @@ func emit_condition_machine(string source, int start, int end) string {
     string right = emit_arithmetic_machine(source, operator_end, end)
     return machine_compare(left, right, operator)
 }
-
 func emit_condition_constant(string source, int start, int end) int {
     int compare = comparison_at(source, start, end)
     if compare < 0 {
@@ -1503,7 +1411,6 @@ func emit_condition_constant(string source, int start, int end) int {
     if left_value < 0 || right_value < 0 { return -1 }
     return fold_compare_uint_value(left_value, right_value, __host_slice(source, compare, operator_end))
 }
-
 func emit_native_return_machine(string source, int return_at, int block_end) string {
     int start = skip_space(source, return_at + 6)
     int end = expression_end(source, start)
@@ -1513,7 +1420,6 @@ func emit_native_return_machine(string source, int return_at, int block_end) str
     string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
     return expression + move_result + exit_sequence()
 }
-
 func emit_native_block_machine(string source, int block_start, int block_end) string {
     int index = skip_space(source, block_start)
     if index >= block_end { return "" }
@@ -1555,7 +1461,6 @@ func emit_native_block_machine(string source, int block_start, int block_end) st
     string jump_false = machine_jump_zero(len(then_code))
     return condition + test_result + jump_false + then_code + else_code
 }
-
 func emit_native_expression_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
@@ -1575,7 +1480,6 @@ func emit_native_expression_elf(string source) string {
     string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
     return emit_elf_image(expression_code + move_result + exit_sequence())
 }
-
 func emit_native_control_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
@@ -1585,7 +1489,6 @@ func emit_native_control_elf(string source) string {
     if code == "" { return "" }
     return emit_elf_image(code)
 }
-
 func local_slot(string source, int scope_start, int before, string wanted) int {
     int index = scope_start
     int slot = 0
@@ -1637,7 +1540,6 @@ func local_slot(string source, int scope_start, int before, string wanted) int {
     }
     return -1
 }
-
 func local_type_kind(string source, int scope_start, int before, string wanted) int {
     int index = scope_start
     for index <= before && index < len(source) {
@@ -1656,31 +1558,26 @@ func local_type_kind(string source, int scope_start, int before, string wanted) 
     }
     return -1
 }
-
 func stack_load(int slot) string {
     int displacement = 256 - ((slot + 1) * 8)
     return __host_byte_string(72) + __host_byte_string(139) + __host_byte_string(69)
         + __host_byte_string(displacement)
 }
-
 func stack_store(int slot) string {
     int displacement = 256 - ((slot + 1) * 8)
     return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(69)
         + __host_byte_string(displacement)
 }
-
 func stack_load_rdx(int slot) string {
     int displacement = 256 - ((slot + 1) * 8)
     return __host_byte_string(72) + __host_byte_string(139) + __host_byte_string(85)
         + __host_byte_string(displacement)
 }
-
 func stack_store_rdx(int slot) string {
     int displacement = 256 - ((slot + 1) * 8)
     return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(85)
         + __host_byte_string(displacement)
 }
-
 func emit_scoped_arithmetic_machine(string source, int raw_start, int raw_end, int scope_start) string {
     int start = skip_space(source, raw_start)
     int end = trim_space_end(source, start, raw_end)
@@ -1711,7 +1608,6 @@ func emit_scoped_arithmetic_machine(string source, int raw_start, int raw_end, i
     }
     return ""
 }
-
 func emit_scoped_condition_machine(string source, int start, int end, int scope_start) string {
     int compare = comparison_at(source, start, end)
     if compare < 0 { return emit_scoped_arithmetic_machine(source, start, end, scope_start) }
@@ -1722,7 +1618,6 @@ func emit_scoped_condition_machine(string source, int start, int end, int scope_
     string right = emit_scoped_arithmetic_machine(source, operator_end, end, scope_start)
     return machine_compare(left, right, operator)
 }
-
 func emit_assignment_block_machine(string source, int block_start, int block_end, int scope_start) string {
     int index = block_start
     string code = ""
@@ -1746,7 +1641,6 @@ func emit_assignment_block_machine(string source, int block_start, int block_end
     }
     return code
 }
-
 func emit_native_loop_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
@@ -1794,7 +1688,6 @@ func emit_native_loop_elf(string source) string {
     return emit_elf_image(prefix + machine_while(condition, loop_body)
         + result + move_result + exit_sequence())
 }
-
 func decode_bootstrap_string(string source, int start, int end) string {
     string output = ""
     int index = start
@@ -1815,7 +1708,6 @@ func decode_bootstrap_string(string source, int start, int end) string {
     }
     return output
 }
-
 func emit_write_sequence(int address, int count) string {
     return __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(192) + little32(1)
         + __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(199) + little32(1)
@@ -1823,7 +1715,6 @@ func emit_write_sequence(int address, int count) string {
         + __host_byte_string(72) + __host_byte_string(199) + __host_byte_string(194) + little32(count)
         + __host_byte_string(15) + __host_byte_string(5)
 }
-
 func emit_native_string_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
@@ -1861,7 +1752,6 @@ func emit_native_string_elf(string source) string {
     string code = emit_write_sequence(string_address, len(literal)) + tail
     return emit_elf_image(code + literal)
 }
-
 func emit_array_expression_machine(string source, int raw_start, int raw_end, string array_name, int array_length) string {
     int start = skip_space(source, raw_start)
     int end = trim_space_end(source, start, raw_end)
@@ -1893,7 +1783,6 @@ func emit_array_expression_machine(string source, int raw_start, int raw_end, st
     if element < 0 || element >= array_length { return "" }
     return stack_load(element)
 }
-
 func emit_native_array_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
@@ -1936,7 +1825,6 @@ func emit_native_array_elf(string source) string {
     string move_result = __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(199)
     return emit_elf_image(code + result + move_result + exit_sequence())
 }
-
 func native_function_slot(string source, string wanted) int {
     if wanted == "main" { return 0 }
     int index = 0
@@ -1956,11 +1844,9 @@ func native_function_slot(string source, string wanted) int {
     }
     return -1
 }
-
 func native_function_stride() int {
     return 16384
 }
-
 func native_function_count(string source) int {
     int count = 1
     int index = 0
@@ -1976,7 +1862,6 @@ func native_function_count(string source) int {
     }
     return count
 }
-
 func string_literal_index_at(string source, int wanted) int {
     int index = 0
     int ordinal = 0
@@ -1992,7 +1877,6 @@ func string_literal_index_at(string source, int wanted) int {
     }
     return ordinal
 }
-
 func string_literal_bytes(string source, int start, int end) string {
     string output = ""
     int index = start + 1
@@ -2012,7 +1896,6 @@ func string_literal_bytes(string source, int start, int end) string {
     }
     return ""
 }
-
 func string_literal_pool(string source) string {
     string pool = ""
     int index = 0
@@ -2030,7 +1913,6 @@ func string_literal_pool(string source) string {
     }
     return pool
 }
-
 func string_literal_length(string source, int start, int end) int {
     if start >= end || __host_char_at(source, start) != "\"" { return -1 }
     int index = start + 1
@@ -2047,7 +1929,6 @@ func string_literal_length(string source, int start, int end) int {
     }
     return -1
 }
-
 func emit_string_value_machine(string source, int raw_start, int raw_end, string current_function) string {
     int start = skip_space(source, raw_start)
     int end = trim_space_end(source, start, raw_end)
@@ -2101,7 +1982,6 @@ func emit_string_value_machine(string source, int raw_start, int raw_end, string
         + __host_byte_string(72) + __host_byte_string(184) + little64(address)
         + __host_byte_string(255) + __host_byte_string(208)
 }
-
 func emit_typed_call_arguments(
     string source,
     int raw_start,
@@ -2144,14 +2024,12 @@ func emit_typed_call_arguments(
     if remaining == "" { return "" }
     return remaining + value + pushes + pops
 }
-
 func machine_drop_stack_arguments(string source, string callee) string {
     int words = function_parameter_abi_words(source, callee)
     if words <= 6 { return "" }
     return __host_byte_string(72) + __host_byte_string(129) + __host_byte_string(196)
         + little32((words - 6) * 8)
 }
-
 func emit_multi_call_arithmetic(string source, int raw_start, int raw_end, string current_function) string {
     int start = skip_space(source, raw_start)
     int end = trim_space_end(source, start, raw_end)
@@ -2237,7 +2115,6 @@ func emit_multi_call_arithmetic(string source, int raw_start, int raw_end, strin
         + __host_byte_string(255) + __host_byte_string(208)
         + machine_drop_stack_arguments(source, name)
 }
-
 func emit_multi_sysv_call_arguments(string source, int raw_start, int end, string current_function, string callee, int index) string {
     int start = skip_space(source, raw_start)
     if start >= end || index >= 6 || function_parameter_at(source, callee, index) == "" { return "" }
@@ -2255,7 +2132,6 @@ func emit_multi_sysv_call_arguments(string source, int raw_start, int end, strin
     if remaining == "" { return "" }
     return value + __host_byte_string(80) + remaining + pop_argument
 }
-
 func emit_multi_condition_machine(string source, int start, int end, string current_function) string {
     int trimmed_start = skip_space(source, start)
     int trimmed_end = trim_space_end(source, trimmed_start, end)
@@ -2308,7 +2184,6 @@ func emit_multi_condition_machine(string source, int start, int end, string curr
     string right = emit_multi_call_arithmetic(source, operator_end, trimmed_end, current_function)
     return machine_compare(left, right, operator)
 }
-
 func emit_multi_assignment_block(string source, int block_start, int block_end, string function_name) string {
     int function_start = function_body(source, function_name)
     int index = block_start
@@ -2332,7 +2207,6 @@ func emit_multi_assignment_block(string source, int block_start, int block_end, 
     }
     return code
 }
-
 func emit_multi_block_sequence(string source, int raw_start, int block_end, string function_name, bool entry_function) string {
     int index = skip_space(source, raw_start)
     if index >= block_end { return "" }
@@ -2473,7 +2347,6 @@ func emit_multi_block_sequence(string source, int raw_start, int block_end, stri
     return expression_code
         + emit_multi_block_sequence(source, expression_finish + 1, block_end, function_name, entry_function)
 }
-
 func emit_multi_function_machine(string source, string function_name, bool entry_function) string {
     int body = function_body(source, function_name)
     if body < 0 { return "" }
@@ -2483,7 +2356,6 @@ func emit_multi_function_machine(string source, string function_name, bool entry
     if statements == "" { return "" }
     return spill_sysv_parameters(function_parameter_abi_words(source, function_name)) + statements
 }
-
 func emit_native_multi_call_elf(string source) string {
     int stride = native_function_stride()
     string main_code = emit_multi_function_machine(source, "main", true)
@@ -2512,7 +2384,6 @@ func emit_native_multi_call_elf(string source) string {
     string literal_pool = string_literal_pool(source)
     return emit_elf_image(image + literal_pool)
 }
-
 func emit_native_copy_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
@@ -2593,7 +2464,6 @@ func emit_native_copy_elf(string source) string {
         + __host_byte_string(15) + __host_byte_string(5)
     return emit_elf_image(argc_check + code + usage_exit)
 }
-
 func emit_native_locals_elf(string source) string {
     int body = function_body(source, "main")
     if body < 0 { return "" }
@@ -2631,7 +2501,6 @@ func emit_native_locals_elf(string source) string {
     }
     return ""
 }
-
 func called_function_name(string source, int start, int end) string {
     int index = start
     for index < end {
@@ -2649,7 +2518,6 @@ func called_function_name(string source, int start, int end) string {
     }
     return ""
 }
-
 func emit_call_arithmetic_machine(string source, int raw_start, int raw_end, string callee, int callee_address) string {
     int start = skip_space(source, raw_start)
     int end = trim_space_end(source, start, raw_end)
@@ -2689,7 +2557,6 @@ func emit_call_arithmetic_machine(string source, int raw_start, int raw_end, str
     }
     return ""
 }
-
 func argument_comma(string source, int start, int end) int {
     int index = start
     int depth = 0
@@ -2703,7 +2570,6 @@ func argument_comma(string source, int start, int end) int {
     }
     return -1
 }
-
 func sysv_argument_pop(int index) string {
     if index == 0 { return __host_byte_string(95) }
     if index == 1 { return __host_byte_string(94) }
@@ -2713,7 +2579,6 @@ func sysv_argument_pop(int index) string {
     if index == 5 { return __host_byte_string(65) + __host_byte_string(89) }
     return ""
 }
-
 func emit_sysv_call_arguments(string source, int raw_start, int end, string callee, int callee_address, int index) string {
     int start = skip_space(source, raw_start)
     if start >= end || index >= 6 || function_parameter_at(source, callee, index) == "" { return "" }
@@ -2731,7 +2596,6 @@ func emit_sysv_call_arguments(string source, int raw_start, int end, string call
     if remaining == "" { return "" }
     return value + __host_byte_string(80) + remaining + pop_argument
 }
-
 func sysv_parameter_load(int index) string {
     if index == 0 { return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(248) }
     if index == 1 { return __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(240) }
@@ -2745,7 +2609,6 @@ func sysv_parameter_load(int index) string {
     }
     return ""
 }
-
 func spill_sysv_parameters(int words) string {
     string code = __host_byte_string(85)
         + __host_byte_string(72) + __host_byte_string(137) + __host_byte_string(229)
@@ -2757,7 +2620,6 @@ func spill_sysv_parameters(int words) string {
     }
     return code
 }
-
 func emit_parameters_arithmetic_machine(string source, int raw_start, int raw_end, string function_name) string {
     int start = skip_space(source, raw_start)
     int end = trim_space_end(source, start, raw_end)
@@ -2788,7 +2650,6 @@ func emit_parameters_arithmetic_machine(string source, int raw_start, int raw_en
     }
     return ""
 }
-
 func emit_native_call_elf(string source) string {
     int main_body = function_body(source, "main")
     if main_body < 0 { return "" }
@@ -2838,7 +2699,6 @@ func emit_native_call_elf(string source) string {
     }
     return emit_elf_image(main_code + zeroes(function_slot - len(main_code)) + callee_code)
 }
-
 func compile_binary(string source, string output_path) int {
     int exit_code = evaluate_main_expression(source)
     if exit_code < 0 {
@@ -2855,7 +2715,6 @@ func compile_binary(string source, string output_path) int {
     }
     return 0
 }
-
 func compile_native_expression_binary(string source, string output_path) int {
     string elf = emit_native_expression_elf(source)
     if elf == "" {
@@ -2868,7 +2727,6 @@ func compile_native_expression_binary(string source, string output_path) int {
     }
     return 0
 }
-
 func compile_native_control_binary(string source, string output_path) int {
     string elf = emit_native_control_elf(source)
     if elf == "" {
@@ -2881,7 +2739,6 @@ func compile_native_control_binary(string source, string output_path) int {
     }
     return 0
 }
-
 func compile_native_locals_binary(string source, string output_path) int {
     string elf = emit_native_locals_elf(source)
     if elf == "" {
@@ -2894,7 +2751,6 @@ func compile_native_locals_binary(string source, string output_path) int {
     }
     return 0
 }
-
 func compile_native_call_binary(string source, string output_path) int {
     string elf = emit_native_call_elf(source)
     if elf == "" {
@@ -2907,7 +2763,6 @@ func compile_native_call_binary(string source, string output_path) int {
     }
     return 0
 }
-
 func compile_native_loop_binary(string source, string output_path) int {
     string elf = emit_native_loop_elf(source)
     if elf == "" {
@@ -2920,7 +2775,6 @@ func compile_native_loop_binary(string source, string output_path) int {
     }
     return 0
 }
-
 func compile_native_string_binary(string source, string output_path) int {
     string elf = emit_native_string_elf(source)
     if elf == "" {
@@ -2933,7 +2787,6 @@ func compile_native_string_binary(string source, string output_path) int {
     }
     return 0
 }
-
 func compile_native_array_binary(string source, string output_path) int {
     string elf = emit_native_array_elf(source)
     if elf == "" {
@@ -2946,7 +2799,6 @@ func compile_native_array_binary(string source, string output_path) int {
     }
     return 0
 }
-
 func compile_native_multi_call_binary(string source, string output_path) int {
     string elf = emit_native_multi_call_elf(source)
     if elf == "" {
@@ -2959,7 +2811,6 @@ func compile_native_multi_call_binary(string source, string output_path) int {
     }
     return 0
 }
-
 func compile_native_copy_binary(string source, string output_path) int {
     string elf = emit_native_copy_elf(source)
     if elf == "" {
@@ -2972,7 +2823,6 @@ func compile_native_copy_binary(string source, string output_path) int {
     }
     return 0
 }
-
 func emit_native_auto_elf(string source) string {
     string elf = emit_native_copy_elf(source)
     if elf != "" { return elf }
@@ -2992,7 +2842,6 @@ func emit_native_auto_elf(string source) string {
     if elf != "" { return elf }
     return emit_native_expression_elf(source)
 }
-
 func asm_argument_pop(int index) string {
     if index == 0 { return "    pop %rdi\n" }
     if index == 1 { return "    pop %rsi\n" }
@@ -3002,7 +2851,6 @@ func asm_argument_pop(int index) string {
     if index == 5 { return "    pop %r9\n" }
     return ""
 }
-
 func asm_runtime_callee(string name) string {
     if name == "len" { return "s_value_len" }
     if name == "host_args" { return "s_host_args_value" }
@@ -3016,7 +2864,6 @@ func asm_runtime_callee(string name) string {
     if name == "__host_make_executable" { return "s_make_executable_value" }
     return "s_fn_" + name
 }
-
 func asm_local_load(string source, string function_name, int before, string name) string {
     int parameter = function_parameter_index(source, function_name, name)
     if parameter >= 0 && parameter < 6 {
@@ -3027,14 +2874,12 @@ func asm_local_load(string source, string function_name, int before, string name
     if slot < 0 { return "" }
     return "    mov " + signed_int_text(0 - ((slot + 7) * 8)) + "(%rbp), %rax\n"
 }
-
 func asm_local_store(string source, string function_name, int before, string name) string {
     int body = function_body(source, function_name)
     int slot = local_slot(source, body, before, name)
     if slot < 0 { return "" }
     return "    mov %rax, " + signed_int_text(0 - ((slot + 7) * 8)) + "(%rbp)\n"
 }
-
 func asm_call_arguments(string source, int raw_start, int end, string function_name, int index) string {
     int start = skip_space(source, raw_start)
     if start >= end || index >= 6 { return "" }
@@ -3050,7 +2895,6 @@ func asm_call_arguments(string source, int raw_start, int end, string function_n
     if remaining == "" { return "" }
     return value + "    push %rax\n" + remaining + asm_argument_pop(index)
 }
-
 func asm_comparison(string operator) string {
     if operator == "==" { return "    sete %al\n" }
     if operator == "!=" { return "    setne %al\n" }
@@ -3059,7 +2903,6 @@ func asm_comparison(string operator) string {
     if operator == ">" { return "    setg %al\n" }
     return "    setge %al\n"
 }
-
 func asm_expression(string source, int raw_start, int raw_end, string function_name) string {
     int start = skip_space(source, raw_start)
     int end = trim_space_end(source, start, raw_end)
@@ -3166,7 +3009,6 @@ func asm_expression(string source, int raw_start, int raw_end, string function_n
     }
     return arguments + "    call " + asm_runtime_callee(name) + "\n"
 }
-
 func asm_if_statement_end(string source, int start, int block_end) int {
     if start >= block_end || !matches_at(source, start, "if") { return -1 }
     int open = skip_space(source, start + 2)
@@ -3196,7 +3038,6 @@ func asm_if_statement_end(string source, int start, int block_end) int {
     if alternative_end < 0 || alternative_end >= block_end { return -1 }
     return alternative_end + 1
 }
-
 func asm_block_loop(string source, int raw_start, int block_end, string function_name, string loop_start, string loop_end) string {
     int index = skip_trivia(source, raw_start)
     if index >= block_end { return "" }
@@ -3331,11 +3172,9 @@ func asm_block_loop(string source, int raw_start, int block_end, string function
     if expression_finish < 0 || expression_finish > block_end || expression == "" { return "" }
     return expression + asm_block_loop(source, expression_finish + 1, block_end, function_name, loop_start, loop_end)
 }
-
 func asm_block(string source, int raw_start, int block_end, string function_name) string {
     return asm_block_loop(source, raw_start, block_end, function_name, "", "")
 }
-
 func asm_function(string source, string name) string {
     int body = function_body(source, name)
     if body < 0 {
@@ -3369,7 +3208,6 @@ func asm_function(string source, string name) string {
     return code + body_code + "    mov $1, %rax\n.Las_return_" + name
         + ":\n    leave\n    ret\n.size s_fn_" + name + ", .-s_fn_" + name + "\n\n"
 }
-
 func asm_literal_byte(string source, int index) int {
     if __host_char_at(source, index) != "\\" { return __host_byte_at(source, index) }
     string escaped = __host_char_at(source, index + 1)
@@ -3378,7 +3216,6 @@ func asm_literal_byte(string source, int index) int {
     if escaped == "t" { return 9 }
     return __host_byte_at(source, index + 1)
 }
-
 func asm_literals(string source) string {
     string output = ".balign 1\n.Las_literals:\n    .byte 0\n"
     int index = 0
@@ -3402,7 +3239,6 @@ func asm_literals(string source) string {
     }
     return output
 }
-
 func emit_native_assembly(string source) string {
     string output = ".section .text\n.global s_main\n.type s_main, @function\ns_main:\n    jmp s_fn_main\n.size s_main, .-s_main\n\n"
     int index = 0
@@ -3433,7 +3269,6 @@ func emit_native_assembly(string source) string {
     if literals == "" { return "" }
     return output + ".section .rodata\n" + literals + ".section .note.GNU-stack,\"\",@progbits\n"
 }
-
 func compile_native_assembly(string source, string output_path) int {
     string assembly = emit_native_assembly(source)
     if assembly == "" {
@@ -3446,7 +3281,6 @@ func compile_native_assembly(string source, string output_path) int {
     }
     return 0
 }
-
 func arm64_asm_argument_pop(int index) string {
     if index == 0 { return "    ldr x0, [sp], #16\n" }
     if index == 1 { return "    ldr x1, [sp], #16\n" }
@@ -3456,7 +3290,6 @@ func arm64_asm_argument_pop(int index) string {
     if index == 5 { return "    ldr x5, [sp], #16\n" }
     return ""
 }
-
 func arm64_asm_call_arguments(string source, int raw_start, int end, string function_name, int index) string {
     int start = skip_space(source, raw_start)
     if start >= end || index >= 6 { return "" }
@@ -3472,7 +3305,6 @@ func arm64_asm_call_arguments(string source, int raw_start, int end, string func
     if remaining == "" { return "" }
     return value + "    str x0, [sp, #-16]!\n" + remaining + arm64_asm_argument_pop(index)
 }
-
 func arm64_asm_expression(string source, int raw_start, int raw_end, string function_name) string {
     int start = skip_space(source, raw_start)
     int end = trim_space_end(source, start, raw_end)
@@ -3523,7 +3355,6 @@ func arm64_asm_expression(string source, int raw_start, int raw_end, string func
     }
     return ""
 }
-
 func arm64_asm_function(string source, string name) string {
     int body = function_body(source, name)
     int body_end = function_body_end(source, body + 1)
@@ -3546,7 +3377,6 @@ func arm64_asm_function(string source, string name) string {
     }
     return code + body_code + "    add sp, sp, #64\n    ldp x29, x30, [sp], #16\n    ret\n\n"
 }
-
 func emit_darwin_arm64_assembly(string source) string {
     string output = ".section __TEXT,__text,regular,pure_instructions\n.globl _start\n.p2align 2\n_start:\n    bl _s_fn_main\n    tbnz x0, #0, 1f\n    mov x0, #0\n    b 2f\n1:\n    asr x0, x0, #1\n2:\n    bl _exit\n    brk #0\n\n"
     int index = 0
@@ -3566,7 +3396,6 @@ func emit_darwin_arm64_assembly(string source) string {
     if emitted == 0 || function_declaration(source, "main") < 0 { return "" }
     return output
 }
-
 func compile_darwin_arm64_assembly(string source, string output_path) int {
     string assembly = emit_darwin_arm64_assembly(source)
     if assembly == "" {
@@ -3579,7 +3408,6 @@ func compile_darwin_arm64_assembly(string source, string output_path) int {
     }
     return 0
 }
-
 func compile_native_binary(string source, string output_path) int {
     string elf = emit_native_auto_elf(source)
     if elf == "" {
@@ -3592,7 +3420,6 @@ func compile_native_binary(string source, string output_path) int {
     }
     return 0
 }
-
 func file_extension(string path) string {
     int dot = -1
     int index = len(path) - 1
@@ -3609,7 +3436,6 @@ func file_extension(string path) string {
     if dot < 0 { return "" }
     return __host_slice(path, dot, len(path))
 }
-
 func default_output_path(string path) string {
     int index = len(path) - 1
     while index >= 0 {
@@ -3623,7 +3449,6 @@ func default_output_path(string path) string {
     }
     return path + ".out"
 }
-
 func main() {
     args := host_args()
     if len(args) == 2 && args[1] == "--help" {
@@ -3763,11 +3588,9 @@ func main() {
     }
     return 0
 }
-
 func c_bad(int position) string {
     return "S_C_UNSUPPORTED_" + int_text(position)
 }
-
 func c_arguments(string source, int start, int end, string function_name) string {
     int cursor = skip_trivia(source, start)
     string output = ""
@@ -3784,7 +3607,6 @@ func c_arguments(string source, int start, int end, string function_name) string
     }
     return output
 }
-
 func c_expression(string source, int raw_start, int raw_end, string function_name) string {
     int start = skip_trivia(source, raw_start)
     int end = trim_space_end(source, start, raw_end)
@@ -3850,7 +3672,6 @@ func c_expression(string source, int raw_start, int raw_end, string function_nam
     if close != end - 1 { return c_bad(close) }
     return "s_fn_" + name + "(" + c_arguments(source, open + 1, close, function_name) + ")"
 }
-
 func c_control_open(string source, int start, int end) int {
     int index = start
     int depth = 0
@@ -3864,7 +3685,6 @@ func c_control_open(string source, int start, int end) int {
     }
     return -1
 }
-
 func c_block(string source, int raw_start, int end, string function_name) string {
     int index = skip_trivia(source, raw_start)
     string output = ""
@@ -3929,7 +3749,6 @@ func c_block(string source, int raw_start, int end, string function_name) string
     }
     return output
 }
-
 func c_signature(string source, string name) string {
     string output = "static SV s_fn_" + name + "("
     int index = 0
@@ -3941,7 +3760,6 @@ func c_signature(string source, string name) string {
     if index == 0 { output = output + "void" }
     return output + ")"
 }
-
 func emit_selfhost_c(string source) string {
     string output = "#include \"selfhost_portable.h\"\n"
     string signatures = ""
@@ -3976,10 +3794,8 @@ func emit_selfhost_c(string source) string {
     }
     return output + signatures + bodies + "int main(int argc,char **argv){s_init(argc,argv);SV result=s_fn_main();int status=(int)S_NUM(result);s_destroy();return status;}\n"
 }
-
 func compile_selfhost_c(string source, string path) int {
     string output = emit_selfhost_c(source)
     if find_word(output, "S_C_UNSUPPORTED") >= 0 { eprintln("compile: unsupported C bootstrap construct"); return 1 }
     if __host_write_text_file(path, output) != 0 { eprintln("compile: cannot write C output"); return 1 }
     return 0
-}

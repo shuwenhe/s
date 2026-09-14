@@ -30,14 +30,12 @@ func main() {
     }
     return bootstrap_three_stage(compiler_src, output_dir, seed_compiler, ir_codegen_bin)
 }
-
 func ensure_dir(string path) bool {
     if std.io_syscall.mkdir(path) != 0 {
         return false
     }
     true
 }
-
 func bootstrap_three_stage(
     string compiler_src,
     string output_dir,
@@ -96,7 +94,6 @@ func bootstrap_three_stage(
     std.io.eprintln("installed candidate: " + stage2_bin)
     0
 }
-
 func make_manifest(
     string stage1_ir,
     string stage1_bin,
@@ -113,4 +110,3 @@ func make_manifest(
     out = out + "stage3.ir=" + stage3_ir + "\n"
     out = out + "stage3=" + stage3_bin + "\n"
     out
-}

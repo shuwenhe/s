@@ -6,7 +6,6 @@ enum sym_type {
     sym_type_rodata,
     sym_type_extern,
 }
-
 struct link_sym {
     string name
     type sym_type
@@ -16,14 +15,12 @@ struct link_sym {
     link_reloc[] relocs
     bool is_defined
 }
-
 struct link_reloc {
     int offset64
     int size64
     string target_sym
     int add_end64
 }
-
 struct link_context {
     link_sym[] symbols
     string[] symbol_names
@@ -31,13 +28,11 @@ struct link_context {
     int data_size64
     int bss_size64
 }
-
 func make_link_context() link_context {
     link_context {
         symbols: link_sym[](), symbol_names string[](), text_size 0, data_size 0, bss_size 0,
     }
 }
-
 func (ctx* link_context) lookup_symbol(string name) (link_sym*, bool) {
     i := 0
     for i < len(ctx.symbol_names) {
@@ -48,7 +43,6 @@ func (ctx* link_context) lookup_symbol(string name) (link_sym*, bool) {
     }
     nil, false
 }
-
 func (ctx* link_context) create_symbol(string name, sym_type type) (link_sym*, string) {
     existing, found := ctx.lookup_symbol(name)
     if found {
@@ -62,19 +56,16 @@ func (ctx* link_context) create_symbol(string name, sym_type type) (link_sym*, s
     ctx.symbol_names = append(ctx.symbol_names, name)
     return &ctx.symbols[len(ctx.symbols) - 1], ""
 }
-
 func (ctx* link_context) allocate_text(int64 size) int64 {
     prev := ctx.text_size
     ctx.text_size = ctx.text_size + size
     prev
 }
-
 func (ctx* link_context) allocate_data(int64 size) int64 {
     prev := ctx.data_size
     ctx.data_size = ctx.data_size + size
     prev
 }
-
 func (ctx* link_context) add_relocation(string sym_name, int64 offset, int64 size, string target, int64 add) string {
     sym, found := ctx.lookup_symbol(sym_name)
     if !found {
@@ -85,4 +76,3 @@ func (ctx* link_context) add_relocation(string sym_name, int64 offset, int64 siz
     }
     sym.relocs = append(sym.relocs, reloc)
     ""
-}

@@ -6,7 +6,6 @@ func is_const_with(ssa_func f, int id, string lit) bool {
     v := f.values[id]
     v.op == op_const() && v.literal == lit
 }
-
 func rewrite_value_generic(ssa_func f, int id) bool {
     if id < 0 || id >= len(f.values) {
         return false
@@ -67,7 +66,6 @@ func rewrite_value_generic(ssa_func f, int id) bool {
     }
     false
 }
-
 func run_rewrite_generic(ssa_func f) int {
     changed := 0
     i := 0
@@ -81,4 +79,3 @@ func run_rewrite_generic(ssa_func f) int {
         recompute_uses(f)
     }
     changed
-}

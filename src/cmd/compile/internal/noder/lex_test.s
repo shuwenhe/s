@@ -19,4 +19,3 @@ func run_lex_tests() int {
         return 1
     }
     0
-}

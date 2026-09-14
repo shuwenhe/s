@@ -13,7 +13,5 @@ func main(string[] args) int {
     }
     return build_main(args)
 }
-
 func run_cli(string[] args) int {
     main(args)
-}

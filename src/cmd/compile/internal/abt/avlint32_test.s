@@ -27,4 +27,3 @@ func self_test() int {
         return 1
     }
     0
-}

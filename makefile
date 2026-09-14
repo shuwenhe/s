@@ -30,6 +30,8 @@ MODULAR_BOOTSTRAP_COMPAT_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-compat-aud
 
 MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-stage-discovery.txt
 
+MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-root-audit.txt
+
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
 
 S_HOST_OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
@@ -2100,6 +2102,17 @@ modular-bootstrap-stage-discovery: modular-bootstrap-compat-audit
 	  misc/scripts/modular_bootstrap_stage_discovery.sh \
 	  src/cmd/compile/modular_build_main.s "$(MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT)" >/dev/null
 	@echo "Modular bootstrap stage discovery report: $(MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT)"
+
+.PHONY: modular-bootstrap-root-audit
+modular-bootstrap-root-audit: modular-bootstrap-stage-discovery
+	@echo "Auditing modular bootstrap root..."
+	@chmod +x misc/scripts/modular_bootstrap_root_audit.sh
+	@S_SOURCE_ROOT=$(CURDIR) \
+	  S_BOOTSTRAP_COMPAT_REPORT="$(MODULAR_BOOTSTRAP_COMPAT_REPORT)" \
+	  S_BOOTSTRAP_STAGE_REPORT="$(MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT)" \
+	  misc/scripts/modular_bootstrap_root_audit.sh \
+	  src/cmd/compile/modular_build_main.s "$(MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT)" >/dev/null
+	@echo "Modular bootstrap root audit report: $(MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT)"
 
 .PHONY: modular-bootstrap
 modular-bootstrap: seed-compiler-bin package-index

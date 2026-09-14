@@ -18,7 +18,5 @@ func load[t: reader](t reader, string path) (string, io_error) {
     value := 1
     value
 }
-
 func (file* self) read(u8[] buf) (usize, io_error) {
     buf
-}

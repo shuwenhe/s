@@ -9,7 +9,6 @@ func make_decision(string ty) string {
     }
     "drop:" + ty
 }
-
 func make_plan(string[] type_env) string[] {
     string[] plan
     i := 0
@@ -21,21 +20,18 @@ func make_plan(string[] type_env) string[] {
     }
     return plan
 }
-
 struct ownership_slot {
     string name
     string type_name
     bool moved
     bool dropped
 }
-
 struct ownership_result {
     bool ok
     int errors
     string message
     string[] drops
 }
-
 func ownership_find_slot(ownership_slot[] slots, string name) int {
     i := 0
     for i < len(slots) {
@@ -44,7 +40,6 @@ func ownership_find_slot(ownership_slot[] slots, string name) int {
     }
     -1
 }
-
 func ownership_event_colon(string event) int {
     i := 0
     for i < len(event) {
@@ -53,7 +48,6 @@ func ownership_event_colon(string event) int {
     }
     -1
 }
-
 func ownership_contains(string[] names, string name) bool {
     i := 0
     for i < len(names) {
@@ -62,7 +56,6 @@ func ownership_contains(string[] names, string name) bool {
     }
     false
 }
-
 func ownership_check_events(string[] events) ownership_result {
     ownership_slot[] slots
     string[] moved
@@ -115,7 +108,6 @@ func ownership_check_events(string[] events) ownership_result {
                 errors = errors + 1
                 message = message + "move-after-move:" + payload + ";"
             } else if compile.internal.typesys.is_copy_type(slots[slot_id].type_name) {
-
             } else {
                 moved = append(moved, payload)
             }
@@ -136,4 +128,3 @@ func ownership_check_events(string[] events) ownership_result {
         i = i + 1
     }
     ownership_result { ok: errors == 0, errors: errors, message: message, drops: drops }
-}

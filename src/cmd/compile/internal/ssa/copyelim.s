@@ -18,4 +18,3 @@ func run_copyelim(ssa_func f) int {
         recompute_uses(f)
     }
     changed
-}
