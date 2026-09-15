@@ -2165,6 +2165,12 @@ generic-production-path-check: canonical-source-compilation-check
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/generic-production-path-check.sh
 
+.PHONY: stage1-generic-dispatch-check
+stage1-generic-dispatch-check: canonical-source-compilation-check
+	@echo "Checking stage1 generic dispatch authority..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/stage1-generic-dispatch-check.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
