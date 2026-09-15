@@ -2273,6 +2273,12 @@ bootstrap-ir-snapshot-boundary-design-check: bootstrap-root-strategy-decision
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/bootstrap-ir-snapshot-boundary-design-check.sh
 
+.PHONY: bootstrap-ir-serialization-format-design-check
+bootstrap-ir-serialization-format-design-check: bootstrap-ir-snapshot-boundary-design-check
+	@echo "Checking bootstrap IR serialization format contract..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/bootstrap-ir-serialization-format-design-check.sh
+
 .PHONY: canonical-mir-bootstrap-sufficiency-audit
 canonical-mir-bootstrap-sufficiency-audit: seed-compiler-bin
 	@echo "Auditing canonical MIR bootstrap sufficiency..."
