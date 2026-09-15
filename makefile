@@ -2147,6 +2147,12 @@ modular-bootstrap: stage0-build stage0-closure-check
 	@echo "canonical-source-compilation=NOT_PROVEN" >>"$(MODULAR_BOOTSTRAP_REPORT)"
 	@echo "production-compiler-bootstrap=NOT_PROVEN" >>"$(MODULAR_BOOTSTRAP_REPORT)"
 
+.PHONY: canonical-source-compilation-check
+canonical-source-compilation-check: modular-bootstrap
+	@echo "Checking canonical source compilation authority..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-source-compilation-check.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
