@@ -2259,6 +2259,12 @@ modular-generic-mono-pipeline-check: modular-generic-parse-check
 	@grep -q 'method Box\[int\]\.get__mono_int' .bootstrap/generic-method-e2e/generic_method.export
 	@! grep -q 'method Box\[T\]\.get generics=T' .bootstrap/generic-method-e2e/generic_method.export
 
+.PHONY: generic-function-native-e2e-check
+generic-function-native-e2e-check: bin/s_modular package-index
+	@echo "Checking generic function native E2E..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/generic-function-native-e2e-check.sh ./bin/s
+
 .PHONY: modular-gate-b
 modular-gate-b: bin/s_modular package-index
 	@echo "Gate B: Testing modular compilation (simple_test.s -> native -> 42)..."

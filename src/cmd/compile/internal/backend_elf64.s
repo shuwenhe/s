@@ -74,6 +74,8 @@ func fail_int(string message) (int, backend_error) {
 control_panic_active := "@panic.active"
 control_panic_payload := "@panic.payload"
 control_in_defer := "@defer.active"
+control_return_active := "@return.active"
+control_return_value := "@return.value"
 
 struct unit_value {}
 
@@ -3463,6 +3465,13 @@ func call_function_with_capture(
     if body_result.is_err() {
         return fail_value(body_result.unwrap_err().message
     }
+    if control_return_is_active(env) {
+        returned := body_result.unwrap()
+        set_control(env, control_return_active, value.bool(false))
+        set_control(env, control_return_value, value.unit(unit_value {}))
+        copy_control_bindings(env, caller_env)
+        return returned
+    }
     copy_control_bindings(env, caller_env)
     ok_value(body_result.unwrap())
 }
@@ -3564,6 +3573,11 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
             cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
             return err
         }
+        if control_return_is_active(env) {
+            returned := control_return_payload(env)
+            cleanup_scope_owned_values(env, local_start, returned, runtime)
+            return returned
+        }
         si = si + 1
     }
     final_value := value.unit(unit_value {})
@@ -3656,7 +3670,22 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
             }
         }
         stmt.c_for(value) : execute_c_for(value, source, env, writes, runtime),
-        stmt.return(_) : backend_error { message: "backend error: return statements are not supported in the mvp backend" },
+        stmt.return(ret_stmt) : {
+            returned := value.unit(unit_value {})
+            switch ret_stmt.value {
+                option.some(expr_value) : {
+                    expr_result := eval_expr(expr_value, source, env, writes, runtime)
+                    if expr_result.is_err() {
+                        return expr_result.unwrap_err()
+                    }
+                    returned = expr_result.unwrap()
+                }
+                option.none : (),
+            }
+            set_control(env, control_return_active, value.bool(true))
+            set_control(env, control_return_value, returned)
+            ()
+        },
         stmt.expr(value) : {
             expr_result := eval_expr(value.expr, source, env, writes, runtime)
             if expr_result.is_err() {
@@ -3857,7 +3886,14 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
         ai = ai + 1
     }
     switch callee_result.unwrap() {
-        value.fn_ref(name) : call_function(source, name, arg_values, env, writes, runtime),
+        value.fn_ref(name) : {
+            target_name := name
+            switch value.resolved_callee {
+                option.some(resolved) : target_name = resolved,
+                option.none : (),
+            }
+            call_function(source, target_name, arg_values, env, writes, runtime)
+        },
         _ : backend_error { message: "backend error: unsupported call target" },
     }
 }
@@ -4446,6 +4482,8 @@ func copy_control_bindings(binding[] from_env, binding[] to_env) () {
     copy_control_binding(from_env, to_env, control_panic_active)
     copy_control_binding(from_env, to_env, control_panic_payload)
     copy_control_binding(from_env, to_env, control_in_defer)
+    copy_control_binding(from_env, to_env, control_return_active)
+    copy_control_binding(from_env, to_env, control_return_value)
 }
 
 func copy_control_binding(binding[] from_env, binding[] to_env, string name) () {
@@ -4498,6 +4536,25 @@ func control_panic_payload_text(binding[] env) string {
         value.bool(flag) : if flag { "true" } else { "false" },
         _ : "",
     }
+}
+
+func control_return_is_active(binding[] env) bool {
+    index := find_binding_index(env, control_return_active)
+    if index < 0 {
+        return false
+    }
+    switch env[index].value {
+        value.bool(flag) : flag,
+        _ : false,
+    }
+}
+
+func control_return_payload(binding[] env) value {
+    index := find_binding_index(env, control_return_value)
+    if index < 0 {
+        return value.unit(unit_value {})
+    }
+    env[index].value
 }
 
 func collect_const_bindings(source_file source) (binding[], backend_error) {
