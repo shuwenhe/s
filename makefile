@@ -2243,6 +2243,18 @@ canonical-bootstrap-ir-emission-audit: canonical-bootstrap-ir-representative-sli
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-ir-emission-audit.sh
 
+.PHONY: canonical-mir-bootstrap-sufficiency-audit
+canonical-mir-bootstrap-sufficiency-audit: seed-compiler-bin
+	@echo "Auditing canonical MIR bootstrap sufficiency..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 bash ./misc/scripts/canonical-mir-bootstrap-sufficiency-audit.sh
+
+.PHONY: canonical-post-mir-lowering-authority-audit
+canonical-post-mir-lowering-authority-audit: seed-compiler-bin
+	@echo "Auditing canonical post-MIR lowering authority..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 bash ./misc/scripts/canonical-post-mir-lowering-authority-audit.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
