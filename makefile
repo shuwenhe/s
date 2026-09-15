@@ -2183,6 +2183,12 @@ stage1-canonical-build-dispatch-check: modular-bootstrap
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/stage1-canonical-build-dispatch-check.sh
 
+.PHONY: stage1-canonical-entry-linkage-check
+stage1-canonical-entry-linkage-check: modular-bootstrap
+	@echo "Checking stage1 canonical entry linkage..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/stage1-canonical-entry-linkage-check.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
