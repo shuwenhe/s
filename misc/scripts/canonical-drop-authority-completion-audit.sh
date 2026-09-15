@@ -60,12 +60,18 @@ if has_text 'emit-mir-after-drop|emit-mir-partial-drop|mir_append_scope_drops|co
 fi
 
 drop_record_population_authority=UNKNOWN
-if has_text 'mir_statement::drop|Drop\\(|compiler_emit_mir_partial_drop|mir_append_scope_drops' src/cmd/compile/compiler.s src/cmd/compile/internal; then
+if has_text 'mir_statement::drop' src/cmd/compile/internal || \
+   has_text 'Drop\(' src/cmd/compile/compiler.s src/cmd/compile/internal || \
+   has_text 'compiler_emit_mir_partial_drop' src/cmd/compile/compiler.s || \
+   has_text 'mir_append_scope_drops' src/cmd/compile/internal; then
     drop_record_population_authority=CANONICAL_DROP_ELABORATION
 fi
 
 drop_record_consumption_authority=UNKNOWN
-if has_text 'emit-mir-after-drop|emit-mir-partial-drop|validate_drop_contract_chain|Drop\\(' misc/scripts src/cmd/compile/internal src/cmd/compile/compiler.s; then
+if has_text 'emit-mir-after-drop' misc/scripts || \
+   has_text 'emit-mir-partial-drop' misc/scripts || \
+   has_text 'validate_drop_contract_chain' src/cmd/compile/internal || \
+   has_text 'Drop\(' src/cmd/compile/compiler.s src/cmd/compile/internal; then
     drop_record_consumption_authority=CANONICAL_MIR_OR_BACKEND_ARTIFACT_PATH
 fi
 
