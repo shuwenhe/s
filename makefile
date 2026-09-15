@@ -2225,6 +2225,18 @@ canonical-bootstrap-root-strategy-design-check:
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-root-strategy-design-check.sh
 
+.PHONY: canonical-bootstrap-ir-feasibility-probe
+canonical-bootstrap-ir-feasibility-probe: canonical-bootstrap-root-strategy-design-check
+	@echo "Probing canonical bootstrap IR feasibility..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-bootstrap-ir-feasibility-probe.sh
+
+.PHONY: canonical-bootstrap-ir-representative-slice-probe
+canonical-bootstrap-ir-representative-slice-probe: canonical-bootstrap-ir-feasibility-probe
+	@echo "Probing canonical bootstrap representative IR slice..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-bootstrap-ir-representative-slice-probe.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
