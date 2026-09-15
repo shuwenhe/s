@@ -2279,6 +2279,36 @@ bootstrap-ir-serialization-format-design-check: bootstrap-ir-snapshot-boundary-d
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/bootstrap-ir-serialization-format-design-check.sh
 
+.PHONY: bootstrap-ir-artifact-schema-design-check
+bootstrap-ir-artifact-schema-design-check: bootstrap-ir-serialization-format-design-check
+	@echo "Checking bootstrap IR artifact schema contract..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/bootstrap-ir-artifact-schema-design-check.sh
+
+.PHONY: bootstrap-ir-equivalence-regeneration-design-check
+bootstrap-ir-equivalence-regeneration-design-check: bootstrap-ir-artifact-schema-design-check
+	@echo "Checking bootstrap IR equivalence and regeneration contract..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/bootstrap-ir-equivalence-regeneration-design-check.sh
+
+.PHONY: canonical-bootstrap-ir-minimal-emission-check
+canonical-bootstrap-ir-minimal-emission-check: bootstrap-ir-equivalence-regeneration-design-check
+	@echo "Checking minimal canonical bootstrap IR emission..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-bootstrap-ir-minimal-emission-check.sh
+
+.PHONY: canonical-bootstrap-ir-direct-state-emission-check
+canonical-bootstrap-ir-direct-state-emission-check: canonical-bootstrap-ir-minimal-emission-check
+	@echo "Checking direct canonical bootstrap IR state emission..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-bootstrap-ir-direct-state-emission-check.sh
+
+.PHONY: canonical-bootstrap-ir-function-call-check
+canonical-bootstrap-ir-function-call-check: canonical-bootstrap-ir-direct-state-emission-check
+	@echo "Checking canonical bootstrap IR direct function call coverage..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-bootstrap-ir-function-call-check.sh
+
 .PHONY: canonical-mir-bootstrap-sufficiency-audit
 canonical-mir-bootstrap-sufficiency-audit: seed-compiler-bin
 	@echo "Auditing canonical MIR bootstrap sufficiency..."
