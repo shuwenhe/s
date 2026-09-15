@@ -2171,6 +2171,12 @@ stage1-generic-dispatch-check: canonical-source-compilation-check
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/stage1-generic-dispatch-check.sh
 
+.PHONY: stage1-build-authority-check
+stage1-build-authority-check:
+	@echo "Checking stage1 build authority replacement edge..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/stage1-build-authority-check.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
