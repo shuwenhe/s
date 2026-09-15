@@ -34,6 +34,7 @@ usage() {
     echo '  s build --legacy <input.s> -o <output>' >&2
 
     echo '  s --emit-c <input.s> <output.c>' >&2
+    echo '  s --emit-lowered-view <input.s> <output.view>' >&2
     echo '  s --emit-mir <input.s> <output.mir>' >&2
     echo '  s --emit-mir-after-drop <input.s> <output.mir>' >&2
     echo '  s --emit-mir-place <input.s> <output.mir>' >&2
@@ -178,6 +179,14 @@ fi
 
 
 if [ "$#" -eq 3 ] && [ "$1" = "--emit-c" ]; then
+
+    ensure_compiler
+
+    exec "$compiler" "$@"
+
+fi
+
+if [ "$#" -eq 3 ] && [ "$1" = "--emit-lowered-view" ]; then
 
     ensure_compiler
 
