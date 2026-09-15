@@ -2255,6 +2255,12 @@ canonical-symbol-bootstrap-requirements-audit:
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-symbol-bootstrap-requirements-audit.sh
 
+.PHONY: canonical-drop-authority-completion-audit
+canonical-drop-authority-completion-audit: canonical-drop-lowering-integration-audit
+	@echo "Auditing canonical drop authority completion..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-drop-authority-completion-audit.sh
+
 .PHONY: canonical-mir-bootstrap-sufficiency-audit
 canonical-mir-bootstrap-sufficiency-audit: seed-compiler-bin
 	@echo "Auditing canonical MIR bootstrap sufficiency..."
