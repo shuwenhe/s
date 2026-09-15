@@ -2309,6 +2309,12 @@ canonical-bootstrap-ir-function-call-check: canonical-bootstrap-ir-direct-state-
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-ir-function-call-check.sh
 
+.PHONY: canonical-bootstrap-ir-cfg-branch-check
+canonical-bootstrap-ir-cfg-branch-check: canonical-bootstrap-ir-function-call-check
+	@echo "Checking canonical bootstrap IR CFG branch coverage..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-bootstrap-ir-cfg-branch-check.sh
+
 .PHONY: canonical-mir-bootstrap-sufficiency-audit
 canonical-mir-bootstrap-sufficiency-audit: seed-compiler-bin
 	@echo "Auditing canonical MIR bootstrap sufficiency..."
