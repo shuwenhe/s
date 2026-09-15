@@ -2189,6 +2189,12 @@ stage1-canonical-entry-linkage-check: modular-bootstrap
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/stage1-canonical-entry-linkage-check.sh
 
+.PHONY: stage1-bootstrap-mechanism-audit
+stage1-bootstrap-mechanism-audit: modular-bootstrap
+	@echo "Auditing stage1 bootstrap mechanism..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/stage1-bootstrap-mechanism-audit.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
