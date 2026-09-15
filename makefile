@@ -2237,6 +2237,12 @@ canonical-bootstrap-ir-representative-slice-probe: canonical-bootstrap-ir-feasib
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-ir-representative-slice-probe.sh
 
+.PHONY: canonical-bootstrap-ir-emission-audit
+canonical-bootstrap-ir-emission-audit: canonical-bootstrap-ir-representative-slice-probe
+	@echo "Auditing canonical bootstrap IR emission path..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-bootstrap-ir-emission-audit.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
