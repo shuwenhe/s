@@ -287,6 +287,19 @@ func run_backend_abi_suite() int {
     if compile.internal.backend_elf64.build(e2e_semantic_src_path, e2e_semantic_out_path, "") == 0 {
         return 1
     }
+    generic_function_src := "package demo.genericnative\nfunc identity[T](T x) T {\n  return x\n}\nfunc main() int {\n  x := identity[int](42)\n  return x\n}"
+    generic_graph := compile.internal.backend_elf64.load_source_graph(e2e_dir + "/generic_identity.s", generic_function_src)
+    if generic_graph.is_err() {
+        return 1
+    }
+    generic_mir := compile.internal.ir.lower.lower_main_to_mir(generic_graph.unwrap())
+    if generic_mir.is_err() {
+        return 1
+    }
+    generic_exit := compile.internal.backend_elf64.compile_exit_code(generic_graph.unwrap(), generic_mir.unwrap())
+    if generic_exit.is_err() || generic_exit.unwrap() != 42 {
+        return 1
+    }
     cfi := compile.internal.backend_elf64.build_cfi_artifact("amd64", "ssa pair blocks=2 spills=1 reloads=1", "ssa.debug pair")
     if !contains(cfi, ".cfi_startproc") {
         return 1
