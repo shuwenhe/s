@@ -2177,6 +2177,12 @@ stage1-build-authority-check:
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/stage1-build-authority-check.sh
 
+.PHONY: stage1-canonical-build-dispatch-check
+stage1-canonical-build-dispatch-check: modular-bootstrap
+	@echo "Checking stage1 canonical build dispatch..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/stage1-canonical-build-dispatch-check.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
