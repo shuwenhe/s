@@ -2243,6 +2243,18 @@ canonical-bootstrap-ir-emission-audit: canonical-bootstrap-ir-representative-sli
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-ir-emission-audit.sh
 
+.PHONY: canonical-drop-lowering-integration-audit
+canonical-drop-lowering-integration-audit:
+	@echo "Auditing canonical drop lowering integration..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-drop-lowering-integration-audit.sh
+
+.PHONY: canonical-symbol-bootstrap-requirements-audit
+canonical-symbol-bootstrap-requirements-audit:
+	@echo "Auditing canonical symbol bootstrap requirements..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-symbol-bootstrap-requirements-audit.sh
+
 .PHONY: canonical-mir-bootstrap-sufficiency-audit
 canonical-mir-bootstrap-sufficiency-audit: seed-compiler-bin
 	@echo "Auditing canonical MIR bootstrap sufficiency..."
