@@ -2153,6 +2153,12 @@ canonical-source-compilation-check: modular-bootstrap
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-source-compilation-check.sh
 
+.PHONY: stage1-delegation-authority-check
+stage1-delegation-authority-check: modular-bootstrap
+	@echo "Checking stage1 delegation authority..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/stage1-delegation-authority-check.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
