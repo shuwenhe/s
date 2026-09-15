@@ -2195,6 +2195,30 @@ stage1-bootstrap-mechanism-audit: modular-bootstrap
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/stage1-bootstrap-mechanism-audit.sh
 
+.PHONY: canonical-bootstrap-capability-gap-audit
+canonical-bootstrap-capability-gap-audit: modular-bootstrap
+	@echo "Auditing canonical bootstrap capability gap..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-bootstrap-capability-gap-audit.sh
+
+.PHONY: canonical-thin-bootstrap-bridge-design-check
+canonical-thin-bootstrap-bridge-design-check:
+	@echo "Checking canonical thin bootstrap bridge design boundary..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-thin-bootstrap-bridge-design-check.sh
+
+.PHONY: canonical-bootstrap-p1-transport-probe
+canonical-bootstrap-p1-transport-probe: canonical-thin-bootstrap-bridge-design-check
+	@echo "Running canonical bootstrap P1 transport probe..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-bootstrap-p1-transport-probe.sh
+
+.PHONY: bootstrap-root-candidate-audit
+bootstrap-root-candidate-audit:
+	@echo "Auditing bootstrap root candidates..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/bootstrap-root-candidate-audit.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
