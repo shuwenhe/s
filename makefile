@@ -2219,6 +2219,12 @@ bootstrap-root-candidate-audit:
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/bootstrap-root-candidate-audit.sh
 
+.PHONY: canonical-bootstrap-root-strategy-design-check
+canonical-bootstrap-root-strategy-design-check:
+	@echo "Checking canonical bootstrap root strategy design..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/canonical-bootstrap-root-strategy-design-check.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
