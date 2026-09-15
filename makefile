@@ -2261,6 +2261,18 @@ canonical-drop-authority-completion-audit: canonical-drop-lowering-integration-a
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-drop-authority-completion-audit.sh
 
+.PHONY: bootstrap-root-strategy-decision
+bootstrap-root-strategy-decision: canonical-bootstrap-ir-emission-audit canonical-drop-authority-completion-audit canonical-symbol-bootstrap-requirements-audit
+	@echo "Recording bootstrap root strategy decision..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/bootstrap-root-strategy-decision.sh
+
+.PHONY: bootstrap-ir-snapshot-boundary-design-check
+bootstrap-ir-snapshot-boundary-design-check: bootstrap-root-strategy-decision
+	@echo "Checking bootstrap IR snapshot boundary contract..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/bootstrap-ir-snapshot-boundary-design-check.sh
+
 .PHONY: canonical-mir-bootstrap-sufficiency-audit
 canonical-mir-bootstrap-sufficiency-audit: seed-compiler-bin
 	@echo "Auditing canonical MIR bootstrap sufficiency..."
