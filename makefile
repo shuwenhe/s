@@ -2159,6 +2159,12 @@ stage1-delegation-authority-check: modular-bootstrap
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/stage1-delegation-authority-check.sh
 
+.PHONY: generic-production-path-check
+generic-production-path-check: canonical-source-compilation-check
+	@echo "Checking generic production invocation path..."
+	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
+	 ./misc/scripts/generic-production-path-check.sh
+
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
