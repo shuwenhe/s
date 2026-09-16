@@ -1,5 +1,6 @@
 # Ignore built S compiler binaries and local installs
 .local/
+.bootstrap/
 .build_seed_b6.7.3/
 bin/*
 !bin/s          # Bootstrap compiler - required for self-hosting
