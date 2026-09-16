@@ -623,11 +623,15 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
             expr.while(while_expr) : {
                 blocks = append(blocks, make_entry_block(0, "entry", stmt_texts, block.statements, "jump", vec1_edge("cond", 1)))
                 cond_lines := string[]()
-                cond_lines = append(cond_lines, "while.cond " + substitute_const_text(s.dump_expr(while_expr.condition.value), const_entries))
+                condition_text := substitute_const_text(s.dump_expr(while_expr.condition.value), const_entries)
+                cond_lines = append(cond_lines, "while.cond " + condition_text)
+                while_condition := option.some(mir_operand {
+                    kind: "expr", value: condition_text, type_name: "bool",
+                })
                 cond_edges := mir_control_edge[]()
                 cond_edges = append(cond_edges, make_edge("true", 2))
                 cond_edges = append(cond_edges, make_edge("false", 3))
-                blocks = append(blocks, make_block(1, "while.cond", cond_lines, "branch", cond_edges))
+                blocks = append(blocks, make_block_with_condition(1, "while.cond", cond_lines, "branch", while_condition, cond_edges))
                 body_lines := string[]()
                 body_lines = append(body_lines, "while.body")
                 blocks = append(blocks, make_block(2, "while.body", body_lines, "jump", vec1_edge("cond", 1)))
@@ -1038,11 +1042,19 @@ func lowered_view_from_mir(mir_graph graph) string {
     for i < len(graph.blocks) {
         block := graph.blocks[i]
         out = out + "block " + lowered_view_block_name(block.id) + "\n"
+        if block.label == "while.cond" {
+            out = out + "loop-header=" + lowered_view_block_name(block.id) + "\n"
+            out = out + "loop-header-origin=canonical-mir\n"
+        }
         if block.terminator.kind == "branch" {
             if block.terminator.condition.is_some() {
                 condition := block.terminator.condition.unwrap()
                 out = out + "branch-condition=" + condition.value + "\n"
                 out = out + "branch-condition-origin=canonical-mir-terminator\n"
+                if block.label == "while.cond" {
+                    out = out + "loop-condition=" + condition.value + "\n"
+                    out = out + "loop-condition-origin=canonical-mir-terminator\n"
+                }
             }
             edge_index := 0
             while edge_index < len(block.terminator.edges) {
@@ -1054,6 +1066,25 @@ func lowered_view_from_mir(mir_graph graph) string {
                 if edge.label == "else" {
                     out = out + "false-edge=" + lowered_view_block_name(edge.target) + "\n"
                     out = out + "false-edge-origin=canonical-mir-terminator\n"
+                }
+                if block.label == "while.cond" && edge.label == "true" {
+                    out = out + "loop-body-edge=" + lowered_view_block_name(edge.target) + "\n"
+                    out = out + "loop-body-edge-origin=canonical-mir-terminator\n"
+                }
+                if block.label == "while.cond" && edge.label == "false" {
+                    out = out + "loop-exit-edge=" + lowered_view_block_name(edge.target) + "\n"
+                    out = out + "loop-exit-edge-origin=canonical-mir-terminator\n"
+                }
+                edge_index = edge_index + 1
+            }
+        }
+        if block.label == "while.body" && block.terminator.kind == "jump" {
+            edge_index := 0
+            while edge_index < len(block.terminator.edges) {
+                edge := block.terminator.edges[edge_index]
+                if edge.label == "cond" {
+                    out = out + "loop-backedge=" + lowered_view_block_name(edge.target) + "\n"
+                    out = out + "loop-backedge-origin=canonical-mir\n"
                 }
                 edge_index = edge_index + 1
             }

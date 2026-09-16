@@ -51,6 +51,7 @@ const char *token_type_name(token_type type) {
 		case TOKEN_FN: return "FN";
 		case TOKEN_PACKAGE: return "PACKAGE";
 		case TOKEN_USE: return "USE";
+		case TOKEN_IMPORT: return "IMPORT";
 		case TOKEN_AS: return "AS";
 		case TOKEN_IF: return "IF";
 		case TOKEN_ELSE: return "ELSE";
@@ -98,6 +99,7 @@ static token_type keyword_or_identifier(const char *lexeme) {
 	if (strcmp(lexeme, "func") == 0) return TOKEN_FN;
 	if (strcmp(lexeme, "package") == 0) return TOKEN_PACKAGE;
 	if (strcmp(lexeme, "use") == 0) return TOKEN_USE;
+	if (strcmp(lexeme, "import") == 0) return TOKEN_IMPORT;
 	if (strcmp(lexeme, "as") == 0) return TOKEN_AS;
 	if (strcmp(lexeme, "if") == 0) return TOKEN_IF;
 	if (strcmp(lexeme, "else") == 0) return TOKEN_ELSE;

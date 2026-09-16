@@ -35,6 +35,17 @@ static char *dup_cstr(const char *s) {
 	memcpy(out, s, n + 1);
 	return out;
 }
+static const char *last_path_segment(const char *path) {
+	const char *last = path;
+	const char *p = path;
+	while (p && *p) {
+		if (*p == '.') {
+			last = p + 1;
+		}
+		p++;
+	}
+	return last;
+}
 static int is_c_identifier(const char *s) {
 	const unsigned char *p = (const unsigned char *)s;
 	if (!p || !(isalpha(*p) || *p == '_')) {
@@ -2340,6 +2351,66 @@ static ast_node *parse_use_decl(parser *p) {
 	consume_optional_semicolon(p);
 	return node;
 }
+static ast_node *new_use_decl_from_import_path(const char *module_path, source_pos pos) {
+	ast_node *node = ast_new(AST_USE_DECL, pos);
+	if (!node) {
+		return NULL;
+	}
+	node->as.use_decl.module_path = dup_cstr(module_path);
+	node->as.use_decl.alias = dup_cstr(last_path_segment(module_path));
+	node->as.use_decl.selectors = NULL;
+	node->as.use_decl.selector_count = 0;
+	if (!node->as.use_decl.module_path || !node->as.use_decl.alias) {
+		ast_free(node);
+		return NULL;
+	}
+	return node;
+}
+static bool parse_import_string_list_decl(parser *p, ast_vec *out_decls) {
+	bool grouped;
+	bool need_string = true;
+	if (!match(p, TOKEN_IMPORT)) {
+		parse_error(p, peek(p), "expected import");
+		return false;
+	}
+	grouped = match(p, TOKEN_LPAREN);
+	if (!grouped) {
+		if (!expect(p, TOKEN_STRING, "import path")) {
+			return false;
+		}
+		if (!ast_vec_push(out_decls, new_use_decl_from_import_path(prev(p)->lexeme, prev(p)->pos))) {
+			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
+			return false;
+		}
+		consume_optional_semicolon(p);
+		return true;
+	}
+	while (!check(p, TOKEN_RPAREN) && !is_at_end(p)) {
+		ast_node *decl;
+		if (!expect(p, TOKEN_STRING, "import path")) {
+			return false;
+		}
+		decl = new_use_decl_from_import_path(prev(p)->lexeme, prev(p)->pos);
+		if (!decl || !ast_vec_push(out_decls, decl)) {
+			ast_free(decl);
+			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
+			return false;
+		}
+		need_string = false;
+		if (match(p, TOKEN_COMMA) || match(p, TOKEN_SEMICOLON)) {
+			need_string = true;
+		}
+	}
+	if (need_string && out_decls->len > 0) {
+		parse_error(p, peek(p), "import path");
+		return false;
+	}
+	if (!expect(p, TOKEN_RPAREN, ")")) {
+		return false;
+	}
+	consume_optional_semicolon(p);
+	return true;
+}
 static int try_parse_array_decl(parser *p, char **out_elem_type, int *out_array_size, char **out_varname) {
 	size_t saved = p->current;
 	*out_elem_type = NULL;
@@ -3129,6 +3200,29 @@ parse_result parser_parse_tokens(const token_vec *tokens, compile_error *err) {
 	while (!is_at_end(&p)) {
 		const token *tpeek = peek(&p);
 		(void)tpeek;
+		if (check(&p, TOKEN_IMPORT)) {
+			ast_vec imports;
+			size_t i;
+			ast_vec_init(&imports);
+			if (!parse_import_string_list_decl(&p, &imports)) {
+				for (i = 0; i < imports.len; i++) ast_free(imports.data[i]);
+				ast_vec_free(&imports);
+				ast_free(out.root);
+				return (parse_result){NULL};
+			}
+			for (i = 0; i < imports.len; i++) {
+				if (!ast_vec_push(&out.root->as.program.statements, imports.data[i])) {
+					ast_free(imports.data[i]);
+					for (i = i + 1; i < imports.len; i++) ast_free(imports.data[i]);
+					ast_vec_free(&imports);
+					ast_free(out.root);
+					error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+					return (parse_result){NULL};
+				}
+			}
+			free(imports.data);
+			continue;
+		}
 		if (check(&p, TOKEN_IDENTIFIER) && strcmp(peek(&p)->lexeme, "enum") == 0) {
 			ast_vec enum_constants;
 			size_t i;
