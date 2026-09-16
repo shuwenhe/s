@@ -31,6 +31,7 @@ func parse_tokens(token[] tokens) (source_file, parse_error) {
     }
     p.parse_source_file()
 }
+
 int global_parse_depth = 0
 
 func log_depth(string msg) {
@@ -59,6 +60,18 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
             return empty, err
         }
         uses = append(uses, decl)
+    }
+    for self.at_keyword("import") {
+        imports, err := self.parse_import_block()
+        if err.message != "" {
+            source_file empty
+            return empty, err
+        }
+        int ii = 0
+        for ii < std.prelude.len(imports) {
+            uses = append(uses, imports[ii])
+            ii = ii + 1
+        }
     }
     for !self.at(token_kind::eof) {
         if self.at_keyword("const") && self.at_symbol_after_keyword("(") {
@@ -116,6 +129,36 @@ func (parser* self) parse_use_decl() (use_decl, parse_error) {
     use_decl {
         path: path, alias alias,
     }
+}
+
+func (parser* self) parse_import_block() (use_decl[], parse_error) {
+    use_decl[] result = use_decl[]()
+    _, err := self.expect_keyword("import")
+    if err.message != "" {
+        return result, err
+    }
+    _, err = self.expect_symbol("(")
+    if err.message != "" {
+        return result, err
+    }
+    for !self.at_symbol(")") {
+        path, err := self.parse_use_path()
+        if err.message != "" {
+            return result, err
+        }
+        result = append(result, use_decl {
+            path: path, alias option::none,
+        })
+        if self.at_symbol(",") {
+            self.advance()
+        }
+    }
+    _, err = self.expect_symbol(")")
+    if err.message != "" {
+        return result, err
+    }
+    self.eat_symbol(";")
+    result, parse_error{ message: "", line 0, column 0 }
 }
 
 func (parser* self) parse_item() (item, parse_error) {

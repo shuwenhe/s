@@ -409,6 +409,94 @@ static bool test_parser_use_selector_list(void) {
 	parser_parse_result_free(&result);
 	return ok;
 }
+static bool test_parser_import_string_list_decl(void) {
+	const char *src =
+		"package cmd\n"
+		"import (\n"
+		"    \"compile.internal.backend_elf64\"\n"
+		"    \"compile.internal.semantic\"\n"
+		")\n"
+		"fn main() int { return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len >= 4;
+	if (ok) {
+		ast_node *first_import = result.root->as.program.statements.data[1];
+		ast_node *second_import = result.root->as.program.statements.data[2];
+		ast_node *next_decl = result.root->as.program.statements.data[3];
+		ok = first_import->kind == AST_USE_DECL;
+		ok = ok && strcmp(first_import->as.use_decl.module_path, "compile.internal.backend_elf64") == 0;
+		ok = ok && strcmp(first_import->as.use_decl.alias, "backend_elf64") == 0;
+		ok = ok && second_import->kind == AST_USE_DECL;
+		ok = ok && strcmp(second_import->as.use_decl.module_path, "compile.internal.semantic") == 0;
+		ok = ok && strcmp(second_import->as.use_decl.alias, "semantic") == 0;
+		ok = ok && next_decl->kind == AST_FN_STMT;
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_import_single_string_decl(void) {
+	const char *src = "package cmd\nimport \"std.io\"\nfn main() int { return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len >= 3;
+	if (ok) {
+		ast_node *decl = result.root->as.program.statements.data[1];
+		ast_node *next_decl = result.root->as.program.statements.data[2];
+		ok = decl->kind == AST_USE_DECL;
+		ok = ok && strcmp(decl->as.use_decl.module_path, "std.io") == 0;
+		ok = ok && strcmp(decl->as.use_decl.alias, "io") == 0;
+		ok = ok && next_decl->kind == AST_FN_STMT;
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_import_qualified_root_call(void) {
+	const char *src =
+		"package cmd\n"
+		"import \"std.env\"\n"
+		"fn main() int { args := std.env.args(); return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	if (!ok) {
+		fprintf(stderr, "semantic import qualified root call failed: %s\n", err.message);
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
 static bool test_parser_member_access_expr(void) {
 	const char *src = "fn main() int { a := 1; println(a.data); return 0; }";
 	token_vec tokens;
@@ -1503,6 +1591,9 @@ int main(void) {
 	RUN_TEST(test_parser_dotted_package_decl);
 	RUN_TEST(test_parser_dotted_use_decl);
 	RUN_TEST(test_parser_use_selector_list);
+	RUN_TEST(test_parser_import_single_string_decl);
+	RUN_TEST(test_parser_import_string_list_decl);
+	RUN_TEST(test_semantic_import_qualified_root_call);
 	RUN_TEST(test_parser_member_access_expr);
 	RUN_TEST(test_parser_control_flow_and_function);
 	RUN_TEST(test_semantic_ok);

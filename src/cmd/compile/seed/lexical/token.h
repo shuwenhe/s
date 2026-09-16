@@ -10,6 +10,7 @@ typedef enum token_type {
 	TOKEN_FN,
 	TOKEN_PACKAGE,
 	TOKEN_USE,
+	TOKEN_IMPORT,
 	TOKEN_AS,
 	TOKEN_IF,
 	TOKEN_ELSE,

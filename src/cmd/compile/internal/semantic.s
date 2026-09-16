@@ -7,6 +7,7 @@ import (
     "std.option"
     "std.prelude"
 )
+
 struct type_binding {
     string name
     string type_name
@@ -242,13 +243,14 @@ func check_detailed(string source) semantic_error[] {
         return finalize_diagnostics(diagnostics)
     }
     file := parsed.unwrap()
+    import_roots := collect_import_module_roots(file.uses)
     functions := collect_functions(file.items)
     traits := collect_traits(file.items)
     consts := collect_consts(file.items, functions, traits, source, diagnostics)
     validate_function_set(functions, source, diagnostics)
     i := 0
     for i < std.prelude.len(file.items) {
-        ignored := check_item(file.items[i], functions, traits, consts, source, diagnostics)
+        ignored := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics)
         i = i + 1
     }
     finalize_diagnostics(diagnostics)
@@ -260,13 +262,14 @@ func check_source_file(source_file file, string source) semantic_error[] {
         add_error(source, diagnostics, "e0002", "type rules consistency check failed", "package")
         return finalize_diagnostics(diagnostics)
     }
+    import_roots := collect_import_module_roots(file.uses)
     functions := collect_functions(file.items)
     traits := collect_traits(file.items)
     consts := collect_consts(file.items, functions, traits, source, diagnostics)
     validate_function_set(functions, source, diagnostics)
     i := 0
     for i < std.prelude.len(file.items) {
-        ignored := check_item(file.items[i], functions, traits, consts, source, diagnostics)
+        ignored := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics)
         i = i + 1
     }
     finalize_diagnostics(diagnostics)
@@ -646,6 +649,41 @@ func same_param_types(string[] left, string[] right) bool {
     true
 }
 
+func extract_module_root(string import_path) string {
+    i := 0
+    for i < std.prelude.len(import_path) {
+        if string(import_path[i]) == "." {
+            return std.prelude.slice(import_path, 0, i)
+        }
+        i = i + 1
+    }
+    return import_path
+}
+
+func collect_import_module_roots(use_decl[] uses) string[] {
+    roots := string[]()
+    seen := string[]()
+    i := 0
+    for i < std.prelude.len(uses) {
+        root := extract_module_root(uses[i].path)
+        j := 0
+        found := false
+        for j < std.prelude.len(seen) {
+            if seen[j] == root {
+                found = true
+                break
+            }
+            j = j + 1
+        }
+        if !found {
+            roots = append(roots, root)
+            seen = append(seen, root)
+        }
+        i = i + 1
+    }
+    roots
+}
+
 func is_main_package(string source) bool {
     contains_token(source, "package main")
 }
@@ -705,10 +743,10 @@ func make_receiver_method_binding(receiver_method_decl method_decl) function_bin
     binding
 }
 
-func check_item(item item, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string source, semantic_error[] diagnostics) int {
+func check_item(item item, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics) int {
     switch item {
-        item.function(function_decl) : check_function(function_decl, functions, traits, consts, source, diagnostics),
-        item.method(method_decl) : check_receiver_method(method_decl, functions, traits, consts, source, diagnostics),
+        item.function(function_decl) : check_function(function_decl, functions, traits, consts, import_roots, source, diagnostics),
+        item.method(method_decl) : check_receiver_method(method_decl, functions, traits, consts, import_roots, source, diagnostics),
         _ : 0,
     }
 }
@@ -1035,7 +1073,7 @@ func receiver_mode_from_params(param_decl[] params) string {
     "value"
 }
 
-func check_receiver_method(receiver_method_decl method_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string source, semantic_error[] diagnostics) int {
+func check_receiver_method(receiver_method_decl method_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics) int {
     method := method_decl.method
     if method.body.is_none() {
         return 0
@@ -1048,6 +1086,14 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
         }
     env := type_binding[]()
     i := 0
+    for i < std.prelude.len(import_roots) {
+        env.push(type_binding {
+            name: import_roots[i], type_name: "module",
+        })
+        ;
+        i = i + 1
+    }
+    i = 0
     for i < std.prelude.len(consts) {
         env.push(type_binding {
             name: consts[i].name, type_name consts[i].kindname,
@@ -1074,7 +1120,7 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
     pre_errors + result.errors
 }
 
-func check_function(function_decl function_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string source, semantic_error[] diagnostics) int {
+func check_function(function_decl function_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics) int {
     if function_decl.body.is_none() {
         return 0
     }
@@ -1086,6 +1132,14 @@ func check_function(function_decl function_decl, function_binding[] functions, t
         }
     env := type_binding[]()
     i := 0
+    for i < std.prelude.len(import_roots) {
+        env.push(type_binding {
+            name: import_roots[i], type_name: "module",
+        })
+        ;
+        i = i + 1
+    }
+    i = 0
     for i < std.prelude.len(consts) {
         env.push(type_binding {
             name: consts[i].name, type_name consts[i].kindname,
