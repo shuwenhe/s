@@ -14,6 +14,7 @@ struct type_binding {
 }
 
 struct function_binding {
+    string package_path
     string name
     string owner_type
     bool has_receiver
@@ -31,11 +32,13 @@ struct method_binding {
 }
 
 struct trait_binding {
+    string package_path
     string name
     method_binding[] methods
 }
 
 struct const_binding {
+    string package_path
     string name
     string type_name
     bool has_int_value
@@ -244,9 +247,9 @@ func check_detailed(string source) semantic_error[] {
     }
     file := parsed.unwrap()
     import_roots := collect_import_module_roots(file.uses)
-    functions := collect_functions(file.items)
-    traits := collect_traits(file.items)
-    consts := collect_consts(file.items, functions, traits, source, diagnostics)
+    functions := collect_functions(file)
+    traits := collect_traits(file)
+    consts := collect_consts(file, functions, traits, source, diagnostics)
     validate_function_set(functions, source, diagnostics)
     i := 0
     for i < std.prelude.len(file.items) {
@@ -263,9 +266,9 @@ func check_source_file(source_file file, string source) semantic_error[] {
         return finalize_diagnostics(diagnostics)
     }
     import_roots := collect_import_module_roots(file.uses)
-    functions := collect_functions(file.items)
-    traits := collect_traits(file.items)
-    consts := collect_consts(file.items, functions, traits, source, diagnostics)
+    functions := collect_functions(file)
+    traits := collect_traits(file)
+    consts := collect_consts(file, functions, traits, source, diagnostics)
     validate_function_set(functions, source, diagnostics)
     i := 0
     for i < std.prelude.len(file.items) {
@@ -688,13 +691,21 @@ func is_main_package(string source) bool {
     contains_token(source, "package main")
 }
 
-func collect_functions(item[] items) function_binding[] {
+func item_package_at(string[] item_packages, int index, string fallback) string {
+    if index >= 0 && index < std.prelude.len(item_packages) {
+        return item_packages[index]
+    }
+    fallback
+}
+
+func collect_functions(source_file file) function_binding[] {
     out := function_binding[]()
     i := 0
-    for i < std.prelude.len(items) {
-        switch items[i] {
-            item.function(function_decl) : out = append(out, make_function_binding(function_decl)),
-            item.method(method_decl) : out = append(out, make_receiver_method_binding(method_decl)),
+    for i < std.prelude.len(file.items) {
+        pkg := item_package_at(file.item_packages, i, file.pkg)
+        switch file.items[i] {
+            item.function(function_decl) : out = append(out, make_function_binding(function_decl, pkg)),
+            item.method(method_decl) : out = append(out, make_receiver_method_binding(method_decl, pkg)),
             _ : {},
         }
         i = i + 1
@@ -702,7 +713,7 @@ func collect_functions(item[] items) function_binding[] {
     out
 }
 
-func make_function_binding(function_decl function_decl) function_binding {
+func make_function_binding(function_decl function_decl, string package_path) function_binding {
     generic_names := string[]()
     i := 0
     for i < std.prelude.len(function_decl.sig.generics) {
@@ -721,14 +732,15 @@ func make_function_binding(function_decl function_decl) function_binding {
             option.none : "()",
         }
     return function_binding {
+        package_path: package_path,
         name: function_decl.sig.name,
         owner_type: "", has_receiver false,
         receiver_mode: "value", generic_names generic_names, param_types params, return_type return_type,
     };
 }
 
-func make_receiver_method_binding(receiver_method_decl method_decl) function_binding {
-    binding := make_function_binding(method_decl.method)
+func make_receiver_method_binding(receiver_method_decl method_decl, string package_path) function_binding {
+    binding := make_function_binding(method_decl.method, package_path)
     params := string[]()
     params = append(params, compile.internal.typesys.parse_type(method_decl.receiver_type))
     i := 0
@@ -751,13 +763,14 @@ func check_item(item item, function_binding[] functions, trait_binding[] traits,
     }
 }
 
-func collect_consts(item[] items, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) const_binding[] {
+func collect_consts(source_file file, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) const_binding[] {
     out := const_binding[]()
     type_env := type_binding[]()
     last_const_expr := option::none
     i := 0
-    for i < std.prelude.len(items) {
-        switch items[i] {
+    for i < std.prelude.len(file.items) {
+        pkg := item_package_at(file.item_packages, i, file.pkg)
+        switch file.items[i] {
             item.const(const_decl) : {
                 if lookup_name_type(type_env, const_decl.name) != "unknown" {
                     ignored := add_error(source, diagnostics, "e3044", "duplicate const declaration", const_decl.name)
@@ -797,6 +810,7 @@ func collect_consts(item[] items, function_binding[] functions, trait_binding[] 
                     }
                 }
                 out.push(const_binding {
+                    package_path: pkg,
                     name: const_decl.name, type_name ty, has_int_value has_int_value, int_value int_value,
                 })
                 ;
@@ -941,11 +955,12 @@ func const_digit_value(string ch) int {
     0
 }
 
-func collect_traits(item[] items) trait_binding[] {
+func collect_traits(source_file file) trait_binding[] {
     out := trait_binding[]()
     i := 0
-    for i < std.prelude.len(items) {
-        switch items[i] {
+    for i < std.prelude.len(file.items) {
+        pkg := item_package_at(file.item_packages, i, file.pkg)
+        switch file.items[i] {
             item.trait(trait_decl) : {
                 methods := method_binding[]()
                 mi := 0
@@ -968,6 +983,7 @@ func collect_traits(item[] items) trait_binding[] {
                     mi = mi + 1
                 }
                 out.push(trait_binding {
+                    package_path: pkg,
                     name: trait_decl.name, methods methods,
                 })
                 ;
@@ -1496,6 +1512,48 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
             switch value.callee.value {
                 expr::member(member) : {
+                    qualified_path := qualified_expr_path(value.callee.value)
+                    qualified_package := qualified_package_part(qualified_path)
+                    qualified_name := qualified_decl_part(qualified_path)
+                    qualified_candidates := lookup_qualified_functions(functions, qualified_package, qualified_name)
+                    if std.prelude.len(qualified_candidates) > 0 {
+                        matches := signature_match[]()
+                        j := 0
+                        for j < std.prelude.len(qualified_candidates) {
+                            m := try_match_signature(qualified_candidates[j], arg_types, functions, traits)
+                            if m.ok {
+                                matches = append(matches, m);
+                            }
+                            j = j + 1
+                        }
+                        if std.prelude.len(matches) == 0 {
+                            return check_result {
+                                type_name: "unknown", errors errors + add_error(source, diagnostics, "e1002", "no matching overload", qualified_path),
+                            }
+                        }
+                        best := matches[0]
+                        ambiguous := false
+                        j = 1
+                        for j < std.prelude.len(matches) {
+                            if better_match(matches[j], best) {
+                                best = matches[j]
+                                ambiguous = false
+                            } else if same_match_rank(matches[j], best) {
+                                ambiguous = true
+                            }
+                            j = j + 1
+                        }
+                        if ambiguous {
+                            return check_result {
+                                type_name: "unknown", errors errors + add_error(source, diagnostics, "e1003", "ambiguous overload", qualified_path),
+                            }
+                        }
+                        value.resolved_callee = option::some(best.instance_name)
+                        value.kindargs = best.kindargs
+                        return check_result {
+                            type_name: best.return_type, errors errors,
+                        }
+                    }
                     target := infer_expr(member.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
                     errors = errors + target.errors
                     named_methods := lookup_named_methods(functions, target.kindname, member.member)
@@ -2162,6 +2220,51 @@ func lookup_functions(function_binding[] functions, string name) function_bindin
         i = i + 1
     }
     out
+}
+
+func lookup_qualified_functions(function_binding[] functions, string package_path, string name) function_binding[] {
+    out := function_binding[]()
+    if package_path == "" || name == "" {
+        return out
+    }
+    i := 0
+    for i < std.prelude.len(functions) {
+        if !functions[i].has_receiver && functions[i].package_path == package_path && functions[i].name == name {
+            out = append(out, functions[i]);
+        }
+        i = i + 1
+    }
+    out
+}
+
+func qualified_expr_path(expr value) string {
+    switch value {
+        expr::name(name_value) : name_value.name,
+        expr::member(member_value) : {
+            prefix := qualified_expr_path(member_value.target.value)
+            if prefix == "" {
+                return ""
+            }
+            prefix + "." + member_value.member
+        }
+        _ : "",
+    }
+}
+
+func qualified_package_part(string path) string {
+    dot := find_last_char(path, ".")
+    if dot <= 0 {
+        return ""
+    }
+    std.prelude.slice(path, 0, dot)
+}
+
+func qualified_decl_part(string path) string {
+    dot := find_last_char(path, ".")
+    if dot <= 0 || dot + 1 >= std.prelude.len(path) {
+        return ""
+    }
+    std.prelude.slice(path, dot + 1, std.prelude.len(path))
 }
 
 func lookup_named_methods(function_binding[] functions, string receiver_type, string name) function_binding[] {

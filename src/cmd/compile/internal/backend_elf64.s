@@ -2549,6 +2549,11 @@ func append_source_items(source_file combined, source_file dep) () {
     i := 0
     for i < std.prelude.len(dep.items) {
         combined.items = append(combined.items, dep.items[i])
+        if i < std.prelude.len(dep.item_packages) {
+            combined.item_packages = append(combined.item_packages, dep.item_packages[i])
+        } else {
+            combined.item_packages = append(combined.item_packages, dep.pkg)
+        }
         i = i + 1
     }
 }

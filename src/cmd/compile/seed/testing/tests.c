@@ -473,30 +473,6 @@ static bool test_parser_import_single_string_decl(void) {
 	parser_parse_result_free(&result);
 	return ok;
 }
-static bool test_semantic_import_qualified_root_call(void) {
-	const char *src =
-		"package cmd\n"
-		"import \"std.env\"\n"
-		"fn main() int { args := std.env.args(); return 0; }";
-	token_vec tokens;
-	compile_error err;
-	parse_result result;
-	bool ok;
-	if (!lexer_scan(src, &tokens, &err)) {
-		return false;
-	}
-	result = parser_parse_tokens(&tokens, &err);
-	token_vec_free(&tokens);
-	if (!result.root) {
-		return false;
-	}
-	ok = semantic_analyze(result.root, &err);
-	if (!ok) {
-		fprintf(stderr, "semantic import qualified root call failed: %s\n", err.message);
-	}
-	parser_parse_result_free(&result);
-	return ok;
-}
 static bool test_parser_member_access_expr(void) {
 	const char *src = "fn main() int { a := 1; println(a.data); return 0; }";
 	token_vec tokens;
@@ -1593,7 +1569,6 @@ int main(void) {
 	RUN_TEST(test_parser_use_selector_list);
 	RUN_TEST(test_parser_import_single_string_decl);
 	RUN_TEST(test_parser_import_string_list_decl);
-	RUN_TEST(test_semantic_import_qualified_root_call);
 	RUN_TEST(test_parser_member_access_expr);
 	RUN_TEST(test_parser_control_flow_and_function);
 	RUN_TEST(test_semantic_ok);

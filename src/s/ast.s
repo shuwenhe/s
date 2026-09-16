@@ -278,6 +278,7 @@ struct source_file {
     string pkg
     use_decl[] uses
     item[] items
+    string[] item_packages
 }
 
 func dump_source_file(source_file source) string {

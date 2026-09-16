@@ -53,6 +53,7 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
     }
     use_decl[] uses = use_decl[]()
     item[] items = item[]()
+    string[] item_packages = string[]()
     for self.at_keyword("use") {
         decl, err := self.parse_use_decl()
         if err.message != "" {
@@ -83,6 +84,7 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
             int ci = 0
             for ci < std.prelude.len(consts) {
                 items = append(items, item::const(consts[ci]))
+                item_packages = append(item_packages, pkg)
                 ci = ci + 1
             }
             continue
@@ -93,11 +95,12 @@ func (parser* self) parse_source_file() (source_file, parse_error) {
             return empty, err
         }
         items = append(items, item_val)
+        item_packages = append(item_packages, pkg)
     }
     global_parse_depth = global_parse_depth - 1
     log_depth("parse_source_file exit depth: " + to_string(global_parse_depth))
     source_file {
-        pkg: pkg, uses uses, items items,
+        pkg: pkg, uses uses, items items, item_packages item_packages,
     }
 }
 
