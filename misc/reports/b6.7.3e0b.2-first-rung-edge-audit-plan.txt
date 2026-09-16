@@ -1,0 +1,319 @@
+================================================================================
+B6.7.3e0b.2 FIRST RUNG EDGE AUDIT
+Actual Bootstrap Invocation Trace
+================================================================================
+
+DATE: 2026-09-16
+MODE: Read-only tracing (no implementation)
+GOAL: Determine if Root0 → stage1 edge is PROVEN or GAP
+
+================================================================================
+SECTION 1: BOOTSTRAP INVOCATION (DISCOVERED, NOT ASSUMED)
+================================================================================
+
+ACTUAL INVOCATION (from makefile line 565):
+  S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --bootstrap src/cmd/compile/main.s $(SELFHOST_DIR)
+
+MAKEFILE TARGET: bootstrap-convergence
+PREREQUISITE: bootstrap-stage0
+
+ROOT0_PRODUCER: bin/s_seed
+ROOT0_PROVENANCE: PARTIAL
+  - Source present: ✅ src/cmd/compile/seed/ (C source)
+  - Build command: ✅ Known (gcc -std=c11)
+  - Build verified: ✅ Compiles successfully
+  - Origin commit: ❌ Unknown (but C code exists)
+
+BOOTSTRAP_FLAG: --bootstrap src/cmd/compile/main.s SELFHOST_DIR
+COMPILER_SOURCE_BOOTSTRAP_TARGET: src/cmd/compile/main.s (NOT modular_build_main.s)
+
+================================================================================
+SECTION 2: CRITICAL DISTINCTION DISCOVERED
+================================================================================
+
+TWO DIFFERENT COMPILER SOURCES IN REPO:
+
+FILE_1: src/cmd/compile/main.s (25 lines, 501 bytes)
+  ├─ PURPOSE: Bootstrap verification compiler (simplified)
+  ├─ IMPORTS: "std.io" only
+  ├─ FUNCTIONS CALLED: host_args(), buildcfg_check(), arch_dispatch_init(), build_main()
+  ├─ ROLE: Target of bootstrap-convergence test
+  └─ CLASSIFICATION: BOOTSTRAP_VERIFICATION_COMPILER (simplified)
+
+FILE_2: src/cmd/compile/modular_build_main.s (161 lines, 4.4K)
+  ├─ PURPOSE: Full canonical compiler entry point
+  ├─ IMPORTS: 15 packages (compile.internal.*, std.env, std.io, etc.)
+  ├─ LANGUAGE_FEATURES: Qualified imports (std.env.args), multi-package
+  ├─ KNOWN_BLOCKER: Line 20 "args := std.env.args()" → type 'any' has no method 'args'
+  ├─ ROLE: Current canonical self-hosted compiler source
+  └─ CLASSIFICATION: CURRENT_CANONICAL_COMPILER_SOURCE
+
+IMPLICATION:
+  The bootstrap-convergence test (Root0 → stage1 → stage2 → stage3)
+  is NOT testing whether the full canonical compiler converges.
+  
+  It is testing whether a SIMPLIFIED bootstrap compiler converges.
+  
+  The simplified compiler may not even require qualified module resolution
+  because it doesn't import std.env directly (imports host_args, etc.).
+
+================================================================================
+SECTION 3: BOOTSTRAP FUNCTION EXECUTION PATH
+================================================================================
+
+FUNCTION: seed_bootstrap_two_stage_check()
+LOCATION: src/cmd/compile/seed/bootstrap/bootstrap.c:171
+
+EXECUTION STEPS (step-by-step trace):
+
+STEP 1: Read source
+  read_file_text(compiler_source_path)
+  INPUT: src/cmd/compile/main.s
+  OUTPUT: compiler_src buffer
+
+STEP 2: Compile to IR (ROOT0 PRODUCES STAGE1.IR)
+  compile_to_buffer(compiler_src, &stage1, err)
+  ├─ This is the ROOT0 compilation capability
+  ├─ Input: main.s source code
+  ├─ Output: stage1 IR buffer
+  ├─ Parser path: (via root0 parser subsystem)
+  ├─ Semantic path: (via root0 semantic subsystem)
+  ├─ Lowering path: (via root0 lowering subsystem)
+  └─ Emitter path: (via root0 IR emitter)
+
+STEP 3: Write stage1.ir
+  write_text_file(stage1_path, stage1, err)
+  OUTPUT: $(SELFHOST_DIR)/stage1.ir
+
+STEP 4: Emit native binary from IR (ROOT0 PRODUCES STAGE1 BINARY)
+  emit_native_from_ir_file(stage1_path, stage1_bin, err)
+  INPUT: stage1.ir
+  OUTPUT: $(SELFHOST_DIR)/stage1 (native binary)
+  
+STEP 5: Run stage1 compiler on main.s → stage2.ir (RUNG1 CONSUMES SOURCE)
+  run_compiler(stage1_bin, compiler_source_path, stage2_path, NULL, err)
+  ├─ Invocation: $(SELFHOST_DIR)/stage1 src/cmd/compile/main.s
+  ├─ Producer: stage1 binary (compiled from stage1.ir)
+  ├─ Input: main.s source
+  ├─ Output: $(SELFHOST_DIR)/stage2.ir
+  └─ This is the FIRST RUNG EDGE TEST
+
+STEP 6: Emit native binary from stage2.ir
+  emit_native_from_ir_file(stage2_path, stage2_bin, err)
+  OUTPUT: $(SELFHOST_DIR)/stage2
+
+STEP 7: Run stage2 compiler on main.s → stage3.ir (CONVERGENCE TEST)
+  run_compiler(stage2_bin, compiler_source_path, stage3_path, NULL, err)
+  ├─ Invocation: $(SELFHOST_DIR)/stage2 src/cmd/compile/main.s
+  ├─ Producer: stage2 binary
+  ├─ Input: main.s source
+  ├─ Output: $(SELFHOST_DIR)/stage3.ir
+
+STEP 8: Convergence check
+  strcmp(stage2, stage3) == 0
+  ├─ IF TRUE: bootstrap converged (stage2 ≡ stage3)
+  └─ IF FALSE: bootstrap mismatch
+
+================================================================================
+SECTION 4: RUNG EDGE ANALYSIS
+================================================================================
+
+EDGE_ID: Root0 → stage1.ir
+
+STATUS: CAN THIS EDGE BE TESTED?
+
+Test command (from bootstrap-convergence):
+  ./bin/s_seed --bootstrap src/cmd/compile/main.s $(SELFHOST_DIR)
+
+Success criteria:
+  1. $(SELFHOST_DIR)/stage1.ir created ✓ (artifact exists)
+  2. $(SELFHOST_DIR)/stage1 binary created ✓ (artifact exists)
+  3. stage1 binary can compile main.s ✓ (if stage2.ir created)
+  4. stage2.ir == stage3.ir ✓ (convergence)
+
+Can test directly:
+  - YES, target exists in makefile
+  - Make target: bootstrap-convergence (line 562-570)
+
+---
+
+EDGE_ID: stage1 (binary) → stage2.ir
+
+PRODUCER: stage1 binary (produced by step 4)
+CONSUMER: run_compiler() invocation in step 5
+CONSUMER_LOCATION: src/cmd/compile/seed/bootstrap/bootstrap.c:206
+
+STATUS: Can this be proven?
+
+The consumer is HARDCODED in bootstrap.c:206:
+  run_compiler(stage1_bin, compiler_source_path, stage2_path, NULL, err)
+
+This assumes stage1 binary is an S compiler that accepts:
+  INPUT_1: source file path (compiler_source_path = main.s)
+  INPUT_2: implicit output (or NULL for IR to stdout → redirect to stage2_path)
+
+QUESTION: Does stage1 binary really accept this invocation?
+
+Answer depends on:
+  - What is the contract of run_compiler()?
+  - What does it expect from the binary?
+
+---
+
+EDGE_ID: stage2.ir → stage3.ir (convergence)
+
+PRODUCER: stage2 binary
+CONSUMER: run_compiler() for stage3
+
+CONVERGENCE TEST:
+  If stage2.ir == stage3.ir:
+    → Bootstrap ladder PROVED UP TO STAGE3
+    → stage3 (binary) would be next rung
+
+================================================================================
+SECTION 5: CONSUMER CONTRACT (run_compiler)
+================================================================================
+
+FUNCTION: run_compiler()
+LOCATION: Need to find definition
+USAGE: bootstrap.c:206, bootstrap.c:209, bootstrap.c:212
+
+Must trace:
+  - What does run_compiler() do?
+  - How does it invoke the binary?
+  - What arguments does it pass?
+  - What output format does it expect?
+
+NOT YET DETERMINED - requires deeper audit
+
+================================================================================
+SECTION 6: CRITICAL QUESTIONS REQUIRING PROOF
+================================================================================
+
+1. Does main.s have "simpler" language requirements than modular_build_main.s?
+   EVIDENCE: main.s has 25 lines, imports only std.io
+   EVIDENCE: modular_build_main.s has 161 lines, imports 15 packages
+   LIKELY: YES, main.s is simpler
+
+2. Can root0 (bin/s_seed) compile main.s to valid IR?
+   METHOD: Run test
+   NEEDS: Execute bootstrap-convergence target or equivalent
+
+3. Does the simple main.s avoid the "std.env.args()" blocker?
+   EVIDENCE: main.s line 9 uses host_args() not std.env.args()
+   LIKELY: YES, avoids the blocker
+
+4. Is run_compiler() invocation correctly documented?
+   METHOD: Read run_compiler() implementation
+   NEEDS: Audit bootstrap.c run_compiler definition
+
+5. Can stage1 binary actually accept run_compiler() invocation?
+   METHOD: Run test
+   NEEDS: Verify stage1 binary exists and accepts invocation
+
+6. Will stage2.ir == stage3.ir?
+   METHOD: Run bootstrap-convergence or equivalent
+   REQUIRES: Both stage1 and stage2 binaries produced successfully
+
+================================================================================
+SECTION 7: CLASSIFICATION PATHWAY
+================================================================================
+
+Current status:
+  - Invocation: DISCOVERED (not assumed)
+  - Source difference: IDENTIFIED (main.s vs modular_build_main.s)
+  - Execution path: TRACED (through bootstrap.c code)
+  - Language requirements: SIMPLER (main.s avoids qualified imports)
+  - Test availability: PROVEN (makefile target exists)
+
+To prove FIRST_RUNG_PROVEN:
+  1. Execute bootstrap-convergence target
+  2. Verify all artifacts created
+  3. Verify stage1 binary can compile main.s
+  4. Verify stage2.ir == stage3.ir
+
+To prove FIRST_RUNG_GAP:
+  1. Execute bootstrap-convergence target
+  2. Identify first failure point
+  3. Report exact error and location
+
+RECOMMENDATION:
+  Next immediate action: RUN bootstrap-convergence test
+  This will definitively answer whether first rung is PROVEN or GAP
+
+================================================================================
+SECTION 8: RELATIONSHIP TO CANONICAL COMPILER
+================================================================================
+
+CURRENT_CANONICAL_COMPILER: modular_build_main.s
+CURRENT_BLOCKER: std.env.args() qualified resolution (B6.7.3 stage)
+
+BOOTSTRAP_TEST_COMPILER: main.s
+BOOTSTRAP_TEST_BLOCKER: (not yet known - may not exist)
+
+RELATIONSHIP:
+  - If bootstrap-convergence PASSES: proves basic self-hosting works for simplified compiler
+  - If bootstrap-convergence FAILS: proves even simplified compiler can't self-host
+  - Neither directly proves modular_build_main.s convergence
+  - Bootstrap main.s convergence is a PREREQUISITE but not SUFFICIENT for modular_build_main.s
+
+IMPLICATION:
+  Bootstrap ladder has TWO separate goals:
+  1. Prove simplified main.s can self-host (verification)
+  2. Prove full modular_build_main.s can self-host (production)
+
+  Currently testing: Goal 1
+  Future testing needed: Goal 2
+
+================================================================================
+NEXT ACTION: B6.7.3e0b.2a EMPIRICAL BOOTSTRAP TEST
+================================================================================
+
+EXACT TEST TO RUN:
+  cd /Users/feifei/shuwen/s
+  make bootstrap-convergence
+
+EXPECTED OUTCOMES:
+
+IF SUCCESS:
+  ✓ $(SELFHOST_DIR)/stage1.ir exists (non-empty, valid IR)
+  ✓ $(SELFHOST_DIR)/stage1 binary exists (executable)
+  ✓ $(SELFHOST_DIR)/stage2.ir exists (produced by stage1)
+  ✓ $(SELFHOST_DIR)/stage3.ir exists (produced by stage2)
+  ✓ stage2.ir == stage3.ir (convergence verified)
+  → CLASSIFICATION: FIRST_RUNG_PROVEN
+  → NEXT: B6.7.3e0b.3 Full ladder audit
+
+IF FAILURE AT STEP 1 (compile_to_buffer):
+  ✗ bin/s_seed fails to compile main.s
+  → FIRST_BROKEN_EDGE: Root0 → stage1.ir
+  → REASON: compile_to_buffer failure
+  → CLASSIFICATION: FIRST_RUNG_GAP
+  → NEXT: Diagnose root0 capability gap
+
+IF FAILURE AT STEP 5 (run_compiler stage1):
+  ✗ stage1.ir valid but stage1 binary fails
+  → FIRST_BROKEN_EDGE: stage1.ir → stage1 (emit)
+  → REASON: emit_native_from_ir_file failure
+  → CLASSIFICATION: FIRST_RUNG_GAP
+
+IF FAILURE AT STEP 6 (stage1 runs but fails):
+  ✗ stage1 binary fails to compile main.s
+  → FIRST_BROKEN_EDGE: stage1(binary) → stage2.ir
+  → REASON: stage1 compiler error
+  → CLASSIFICATION: FIRST_RUNG_GAP
+  → INVESTIGATION: What capability does stage1 lack?
+
+IF FAILURE AT STEP 8 (convergence):
+  ✗ stage2.ir != stage3.ir
+  → FIRST_BROKEN_EDGE: stage2 → stage3 convergence
+  → REASON: stage2 and stage3 IR differ
+  → CLASSIFICATION: CONVERGENCE_GAP (not truly self-hosting)
+
+================================================================================
+END OF AUDIT PLAN
+================================================================================
+
+STATUS: READY FOR EMPIRICAL TESTING
+PREREQUISITE MET: bootstrap-convergence target exists and is runnable
+NEXT PHASE: Execute test and capture results
