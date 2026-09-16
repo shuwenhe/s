@@ -285,6 +285,7 @@ static void resolve_import_signature(const char *module_path, int *min_arity, in
 	*max_arity = spec->max_arity;
 	*return_type = spec->return_type;
 }
+
 static scope *scope_push(scope *parent) {
 	scope *s = (scope *)calloc(1, sizeof(scope));
 	if (!s) {
@@ -883,6 +884,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					lookup_type = base;
 				}
 			}
+			
 			if (lhs_type) {
 				const char *resolved = NULL;
 
@@ -1199,6 +1201,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				ast_node *trait_decl;
 				ast_node *required = NULL;
 				char method_name[256];
+				
 				if (!analyze_expr(ctx, member->as.member_expr.object, &lhs_type)) {
 					return 0;
 				}
