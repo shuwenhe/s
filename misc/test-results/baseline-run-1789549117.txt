@@ -1,0 +1,17 @@
+=== PROBE BASELINE TEST (before e0b.2e implementation) ===
+Date: Wed Sep 16 16:58:38 CST 2026
+
+Testing: probe_01_integer.s             ⚠️  UNKNOWN
+Testing: probe_02_parameter.s           ⚠️  UNKNOWN
+Testing: probe_03_if.s                  ⚠️  UNKNOWN
+Testing: probe_04_string_literal.s      ⚠️  UNKNOWN
+Testing: probe_05_string_eq.s           ⚠️  UNKNOWN
+Testing: probe_06_string_concat.s       ⚠️  UNKNOWN
+Testing: probe_07_import.s              ⚠️  UNKNOWN
+Testing: probe_08_qualified_call.s      ⚠️  UNKNOWN
+
+=== SUMMARY ===
+  PASS: 0/8
+  FAIL: 8/8
+
+❌ Multiple failures - investigate
