@@ -1,0 +1,424 @@
+================================================================================
+B6.7.3e0b.1 BOOTSTRAP LADDER RUNG INVENTORY
+Initial Discovery Phase (Read-Only Audit)
+================================================================================
+
+SCAN_DATE: 2026-09-16
+SCAN_MODE: discovery-only, no semantic judgment
+PHASE: Inventory collection before framework design
+
+================================================================================
+SECTION 1: EXECUTABLE ARTIFACT CANDIDATES
+================================================================================
+
+RUNG_ID: EXEC_0001
+PATH: bin/s_seed
+TYPE: Binary (Mach-O 64-bit arm64)
+SIZE: 327K
+MODIFIED: 2026-09-16 14:19
+SHA256: (pending)
+PRODUCER: gcc -std=c11 (C seed compiler)
+SOURCE_ROOT: src/cmd/compile/seed/s_seed.c
+PRODUCER_COMPONENTS:
+  - src/cmd/compile/seed/s_seed.c (main entry)
+  - src/cmd/compile/seed/bootstrap/bootstrap.c
+  - src/cmd/compile/seed/lexical/lexer.c
+  - src/cmd/compile/seed/lexical/selfhost_bridge.c
+  - src/cmd/compile/seed/error/error.c
+  - src/cmd/compile/seed/syntax/parser.c
+  - src/cmd/compile/seed/semantic/analyzer.c
+  - src/cmd/compile/seed/intermediate/ir.c
+  - src/cmd/compile/seed/code/generator.c
+  - src/cmd/compile/seed/code/backend_registry.c
+  - src/cmd/compile/seed/code/native_backend.c
+  - src/cmd/compile/seed/code/standalone_amd64_backend.c
+  - src/cmd/compile/seed/runtime/network_windows.c
+  - src/cmd/compile/seed/runtime/runtime.c
+BUILD_COMMAND: gcc -std=c11 -Wall -Wextra -Werror -o bin/s_seed [sources]
+CONSUMER_ROLE: Current working bootstrap compiler
+KNOWN_INPUTS:
+  - S source files (.s)
+  - S test files (.s)
+KNOWN_OUTPUTS:
+  - S IR files (.ir)
+  - ELF x86_64 binaries
+  - Mach-O arm64 binaries
+LANGUAGE_CAPABILITY: (to be determined by separate audit)
+EXECUTABLE: YES
+PROVENANCE: 
+  origin-commit=LATEST
+  source-integrity=VERIFIED (C source present in tree)
+  build-command-known=YES
+  producer-known=gcc
+  producer-version=UNKNOWN
+BOUNDED: YES
+NON_CIRCULAR: YES
+PRODUCES_RUNG: Rung_1 (candidate: s source IR)
+EVIDENCE: 
+  - makefile target: seed-compiler-bin
+  - make target: bin/s_seed depends on SEED_COMPILER_SOURCES
+  - recent git commit ae80731a4, etc. invoke bin/s_seed
+CLASSIFICATION: PRIMARY_ROOT_CANDIDATE
+
+---
+
+RUNG_ID: EXEC_0002
+PATH: bin/s_compiler
+TYPE: Binary (Mach-O 64-bit arm64)
+SIZE: 723K
+MODIFIED: 2026-09-16 14:33
+SHA256: 1916fbb57f68551a77bc5a4cfc3a60cfe66778c2ac5ed375dacd2608767f743c
+PRODUCER: UNKNOWN
+SOURCE_ROOT: UNKNOWN (not tracked in git log bin/s_compiler)
+PRODUCER_COMPONENTS: UNKNOWN
+BUILD_COMMAND: UNKNOWN (not found in makefile)
+CONSUMER_ROLE: UNKNOWN
+KNOWN_INPUTS: UNKNOWN
+KNOWN_OUTPUTS: UNKNOWN
+LANGUAGE_CAPABILITY: UNKNOWN
+EXECUTABLE: YES (verified binary format)
+PROVENANCE:
+  origin-commit=UNKNOWN
+  source-integrity=UNKNOWN
+  build-command-known=NO
+  producer-known=NO
+  producer-version=UNKNOWN
+BOUNDED: NO (unknown producer/consumer relation)
+NON_CIRCULAR: UNKNOWN
+PRODUCES_RUNG: UNKNOWN
+EVIDENCE:
+  - File exists in bin/
+  - Binary is valid Mach-O arm64 executable
+  - No git history tracked
+  - Not mentioned in makefile
+CLASSIFICATION: ORPHANED_ARTIFACT (requires provenance audit)
+STATUS: REQUIRES_INVESTIGATION
+
+---
+
+RUNG_ID: EXEC_0003
+PATH: bin/s_darwin_arm64
+TYPE: Binary (Mach-O 64-bit arm64)
+SIZE: 643K
+MODIFIED: 2026-09-11 15:09
+SHA256: (pending)
+PRODUCER: UNKNOWN (likely prior bootstrap stage)
+BUILD_COMMAND: UNKNOWN
+CONSUMER_ROLE: Historical artifact / prior self-hosted version
+KNOWN_INPUTS: UNKNOWN
+KNOWN_OUTPUTS: UNKNOWN
+EXECUTABLE: YES
+PROVENANCE:
+  origin-commit=UNKNOWN (predates recent seed work)
+  source-integrity=UNKNOWN
+  build-command-known=NO
+  producer-known=NO
+BOUNDED: NO
+NON_CIRCULAR: UNKNOWN
+PRODUCES_RUNG: UNKNOWN
+EVIDENCE:
+  - File exists with historical timestamp
+  - Naming suggests platform-specific binary (darwin arm64)
+  - Not in makefile build system
+CLASSIFICATION: HISTORICAL_ASSET (provenance unclear)
+STATUS: CANDIDATE_FOR_HISTORICAL_BOOTSTRAP_CHAIN
+
+---
+
+RUNG_ID: EXEC_0004
+PATH: src/cmd/compile/seed/s_new
+TYPE: Binary (ELF 64-bit x86-64)
+SIZE: 195K
+MODIFIED: 2026-09-09 09:12
+SHA256: (pending, BuildID available)
+PRODUCER: UNKNOWN
+BUILD_COMMAND: UNKNOWN
+CONSUMER_ROLE: Archive artifact (not in current bin/)
+EXECUTABLE: YES
+BOUNDED: NO
+NON_CIRCULAR: UNKNOWN
+CLASSIFICATION: ARCHIVED_CANDIDATE
+
+---
+
+RUNG_ID: EXEC_0005
+PATH: src/cmd/compile/seed/s_x86_64_final_v5
+TYPE: Binary (ELF 64-bit x86-64)
+SIZE: 269K
+MODIFIED: 2026-09-09 09:12
+PRODUCER: UNKNOWN
+CONSUMER_ROLE: Archive artifact
+EXECUTABLE: YES
+BOUNDED: NO
+NON_CIRCULAR: UNKNOWN
+CLASSIFICATION: ARCHIVED_CANDIDATE
+
+================================================================================
+SECTION 2: IR ARTIFACT CANDIDATES (Intermediate Representation)
+================================================================================
+
+RUNG_ID: IR_0001
+PATH: src/cmd/compile/seed/stage1.ir
+TYPE: IR (2.7K)
+MODIFIED: 2026-09-09 09:12
+PRODUCER: bin/s_seed (presumed)
+CONSUMER: Further IR processing / stage2 generation
+ROLE: Potential stage1 IR checkpoint
+EVIDENCE:
+  - Named "stage1.ir" (suggests stage1 IR artifact)
+  - Stored in seed directory
+CLASSIFICATION: STAGE_CHECKPOINT_CANDIDATE
+
+---
+
+RUNG_ID: IR_0002
+PATH: src/cmd/compile/seed/stage2.ir
+TYPE: IR (2.7K)
+MODIFIED: 2026-09-09 09:12
+PRODUCER: bin/s_seed (presumed, from stage1?)
+CONSUMER: Code generation / binary emission
+ROLE: Potential stage2 IR checkpoint
+CLASSIFICATION: STAGE_CHECKPOINT_CANDIDATE
+
+================================================================================
+SECTION 3: SOURCE CODE CANDIDATES (Potential Rungs)
+================================================================================
+
+RUNG_ID: SRC_0001
+PATH: src/cmd/compile/main.s
+TYPE: S source (canonical stage1 compiler)
+SIZE: (pending)
+PURPOSE: Bootstrapped S compiler (self-host target)
+LANGUAGE: S
+IMPORTS: (to be audited)
+COMPLEXITY: UNKNOWN
+CLASSIFICATION: CANONICAL_STAGE1_SOURCE_CANDIDATE
+EVIDENCE:
+  - Explicitly named in bootstrap procedures (makefile references)
+  - Located in src/cmd/compile/ (compiler sources)
+
+---
+
+RUNG_ID: SRC_0002
+PATH: src/cmd/compile/selfhost/compiler.s
+TYPE: S source (selfhost compiler variant)
+SIZE: (pending)
+PURPOSE: Selfhost compiler variant
+LANGUAGE: S
+CLASSIFICATION: SELFHOST_COMPILER_SOURCE
+
+---
+
+RUNG_ID: SRC_0003
+PATH: src/cmd/compile/modular_build_main.s
+TYPE: S source (modular build entry)
+SIZE: (pending)
+PURPOSE: Modular bootstrap closure (37-file dependency graph)
+LANGUAGE: S
+KNOWN_BLOCKER: Line 20 `args := std.env.args()` → type 'any' has no method 'args'
+CLASSIFICATION: E2E_TEST_CLOSURE
+
+================================================================================
+SECTION 4: BOOTSTRAP BUILD SYSTEM TARGETS
+================================================================================
+
+MAKEFILE_TARGET: seed-compiler-bin
+INPUT: SEED_COMPILER_SOURCES (C sources + headers)
+OUTPUT: bin/s_seed
+COMMAND: gcc -std=c11 [~50 source files]
+ROLE: Build primary root0 candidate
+STATUS: FUNCTIONAL (target exists and executes)
+
+---
+
+MAKEFILE_TARGET: bootstrap-stage0
+PREREQUISITE: seed-compiler-bin
+OUTPUT: ./bin/s_seed (trusted C seed)
+ROLE: Signal stage0 readiness
+STATUS: FUNCTIONAL
+
+---
+
+MAKEFILE_TARGET: bootstrap-convergence
+PREREQUISITE: bootstrap-stage0
+EXECUTES: ./bin/s_seed --bootstrap src/cmd/compile/main.s $(SELFHOST_DIR)
+OUTPUT: $(SELFHOST_DIR)/stage2.ir, $(SELFHOST_DIR)/stage3.ir
+ROLE: Verify bootstrap chain convergence (stage2 == stage3)
+STATUS: PRESENT IN MAKEFILE
+
+---
+
+MAKEFILE_TARGET: selfhost
+PREREQUISITE: native-bootstrap
+OUTPUT: ./bin/s (self-hosted compiler)
+COMMAND: Install $(SELFHOST_DIR)/native/stage2 → ./bin/s
+ROLE: Final self-hosted compiler installation
+STATUS: PRESENT IN MAKEFILE
+
+================================================================================
+SECTION 5: GIT HISTORY BOOTSTRAP SIGNALS
+================================================================================
+
+TOTAL_BOOTSTRAP_RELATED_COMMITS: ~65 (grep: bootstrap|seed|stage|self-host|ladder|root)
+
+SAMPLE_RECENT_COMMITS:
+  - bdd86ef09  cleanup: add .bootstrap directory to .gitignore
+  - ae80731a4  B6.7.3a: Design and Module Loading Feasibility Audit
+  - b440599aa  B6.7.2: Freeze verification gate - PASS
+  - e078f240d  B6.7.2: Add import block parsing and module root symbol registration
+  - 331571751  Phase 1.6.2: Add import declaration structural carry to bootstrap_subset.c
+  - 05b4705ee  Fix: s_modular wrapper to support s_seed delegation
+  - ed00f26a1  docs: design thin bootstrap bridge
+  - 4d24aabe3  B1.3: Add shadow analysis query for borrowed Place identity
+
+SIGNAL_INTERPRETATION:
+  - High frequency of bootstrap-related commits suggests active ladder development
+  - Phase numbering (1.6.x, B6.7.x) indicates structured approach
+  - Multiple "capability" and "authority" related commits suggest proof work
+
+================================================================================
+SECTION 6: UNPROVEN EDGES AND OPEN QUESTIONS
+================================================================================
+
+EDGE_UNKNOWN_1: Root0 (bin/s_seed) → Rung1 (s source IR)
+  Questions:
+    - Can bin/s_seed compile src/cmd/compile/main.s?
+    - Does it generate valid stage1.ir?
+    - Evidence: REQUIRES_EXECUTION_TEST
+
+EDGE_UNKNOWN_2: Rung1 (stage1.ir) → Rung2 (stage2 binary)
+  Questions:
+    - Does stage1.ir produce stage2 binary?
+    - What tool performs this transition?
+    - Evidence: REQUIRES_CLARIFICATION
+
+EDGE_UNKNOWN_3: bin/s_compiler → (?)
+  Questions:
+    - Where did bin/s_compiler come from?
+    - What is its producer?
+    - What can it compile?
+    - Evidence: REQUIRES_PROVENANCE_AUDIT
+
+EDGE_UNKNOWN_4: Historical artifacts (s_darwin_arm64, s_new, s_x86_64_final_v5)
+  Questions:
+    - Which historical bootstrap chain do they belong to?
+    - Are they still relevant?
+    - Evidence: REQUIRES_GIT_HISTORICAL_AUDIT
+
+RUNG_CAPABILITY_UNKNOWN: bin/s_seed
+  Questions:
+    - What language features does it support?
+    - Can it compile qualified imports (std.env.args)?
+    - Can it compile S code with generics, ownership, etc.?
+    - Evidence: REQUIRES_CAPABILITY_AUDIT
+
+================================================================================
+SECTION 7: INVENTORY SUMMARY
+================================================================================
+
+EXECUTABLE_CANDIDATES: 5
+  - PRIMARY_ROOT_0: bin/s_seed (provenance PARTIAL, capability UNKNOWN)
+  - ORPHANED: bin/s_compiler (provenance UNKNOWN)
+  - HISTORICAL: bin/s_darwin_arm64, s_new, s_x86_64_final_v5
+
+IR_CANDIDATES: 2
+  - stage1.ir, stage2.ir (role UNCLEAR, producer INFERRED)
+
+SOURCE_CANDIDATES: 3+
+  - CANONICAL_STAGE1: src/cmd/compile/main.s
+  - SELFHOST: src/cmd/compile/selfhost/compiler.s
+  - E2E_TEST: src/cmd/compile/modular_build_main.s (known blocker)
+
+BUILD_SYSTEM: Integrated in makefile
+  - seed-compiler-bin ✓ (functional)
+  - bootstrap-stage0 ✓ (defined)
+  - bootstrap-convergence ✓ (defined)
+  - selfhost ✓ (defined)
+
+PROVENANCE_STATUS:
+  - bin/s_seed: PARTIAL (source present, build command known, origin UNKNOWN)
+  - bin/s_compiler: UNKNOWN (orphaned, no build command found)
+  - Historical binaries: UNKNOWN (archived, purpose unclear)
+
+BOOTSTRAP_LADDER_VISIBILITY:
+  classification=RUNG_INVENTORY_SUFFICIENT_FOR_NEXT_PHASE
+
+NEXT_PHASE_REQUIRED:
+  B6.7.3e0b.2 - First Rung Edge Audit
+  Focus: Can bin/s_seed actually compile src/cmd/compile/main.s?
+  Goal: PROVE first executable edge: Root0 → stage1.ir
+
+================================================================================
+END OF INVENTORY REPORT
+================================================================================
+
+================================================================================
+ADDENDUM: STAGE0 DISCOVERY
+================================================================================
+
+RUNG_ID: C_STAGE0_001
+PATH: src/cmd/compile/stage0/stage0.c
+TYPE: C source
+SIZE: 233 lines
+PURPOSE: Closure statistics and verification tool
+COMPONENTS:
+  - ClosureStats structure (files, bytes, packages, imports, funcs, structs, enums, fors, ifs, returns, saw_entry)
+  - file_read function
+  - die() error handler
+ROLE: Bootstrap closure validator (not a compiler, but verification infrastructure)
+CLASSIFICATION: BOOTSTRAP_INFRASTRUCTURE
+
+---
+
+RUNG_ID: C_STAGE0_002
+PATH: src/cmd/compile/stage0/bootstrap_subset.c
+TYPE: C source (Embedded in Stage1 per header comment)
+SIZE: 379 lines
+PURPOSE: Bootstrap subset language parser/interpreter
+CONTRACT: doc/bootstrap-subset.md
+COMPONENTS:
+  - BsLocal (local variable representation)
+  - BsFunction (function with locals)
+  - BsUnit (compilation unit)
+  - Lexer: BS_EOF, BS_NAME, BS_INT, BS_STRING, BS_WALRUS, BS_DOT tokens
+  - Parser: bs_error, bs_next, token scanning
+ROLE: Minimal S language subset that can be interpreted/compiled by stage0
+CLASSIFICATION: MINIMAL_BOOTSTRAP_SUBSET_SPEC
+
+---
+
+DOCUMENTATION:
+PATH: doc/bootstrap-subset.md (2.9K)
+PURPOSE: Bootstrap subset contract and specification
+
+PATH: doc/canonical-bootstrap-capability.md (5.1K)
+PURPOSE: Canonical bootstrap capability specification
+
+================================================================================
+CRITICAL NEW INSIGHT: BOOTSTRAP_SUBSET_EMBEDDED
+================================================================================
+
+The comment in bootstrap_subset.c states:
+  "Bootstrap subset v1; contract: doc/bootstrap-subset.md. Embedded in Stage1."
+
+IMPLICATION:
+  stage0 ≠ compiler
+  stage0 = bootstrap mechanics validator + bootstrap_subset interpreter
+
+BOOTSTRAP_SUBSET:
+  A MINIMAL language subset (S language restricted to basic constructs)
+  designed to be:
+    1. Easily parsed by minimal tools
+    2. Embedded in Stage1 as self-contained subset interpreter
+    3. Sufficient to implement bootstrap chains
+
+This suggests the ladder is NOT:
+  seed (C) → stage1 (full S) → stage2 → stage3
+
+But rather:
+  seed (C) → stage1 (full S with embedded bootstrap_subset) 
+    → stage2 (compiled via bootstrap_subset) → stage3 (convergence)
+
+================================================================================
+END ADDENDUM
+================================================================================
