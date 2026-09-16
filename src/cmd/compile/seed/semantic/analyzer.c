@@ -546,6 +546,60 @@ static int is_truthy_type(const char *type_name) {
 static int is_ordered_type(const char *type_name) {
 	return is_type_any(type_name) || strcmp(type_name, TYPE_INT) == 0 || strcmp(type_name, TYPE_FLOAT) == 0 || strcmp(type_name, TYPE_STRING) == 0;
 }
+
+// Helper: Construct full qualified name from nested member expressions (e.g., "std.io.eprintln")
+static int construct_qualified_name(ast_node *node, char *buf, size_t buf_size) {
+	int len;
+	if (!node || buf_size < 1) {
+		return 0;
+	}
+	buf[0] = '\0';
+	
+	if (node->kind == AST_IDENT_EXPR) {
+		return snprintf(buf, buf_size, "%s", node->as.ident_expr.name) > 0 && 
+		       (size_t)snprintf(buf, buf_size, "%s", node->as.ident_expr.name) < buf_size;
+	}
+	
+	if (node->kind == AST_MEMBER_EXPR) {
+		char base_buf[256];
+		if (!construct_qualified_name(node->as.member_expr.object, base_buf, sizeof(base_buf))) {
+			return 0;
+		}
+		len = snprintf(buf, buf_size, "%s.%s", base_buf, node->as.member_expr.member);
+		return len > 0 && (size_t)len < buf_size;
+	}
+	
+	return 0;
+}
+
+// Helper: Check if this is a qualified import function call
+// Returns 1 if found in import_signatures, sets out_type and out_min_arity/out_max_arity
+static int resolve_qualified_import_call(ast_node *member_expr, char *full_name, 
+                                        size_t full_name_size, const char **out_type,
+                                        int *out_min_arity, int *out_max_arity) {
+	const signature_spec *spec;
+	
+	if (!member_expr || member_expr->kind != AST_MEMBER_EXPR) {
+		return 0;
+	}
+	
+	// Construct full qualified name (e.g., "std.io.eprintln")
+	if (!construct_qualified_name(member_expr, full_name, full_name_size)) {
+		return 0;
+	}
+	
+	// Look up in import_signatures
+	spec = find_signature(import_signatures, import_signatures_len, full_name);
+	if (!spec) {
+		return 0;  // Not found in import signatures
+	}
+	
+	*out_type = spec->return_type;
+	*out_min_arity = spec->min_arity;
+	*out_max_arity = spec->max_arity;
+	return 1;  // Found in import signatures
+}
+
 static int analyze_node(semantic_ctx *ctx, ast_node *node);
 static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type);
 static flow_exit_kind stmt_exit_kind(ast_node *node) {
@@ -1201,6 +1255,41 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				ast_node *trait_decl;
 				ast_node *required = NULL;
 				char method_name[256];
+				
+				// NEW: Check for qualified import function call (e.g., std.io.eprintln)
+				{
+					char full_qualified_name[512];
+					const char *imported_return_type = NULL;
+					int imported_min_arity, imported_max_arity;
+					
+					if (resolve_qualified_import_call(member, full_qualified_name, sizeof(full_qualified_name),
+													 &imported_return_type, &imported_min_arity, &imported_max_arity)) {
+						// Validate argument count
+						if ((int)node->as.call_expr.args.len < imported_min_arity ||
+							(imported_max_arity >= 0 && (int)node->as.call_expr.args.len > imported_max_arity)) {
+							error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+								"call to '%s' expects %d to %s arguments, got %zu", full_qualified_name,
+								imported_min_arity, imported_max_arity < 0 ? "unlimited" : "limited", 
+								node->as.call_expr.args.len);
+							return 0;
+						}
+						// Analyze arguments
+						for (i = 0; i < node->as.call_expr.args.len; i++) {
+							if (!analyze_expr(ctx, node->as.call_expr.args.data[i], &rhs_type)) {
+								return 0;
+							}
+						}
+						// Set return type and mark as resolved
+						*out_type = imported_return_type;
+						free(member->as.member_expr.resolved_method);
+						member->as.member_expr.resolved_method = dup_cstr(full_qualified_name);
+						if (!member->as.member_expr.resolved_method) {
+							error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+							return 0;
+						}
+						return 1;
+					}
+				}
 				
 				if (!analyze_expr(ctx, member->as.member_expr.object, &lhs_type)) {
 					return 0;
