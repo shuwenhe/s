@@ -603,7 +603,11 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 entry_edges := mir_control_edge[]()
                 entry_edges = append(entry_edges, make_edge("then", 1))
                 entry_edges = append(entry_edges, make_edge("else", 2))
-                blocks = append(blocks, make_entry_block(0, "entry", stmt_texts, block.statements, "branch", entry_edges))
+                condition_text := substitute_const_text(s.dump_expr(if_expr.condition.value), const_entries)
+                branch_condition := option.some(mir_operand {
+                    kind: "expr", value: condition_text, type_name: "bool",
+                })
+                blocks = append(blocks, make_entry_block_with_condition(0, "entry", stmt_texts, block.statements, "branch", branch_condition, entry_edges))
                 then_lines := string[]()
                 then_lines = append(then_lines, "if.then")
                 blocks = append(blocks, make_block(1, "if.then", then_lines, "jump", vec1_edge("merge", 3)))
@@ -968,6 +972,10 @@ func vec1_edge(string label, int target) mir_control_edge[] {
 }
 
 func make_block(int id, string label, string[] lines, string term_kind, mir_control_edge[] edges) mir_basic_block {
+    make_block_with_condition(id, label, lines, term_kind, option.none, edges)
+}
+
+func make_block_with_condition(int id, string label, string[] lines, string term_kind, option[mir_operand] condition, mir_control_edge[] edges) mir_basic_block {
     statements := mir_statement[]()
     i := 0
     for i < len(lines) {
@@ -980,12 +988,16 @@ func make_block(int id, string label, string[] lines, string term_kind, mir_cont
     }
     mir_basic_block {
         id: id, label label, statements statements, terminator mir_terminator {
-            kind: term_kind, edges edges,
+            kind: term_kind, condition: condition, edges edges,
         },
     }
 }
 
 func make_entry_block(int id, string label, string[] lines, stmt[] source_statements, string term_kind, mir_control_edge[] edges) mir_basic_block {
+    make_entry_block_with_condition(id, label, lines, source_statements, term_kind, option.none, edges)
+}
+
+func make_entry_block_with_condition(int id, string label, string[] lines, stmt[] source_statements, string term_kind, option[mir_operand] condition, mir_control_edge[] edges) mir_basic_block {
     statements := mir_statement[]()
     i := 0
     for i < len(lines) {
@@ -1001,7 +1013,7 @@ func make_entry_block(int id, string label, string[] lines, stmt[] source_statem
     }
     mir_basic_block {
         id: id, label label, statements statements, terminator mir_terminator {
-            kind: term_kind, edges edges,
+            kind: term_kind, condition: condition, edges edges,
         },
     }
 }
@@ -1011,4 +1023,42 @@ func make_graph(string function_name, mir_basic_block[] blocks, string[] trace, 
         function_name: function_name, blocks blocks, locals mir_local_slot[](), trace trace, entry entry, exit exit,
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
+}
+
+func lowered_view_block_name(int id) string {
+    "bb" + std.prelude.to_string(id)
+}
+
+func lowered_view_from_mir(mir_graph graph) string {
+    out := "canonical-lowered-view version=1\n"
+    out = out + "view-role=READ_ONLY\n"
+    out = out + "function " + graph.function_name + "\n"
+    out = out + "entry-block=" + lowered_view_block_name(graph.entry) + "\n"
+    i := 0
+    for i < len(graph.blocks) {
+        block := graph.blocks[i]
+        out = out + "block " + lowered_view_block_name(block.id) + "\n"
+        if block.terminator.kind == "branch" {
+            if block.terminator.condition.is_some() {
+                condition := block.terminator.condition.unwrap()
+                out = out + "branch-condition=" + condition.value + "\n"
+                out = out + "branch-condition-origin=canonical-mir-terminator\n"
+            }
+            edge_index := 0
+            while edge_index < len(block.terminator.edges) {
+                edge := block.terminator.edges[edge_index]
+                if edge.label == "then" {
+                    out = out + "true-edge=" + lowered_view_block_name(edge.target) + "\n"
+                    out = out + "true-edge-origin=canonical-mir-terminator\n"
+                }
+                if edge.label == "else" {
+                    out = out + "false-edge=" + lowered_view_block_name(edge.target) + "\n"
+                    out = out + "false-edge-origin=canonical-mir-terminator\n"
+                }
+                edge_index = edge_index + 1
+            }
+        }
+        i = i + 1
+    }
+    out
 }

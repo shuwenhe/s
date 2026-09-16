@@ -28,7 +28,7 @@ func run_mir_suite() int {
     blocks.push(mir_basic_block {
         id: 0,
         label: "entry", statements mir_statement[](), terminator mir_terminator {
-            kind: "return", edges mir_control_edge[](),
+            kind: "return", condition: option.none, edges mir_control_edge[](),
         },
     })
     graph := mir_graph {
@@ -52,7 +52,7 @@ func run_mir_suite() int {
     gate_blocks.push(mir_basic_block {
         id: 0,
         label: "entry", statements gate_statements, terminator mir_terminator {
-            kind: "return", edges mir_control_edge[](),
+            kind: "return", condition: option.none, edges mir_control_edge[](),
         },
     })
     gate_locals := mir_local_slot[]()
@@ -83,6 +83,9 @@ func run_mir_suite() int {
     then_statements.push(mir_statement::eval(mir_eval_stmt { op: "line", args then_args }))
     else_statements := mir_statement[]()
     else_statements.push(mir_statement::eval(mir_eval_stmt { op: "line", args else_args }))
+    branch_condition := option.some(mir_operand {
+        kind: "local", value: "cond", type_name: "bool",
+    })
     entry_edges := mir_control_edge[]()
     entry_edges = append(entry_edges, mir_control_edge { label: "then", target 1, args mir_operand[]() })
     entry_edges = append(entry_edges, mir_control_edge { label: "else", target 2, args mir_operand[]() })
@@ -94,25 +97,25 @@ func run_mir_suite() int {
     diamond_blocks.push(mir_basic_block {
         id: 0,
         label: "entry", statements entry_statements, terminator mir_terminator {
-            kind: "branch", edges entry_edges,
+            kind: "branch", condition: branch_condition, edges entry_edges,
         },
     })
     diamond_blocks.push(mir_basic_block {
         id: 1,
         label: "then", statements then_statements, terminator mir_terminator {
-            kind: "jump", edges then_edges,
+            kind: "jump", condition: option.none, edges then_edges,
         },
     })
     diamond_blocks.push(mir_basic_block {
         id: 2,
         label: "else", statements else_statements, terminator mir_terminator {
-            kind: "jump", edges else_edges,
+            kind: "jump", condition: option.none, edges else_edges,
         },
     })
     diamond_blocks.push(mir_basic_block {
         id: 3,
         label: "merge", statements mir_statement[](), terminator mir_terminator {
-            kind: "return", edges mir_control_edge[](),
+            kind: "return", condition: option.none, edges mir_control_edge[](),
         },
     })
     diamond := mir_graph {
@@ -128,6 +131,8 @@ func run_mir_suite() int {
     }
     if mir.mir_point_text(diamond, point_map.points[0]) != "BB0(entry):stmt0" { return 1 }
     if mir.mir_point_text(diamond, point_map.points[1]) != "BB0(entry):stmt1" { return 1 }
+    if diamond.blocks[0].terminator.condition.is_none() { return 1 }
+    if diamond.blocks[0].terminator.condition.unwrap().value != "cond" { return 1 }
     if mir.mir_point_text(diamond, point_map.points[2]) != "BB0(entry):term" { return 1 }
     if mir.mir_point_text(diamond, point_map.points[3]) != "BB1(then):stmt0" { return 1 }
     if mir.mir_point_text(diamond, point_map.points[4]) != "BB1(then):term" { return 1 }
@@ -151,7 +156,7 @@ func run_mir_suite() int {
     fact_blocks.push(mir_basic_block {
         id: 0,
         label: "entry", statements fact_statements, terminator mir_terminator {
-            kind: "return", edges mir_control_edge[](),
+            kind: "return", condition: option.none, edges mir_control_edge[](),
         },
     })
     fact_graph := mir_graph {
