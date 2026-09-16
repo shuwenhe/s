@@ -1515,6 +1515,42 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						}
 					}
 				}
+				// Register module root symbols for all imports
+				// For example: import ("std.io") → register "std" symbol
+				if (decl->kind == AST_USE_DECL) {
+					const char *module_path = decl->as.use_decl.module_path;
+					if (module_path) {
+						// Extract module root (first part before '.')
+						const char *dot = strchr(module_path, '.');
+						if (dot) {
+							char module_root[256];
+							size_t root_len = dot - module_path;
+							if (root_len < sizeof(module_root) && root_len > 0) {
+								strncpy(module_root, module_path, root_len);
+								module_root[root_len] = '\0';
+								
+								// Check if this module root symbol already exists
+								symbol *existing = scope_lookup_current(ctx->current_scope, module_root);
+								if (!existing) {
+									// Register the module root as a module type symbol
+									status = scope_define(ctx->current_scope,
+										module_root,
+										SYMBOL_IMPORT,
+										0,
+										0,
+										0,
+										"module",
+										NULL,
+										0);
+									if (status < 0) {
+										error_set(ctx->err, ERR_OUT_OF_MEMORY, decl->pos.line, decl->pos.column, "out of memory");
+										return 0;
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 			for (i = 0; i < node->as.program.statements.len; i++) {
 				if (!analyze_node(ctx, node->as.program.statements.data[i])) {
