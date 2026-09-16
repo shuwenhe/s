@@ -1,0 +1,239 @@
+================================================================================
+B6.7.3e0b.2a BOOTSTRAP CONVERGENCE TEST - FIRST RUN RESULTS
+================================================================================
+
+DATE: 2026-09-16 15:37 UTC
+TEST_COMMAND: make bootstrap-convergence
+TEST_RESULT: RED (FAILURE)
+
+================================================================================
+SECTION 1: TEST EXECUTION OUTPUT
+================================================================================
+
+$ make bootstrap-convergence
+
+Bootstrap stage0 ready: ./bin/s_seed (trusted C seed)
+error[5] at 23:20: type 'any' has no method 'eprintln'
+make: *** [bootstrap-convergence] Error 1
+
+EXIT_CODE: 1 (FAILURE)
+
+================================================================================
+SECTION 2: FIRST BROKEN EDGE IDENTIFIED
+================================================================================
+
+BROKEN_EDGE: Root0 → stage1.ir
+
+CLASSIFICATION: FIRST_RUNG_GAP
+
+FAILURE_POINT: Root0 (bin/s_seed) cannot compile src/cmd/compile/main.s
+
+ERROR_TYPE: Semantic analysis failure
+ERROR_MESSAGE: type 'any' has no method 'eprintln'
+ERROR_LOCATION: src/cmd/compile/main.s:23:20
+
+SOURCE_CODE:
+  Line 23: std.io.eprintln("compile: " + message)
+           └─ Qualified method call on imported module
+
+ROOT_CAUSE: Qualified member type resolution failure
+  - Module "std.io" is imported ✅
+  - But its type is resolved as "any" ❌
+  - Cannot access method "eprintln" on type "any" ❌
+  - This is exactly B6.7.3 problem domain
+
+================================================================================
+SECTION 3: DIAGNOSTIC ANALYSIS
+================================================================================
+
+WHAT WORKED:
+  ✓ bin/s_seed binary starts (Stage 0 ready message)
+  ✓ Parser reads main.s
+  ✓ Import statement "std.io" is recognized
+  ✓ Function definitions parsed
+
+WHAT FAILED:
+  ✗ Semantic analysis encounters std.io.eprintln
+  ✗ Qualified resolution: std.io → (should resolve to struct/package type)
+  ✗ But resolves to "any" instead
+  ✗ Type system cannot provide eprintln method on "any" type
+
+KEY INSIGHT:
+  Simple bootstrap compiler (main.s) also requires qualified member resolution.
+  It's not a capability difference from modular_build_main.s;
+  it's a FUNDAMENTAL REQUIREMENT for ANY compiler that uses std.* imports.
+
+ERROR_CODE: 5
+  [Need to correlate with error.h to determine exact error classification]
+
+================================================================================
+SECTION 4: COMPARISON TO modular_build_main.s
+================================================================================
+
+Previously, we thought main.s avoids the std.env.args() blocker
+by using host_args() instead.
+
+DISCOVERY:
+  main.s also uses qualified imports (std.io)
+  Just in a different function than modular_build_main.s
+
+main.s:
+  Line 23: std.io.eprintln(...)
+           └─ Qualified member call, same pattern
+
+modular_build_main.s:
+  Line 20: std.env.args()
+           └─ Also qualified member call
+
+CONCLUSION:
+  The B6.7.3 qualified member type resolution problem is NOT limited to std.env
+  It affects ANY qualified import member access in ANY S source
+
+================================================================================
+SECTION 5: EXACT FAILURE CLASSIFICATION
+================================================================================
+
+EDGE_IDENTIFIER: Root0 → stage1.ir
+
+ROOT0_CAPABILITY: bin/s_seed parser and semantic analyzer
+ROOT0_MAXIMUM_LANGUAGE_FEATURES:
+  ✓ Single-file compilation
+  ✓ Basic imports (symbol registration)
+  ✓ Function definitions
+  ✗ Qualified member access (package_name.member_name)
+
+REASON_UNABLE_TO_PROCEED:
+  Qualified member type resolution not implemented in Root0 semantic analyzer
+  (src/cmd/compile/seed/semantic/analyzer.c)
+
+STAGE1_NEVER_PRODUCED: YES
+  compile_to_buffer() fails → stage1.ir is not created
+
+NEXT_RUNG_IMPOSSIBLE: YES
+  Without stage1.ir, cannot create stage1 binary
+  Without stage1 binary, cannot proceed to stage2
+
+================================================================================
+SECTION 6: BOOTSTRAP LADDER CURRENT STATUS
+================================================================================
+
+BOOTSTRAP_LADDER_STATUS:
+
+```
+Root0 (bin/s_seed)
+  │
+  ├─ Parser ✓ (can read S source)
+  │
+  ├─ Semantic Analyzer
+  │  │
+  │  └─ Qualified member resolution ✗ MISSING
+  │     └─ std.io.eprintln → "type 'any' has no method 'eprintln'"
+  │
+  └─ Cannot produce stage1.ir
+
+Simple main.s also BLOCKED by same issue
+Modular modular_build_main.s also BLOCKED by same issue
+```
+
+CONCLUSION:
+  Both simple and full bootstrap ladders hit the same first blocker:
+  **Qualified member type resolution is missing from Root0**
+
+================================================================================
+SECTION 7: IMPLICATION FOR B6.7.3 SCOPE
+================================================================================
+
+PREVIOUS UNDERSTANDING:
+  B6.7.3 was needed for full canonical compiler (modular_build_main.s)
+  Simple bootstrap (main.s) might work without it
+
+CORRECTED UNDERSTANDING:
+  B6.7.3 is needed for BOTH:
+    - Simple bootstrap ladder (main.s)
+    - Full canonical ladder (modular_build_main.s)
+  
+  It's a ROOT0 capability requirement, not just a Stage1+ feature
+
+BLOCKING_FEATURE: Qualified member resolution
+REQUIRED_TO_UNBLOCK:
+  1. Implement qualified module type resolution in Root0 semantic analyzer
+  2. This is the EXACT scope of B6.7.3 work
+  3. B6.7.3a design was correct: need module registry + qualified resolver
+
+================================================================================
+SECTION 8: WHAT THIS TELLS US ABOUT BOOTSTRAP STRATEGY
+================================================================================
+
+FINDING_1: NO LADDER WITHOUT B6.7.3
+  The simple bootstrap ladder (main.s) cannot proceed without
+  qualified member resolution. The "easier path" doesn't bypass B6.7.3.
+
+FINDING_2: B6.7.3 IS BLOCKING POINT
+  B6.7.3 qualified member resolution is the FIRST RUNG BLOCKER
+  for the entire bootstrap strategy, not just modular_build_main.s
+
+FINDING_3: SINGLE LADDER, NOT MULTIPLE TRACKS
+  There isn't a "simple path that works" and a "complex path that fails"
+  Both paths fail at the same point: qualified resolution
+
+FINDING_4: ROOT0 SEMANTIC LIMITATION
+  bin/s_seed (Root0) has a semantic analysis gap that affects
+  any S code using qualified imports (which includes stdlib functions)
+
+================================================================================
+SECTION 9: RECOMMENDATION FOR NEXT ACTION
+================================================================================
+
+DO NOT attempt to bypass B6.7.3 by choosing simpler sources.
+The blocking issue is in Root0 semantic analysis, not in source complexity.
+
+NEXT_PHASE_OPTIONS:
+
+OPTION_A: Implement B6.7.3 in bin/s_seed
+  Goal: Make Root0 capable of qualified member resolution
+  Scope: src/cmd/compile/seed/semantic/analyzer.c
+  Timeline: Proceed with B6.7.3b architectural fix in seed compiler
+  
+OPTION_B: Find historical bootstrap point before qualified resolution requirement
+  Goal: Find earlier version of S that didn't use qualified imports
+  Challenge: Likely very limited functionality
+  Timeline: Extensive git history audit
+
+OPTION_C: Implement minimal bootstrap subset that doesn't use qualified imports
+  Goal: Create alternative main.s without std.io.eprintln
+  Challenge: May require core functionality reimplementation
+  Timeline: Significant effort
+
+RECOMMENDATION: OPTION_A
+  Reason: B6.7.3 work is already designed and scoped
+  Reason: Both bootstrap paths need it anyway
+  Reason: This proves B6.7.3 is truly blocking bootstrap, not optional
+
+================================================================================
+SECTION 10: TEST RESULT SUMMARY
+================================================================================
+
+TEST: make bootstrap-convergence
+RESULT: FAILED at first edge (Root0 → stage1.ir)
+
+EVIDENCE:
+  ✗ Stage1.ir not created
+  ✗ Error in semantic analysis: "type 'any' has no method 'eprintln'"
+  ✗ Location: src/cmd/compile/main.s:23:20
+  ✗ Root cause: Qualified member resolution missing from Root0
+
+CLASSIFICATION: SIMPLE_BOOTSTRAP_LADDER_PROVEN_IMPOSSIBLE_WITHOUT_B6.7.3
+
+FIRST_BROKEN_EDGE: Root0 → stage1.ir
+EXACT_ERROR_TYPE: Qualified member type resolution
+REQUIRED_IMPLEMENTATION: B6.7.3 in seed compiler semantic analyzer
+
+BOOTSTRAP_LADDER_STATUS: BLOCKED UNTIL B6.7.3 IMPLEMENTATION
+
+================================================================================
+END OF DIAGNOSTIC REPORT
+================================================================================
+
+ARTIFACTS:
+- Full test output: /tmp/bootstrap-convergence-log.txt
+- This report: misc/reports/b6.7.3e0b.2a-bootstrap-convergence-first-run.txt
