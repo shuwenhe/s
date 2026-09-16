@@ -109,6 +109,7 @@ struct mir_control_edge {
 
 struct mir_terminator {
     string kind
+    option[mir_operand] condition
     mir_control_edge[] edges
 }
 
@@ -463,7 +464,7 @@ func lower_function_graph(function_decl function) mir_graph {
     blocks.push(mir_basic_block {
         id: 0,
         label: "entry", statements empty_statements, terminator mir_terminator {
-            kind: "return", edges empty_edges,
+            kind: "return", condition: option.none, edges empty_edges,
         },
     })
     trace := string[]()
@@ -519,7 +520,7 @@ func lower_block_graph(string function_name, param[] params, block_expr block) m
     blocks.push(mir_basic_block {
         id: 0,
         label: "entry", statements statements, terminator mir_terminator {
-            kind: "return", edges mir_control_edge[](),
+            kind: "return", condition: option.none, edges mir_control_edge[](),
         },
     })
     mir_graph {
