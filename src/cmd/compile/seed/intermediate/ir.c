@@ -483,20 +483,30 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 				expr->as.call_expr.callee->as.member_expr.resolved_method) {
 				char receiver[IR_OPERAND_CAP];
 				char receiver_arg[IR_OPERAND_CAP];
+				char qualified_name[IR_OPERAND_CAP];
+				bool static_qualified_call = false;
 				if (!lower_expr(b, expr->as.call_expr.callee->as.member_expr.object, receiver)) {
 					return false;
 				}
-				if (strncmp(expr->as.call_expr.callee->as.member_expr.resolved_method, "__vec_", 6) == 0) {
-					if (snprintf(receiver_arg, sizeof(receiver_arg), "\"%s\"", receiver) >= (int)sizeof(receiver_arg)) {
-						error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "vector receiver is too long");
-						return false;
-					}
-				} else {
-					snprintf(receiver_arg, sizeof(receiver_arg), "%s", receiver);
+				if (snprintf(qualified_name, sizeof(qualified_name), "%s.%s",
+					receiver, expr->as.call_expr.callee->as.member_expr.member) >= (int)sizeof(qualified_name)) {
+					error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "qualified call name is too long");
+					return false;
 				}
-				if (!emit_ins(b, IR_ARG, receiver_arg, "", "", expr->pos)) return false;
+				static_qualified_call = strcmp(expr->as.call_expr.callee->as.member_expr.resolved_method, qualified_name) == 0;
+				if (!static_qualified_call) {
+					if (strncmp(expr->as.call_expr.callee->as.member_expr.resolved_method, "__vec_", 6) == 0) {
+						if (snprintf(receiver_arg, sizeof(receiver_arg), "\"%s\"", receiver) >= (int)sizeof(receiver_arg)) {
+							error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "vector receiver is too long");
+							return false;
+						}
+					} else {
+						snprintf(receiver_arg, sizeof(receiver_arg), "%s", receiver);
+					}
+					if (!emit_ins(b, IR_ARG, receiver_arg, "", "", expr->pos)) return false;
+					argc++;
+				}
 				snprintf(callee, sizeof(callee), "%s", expr->as.call_expr.callee->as.member_expr.resolved_method);
-				argc++;
 			}
 			for (i = 0; i < expr->as.call_expr.args.len; i++) {
 				char arg_tmp[IR_OPERAND_CAP];
