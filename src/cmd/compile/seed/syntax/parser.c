@@ -3312,11 +3312,15 @@ static ast_node *parse_struct_literal_expr(parser *p, const token *type_tok) {
 			ast_free(node);
 			return NULL;
 		}
-		if (!expect(p, TOKEN_COLON, ":")) {
-			ast_free(node);
-			return NULL;
+		if (match(p, TOKEN_COLON)) {
+			value = parse_expression(p);
+		} else if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) &&
+			peek_ahead(p, 1)->type == TOKEN_LBRACE) {
+			const token *nested_type = advance_tok(p);
+			value = parse_struct_literal_expr(p, nested_type);
+		} else {
+			value = parse_expression(p);
 		}
-		value = parse_expression(p);
 		if (!value) {
 			ast_free(node);
 			return NULL;
@@ -3451,13 +3455,25 @@ static int looks_like_struct_literal(parser *p) {
 					p->current = saved;
 					return 0;
 				}
-				if (!match(p, TOKEN_COLON)) {
-					p->current = saved;
-					return 0;
+				if (match(p, TOKEN_COLON)) {
+					expect_field_name = 0;
+					saw_field = 1;
+					continue;
 				}
-				expect_field_name = 0;
-				saw_field = 1;
-				continue;
+				if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) &&
+					peek_ahead(p, 1)->type == TOKEN_LBRACE) {
+					advance_tok(p);
+					expect_field_name = 0;
+					saw_field = 1;
+					continue;
+				}
+				if (!check(p, TOKEN_COMMA) && !check(p, TOKEN_RBRACE)) {
+					expect_field_name = 0;
+					saw_field = 1;
+					continue;
+				}
+				p->current = saved;
+				return 0;
 			}
 			if (match(p, TOKEN_COMMA)) {
 				expect_field_name = 1;
