@@ -2025,7 +2025,7 @@ func find_decl_name_index(token[] tokens) int {
     index
 }
 
-func normalize_type_text(string text) string {
+func normalize_type_text(string text) string /home/shuwen/shuwen/s push main shuwenhe直接推送到main分支不要创建新分支{
     text
         .replace(" . ", ".")
         .replace("[ ", "[")
