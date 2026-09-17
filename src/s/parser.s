@@ -1718,76 +1718,84 @@ func (parser* self) parse_bracket_group() (string, parse_error) {
             depth = depth - 1
         }
     }
-    join_strings(parts, " ").replace("[ ", "[").replace(" ]", "]"), parse_error { message: "" }
-})
-                .replace(" ,", ",")
-    }
+    return join_strings(parts, " ").replace("[ ", "[").replace(" ]", "]").replace(" ,", ","), parse_error { message: "" }
+}
 
 func (parser* self) at(token_kind kind) bool {
-        self.peek().unwrap().kind == kind
-    }
+    return self.peek().unwrap().kind == kind
+}
 
 func (parser* self) at_keyword(string value) bool {
-        token token = self.peek().unwrap()        token.kind == token_kind::keyword && token.value == value
-    }
+    token tok = self.peek().unwrap()
+    return tok.kind == token_kind::keyword && tok.value == value
+}
 
 func (parser* self) at_symbol(string value) bool {
-        token token = self.peek().unwrap()        token.kind == token_kind::symbol && token.value == value
-    }
+    token tok = self.peek().unwrap()
+    return tok.kind == token_kind::symbol && tok.value == value
+}
 
 func (parser* self) at_symbol_after_keyword(string value) bool {
-        token first = self.peek().unwrap()        if first.kind != token_kind::keyword {
-            return false
-        }
-        token second = self.peek_at(1).unwrap()        second.kind == token_kind::symbol && second.value == value
+    token first = self.peek().unwrap()
+    if first.kind != token_kind::keyword {
+        return false
     }
+    token second = self.peek_at(1).unwrap()
+    return second.kind == token_kind::symbol && second.value == value
+}
 
 func (parser* self) at_cfor_start() bool {
-        self.at_keyword("for") && self.peek_at(1).unwrap().kind == token_kind::symbol && self.peek_at(1).unwrap().value == "("
-    }
+    return self.at_keyword("for") && self.peek_at(1).unwrap().kind == token_kind::symbol && self.peek_at(1).unwrap().value == "("
+}
 
 func (parser* self) looks_like_assignment_stmt() bool {
-        token first = self.peek().unwrap()        token second = self.peek_at(1).unwrap()        first.kind == token_kind::ident && second.kind == token_kind::symbol && second.value == "="
-    }
+    token first = self.peek().unwrap()
+    token second = self.peek_at(1).unwrap()
+    return first.kind == token_kind::ident && second.kind == token_kind::symbol && second.value == "="
+}
 
 func (parser* self) looks_like_short_var_stmt() bool {
-        false
-    }
+    return false
+}
 
 func (parser* self) looks_like_increment_stmt() bool {
-        token first = self.peek().unwrap()        token second = self.peek_at(1).unwrap()        first.kind == token_kind::ident && second.kind == token_kind::symbol && second.value == "++"
-    }
+    token first = self.peek().unwrap()
+    token second = self.peek_at(1).unwrap()
+    return first.kind == token_kind::ident && second.kind == token_kind::symbol && second.value == "++"
+}
 
 func (parser* self) looks_like_typed_var_stmt() bool {
-        int offset = self.find_top_level_symbol_offset("=")        if offset <= 0 {
-            return false
-        }
-        decode_named_type(slice_tokens(self.tokens, self.index, self.index + offset)).is_ok()
+    int offset = self.find_top_level_symbol_offset("=")
+    if offset <= 0 {
+        return false
     }
+    return decode_named_type(slice_tokens(self.tokens, self.index, self.index + offset)).is_ok()
+}
 
 func (parser* self) eat_keyword(string value) bool {
-        if self.at_keyword(value) {
-            self.advance().unwrap()
-            return true
-        }
-        false
+    if self.at_keyword(value) {
+        self.advance().unwrap()
+        return true
     }
+    return false
+}
 
 func (parser* self) eat_ident_value(string value) bool {
-        token token = self.peek().unwrap()        if token.kind == token_kind::ident && token.value == value {
-            self.advance().unwrap()
-            return true
-        }
-        false
+    token tok = self.peek().unwrap()
+    if tok.kind == token_kind::ident && tok.value == value {
+        self.advance().unwrap()
+        return true
     }
+    return false
+}
 
 func (parser* self) eat_symbol(string value) bool {
-        if self.at_symbol(value) {
-            self.advance().unwrap()
-            return true
-        }
-        false
+    if self.at_symbol(value) {
+        self.advance().unwrap()
+        return true
     }
+    return false
+}
 
 func (parser* self) expect_keyword(string value) (token, parse_error) {
     t, err := self.peek()
@@ -2025,7 +2033,7 @@ func find_decl_name_index(token[] tokens) int {
     index
 }
 
-func normalize_type_text(string text) string /home/shuwen/shuwen/s push main shuwenhe直接推送到main分支不要创建新分支{
+func normalize_type_text(string text) string {
     text
         .replace(" . ", ".")
         .replace("[ ", "[")
