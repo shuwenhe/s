@@ -5,7 +5,12 @@ set -euo pipefail
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 closure="${STAGE0_CLOSURE:-"$root/.bootstrap/modular/canonical-closure.txt"}"
 report="${P05D2_CANONICAL_CLOSURE_DRIFT_REPORT:-"$root/.bootstrap/modular/p0.5d2-canonical-closure-drift-audit.txt"}"
-expected_closure_hash="${CANONICAL_CLOSURE_HASH:-61bf30372b40e06defa4f8e8aadb6ed240b88e67982c73a3994feea61fe43fa9}"
+closure_freeze_manifest="${CANONICAL_CLOSURE_FREEZE_MANIFEST:-"$root/.bootstrap/modular/canonical-closure.freeze.manifest"}"
+expected_closure_hash="${CANONICAL_CLOSURE_HASH:-}"
+if [ -z "$expected_closure_hash" ] && [ -f "$closure_freeze_manifest" ]; then
+    expected_closure_hash=$(awk -F= '$1 == "closure.aggregate-sha256" { print $2; exit }' "$closure_freeze_manifest")
+fi
+expected_closure_hash="${expected_closure_hash:-61bf30372b40e06defa4f8e8aadb6ed240b88e67982c73a3994feea61fe43fa9}"
 
 mkdir -p "$(dirname "$report")"
 
@@ -148,9 +153,11 @@ fi
 
 classification=NOT_PROVEN
 verdict=INVESTIGATE
+gate=RED
 if [ "$current_closure_hash" = "$expected_closure_hash" ]; then
     classification=NO_DRIFT
     verdict=SOURCE_BINDING_GREEN
+    gate=GREEN
 elif [ "$hash_algorithm_changed" = NOT_PROVEN ]; then
     classification=HASH_PROCEDURE_DRIFT_NOT_PROVEN
     verdict=FIX_HASH_PROCEDURE_OR_RECORD_PROCEDURE
@@ -167,12 +174,13 @@ fi
 
 {
     echo "P0.5d.2 CANONICAL_CLOSURE_DRIFT_AUDIT"
-    echo "P0_5D_2_SOURCE_BINDING=RED"
+    echo "P0_5D_2_SOURCE_BINDING=$gate"
     echo
     echo "FROZEN_CLOSURE_HASH=$expected_closure_hash"
     echo "CURRENT_CLOSURE_HASH=$current_closure_hash"
     echo "HEAD_CLOSURE_HASH=$head_closure_hash"
     echo "HEAD_HASH_USING_CURRENT_MEMBERSHIP=$head_hash_using_current_membership"
+    echo "FREEZE_MANIFEST=$closure_freeze_manifest"
     echo
     echo "hash-status:"
     echo "  source-binding-status=$( [ "$current_closure_hash" = "$expected_closure_hash" ] && echo MATCH || echo MISMATCH )"
@@ -222,9 +230,15 @@ fi
     echo "SOURCE_BINDING_VERDICT=$verdict"
     echo
     echo "blocked-next-steps:"
-    echo "  producer-selection=BLOCKED_UNTIL_SOURCE_BINDING_GREEN"
-    echo "  snapshot-generation=BLOCKED_UNTIL_SOURCE_BINDING_GREEN"
-    echo "  snapshot-acceptance=BLOCKED_UNTIL_SOURCE_BINDING_GREEN"
+    if [ "$gate" = GREEN ]; then
+        echo "  producer-selection=UNBLOCKED_FOR_P0.5d.3"
+        echo "  snapshot-generation=STILL_BLOCKED_UNTIL_PRODUCER_SELECTED"
+        echo "  snapshot-acceptance=STILL_BLOCKED_UNTIL_SNAPSHOT_EXISTS"
+    else
+        echo "  producer-selection=BLOCKED_UNTIL_SOURCE_BINDING_GREEN"
+        echo "  snapshot-generation=BLOCKED_UNTIL_SOURCE_BINDING_GREEN"
+        echo "  snapshot-acceptance=BLOCKED_UNTIL_SOURCE_BINDING_GREEN"
+    fi
     echo
     echo "DO_NOT_UPDATE_EXPECTED_HASH_WITHOUT_APPROVAL=YES"
     echo "DO_NOT_GENERATE_SSEED=YES"
@@ -232,4 +246,4 @@ fi
     echo "DO_NOT_MODIFY_PARSER=YES"
 } | tee "$report"
 
-[ "$current_closure_hash" = "$expected_closure_hash" ]
+[ "$gate" = GREEN ]
