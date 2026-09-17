@@ -600,6 +600,33 @@ static int resolve_qualified_import_call(ast_node *member_expr, char *full_name,
 	return 1;  // Found in import signatures
 }
 
+static int split_result_tuple_type(const char *type_name, char **ok_type, char **err_type) {
+	const char *comma;
+	size_t ok_len;
+	size_t err_len;
+	if (!type_name || type_name[0] != '(') return 0;
+	comma = strchr(type_name, ',');
+	if (!comma) return 0;
+	err_len = strlen(comma + 1);
+	if (err_len == 0 || comma[err_len] != ')') return 0;
+	ok_len = (size_t)(comma - type_name - 1);
+	if (ok_len == 0 || err_len <= 1) return 0;
+	*ok_type = (char *)malloc(ok_len + 1);
+	*err_type = (char *)malloc(err_len);
+	if (!*ok_type || !*err_type) {
+		free(*ok_type);
+		free(*err_type);
+		*ok_type = NULL;
+		*err_type = NULL;
+		return 0;
+	}
+	memcpy(*ok_type, type_name + 1, ok_len);
+	(*ok_type)[ok_len] = '\0';
+	memcpy(*err_type, comma + 1, err_len - 1);
+	(*err_type)[err_len - 1] = '\0';
+	return 1;
+}
+
 static int analyze_node(semantic_ctx *ctx, ast_node *node);
 static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type);
 static flow_exit_kind stmt_exit_kind(ast_node *node) {
@@ -1314,6 +1341,51 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					member->as.member_expr.resolved_method = dup_cstr("__string_len");
 					*out_type = TYPE_INT;
 					return 1;
+				}
+				if (lhs_type && lhs_type[0] == '(') {
+					char *ok_type = NULL;
+					char *err_type = NULL;
+					const char *result_method = member->as.member_expr.member;
+					const char *resolved_result_method = NULL;
+					const char *result_return_type = NULL;
+					if (split_result_tuple_type(lhs_type, &ok_type, &err_type)) {
+						if (strcmp(result_method, "is_ok") == 0) {
+							resolved_result_method = "__result_is_ok";
+							result_return_type = TYPE_BOOL;
+						} else if (strcmp(result_method, "is_err") == 0) {
+							resolved_result_method = "__result_is_err";
+							result_return_type = TYPE_BOOL;
+						} else if (strcmp(result_method, "unwrap") == 0) {
+							resolved_result_method = "__result_unwrap";
+							result_return_type = ok_type;
+						} else if (strcmp(result_method, "unwrap_err") == 0) {
+							resolved_result_method = "__result_unwrap_err";
+							result_return_type = err_type;
+						}
+						if (resolved_result_method) {
+							if (node->as.call_expr.args.len != 0) {
+								error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+									"result.%s expects no arguments", result_method);
+								free(ok_type);
+								free(err_type);
+								return 0;
+							}
+							free(member->as.member_expr.resolved_method);
+							member->as.member_expr.resolved_method = dup_cstr(resolved_result_method);
+							if (!member->as.member_expr.resolved_method) {
+								free(ok_type);
+								free(err_type);
+								error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+								return 0;
+							}
+							if (result_return_type != ok_type) free(ok_type);
+							if (result_return_type != err_type) free(err_type);
+							*out_type = result_return_type;
+							return 1;
+						}
+						free(ok_type);
+						free(err_type);
+					}
 				}
 				if ((lhs_type && strncmp(lhs_type, "vec[", 4) == 0) ||
 					(lhs_type && strcmp(lhs_type, TYPE_ARRAY) == 0) ||
