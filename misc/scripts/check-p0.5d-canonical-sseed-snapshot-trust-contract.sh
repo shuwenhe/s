@@ -7,7 +7,12 @@ closure="${STAGE0_CLOSURE:-"$root/.bootstrap/modular/canonical-closure.txt"}"
 report="${P05D_CANONICAL_SSEED_SNAPSHOT_TRUST_REPORT:-"$root/.bootstrap/modular/p0.5d-canonical-sseed-snapshot-trust-contract.txt"}"
 snapshot="${CANONICAL_STAGE1_SSEED_SNAPSHOT:-"$root/src/cmd/compile/bootstrap/canonical-stage1.sseed"}"
 manifest="${CANONICAL_STAGE1_SSEED_MANIFEST:-"$root/src/cmd/compile/bootstrap/canonical-stage1.sseed.manifest"}"
-expected_closure_hash="${CANONICAL_CLOSURE_HASH:-61bf30372b40e06defa4f8e8aadb6ed240b88e67982c73a3994feea61fe43fa9}"
+closure_freeze_manifest="${CANONICAL_CLOSURE_FREEZE_MANIFEST:-"$root/.bootstrap/modular/canonical-closure.freeze.manifest"}"
+expected_closure_hash="${CANONICAL_CLOSURE_HASH:-}"
+if [ -z "$expected_closure_hash" ] && [ -f "$closure_freeze_manifest" ]; then
+    expected_closure_hash=$(awk -F= '$1 == "closure.aggregate-sha256" { print $2; exit }' "$closure_freeze_manifest")
+fi
+expected_closure_hash="${expected_closure_hash:-61bf30372b40e06defa4f8e8aadb6ed240b88e67982c73a3994feea61fe43fa9}"
 
 mkdir -p "$(dirname "$report")"
 
@@ -147,6 +152,7 @@ fi
     echo "  canonical-snapshot-count=$closure_count"
     echo "  canonical-closure-hash=$canonical_snapshot_hash"
     echo "  expected-canonical-closure-hash=$expected_closure_hash"
+    echo "  closure-freeze-manifest=$closure_freeze_manifest"
     echo "  source-binding-status=$source_binding_status"
     echo
     echo "provenance-required:"
