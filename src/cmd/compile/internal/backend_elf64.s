@@ -2502,8 +2502,8 @@ func load_source_graph(string path, string source) (source_file, backend_error) 
         return deps_result.unwrap_err()
     }
     if !should_skip_semantic_check(path) {
-        diagnostics := compile.internal.semantic.check_source_file(combined, source)
-        if std.prelude.len(diagnostics) > 0 {
+        semantic_result := compile.internal.semantic.check_source_file(combined, source)
+        if std.prelude.len(semantic_result.errors) > 0 {
             return backend_error { message: "semantic check failed before monomorphization" }
         }
         mono_result := compile.internal.mono.monomorphize_file(combined)
