@@ -1,5 +1,6 @@
 package compile.internal.mono
 import (
+    "compile.internal.semantic"
     "compile.internal.typesys"
     "s"
     "std.option"
@@ -45,6 +46,7 @@ struct monomorphize_file_result {
     file source_file
     mono_cache cache
     int invariant_errors
+    m1_identity_verification m1_gate
 }
 
 struct mono_work_item {
@@ -52,6 +54,7 @@ struct mono_work_item {
     string receiver_type
     string generic_name
     string[] type_args
+    compile.internal.semantic.declaration_ref declaration_ref
 }
 
 struct mono_context {
@@ -59,6 +62,7 @@ struct mono_context {
     mono_work_item[] worklist
     string[] processed
     function_decl[] generated
+    compile.internal.semantic.declaration_ref[] declarations
 }
 
 func new_context() mono_context {
@@ -67,6 +71,17 @@ func new_context() mono_context {
         worklist: mono_work_item[] {},
         processed: string[] {},
         generated: function_decl[] {},
+        declarations: compile.internal.semantic.declaration_ref[] {},
+    }
+}
+
+func new_context_with_declarations(compile.internal.semantic.declaration_ref[] declarations) mono_context {
+    mono_context {
+        cache: new_cache(),
+        worklist: mono_work_item[] {},
+        processed: string[] {},
+        generated: function_decl[] {},
+        declarations: declarations,
     }
 }
 
@@ -188,9 +203,100 @@ func mono_cache_count(mono_cache cache) int {
     len(cache.instances)
 }
 
-func monomorphize_file(source_file file) monomorphize_file_result {
+func find_declaration_ref_for_item(mono_context ctx, string item_kind, string generic_name) compile.internal.semantic.declaration_ref {
+    i := 0
+    for i < len(ctx.declarations) {
+        decl := ctx.declarations[i]
+        // Match declaration_kind to item_kind
+        expected_kind := match item_kind {
+            case "function": compile.internal.semantic.function_kind
+            case "method": compile.internal.semantic.method_kind
+            case "struct": compile.internal.semantic.struct_kind
+            default: compile.internal.semantic.function_kind
+        }
+        // Check if this declaration matches the item
+        if decl.kind == expected_kind && decl.path == generic_name {
+            return decl
+        }
+        i = i + 1
+    }
+    // Return empty declaration_ref if not found
+    compile.internal.semantic.declaration_ref {
+        package_path: "",
+        kind: compile.internal.semantic.function_kind,
+        path: generic_name,
+    }
+}
 
-    ctx := new_context()
+struct m1_identity_verification {
+    bool declarations_received
+    int declarations_count
+    int work_items_with_ref_count
+    int work_items_without_ref_count
+    bool all_refs_have_valid_package_path
+    bool all_refs_have_valid_kind
+    bool all_refs_have_valid_path
+    int work_items_with_provable_source
+    int work_items_with_untraced_source
+    bool all_refs_traced_to_semantic
+}
+
+func verify_identity_threading(mono_context ctx) m1_identity_verification {
+    verification := m1_identity_verification {
+        declarations_received: len(ctx.declarations) > 0,
+        declarations_count: len(ctx.declarations),
+        work_items_with_ref_count: 0,
+        work_items_without_ref_count: 0,
+        all_refs_have_valid_package_path: true,
+        all_refs_have_valid_kind: true,
+        all_refs_have_valid_path: true,
+        work_items_with_provable_source: 0,
+        work_items_with_untraced_source: 0,
+        all_refs_traced_to_semantic: true,
+    }
+    
+    i := 0
+    for i < len(ctx.worklist) {
+        item := ctx.worklist[i]
+        
+        if item.declaration_ref.path != "" {
+            verification.work_items_with_ref_count = verification.work_items_with_ref_count + 1
+            
+            if item.declaration_ref.package_path == "" {
+                verification.all_refs_have_valid_package_path = false
+            }
+            if item.declaration_ref.path == "" {
+                verification.all_refs_have_valid_path = false
+            }
+            
+            // PROVENANCE CHECK: Can this ref be traced back to semantic declarations?
+            found_in_semantic := false
+            j := 0
+            for j < len(ctx.declarations) {
+                if compile.internal.semantic.declaration_ref_equal(item.declaration_ref, ctx.declarations[j]) {
+                    found_in_semantic = true
+                    verification.work_items_with_provable_source = verification.work_items_with_provable_source + 1
+                    break
+                }
+                j = j + 1
+            }
+            
+            if !found_in_semantic {
+                verification.work_items_with_untraced_source = verification.work_items_with_untraced_source + 1
+                verification.all_refs_traced_to_semantic = false
+            }
+        } else {
+            verification.work_items_without_ref_count = verification.work_items_without_ref_count + 1
+        }
+        i = i + 1
+    }
+    
+    verification
+}
+
+func monomorphize_file(source_file file, semantic_result result) monomorphize_file_result {
+
+    ctx := new_context_with_declarations(result.declarations)
     extra_items := item[]()
 
     i := 0
@@ -249,7 +355,9 @@ func monomorphize_file(source_file file) monomorphize_file_result {
         i = i + 1
     }
 
-    monomorphize_file_result { file: file, cache: ctx.cache, invariant_errors: verify_monomorphized_file(file) }
+    m1_verification := verify_identity_threading(ctx)
+
+    monomorphize_file_result { file: file, cache: ctx.cache, invariant_errors: verify_monomorphized_file(file), m1_gate: m1_verification }
 }
 
 func should_keep_after_monomorphization(item value) bool {
@@ -403,7 +511,8 @@ func collect_call_instance_ctx(call_expr call, item[] all_items, mono_context ct
     ctx.cache = result.cache
 
     if existing == "" {
-        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.kindargs })
+        decl_ref := find_declaration_ref_for_item(ctx, "function", generic_name)
+        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.kindargs, declaration_ref: decl_ref })
     }
 
     ctx
@@ -452,7 +561,8 @@ func collect_method_call_instance_ctx(call_expr call, item[] all_items, mono_con
     ctx.cache = result.cache
 
     if existing == "" {
-        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "method", receiver_type: source.receiver_type, generic_name: method_name, type_args: call.kindargs })
+        decl_ref := find_declaration_ref_for_item(ctx, "method", method_name)
+        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "method", receiver_type: source.receiver_type, generic_name: method_name, type_args: call.kindargs, declaration_ref: decl_ref })
     }
 
     ctx
@@ -615,7 +725,8 @@ func collect_call_instance(call_expr call, item[] all_items, mono_cache cache, m
     result := mono_cache_get_or_create(cache, generic_name, call.kindargs)
     cache = result.cache
     if existing == "" && result.instance_name == resolved {
-        worklist = append(worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.kindargs })
+        decl_ref := find_declaration_ref_for_item(ctx, "function", generic_name)
+        worklist = append(worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.kindargs, declaration_ref: decl_ref })
     }
     cache
 }
