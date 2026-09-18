@@ -2506,10 +2506,39 @@ func load_source_graph(string path, string source) (source_file, backend_error) 
         if std.prelude.len(semantic_result.errors) > 0 {
             return backend_error { message: "semantic check failed before monomorphization" }
         }
-        mono_result := compile.internal.mono.monomorphize_file(combined)
+        mono_result := compile.internal.mono.monomorphize_file(combined, semantic_result)
         if mono_result.invariant_errors != 0 {
             return backend_error { message: "monomorphization failed: unresolved generic residue" }
         }
+        
+        // M1.1 Gate: Strict identity threading verification
+        // Proves: DeclarationRef flows from Semantic→Mono as value
+        if !mono_result.m1_gate.declarations_received {
+            return backend_error { message: "M1 gate FAILED: no declarations received from semantic phase" }
+        }
+        if mono_result.m1_gate.declarations_count == 0 {
+            return backend_error { message: "M1 gate WARNING: semantic phase produced no declarations (may be expected for simple programs)" }
+        }
+        if mono_result.m1_gate.work_items_without_ref_count > 0 {
+            return backend_error { message: "M1 gate FAILED: work_items exist without declaration_ref - indicates uninitialized refs" }
+        }
+        if !mono_result.m1_gate.all_refs_have_valid_package_path {
+            return backend_error { message: "M1 gate FAILED: some declaration_refs missing package_path" }
+        }
+        if !mono_result.m1_gate.all_refs_have_valid_path {
+            return backend_error { message: "M1 gate FAILED: some declaration_refs missing path" }
+        }
+        
+        // M1.1 PROVENANCE GATE: Verify refs come from semantic, not reconstructed
+        // This is the critical distinction: having a ref is not enough
+        // The ref must be traceable back to semantic declarations
+        if !mono_result.m1_gate.all_refs_traced_to_semantic {
+            return backend_error { message: "M1 gate FAILED: PROVENANCE - some work_item refs not found in semantic declarations - indicates reconstruction or re-lookup" }
+        }
+        if mono_result.m1_gate.work_items_with_untraced_source > 0 {
+            return backend_error { message: "M1 gate FAILED: PROVENANCE - untraced refs indicate Mono did not use semantic declarations" }
+        }
+        
         return mono_result.file
     }
     combined
