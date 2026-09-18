@@ -98,6 +98,60 @@ struct semantic_error {
     int column
 }
 
+enum declaration_kind {
+    function_kind,
+    struct_kind,
+    enum_kind,
+    trait_kind,
+    const_kind,
+    var_kind,
+    method_kind,
+}
+
+struct struct_binding {
+    string package_path
+    string name
+}
+
+
+
+struct declaration_ref {
+    string package_path
+    declaration_kind kind
+    string path
+}
+
+struct semantic_result {
+    semantic_error[] errors
+    declaration_ref[] declarations
+}
+
+func declaration_ref_equal(declaration_ref a, declaration_ref b) bool {
+    if a.package_path != b.package_path { return false }
+    if a.kind != b.kind { return false }
+    if a.path != b.path { return false }
+    true
+}
+
+func declaration_ref_display(declaration_ref ref) string {
+    if ref.kind == declaration_kind.function_kind {
+        return ref.package_path + ".func:" + ref.path
+    } else if ref.kind == declaration_kind.struct_kind {
+        return ref.package_path + ".struct:" + ref.path
+    } else if ref.kind == declaration_kind.enum_kind {
+        return ref.package_path + ".enum:" + ref.path
+    } else if ref.kind == declaration_kind.trait_kind {
+        return ref.package_path + ".trait:" + ref.path
+    } else if ref.kind == declaration_kind.const_kind {
+        return ref.package_path + ".const:" + ref.path
+    } else if ref.kind == declaration_kind.var_kind {
+        return ref.package_path + ".var:" + ref.path
+    } else if ref.kind == declaration_kind.method_kind {
+        return ref.package_path + ".method:" + ref.path
+    }
+    "unknown"
+}
+
 func check_text(string source) int {
     diagnostics := check_detailed(source);
     if std.prelude.len(diagnostics) > 0 {
@@ -259,23 +313,88 @@ func check_detailed(string source) semantic_error[] {
     finalize_diagnostics(diagnostics)
 }
 
-func check_source_file(source_file file, string source) semantic_error[] {
+func check_source_file(source_file file, string source) semantic_result {
     diagnostics := semantic_error[]()
     if !compile.internal.typesys.rules_consistent() {
         add_error(source, diagnostics, "e0002", "type rules consistency check failed", "package")
-        return finalize_diagnostics(diagnostics)
+        return semantic_result {
+            errors: finalize_diagnostics(diagnostics),
+            declarations: declaration_ref[](),
+        }
     }
     import_roots := collect_import_module_roots(file.uses)
     functions := collect_functions(file)
     traits := collect_traits(file)
     consts := collect_consts(file, functions, traits, source, diagnostics)
+    structs := collect_structs(file)
     validate_function_set(functions, source, diagnostics)
     i := 0
     for i < std.prelude.len(file.items) {
         ignored := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics)
         i = i + 1
     }
-    finalize_diagnostics(diagnostics)
+    declarations := establish_declaration_identities(functions, traits, consts, structs)
+    return semantic_result {
+        errors: finalize_diagnostics(diagnostics),
+        declarations: declarations,
+    }
+}
+
+func collect_structs(source_file file) struct_binding[] {
+    out := struct_binding[]()
+    i := 0
+    for i < std.prelude.len(file.items) {
+        pkg := item_package_at(file.item_packages, i, file.pkg)
+        switch file.items[i] {
+            item.struct(struct_decl) : out = append(out, struct_binding { package_path: pkg, name: struct_decl.name }),
+            _ : {},
+        }
+        i = i + 1
+    }
+    out
+}
+
+
+
+func establish_declaration_identities(function_binding[] functions, trait_binding[] traits, const_binding[] consts, struct_binding[] structs) declaration_ref[] {
+    declarations := declaration_ref[]()
+    i := 0
+    for i < std.prelude.len(functions) {
+        declarations = append(declarations, declaration_ref {
+            package_path: functions[i].package_path,
+            kind: declaration_kind.function_kind,
+            path: functions[i].name,
+        })
+        i = i + 1
+    }
+    i = 0
+    for i < std.prelude.len(traits) {
+        declarations = append(declarations, declaration_ref {
+            package_path: traits[i].package_path,
+            kind: declaration_kind.trait_kind,
+            path: traits[i].name,
+        })
+        i = i + 1
+    }
+    i = 0
+    for i < std.prelude.len(consts) {
+        declarations = append(declarations, declaration_ref {
+            package_path: consts[i].package_path,
+            kind: declaration_kind.const_kind,
+            path: consts[i].name,
+        })
+        i = i + 1
+    }
+    i = 0
+    for i < std.prelude.len(structs) {
+        declarations = append(declarations, declaration_ref {
+            package_path: structs[i].package_path,
+            kind: declaration_kind.struct_kind,
+            path: structs[i].name,
+        })
+        i = i + 1
+    }
+    declarations
 }
 
 func run_preparse_semantic_completeness_checks(string source, semantic_error[] diagnostics) {
