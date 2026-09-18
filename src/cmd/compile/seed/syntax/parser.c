@@ -3467,11 +3467,8 @@ static int looks_like_struct_literal(parser *p) {
 					saw_field = 1;
 					continue;
 				}
-				if (!check(p, TOKEN_COMMA) && !check(p, TOKEN_RBRACE)) {
-					expect_field_name = 0;
-					saw_field = 1;
-					continue;
-				}
+				/* After consuming identifier, must see ':' or nested '{'.
+				   If not, this is not a struct literal. */
 				p->current = saved;
 				return 0;
 			}
