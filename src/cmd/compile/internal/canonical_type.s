@@ -106,7 +106,7 @@ func canonical_type_to_string(canonical_type t) string {
             if t.declared_ref.is_none() {
                 return "unknown"
             }
-            return ir.declaration_ref_display(t.declared_ref.unwrap())
+            return semantic.declaration_ref_display(t.declared_ref.unwrap())
         }
         canonical_type_kind.pointer_kind : {
             if t.child.is_none() {
