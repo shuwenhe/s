@@ -1,5 +1,6 @@
 package compile.internal.typesys
 import (
+    "compile.internal.canonical_type"
     "std"
     "std.prelude"
 )
