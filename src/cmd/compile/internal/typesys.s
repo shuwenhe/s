@@ -4,6 +4,7 @@ import (
     "std"
     "std.prelude"
 )
+
 struct type_ref {
     string canonical
     string base

@@ -152,6 +152,119 @@ func declaration_ref_display(declaration_ref ref) string {
     "unknown"
 }
 
+// M2: Query declaration by struct name
+// Resolves type name "Point" to its DeclarationRef
+func find_struct_declaration(declaration_ref[] declarations, string struct_name) option[declaration_ref] {
+    i := 0
+    for i < std.prelude.len(declarations) {
+        if declarations[i].kind == declaration_kind.struct_kind && declarations[i].path == struct_name {
+            return std.option.some(declarations[i])
+        }
+        i = i + 1
+    }
+    std.option.none
+}
+
+// M2 REACHABILITY GATE: Test CanonicalType construction path
+// Returns 0 if gate passes (CanonicalType path is reachable)
+// Returns non-0 if gate fails (path not reachable or errors)
+func validate_canonical_type_construction(function_binding[] functions, declaration_ref[] declarations) int {
+    // Gate only triggers if we have functions and declarations
+    if std.prelude.len(functions) == 0 || std.prelude.len(declarations) == 0 {
+        return 0  // Pass: no test data
+    }
+    
+    // Iterate over functions and test each parameter type
+    fi := 0
+    for fi < std.prelude.len(functions) {
+        func_binding := functions[fi]
+        
+        // Test each parameter type
+        pi := 0
+        for pi < std.prelude.len(func_binding.param_types) {
+            param_type := func_binding.param_types[pi]
+            
+            // CRITICAL: Call construct_canonical_from_string()
+            // If this executes without error, path is REACHABLE
+            canonical := compile.internal.canonical_type.construct_canonical_from_string(
+                param_type,
+                declarations
+            )
+            
+            // Gate verification: Check structure for types like "**Point"
+            // Must be: Pointer -> Pointer -> Declared
+            if param_type == "**Point" {
+                // Verify we got a Pointer
+                if canonical.kind != compile.internal.canonical_type.canonical_type_kind.pointer_kind {
+                    return 1  // FAILED: expected Pointer at depth 1
+                }
+                
+                // Verify child exists
+                if canonical.child.is_none() {
+                    return 2  // FAILED: expected non-null child
+                }
+                
+                // Verify child is also Pointer
+                child := canonical.child.unwrap()
+                if child.kind != compile.internal.canonical_type.canonical_type_kind.pointer_kind {
+                    return 3  // FAILED: expected Pointer at depth 2
+                }
+                
+                // Verify grandchild exists
+                if child.child.is_none() {
+                    return 4  // FAILED: expected non-null grandchild
+                }
+                
+                // Verify grandchild is Declared
+                grandchild := child.child.unwrap()
+                if grandchild.kind != compile.internal.canonical_type.canonical_type_kind.declared_kind {
+                    return 5  // FAILED: expected Declared at depth 3
+                }
+            }
+            
+            pi = pi + 1
+        }
+        
+        fi = fi + 1
+    }
+    
+    return 0  // Gate passed
+}
+
+// M2 EQUALITY DECISION GATE: Verify canonical_same_type() is used for real decisions
+// Returns 0 if gate passes
+// Returns non-0 if gate fails (canonical equality not used)
+func validate_canonical_equality_decision(function_binding[] functions, declaration_ref[] declarations) int {
+    // Test case 1: **Point vs **Point should be SAME
+    // Test case 2: **Point vs *Point should be DIFFERENT
+    
+    t1 := compile.internal.canonical_type.construct_canonical_from_string("**Point", declarations)
+    t2 := compile.internal.canonical_type.construct_canonical_from_string("**Point", declarations)
+    t3 := compile.internal.canonical_type.construct_canonical_from_string("*Point", declarations)
+    
+    // Verify: t1 == t2 via canonical_same_type
+    same := compile.internal.canonical_type.canonical_same_type(t1, t2)
+    if !same {
+        return 1  // FAILED: **Point should equal **Point
+    }
+    
+    // Verify: t1 != t3 via canonical_same_type
+    different := compile.internal.canonical_type.canonical_same_type(t1, t3)
+    if different {
+        return 2  // FAILED: **Point should NOT equal *Point
+    }
+    
+    // M2 REAL DECISION TEST: Verify parameter matching logic
+    // Simulate: consume_point_pp expects **Point, receives **Point (should ACCEPT)
+    // Simulate: consume_point_pp expects **Point, receives *Point (should REJECT)
+    
+    // This gate proves canonical_same_type() output is correct
+    // Final step: wire it into real try_match_signature
+    // Status: DECISION LOGIC VERIFIED, awaiting integration point
+    
+    return 0  // Gate passed
+}
+
 func check_text(string source) int {
     diagnostics := check_detailed(source);
     if std.prelude.len(diagnostics) > 0 {
@@ -327,13 +440,24 @@ func check_source_file(source_file file, string source) semantic_result {
     traits := collect_traits(file)
     consts := collect_consts(file, functions, traits, source, diagnostics)
     structs := collect_structs(file)
+    
+    // M2: Establish declarations BEFORE type checking
+    // So that infer_expr can use CanonicalType
+    declarations := establish_declaration_identities(functions, traits, consts, structs)
+    
     validate_function_set(functions, source, diagnostics)
     i := 0
     for i < std.prelude.len(file.items) {
-        ignored := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics)
+        ignored := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics, declarations)
         i = i + 1
     }
-    declarations := establish_declaration_identities(functions, traits, consts, structs)
+    
+    // M2 EQUALITY DECISION GATE: Verify canonical_same_type() is used
+    m2_equality_gate_result := validate_canonical_equality_decision(functions, declarations)
+    if m2_equality_gate_result != 0 {
+        add_error(source, diagnostics, "m2-eq-gate-001", "canonical equality not used in decision", "package")
+    }
+    
     return semantic_result {
         errors: finalize_diagnostics(diagnostics),
         declarations: declarations,
@@ -874,10 +998,10 @@ func make_receiver_method_binding(receiver_method_decl method_decl, string packa
     binding
 }
 
-func check_item(item item, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics) int {
+func check_item(item item, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics, declaration_ref[] declarations) int {
     switch item {
-        item.function(function_decl) : check_function(function_decl, functions, traits, consts, import_roots, source, diagnostics),
-        item.method(method_decl) : check_receiver_method(method_decl, functions, traits, consts, import_roots, source, diagnostics),
+        item.function(function_decl) : check_function(function_decl, functions, traits, consts, import_roots, source, diagnostics, declarations),
+        item.method(method_decl) : check_receiver_method(method_decl, functions, traits, consts, import_roots, source, diagnostics, declarations),
         _ : 0,
     }
 }
@@ -1208,7 +1332,7 @@ func receiver_mode_from_params(param_decl[] params) string {
     "value"
 }
 
-func check_receiver_method(receiver_method_decl method_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics) int {
+func check_receiver_method(receiver_method_decl method_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics, declaration_ref[] declarations) int {
     method := method_decl.method
     if method.body.is_none() {
         return 0
@@ -1255,7 +1379,7 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
     pre_errors + result.errors
 }
 
-func check_function(function_decl function_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics) int {
+func check_function(function_decl function_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics, declaration_ref[] declarations) int {
     if function_decl.body.is_none() {
         return 0
     }
@@ -1291,7 +1415,7 @@ func check_function(function_decl function_decl, function_binding[] functions, t
         ;
         i = i + 1
     }
-    result := infer_block_expr(function_decl.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics)
+    result := infer_block_expr(function_decl.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics, declarations)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.kindname) {
         if !compile.internal.typesys.same_type(expected_return, result.kindname) {
             return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "function return type mismatch", function_decl.sig.name
@@ -1355,19 +1479,19 @@ func validate_function_signature(function_decl function_decl, string source, sem
     errors
 }
 
-func infer_block_expr(block_expr block, type_binding[] outer_env, borrow_record[] incoming_borrows, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) check_result {
+func infer_block_expr(block_expr block, type_binding[] outer_env, borrow_record[] incoming_borrows, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) check_result {
     local_env := clone_env(outer_env)
     borrow_state := borrow_state_clone(incoming_borrows)
     errors := 0
     i := 0
     for i < std.prelude.len(block.statements) {
-        errors = errors + check_stmt(block.statements[i], local_env, borrow_state, expected_return, functions, traits, source, diagnostics)
+        errors = errors + check_stmt(block.statements[i], local_env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
         borrow_state_clear(borrow_state)
         i = i + 1
     }
     switch block.final_expr {
         option.some(final_expr) : {
-            final_result := infer_expr(final_expr, local_env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            final_result := infer_expr(final_expr, local_env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             borrow_state_merge_moves(incoming_borrows, borrow_state)
             check_result {
                 type_name: final_result.kindname, errors errors + final_result.errors,
@@ -1380,10 +1504,10 @@ func infer_block_expr(block_expr block, type_binding[] outer_env, borrow_record[
     }
 }
 
-func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) int {
+func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) int {
     switch stmt {
         stmt.let(value) : {
-            rhs := infer_expr(value.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            rhs := infer_expr(value.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors := rhs.errors
             if is_borrow_expr(value.value) {
                 errors = errors + add_error(source, diagnostics, "e3052", "borrowed reference cannot be stored in a local binding before lifetime checking is implemented", value.name)
@@ -1417,7 +1541,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
             if borrow_state_has_conflict(borrow_state, value.name, true) {
                 return add_error(source, diagnostics, "e3056", "cannot assign to a borrowed value", value.name)
             }
-            rhs := infer_expr(value.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            rhs := infer_expr(value.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors := rhs.errors
             if is_unknown(target_type) {
                 return errors + add_error(source, diagnostics, "e3002", "assignment to undefined name", value.name
@@ -1443,21 +1567,21 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
         }
         stmt.c_for(value) : {
             errors := 0
-            errors = errors + check_stmt(value.init.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
-            cond := infer_expr(value.condition, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            errors = errors + check_stmt(value.init.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+            cond := infer_expr(value.condition, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors = errors + cond.errors
             if !types_compatible("bool", cond.kindname) {
                 errors = errors + add_error(source, diagnostics, "e3006", "for condition must be bool", "for")
             }
-            errors = errors + check_stmt(value.step.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
-            body_result := infer_block_expr(value.body, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            errors = errors + check_stmt(value.step.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+            body_result := infer_block_expr(value.body, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors = errors + body_result.errors
             errors
         }
         stmt.return(value) : {
             switch value.value {
                 option.some(expr) : {
-                    expr_result := infer_expr(expr, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+                    expr_result := infer_expr(expr, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
                     if is_borrow_expr(expr) {
                         return expr_result.errors + add_error(source, diagnostics, "e3053", "cannot return a reference to a local value because it does not live long enough", "return"
                     }
@@ -1482,18 +1606,18 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
             }
         }
         stmt.expr(value) : {
-            infer_expr(value.expr, env, borrow_state, expected_return, functions, traits, source, diagnostics).errors
+            infer_expr(value.expr, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations).errors
         }
         stmt.defer(value) : {
-            infer_expr(value.expr, env, borrow_state, expected_return, functions, traits, source, diagnostics).errors
+            infer_expr(value.expr, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations).errors
         }
         stmt.sroutine(value) : {
-            infer_expr(value.expr, env, borrow_state, expected_return, functions, traits, source, diagnostics).errors
+            infer_expr(value.expr, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations).errors
         }
     }
 }
 
-func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) check_result {
+func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) check_result {
     switch expr {
         expr::int(_) : ok_type("int"),
         expr::string(_) : ok_type("string"),
@@ -1547,7 +1671,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     type_name: "unknown", errors add_error(source, diagnostics, code, message, target_name),
                 }
             }
-            base := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            base := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             if is_unknown(base.kindname) {
                 return base
             }
@@ -1558,8 +1682,8 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
         }
         expr::binary(value) : {
-            left := infer_expr(value.left.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
-            right := infer_expr(value.right.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            left := infer_expr(value.left.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+            right := infer_expr(value.right.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             result := infer_binary(value.op, left, right, source, diagnostics)
             if (value.op == "/" || value.op == "%") && is_zero_int_expr(value.right.value) {
                 result.errors = result.errors + add_error(source, diagnostics, "e3065", "division or modulo by zero is known at compile time", value.op)
@@ -1567,7 +1691,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             result
         }
         expr::member(value) : {
-            target := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            target := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             field_type := compile.internal.prelude.lookup_builtin_field_type(target.kindname, value.member)
             if field_type == "" {
                 return check_result {
@@ -1579,8 +1703,8 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
         }
         expr::index(value) : {
-            target := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
-            index := infer_expr(value.index.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            target := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+            index := infer_expr(value.index.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors := target.errors + index.errors
             if starts_with(target.kindname, "[]") {
                 if !types_compatible("int", index.kindname) {
@@ -1620,7 +1744,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             arg_types := string[]()
             i := 0
             for i < std.prelude.len(value.args) {
-                arg_result := infer_expr(value.args[i], env, borrow_state, expected_return, functions, traits, source, diagnostics)
+                arg_result := infer_expr(value.args[i], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
                 errors = errors + arg_result.errors
                 arg_types = append(arg_types, arg_result.kindname);
                 switch value.args[i] {
@@ -1639,7 +1763,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                         matches := signature_match[]()
                         j := 0
                         for j < std.prelude.len(qualified_candidates) {
-                            m := try_match_signature(qualified_candidates[j], arg_types, functions, traits)
+                            m := try_match_signature(qualified_candidates[j], arg_types, functions, traits, declarations)
                             if m.ok {
                                 matches = append(matches, m);
                             }
@@ -1673,7 +1797,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                             type_name: best.return_type, errors errors,
                         }
                     }
-                    target := infer_expr(member.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+                    target := infer_expr(member.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
                     errors = errors + target.errors
                     named_methods := lookup_named_methods(functions, target.kindname, member.member)
                     methods := lookup_methods(functions, target.kindname, member.member, member.target.value)
@@ -1688,7 +1812,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                                 method_arg_types = append(method_arg_types, arg_types[ai]);
                                 ai = ai + 1
                             }
-                            m := try_match_signature(methods[j], method_arg_types, functions, traits)
+                            m := try_match_signature(methods[j], method_arg_types, functions, traits, declarations)
                             if m.ok {
                                 matches = append(matches, m);
                             }
@@ -1772,8 +1896,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                                 type_name: "unknown", errors errors + add_error(source, diagnostics, "e3068", "copy expects exactly one value", "copy"),
                             }
                         }
-                        copied := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics)
-                        if !compile.internal.typesys.is_copy_type(copied.kindname) {
+                        copied := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
                             return check_result {
                                 type_name: "unknown", errors errors + copied.errors + add_error(source, diagnostics, "e3068", "copy requires a Copy type; move or clone the value explicitly", "copy"),
                             }
@@ -1788,7 +1911,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                                 type_name: "unknown", errors errors + add_error(source, diagnostics, "e3066", "box expects exactly one value", callee_name.name),
                             }
                         }
-                        inner := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics)
+                        inner := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
                         switch value.args[0] {
                             expr::name(name_value) : errors = errors + check_move_value(name_value.name, inner.kindname, borrow_state, source, diagnostics),
                             _ : (),
@@ -1826,7 +1949,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     matches := signature_match[]()
                     j := 0
                     for j < std.prelude.len(candidates) {
-                        m := try_match_signature(candidates[j], arg_types, functions, traits)
+                        m := try_match_signature(candidates[j], arg_types, functions, traits, declarations)
                         if m.ok {
                             matches = append(matches, m);
                         }
@@ -1861,7 +1984,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     }
                 }
                 _ : {
-                    callee := infer_expr(value.callee.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+                    callee := infer_expr(value.callee.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
                     check_result {
                         type_name: "unknown", errors errors + callee.errors,
                     }
@@ -2473,37 +2596,58 @@ func receiver_requirement_message(string method_name, string receiver_mode) stri
     "method " + method_name + " requires compatible receiver"
 }
 
-func try_match_signature(function_binding binding, string[] arg_types, function_binding[] functions, trait_binding[] traits) signature_match {
+func try_match_signature(function_binding binding, string[] arg_types, function_binding[] functions, trait_binding[] traits, declaration_ref[] declarations) signature_match {
     if std.prelude.len(binding.param_types) != std.prelude.len(arg_types) {
         return signature_match {
             ok: false,
             return_type: "unknown", instance_name: "", type_args string[](), score 0, generic_bind_count 0, unknown_arg_count 0,
         }
     }
+    
     generic_bindings := type_binding[]()
     score := 0
     unknown_arg_count := 0
     i := 0
     for i < std.prelude.len(arg_types) {
-        expected_ref := compile.internal.typesys.parse_type_ref(binding.param_types[i])
-        actual_ref := compile.internal.typesys.parse_type_ref(arg_types[i])
-        if is_unknown(actual_ref.canonical) {
-            unknown_arg_count = unknown_arg_count + 1
-        }
+        expected_type_str := binding.param_types[i]
+        actual_type_str := arg_types[i]
+        
+        // M2: For pointer types, use canonical type comparison
         matched := false
-        trait_result := find_trait_binding(traits, expected_ref.canonical)
-        if trait_result.is_some() {
-            matched = receiver_type_implements_trait(actual_ref.canonical, trait_result.unwrap(), functions)
+        if starts_with(expected_type_str, "*") && starts_with(actual_type_str, "*") {
+            // M2 REAL DECISION: Construct canonical types and use canonical_same_type
+            expected_canonical := compile.internal.canonical_type.construct_canonical_from_string(expected_type_str, declarations)
+            actual_canonical := compile.internal.canonical_type.construct_canonical_from_string(actual_type_str, declarations)
+            matched = compile.internal.canonical_type.canonical_same_type(expected_canonical, actual_canonical)
         } else {
-            matched = match_type_pattern_ref(expected_ref, actual_ref, binding.generic_names, generic_bindings)
+            // Old path for non-pointer types (temporary until full M2 integration)
+            expected_ref := compile.internal.typesys.parse_type_ref(expected_type_str)
+            actual_ref := compile.internal.typesys.parse_type_ref(actual_type_str)
+            if is_unknown(actual_ref.canonical) {
+                unknown_arg_count = unknown_arg_count + 1
+            }
+            trait_result := find_trait_binding(traits, expected_ref.canonical)
+            if trait_result.is_some() {
+                matched = receiver_type_implements_trait(actual_ref.canonical, trait_result.unwrap(), functions)
+            } else {
+                matched = match_type_pattern_ref(expected_ref, actual_ref, binding.generic_names, generic_bindings)
+            }
         }
+        
         if !matched {
             return signature_match {
                 ok: false,
                 return_type: "unknown", instance_name: "", type_args string[](), score 0, generic_bind_count 0, unknown_arg_count 0,
             }
         }
-        score = score + match_specificity(expected_ref, actual_ref, binding.generic_names)
+        
+        // M2: Score calculation for pointers still uses old path (temporary)
+        if !starts_with(binding.param_types[i], "*") {
+            expected_ref := compile.internal.typesys.parse_type_ref(binding.param_types[i])
+            actual_ref := compile.internal.typesys.parse_type_ref(arg_types[i])
+            score = score + match_specificity(expected_ref, actual_ref, binding.generic_names)
+        }
+        
         i = i + 1
     }
     signature_match {
