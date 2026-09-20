@@ -1200,12 +1200,12 @@ static int host_dispatch_call(
 	}
 	ffi_status = host_dispatch_libc_ffi(name, args, argc, out, err);
 	if (ffi_status != 0) return ffi_status > 0;
-	if (strcmp(name, "host_args") == 0) {
+	if (strcmp(name, "host_args") == 0 || strcmp(name, "std.env.args") == 0) {
 		size_t i;
 		runtime_data_value *items = NULL;
 		(void)args;
 		if (argc != 0) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "host_args expects 0 args");
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s expects 0 args", name);
 			return 0;
 		}
 		if (g_host_argc > 0) {
@@ -1230,10 +1230,10 @@ static int host_dispatch_call(
 		*out = value_make_array_owned(items, (size_t)(g_host_argc > 0 ? g_host_argc : 0));
 		return 1;
 	}
-	if (strcmp(name, "buildcfg_goarch") == 0) {
+	if (strcmp(name, "buildcfg_goarch") == 0 || strcmp(name, "internal.buildcfg.goarch") == 0) {
 		(void)args;
 		if (argc != 0) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "buildcfg_goarch expects 0 args");
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s expects 0 args", name);
 			return 0;
 		}
 		*out = value_make_string_copy("amd64");
@@ -1243,10 +1243,10 @@ static int host_dispatch_call(
 		}
 		return 1;
 	}
-	if (strcmp(name, "buildcfg_check") == 0) {
+	if (strcmp(name, "buildcfg_check") == 0 || strcmp(name, "internal.buildcfg.check") == 0) {
 		(void)args;
 		if (argc != 0) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "buildcfg_check expects 0 args");
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s expects 0 args", name);
 			return 0;
 		}
 		*out = value_make_string_copy("");
@@ -1256,9 +1256,9 @@ static int host_dispatch_call(
 		}
 		return 1;
 	}
-	if (strcmp(name, "arch_dispatch_init") == 0) {
+	if (strcmp(name, "arch_dispatch_init") == 0 || strcmp(name, "compile.internal.arch.dispatch_init") == 0) {
 		if (argc != 1) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "arch_dispatch_init expects 1 arg");
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s expects 1 arg", name);
 			return 0;
 		}
 		*out = value_make_string_copy("");
@@ -1268,10 +1268,10 @@ static int host_dispatch_call(
 		}
 		return 1;
 	}
-	if (strcmp(name, "eprintln") == 0) {
+	if (strcmp(name, "eprintln") == 0 || strcmp(name, "std.io.eprintln") == 0) {
 		char *joined = join_args_text(args, argc);
 		if (!joined) {
-			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "failed to render eprintln argument");
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "failed to render %s argument", name);
 			return 0;
 		}
 		fprintf(stderr, "%s\n", joined);
