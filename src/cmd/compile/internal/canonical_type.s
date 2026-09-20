@@ -117,3 +117,50 @@ func canonical_type_to_string(canonical_type t) string {
     }
     "invalid"
 }
+
+// M2 TypeSystem: Construct CanonicalType from string type and declarations
+// Handles forms like "Point", "Point*", "Point**", etc.
+func construct_canonical_from_string(string type_str, semantic.declaration_ref[] declarations) canonical_type {
+    // Count pointer prefix depth
+    pointer_depth := 0
+    i := 0
+    for i < std.prelude.len(type_str) && string(type_str[i]) == "*" {
+        pointer_depth = pointer_depth + 1
+        i = i + 1
+    }
+    
+    // Extract base type name (remaining after pointer stripping)
+    base_name := type_str[pointer_depth:]
+    
+    // Resolve base name
+    base_canonical := canonical_type {
+        kind: canonical_type_kind.primitive_kind,
+        primitive_name: "",
+        declared_ref: std.option.none,
+        child: std.option.none,
+    }
+    
+    // Check if it's a primitive
+    if base_name == "int" || base_name == "bool" || base_name == "string" {
+        base_canonical = primitive(base_name)
+    } else {
+        // Try to find in declarations
+        found := semantic.find_struct_declaration(declarations, base_name)
+        if found.is_some() {
+            base_canonical = declared(found.unwrap())
+        } else {
+            // Fallback: create as primitive with the name (may be error later)
+            base_canonical = primitive(base_name)
+        }
+    }
+    
+    // Wrap with Pointer for each * prefix
+    result := base_canonical
+    j := 0
+    for j < pointer_depth {
+        result = pointer(result)
+        j = j + 1
+    }
+    
+    result
+}

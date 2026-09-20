@@ -25,6 +25,11 @@ backend	src/cmd/compile/internal/backend/stack_frame.s
 bootstrap	src/cmd/compile/bootstrap/bootstrap.s
 borrow_checker_guide	src/cmd/compile/internal/ownership/borrow_checker_guide.s
 cmd	src/cmd/ast_dump/main.s
+cmd	src/cmd/compile/internal/tests/modular_build_main_seed_compatible.s
+cmd	src/cmd/compile/internal/tests/probe_import_multi.s
+cmd	src/cmd/compile/internal/tests/probe_import_multi_split.s
+cmd	src/cmd/compile/internal/tests/probe_import_single.s
+cmd	src/cmd/compile/internal/tests/probe_qualified_call.s
 cmd	src/cmd/compile/main.s
 cmd	src/cmd/compile/modular_build_main.s
 cmd	src/cmd/compile/selfhost/elf_gen.s
@@ -81,6 +86,7 @@ compile.internal.build.frontend	src/cmd/compile/internal/build/frontend/frontend
 compile.internal.build.parse	src/cmd/compile/internal/build/parse/parse.s
 compile.internal.build.report	src/cmd/compile/internal/build/report/report.s
 compile.internal.build.utils	src/cmd/compile/internal/build/utils.s
+compile.internal.canonical_type	src/cmd/compile/internal/canonical_type.s
 compile.internal.check	src/cmd/compile/internal/check/check.s
 compile.internal.codegen	src/cmd/compile/bootstrap_demo.s
 compile.internal.codegen	src/cmd/compile/internal/codegen/bootstrap_integration.s
@@ -536,6 +542,11 @@ compile.internal.test.testdata.reproducible	src/cmd/compile/internal/test/testda
 compile.internal.test.testdata.reproducible	src/cmd/compile/internal/test/testdata/reproducible/issue38068.s
 compile.internal.tests	src/cmd/compile/internal/tests/test_b1_2_nested_place.s
 compile.internal.tests	src/cmd/compile/internal/tests/test_b1_3_loan_query.s
+compile.internal.tests.probe_stage1_backend_alias	src/cmd/compile/internal/tests/probe_stage1_backend_alias.s
+compile.internal.tests.probe_stage1_backend_call	src/cmd/compile/internal/tests/probe_stage1_backend_call.s
+compile.internal.tests.probe_stage1_backend_elf64	src/cmd/compile/internal/tests/probe_stage1_backend_elf64.s
+compile.internal.tests.probe_stage1_backend_elf64_simple	src/cmd/compile/internal/tests/probe_stage1_backend_simple.s
+compile.internal.tests.probe_stage1_backend_ref	src/cmd/compile/internal/tests/probe_stage1_backend_ref.s
 compile.internal.tests.test_abt	src/cmd/compile/internal/tests/test_abt.s
 compile.internal.tests.test_backend_abi	src/cmd/compile/internal/tests/test_backend_abi.s
 compile.internal.tests.test_golden	src/cmd/compile/internal/tests/test_golden.s
@@ -6279,6 +6290,12 @@ std.tensor_core	src/std/tensor_core.s
 std.text	src/text/text.s
 std.training_io	src/std/training_io.s
 std.vec	src/vec/vec.s
+test	src/cmd/compile/internal/tests/probe_enum_support.s
+test	src/cmd/compile/internal/tests/probe_generic_enum.s
+test	src/cmd/compile/internal/tests/probe_method_support.s
+test	src/cmd/compile/internal/tests/probe_std_import.s
+test	src/cmd/compile/internal/tests/probe_struct_support.s
+test	src/cmd/compile/internal/tests/probe_tuple_support.s
 test_backend	src/cmd/compile/internal/backend/test_backend.s
 test_optimizations	src/cmd/compile/internal/tests/test_optimizations.s
 testing	src/cmd/compile/testing/regression.s
