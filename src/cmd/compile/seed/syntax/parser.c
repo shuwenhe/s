@@ -1969,21 +1969,21 @@ static ast_node *parse_fn_statement(parser *p) {
 			try_new_format = 0;
 			p->current = saved_pos;
 		} else {
-			size_t type_end = p->current + 1;
+			/* Try format: (type name) or (type* name) */
+			size_t has_ptr_or_amp = (check(p, TOKEN_STAR) || check(p, TOKEN_AMP)) ? 1 : 0;
+			size_t type_end = p->current + (has_ptr_or_amp ? 2 : 1);
 			advance_tok(p);
+			if (has_ptr_or_amp) advance_tok(p);
 			if (check(p, TOKEN_IDENTIFIER)) {
-				receiver_type = join_lexemes_range(p->tokens, type_start, type_end);
-				receiver_name = dup_cstr(peek(p)->lexeme);
+				const char *name_ident = peek(p)->lexeme;
 				advance_tok(p);
-				if (!check(p, TOKEN_RPAREN)) {
-					try_new_format = 0;
-					free(receiver_name);
-					free(receiver_type);
-					p->current = saved_pos;
-					receiver_name = NULL;
-					receiver_type = NULL;
-				} else {
+				if (check(p, TOKEN_RPAREN)) {
+					receiver_type = join_lexemes_range(p->tokens, type_start, type_end);
+					receiver_name = dup_cstr(name_ident);
 					try_new_format = 1;
+				} else {
+					try_new_format = 0;
+					p->current = saved_pos;
 				}
 			} else if (check(p, TOKEN_COLON)) {
 				try_new_format = 0;
