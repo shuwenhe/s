@@ -556,8 +556,8 @@ static int construct_qualified_name(ast_node *node, char *buf, size_t buf_size) 
 	buf[0] = '\0';
 	
 	if (node->kind == AST_IDENT_EXPR) {
-		return snprintf(buf, buf_size, "%s", node->as.ident_expr.name) > 0 && 
-		       (size_t)snprintf(buf, buf_size, "%s", node->as.ident_expr.name) < buf_size;
+		len = snprintf(buf, buf_size, "%s", node->as.ident_expr.name);
+		return len > 0 && (size_t)len < buf_size;
 	}
 	
 	if (node->kind == AST_MEMBER_EXPR) {
