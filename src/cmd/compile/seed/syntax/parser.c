@@ -1445,17 +1445,11 @@ static ast_node *parse_for_init(parser *p) {
 static ast_node *parse_if_statement(parser *p) {
 	(void)p;
 	ast_node *node = ast_new(AST_IF_STMT, prev(p)->pos);
-	int has_paren;
 	if (!node) {
 		return NULL;
 	}
-	has_paren = match(p, TOKEN_LPAREN);
 	node->as.if_stmt.condition = parse_expression(p);
 	if (!node->as.if_stmt.condition) {
-		ast_free(node);
-		return NULL;
-	}
-	if (has_paren && !expect(p, TOKEN_RPAREN, ")")) {
 		ast_free(node);
 		return NULL;
 	}
@@ -1476,17 +1470,11 @@ static ast_node *parse_if_statement(parser *p) {
 static ast_node *parse_while_statement(parser *p) {
 	(void)p;
 	ast_node *node = ast_new(AST_WHILE_STMT, prev(p)->pos);
-	int has_paren;
 	if (!node) {
 		return NULL;
 	}
-	has_paren = match(p, TOKEN_LPAREN);
 	node->as.while_stmt.condition = parse_expression(p);
 	if (!node->as.while_stmt.condition) {
-		ast_free(node);
-		return NULL;
-	}
-	if (has_paren && !expect(p, TOKEN_RPAREN, ")")) {
 		ast_free(node);
 		return NULL;
 	}
