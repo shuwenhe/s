@@ -630,7 +630,7 @@ static ast_node *parse_primary(parser *p) {
 			}
 			return node;
 		}
-		node = parse_expression(p);
+		node = parse_assignment(p);
 		if (!node) {
 			return NULL;
 		}
@@ -2803,6 +2803,17 @@ static bool parse_enum_decl(parser *p, ast_vec *out_constants) {
 			return false;
 		}
 		value++;
+		
+		/* Handle tagged enum variants: variant_name(type) */
+		if (match(p, TOKEN_LPAREN)) {
+			int paren_depth = 1;
+			while (paren_depth > 0 && !is_at_end(p)) {
+				if (check(p, TOKEN_LPAREN)) paren_depth++;
+				else if (check(p, TOKEN_RPAREN)) paren_depth--;
+				advance_tok(p);
+			}
+		}
+		
 		if (match(p, TOKEN_ASSIGN)) {
 			if (!match(p, TOKEN_NUMBER)) {
 				parse_error(p, peek(p), "enum values must be integer literals in seed compiler");
@@ -2822,7 +2833,6 @@ static bool parse_enum_decl(parser *p, ast_vec *out_constants) {
 			continue;
 		}
 		need_member = false;
-		break;
 	}
 	if (need_member && !check(p, TOKEN_RBRACE)) {
 		parse_error(p, peek(p), "expected enum member");
