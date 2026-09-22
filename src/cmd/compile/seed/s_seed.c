@@ -424,6 +424,116 @@ static bool default_binary_path_from_source(const char *input_path, char *output
 	output_path[len] = '\0';
 	return true;
 }
+static bool seed_compile_closure(const char *source_root, const char *closure_path, const char *entry_file, const char *output_path, compile_error *err) {
+	FILE *closure_fp = NULL;
+	char line[2048];
+	char **file_paths = NULL;
+	int file_count = 0;
+	int file_capacity = 64;
+	int i;
+	bool ok = false;
+	bool entry_found = false;
+
+	if (!source_root || !closure_path || !entry_file || !output_path) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "closure compilation requires source-root, closure, entry, and output");
+		return false;
+	}
+
+	file_paths = (char **)calloc(file_capacity, sizeof(char *));
+	if (!file_paths) {
+		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory allocating file paths");
+		return false;
+	}
+
+	closure_fp = fopen(closure_path, "rb");
+	if (!closure_fp) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open closure file: %s", closure_path);
+		goto done;
+	}
+
+	while (fgets(line, sizeof(line), closure_fp)) {
+		char full_path[4096];
+		size_t len = strlen(line);
+		char *path_copy;
+
+		while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
+			line[--len] = '\0';
+		}
+
+		if (len == 0) continue;
+
+		snprintf(full_path, sizeof(full_path), "%s/%s", source_root, line);
+
+		if (file_count >= file_capacity) {
+			char **new_paths;
+			file_capacity *= 2;
+			new_paths = (char **)realloc(file_paths, file_capacity * sizeof(char *));
+			if (!new_paths) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				goto done;
+			}
+			file_paths = new_paths;
+		}
+
+		path_copy = (char *)malloc(strlen(full_path) + 1);
+		if (!path_copy) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			goto done;
+		}
+
+		strcpy(path_copy, full_path);
+		file_paths[file_count++] = path_copy;
+	}
+
+	if (closure_fp) {
+		fclose(closure_fp);
+		closure_fp = NULL;
+	}
+
+	if (file_count == 0) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "closure file is empty");
+		goto done;
+	}
+
+	for (i = 0; i < file_count; i++) {
+		if (strstr(file_paths[i], entry_file)) {
+			entry_found = true;
+			break;
+		}
+	}
+
+	if (!entry_found) {
+		char full_entry[4096];
+		snprintf(full_entry, sizeof(full_entry), "%s/%s", source_root, entry_file);
+		if (file_count >= file_capacity) {
+			char **new_paths;
+			file_capacity *= 2;
+			new_paths = (char **)realloc(file_paths, file_capacity * sizeof(char *));
+			if (!new_paths) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				goto done;
+			}
+			file_paths = new_paths;
+		}
+		char *path_copy = (char *)malloc(strlen(full_entry) + 1);
+		if (!path_copy) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			goto done;
+		}
+		strcpy(path_copy, full_entry);
+		file_paths[file_count++] = path_copy;
+	}
+
+	ok = seed_compile_files(file_count, file_paths, output_path, err);
+
+done:
+	if (closure_fp) fclose(closure_fp);
+	for (i = 0; i < file_count; i++) {
+		if (file_paths[i]) free(file_paths[i]);
+	}
+	if (file_paths) free(file_paths);
+	return ok;
+}
 static bool seed_compile_source_to_binary(const char *input_path, const char *output_path, compile_error *err) {
 	char temp_ir[256];
 	bool ok = false;
@@ -445,6 +555,18 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 		printf("compiled %s -> %s\n", argv[2], argv[4]);
+		return 0;
+	}
+	if (argc >= 2 && strcmp(argv[1], "--closure-compile") == 0) {
+		if (argc != 8 || strcmp(argv[2], "--source-root") != 0 || strcmp(argv[4], "--closure") != 0) {
+			fprintf(stderr, "usage: %s --closure-compile --source-root <root> --closure <closure.txt> <entry.s> <output.ir>\n", argv[0]);
+			return 2;
+		}
+		if (!seed_compile_closure(argv[3], argv[5], argv[6], argv[7], &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("compiled closure (canonical implementation closure) -> IR: %s\n", argv[7]);
 		return 0;
 	}
 	if (argc >= 2 && strcmp(argv[1], "--link-ir") == 0) {
