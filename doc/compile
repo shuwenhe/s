@@ -1,0 +1,644 @@
+Source Code (.s)
+     ↓
+┌────────────────────────────────────────┐
+│  Frontend (Syntax Analysis)            │
+│  - Lexical Analysis (Scanner)          │
+│  - Parsing (Parser)                    │
+│  - AST Construction                    │
+└────────────────────────────────────────┘
+     ↓
+┌────────────────────────────────────────┐
+│  Semantic Analysis (Type Checking)     │
+│  - Symbol Resolution                   │
+│  - Type Checking                       │
+│  - Constant Evaluation                 │
+└────────────────────────────────────────┘
+     ↓
+┌────────────────────────────────────────┐
+│  Middle-End (Intermediate Code Gen)    │
+│  - MIR (Middle-end IR) Generation      │
+│  - SSA (Static Single Assignment)      │
+└────────────────────────────────────────┘
+     ↓
+┌────────────────────────────────────────┐
+│  Optimization Pipeline                 │
+│  - Constant Folding                    │
+│  - Dead Code Elimination               │
+│  - Common Subexpression Elimination    │
+│  - Loop Invariant Code Motion          │
+│  - Escape Analysis                     │
+│  - And More...                         │
+└────────────────────────────────────────┘
+     ↓
+┌────────────────────────────────────────┐
+│  Backend (Code Generation)             │
+│  - Register Allocation                 │
+│  - Instruction Selection               │
+│  - Code Emission                       │
+│  - ELF64 Binary Generation             │
+└────────────────────────────────────────┘
+     ↓
+Machine Code (Binary)
+
+## Phase 1: Frontend - Lexical Analysis (Scanner)
+
+**Location**: `src/compiler/frontend/scanner/`
+
+The scanner is the first phase of compilation. It reads source code as a stream of characters and produces a sequence of tokens.
+
+### Responsibilities:
+- **Character Stream Reading**: Read source file into memory
+- **Tokenization**: Break the source into meaningful tokens (keywords, identifiers, literals, operators, etc.)
+- **Position Tracking**: Maintain line and column information for error reporting
+- **Comment Handling**: Filter out comments from token stream
+
+### Key Components:
+
+**Scanner Module** (`scanner.s`):
+- Implements the core scanning algorithm
+- Produces tokens from character stream
+- Handles different token types:
+  - Keywords: `func`, `struct`, `package`, `import`, etc.
+  - Identifiers: variable and function names
+  - Literals: numbers, strings, booleans
+  - Operators: `+`, `-`, `*`, `/`, `=`, `:=`, etc.
+  - Delimiters: `{`, `}`, `(`, `)`, `[`, `]`, etc.
+
+**Error Handling**:
+- Reports unexpected characters
+- Tracks position for error messages
+- Supports recovery for multiple errors
+
+### Example:
+```
+Input:  func add(int a, int b) int { a + b }
+Output: TOKEN_FUNC TOKEN_IDENT("add") TOKEN_LPAREN TOKEN_INT TOKEN_IDENT("a") 
+        TOKEN_COMMA TOKEN_INT TOKEN_IDENT("b") TOKEN_RPAREN TOKEN_INT 
+        TOKEN_LBRACE TOKEN_IDENT("a") TOKEN_PLUS TOKEN_IDENT("b") TOKEN_RBRACE
+```
+
+---
+
+## Phase 2: Frontend - Parsing (Parser)
+
+**Location**: `src/compiler/frontend/parser/`
+
+The parser takes the token stream from the scanner and builds an Abstract Syntax Tree (AST) that represents the program structure.
+
+### Responsibilities:
+- **Syntax Analysis**: Verify tokens follow S language grammar rules
+- **AST Construction**: Build tree representation of program
+- **Error Detection**: Report syntax errors with precise locations
+- **Symbol Collection**: Gather package, function, and type declarations
+
+### Key Components:
+
+**Parser Module** (`parser.s`):
+- Implements recursive descent parsing
+- Constructs AST nodes for:
+  - Package declarations
+  - Import statements
+  - Function declarations
+  - Structure definitions
+  - Expression statements
+  - Control flow (if, for, switch)
+  - Type declarations
+
+**AST Module** (`src/compiler/frontend/ast/`):
+- Abstract Syntax Tree node definitions
+- Node types for all language constructs
+- Tree traversal and manipulation utilities
+- Comment mapping (associates comments with AST nodes)
+
+**Key AST Node Types**:
+- `File`: Root node representing entire source file
+- `Package`: Package declaration
+- `Import`: Import statement
+- `Function`: Function declaration
+- `Struct`: Structure definition
+- `Expression`: Various expression types
+- `Statement`: Various statement types
+- `Block`: Code block with multiple statements
+
+### Parsing Strategy:
+The parser uses **recursive descent** approach:
+1. Parse package declaration
+2. Parse imports
+3. Parse top-level declarations (functions, structs, types)
+4. For each function, parse function body recursively
+5. Build expression trees respecting operator precedence
+
+### Example:
+```
+Input AST for: func add(int a, int b) int { a + b }
+
+File
+├── Package("main")
+└── Function
+    ├── Name: "add"
+    ├── Params: [Param(int, "a"), Param(int, "b")]
+    ├── Returns: int
+    └── Body: Block
+        └── BinaryExpr
+            ├── Left: Ident("a")
+            ├── Op: PLUS
+            └── Right: Ident("b")
+```
+
+### Error Recovery:
+- Attempts to recover from syntax errors
+- Reports first critical error
+- Allows secondary error detection for better diagnostics
+
+---
+
+## Phase 3: Semantic Analysis (Type Checking)
+
+**Location**: `src/compiler/types/`
+
+The semantic analyzer walks the AST and performs type checking, symbol resolution, and semantic validation.
+
+### Responsibilities:
+- **Symbol Resolution**: Resolve identifiers to their declarations
+- **Type Checking**: Verify type compatibility in operations
+- **Type Inference**: Infer types where not explicitly stated
+- **Constant Evaluation**: Evaluate compile-time constants
+- **Scope Management**: Track variable and function scopes
+- **Interface Resolution**: Match implementations to interfaces
+- **Method Binding**: Associate methods with types
+
+### Key Components:
+
+**Checker Module** (`check.s`):
+- Main type checking engine
+- Walks AST and validates each node
+- Manages symbol tables and scopes
+- Reports type errors
+
+**Type System** (`type.s`):
+- Type representation and operations
+- Type compatibility checking
+- Type equivalence rules
+- Generic type instantiation
+
+**Scope Module** (`scope.s`):
+- Scope hierarchy management
+- Symbol table implementation
+- Variable visibility rules
+
+**Common Issues Detected**:
+- Undefined variable references
+- Type mismatches in assignments
+- Invalid function arguments
+- Undefined function calls
+- Field access on non-struct types
+- Duplicate declarations
+
+### Example Type Errors:
+```
+// Error: Cannot add int and string
+x := 5 + "hello"
+
+// Error: Cannot assign string to int
+var a int = "test"
+
+// Error: Undefined identifier
+y := undefined_variable
+```
+
+---
+
+## Phase 4: Middle-End - Intermediate Representation
+
+**Location**: `src/cmd/compile/internal/`
+
+After semantic analysis, the compiler generates intermediate representations to facilitate optimization and code generation.
+
+### IR Levels:
+
+**1. MIR (Middle-end Intermediate Representation)**
+- Higher-level IR close to source structure
+- Represents program as functions and basic blocks
+- Includes control flow information
+- Better for semantic-level optimizations
+
+**2. SSA (Static Single Assignment)**
+- Each variable assigned exactly once
+- Enables advanced data flow analysis
+- Every value has exactly one definition
+- Forms basis for many optimizations
+
+### IR Modules:
+- `compile.internal.mir`: MIR construction and manipulation
+- `compile.internal.ssa`: SSA form conversion and utilities
+- `compile.internal.semantic`: Semantic information preservation
+
+### Example IR Generation:
+```
+Source:
+  if x > 0 {
+    y = x + 1
+  } else {
+    y = x - 1
+  }
+  z = y * 2
+
+IR (Basic Blocks):
+  Block 0:
+    - if (x > 0) goto Block 1 else Block 2
+  
+  Block 1:
+    - y = x + 1
+    - goto Block 3
+  
+  Block 2:
+    - y = x - 1
+    - goto Block 3
+  
+  Block 3:
+    - z = y * 2
+```
+
+---
+
+## Phase 5: Optimization Pipeline
+
+**Location**: `src/cmd/compile/optimization_pipeline.s`
+
+The compiler applies a series of transformations to optimize the code for performance and size.
+
+### Optimization Phases:
+
+#### 1. **SSA Construction** (phase_ssa_construction)
+- Convert IR to Static Single Assignment form
+- Each variable has single assignment
+- Enables later analysis
+
+#### 2. **Constant Folding** (phase_constant_folding)
+- Evaluate constant expressions at compile time
+- Replace expressions with results
+- Example: `5 + 3` → `8`
+
+#### 3. **Dead Code Elimination** (phase_dead_code_elim)
+- Remove unused code and variables
+- Eliminate unreachable branches
+- Clean up after other optimizations
+
+#### 4. **Common Subexpression Elimination** (phase_common_subexpr_elim)
+- Identify identical expressions
+- Compute result once, reuse
+- Example: Both `x+y` references share result
+
+#### 5. **Algebraic Simplification** (phase_algebraic_simp)
+- Apply mathematical identities
+- Examples:
+  - `x + 0` → `x`
+  - `x * 1` → `x`
+  - `x | 0` → `x`
+  - `x & x` → `x`
+
+#### 6. **Loop Invariant Code Motion** (phase_loop_invariant_cm)
+- Move loop-invariant computations outside loop
+- Reduce redundant work in loops
+- Example: `for i := 0; i < n; i++ { y = c + 1 }` → `y = c + 1; for i := 0; ...`
+
+#### 7. **Strength Reduction** (phase_strength_reduction)
+- Replace expensive operations with cheaper ones
+- Examples:
+  - `x * 2` → `x << 1`
+  - `x * constant` → `x + x + ...`
+  - `x / 2` → `x >> 1`
+
+#### 8. **Function Inlining** (phase_inlining)
+- Embed function calls directly
+- Reduce function call overhead
+- Enable further optimizations
+- Subject to size constraints
+
+#### 9. **Escape Analysis** (phase_escape_analysis)
+- Determine which values escape function scope
+- Optimize allocation strategy
+- Stack allocate instead of heap where possible
+
+#### 10. **Devirtualization** (phase_devirt)
+- Resolve virtual function calls statically
+- Replace indirect calls with direct calls
+- Enable further optimizations
+
+#### 11. **Liveness Analysis** (phase_liveness_analysis)
+- Determine variable liveness at each point
+- Used for register allocation
+- Enables dead code elimination
+
+#### 12. **Register Allocation** (phase_register_allocation)
+- Assign variables to physical registers
+- Minimize memory loads/stores
+- Handle spill code generation
+
+### Pipeline Execution:
+Phases are executed in sequence. Each phase:
+- Reads intermediate representation
+- Applies transformations
+- Produces modified IR
+- Records statistics (time, changes)
+
+### Statistics Tracking:
+- `code_size_before` / `code_size_after`: Code size reduction
+- `instr_count_before` / `instr_count_after`: Instruction count reduction
+- `total_optimizations`: Total number of optimizations applied
+- Phase timing for profiling
+
+---
+
+## Phase 6: Backend - Code Generation
+
+**Location**: `src/cmd/compile/internal/backend_elf64.s`
+
+The backend converts the optimized IR into machine code and generates the final executable.
+
+### Responsibilities:
+- **Instruction Selection**: Choose target machine instructions
+- **Register Allocation**: Assign values to registers (if not done in optimization)
+- **Stack Frame Layout**: Arrange local variables and parameters on stack
+- **Code Emission**: Generate binary machine code
+- **Relocation**: Generate relocation information for linker
+- **Debugging Info**: Generate debug symbols (DWARF)
+
+### Target Platforms:
+- **ELF64 (64-bit Executable Linkable Format)**
+  - Primary supported format
+  - Handles x86-64, ARM64, etc.
+  - Module: `compile.internal.backend_elf64`
+
+### Architecture Support:
+Located in `compile.internal.arch`:
+- Architecture dispatch system
+- Platform-specific code generation
+- ABI implementation for each architecture
+
+### Code Generation Steps:
+
+1. **Prologue Generation**:
+   - Stack frame setup
+   - Save callee-saved registers
+   - Initialize local variables
+
+2. **Instruction Emission**:
+   - For each IR operation, emit corresponding machine instruction(s)
+   - Maintain register allocations
+   - Handle memory addressing
+
+3. **Control Flow**:
+   - Emit branch instructions
+   - Resolve jump targets
+   - Generate jump tables for switches
+
+4. **Epilogue Generation**:
+   - Restore saved registers
+   - Deallocate stack frame
+   - Return instruction
+
+5. **Symbol Resolution**:
+   - Record external symbols for linker
+   - Generate symbol table
+   - Handle relocations
+
+6. **ELF Emission**:
+   - Generate ELF headers
+   - Emit sections (.text, .data, .bss, .rodata, .symtab, .strtab)
+   - Output binary file
+
+### Example (Simplified):
+```
+IR:
+  x = 5
+  y = x + 3
+  return y
+
+Machine Code (x86-64):
+  mov rax, 5       // x = 5
+  add rax, 3       // y = x + 3
+  ret              // return y
+```
+
+---
+
+## Compilation Modes
+
+The compiler supports different compilation modes for various use cases:
+
+### 1. **Full Compilation** (`build` command)
+```
+Command: s_compiler build <input.s> -o <output>
+Output: Executable binary
+Pipeline: All phases (frontend → backend)
+```
+
+### 2. **Type Checking Only** (`check` command)
+```
+Command: s_compiler check <input.s>
+Output: Success/failure status
+Pipeline: Frontend + Semantic Analysis
+Purpose: Validate code without generating binary
+```
+
+### 3. **Tokenization** (`tokens` command)
+```
+Command: s_compiler tokens <input.s>
+Output: Token stream
+Pipeline: Frontend (Lexical Analysis only)
+Purpose: Debug lexical analysis
+```
+
+### 4. **AST Generation** (`ast` command)
+```
+Command: s_compiler ast <input.s>
+Output: AST representation
+Pipeline: Frontend (Lexical + Parsing)
+Purpose: Debug syntax analysis
+```
+
+### 5. **Testing** (`test` command)
+```
+Command: s_compiler test [fixtures_root]
+Output: Test results
+Includes:
+  - Semantic analysis test suite
+  - Golden file tests
+  - Backend ABI tests
+  - MIR tests
+  - SSA tests
+  - Pipeline regression tests
+  - Type system tests
+```
+
+---
+
+## Error Handling
+
+Each compilation phase has error detection and reporting:
+
+### Scanner Errors:
+- Unexpected characters
+- Unterminated strings
+- Invalid escape sequences
+- Example: `ERROR: unexpected character '@' at line:col`
+
+### Parser Errors:
+- Syntax violations
+- Unexpected tokens
+- Missing closing brackets
+- Example: `PARSE_FAIL at line:col expected ), got {`
+
+### Semantic Errors:
+- Type mismatches
+- Undefined identifiers
+- Invalid operations
+- Example: `type error: cannot add int and string`
+
+### Backend Errors:
+- Target-specific constraints
+- ABI violations
+- Unsupported operations
+
+### Error Output Format:
+- File path and location (line:column)
+- Error message describing issue
+- Context showing the problematic code
+- Suggestion for fix (when applicable)
+
+---
+
+## Compiler Internals
+
+### Key Data Structures:
+
+**Compilation Context**:
+```
+struct compiler_state {
+    string source              // Source code
+    int pos                    // Current position
+    int line                   // Current line number
+    string token               // Current token
+    string error               // Error message
+    string[] function_names    // Collected function names
+    string[] struct_names      // Collected struct names
+    // ... many more fields for state tracking
+}
+```
+
+**Type Information**:
+- Type names and compatibility
+- Field information for structs
+- Function signatures
+- Generic type parameters
+
+**Symbol Tables**:
+- Variable declarations
+- Function definitions
+- Type definitions
+- Package imports
+
+### Performance Characteristics:
+
+- **Lexical Analysis**: O(n) where n = source length
+- **Parsing**: O(n) for well-formed code
+- **Type Checking**: O(n) to O(n²) depending on complexity
+- **Optimizations**: Varies by phase; generally O(n) to O(n²)
+- **Code Generation**: O(n) to generated code size
+
+---
+
+## Debugging and Development
+
+### Development Workflow:
+
+1. **Write S source code** (`.s` files)
+2. **Run type check** (`check` command) to validate
+3. **Generate AST** (`ast` command) to debug parsing
+4. **Generate tokens** (`tokens` command) for lexical issues
+5. **Full compilation** (`build` command) to generate binary
+6. **Run tests** (`test` command) to verify
+
+### Compiler Flags and Options:
+
+**Build Configuration**:
+- Set via `internal.buildcfg` module
+- Platform detection
+- Optimization level selection (future)
+
+**Architecture Configuration**:
+- Initialized via `arch.dispatch_init()`
+- Sets ABI, register conventions
+- Platform-specific code generation
+
+### Debugging Techniques:
+
+1. **AST Inspection**: Use `ast` command to see parse tree
+2. **Token Inspection**: Use `tokens` command to see token stream
+3. **Intermediate Printing**: Add diagnostic output to IR
+4. **Breakpoint Testing**: Use test suite for isolated testing
+5. **IR Dumping**: Examine intermediate code before/after optimizations
+
+---
+
+## Related Systems
+
+### Package System:
+- Located in `src/compiler/frontend/ast/`
+- Package resolution and organization
+- Import statement handling
+- Symbol visibility across packages
+
+### Type System:
+- Located in `src/compiler/types/`
+- Type representation
+- Type checking algorithms
+- Generic type support
+
+### Constant Evaluation:
+- Located in `src/compiler/constant/`
+- Compile-time constant folding
+- Value representation
+- Kind tracking for constants
+
+### Documentation Generation:
+- Located in `src/compiler/doc/`
+- Comment parsing and formatting
+- HTML documentation generation
+- Comment association with code elements
+
+---
+
+## Future Extensions
+
+Potential areas for compiler enhancement:
+
+1. **Additional Optimization Passes**
+   - Profile-guided optimization
+   - Vectorization passes
+   - Auto-parallelization
+
+2. **New Target Platforms**
+   - WebAssembly backend
+   - ARM64 specific optimizations
+   - RISC-V support
+
+3. **Compiler Features**
+   - Link-time optimization (LTO)
+   - Cross-compilation support
+   - Debugging symbol improvements
+
+4. **Language Features**
+   - Generic types expansion
+   - Advanced trait system
+   - Async/await support
+
+---
+
+## References
+
+- Source location: `/home/shuwen/shuwen/s/src/compiler/`
+- Compiler command: `/home/shuwen/shuwen/s/bin/s_compiler`
+- Language reference: `/home/shuwen/shuwen/s/doc/s`
+- Test suite: `/home/shuwen/shuwen/s/src/cmd/compile/internal/tests/`
