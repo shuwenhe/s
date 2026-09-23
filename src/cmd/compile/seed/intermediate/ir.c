@@ -159,6 +159,7 @@ static const char *current_continue_label(ir_builder *b) {
 	return b->continue_labels[b->loop_depth - 1];
 }
 static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]);
+static bool lower_place_assignment(ir_builder *b, ast_node *target, const char *value, char out[IR_OPERAND_CAP]);
 static bool lower_struct_literal(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
 	size_t i;
 	char alias_literal[IR_OPERAND_CAP];
@@ -368,6 +369,79 @@ static bool lower_binary(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]
 	next_temp(b, out);
 	return emit_ins(b, op, out, lhs, rhs, expr->pos);
 }
+static bool lower_place_assignment(ir_builder *b, ast_node *target, const char *value, char out[IR_OPERAND_CAP]) {
+	if (!target) return false;
+	if (target->kind == AST_IDENT_EXPR) {
+		if (!emit_ins(b, IR_MOV, target->as.ident_expr.name, value, "", target->pos)) {
+			return false;
+		}
+		snprintf(out, IR_OPERAND_CAP, "%s", target->as.ident_expr.name);
+		return true;
+	}
+	if (target->kind == AST_MEMBER_EXPR) {
+		ast_node *object = target->as.member_expr.object;
+		char place[IR_OPERAND_CAP];
+		if (object && object->kind == AST_INDEX_EXPR) {
+			char array_name[IR_OPERAND_CAP];
+			char index_name[IR_OPERAND_CAP];
+			char element_name[IR_OPERAND_CAP];
+			char field_name[IR_OPERAND_CAP];
+			if (!lower_expr(b, object->as.index_expr.object, array_name)) {
+				return false;
+			}
+			if (!lower_expr(b, object->as.index_expr.index, index_name)) {
+				return false;
+			}
+			if (!emit_ins(b, IR_ARG, array_name, "", "", object->pos)) {
+				return false;
+			}
+			if (!emit_ins(b, IR_ARG, index_name, "", "", object->pos)) {
+				return false;
+			}
+			next_temp(b, element_name);
+			if (!emit_ins(b, IR_CALL, element_name, "__index_get", "2", object->pos)) {
+				return false;
+			}
+			if (snprintf(field_name, IR_OPERAND_CAP, "%s.%s", element_name, target->as.member_expr.member) >= IR_OPERAND_CAP) {
+				error_set(b->err, ERR_SEMANTIC, target->pos.line, target->pos.column, "member assignment target too long for IR operand");
+				return false;
+			}
+			if (!emit_ins(b, IR_MOV, field_name, value, "", target->pos)) {
+				return false;
+			}
+			if (!emit_ins(b, IR_INDEX_SET, array_name, index_name, element_name, target->pos)) {
+				return false;
+			}
+			snprintf(out, IR_OPERAND_CAP, "%s", field_name);
+			return true;
+		}
+		if (!lower_expr(b, target, place)) {
+			return false;
+		}
+		if (!emit_ins(b, IR_MOV, place, value, "", target->pos)) {
+			return false;
+		}
+		snprintf(out, IR_OPERAND_CAP, "%s", place);
+		return true;
+	}
+	if (target->kind == AST_INDEX_EXPR) {
+		char object_name[IR_OPERAND_CAP];
+		char index_name[IR_OPERAND_CAP];
+		if (!lower_expr(b, target->as.index_expr.object, object_name)) {
+			return false;
+		}
+		if (!lower_expr(b, target->as.index_expr.index, index_name)) {
+			return false;
+		}
+		if (!emit_ins(b, IR_INDEX_SET, object_name, index_name, value, target->pos)) {
+			return false;
+		}
+		snprintf(out, IR_OPERAND_CAP, "%s", object_name);
+		return true;
+	}
+	error_set(b->err, ERR_SEMANTIC, target->pos.line, target->pos.column, "computed assignment target is not supported for IR");
+	return false;
+}
 static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
 	if (!expr) {
 		out[0] = '\0';
@@ -448,8 +522,10 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			return lower_binary(b, expr, out);
 		case AST_ASSIGN_EXPR:
 			if (expr->as.assign_expr.target_expr) {
-				error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "computed assignment target is not supported for IR");
-				return false;
+				if (!lower_expr(b, expr->as.assign_expr.value, out)) {
+					return false;
+				}
+				return lower_place_assignment(b, expr->as.assign_expr.target_expr, out, out);
 			}
 			if (expr->as.assign_expr.target_object && expr->as.assign_expr.target_index) {
 				char object_name[IR_OPERAND_CAP];
