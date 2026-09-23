@@ -2848,6 +2848,30 @@ static ast_node *parse_switch_statement(parser *p) {
 						return NULL;
 					}
 				}
+			} else if (check(p, TOKEN_DOT)) {
+				// Pattern: namespace.variant(binding), matching canonical AST enum arms.
+				is_pattern_switch = true;
+				do {
+					advance_tok(p);
+					if (!check(p, TOKEN_IDENTIFIER)) {
+						parse_error(p, peek(p), "expected pattern name after .");
+						ast_free(subject);
+						ast_free(root);
+						return NULL;
+					}
+					advance_tok(p);
+				} while (check(p, TOKEN_DOT));
+				if (check(p, TOKEN_LPAREN)) {
+					advance_tok(p);
+					if (check(p, TOKEN_IDENTIFIER)) {
+						advance_tok(p);
+					}
+					if (!expect(p, TOKEN_RPAREN, "expected ')' after binding")) {
+						ast_free(subject);
+						ast_free(root);
+						return NULL;
+					}
+				}
 			} else {
 				// Not a recognized pattern
 				parse_error(p, peek(p), "expected 'case', 'default', pattern, or '_'");

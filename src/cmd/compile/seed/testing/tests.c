@@ -626,6 +626,32 @@ static bool test_parser_switch_variant_pattern_arm(void) {
 	parser_parse_result_free(&result);
 	return ok;
 }
+static bool test_parser_switch_dot_qualified_pattern_arm(void) {
+	const char *src =
+		"fn main() int { "
+		"  stmt := 0; keep := true; "
+		"  switch stmt { "
+		"    item.function(fn_decl) : { keep = false } "
+		"    _ : (), "
+		"  } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
 static bool test_semantic_ok(void) {
 	const char *src = "fn add(a, b) { c := a + b; return c; }";
 	token_vec tokens;
@@ -1380,6 +1406,24 @@ static bool test_runtime_nested_member_return_alias(void) {
 	bool ok = execute_source_main(src, &ret, &err);
 	return ok && ret == 7;
 }
+static bool test_runtime_computed_member_place_assignment(void) {
+	const char *src =
+		"struct EdgeList { int count } "
+		"struct Block { EdgeList terminator } "
+		"struct Graph { Block[] blocks } "
+		"fn main() int { "
+		"  b := Block { terminator: EdgeList { count: 0 } }; "
+		"  g := Graph { blocks: [b] }; "
+		"  i := 0; "
+		"  x := EdgeList { count: 704 }; "
+		"  g.blocks[i].terminator = x; "
+		"  return g.blocks[i].terminator.count; "
+		"}";
+	compile_error err;
+	long ret = 0;
+	bool ok = execute_source_main(src, &ret, &err);
+	return ok && ret == 704;
+}
 static bool test_runtime_function_call_and_tail_expr_return(void) {
 	const char *src =
 		"fn id(x) int { x } "
@@ -1685,6 +1729,7 @@ int main(void) {
 	RUN_TEST(test_parser_receiver_adjacent_member_shorthand_call);
 	RUN_TEST(test_parser_control_flow_and_function);
 	RUN_TEST(test_parser_switch_variant_pattern_arm);
+	RUN_TEST(test_parser_switch_dot_qualified_pattern_arm);
 	RUN_TEST(test_semantic_ok);
 	RUN_TEST(test_semantic_undeclared_symbol);
 	RUN_TEST(test_semantic_return_outside_function);
@@ -1716,6 +1761,7 @@ int main(void) {
 	RUN_TEST(test_runtime_array_len_and_index);
 	RUN_TEST(test_runtime_nested_member_alias_compare);
 	RUN_TEST(test_runtime_nested_member_return_alias);
+	RUN_TEST(test_runtime_computed_member_place_assignment);
 	RUN_TEST(test_runtime_function_call_and_tail_expr_return);
 	RUN_TEST(test_runtime_string_record_collision);
 	RUN_TEST(test_runtime_receiver_method);

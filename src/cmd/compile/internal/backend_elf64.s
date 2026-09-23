@@ -1084,7 +1084,7 @@ func emit_wasm_c_source(write_op[] writes, int exit_code) string {
         lines = append(lines, "  fd_write(" + std.prelude.to_string(writes[i].fd) + ", *iov_" + std.prelude.to_string(i) + ", 1, *nw_" + std.prelude.to_string(i) + ");")
         i = i + 1
     }
-    lines = append(lines, "  return " + std.prelude.to_string(exit_code) + ";"
+    lines = append(lines, "  return " + std.prelude.to_string(exit_code) + ";")
     lines = append(lines, "}")
     lines = append(lines, "")
     lines = append(lines, "void _start(void) {")
@@ -1206,7 +1206,7 @@ func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
     if translated.is_err() {
         lines = append(lines, "status=error")
         lines = append(lines, "reason=" + translated.unwrap_err().message)
-        return join_lines(lines
+        return join_lines(lines)
     }
     lines = append(lines, "status=ok")
     lines = append(lines, "translator=plan9-to-gas")
@@ -1323,7 +1323,7 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
         if one.is_err() {
             return one.unwrap_err()
         }
-        return "    " + gas_op + " " + one.unwrap())
+        return "    " + gas_op + " " + one.unwrap()
     }
     left_raw := trim_spaces(std.prelude.slice(args_text, 0, comma))
     right_raw := trim_spaces(std.prelude.slice(args_text, comma + 1, std.prelude.len(args_text)))
@@ -1421,7 +1421,7 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
         if ends_with_local(imm, "(SB)") {
             return "$" + normalize_go_symbol(std.prelude.slice(imm, 0, std.prelude.len(imm) - std.prelude.len("(SB)")))
         }
-        return "$" + normalize_go_symbol(imm))
+        return "$" + normalize_go_symbol(imm)
     }
     if ends_with_local(operand, "(SB)") {
         sym := normalize_go_symbol(std.prelude.slice(operand, 0, std.prelude.len(operand) - std.prelude.len("(SB)")))
@@ -1434,7 +1434,7 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
     if paren >= 0 && ends_with_local(operand, ")") {
         base := std.prelude.slice(operand, paren + 1, std.prelude.len(operand) - 1)
         if base == "SB" {
-            return normalize_go_symbol(std.prelude.slice(operand, 0, paren)))
+            return normalize_go_symbol(std.prelude.slice(operand, 0, paren))
         }
         mapped_base := map_go_register(base, arch)
         if mapped_base == "" {
@@ -1448,7 +1448,7 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
         return mapped_reg
     }
     if starts_with_local(operand, ".") {
-        return normalize_go_symbol(operand))
+        return normalize_go_symbol(operand)
     }
     normalize_go_symbol(operand)
 }
@@ -1642,7 +1642,7 @@ func estimate_function_stack_slots(function_decl fn_decl, string ssa_text) int {
     if fn_decl.body.is_none() {
         return 0
     }
-    stmt_count := fn_decl.body.unwrap()std.prelude.len(.statements)
+    stmt_count := std.prelude.len(fn_decl.body.unwrap().statements)
     slots := (stmt_count + 1) / 2
     if slots < 1 {
         return 1
