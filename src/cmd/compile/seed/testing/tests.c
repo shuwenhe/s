@@ -600,6 +600,74 @@ static bool test_parser_control_flow_and_function(void) {
 	parser_parse_result_free(&result);
 	return ok;
 }
+
+// Regression tests for struct literal in call arguments (3505 fix)
+static bool test_parser_struct_literal_with_field(void) {
+	const char *src =
+		"fn test() { "
+		"  foo(T { x: 1 }) "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_parser_struct_literal_empty(void) {
+	const char *src =
+		"fn test() { "
+		"  foo(T {}) "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_parser_struct_literal_unit_value_call(void) {
+	const char *src =
+		"fn test() { "
+		"  value.unit(unit_value {}) "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
 static bool test_parser_switch_variant_pattern_arm(void) {
 	const char *src =
 		"fn main() int { "
@@ -1779,6 +1847,10 @@ int main(void) {
 	RUN_TEST(test_parser_member_access_expr);
 	RUN_TEST(test_parser_receiver_adjacent_member_shorthand_call);
 	RUN_TEST(test_parser_control_flow_and_function);
+	// Regression tests for struct literal parser fix (3505)
+	RUN_TEST(test_parser_struct_literal_with_field);
+	RUN_TEST(test_parser_struct_literal_empty);
+	RUN_TEST(test_parser_struct_literal_unit_value_call);
 	RUN_TEST(test_parser_switch_variant_pattern_arm);
 	RUN_TEST(test_parser_switch_dot_qualified_pattern_arm);
 	RUN_TEST(test_parser_switch_expression_rhs);
