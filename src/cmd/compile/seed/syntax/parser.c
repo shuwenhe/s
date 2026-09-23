@@ -2856,7 +2856,7 @@ static ast_node *parse_switch_statement(parser *p) {
 				is_pattern_switch = true;
 				do {
 					advance_tok(p);
-					if (!check(p, TOKEN_IDENTIFIER)) {
+					if (!check(p, TOKEN_IDENTIFIER) && peek(p)->type != TOKEN_RETURN) {
 						parse_error(p, peek(p), "expected pattern name after .");
 						ast_free(subject);
 						ast_free(root);
@@ -3749,7 +3749,6 @@ static int looks_like_struct_literal(parser *p) {
 	int paren_depth = 0;
 	int bracket_depth = 0;
 	int expect_field_name = 1;
-	int saw_field = 0;
 	if (!match(p, TOKEN_LBRACE)) {
 		return 0;
 	}
@@ -3787,21 +3786,18 @@ static int looks_like_struct_literal(parser *p) {
 				}
 				if (match(p, TOKEN_COLON)) {
 					expect_field_name = 0;
-					saw_field = 1;
 					continue;
 				}
 				if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) &&
 					peek_ahead(p, 1)->type == TOKEN_LBRACE) {
 					advance_tok(p);
 					expect_field_name = 0;
-					saw_field = 1;
 					continue;
 				}
 				if (check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_NUMBER) ||
 					check(p, TOKEN_STRING) || check(p, TOKEN_TRUE) ||
 					check(p, TOKEN_FALSE)) {
 					expect_field_name = 0;
-					saw_field = 1;
 					continue;
 				}
 				/* After consuming identifier, must see ':' or nested '{'.
