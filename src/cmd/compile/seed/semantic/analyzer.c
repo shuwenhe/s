@@ -1178,9 +1178,18 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			}
 		case AST_ASSIGN_EXPR:
 			if (node->as.assign_expr.target_expr) {
-				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
-					"computed member assignment target is not supported");
-				return 0;
+				// Computed place assignment: x[i].member = value or x[i].member.deep = value
+				// For now, just analyze both sides without full type checking
+				const char *target_type;
+				if (!analyze_expr(ctx, node->as.assign_expr.target_expr, &target_type)) {
+					return 0;
+				}
+				if (!analyze_expr(ctx, node->as.assign_expr.value, &rhs_type)) {
+					return 0;
+				}
+				// Accept the assignment (semantic layer will do detailed type checking later)
+				*out_type = rhs_type;
+				return 1;
 			}
 			if (node->as.assign_expr.target_object && node->as.assign_expr.target_index) {
 				const char *object_type;
