@@ -258,7 +258,6 @@ void ast_free(ast_node *node) {
 			free(node->as.assign_expr.name);
 			ast_free(node->as.assign_expr.target_object);
 			ast_free(node->as.assign_expr.target_index);
-			ast_free(node->as.assign_expr.target_expr);
 			ast_free(node->as.assign_expr.value);
 			break;
 		case AST_UNARY_EXPR:
@@ -1125,7 +1124,6 @@ static ast_node *parse_assignment(parser *p) {
 	ast_node *expr = parse_logic_or(p);
 	ast_node *node;
 	char *name;
-	int expr_moved = 0;
 	if (!expr) {
 		return NULL;
 	}
@@ -1164,17 +1162,12 @@ static ast_node *parse_assignment(parser *p) {
 	} else if (expr->kind == AST_MEMBER_EXPR) {
 		name = member_expr_to_name(expr);
 		if (!name) {
-			node->as.assign_expr.target_expr = expr;
-			expr_moved = 1;
-		} else {
-			node->as.assign_expr.name = name;
-		}
-		if (!expr_moved && !node->as.assign_expr.name) {
 			ast_free(node);
 			ast_free(expr);
-			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
+			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory or invalid member expression");
 			return NULL;
 		}
+		node->as.assign_expr.name = name;
 	} else {
 		ast_node *rhs = parse_assignment(p);
 		ast_free(node);
@@ -1182,9 +1175,7 @@ static ast_node *parse_assignment(parser *p) {
 		return rhs;
 	}
 	node->as.assign_expr.value = parse_assignment(p);
-	if (!expr_moved) {
-		ast_free(expr);
-	}
+	ast_free(expr);
 	if (!node->as.assign_expr.value) {
 		ast_free(node);
 		return NULL;
@@ -2779,19 +2770,26 @@ static ast_node *parse_switch_statement(parser *p) {
 	}
 	while (!check(p, TOKEN_RBRACE) && !is_at_end(p)) {
 		bool is_default = false;
+		bool is_pattern_switch = false;
 		ast_node *case_value = NULL;
 		ast_node *body;
 		ast_node *arm;
 		if (!check(p, TOKEN_IDENTIFIER)) {
-			parse_error(p, peek(p), "expected 'case' or 'default'");
+			parse_error(p, peek(p), "expected 'case', 'default', or pattern");
 			ast_free(subject);
 			ast_free(root);
 			return NULL;
 		}
-		if (strcmp(peek(p)->lexeme, "default") == 0) {
+		
+		// Determine what kind of switch arm this is
+		const char *word = peek(p)->lexeme;
+		
+		if (strcmp(word, "_") == 0) {
+			// Wildcard pattern
+			is_pattern_switch = true;
 			advance_tok(p);
-			is_default = true;
-		} else if (strcmp(peek(p)->lexeme, "case") == 0) {
+		} else if (strcmp(word, "case") == 0) {
+			// Traditional case: case <expr> :
 			advance_tok(p);
 			case_value = parse_expression(p);
 			if (!case_value) {
@@ -2799,11 +2797,57 @@ static ast_node *parse_switch_statement(parser *p) {
 				ast_free(root);
 				return NULL;
 			}
+		} else if (strcmp(word, "default") == 0) {
+			// Traditional default: default :
+			advance_tok(p);
+			is_default = true;
 		} else {
-			parse_error(p, peek(p), "expected 'case' or 'default'");
-			ast_free(subject);
-			ast_free(root);
-			return NULL;
+			// Could be pattern: Type::Variant or error
+			int start_pos = p->current;
+			advance_tok(p);  // consume first identifier
+			
+			// Check if followed by :: (two COLON tokens)
+			bool found_double_colon = false;
+			if (check(p, TOKEN_COLON)) {
+				advance_tok(p);  // consume first :
+				if (check(p, TOKEN_COLON)) {
+					found_double_colon = true;
+					advance_tok(p);  // consume second :
+				}
+			}
+			
+			if (found_double_colon) {
+				// This is a pattern: Type::Variant(binding)
+				is_pattern_switch = true;
+				
+				// Expect variant name
+				if (!check(p, TOKEN_IDENTIFIER)) {
+					parse_error(p, peek(p), "expected variant name after ::");
+					ast_free(subject);
+					ast_free(root);
+					return NULL;
+				}
+				advance_tok(p);  // consume variant name
+				
+				// Optional binding parameter
+				if (check(p, TOKEN_LPAREN)) {
+					advance_tok(p);  // consume (
+					if (check(p, TOKEN_IDENTIFIER)) {
+						advance_tok(p);  // consume binding name
+					}
+					if (!expect(p, TOKEN_RPAREN, "expected ')' after binding")) {
+						ast_free(subject);
+						ast_free(root);
+						return NULL;
+					}
+				}
+			} else {
+				// Not a recognized pattern
+				parse_error(p, peek(p), "expected 'case', 'default', pattern, or '_'");
+				ast_free(subject);
+				ast_free(root);
+				return NULL;
+			}
 		}
 		if (!expect(p, TOKEN_COLON, "':' after switch arm")) {
 			ast_free(subject);
@@ -2811,38 +2855,103 @@ static ast_node *parse_switch_statement(parser *p) {
 			ast_free(root);
 			return NULL;
 		}
-		body = ast_new(AST_BLOCK, peek(p)->pos);
-		if (!body) {
-			ast_free(subject);
-			ast_free(case_value);
-			ast_free(root);
-			return NULL;
-		}
-		while (!check(p, TOKEN_RBRACE) && !is_at_end(p) &&
-			!(check(p, TOKEN_IDENTIFIER) &&
-			  (strcmp(peek(p)->lexeme, "case") == 0 || strcmp(peek(p)->lexeme, "default") == 0))) {
-			ast_node *stmt = parse_statement(p);
-			if (!stmt || !ast_vec_push(&body->as.block.statements, stmt)) {
-				ast_free(stmt);
+		
+		// For pattern-switch, body can be expression or block
+		// For case/default, body is always statements in a block
+		if (is_pattern_switch && !check(p, TOKEN_LBRACE)) {
+			// Pattern-switch with expression body
+			ast_node *expr = parse_expression(p);
+			if (!expr) {
+				ast_free(subject);
+				ast_free(root);
+				return NULL;
+			}
+			// Wrap in block
+			body = ast_new(AST_BLOCK, expr->pos);
+			if (!body) {
+				ast_free(expr);
+				ast_free(subject);
+				ast_free(root);
+				return NULL;
+			}
+			if (!ast_vec_push(&body->as.block.statements, expr)) {
+				ast_free(expr);
 				ast_free(body);
+				ast_free(subject);
+				ast_free(root);
+				return NULL;
+			}
+		} else {
+			// Block body (pattern-switch with block or case/default)
+			body = ast_new(AST_BLOCK, peek(p)->pos);
+			if (!body) {
 				ast_free(subject);
 				ast_free(case_value);
 				ast_free(root);
 				return NULL;
 			}
+			
+			// For pattern-switch, we need different termination check
+			if (is_pattern_switch) {
+				// Parse block body {..}
+				if (!check(p, TOKEN_LBRACE)) {
+					parse_error(p, peek(p), "expected '{' for block body");
+					ast_free(body);
+					ast_free(subject);
+					ast_free(root);
+					return NULL;
+				}
+				advance_tok(p);  // consume {
+				
+				while (!check(p, TOKEN_RBRACE) && !is_at_end(p)) {
+					ast_node *stmt = parse_statement(p);
+					if (!stmt || !ast_vec_push(&body->as.block.statements, stmt)) {
+						ast_free(stmt);
+						ast_free(body);
+						ast_free(subject);
+						ast_free(root);
+						return NULL;
+					}
+				}
+				
+				if (!expect(p, TOKEN_RBRACE, "'}' after block")) {
+					ast_free(body);
+					ast_free(subject);
+					ast_free(root);
+					return NULL;
+				}
+			} else {
+				// case/default: collect statements until next case/default or }
+				while (!check(p, TOKEN_RBRACE) && !is_at_end(p) &&
+					!(check(p, TOKEN_IDENTIFIER) &&
+					  (strcmp(peek(p)->lexeme, "case") == 0 || strcmp(peek(p)->lexeme, "default") == 0))) {
+					ast_node *stmt = parse_statement(p);
+					if (!stmt || !ast_vec_push(&body->as.block.statements, stmt)) {
+						ast_free(stmt);
+						ast_free(body);
+						ast_free(subject);
+						ast_free(case_value);
+						ast_free(root);
+						return NULL;
+					}
+				}
+				if (body->as.block.statements.len == 0) {
+					parse_error(p, peek(p), "switch arm requires a statement");
+					ast_free(body);
+					ast_free(subject);
+					ast_free(case_value);
+					ast_free(root);
+					return NULL;
+				}
+			}
 		}
-		if (body->as.block.statements.len == 0) {
-			parse_error(p, peek(p), "switch arm requires a statement");
-			ast_free(body);
-			ast_free(subject);
-			ast_free(case_value);
-			ast_free(root);
-			return NULL;
-		}
-		if (is_default) {
+		
+		if (is_default || (is_pattern_switch && (peek(p)->lexeme && strcmp(peek(p)->lexeme, "_") != 0))) {
+			// Default arm or last pattern (should not be wildcard condition)
 			*tail = body;
 			break;
 		}
+		
 		arm = ast_new(AST_IF_STMT, body->pos);
 		if (!arm) {
 			ast_free(subject);
@@ -2851,20 +2960,31 @@ static ast_node *parse_switch_statement(parser *p) {
 			ast_free(root);
 			return NULL;
 		}
-		arm->as.if_stmt.condition = ast_new(AST_BINARY_EXPR, case_value->pos);
-		arm->as.if_stmt.condition->as.binary_expr.op = TOKEN_EQ;
-		arm->as.if_stmt.condition->as.binary_expr.left = clone_expr(subject);
-		arm->as.if_stmt.condition->as.binary_expr.right = case_value;
+		
+		if (is_pattern_switch) {
+			// Pattern-switch: no condition, mark with NULL
+			arm->as.if_stmt.condition = NULL;
+		} else {
+			// case/default: equality condition
+			arm->as.if_stmt.condition = ast_new(AST_BINARY_EXPR, case_value->pos);
+			arm->as.if_stmt.condition->as.binary_expr.op = TOKEN_EQ;
+			arm->as.if_stmt.condition->as.binary_expr.left = clone_expr(subject);
+			arm->as.if_stmt.condition->as.binary_expr.right = case_value;
+		}
+		
 		arm->as.if_stmt.then_branch = body;
 		arm->as.if_stmt.else_branch = NULL;
-		if (!arm->as.if_stmt.condition->as.binary_expr.left) {
+		
+		if (!is_pattern_switch && !arm->as.if_stmt.condition->as.binary_expr.left) {
 			ast_free(arm);
 			ast_free(subject);
 			ast_free(root);
 			return NULL;
 		}
+		
 		*tail = arm;
 		tail = &arm->as.if_stmt.else_branch;
+
 	}
 	if (!expect(p, TOKEN_RBRACE, "'}' after switch")) {
 		ast_free(subject);
