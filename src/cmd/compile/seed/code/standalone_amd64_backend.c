@@ -200,6 +200,7 @@ static void detect_integer_only(standalone_module *module, standalone_function *
 		if (strcmp(ins->op, "MOV") != 0 && strcmp(ins->op, "ADD") != 0 &&
 			strcmp(ins->op, "SUB") != 0 && strcmp(ins->op, "MUL") != 0 &&
 			strcmp(ins->op, "DIV") != 0 && strcmp(ins->op, "MOD") != 0 &&
+			strcmp(ins->op, "BOR") != 0 &&
 			strncmp(ins->op, "CMP_", 4) != 0 && strcmp(ins->op, "JUMP") != 0 &&
 			strcmp(ins->op, "JUMP_IF_FALSE") != 0 && strcmp(ins->op, "LABEL") != 0 &&
 			strcmp(ins->op, "RET") != 0 && strcmp(ins->op, "NOP") != 0) {
@@ -528,6 +529,11 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n    cqo\n    idiv %%rcx\n");
 			if (strcmp(ins->op, "MOD") == 0) fprintf(out, "    mov %%rdx, %%rax\n");
 			fprintf(out, "    lea 1(%%rax,%%rax), %%rax\n");
+			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+		} else if (strcmp(ins->op, "BOR") == 0) {
+			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
+				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
+			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n    or %%rcx, %%rax\n    lea 1(%%rax,%%rax), %%rax\n");
 			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
 		} else if (strncmp(ins->op, "CMP_", 4) == 0) {
 			const char *store_name = ins->result;

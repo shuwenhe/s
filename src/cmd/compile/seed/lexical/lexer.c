@@ -73,6 +73,7 @@ const char *token_type_name(token_type type) {
 		case TOKEN_EQ: return "==";
 		case TOKEN_NE: return "!=";
 		case TOKEN_AMP: return "&";
+		case TOKEN_PIPE: return "|";
 		case TOKEN_SHL: return "<<";
 		case TOKEN_SHR: return ">>";
 		case TOKEN_AND_AND: return "&&";
@@ -394,6 +395,7 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 			case '<': if (!push_simple(out_tokens, TOKEN_LT, "<", tok_line, tok_col)) goto oom; break;
 			case '>': if (!push_simple(out_tokens, TOKEN_GT, ">", tok_line, tok_col)) goto oom; break;
 			case '&': if (!push_simple(out_tokens, TOKEN_AMP, "&", tok_line, tok_col)) goto oom; break;
+			case '|': if (!push_simple(out_tokens, TOKEN_PIPE, "|", tok_line, tok_col)) goto oom; break;
 			case '(': if (!push_simple(out_tokens, TOKEN_LPAREN, "(", tok_line, tok_col)) goto oom; break;
 			case ')': if (!push_simple(out_tokens, TOKEN_RPAREN, ")", tok_line, tok_col)) goto oom; break;
 			case '[': if (!push_simple(out_tokens, TOKEN_LBRACKET, "[", tok_line, tok_col)) goto oom; break;
