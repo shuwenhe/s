@@ -3662,9 +3662,8 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
                 return expr_result.unwrap_err()
             }
             env.push(binding {
-                name: value.name, value expr_result.unwrap(),
+                name: value.name, value: expr_result.unwrap(),
             })
-            ()
         },
         stmt.assign(value) : {
             expr_result := eval_expr(value.value, source, env, writes, runtime)
