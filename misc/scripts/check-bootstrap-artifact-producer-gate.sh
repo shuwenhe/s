@@ -127,6 +127,8 @@ if [ -x "$root/bin/s_seed" ] && [ -f "$closure" ]; then
                     direct_seed_blocker_kind=CANONICAL_SYNTAX_SEED_LEXER_GAP_SINGLE_PIPE
                 elif printf '%s\n' "$direct_seed_single_file_diagnostic" | grep -Eq "expected expression, got :|near ':'"; then
                     direct_seed_blocker_kind=CANONICAL_SYNTAX_SEED_PARSER_GAP_STRUCT_FIELD_INITIALIZER
+                elif printf '%s\n' "$direct_seed_single_file_diagnostic" | grep -q "near '.'"; then
+                    direct_seed_blocker_kind=CANONICAL_SYNTAX_SEED_PARSER_GAP_POSTFIX_LEN_MEMBER_SHORTHAND
                 fi
             fi
         fi

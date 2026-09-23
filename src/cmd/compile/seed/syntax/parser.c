@@ -386,6 +386,7 @@ static int skip_brace_initializer(parser *p);
 static ast_node *parse_struct_literal_expr(parser *p, const token *type_tok);
 static int looks_like_struct_literal(parser *p);
 static ast_node *parse_typed_array_literal(parser *p, const token *type_tok);
+static ast_node *parse_receiver_adjacent_call(parser *p, ast_node *receiver);
 static int parse_dotted_path(parser *p,
 	char *path,
 	size_t path_size,
@@ -677,6 +678,119 @@ static ast_node *parse_typed_array_literal(parser *p, const token *type_tok) {
 	}
 	return node;
 }
+static int looks_like_receiver_adjacent_call(parser *p) {
+	size_t i;
+	if (!check(p, TOKEN_IDENTIFIER)) {
+		return 0;
+	}
+	i = p->current + 1;
+	while (i + 1 < p->tokens->len &&
+		p->tokens->data[i].type == TOKEN_DOT &&
+		p->tokens->data[i + 1].type == TOKEN_IDENTIFIER) {
+		i += 2;
+	}
+	return i < p->tokens->len && p->tokens->data[i].type == TOKEN_LPAREN;
+}
+static ast_node *parse_receiver_adjacent_callee(parser *p) {
+	ast_node *callee;
+	if (!expect(p, TOKEN_IDENTIFIER, "function name")) {
+		return NULL;
+	}
+	callee = ast_new(AST_IDENT_EXPR, prev(p)->pos);
+	if (!callee) {
+		return NULL;
+	}
+	callee->as.ident_expr.name = dup_cstr(prev(p)->lexeme);
+	if (!callee->as.ident_expr.name) {
+		ast_free(callee);
+		return NULL;
+	}
+	while (match(p, TOKEN_DOT)) {
+		ast_node *member = ast_new(AST_MEMBER_EXPR, prev(p)->pos);
+		if (!member) {
+			ast_free(callee);
+			return NULL;
+		}
+		if (!expect(p, TOKEN_IDENTIFIER, "qualified function name")) {
+			ast_free(member);
+			ast_free(callee);
+			return NULL;
+		}
+		member->as.member_expr.object = callee;
+		member->as.member_expr.member = dup_cstr(prev(p)->lexeme);
+		if (!member->as.member_expr.member) {
+			ast_free(member);
+			return NULL;
+		}
+		callee = member;
+	}
+	return callee;
+}
+static ast_node *parse_receiver_shorthand_arg(parser *p, ast_node *receiver) {
+	ast_node *member;
+	if (!match(p, TOKEN_DOT)) {
+		return parse_expression(p);
+	}
+	member = ast_new(AST_MEMBER_EXPR, prev(p)->pos);
+	if (!member) {
+		return NULL;
+	}
+	if (!expect(p, TOKEN_IDENTIFIER, "member name")) {
+		ast_free(member);
+		return NULL;
+	}
+	member->as.member_expr.object = clone_expr(receiver);
+	member->as.member_expr.member = dup_cstr(prev(p)->lexeme);
+	if (!member->as.member_expr.object || !member->as.member_expr.member) {
+		ast_free(member);
+		return NULL;
+	}
+	return member;
+}
+static ast_node *parse_receiver_adjacent_call(parser *p, ast_node *receiver) {
+	ast_node *call = ast_new(AST_CALL_EXPR, peek(p)->pos);
+	if (!call) {
+		ast_free(receiver);
+		return NULL;
+	}
+	call->as.call_expr.callee = parse_receiver_adjacent_callee(p);
+	if (!call->as.call_expr.callee) {
+		ast_free(call);
+		ast_free(receiver);
+		return NULL;
+	}
+	if (!expect(p, TOKEN_LPAREN, "(")) {
+		ast_free(call);
+		ast_free(receiver);
+		return NULL;
+	}
+	if (!check(p, TOKEN_RPAREN)) {
+		for (;;) {
+			ast_node *arg = parse_receiver_shorthand_arg(p, receiver);
+			if (!arg) {
+				ast_free(call);
+				ast_free(receiver);
+				return NULL;
+			}
+			if (!ast_vec_push(&call->as.call_expr.args, arg)) {
+				ast_free(arg);
+				ast_free(call);
+				ast_free(receiver);
+				return NULL;
+			}
+			if (!match(p, TOKEN_COMMA)) {
+				break;
+			}
+		}
+	}
+	if (!expect(p, TOKEN_RPAREN, ")")) {
+		ast_free(call);
+		ast_free(receiver);
+		return NULL;
+	}
+	ast_free(receiver);
+	return call;
+}
 static ast_node *parse_call(parser *p) {
 	(void)p;
 	ast_node *expr = parse_primary(p);
@@ -830,6 +944,13 @@ static ast_node *parse_call(parser *p) {
 				return NULL;
 			}
 			expr = member;
+			continue;
+		}
+		if (looks_like_receiver_adjacent_call(p)) {
+			expr = parse_receiver_adjacent_call(p, expr);
+			if (!expr) {
+				return NULL;
+			}
 			continue;
 		}
 		break;
@@ -3467,6 +3588,13 @@ static int looks_like_struct_literal(parser *p) {
 				if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) &&
 					peek_ahead(p, 1)->type == TOKEN_LBRACE) {
 					advance_tok(p);
+					expect_field_name = 0;
+					saw_field = 1;
+					continue;
+				}
+				if (check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_NUMBER) ||
+					check(p, TOKEN_STRING) || check(p, TOKEN_TRUE) ||
+					check(p, TOKEN_FALSE)) {
 					expect_field_name = 0;
 					saw_field = 1;
 					continue;
