@@ -3817,7 +3817,8 @@ static int looks_like_struct_literal(parser *p) {
 		advance_tok(p);
 	}
 	p->current = saved;
-	return brace_depth == 0 && paren_depth == 0 && bracket_depth == 0 && saw_field;
+	// Allow both non-empty struct literals (with fields) and empty struct literals
+	return brace_depth == 0 && paren_depth == 0 && bracket_depth == 0;
 }
 static int skip_brace_initializer(parser *p) {
 	size_t saved = p->current;
