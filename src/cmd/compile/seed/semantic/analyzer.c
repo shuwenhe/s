@@ -1177,6 +1177,11 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					return 0;
 			}
 		case AST_ASSIGN_EXPR:
+			if (node->as.assign_expr.target_expr) {
+				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+					"computed member assignment target is not supported");
+				return 0;
+			}
 			if (node->as.assign_expr.target_object && node->as.assign_expr.target_index) {
 				const char *object_type;
 				const char *index_type;

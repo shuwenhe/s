@@ -258,6 +258,7 @@ void ast_free(ast_node *node) {
 			free(node->as.assign_expr.name);
 			ast_free(node->as.assign_expr.target_object);
 			ast_free(node->as.assign_expr.target_index);
+			ast_free(node->as.assign_expr.target_expr);
 			ast_free(node->as.assign_expr.value);
 			break;
 		case AST_UNARY_EXPR:
@@ -1124,6 +1125,7 @@ static ast_node *parse_assignment(parser *p) {
 	ast_node *expr = parse_logic_or(p);
 	ast_node *node;
 	char *name;
+	int expr_moved = 0;
 	if (!expr) {
 		return NULL;
 	}
@@ -1162,12 +1164,17 @@ static ast_node *parse_assignment(parser *p) {
 	} else if (expr->kind == AST_MEMBER_EXPR) {
 		name = member_expr_to_name(expr);
 		if (!name) {
+			node->as.assign_expr.target_expr = expr;
+			expr_moved = 1;
+		} else {
+			node->as.assign_expr.name = name;
+		}
+		if (!expr_moved && !node->as.assign_expr.name) {
 			ast_free(node);
 			ast_free(expr);
-			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory or invalid member expression");
+			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
 			return NULL;
 		}
-		node->as.assign_expr.name = name;
 	} else {
 		ast_node *rhs = parse_assignment(p);
 		ast_free(node);
@@ -1175,7 +1182,9 @@ static ast_node *parse_assignment(parser *p) {
 		return rhs;
 	}
 	node->as.assign_expr.value = parse_assignment(p);
-	ast_free(expr);
+	if (!expr_moved) {
+		ast_free(expr);
+	}
 	if (!node->as.assign_expr.value) {
 		ast_free(node);
 		return NULL;
