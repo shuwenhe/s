@@ -22,6 +22,7 @@ typedef enum ir_op {
 	IR_DIV,
 	IR_MOD,
 	IR_BAND,
+	IR_BOR,
 	IR_SHL,
 	IR_SHR,
 	IR_CMP_EQ,

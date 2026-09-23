@@ -81,6 +81,10 @@ selfhost_artifact_verdict=REFERENCE_ONLY
 
 direct_seed_closure_status=NOT_RUN
 direct_seed_closure_diagnostic=NONE
+direct_seed_closure_origin=UNKNOWN
+direct_seed_single_file_status=NOT_RUN
+direct_seed_single_file_diagnostic=NONE
+direct_seed_blocker_kind=UNKNOWN
 if [ -x "$root/bin/s_seed" ] && [ -f "$closure" ]; then
     direct_seed_tmp="${TMPDIR:-/tmp}/s-direct-seed-closure.$$"
     direct_seed_log="$direct_seed_tmp.log"
@@ -89,8 +93,45 @@ if [ -x "$root/bin/s_seed" ] && [ -f "$closure" ]; then
     else
         direct_seed_closure_status=FAIL
         direct_seed_closure_diagnostic=$(sed -n '1p' "$direct_seed_log" | sed 's/[[:cntrl:]]//g')
+        direct_seed_line=$(printf '%s\n' "$direct_seed_closure_diagnostic" | sed -n 's/.* at \([0-9][0-9]*\):\([0-9][0-9]*\)\(:.*\| .*\)/\1/p')
+        direct_seed_col=$(printf '%s\n' "$direct_seed_closure_diagnostic" | sed -n 's/.* at \([0-9][0-9]*\):\([0-9][0-9]*\)\(:.*\| .*\)/\2/p')
+        if [ -n "$direct_seed_line" ] && [ -n "$direct_seed_col" ]; then
+            direct_seed_origin=$(awk -v target="$direct_seed_line" -v col="$direct_seed_col" '
+                BEGIN { cum = 0 }
+                {
+                    file = $0
+                    cmd = "wc -l < \"" file "\""
+                    cmd | getline lines
+                    close(cmd)
+                    start = cum + 1
+                    end = cum + lines
+                    if (target >= start && target <= end) {
+                        print file ":" (target - cum) ":" col
+                        exit
+                    }
+                    cum = end + 1
+                }
+            ' "$closure")
+            direct_seed_closure_origin=${direct_seed_origin:-UNKNOWN}
+            if [ "$direct_seed_closure_origin" != UNKNOWN ]; then
+                direct_seed_file=${direct_seed_closure_origin%%:*}
+                direct_seed_probe_ir="$direct_seed_tmp.single.ir"
+                direct_seed_probe_log="$direct_seed_tmp.single.log"
+                if "$root/bin/s_seed" "$root/$direct_seed_file" "$direct_seed_probe_ir" >"$direct_seed_probe_log" 2>&1; then
+                    direct_seed_single_file_status=UNEXPECTED_PASS
+                else
+                    direct_seed_single_file_status=FAIL
+                    direct_seed_single_file_diagnostic=$(sed -n '1p' "$direct_seed_probe_log" | sed 's/[[:cntrl:]]//g')
+                fi
+                if printf '%s\n' "$direct_seed_single_file_diagnostic" | grep -q 'illegal character: |'; then
+                    direct_seed_blocker_kind=CANONICAL_SYNTAX_SEED_LEXER_GAP_SINGLE_PIPE
+                elif printf '%s\n' "$direct_seed_single_file_diagnostic" | grep -Eq "expected expression, got :|near ':'"; then
+                    direct_seed_blocker_kind=CANONICAL_SYNTAX_SEED_PARSER_GAP_STRUCT_FIELD_INITIALIZER
+                fi
+            fi
+        fi
     fi
-    rm -f "$direct_seed_tmp.ir" "$direct_seed_log"
+    rm -f "$direct_seed_tmp.ir" "$direct_seed_log" "$direct_seed_tmp.single.ir" "$direct_seed_tmp.single.log"
 fi
 
 ir_producer_exists=NO
@@ -215,6 +256,10 @@ fi
     echo "  selfhost-artifact-verdict=$selfhost_artifact_verdict"
     echo "  direct-seed-closure-status=$direct_seed_closure_status"
     echo "  direct-seed-closure-diagnostic=$direct_seed_closure_diagnostic"
+    echo "  direct-seed-closure-origin=$direct_seed_closure_origin"
+    echo "  direct-seed-single-file-status=$direct_seed_single_file_status"
+    echo "  direct-seed-single-file-diagnostic=$direct_seed_single_file_diagnostic"
+    echo "  direct-seed-blocker-kind=$direct_seed_blocker_kind"
     echo
     echo "selected-root=$selected_root"
     echo
@@ -228,6 +273,7 @@ fi
     echo
     echo "DIRECT_SEED_CLOSURE=REJECTED"
     echo "DIRECT_SEED_CLOSURE_STATUS=$direct_seed_closure_status"
+    echo "DIRECT_SEED_BLOCKER_KIND=$direct_seed_blocker_kind"
     echo "SEED_REASSIGNMENT_FIX=FORBIDDEN_BY_CURRENT_GATE"
 } | tee "$report"
 
