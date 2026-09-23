@@ -2717,6 +2717,10 @@ static ast_node *clone_expr(const ast_node *node) {
 			copy->as.member_expr.object = clone_expr(node->as.member_expr.object);
 			copy->as.member_expr.member = dup_cstr(node->as.member_expr.member);
 			break;
+		case AST_INDEX_EXPR:
+			copy->as.index_expr.object = clone_expr(node->as.index_expr.object);
+			copy->as.index_expr.index = clone_expr(node->as.index_expr.index);
+			break;
 		case AST_BINARY_EXPR:
 			copy->as.binary_expr.op = node->as.binary_expr.op;
 			copy->as.binary_expr.left = clone_expr(node->as.binary_expr.left);

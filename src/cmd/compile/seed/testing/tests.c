@@ -517,7 +517,7 @@ static bool test_parser_member_access_expr(void) {
 	return ok;
 }
 static bool test_parser_receiver_adjacent_member_shorthand_call(void) {
-	const char *src = "fn main() int { a := 1; println(a len(.data)); return 0; }";
+	const char *src = "fn main() int { a := 1; i := 0; println(a[i]len(.data)); return 0; }";
 	token_vec tokens;
 	compile_error err;
 	parse_result result;
@@ -542,9 +542,9 @@ static bool test_parser_receiver_adjacent_member_shorthand_call(void) {
 		ok = fn->kind == AST_FN_STMT;
 		ok = ok && fn->as.fn_stmt.body != NULL;
 		ok = ok && fn->as.fn_stmt.body->kind == AST_BLOCK;
-		ok = ok && fn->as.fn_stmt.body->as.block.statements.len >= 2;
+		ok = ok && fn->as.fn_stmt.body->as.block.statements.len >= 3;
 		if (ok) {
-			stmt = fn->as.fn_stmt.body->as.block.statements.data[1];
+			stmt = fn->as.fn_stmt.body->as.block.statements.data[2];
 			ok = stmt->kind == AST_EXPR_STMT;
 			if (ok) {
 				outer_call = stmt->as.expr_stmt.expr;
@@ -559,8 +559,7 @@ static bool test_parser_receiver_adjacent_member_shorthand_call(void) {
 					ok = ok && callee->kind == AST_IDENT_EXPR;
 					ok = ok && strcmp(callee->as.ident_expr.name, "len") == 0;
 					ok = ok && arg->kind == AST_MEMBER_EXPR;
-					ok = ok && arg->as.member_expr.object->kind == AST_IDENT_EXPR;
-					ok = ok && strcmp(arg->as.member_expr.object->as.ident_expr.name, "a") == 0;
+					ok = ok && arg->as.member_expr.object->kind == AST_INDEX_EXPR;
 					ok = ok && strcmp(arg->as.member_expr.member, "data") == 0;
 				}
 			}
