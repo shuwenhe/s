@@ -278,21 +278,21 @@ func build_object(string path, string output, string ssa_margin_override) int {
 func build(string path, string output, string ssa_margin_override, bool nostdlib) int {
     source_result := std.fs.read_to_string(path)
     if source_result.is_err() {
-        return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message
+        return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message)
     }
     source := source_result.unwrap()
     if is_compiler_runtime_entry(path, source) {
-        return build_compiler_runtime_launcher(output
+        return build_compiler_runtime_launcher(output)
     }
     parsed_result := load_source_graph(path, source)
     if parsed_result.is_err() {
-        return report_failure(parsed_result.unwrap_err().message
+        return report_failure(parsed_result.unwrap_err().message)
     }
     parsed := parsed_result.unwrap()
     if !should_skip_semantic_check(path) {
         safety := compile.internal.safety.prove_safety(source)
         if !safety.proven {
-            return report_failure("safety proof failed: " + safety.summary
+            return report_failure("safety proof failed: " + safety.summary)
         }
     }
     mir_result := compile.internal.ir.lower.lower_main_to_mir(parsed)
@@ -303,52 +303,52 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     arch := buildcfg_goarch()
     margin_result := parse_ssa_margin_override(ssa_margin_override)
     if margin_result.is_err() {
-        return report_failure(margin_result.unwrap_err().message
+        return report_failure(margin_result.unwrap_err().message)
     }
     dominant_margin := margin_result.unwrap()
     midend := run_midend_pipeline(graph)
     ssa_program := build_ssa_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
     ssa_text := dump_ssa_pipeline(ssa_program)
     if ssa_text == "" {
-        return report_failure("ssa lowering failed: empty pipeline"
+        return report_failure("ssa lowering failed: empty pipeline")
     }
     debug_map := dump_ssa_debug_map(ssa_program)
     if debug_map == "" {
-        return report_failure("ssa debug map failed: empty map"
+        return report_failure("ssa debug map failed: empty map")
     }
     abi_runtime_check := validate_ssa_abi_contracts(arch, ssa_text)
     if abi_runtime_check.is_err() {
-        return report_failure(abi_runtime_check.unwrap_err().message
+        return report_failure(abi_runtime_check.unwrap_err().message)
     }
     abi_check := validate_abi_coverage(arch)
     if abi_check.is_err() {
-        return report_failure(abi_check.unwrap_err().message
+        return report_failure(abi_check.unwrap_err().message)
     }
     writes_result := compile_writes(parsed, graph)
     if writes_result.is_err() {
-        return report_failure(writes_result.unwrap_err().message
+        return report_failure(writes_result.unwrap_err().message)
     }
     exit_code_result := compile_exit_code(parsed, graph)
     if exit_code_result.is_err() {
-        return report_failure(exit_code_result.unwrap_err().message
+        return report_failure(exit_code_result.unwrap_err().message)
     }
     runtime_metrics_result := compile_runtime_metrics(parsed, graph)
     if runtime_metrics_result.is_err() {
-        return report_failure(runtime_metrics_result.unwrap_err().message
+        return report_failure(runtime_metrics_result.unwrap_err().message)
     }
     temp_dir_result := std.fs.make_temp_dir("s-build-")
     if temp_dir_result.is_err() {
-        return report_failure("could not create temporary output directory: " + temp_dir_result.unwrap_err().message
+        return report_failure("could not create temporary output directory: " + temp_dir_result.unwrap_err().message)
     }
     temp_dir := temp_dir_result.unwrap()
     if arch == "wasm" {
         wasm_result := build_wasm_object_chain(temp_dir, output, writes_result.unwrap(), exit_code_result.unwrap())
         if wasm_result.is_err() {
-            return report_failure(wasm_result.unwrap_err().message
+            return report_failure(wasm_result.unwrap_err().message)
         }
         wasm_binary_check := validate_wasi_binary_artifact(output)
         if wasm_binary_check.is_err() {
-            return report_failure(wasm_binary_check.unwrap_err().message
+            return report_failure(wasm_binary_check.unwrap_err().message)
         }
     } else {
         asm_text := emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
@@ -356,7 +356,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         obj_path := temp_dir + "/out.o"
         write_result := std.fs.write_text_file(asm_path, asm_text)
         if write_result.is_err() {
-            return report_failure("failed to write assembly: " + write_result.unwrap_err().message
+            return report_failure("failed to write assembly: " + write_result.unwrap_err().message)
         }
         as_argv := string[]()
         as_argv = append(as_argv, "as");
@@ -365,7 +365,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         as_argv = append(as_argv, asm_path);
         as_result := std.process.run_process(as_argv)
         if as_result.is_err() {
-            return report_failure("toolchain failed: " + as_result.unwrap_err().message
+            return report_failure("toolchain failed: " + as_result.unwrap_err().message)
         }
         ld_argv := string[]()
         ld_argv = append(ld_argv, "ld")
@@ -380,108 +380,108 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
         ld_argv = append(ld_argv, obj_path)
         ld_result := std.process.run_process(ld_argv)
         if ld_result.is_err() {
-            return report_failure("toolchain failed: " + ld_result.unwrap_err().message
+            return report_failure("toolchain failed: " + ld_result.unwrap_err().message)
         }
     }
     dbg_path := output + ".dbg"
     dbg_payload := "ssa\n" + ssa_text + "\n\ndebug\n" + debug_map
     dbg_write := std.fs.write_text_file(dbg_path, dbg_payload)
     if dbg_write.is_err() {
-        return report_failure("failed to write debug artifact: " + dbg_write.unwrap_err().message
+        return report_failure("failed to write debug artifact: " + dbg_write.unwrap_err().message)
     }
     stackmap_path := output + ".stackmap"
     stackmap_payload := build_stackmap_artifact(arch, parsed, ssa_text, debug_map)
     stackmap_write := std.fs.write_text_file(stackmap_path, stackmap_payload)
     if stackmap_write.is_err() {
-        return report_failure("failed to write stack map artifact: " + stackmap_write.unwrap_err().message
+        return report_failure("failed to write stack map artifact: " + stackmap_write.unwrap_err().message)
     }
     abi_path := output + ".abi"
     abi_payload := build_abi_behavior_artifact(arch, parsed)
     abi_write := std.fs.write_text_file(abi_path, abi_payload)
     if abi_write.is_err() {
-        return report_failure("failed to write ABI behavior artifact: " + abi_write.unwrap_err().message
+        return report_failure("failed to write ABI behavior artifact: " + abi_write.unwrap_err().message)
     }
     abi_emit_path := output + ".abi.emit"
     abi_emit_payload := build_abi_emit_plan(arch, parsed)
     abi_emit_write := std.fs.write_text_file(abi_emit_path, abi_emit_payload)
     if abi_emit_write.is_err() {
-        return report_failure("failed to write ABI emission artifact: " + abi_emit_write.unwrap_err().message
+        return report_failure("failed to write ABI emission artifact: " + abi_emit_write.unwrap_err().message)
     }
     abi_matrix_payload := build_abi_machine_matrix_artifact(arch, parsed, ssa_text)
     abi_matrix_check := validate_abi_machine_matrix(abi_matrix_payload)
     if abi_matrix_check.is_err() {
-        return report_failure(abi_matrix_check.unwrap_err().message
+        return report_failure(abi_matrix_check.unwrap_err().message)
     }
     abi_matrix_path := output + ".abi.matrix"
     abi_matrix_write := std.fs.write_text_file(abi_matrix_path, abi_matrix_payload)
     if abi_matrix_write.is_err() {
-        return report_failure("failed to write ABI matrix artifact: " + abi_matrix_write.unwrap_err().message
+        return report_failure("failed to write ABI matrix artifact: " + abi_matrix_write.unwrap_err().message)
     }
     dwarf_path := output + ".dwarf"
     dwarf_payload := build_dwarf_like_artifact(parsed, ssa_text, debug_map)
     dwarf_check := validate_dwarf_consumability(dwarf_payload, ssa_text)
     if dwarf_check.is_err() {
-        return report_failure(dwarf_check.unwrap_err().message
+        return report_failure(dwarf_check.unwrap_err().message)
     }
     dwarf_write := std.fs.write_text_file(dwarf_path, dwarf_payload)
     if dwarf_write.is_err() {
-        return report_failure("failed to write DWARF-like artifact: " + dwarf_write.unwrap_err().message
+        return report_failure("failed to write DWARF-like artifact: " + dwarf_write.unwrap_err().message)
     }
     cfi_path := output + ".cfi"
     cfi_payload := build_cfi_artifact(arch, ssa_text, debug_map)
     cfi_check := validate_cfi_artifact(cfi_payload)
     if cfi_check.is_err() {
-        return report_failure(cfi_check.unwrap_err().message
+        return report_failure(cfi_check.unwrap_err().message)
     }
     cfi_write := std.fs.write_text_file(cfi_path, cfi_payload)
     if cfi_write.is_err() {
-        return report_failure("failed to write CFI artifact: " + cfi_write.unwrap_err().message
+        return report_failure("failed to write CFI artifact: " + cfi_write.unwrap_err().message)
     }
     drop_path := output + ".dropmap"
     drop_payload := build_drop_metadata_artifact(arch, parsed, ssa_text)
     drop_check := validate_drop_contract_chain(drop_payload, parsed, ssa_text)
     if drop_check.is_err() {
-        return report_failure(drop_check.unwrap_err().message
+        return report_failure(drop_check.unwrap_err().message)
     }
     drop_write := std.fs.write_text_file(drop_path, drop_payload)
     if drop_write.is_err() {
-        return report_failure("failed to write drop metadata artifact: " + drop_write.unwrap_err().message
+        return report_failure("failed to write drop metadata artifact: " + drop_write.unwrap_err().message)
     }
     export_path := output + ".export"
     export_payload := build_export_data_artifact(parsed, arch)
     export_write := std.fs.write_text_file(export_path, export_payload)
     if export_write.is_err() {
-        return report_failure("failed to write export data artifact: " + export_write.unwrap_err().message
+        return report_failure("failed to write export data artifact: " + export_write.unwrap_err().message)
     }
     toolchain_path := output + ".toolchain"
     toolchain_payload := build_toolchain_compat_artifact(parsed, arch)
     toolchain_check := validate_toolchain_compat_artifact(toolchain_payload)
     if toolchain_check.is_err() {
-        return report_failure(toolchain_check.unwrap_err().message
+        return report_failure(toolchain_check.unwrap_err().message)
     }
     toolchain_write := std.fs.write_text_file(toolchain_path, toolchain_payload)
     if toolchain_write.is_err() {
-        return report_failure("failed to write toolchain compatibility artifact: " + toolchain_write.unwrap_err().message
+        return report_failure("failed to write toolchain compatibility artifact: " + toolchain_write.unwrap_err().message)
     }
     perf_path := output + ".perf"
     perf_payload := build_backend_perf_baseline_artifact(arch, ssa_text, midend.report, runtime_metrics_text(runtime_metrics_result.unwrap()))
     perf_check := validate_backend_perf_baseline(perf_payload)
     if perf_check.is_err() {
-        return report_failure(perf_check.unwrap_err().message
+        return report_failure(perf_check.unwrap_err().message)
     }
     perf_write := std.fs.write_text_file(perf_path, perf_payload)
     if perf_write.is_err() {
-        return report_failure("failed to write backend perf baseline artifact: " + perf_write.unwrap_err().message
+        return report_failure("failed to write backend perf baseline artifact: " + perf_write.unwrap_err().message)
     }
     opt_path := output + ".opt"
     opt_payload := build_midend_opt_artifact(midend.report)
     opt_check := validate_midend_opt_artifact(opt_payload)
     if opt_check.is_err() {
-        return report_failure(opt_check.unwrap_err().message
+        return report_failure(opt_check.unwrap_err().message)
     }
     opt_write := std.fs.write_text_file(opt_path, opt_payload)
     if opt_write.is_err() {
-        return report_failure("failed to write optimization report: " + opt_write.unwrap_err().message
+        return report_failure("failed to write optimization report: " + opt_write.unwrap_err().message)
     }
     0
 }
