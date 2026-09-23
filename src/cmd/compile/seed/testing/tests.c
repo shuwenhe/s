@@ -652,6 +652,32 @@ static bool test_parser_switch_dot_qualified_pattern_arm(void) {
 	parser_parse_result_free(&result);
 	return ok;
 }
+static bool test_parser_switch_expression_rhs(void) {
+	const char *src =
+		"fn main() int { "
+		"  subject := 0; "
+		"  ret_type := switch subject { "
+		"    option.some(value) : trim_spaces(value), "
+		"    option.none : \"\", "
+		"  }; "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
 static bool test_semantic_ok(void) {
 	const char *src = "fn add(a, b) { c := a + b; return c; }";
 	token_vec tokens;
@@ -1730,6 +1756,7 @@ int main(void) {
 	RUN_TEST(test_parser_control_flow_and_function);
 	RUN_TEST(test_parser_switch_variant_pattern_arm);
 	RUN_TEST(test_parser_switch_dot_qualified_pattern_arm);
+	RUN_TEST(test_parser_switch_expression_rhs);
 	RUN_TEST(test_semantic_ok);
 	RUN_TEST(test_semantic_undeclared_symbol);
 	RUN_TEST(test_semantic_return_outside_function);
