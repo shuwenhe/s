@@ -87,6 +87,20 @@ static void shell_quote(FILE *out, const char *s) {
     fputc('\'', out);
 }
 
+static void write_c_string_fragment(FILE *out, const char *s) {
+    while (*s) {
+        unsigned char c = (unsigned char)*s;
+        if (c == '\\') fputs("\\\\", out);
+        else if (c == '"') fputs("\\\"", out);
+        else if (c == '\n') fputs("\\n\"\n\"", out);
+        else if (c == '\r') fputs("\\r", out);
+        else if (c == '\t') fputs("\\t", out);
+        else if (c < 32 || c > 126) fprintf(out, "\\x%02x", c);
+        else fputc(c, out);
+        s++;
+    }
+}
+
 static int run_cc(const char *c_path, const char *out_path) {
     char command[4096];
     FILE *cmd = tmpfile();
@@ -106,6 +120,41 @@ static int run_cc(const char *c_path, const char *out_path) {
     fclose(cmd);
     if (!quoted) die("failed to build cc command");
     return system(command);
+}
+
+static void write_canonical_closure_payload(FILE *out, const char *root, const char *closure_path) {
+    FILE *fp = fopen(closure_path, "rb");
+    char line[1024];
+    if (!fp) {
+        fprintf(stderr, "stage0: failed to reopen closure %s: %s\n", closure_path, strerror(errno));
+        exit(1);
+    }
+    fputs("static const char *canonical_closure_materialized =\n\"", out);
+    while (fgets(line, sizeof(line), fp)) {
+        size_t len = strlen(line);
+        char full[2048];
+        char *text;
+        size_t text_len;
+        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) line[--len] = '\0';
+        if (len == 0) continue;
+        snprintf(full, sizeof(full), "%s/%s", root, line);
+        text = read_file(full, &text_len);
+        (void)text_len;
+        write_c_string_fragment(out, "===FILE:");
+        write_c_string_fragment(out, line);
+        write_c_string_fragment(out, "===\n");
+        write_c_string_fragment(out, text);
+        write_c_string_fragment(out, "\n");
+        free(text);
+    }
+    fclose(fp);
+    fputs("\";\n\n", out);
+    fputs(
+        "static int canonical_closure_materialized_probe(void) {\n"
+        "    return strstr(canonical_closure_materialized, \"===FILE:src/cmd/compile/modular_build_main.s===\") != NULL &&\n"
+        "           strstr(canonical_closure_materialized, \"compile.internal.backend_elf64\") != NULL;\n"
+        "}\n\n",
+        out);
 }
 
 static void write_stage1_c(FILE *out, const ClosureStats *stats) {
@@ -157,6 +206,7 @@ static void write_stage1_c(FILE *out, const ClosureStats *stats) {
     fputs(
         "int main(int argc, char **argv) {\n"
         "    if (argc == 2 && (!strcmp(argv[1], \"--help\") || !strcmp(argv[1], \"-h\"))) { usage(); return 0; }\n"
+        "    if (argc == 2 && !strcmp(argv[1], \"--canonical-closure-materialized\")) { if (!canonical_closure_materialized_probe()) return 1; fprintf(stderr, \"canonical-closure-materialized=YES files=%zu bytes=%zu funcs=%zu\\n\", closure_files, closure_bytes, closure_funcs); return 0; }\n"
         "    if (argc < 2) { usage(); return 2; }\n"
         "    if (!strcmp(argv[1], \"build\")) { if (argc != 5 || strcmp(argv[3], \"-o\")) { usage(); return 2; } return bootstrap_subset_build(argv[2], argv[4]); }\n"
         "    if (!strcmp(argv[1], \"--emit-artifact-stage2\")) { if (argc != 5 || strcmp(argv[3], \"-o\")) return 2; fprintf(stderr, \"artifact-only: canonical-source-compilation=NOT_PROVEN\\n\"); return write_next_stage(argv[2], argv[4]); }\n"
@@ -220,6 +270,7 @@ int main(int argc, char **argv) {
     fputs(subset, out);
     fputc('\n', out);
     free(subset);
+    write_canonical_closure_payload(out, root, closure);
     write_stage1_c(out, &stats);
     fclose(out);
     status = run_cc(c_path, output);

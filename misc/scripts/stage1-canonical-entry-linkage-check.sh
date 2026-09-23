@@ -18,6 +18,7 @@ help_log="$tmp/help.log"
 strings_log="$tmp/strings.log"
 symbols_log="$tmp/symbols.log"
 call_log="$tmp/call.log"
+materialized_log="$tmp/materialized.log"
 
 canonical_closure_generated=NO
 if [ -f "$closure" ]; then
@@ -39,10 +40,28 @@ if [ -x "$stage1" ]; then
     stage1_binary=YES
 fi
 
-canonical_closure_consumed_by_stage1=NO
+canonical_closure_payload_materialized=NO
+canonical_closure_executable=NO
 if [ -f "$stage1_c" ] && rg -q 'closure_files|closure_bytes|closure_funcs' "$stage1_c" && \
    [ "$canonical_closure_generated" = YES ] && [ "$closure_has_entry" = YES ]; then
-    canonical_closure_consumed_by_stage1=METADATA_ONLY
+    canonical_closure_payload_materialized=METADATA_ONLY
+fi
+
+set +e
+if [ -x "$stage1" ]; then
+    "$stage1" --canonical-closure-materialized >"$materialized_log" 2>&1
+    materialized_status=$?
+else
+    materialized_status=127
+fi
+set -e
+
+if [ "$materialized_status" -eq 0 ] &&
+   [ -f "$stage1_c" ] &&
+   rg -q 'canonical_closure_materialized|src/cmd/compile/modular_build_main\.s|compile\.internal\.backend_elf64' "$stage1_c" &&
+   [ "$canonical_closure_generated" = YES ] &&
+   [ "$closure_has_entry" = YES ]; then
+    canonical_closure_payload_materialized=YES
 fi
 
 canonical_entry_symbol=NO
@@ -92,8 +111,11 @@ if [ "$canonical_closure_generated" != YES ]; then
 elif [ "$closure_has_entry" != YES ]; then
     missing_capability=canonical-entry-not-in-closure
     linkage=NOT_PROVEN
-elif [ "$canonical_closure_consumed_by_stage1" != YES ]; then
+elif [ "$canonical_closure_payload_materialized" != YES ]; then
     missing_capability=stage1-canonical-closure-consumption
+    linkage=NOT_PROVEN
+elif [ "$canonical_closure_executable" != YES ]; then
+    missing_capability=stage1-canonical-entry-linkage
     linkage=NOT_PROVEN
 elif [ "$canonical_entry_linked" != YES ]; then
     missing_capability=stage1-canonical-entry-linkage
@@ -112,7 +134,9 @@ fi
     echo "canonical-closure-has-entry=$closure_has_entry"
     echo "stage1-generated-c-present=$stage1_generated_c"
     echo "stage1-binary-present=$stage1_binary"
-    echo "canonical-closure-consumed-by-stage1=$canonical_closure_consumed_by_stage1"
+    echo "canonical-closure-payload-materialized=$canonical_closure_payload_materialized"
+    echo "canonical-closure-materialized-status=$materialized_status"
+    echo "canonical-closure-executable=$canonical_closure_executable"
     echo "canonical-entry-symbol=$canonical_entry_symbol"
     echo "canonical-entry-linked=$canonical_entry_linked"
     echo "canonical-entry-callable=$canonical_entry_callable"
@@ -122,6 +146,9 @@ fi
     echo "missing-capability=$missing_capability"
     if [ -s "$help_log" ]; then
         sed 's/^/stage1-help=/' "$help_log"
+    fi
+    if [ -s "$materialized_log" ]; then
+        sed 's/^/materialized-log=/' "$materialized_log"
     fi
     if [ -s "$symbols_log" ]; then
         grep -E 'modular_build_main|backend_elf64|canonical_build|bootstrap_subset_build' "$symbols_log" | sed 's/^/stage1-symbol=/' || true
