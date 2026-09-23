@@ -1160,14 +1160,22 @@ static ast_node *parse_assignment(parser *p) {
 		expr->as.index_expr.object = NULL;
 		expr->as.index_expr.index = NULL;
 	} else if (expr->kind == AST_MEMBER_EXPR) {
-		name = member_expr_to_name(expr);
-		if (!name) {
-			ast_free(node);
-			ast_free(expr);
-			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory or invalid member expression");
-			return NULL;
+		// Check if the base object is a simple ident (simple member)
+		if (expr->as.member_expr.object->kind == AST_IDENT_EXPR) {
+			// Simple case: x.member
+			name = member_expr_to_name(expr);
+			if (!name) {
+				ast_free(node);
+				ast_free(expr);
+				error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory or invalid member expression");
+				return NULL;
+			}
+			node->as.assign_expr.name = name;
+		} else {
+			// Complex case: x[i].member or deeper chains
+			node->as.assign_expr.target_expr = expr;
+			expr = NULL;  // Don't free it, ownership transferred
 		}
-		node->as.assign_expr.name = name;
 	} else {
 		ast_node *rhs = parse_assignment(p);
 		ast_free(node);
@@ -2880,6 +2888,8 @@ static ast_node *parse_switch_statement(parser *p) {
 				ast_free(root);
 				return NULL;
 			}
+			// Skip optional comma after expression body
+			match(p, TOKEN_COMMA);
 		} else {
 			// Block body (pattern-switch with block or case/default)
 			body = ast_new(AST_BLOCK, peek(p)->pos);
@@ -2943,13 +2953,6 @@ static ast_node *parse_switch_statement(parser *p) {
 					return NULL;
 				}
 			}
-		}
-		
-		// Only add intermediate arms to the chain; terminal arms (default/wildcard) end it
-		if (is_default || (is_pattern_switch && peek(p)->lexeme && strcmp(peek(p)->lexeme, "_") == 0)) {
-			// Default or wildcard pattern: terminal arm
-			*tail = body;
-			break;
 		}
 		
 		arm = ast_new(AST_IF_STMT, body->pos);
