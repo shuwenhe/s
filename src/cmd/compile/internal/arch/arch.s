@@ -80,10 +80,10 @@ func run_arch_init(string init_name) string {
         return riscv64_init()
     }
     if init_name == "amd64p32_init" {
-        return amd64p32_init(
+        return amd64p32_init()
     }
     if init_name == "s390x_init" {
-        return s390x_init(
+        return s390x_init()
     }
     if init_name == "wasm_init" {
         return wasm_init()
