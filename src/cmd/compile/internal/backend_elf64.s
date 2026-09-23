@@ -1741,7 +1741,7 @@ func build_abi_emit_plan(string arch, source_file source) string {
 func abi_param_location(string arch, int index) string {
     reg := abi_int_arg_reg(arch, index)
     if reg == "" {
-        return "stack+" + std.prelude.to_string((index - abi_variadic_gp_limit(arch)) * 8
+        return "stack+" + std.prelude.to_string((index - abi_variadic_gp_limit(arch)) * 8)
     }
     reg
 }
@@ -1749,14 +1749,14 @@ func abi_param_location(string arch, int index) string {
 func abi_float_param_location(string arch, int index) string {
     reg := abi_float_arg_reg(arch, index)
     if reg == "" {
-        return "stackf+" + std.prelude.to_string(index * 8
+        return "stackf+" + std.prelude.to_string(index * 8)
     }
     reg
 }
 
 func abi_emit_ret_location(string arch, int aggregate_size) string {
     if aggregate_size > 16 {
-        return "sret:" + abi_sret_reg(arch
+        return "sret:" + abi_sret_reg(arch)
     }
     abi_int_ret_reg(arch)
 }
@@ -1800,13 +1800,13 @@ func abi_emit_ret_plan(string arch, string ret_type, int ret_parts, int aggregat
         return "ret->void"
     }
     if ret_parts <= 1 {
-        return "ret->" + abi_emit_ret_location(arch, aggregate_size
+        return "ret->" + abi_emit_ret_location(arch, aggregate_size)
     }
     if ret_parts == 2 && aggregate_size <= 16 {
-        return "ret0->" + abi_int_ret_reg(arch) + " | ret1->" + abi_second_int_ret_reg(arch
+        return "ret0->" + abi_int_ret_reg(arch) + " | ret1->" + abi_second_int_ret_reg(arch)
     }
     if aggregate_size > 16 || ret_parts > 2 {
-        return "ret->sret:" + abi_sret_reg(arch) + " | tuple_parts=" + std.prelude.to_string(ret_parts
+        return "ret->sret:" + abi_sret_reg(arch) + " | tuple_parts=" + std.prelude.to_string(ret_parts)
     }
     "ret->" + abi_int_ret_reg(arch)
 }

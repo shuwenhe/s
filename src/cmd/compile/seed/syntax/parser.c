@@ -398,6 +398,9 @@ static ast_node *parse_primary(parser *p) {
 	(void)p;
 	const token *tok = peek(p);
 	ast_node *node;
+	if (check(p, TOKEN_IDENTIFIER) && strcmp(tok->lexeme, "switch") == 0) {
+		return parse_switch_statement(p);
+	}
 	if (match(p, TOKEN_NUMBER)) {
 		node = ast_new(AST_NUMBER_EXPR, tok->pos);
 		if (!node) return NULL;
