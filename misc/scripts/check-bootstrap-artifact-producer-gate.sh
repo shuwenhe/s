@@ -79,6 +79,20 @@ if [ -f "$root/.bootstrap/selfhost/stage1.ir" ] || [ -f "$root/.bootstrap/selfho
 fi
 selfhost_artifact_verdict=REFERENCE_ONLY
 
+direct_seed_closure_status=NOT_RUN
+direct_seed_closure_diagnostic=NONE
+if [ -x "$root/bin/s_seed" ] && [ -f "$closure" ]; then
+    direct_seed_tmp="${TMPDIR:-/tmp}/s-direct-seed-closure.$$"
+    direct_seed_log="$direct_seed_tmp.log"
+    if "$root/bin/s_seed" --closure-compile --source-root "$root" --closure "$closure" "$entry_rel" "$direct_seed_tmp.ir" >"$direct_seed_log" 2>&1; then
+        direct_seed_closure_status=UNEXPECTED_PASS
+    else
+        direct_seed_closure_status=FAIL
+        direct_seed_closure_diagnostic=$(sed -n '1p' "$direct_seed_log" | sed 's/[[:cntrl:]]//g')
+    fi
+    rm -f "$direct_seed_tmp.ir" "$direct_seed_log"
+fi
+
 ir_producer_exists=NO
 ir_producer_non_circular=NOT_PROVEN
 ir_producer_bounded=NOT_PROVEN
@@ -199,6 +213,8 @@ fi
     echo "  historical-emit-c-verdict=$historical_emit_c_verdict"
     echo "  selfhost-artifact-exists=$selfhost_artifact_exists"
     echo "  selfhost-artifact-verdict=$selfhost_artifact_verdict"
+    echo "  direct-seed-closure-status=$direct_seed_closure_status"
+    echo "  direct-seed-closure-diagnostic=$direct_seed_closure_diagnostic"
     echo
     echo "selected-root=$selected_root"
     echo
@@ -211,6 +227,7 @@ fi
     echo "G3_REGENERATION=NOT_RUN"
     echo
     echo "DIRECT_SEED_CLOSURE=REJECTED"
+    echo "DIRECT_SEED_CLOSURE_STATUS=$direct_seed_closure_status"
     echo "SEED_REASSIGNMENT_FIX=FORBIDDEN_BY_CURRENT_GATE"
 } | tee "$report"
 
