@@ -84,6 +84,7 @@ direct_seed_closure_diagnostic=NONE
 direct_seed_closure_origin=UNKNOWN
 direct_seed_single_file_status=NOT_RUN
 direct_seed_single_file_diagnostic=NONE
+direct_seed_failure_shape=UNKNOWN
 direct_seed_blocker_kind=UNKNOWN
 if [ -x "$root/bin/s_seed" ] && [ -f "$closure" ]; then
     direct_seed_tmp="${TMPDIR:-/tmp}/s-direct-seed-closure.$$"
@@ -124,11 +125,17 @@ if [ -x "$root/bin/s_seed" ] && [ -f "$closure" ]; then
                     direct_seed_single_file_diagnostic=$(sed -n '1p' "$direct_seed_probe_log" | sed 's/[[:cntrl:]]//g')
                 fi
                 if printf '%s\n' "$direct_seed_single_file_diagnostic" | grep -q 'illegal character: |'; then
+                    direct_seed_failure_shape=LEXER_ILLEGAL_SINGLE_PIPE
                     direct_seed_blocker_kind=CANONICAL_SYNTAX_SEED_LEXER_GAP_SINGLE_PIPE
                 elif printf '%s\n' "$direct_seed_single_file_diagnostic" | grep -Eq "expected expression, got :|near ':'"; then
+                    direct_seed_failure_shape=PARSER_COLON_IN_EXPRESSION
                     direct_seed_blocker_kind=CANONICAL_SYNTAX_SEED_PARSER_GAP_STRUCT_FIELD_INITIALIZER
-                elif printf '%s\n' "$direct_seed_single_file_diagnostic" | grep -q "near '.'"; then
+                elif printf '%s\n' "$direct_seed_single_file_diagnostic" | grep -Fq "near '.'"; then
+                    direct_seed_failure_shape=PARSER_DOT_IN_EXPRESSION
                     direct_seed_blocker_kind=CANONICAL_SYNTAX_SEED_PARSER_GAP_POSTFIX_LEN_MEMBER_SHORTHAND
+                elif printf '%s\n' "$direct_seed_single_file_diagnostic" | grep -Fq "near '}'"; then
+                    direct_seed_failure_shape=PARSER_UNCLOSED_CALL_ARGUMENT_LIST
+                    direct_seed_blocker_kind=ATTRIBUTION_REQUIRED
                 fi
             fi
         fi
@@ -261,6 +268,7 @@ fi
     echo "  direct-seed-closure-origin=$direct_seed_closure_origin"
     echo "  direct-seed-single-file-status=$direct_seed_single_file_status"
     echo "  direct-seed-single-file-diagnostic=$direct_seed_single_file_diagnostic"
+    echo "  direct-seed-failure-shape=$direct_seed_failure_shape"
     echo "  direct-seed-blocker-kind=$direct_seed_blocker_kind"
     echo
     echo "selected-root=$selected_root"
@@ -273,9 +281,10 @@ fi
     echo "G2_AUTHORITY=NOT_RUN"
     echo "G3_REGENERATION=NOT_RUN"
     echo
-    echo "DIRECT_SEED_CLOSURE=REJECTED"
-    echo "DIRECT_SEED_CLOSURE_STATUS=$direct_seed_closure_status"
-    echo "DIRECT_SEED_BLOCKER_KIND=$direct_seed_blocker_kind"
+echo "DIRECT_SEED_CLOSURE=REJECTED"
+echo "DIRECT_SEED_CLOSURE_STATUS=$direct_seed_closure_status"
+    echo "DIRECT_SEED_FAILURE_SHAPE=$direct_seed_failure_shape"
+echo "DIRECT_SEED_BLOCKER_KIND=$direct_seed_blocker_kind"
     echo "SEED_REASSIGNMENT_FIX=FORBIDDEN_BY_CURRENT_GATE"
 } | tee "$report"
 
