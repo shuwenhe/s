@@ -2803,7 +2803,6 @@ static ast_node *parse_switch_statement(parser *p) {
 			is_default = true;
 		} else {
 			// Could be pattern: Type::Variant or error
-			int start_pos = p->current;
 			advance_tok(p);  // consume first identifier
 			
 			// Check if followed by :: (two COLON tokens)
@@ -2946,8 +2945,9 @@ static ast_node *parse_switch_statement(parser *p) {
 			}
 		}
 		
-		if (is_default || (is_pattern_switch && (peek(p)->lexeme && strcmp(peek(p)->lexeme, "_") != 0))) {
-			// Default arm or last pattern (should not be wildcard condition)
+		// Only add intermediate arms to the chain; terminal arms (default/wildcard) end it
+		if (is_default || (is_pattern_switch && peek(p)->lexeme && strcmp(peek(p)->lexeme, "_") == 0)) {
+			// Default or wildcard pattern: terminal arm
 			*tail = body;
 			break;
 		}
@@ -2964,8 +2964,11 @@ static ast_node *parse_switch_statement(parser *p) {
 		if (is_pattern_switch) {
 			// Pattern-switch: no condition, mark with NULL
 			arm->as.if_stmt.condition = NULL;
+		} else if (is_default) {
+			// default: no condition
+			arm->as.if_stmt.condition = NULL;
 		} else {
-			// case/default: equality condition
+			// case: equality condition
 			arm->as.if_stmt.condition = ast_new(AST_BINARY_EXPR, case_value->pos);
 			arm->as.if_stmt.condition->as.binary_expr.op = TOKEN_EQ;
 			arm->as.if_stmt.condition->as.binary_expr.left = clone_expr(subject);
