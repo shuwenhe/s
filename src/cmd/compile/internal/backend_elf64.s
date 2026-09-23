@@ -1943,13 +1943,13 @@ func collect_fn_result_types(function_decl fn_decl) string[] {
 func split_signature_types(string type_text) string[] {
     t := trim_spaces(type_text)
     if t == "" {
-        return string[](
+        return string[]()
     }
     if abi_text_starts_with(t, "(") && abi_text_ends_with(t, ")") {
         t = trim_spaces(std.prelude.slice(t, 1, std.prelude.len(t) - 1))
     }
     if t == "" {
-        return string[](
+        return string[]()
     }
     out := string[]()
     start := 0
@@ -2616,7 +2616,7 @@ func resolve_module_source_path(string module) option[string] {
     for i < std.prelude.len(candidates) {
         probe := std.fs.read_to_string(candidates[i])
         if probe.is_ok() {
-            return option::some(candidates[i]
+            return option::some(candidates[i])
         }
         i = i + 1
     }
@@ -2634,7 +2634,7 @@ func lookup_package_index(string module) option[string] {
                 path := found.unwrap()
                 probe := std.fs.read_to_string(path)
                 if probe.is_ok() {
-                    return option::some(path
+                    return option::some(path)
                 }
             }
         }
@@ -2962,18 +2962,18 @@ func is_compiler_runtime_entry(string path, string source) bool {
 func build_compiler_runtime_launcher(string output) int {
     base_compiler := resolve_bootstrap_base_compiler()
     if output == base_compiler {
-        return report_failure("refusing to generate a launcher that execs itself; set s_bootstrap_base_compiler to a different binary"
+        return report_failure("refusing to generate a launcher that execs itself; set s_bootstrap_base_compiler to a different binary")
     }
     temp_dir_result := std.fs.make_temp_dir("s-launcher-")
     if temp_dir_result.is_err() {
-        return report_failure("could not create temporary launcher directory: " + temp_dir_result.unwrap_err().message
+        return report_failure("could not create temporary launcher directory: " + temp_dir_result.unwrap_err().message)
     }
     temp_dir := temp_dir_result.unwrap()
     asm_path := temp_dir + "/launcher.s"
     obj_path := temp_dir + "/launcher.o"
     asm_text_result := emit_runtime_launcher_asm(base_compiler)
     if asm_text_result.is_err() {
-        return report_failure(asm_text_result.unwrap_err().message
+        return report_failure(asm_text_result.unwrap_err().message)
     }
     write_result := std.fs.write_text_file(asm_path, asm_text_result.unwrap())
     if write_result.is_err() {
