@@ -2995,7 +2995,7 @@ func build_compiler_runtime_launcher(string output) int {
     ld_argv = append(ld_argv, obj_path)
     ld_result := std.process.run_process(ld_argv)
     if ld_result.is_err() {
-        return report_failure("launcher linker failed: " + ld_result.unwrap_err().message
+        return report_failure("launcher linker failed: " + ld_result.unwrap_err().message)
     }
     0
 }
@@ -3023,10 +3023,10 @@ func resolve_bootstrap_base_compiler() string {
 func emit_runtime_launcher_asm(string base_compiler) (string, backend_error) {
     arch := buildcfg_goarch()
     if arch == "arm64" {
-        return emit_runtime_launcher_asm_arm64(base_compiler))
+        return emit_runtime_launcher_asm_arm64(base_compiler)
     }
     if arch == "amd64" || arch == "amd64p32" {
-        return emit_runtime_launcher_asm_amd64(base_compiler))
+        return emit_runtime_launcher_asm_amd64(base_compiler)
     }
     backend_error { message: "unsupported architecture for compiler launcher: " + arch }
 }
@@ -3155,7 +3155,7 @@ func restore_captured_bindings(captured_binding[] captured) binding[] {
 
 func compile_writes(source_file source, mir_graph graph) (write_op[], backend_error) {
     if std.prelude.len(graph.blocks) == 0 {
-        return fail_write_ops("backend error: mir graph has no blocks"
+        return fail_write_ops("backend error: mir graph has no blocks")
     }
     source_exec := execute_source_main(source)
     if source_exec.is_ok() {
@@ -3163,14 +3163,14 @@ func compile_writes(source_file source, mir_graph graph) (write_op[], backend_er
     }
     exec_result := execute_mir_graph(graph)
     if exec_result.is_err() {
-        return fail_write_ops(source_exec.unwrap_err().message
+        return fail_write_ops(source_exec.unwrap_err().message)
     }
     exec_result.unwrap().writes
 }
 
 func compile_exit_code(source_file source, mir_graph graph) (int, backend_error) {
     if std.prelude.len(graph.blocks) == 0 {
-        return fail_int("backend error: mir graph has no blocks"
+        return fail_int("backend error: mir graph has no blocks")
     }
     source_exec := execute_source_main(source)
     if source_exec.is_ok() {
@@ -3178,7 +3178,7 @@ func compile_exit_code(source_file source, mir_graph graph) (int, backend_error)
     }
     exec_result := execute_mir_graph(graph)
     if exec_result.is_err() {
-        return fail_int(source_exec.unwrap_err().message
+        return fail_int(source_exec.unwrap_err().message)
     }
     exec_result.unwrap().exit_code
 }
@@ -3251,7 +3251,7 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
                 writes: writes, exit_code 0, runtime runtime_metrics {
                     sroutine_scheduled: 0, sroutine_completed 0, sroutine_panics 0, sroutine_recovered 0, sroutine_yields 0, select_attempts 0, select_default_fallbacks 0, select_timeouts 0, channels 0, channel_sends 0, channel_recvs 0, channel_closed 0,
                 },
-            })
+            }
         }
         if block.terminator.kind == "jump" {
             if std.prelude.len(block.terminator.edges) == 0 {
@@ -3294,7 +3294,7 @@ func execute_mir_statement(mir_statement statement, write_op[] writes) ((), back
             }
             ()
         }
-        _ : (,
+        _ : (),
     }
 }
 
@@ -3323,7 +3323,7 @@ func emit_call_line_to_write(string line, string callee, int fd, write_op[] writ
 func render_literal_text(string raw_arg) string {
     arg := trim_spaces(raw_arg)
     if is_quoted_literal(arg) {
-        return decode_string_literal(arg
+        return decode_string_literal(arg)
     }
     if arg == "true" || arg == "false" {
         return arg
@@ -3462,11 +3462,11 @@ func call_function_with_capture(
 ) (value, backend_error) {
     fn_result := find_function(source, name)
     if fn_result.is_err() {
-        return fail_value(fn_result.unwrap_err().message
+        return fail_value(fn_result.unwrap_err().message)
     }
     function := fn_result.unwrap()
     if function.body.is_none() {
-        return fail_value("backend error: function " + name + " has no body"
+        return fail_value("backend error: function " + name + " has no body")
     }
     if std.prelude.len(function.sig.params) != std.prelude.len(args) {
         return fail_value(
@@ -3481,7 +3481,7 @@ func call_function_with_capture(
     env := binding[]()
     const_bindings := collect_const_bindings(source)
     if const_bindings.is_err() {
-        return fail_value(const_bindings.unwrap_err().message
+        return fail_value(const_bindings.unwrap_err().message)
     }
     env = copy_bindings(const_bindings.unwrap())
     captured := restore_captured_bindings(captured_env)
@@ -3497,7 +3497,7 @@ func call_function_with_capture(
     }
     body_result := execute_block_in_place(function.body.unwrap(), source, env, writes, runtime)
     if body_result.is_err() {
-        return fail_value(body_result.unwrap_err().message
+        return fail_value(body_result.unwrap_err().message)
     }
     if control_return_is_active(env) {
         returned := body_result.unwrap()
