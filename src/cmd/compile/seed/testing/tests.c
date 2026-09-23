@@ -516,6 +516,59 @@ static bool test_parser_member_access_expr(void) {
 	parser_parse_result_free(&result);
 	return ok;
 }
+static bool test_parser_receiver_adjacent_member_shorthand_call(void) {
+	const char *src = "fn main() int { a := 1; println(a len(.data)); return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len == 1;
+	if (ok) {
+		ast_node *fn = result.root->as.program.statements.data[0];
+		ast_node *stmt;
+		ast_node *outer_call;
+		ast_node *inner_call;
+		ast_node *callee;
+		ast_node *arg;
+		ok = fn->kind == AST_FN_STMT;
+		ok = ok && fn->as.fn_stmt.body != NULL;
+		ok = ok && fn->as.fn_stmt.body->kind == AST_BLOCK;
+		ok = ok && fn->as.fn_stmt.body->as.block.statements.len >= 2;
+		if (ok) {
+			stmt = fn->as.fn_stmt.body->as.block.statements.data[1];
+			ok = stmt->kind == AST_EXPR_STMT;
+			if (ok) {
+				outer_call = stmt->as.expr_stmt.expr;
+				ok = outer_call->kind == AST_CALL_EXPR;
+				ok = ok && outer_call->as.call_expr.args.len == 1;
+				if (ok) {
+					inner_call = outer_call->as.call_expr.args.data[0];
+					ok = inner_call->kind == AST_CALL_EXPR;
+					ok = ok && inner_call->as.call_expr.args.len == 1;
+					callee = inner_call->as.call_expr.callee;
+					arg = inner_call->as.call_expr.args.data[0];
+					ok = ok && callee->kind == AST_IDENT_EXPR;
+					ok = ok && strcmp(callee->as.ident_expr.name, "len") == 0;
+					ok = ok && arg->kind == AST_MEMBER_EXPR;
+					ok = ok && arg->as.member_expr.object->kind == AST_IDENT_EXPR;
+					ok = ok && strcmp(arg->as.member_expr.object->as.ident_expr.name, "a") == 0;
+					ok = ok && strcmp(arg->as.member_expr.member, "data") == 0;
+				}
+			}
+		}
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
 static bool test_parser_control_flow_and_function(void) {
 	const char *src =
 		"fn sum(a, b) { i := 0; while (i < b) { i + 1; } return a + b; } "
@@ -1570,6 +1623,7 @@ int main(void) {
 	RUN_TEST(test_parser_import_single_string_decl);
 	RUN_TEST(test_parser_import_string_list_decl);
 	RUN_TEST(test_parser_member_access_expr);
+	RUN_TEST(test_parser_receiver_adjacent_member_shorthand_call);
 	RUN_TEST(test_parser_control_flow_and_function);
 	RUN_TEST(test_semantic_ok);
 	RUN_TEST(test_semantic_undeclared_symbol);
