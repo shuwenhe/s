@@ -2893,29 +2893,49 @@ static ast_node *parse_switch_statement(parser *p) {
 		// For pattern-switch, body can be expression or block
 		// For case/default, body is always statements in a block
 		if (is_pattern_switch && !check(p, TOKEN_LBRACE)) {
-			// Pattern-switch with expression body
-			ast_node *expr = parse_expression(p);
-			if (!expr) {
+			ast_node *stmt;
+			if (check(p, TOKEN_RETURN)) {
+				const token *return_tok = advance_tok(p);
+				stmt = ast_new(AST_RETURN_STMT, return_tok->pos);
+				if (!stmt) {
+					ast_free(subject);
+					ast_free(root);
+					return NULL;
+				}
+				if (!check(p, TOKEN_COMMA) && !check(p, TOKEN_RBRACE)) {
+					stmt->as.return_stmt.value = parse_expression(p);
+					if (!stmt->as.return_stmt.value || !ast_vec_push(&stmt->as.return_stmt.values, stmt->as.return_stmt.value)) {
+						ast_free(stmt);
+						ast_free(subject);
+						ast_free(root);
+						return NULL;
+					}
+				}
+			} else {
+				// Pattern-switch with expression body
+				stmt = parse_expression(p);
+			}
+			if (!stmt) {
 				ast_free(subject);
 				ast_free(root);
 				return NULL;
 			}
 			// Wrap in block
-			body = ast_new(AST_BLOCK, expr->pos);
+			body = ast_new(AST_BLOCK, stmt->pos);
 			if (!body) {
-				ast_free(expr);
+				ast_free(stmt);
 				ast_free(subject);
 				ast_free(root);
 				return NULL;
 			}
-			if (!ast_vec_push(&body->as.block.statements, expr)) {
-				ast_free(expr);
+			if (!ast_vec_push(&body->as.block.statements, stmt)) {
+				ast_free(stmt);
 				ast_free(body);
 				ast_free(subject);
 				ast_free(root);
 				return NULL;
 			}
-			// Skip optional comma after expression body
+			// Skip optional comma after expression or return body
 			match(p, TOKEN_COMMA);
 		} else {
 			// Block body (pattern-switch with block or case/default)
