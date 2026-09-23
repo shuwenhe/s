@@ -1,4 +1,5 @@
 package compile.internal.semantic
+
 import (
     "compile.internal.prelude"
     "compile.internal.typesys"
