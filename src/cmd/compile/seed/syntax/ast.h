@@ -133,6 +133,7 @@ struct ast_node {
 			char *name;
 			ast_node *target_object;
 			ast_node *target_index;
+			ast_node *target_expr;
 			ast_node *value;
 		} assign_expr;
 		struct {

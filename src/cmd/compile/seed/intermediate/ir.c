@@ -447,6 +447,10 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 		case AST_BINARY_EXPR:
 			return lower_binary(b, expr, out);
 		case AST_ASSIGN_EXPR:
+			if (expr->as.assign_expr.target_expr) {
+				error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "computed assignment target is not supported for IR");
+				return false;
+			}
 			if (expr->as.assign_expr.target_object && expr->as.assign_expr.target_index) {
 				char object_name[IR_OPERAND_CAP];
 				char index_name[IR_OPERAND_CAP];

@@ -1089,6 +1089,35 @@ static bool test_parser_assignment_expression(void) {
 	parser_parse_result_free(&result);
 	return ok;
 }
+static bool test_parser_indexed_member_assignment_place(void) {
+	const char *src =
+		"fn main() int { xs := 0; i := 0; y := 1; xs[i].a = y; return y; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	if (ok) {
+		ast_node *fn = result.root->as.program.statements.data[0];
+		ast_node *stmt = fn->as.fn_stmt.body->as.block.statements.data[3];
+		ast_node *assign = stmt->as.expr_stmt.expr;
+		ok = stmt->kind == AST_EXPR_STMT;
+		ok = ok && assign->kind == AST_ASSIGN_EXPR;
+		ok = ok && assign->as.assign_expr.target_expr != NULL;
+		ok = ok && assign->as.assign_expr.target_expr->kind == AST_MEMBER_EXPR;
+		ok = ok && assign->as.assign_expr.value != NULL;
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
 static bool test_runtime_short_circuit_or(void) {
 	const char *src =
 		"fn main() int { "
@@ -1651,6 +1680,7 @@ int main(void) {
 	RUN_TEST(test_semantic_path_sensitive_narrowing_if_or_else);
 	RUN_TEST(test_semantic_metadata_import_signature_success);
 	RUN_TEST(test_parser_assignment_expression);
+	RUN_TEST(test_parser_indexed_member_assignment_place);
 	RUN_TEST(test_ir_generation_entry);
 	RUN_TEST(test_codegen_end_to_end);
 	RUN_TEST(test_runtime_minimal_loop);
