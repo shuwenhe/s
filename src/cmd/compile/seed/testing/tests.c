@@ -517,7 +517,7 @@ static bool test_parser_member_access_expr(void) {
 	return ok;
 }
 static bool test_parser_receiver_adjacent_member_shorthand_call(void) {
-	const char *src = "fn main() int { a := 1; i := 0; println(a[i]len(.data)); return 0; }";
+	const char *src = "fn main() int { a := 1; i := 0; println(a[i]std.prelude.len(.terminator.edges)); return 0; }";
 	token_vec tokens;
 	compile_error err;
 	parse_result result;
@@ -539,6 +539,7 @@ static bool test_parser_receiver_adjacent_member_shorthand_call(void) {
 		ast_node *inner_call;
 		ast_node *callee;
 		ast_node *arg;
+		ast_node *projected;
 		ok = fn->kind == AST_FN_STMT;
 		ok = ok && fn->as.fn_stmt.body != NULL;
 		ok = ok && fn->as.fn_stmt.body->kind == AST_BLOCK;
@@ -556,11 +557,15 @@ static bool test_parser_receiver_adjacent_member_shorthand_call(void) {
 					ok = ok && inner_call->as.call_expr.args.len == 1;
 					callee = inner_call->as.call_expr.callee;
 					arg = inner_call->as.call_expr.args.data[0];
-					ok = ok && callee->kind == AST_IDENT_EXPR;
-					ok = ok && strcmp(callee->as.ident_expr.name, "len") == 0;
+					ok = ok && callee->kind == AST_MEMBER_EXPR;
+					ok = ok && strcmp(callee->as.member_expr.member, "len") == 0;
+					ok = ok && callee->as.member_expr.object->kind == AST_MEMBER_EXPR;
 					ok = ok && arg->kind == AST_MEMBER_EXPR;
-					ok = ok && arg->as.member_expr.object->kind == AST_INDEX_EXPR;
-					ok = ok && strcmp(arg->as.member_expr.member, "data") == 0;
+					ok = ok && strcmp(arg->as.member_expr.member, "edges") == 0;
+					projected = arg->as.member_expr.object;
+					ok = ok && projected->kind == AST_MEMBER_EXPR;
+					ok = ok && strcmp(projected->as.member_expr.member, "terminator") == 0;
+					ok = ok && projected->as.member_expr.object->kind == AST_INDEX_EXPR;
 				}
 			}
 		}

@@ -745,6 +745,25 @@ static ast_node *parse_receiver_shorthand_arg(parser *p, ast_node *receiver) {
 		ast_free(member);
 		return NULL;
 	}
+	while (match(p, TOKEN_DOT)) {
+		ast_node *next = ast_new(AST_MEMBER_EXPR, prev(p)->pos);
+		if (!next) {
+			ast_free(member);
+			return NULL;
+		}
+		if (!expect(p, TOKEN_IDENTIFIER, "member name")) {
+			ast_free(next);
+			ast_free(member);
+			return NULL;
+		}
+		next->as.member_expr.object = member;
+		next->as.member_expr.member = dup_cstr(prev(p)->lexeme);
+		if (!next->as.member_expr.member) {
+			ast_free(next);
+			return NULL;
+		}
+		member = next;
+	}
 	return member;
 }
 static ast_node *parse_receiver_adjacent_call(parser *p, ast_node *receiver) {
