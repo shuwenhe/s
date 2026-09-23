@@ -3512,7 +3512,7 @@ func call_function_with_capture(
 
 func find_function(source_file source, string name) (function_decl, backend_error) {
     visited := string[]()
-    return find_function_in_source_graph(source, name, visited
+    return find_function_in_source_graph(source, name, visited)
 }
 
 func find_function_in_source_graph(source_file source, string name, string[] visited) (function_decl, backend_error) {
@@ -3583,7 +3583,7 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
                     return panic_error(control_panic_payload_text(env))
                 }
                 cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                return value.unit(unit_value {}))
+                return value.unit(unit_value {})
             }
             cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
             return err
@@ -3659,26 +3659,26 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
         stmt.let(value) : {
             expr_result := eval_expr(value.value, source, env, writes, runtime)
             if expr_result.is_err() {
-                expr_result.unwrap_err()
+                return expr_result.unwrap_err()
             }
             env.push(binding {
                 name: value.name, value expr_result.unwrap(),
             })
             ()
-        }
+        },
         stmt.assign(value) : {
             expr_result := eval_expr(value.value, source, env, writes, runtime)
             if expr_result.is_err() {
-                expr_result.unwrap_err()
+                return expr_result.unwrap_err()
             }
             replacement := expr_result.unwrap()
             index := find_binding_index(env, value.name)
             if index < 0 {
-                backend_error { message: "backend error: unknown name " + value.name }
+                return backend_error { message: "backend error: unknown name " + value.name }
             }
             replacement_id := -1
             switch replacement {
-                value.owned_box(handle) : replacement_id = handle.id
+                value.owned_box(handle) : replacement_id = handle.id,
                 _ : { }
             }
             release_owned_value(env.get(index).unwrap().value, runtime, replacement_id)
@@ -3686,11 +3686,11 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
                 name: value.name, value replacement,
             })
             ()
-        }
+        },
         stmt.increment(value) : {
             index := find_binding_index(env, value.name)
             if index < 0 {
-                backend_error { message: "backend error: unknown name " + value.name }
+                return backend_error { message: "backend error: unknown name " + value.name }
             }
             current := env.get(index).unwrap().value
             switch current {
@@ -3702,7 +3702,7 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
                 }
                 _ : backend_error { message: "backend error: increment expects int for " + value.name },
             }
-        }
+        },
         stmt.c_for(value) : execute_c_for(value, source, env, writes, runtime),
         stmt.return(ret_stmt) : {
             returned := value.unit(unit_value {})
@@ -3723,11 +3723,11 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
         stmt.expr(value) : {
             expr_result := eval_expr(value.expr, source, env, writes, runtime)
             if expr_result.is_err() {
-                expr_result.unwrap_err()
+                return expr_result.unwrap_err()
             }
             ()
-        }
-        stmt.defer(_) : (,
+        },
+        stmt.defer(_) : (),
         stmt.sroutine(value) : execute_sroutine_stmt(value, source, env, writes, runtime),
     }
 }
@@ -3742,7 +3742,7 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] en
             fn_name := ""
             switch callee_result.unwrap() {
                 value.fn_ref(name) : fn_name = name,
-                _ : return backend_error { message: "backend error: sroutine expects function call target" },
+                _ : return backend_error { message: "backend error: sroutine expects function call target" }
             }
             arg_values := value[]()
             ai := 0
@@ -4057,10 +4057,10 @@ func eval_panic_call(expr[] args, source_file source, binding[] env, write_op[] 
 
 func eval_recover_call(binding[] env, runtime_state runtime) (value, backend_error) {
     if !control_in_defer_mode(env) {
-        return value.unit(unit_value {}))
+        return value.unit(unit_value {})
     }
     if !control_panic_is_active(env) {
-        return value.unit(unit_value {}))
+        return value.unit(unit_value {})
     }
     payload := control_panic_payload_text(env)
     set_control(env, control_panic_active, value.bool(false))
@@ -4152,7 +4152,7 @@ func eval_chan_recv_call(expr[] args, source_file source, binding[] env, write_o
         if is_select && std.prelude.len(channels) > 0 {
             runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % std.prelude.len(channels)
         }
-        return value.unit(unit_value {}))
+        return value.unit(unit_value {})
     }
     if is_select {
         return backend_error { message: "backend error: select_recv has no ready channel" }
@@ -4201,7 +4201,7 @@ func eval_select_recv_weighted_call(expr[] args, source_file source, binding[] e
         if std.prelude.len(weighted) > 0 {
             runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % std.prelude.len(weighted)
         }
-        return value.unit(unit_value {}))
+        return value.unit(unit_value {})
     }
     return backend_error { message: "backend error: select_recv_weighted has no ready channel" }
 }
@@ -4373,7 +4373,7 @@ func drain_selected_channel(runtime_state runtime, int idx) (value, backend_erro
     }
     ch_state := runtime.channels[idx]
     if std.prelude.len(ch_state.buffer) == 0 {
-        return value.unit(unit_value {}))
+        return value.unit(unit_value {})
     }
     first := ch_state.buffer[0]
     rest := value[]()
@@ -4716,7 +4716,7 @@ func eval_const_value_expr(expr value, binding[] const_env, int iota_value) (val
 
 func lookup_name_or_function(binding[] env, source_file source, string name) (value, backend_error) {
     if name == "nil" {
-        return value.unit(unit_value {}))
+        return value.unit(unit_value {})
     }
     local := lookup_value(env, name)
     if local.is_ok() {
