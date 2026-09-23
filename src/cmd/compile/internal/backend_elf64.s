@@ -2977,7 +2977,7 @@ func build_compiler_runtime_launcher(string output) int {
     }
     write_result := std.fs.write_text_file(asm_path, asm_text_result.unwrap())
     if write_result.is_err() {
-        return report_failure("failed to write launcher assembly: " + write_result.unwrap_err().message
+        return report_failure("failed to write launcher assembly: " + write_result.unwrap_err().message)
     }
     as_argv := string[]()
     as_argv = append(as_argv, "as")
@@ -2986,7 +2986,7 @@ func build_compiler_runtime_launcher(string output) int {
     as_argv = append(as_argv, asm_path)
     as_result := std.process.run_process(as_argv)
     if as_result.is_err() {
-        return report_failure("launcher assembler failed: " + as_result.unwrap_err().message
+        return report_failure("launcher assembler failed: " + as_result.unwrap_err().message)
     }
     ld_argv := string[]()
     ld_argv = append(ld_argv, "ld")
