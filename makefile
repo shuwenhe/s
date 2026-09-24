@@ -2367,6 +2367,24 @@ parser-authority-check: modular-bootstrap stage0-freeze-check
 	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/parser_authority_check.sh \
 	  "$(MODULAR_STAGE1_BIN)" "$(PARSER_AUTHORITY_REPORT)"
 
+.PHONY: canonical-parser-closure-check
+canonical-parser-closure-check: bin/s_modular stage0-closure-check
+	@echo "Checking Stage 3 canonical parser closure..."
+	@chmod +x misc/scripts/canonical-parser-closure-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) S_PROJECT_ROOT=$(CURDIR) \
+	  misc/scripts/canonical-parser-closure-check.sh \
+	  "$(CURDIR)/bin/s_modular" "$(STAGE0_CLOSURE)" \
+	  "$(MODULAR_BOOTSTRAP_DIR)/canonical-parser-closure-report.txt"
+
+.PHONY: canonical-resolution-closure-check
+canonical-resolution-closure-check: bin/s_modular stage0-closure-check
+	@echo "Checking Stage 5/6 canonical resolution/declaration-ref closure..."
+	@chmod +x misc/scripts/canonical-resolution-closure-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) S_PROJECT_ROOT=$(CURDIR) \
+	  misc/scripts/canonical-resolution-closure-check.sh \
+	  "$(CURDIR)/bin/s_modular" "$(STAGE0_CLOSURE)" \
+	  "$(MODULAR_BOOTSTRAP_DIR)/canonical-resolution-closure-report.txt"
+
 .PHONY: parser-execution-path-check
 parser-execution-path-check: modular-bootstrap
 	@echo "Tracing parser execution path..."
