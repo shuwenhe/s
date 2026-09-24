@@ -69,6 +69,12 @@ struct signature_match {
     int unknown_arg_count
 }
 
+struct call_callee_resolution {
+    bool ok
+    signature_match match
+    int errors
+}
+
 struct check_result {
     string type_name
     int errors
@@ -1757,45 +1763,12 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             switch value.callee.value {
                 expr::member(member) : {
                     qualified_path := qualified_expr_path(value.callee.value)
-                    qualified_package := qualified_package_part(qualified_path)
-                    qualified_name := qualified_decl_part(qualified_path)
-                    qualified_candidates := lookup_qualified_functions(functions, qualified_package, qualified_name)
-                    if std.prelude.len(qualified_candidates) > 0 {
-                        matches := signature_match[]()
-                        j := 0
-                        for j < std.prelude.len(qualified_candidates) {
-                            m := try_match_signature(qualified_candidates[j], arg_types, functions, traits, declarations)
-                            if m.ok {
-                                matches = append(matches, m);
-                            }
-                            j = j + 1
-                        }
-                        if std.prelude.len(matches) == 0 {
-                            return check_result {
-                                type_name: "unknown", errors errors + add_error(source, diagnostics, "e1002", "no matching overload", qualified_path),
-                            }
-                        }
-                        best := matches[0]
-                        ambiguous := false
-                        j = 1
-                        for j < std.prelude.len(matches) {
-                            if better_match(matches[j], best) {
-                                best = matches[j]
-                                ambiguous = false
-                            } else if same_match_rank(matches[j], best) {
-                                ambiguous = true
-                            }
-                            j = j + 1
-                        }
-                        if ambiguous {
-                            return check_result {
-                                type_name: "unknown", errors errors + add_error(source, diagnostics, "e1003", "ambiguous overload", qualified_path),
-                            }
-                        }
-                        value.resolved_callee = option::some(best.instance_name)
-                        value.kindargs = best.kindargs
+                    qualified := resolve_qualified_call_callee(qualified_path, arg_types, functions, traits, declarations, source, diagnostics)
+                    if qualified.ok {
+                        value.resolved_callee = option::some(qualified.match.instance_name)
+                        value.kindargs = qualified.match.kindargs
                         return check_result {
-                            type_name: best.return_type, errors errors,
+                            type_name: qualified.match.return_type, errors errors,
                         }
                     }
                     target := infer_expr(member.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
@@ -1941,47 +1914,16 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                             type_name: "()", errors errors + owned.errors,
                         }
                     }
-                    candidates := lookup_functions(functions, callee_name.name)
-                    if std.prelude.len(candidates) == 0 {
+                    resolved := resolve_call_callee(callee_name.name, arg_types, functions, traits, declarations, source, diagnostics)
+                    if !resolved.ok {
                         return check_result {
-                            type_name: "unknown", errors errors + add_error(source, diagnostics, "e1001", "undefined function", callee_name.name),
+                            type_name: "unknown", errors errors + resolved.errors,
                         }
                     }
-                    matches := signature_match[]()
-                    j := 0
-                    for j < std.prelude.len(candidates) {
-                        m := try_match_signature(candidates[j], arg_types, functions, traits, declarations)
-                        if m.ok {
-                            matches = append(matches, m);
-                        }
-                        j = j + 1
-                    }
-                    if std.prelude.len(matches) == 0 {
-                        return check_result {
-                            type_name: "unknown", errors errors + add_error(source, diagnostics, "e1002", "no matching overload", callee_name.name),
-                        }
-                    }
-                    best := matches[0]
-                    ambiguous := false
-                    j = 1
-                    for j < std.prelude.len(matches) {
-                        if better_match(matches[j], best) {
-                            best = matches[j]
-                            ambiguous = false
-                        } else if same_match_rank(matches[j], best) {
-                            ambiguous = true
-                        }
-                        j = j + 1
-                    }
-                    if ambiguous {
-                        return check_result {
-                            type_name: "unknown", errors errors + add_error(source, diagnostics, "e1003", "ambiguous overload", callee_name.name),
-                        }
-                    }
-                    value.resolved_callee = option::some(best.instance_name)
-                    value.kindargs = best.kindargs
+                    value.resolved_callee = option::some(resolved.match.instance_name)
+                    value.kindargs = resolved.match.kindargs
                     check_result {
-                        type_name: best.return_type, errors errors,
+                        type_name: resolved.match.return_type, errors errors,
                     }
                 }
                 _ : {
@@ -2450,6 +2392,116 @@ func infer_binary(string op, check_result left, check_result right, string sourc
     }
     check_result {
         type_name: "unknown", errors errors,
+    }
+}
+
+func resolve_qualified_call_callee(string qualified_path, string[] arg_types, function_binding[] functions, trait_binding[] traits, declaration_ref[] declarations, string source, semantic_error[] diagnostics) call_callee_resolution {
+    qualified_package := qualified_package_part(qualified_path)
+    qualified_name := qualified_decl_part(qualified_path)
+    qualified_candidates := lookup_qualified_functions(functions, qualified_package, qualified_name)
+    empty_match := signature_match {
+        ok: false, return_type: "unknown", instance_name: "", type_args: string[](), score: 0, generic_bind_count: 0, unknown_arg_count: 0,
+    }
+    if std.prelude.len(qualified_candidates) == 0 {
+        return call_callee_resolution {
+            ok: false,
+            match: empty_match,
+            errors: 0,
+        }
+    }
+    matches := signature_match[]()
+    j := 0
+    for j < std.prelude.len(qualified_candidates) {
+        m := try_match_signature(qualified_candidates[j], arg_types, functions, traits, declarations)
+        if m.ok {
+            matches = append(matches, m);
+        }
+        j = j + 1
+    }
+    if std.prelude.len(matches) == 0 {
+        return call_callee_resolution {
+            ok: false,
+            match: empty_match,
+            errors: add_error(source, diagnostics, "e1002", "no matching overload", qualified_path),
+        }
+    }
+    best := matches[0]
+    ambiguous := false
+    j = 1
+    for j < std.prelude.len(matches) {
+        if better_match(matches[j], best) {
+            best = matches[j]
+            ambiguous = false
+        } else if same_match_rank(matches[j], best) {
+            ambiguous = true
+        }
+        j = j + 1
+    }
+    if ambiguous {
+        return call_callee_resolution {
+            ok: false,
+            match: empty_match,
+            errors: add_error(source, diagnostics, "e1003", "ambiguous overload", qualified_path),
+        }
+    }
+    call_callee_resolution {
+        ok: true,
+        match: best,
+        errors: 0,
+    }
+}
+
+func resolve_call_callee(string name, string[] arg_types, function_binding[] functions, trait_binding[] traits, declaration_ref[] declarations, string source, semantic_error[] diagnostics) call_callee_resolution {
+    candidates := lookup_functions(functions, name)
+    empty_match := signature_match {
+        ok: false, return_type: "unknown", instance_name: "", type_args: string[](), score: 0, generic_bind_count: 0, unknown_arg_count: 0,
+    }
+    if std.prelude.len(candidates) == 0 {
+        return call_callee_resolution {
+            ok: false,
+            match: empty_match,
+            errors: add_error(source, diagnostics, "e1001", "undefined function", name),
+        }
+    }
+    matches := signature_match[]()
+    j := 0
+    for j < std.prelude.len(candidates) {
+        m := try_match_signature(candidates[j], arg_types, functions, traits, declarations)
+        if m.ok {
+            matches = append(matches, m);
+        }
+        j = j + 1
+    }
+    if std.prelude.len(matches) == 0 {
+        return call_callee_resolution {
+            ok: false,
+            match: empty_match,
+            errors: add_error(source, diagnostics, "e1002", "no matching overload", name),
+        }
+    }
+    best := matches[0]
+    ambiguous := false
+    j = 1
+    for j < std.prelude.len(matches) {
+        if better_match(matches[j], best) {
+            best = matches[j]
+            ambiguous = false
+        } else if same_match_rank(matches[j], best) {
+            ambiguous = true
+        }
+        j = j + 1
+    }
+    if ambiguous {
+        return call_callee_resolution {
+            ok: false,
+            match: empty_match,
+            errors: add_error(source, diagnostics, "e1003", "ambiguous overload", name),
+        }
+    }
+    call_callee_resolution {
+        ok: true,
+        match: best,
+        errors: 0,
     }
 }
 
