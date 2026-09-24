@@ -3682,7 +3682,7 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
             }
             release_owned_value(env.get(index).unwrap().value, runtime, replacement_id)
             env.set(index, binding {
-                name: value.name, value replacement,
+                name: value.name, value: replacement,
             })
             ()
         },
