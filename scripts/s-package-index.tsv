@@ -43,6 +43,7 @@ codegen.test	src/cmd/compile/seed/codegen/test_native.s
 compile	src/cmd/compile/internal/compile_optimization_pipeline.s
 compile	src/cmd/compile/test_complete_system.s
 compile.compiler	src/cmd/compile/compiler.s
+compile.internal	src/cmd/compile/run_stage5_gate.s
 compile.internal.abi	src/cmd/compile/internal/abi/abiutils.s
 compile.internal.abt	src/cmd/compile/internal/abt/avlint32.s
 compile.internal.amd64	src/cmd/compile/internal/amd64/amd64.s
@@ -320,6 +321,7 @@ compile.internal.s390x	src/cmd/compile/internal/s390x/s390x.s
 compile.internal.s390x	src/cmd/compile/internal/s390x/ssa.s
 compile.internal.safety	src/cmd/compile/internal/safety/proof.s
 compile.internal.semantic	src/cmd/compile/internal/semantic.s
+compile.internal.semantic	src/cmd/compile/internal/stage5_gate.s
 compile.internal.slice	src/cmd/compile/internal/slice/slice.s
 compile.internal.ssa	src/cmd/compile/internal/ssa/addressingmodes.s
 compile.internal.ssa	src/cmd/compile/internal/ssa/allocators.s
