@@ -2376,6 +2376,23 @@ canonical-parser-closure-check: bin/s_modular stage0-closure-check
 	  "$(CURDIR)/bin/s_modular" "$(STAGE0_CLOSURE)" \
 	  "$(MODULAR_BOOTSTRAP_DIR)/canonical-parser-closure-report.txt"
 
+.PHONY: compile-pipeline-check
+compile-pipeline-check:
+	@echo "Running S Compiler Canonical Pipeline Check..."
+	@chmod +x scripts/compile-pipeline-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/compile-pipeline-check.sh
+
+.PHONY: stage5-name-resolution-check
+stage5-name-resolution-check: bin/s_compiler
+	@echo "Checking Stage 5 Name → Declaration Resolution Authority..."
+	@mkdir -p $(MODULAR_BOOTSTRAP_DIR)/stage5
+	@chmod +x scripts/canonical-name-resolution-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-name-resolution-check.sh "$(CURDIR)"
+
+.PHONY: canonical-name-resolution-check
+canonical-name-resolution-check:
+	@$(MAKE) stage5-name-resolution-check
+
 .PHONY: canonical-resolution-closure-check
 canonical-resolution-closure-check: bin/s_modular stage0-closure-check
 	@echo "Checking Stage 5/6 canonical resolution/declaration-ref closure..."

@@ -15,15 +15,42 @@
    syntactic representation
    ✅ PROVEN
      ↓
-══════════════════════════════════
 5. Name / Import Resolution
-   names → declarations/packages
-   🟡 CURRENT FRONTIER
-══════════════════════════════════
+   names → declaration candidates
+   ✅ CLOSED / AUTHORITY BOUNDARY ESTABLISHED
+   canonical-name-resolution-check: Option A (Candidate-based)
+   Proof: Stage 5a complete, Stage 5b candidate resolution proven
      ↓
+══════════════════════════════════
 6. DeclarationRef
    declaration → canonical declaration identity
-   🟡 OPEN / P0
+   🟡 CURRENT FRONTIER / P0
+══════════════════════════════════
+
+   CORE RESPONSIBILITY:
+   Input:  declaration from Stage 5 Name Resolution
+   Output: unique, stable DeclarationRef with canonical identity
+   NOT:    re-resolving names, re-checking types
+
+   EXAMPLE:
+   std.env.args (resolved by Stage 5)
+       ↓
+   DeclarationRef {
+       package_path: "std.env",
+       name: "args",
+       kind: FUNCTION,
+       identity: <canonical>
+   }
+
+   COMPLETION CRITERIA (must prove all 4):
+   1. Central creation:        DeclarationRef only from canonical producer
+   2. Uniqueness:              same declaration → same DeclarationRef
+   3. Propagation:             preserved through semantic/type-checking
+   4. No string reconstruction: downstream must NOT re-lookup by package+name
+
+   GATE: canonical-declaration-ref-check
+   PASS: Identity preserved, propagated, unique
+   FAIL: String reconstruction, identity loss, duplication
      ↓
 7. Type Checking / Inference
    expressions → types
@@ -87,3 +114,22 @@
      ↓
 22. Executable
     ✅ PROVEN
+
+═════════════════════════════════════════════════════════════════
+
+PROGRESS INTERPRETATION:
+
+  Authority Chain Frontier:  5/22 ≈ 23% (stages with canonical proof)
+  
+  Closed/Proven:             Source, Lexer, Parser, AST, Name Resolution
+  Current Frontier:          DeclarationRef (P0)
+  Open/ToDo:                 Type Checking, CanonicalTypeRef, Semantic Analysis, ...
+  
+  ⚠️  IMPORTANT: 23% does NOT mean "only 23% of engineering done"
+  
+  Reality:
+  ✅ MIR, Ownership/NLL, Codegen, Machine Code, ELF, Executable already exist
+  🟡 What's missing: canonical authority chain connecting these pieces
+  
+  Current bottleneck: proving name → declaration → type → semantic flow
+  (NOT implementing new features, but authorizing existing ones)
