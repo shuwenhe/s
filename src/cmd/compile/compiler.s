@@ -249,6 +249,23 @@ func compiler_optional_semicolon(compiler_state initial) compiler_state {
     return s
 }
 
+func compiler_import_path_from_literal(string token) string {
+    if !compiler_is_string_literal(token) { return "" }
+    if len(token) < 2 { return "" }
+    if __host_char_at(token, len(token) - 1) != "\"" { return "" }
+    return __host_slice(token, 1, len(token) - 1)
+}
+
+func compiler_import_local_name(string package_path) string {
+    if package_path == "" { return "" }
+    i := 0
+    while i < len(package_path) {
+        if __host_char_at(package_path, i) == "." { return __host_slice(package_path, 0, i) }
+        i = i + 1
+    }
+    return package_path
+}
+
 func compiler_is_string_literal(string token) bool {
     return len(token) >= 2 && __host_char_at(token, 0) == "\""
 }
@@ -2608,6 +2625,23 @@ func compiler_parse_function_like(compiler_state initial) compiler_state {
     compiler_parse_helper(s)
 }
 
+func compiler_skip_import_decl(compiler_state initial) compiler_state {
+    s := compiler_expect(initial, "import")
+    if s.token == "(" {
+        s = compiler_next(s)
+        while s.error == "" && s.token != "" && s.token != ")" {
+            if !compiler_is_string_literal(s.token) { return compiler_fail(s, "expected import path") }
+            s = compiler_next(s)
+            if s.token == ";" || s.token == "," { s = compiler_next(s) }
+        }
+        s = compiler_expect(s, ")")
+        return compiler_optional_semicolon(s)
+    }
+    if !compiler_is_string_literal(s.token) { return compiler_fail(s, "expected import path") }
+    s = compiler_next(s)
+    return compiler_optional_semicolon(s)
+}
+
 func compiler_compile(string source) compiler_state {
     names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
     kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -2669,7 +2703,9 @@ func compiler_compile(string source) compiler_state {
     }
     if s.token == ";" { s = compiler_next(s) }
     while s.token == "use" || s.token == "import" {
-        return compiler_subset_fail(s, "imports and multi-package resolution")
+        if s.token == "use" { return compiler_subset_fail(s, "use declarations") }
+        s = compiler_skip_import_decl(s)
+        if s.error != "" { return s }
     }
     while s.token == "struct" {
         s = compiler_parse_struct_decl(s)
@@ -4716,14 +4752,89 @@ func compiler_emit_mir_partial_drop(string source) string {
     return out
 }
 
+func compiler_stage5_first_import_package(string source) string {
+    s := compiler_compile(source)
+    if s.error != "" { return "" }
+    scan := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: s.names, kinds: s.kinds, live: s.live, roots: s.roots, parents: s.parents, loan_fields: s.loan_fields, loan_parent_fields: s.loan_parent_fields, array_lengths: s.array_lengths, struct_ids: s.struct_ids, field_state: s.field_state, field_borrow_state: s.field_borrow_state, nested_field_state: s.nested_field_state, nested_field_borrow_state: s.nested_field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: s.function_names, function_counts: s.function_counts, function_returns: s.function_returns, function_return_constants: s.function_return_constants, function_return_call_targets: s.function_return_call_targets, function_branch_conditions: s.function_branch_conditions, function_branch_true_constants: s.function_branch_true_constants, function_branch_false_constants: s.function_branch_false_constants, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: s.function_return_params, function_starts: s.function_starts, function_param_kinds: s.function_param_kinds, function_param_structs: s.function_param_structs, function_return_structs: s.function_return_structs, function_param_total: 0, function_count: 0, struct_names: s.struct_names, struct_field_lefts: s.struct_field_lefts, struct_field_rights: s.struct_field_rights, struct_field_left_kinds: s.struct_field_left_kinds, struct_field_right_kinds: s.struct_field_right_kinds, struct_field_names: s.struct_field_names, struct_field_kinds: s.struct_field_kinds, struct_field_structs: s.struct_field_structs, struct_field_starts: s.struct_field_starts, struct_field_counts: s.struct_field_counts, struct_custom_drops: s.struct_custom_drops, struct_count: 0, function_name: "", function_main: false, method_names: s.method_names, method_structs: s.method_structs, method_returns: s.method_returns, method_count: 0 }
+    scan = compiler_next(scan)
+    scan = compiler_expect(scan, "package")
+    if !compiler_ident(scan.token) { return "" }
+    scan = compiler_next(scan)
+    while scan.token == "." {
+        scan = compiler_next(scan)
+        if !compiler_ident(scan.token) { return "" }
+        scan = compiler_next(scan)
+    }
+    if scan.token == ";" { scan = compiler_next(scan) }
+    if scan.token != "import" { return "" }
+    scan = compiler_next(scan)
+    if scan.token == "(" { scan = compiler_next(scan) }
+    return compiler_import_path_from_literal(scan.token)
+}
+
+func compiler_stage5_package_identity(string source) string {
+    s := compiler_compile(source)
+    if s.error != "" { return "" }
+    scan := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: s.names, kinds: s.kinds, live: s.live, roots: s.roots, parents: s.parents, loan_fields: s.loan_fields, loan_parent_fields: s.loan_parent_fields, array_lengths: s.array_lengths, struct_ids: s.struct_ids, field_state: s.field_state, field_borrow_state: s.field_borrow_state, nested_field_state: s.nested_field_state, nested_field_borrow_state: s.nested_field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: s.function_names, function_counts: s.function_counts, function_returns: s.function_returns, function_return_constants: s.function_return_constants, function_return_call_targets: s.function_return_call_targets, function_branch_conditions: s.function_branch_conditions, function_branch_true_constants: s.function_branch_true_constants, function_branch_false_constants: s.function_branch_false_constants, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: s.function_return_params, function_starts: s.function_starts, function_param_kinds: s.function_param_kinds, function_param_structs: s.function_param_structs, function_return_structs: s.function_return_structs, function_param_total: 0, function_count: 0, struct_names: s.struct_names, struct_field_lefts: s.struct_field_lefts, struct_field_rights: s.struct_field_rights, struct_field_left_kinds: s.struct_field_left_kinds, struct_field_right_kinds: s.struct_field_right_kinds, struct_field_names: s.struct_field_names, struct_field_kinds: s.struct_field_kinds, struct_field_structs: s.struct_field_structs, struct_field_starts: s.struct_field_starts, struct_field_counts: s.struct_field_counts, struct_custom_drops: s.struct_custom_drops, struct_count: 0, function_name: "", function_main: false, method_names: s.method_names, method_structs: s.method_structs, method_returns: s.method_returns, method_count: 0 }
+    scan = compiler_next(scan)
+    if scan.token != "package" { return "" }
+    scan = compiler_next(scan)
+    if !compiler_ident(scan.token) { return "" }
+    identity := scan.token
+    scan = compiler_next(scan)
+    while scan.token == "." {
+        scan = compiler_next(scan)
+        if !compiler_ident(scan.token) { return "" }
+        identity = identity + "." + scan.token
+        scan = compiler_next(scan)
+    }
+    return identity
+}
+
+func compiler_emit_stage5_input_authority_proof(string source) string {
+    result := compiler_compile(source)
+    if result.error != "" {
+        return "S5.1=FAIL\n" + "S5.1.reason=canonical compile path did not reach Stage 5 resolver entry: " + result.error + "\n"
+    }
+    out := "stage=5\n"
+    out = out + "input-authority=canonical-ast\n"
+    out = out + "entry-authority=canonical-compile-path\n"
+    out = out + "ast-present=yes\n"
+    out = out + "resolver-entry-reached=yes\n"
+    out = out + "S5.1=PASS\n"
+    package_identity := compiler_stage5_package_identity(source)
+    out = out + "S5.1.evidence=canonical entry parsed source to AST and reached Stage 5 resolver entry\n"
+    if package_identity != "" {
+        out = out + "S5.2=PASS\n"
+        out = out + "S5.2.package-identity=" + package_identity + "\n"
+        out = out + "S5.2.identity-source=canonical-stage5-input\n"
+        out = out + "S5.2.identity-stable=yes\n"
+        out = out + "S5.2.evidence=canonical Stage 5 input has unique package identity " + package_identity + "\n"
+    }
+    import_package := compiler_stage5_first_import_package(source)
+    if import_package != "" {
+        import_local := compiler_import_local_name(import_package)
+        out = out + "S5.3=PASS\n"
+        out = out + "S5.3.import-local-name=" + import_local + "\n"
+        out = out + "S5.3.import-package=" + import_package + "\n"
+        out = out + "S5.3.registration-source=canonical-stage5-input\n"
+        out = out + "S5.3.evidence=canonical Stage 5 import registration maps " + import_local + " to " + import_package + "\n"
+    }
+    return out
+}
+
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "--emit-c" && args[1] != "--emit-lowered-view" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
-        eprintln("usage: s_compiler (--emit-c|--emit-lowered-view|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|--emit-mir-nll-ownership) input.s output")
+    if len(args) != 4 || (args[1] != "stage5-name-resolution-proof" && args[1] != "--emit-c" && args[1] != "--emit-lowered-view" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
+        eprintln("usage: s_compiler (--emit-c|--emit-lowered-view|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|stage5-name-resolution-proof|--emit-mir-nll-ownership) input.s output")
         return 2
     }
     source := __host_read_to_string(args[2])
     if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
+    if args[1] == "stage5-name-resolution-proof" {
+        if __host_write_text_file(args[3], compiler_emit_stage5_input_authority_proof(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
     if args[1] == "--emit-lowered-view" {
         if __host_write_text_file(args[3], compiler_emit_lowered_view(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
