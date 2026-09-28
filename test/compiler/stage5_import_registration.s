@@ -4,6 +4,10 @@ import (
     "std.io"
 )
 
+func helper() int {
+    return 7;
+}
+
 func main() int {
-    return 0;
+    return helper();
 }

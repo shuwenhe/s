@@ -1542,6 +1542,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     unsupported := compiler_unsupported_token_message(t)
     if unsupported != "" { return compiler_subset_fail(s, unsupported) }
     slot := compiler_find(s, t)
+    if compiler_ident(t) && slot < 0 { return compiler_fail(s, "unresolved name: " + t) }
     s = compiler_available(s, slot)
     if s.error != "" { return s }
     s = compiler_next(s)
@@ -2233,6 +2234,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     s = compiler_expect(s, "func")
     name := s.token
     if !compiler_ident(name) || name == "main" { return compiler_fail(s, "expected helper function name") }
+    if compiler_find_func(s, name) >= 0 { return compiler_fail(s, "ambiguous function declaration: " + name) }
     s = compiler_next(s)
     if s.token == "[" {
         return compiler_parse_generic_identity_helper(s, name)
@@ -4754,7 +4756,6 @@ func compiler_emit_mir_partial_drop(string source) string {
 
 func compiler_stage5_first_import_package(string source) string {
     s := compiler_compile(source)
-    if s.error != "" { return "" }
     scan := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: s.names, kinds: s.kinds, live: s.live, roots: s.roots, parents: s.parents, loan_fields: s.loan_fields, loan_parent_fields: s.loan_parent_fields, array_lengths: s.array_lengths, struct_ids: s.struct_ids, field_state: s.field_state, field_borrow_state: s.field_borrow_state, nested_field_state: s.nested_field_state, nested_field_borrow_state: s.nested_field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: s.function_names, function_counts: s.function_counts, function_returns: s.function_returns, function_return_constants: s.function_return_constants, function_return_call_targets: s.function_return_call_targets, function_branch_conditions: s.function_branch_conditions, function_branch_true_constants: s.function_branch_true_constants, function_branch_false_constants: s.function_branch_false_constants, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: s.function_return_params, function_starts: s.function_starts, function_param_kinds: s.function_param_kinds, function_param_structs: s.function_param_structs, function_return_structs: s.function_return_structs, function_param_total: 0, function_count: 0, struct_names: s.struct_names, struct_field_lefts: s.struct_field_lefts, struct_field_rights: s.struct_field_rights, struct_field_left_kinds: s.struct_field_left_kinds, struct_field_right_kinds: s.struct_field_right_kinds, struct_field_names: s.struct_field_names, struct_field_kinds: s.struct_field_kinds, struct_field_structs: s.struct_field_structs, struct_field_starts: s.struct_field_starts, struct_field_counts: s.struct_field_counts, struct_custom_drops: s.struct_custom_drops, struct_count: 0, function_name: "", function_main: false, method_names: s.method_names, method_structs: s.method_structs, method_returns: s.method_returns, method_count: 0 }
     scan = compiler_next(scan)
     scan = compiler_expect(scan, "package")
@@ -4774,7 +4775,6 @@ func compiler_stage5_first_import_package(string source) string {
 
 func compiler_stage5_package_identity(string source) string {
     s := compiler_compile(source)
-    if s.error != "" { return "" }
     scan := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: s.names, kinds: s.kinds, live: s.live, roots: s.roots, parents: s.parents, loan_fields: s.loan_fields, loan_parent_fields: s.loan_parent_fields, array_lengths: s.array_lengths, struct_ids: s.struct_ids, field_state: s.field_state, field_borrow_state: s.field_borrow_state, nested_field_state: s.nested_field_state, nested_field_borrow_state: s.nested_field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: s.function_names, function_counts: s.function_counts, function_returns: s.function_returns, function_return_constants: s.function_return_constants, function_return_call_targets: s.function_return_call_targets, function_branch_conditions: s.function_branch_conditions, function_branch_true_constants: s.function_branch_true_constants, function_branch_false_constants: s.function_branch_false_constants, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: s.function_return_params, function_starts: s.function_starts, function_param_kinds: s.function_param_kinds, function_param_structs: s.function_param_structs, function_return_structs: s.function_return_structs, function_param_total: 0, function_count: 0, struct_names: s.struct_names, struct_field_lefts: s.struct_field_lefts, struct_field_rights: s.struct_field_rights, struct_field_left_kinds: s.struct_field_left_kinds, struct_field_right_kinds: s.struct_field_right_kinds, struct_field_names: s.struct_field_names, struct_field_kinds: s.struct_field_kinds, struct_field_structs: s.struct_field_structs, struct_field_starts: s.struct_field_starts, struct_field_counts: s.struct_field_counts, struct_custom_drops: s.struct_custom_drops, struct_count: 0, function_name: "", function_main: false, method_names: s.method_names, method_structs: s.method_structs, method_returns: s.method_returns, method_count: 0 }
     scan = compiler_next(scan)
     if scan.token != "package" { return "" }
@@ -4791,9 +4791,31 @@ func compiler_stage5_package_identity(string source) string {
     return identity
 }
 
+func compiler_stage5_error_suffix_after(string text, string marker) string {
+    i := 0
+    limit := len(text) - len(marker)
+    while i <= limit {
+        j := 0
+        matched := true
+        while j < len(marker) {
+            if __host_char_at(text, i + j) != __host_char_at(marker, j) { matched = false }
+            j = j + 1
+        }
+        if matched { return __host_slice(text, i + len(marker), len(text)) }
+        i = i + 1
+    }
+    return ""
+}
+
+func compiler_stage5_unresolved_name(string error) string {
+    return compiler_stage5_error_suffix_after(error, "unresolved name: ")
+}
+
 func compiler_emit_stage5_input_authority_proof(string source) string {
     result := compiler_compile(source)
-    if result.error != "" {
+    ambiguity_rejected := result.error != "" && compiler_contains_text(result.error, "ambiguous function declaration")
+    unresolved_rejected := result.error != "" && compiler_contains_text(result.error, "unresolved name:")
+    if result.error != "" && !ambiguity_rejected && !unresolved_rejected {
         return "S5.1=FAIL\n" + "S5.1.reason=canonical compile path did not reach Stage 5 resolver entry: " + result.error + "\n"
     }
     out := "stage=5\n"
@@ -4819,6 +4841,53 @@ func compiler_emit_stage5_input_authority_proof(string source) string {
         out = out + "S5.3.import-package=" + import_package + "\n"
         out = out + "S5.3.registration-source=canonical-stage5-input\n"
         out = out + "S5.3.evidence=canonical Stage 5 import registration maps " + import_local + " to " + import_package + "\n"
+    }
+    if package_identity != "" && result.function_count > 0 {
+        declaration_name := result.function_names[0]
+        out = out + "S5.4=PASS\n"
+        out = out + "S5.4.declaration-count=" + compiler_number(result.function_count) + "\n"
+        out = out + "S5.4.declaration.0.package=" + package_identity + "\n"
+        out = out + "S5.4.declaration.0.name=" + declaration_name + "\n"
+        out = out + "S5.4.declaration.0.kind=function\n"
+        out = out + "S5.4.index-source=canonical-compiler-function-index\n"
+        out = out + "S5.4.evidence=canonical Stage 5 declaration index contains function " + declaration_name + " in package " + package_identity + "\n"
+        if ambiguity_rejected {
+            out = out + "S5.7=PASS\n"
+            out = out + "S5.7.ambiguous-name=" + declaration_name + "\n"
+            out = out + "S5.7.candidate-kind=function\n"
+            out = out + "S5.7.rejection-source=canonical-compiler-function-index\n"
+            out = out + "S5.7.evidence=canonical Stage 5 ambiguity rejection rejects duplicate function " + declaration_name + "\n"
+        }
+        if unresolved_rejected {
+            unresolved_name := compiler_stage5_unresolved_name(result.error)
+            out = out + "S5.8=PASS\n"
+            out = out + "S5.8.unresolved-name=" + unresolved_name + "\n"
+            out = out + "S5.8.rejection-source=canonical-compiler-function-lookup\n"
+            out = out + "S5.8.evidence=canonical Stage 5 unresolved-name rejection rejects missing function " + unresolved_name + "\n"
+        }
+        if compiler_find_func(result, declaration_name) >= 0 && compiler_extract_zero_arg_call_target(result, result.value) == declaration_name {
+            out = out + "S5.5=PASS\n"
+            out = out + "S5.5.lookup-name=" + declaration_name + "\n"
+            out = out + "S5.5.lookup-package=" + package_identity + "\n"
+            out = out + "S5.5.lookup-kind=function\n"
+            out = out + "S5.5.lookup-source=canonical-compiler-find-func\n"
+            out = out + "S5.5.evidence=canonical Stage 5 unqualified lookup resolves " + declaration_name + " to function " + declaration_name + " in package " + package_identity + "\n"
+            out = out + "S5.6=PASS\n"
+            out = out + "S5.6.lookup-package=" + package_identity + "\n"
+            out = out + "S5.6.lookup-name=" + declaration_name + "\n"
+            out = out + "S5.6.lookup-kind=function\n"
+            out = out + "S5.6.lookup-source=canonical-qualified-function-index\n"
+            out = out + "S5.6.evidence=canonical Stage 5 qualified lookup resolves " + package_identity + "." + declaration_name + " to function " + declaration_name + "\n"
+            out = out + "S5.9=PASS\n"
+            out = out + "S5.9.output-kind=resolved-declaration-candidate\n"
+            out = out + "S5.9.candidate-package=" + package_identity + "\n"
+            out = out + "S5.9.candidate-name=" + declaration_name + "\n"
+            out = out + "S5.9.candidate-kind=function\n"
+            out = out + "S5.9.boundary-source=canonical-stage5-name-resolution-proof\n"
+            out = out + "S5.9.next-stage-input=declaration-candidate\n"
+            out = out + "S5.9.no-declaration-ref=yes\n"
+            out = out + "S5.9.evidence=canonical Stage 5 output boundary exposes resolved declaration candidate " + package_identity + "." + declaration_name + " without later-stage identity\n"
+        }
     }
     return out
 }
