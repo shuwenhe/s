@@ -1,4 +1,4 @@
-package stage5_import_registration
+package stage5_ambiguity_rejection
 
 import (
     "std.io"
@@ -6,6 +6,10 @@ import (
 
 func helper() int {
     return 7;
+}
+
+func helper() int {
+    return 8;
 }
 
 func main() int {

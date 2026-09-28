@@ -1,4 +1,4 @@
-package stage5_import_registration
+package stage5_unresolved_rejection
 
 import (
     "std.io"
@@ -9,5 +9,5 @@ func helper() int {
 }
 
 func main() int {
-    return helper();
+    return missing();
 }

@@ -156,6 +156,24 @@ if printf '%s\n' "$help_output" | grep -Fq 'stage5-name-resolution-proof'; then
     proof_status=0
     proof_input="${S_STAGE5_PROOF_INPUT:-$SOURCE_ROOT/test/compiler/stage5_import_registration.s}"
     "$COMPILER" stage5-name-resolution-proof "$proof_input" "$RAW_REPORT" || proof_status=$?
+    ambiguity_input="${S_STAGE5_AMBIGUITY_INPUT:-$SOURCE_ROOT/test/compiler/stage5_ambiguity_rejection.s}"
+    if [ "$proof_status" -eq 0 ] && [ -f "$RAW_REPORT" ] && [ -f "$ambiguity_input" ] && ! grep -q "^S5\.7=" "$RAW_REPORT"; then
+        ambiguity_report="$RAW_REPORT.ambiguity"
+        ambiguity_status=0
+        "$COMPILER" stage5-name-resolution-proof "$ambiguity_input" "$ambiguity_report" || ambiguity_status=$?
+        if [ "$ambiguity_status" -eq 0 ] && [ -f "$ambiguity_report" ]; then
+            sed -n "/^S5\.7/p" "$ambiguity_report" >> "$RAW_REPORT"
+        fi
+    fi
+    unresolved_input="${S_STAGE5_UNRESOLVED_INPUT:-$SOURCE_ROOT/test/compiler/stage5_unresolved_rejection.s}"
+    if [ "$proof_status" -eq 0 ] && [ -f "$RAW_REPORT" ] && [ -f "$unresolved_input" ] && ! grep -q "^S5\.8=" "$RAW_REPORT"; then
+        unresolved_report="$RAW_REPORT.unresolved"
+        unresolved_status=0
+        "$COMPILER" stage5-name-resolution-proof "$unresolved_input" "$unresolved_report" || unresolved_status=$?
+        if [ "$unresolved_status" -eq 0 ] && [ -f "$unresolved_report" ]; then
+            sed -n "/^S5\.8/p" "$unresolved_report" >> "$RAW_REPORT"
+        fi
+    fi
     if [ "$proof_status" -ne 0 ] || [ ! -f "$RAW_REPORT" ]; then
         {
             echo "S5.1=FAIL"
