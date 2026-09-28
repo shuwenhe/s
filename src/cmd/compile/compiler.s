@@ -86,6 +86,11 @@ struct compiler_state {
     string stage7_compatibility_action
     string stage7_compatibility_name_reresolution
     string stage7_compatibility_declaration_ref
+    string stage7_rejection_source
+    string stage7_rejection_kind
+    string stage7_rejection_diagnostic
+    string stage7_rejection_expected_key
+    string stage7_rejection_name_reresolution
 }
 
 struct ownership_decision {
@@ -5082,6 +5087,24 @@ func compiler_stage7_type_fact_name(compiler_state initial, int kind, int struct
     if kind == 15 { return "slice" }
     if kind == 16 { return "mutslice" }
     if kind == 17 { return "string" }
+    return ""
+}
+
+func compiler_stage7_negative_proof_input() string {
+    negative_path := runtime_env_get("S_STAGE7_NEGATIVE_PROOF_INPUT", "")
+    if negative_path == "" { return "" }
+    return __host_read_to_string(negative_path)
+}
+
+func compiler_stage7_is_type_error_diagnostic(string error) bool {
+    return error == "return type mismatch" || error == "return struct type mismatch" || error == "function argument type mismatch" || error == "function argument struct type mismatch"
+}
+
+func compiler_stage7_rejection_kind_from_error(string error) string {
+    if error == "return type mismatch" { return "return-type-mismatch" }
+    if error == "return struct type mismatch" { return "return-struct-type-mismatch" }
+    if error == "function argument type mismatch" { return "function-argument-type-mismatch" }
+    if error == "function argument struct type mismatch" { return "function-argument-struct-type-mismatch" }
     return ""
 }
 
