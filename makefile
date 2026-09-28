@@ -2393,6 +2393,16 @@ stage5-name-resolution-check: bin/s_compiler
 canonical-name-resolution-check:
 	@$(MAKE) stage5-name-resolution-check
 
+.PHONY: canonical-declaration-ref-check
+canonical-declaration-ref-check: compiler
+	@chmod +x scripts/canonical-declaration-ref-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-declaration-ref-check.sh "$(CURDIR)"
+.PHONY: canonical-type-checking-check
+canonical-type-checking-check: compiler
+	@chmod +x scripts/canonical-type-checking-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-type-checking-check.sh "$(CURDIR)"
+
+
 .PHONY: canonical-resolution-closure-check
 canonical-resolution-closure-check: bin/s_modular stage0-closure-check
 	@echo "Checking Stage 5/6 canonical resolution/declaration-ref closure..."
