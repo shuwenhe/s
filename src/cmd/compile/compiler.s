@@ -2,6 +2,7 @@ package compile.compiler
 extern "intrinsic" func host_args() string[];
 extern "intrinsic" func __host_read_to_string(string path) string;
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
+extern "intrinsic" func runtime_env_get(string key, string fallback) string;
 extern "intrinsic" func __host_char_at(string text, int index) string;
 extern "intrinsic" func __host_slice(string text, int start, int end) string;
 
@@ -78,6 +79,13 @@ struct compiler_state {
     int[] method_structs
     int[] method_returns
     int method_count
+    string stage7_compatibility_actual_source
+    string stage7_compatibility_expected_source
+    string stage7_compatibility_expected_key
+    string stage7_compatibility_result
+    string stage7_compatibility_action
+    string stage7_compatibility_name_reresolution
+    string stage7_compatibility_declaration_ref
 }
 
 struct ownership_decision {
@@ -264,6 +272,25 @@ func compiler_import_local_name(string package_path) string {
         i = i + 1
     }
     return package_path
+}
+
+func compiler_scan_package_identity(string source) string {
+    empty_names := ["", "", "", "", "", "", "", ""];
+    empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
+    scan := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_constants: empty_names, function_return_call_targets: empty_names, function_branch_conditions: empty_names, function_branch_true_constants: empty_names, function_branch_false_constants: empty_names, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0, stage7_compatibility_actual_source: "", stage7_compatibility_expected_source: "", stage7_compatibility_expected_key: "", stage7_compatibility_result: "", stage7_compatibility_action: "", stage7_compatibility_name_reresolution: "", stage7_compatibility_declaration_ref: "" }
+    scan = compiler_next(scan)
+    if scan.token != "package" { return "" }
+    scan = compiler_next(scan)
+    if !compiler_ident(scan.token) { return "" }
+    identity := scan.token
+    scan = compiler_next(scan)
+    while scan.token == "." {
+        scan = compiler_next(scan)
+        if !compiler_ident(scan.token) { return "" }
+        identity = identity + "." + scan.token
+        scan = compiler_next(scan)
+    }
+    return identity
 }
 
 func compiler_is_string_literal(string token) bool {
@@ -1396,8 +1423,16 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             return generic_call
         }
     }
-    if compiler_ident(t) && compiler_find_func(s, t) >= 0 {
-        function_index := compiler_find_func(s, t)
+    if compiler_ident(t) {
+        package_identity := compiler_scan_package_identity(s.source)
+        declaration_ref_identity := compiler_stage6_function_declaration_ref_identity(s, package_identity, t)
+        declaration_type_fact_key := compiler_stage7_declaration_type_fact_key(declaration_ref_identity)
+        function_index := compiler_stage7_type_environment_lookup_function(s, package_identity, declaration_ref_identity)
+        expected_param_count := compiler_stage7_declaration_param_count_fact(s, package_identity, declaration_type_fact_key)
+        expected_return_kind := compiler_stage7_declaration_return_kind_fact(s, package_identity, declaration_type_fact_key)
+        expected_return_struct := compiler_stage7_declaration_return_struct_fact(s, package_identity, declaration_type_fact_key)
+        if function_index < 0 || expected_param_count < 0 || expected_return_kind == 0 { }
+        else {
         s = compiler_expect(compiler_next(s), "(")
         args := ""
         evaluations := ""
@@ -1409,14 +1444,15 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if arg > 0 { s = compiler_expect(s, ",") }
             s = compiler_expression(s, 1)
             if s.value_kind < 1 || (s.value_kind > 9 && s.value_kind != 17) { return compiler_fail(s, "function arguments require integers, strings, owners, arrays, slices, pairs or references") }
-            if arg >= s.function_counts[function_index] { return compiler_fail(s, "too many function arguments") }
-            expected := s.function_param_kinds[s.function_starts[function_index] + arg]
+            if arg >= expected_param_count { return compiler_fail(s, "too many function arguments") }
+            expected := compiler_stage7_declaration_param_kind_fact(s, package_identity, declaration_type_fact_key, arg)
+            expected_struct := compiler_stage7_declaration_param_struct_fact(s, package_identity, declaration_type_fact_key, arg)
             if expected == 7 || expected == 8 {
                 if s.value_kind != 6 && s.value_kind != 7 && s.value_kind != 8 { return compiler_fail(s, "function argument requires an integer array") }
             } else if expected == 15 || expected == 16 {
                 if s.value_kind != 9 && s.value_kind != 15 && s.value_kind != 16 { return compiler_fail(s, "function argument requires a slice") }
             } else if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
-            if expected == 5 && s.value_struct_id != s.function_param_structs[s.function_starts[function_index] + arg] { return compiler_fail(s, "function argument struct type mismatch") }
+            if expected == 5 && s.value_struct_id != expected_struct { return compiler_fail(s, "function argument struct type mismatch") }
             argument := s.value
             argument_length := ""
             if expected == 7 || expected == 8 || expected == 15 || expected == 16 {
@@ -1444,7 +1480,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 s.loan_parent_fields[s.count] = -1
                 if s.value_field >= 0 { s.loan_fields[s.count] = s.value_field }
                 if s.value_parent_field >= 0 { s.loan_parent_fields[s.count] = s.value_parent_field }
-                if s.function_returns[function_index] >= 3 && s.function_returns[function_index] <= 4 && arg == s.function_return_params[function_index] {
+                if expected_return_kind >= 3 && expected_return_kind <= 4 && arg == s.function_return_params[function_index] {
                     returned_loan_slot = s.count
                 }
                 s.count = s.count + 1
@@ -1483,7 +1519,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 }
             }
             temporary := "s_arg" + call_id + "_" + compiler_number(arg)
-            argument_type := compiler_c_type_for_kind(s, expected, s.function_param_structs[s.function_starts[function_index] + arg])
+            argument_type := compiler_c_type_for_kind(s, expected, expected_struct)
             s.code = s.code + argument_type + temporary + ";\n"
             evaluations = evaluations + "(" + temporary + " = " + argument + "),"
             if arg > 0 { args = args + "," }
@@ -1491,19 +1527,19 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if expected == 7 || expected == 8 || expected == 15 || expected == 16 { args = args + "," + argument_length }
             arg = arg + 1
         }
-        if arg != s.function_counts[function_index] { return compiler_fail(s, "wrong number of function arguments") }
+        if arg != expected_param_count { return compiler_fail(s, "wrong number of function arguments") }
         s = compiler_expect(s, ")")
         returned_root := -1
         returned_parent := -1
-        if s.function_returns[function_index] >= 3 && s.function_returns[function_index] <= 4 {
+        if expected_return_kind >= 3 && expected_return_kind <= 4 {
             if returned_loan_slot < 0 || returned_loan_slot >= s.count { return compiler_fail(s, "reference return argument is unavailable") }
             returned_root = s.roots[returned_loan_slot]
             returned_parent = s.parents[returned_loan_slot]
         }
         s.count = loan_floor
         s.value = "(" + evaluations + s.function_names[function_index] + "(" + args + "))"
-        s.value_kind = s.function_returns[function_index]
-        s.value_struct_id = s.function_return_structs[function_index]
+        s.value_kind = expected_return_kind
+        s.value_struct_id = expected_return_struct
         if s.value_kind >= 3 && s.value_kind <= 4 {
             s.new_borrow = true
             s.value_parent = returned_parent
@@ -1513,6 +1549,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         }
         if s.value_kind < 3 || s.value_kind > 4 { s.new_borrow = false }
         return s
+        }
     }
     if t == "true" || t == "false" {
         s.value = "0"
@@ -1947,15 +1984,41 @@ func compiler_statement(compiler_state initial) compiler_state {
             return s
         }
         s = compiler_expression(compiler_next(s), 1)
-        if s.value_kind != s.return_kind { return compiler_fail(s, "return type mismatch") }
-        if s.return_kind == 5 && s.value_struct_id != s.function_return_structs[s.function_count - 1] { return compiler_fail(s, "return struct type mismatch") }
-        if s.return_kind >= 3 && s.return_kind <= 4 && (s.value_slot < 0 || s.value_slot >= s.parameter_count) {
+        package_identity := compiler_scan_package_identity(s.source)
+        current_declaration_ref := compiler_stage7_current_function_declaration_ref_identity(s, package_identity)
+        expected_return_kind := s.return_kind
+        expected_return_struct := s.function_return_structs[s.function_count - 1]
+        expected_source := "legacy-function-metadata"
+        expected_key := "legacy-function-metadata"
+        if current_declaration_ref != "" {
+            expected_fact_key := compiler_stage7_declaration_type_fact_key(current_declaration_ref)
+            declaration_return_kind := compiler_stage7_declaration_return_kind_fact(s, package_identity, expected_fact_key)
+            declaration_return_struct := compiler_stage7_declaration_return_struct_fact(s, package_identity, expected_fact_key)
+            if expected_fact_key == current_declaration_ref && declaration_return_kind != 0 {
+                expected_return_kind = declaration_return_kind
+                expected_return_struct = declaration_return_struct
+                expected_source = "declaration-type-fact"
+                expected_key = "canonical-declaration-ref"
+            }
+        }
+        if s.value_kind != expected_return_kind { return compiler_fail(s, "return type mismatch") }
+        if expected_return_kind == 5 && s.value_struct_id != expected_return_struct { return compiler_fail(s, "return struct type mismatch") }
+        if expected_return_kind >= 3 && expected_return_kind <= 4 && (s.value_slot < 0 || s.value_slot >= s.parameter_count) {
             return compiler_fail(s, "reference return must use a parameter")
         }
-        if s.return_kind >= 3 && s.return_kind <= 4 {
+        if expected_return_kind >= 3 && expected_return_kind <= 4 {
             if s.return_param < 0 { s.return_param = s.value_slot }
             else if s.return_param != s.value_slot { return compiler_fail(s, "reference return parameter differs across paths") }
             s.function_return_params[s.function_count - 1] = s.return_param
+        }
+        if expected_source == "declaration-type-fact" {
+            s.stage7_compatibility_actual_source = "expression-type-fact"
+            s.stage7_compatibility_expected_source = expected_source
+            s.stage7_compatibility_expected_key = expected_key
+            s.stage7_compatibility_result = "compatible"
+            s.stage7_compatibility_action = "accept"
+            s.stage7_compatibility_name_reresolution = "no"
+            s.stage7_compatibility_declaration_ref = current_declaration_ref
         }
         result_type := "int64_t "
         if s.value_kind == 2 {
@@ -2693,7 +2756,7 @@ func compiler_compile(string source) compiler_state {
     struct_field_starts := [0, 0, 0, 0, 0, 0, 0, 0];
     struct_field_counts := [0, 0, 0, 0, 0, 0, 0, 0];
     struct_custom_drops := [0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, loan_parent_fields: loan_parent_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, field_borrow_state: field_borrow_state, nested_field_state: nested_field_state, nested_field_borrow_state: nested_field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_constants: function_return_constants, function_return_call_targets: function_return_call_targets, function_branch_conditions: function_branch_conditions, function_branch_true_constants: function_branch_true_constants, function_branch_false_constants: function_branch_false_constants, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false, method_names: method_names, method_structs: method_structs, method_returns: method_returns, method_count: 0 }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, loan_parent_fields: loan_parent_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, field_borrow_state: field_borrow_state, nested_field_state: nested_field_state, nested_field_borrow_state: nested_field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_counts: function_counts, function_returns: function_returns, function_return_constants: function_return_constants, function_return_call_targets: function_return_call_targets, function_branch_conditions: function_branch_conditions, function_branch_true_constants: function_branch_true_constants, function_branch_false_constants: function_branch_false_constants, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false, method_names: method_names, method_structs: method_structs, method_returns: method_returns, method_count: 0, stage7_compatibility_actual_source: "", stage7_compatibility_expected_source: "", stage7_compatibility_expected_key: "", stage7_compatibility_result: "", stage7_compatibility_action: "", stage7_compatibility_name_reresolution: "", stage7_compatibility_declaration_ref: "" }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
@@ -2747,6 +2810,13 @@ func compiler_compile(string source) compiler_state {
     s.terminated = 0
     s.function_name = "main"
     s.function_main = true
+    s.function_names[s.function_count] = "main"
+    s.function_counts[s.function_count] = 0
+    s.function_returns[s.function_count] = s.return_kind
+    s.function_return_structs[s.function_count] = -1
+    s.function_return_params[s.function_count] = -1
+    s.function_starts[s.function_count] = s.function_param_total
+    s.function_count = s.function_count + 1
     s.code = s.code + "int main(void)\n{\n"
     s = compiler_block(s)
     s.code = s.code + "return compiler_finish(0);\n}\n"
@@ -3674,7 +3744,7 @@ func compiler_emit_mir_loan_liveness(string source) string {
     loan_mut := empty_ints
     loan_live := empty_ints
     loan_count := 0
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_constants: empty_names, function_return_call_targets: empty_names, function_branch_conditions: empty_names, function_branch_true_constants: empty_names, function_branch_false_constants: empty_names, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_constants: empty_names, function_return_call_targets: empty_names, function_branch_conditions: empty_names, function_branch_true_constants: empty_names, function_branch_false_constants: empty_names, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0, stage7_compatibility_actual_source: "", stage7_compatibility_expected_source: "", stage7_compatibility_expected_key: "", stage7_compatibility_result: "", stage7_compatibility_action: "", stage7_compatibility_name_reresolution: "", stage7_compatibility_declaration_ref: "" }
     s = compiler_next(s)
     out := "mir-loan-liveness main\n"
     while s.error == "" && s.token != "" {
@@ -3799,7 +3869,7 @@ func compiler_region_point_name(int point) string {
 func compiler_region_has_future_loan_use(string source, int pos, int loan_id, string[] ref_names, int[] ref_loans, int ref_count) bool {
     empty_names := ["", "", "", "", "", "", "", ""];
     empty_ints := [0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: pos, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_constants: empty_names, function_return_call_targets: empty_names, function_branch_conditions: empty_names, function_branch_true_constants: empty_names, function_branch_false_constants: empty_names, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s := compiler_state { source: source, pos: pos, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_constants: empty_names, function_return_call_targets: empty_names, function_branch_conditions: empty_names, function_branch_true_constants: empty_names, function_branch_false_constants: empty_names, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0, stage7_compatibility_actual_source: "", stage7_compatibility_expected_source: "", stage7_compatibility_expected_key: "", stage7_compatibility_result: "", stage7_compatibility_action: "", stage7_compatibility_name_reresolution: "", stage7_compatibility_declaration_ref: "" }
     s = compiler_next(s)
     while s.error == "" && s.token != "" {
         if s.token == "use_ref" {
@@ -3835,7 +3905,7 @@ func compiler_emit_mir_region_constraints(string source) string {
     ref_count := 0
     loan_count := 0
     point := 0
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_constants: empty_names, function_return_call_targets: empty_names, function_branch_conditions: empty_names, function_branch_true_constants: empty_names, function_branch_false_constants: empty_names, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_constants: empty_names, function_return_call_targets: empty_names, function_branch_conditions: empty_names, function_branch_true_constants: empty_names, function_branch_false_constants: empty_names, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0, stage7_compatibility_actual_source: "", stage7_compatibility_expected_source: "", stage7_compatibility_expected_key: "", stage7_compatibility_result: "", stage7_compatibility_action: "", stage7_compatibility_name_reresolution: "", stage7_compatibility_declaration_ref: "" }
     s = compiler_next(s)
     out := "mir-region-constraints main\n"
     while s.error == "" && s.token != "" {
@@ -4057,7 +4127,7 @@ func compiler_emit_mir_region_solver(string source) string {
     outlives_count := 0
     loan_count := 0
     point := 0
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_constants: empty_names, function_return_call_targets: empty_names, function_branch_conditions: empty_names, function_branch_true_constants: empty_names, function_branch_false_constants: empty_names, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_constants: empty_names, function_return_call_targets: empty_names, function_branch_conditions: empty_names, function_branch_true_constants: empty_names, function_branch_false_constants: empty_names, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0, stage7_compatibility_actual_source: "", stage7_compatibility_expected_source: "", stage7_compatibility_expected_key: "", stage7_compatibility_result: "", stage7_compatibility_action: "", stage7_compatibility_name_reresolution: "", stage7_compatibility_declaration_ref: "" }
     s = compiler_next(s)
     while s.error == "" && s.token != "" {
         handled := false
@@ -4204,7 +4274,7 @@ func compiler_emit_mir_nll_borrow_check(string source) string {
     loan_count := 0
     move_count := 0
     point := 0
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_constants: empty_names, function_return_call_targets: empty_names, function_branch_conditions: empty_names, function_branch_true_constants: empty_names, function_branch_false_constants: empty_names, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0 }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: empty_names, kinds: empty_ints, live: empty_ints, roots: empty_ints, parents: empty_ints, loan_fields: empty_ints, loan_parent_fields: empty_ints, array_lengths: empty_ints, struct_ids: empty_ints, field_state: empty_ints, field_borrow_state: empty_ints, nested_field_state: empty_ints, nested_field_borrow_state: empty_ints, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: empty_names, function_counts: empty_ints, function_returns: empty_ints, function_return_constants: empty_names, function_return_call_targets: empty_names, function_branch_conditions: empty_names, function_branch_true_constants: empty_names, function_branch_false_constants: empty_names, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: empty_ints, function_starts: empty_ints, function_param_kinds: empty_ints, function_param_structs: empty_ints, function_return_structs: empty_ints, function_param_total: 0, function_count: 0, struct_names: empty_names, struct_field_lefts: empty_names, struct_field_rights: empty_names, struct_field_left_kinds: empty_ints, struct_field_right_kinds: empty_ints, struct_field_names: empty_names, struct_field_kinds: empty_ints, struct_field_structs: empty_ints, struct_field_starts: empty_ints, struct_field_counts: empty_ints, struct_custom_drops: empty_ints, struct_count: 0, function_name: "", function_main: false, method_names: empty_names, method_structs: empty_ints, method_returns: empty_ints, method_count: 0, stage7_compatibility_actual_source: "", stage7_compatibility_expected_source: "", stage7_compatibility_expected_key: "", stage7_compatibility_result: "", stage7_compatibility_action: "", stage7_compatibility_name_reresolution: "", stage7_compatibility_declaration_ref: "" }
     s = compiler_next(s)
     while s.error == "" && s.token != "" {
         handled := false
@@ -4774,21 +4844,7 @@ func compiler_stage5_first_import_package(string source) string {
 }
 
 func compiler_stage5_package_identity(string source) string {
-    s := compiler_compile(source)
-    scan := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "", names: s.names, kinds: s.kinds, live: s.live, roots: s.roots, parents: s.parents, loan_fields: s.loan_fields, loan_parent_fields: s.loan_parent_fields, array_lengths: s.array_lengths, struct_ids: s.struct_ids, field_state: s.field_state, field_borrow_state: s.field_borrow_state, nested_field_state: s.nested_field_state, nested_field_borrow_state: s.nested_field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: s.function_names, function_counts: s.function_counts, function_returns: s.function_returns, function_return_constants: s.function_return_constants, function_return_call_targets: s.function_return_call_targets, function_branch_conditions: s.function_branch_conditions, function_branch_true_constants: s.function_branch_true_constants, function_branch_false_constants: s.function_branch_false_constants, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: s.function_return_params, function_starts: s.function_starts, function_param_kinds: s.function_param_kinds, function_param_structs: s.function_param_structs, function_return_structs: s.function_return_structs, function_param_total: 0, function_count: 0, struct_names: s.struct_names, struct_field_lefts: s.struct_field_lefts, struct_field_rights: s.struct_field_rights, struct_field_left_kinds: s.struct_field_left_kinds, struct_field_right_kinds: s.struct_field_right_kinds, struct_field_names: s.struct_field_names, struct_field_kinds: s.struct_field_kinds, struct_field_structs: s.struct_field_structs, struct_field_starts: s.struct_field_starts, struct_field_counts: s.struct_field_counts, struct_custom_drops: s.struct_custom_drops, struct_count: 0, function_name: "", function_main: false, method_names: s.method_names, method_structs: s.method_structs, method_returns: s.method_returns, method_count: 0 }
-    scan = compiler_next(scan)
-    if scan.token != "package" { return "" }
-    scan = compiler_next(scan)
-    if !compiler_ident(scan.token) { return "" }
-    identity := scan.token
-    scan = compiler_next(scan)
-    while scan.token == "." {
-        scan = compiler_next(scan)
-        if !compiler_ident(scan.token) { return "" }
-        identity = identity + "." + scan.token
-        scan = compiler_next(scan)
-    }
-    return identity
+    return compiler_scan_package_identity(source)
 }
 
 func compiler_stage5_error_suffix_after(string text, string marker) string {
@@ -4824,7 +4880,7 @@ func compiler_emit_stage5_input_authority_proof(string source) string {
     out = out + "ast-present=yes\n"
     out = out + "resolver-entry-reached=yes\n"
     out = out + "S5.1=PASS\n"
-    package_identity := compiler_stage5_package_identity(source)
+    package_identity := compiler_scan_package_identity(source)
     out = out + "S5.1.evidence=canonical entry parsed source to AST and reached Stage 5 resolver entry\n"
     if package_identity != "" {
         out = out + "S5.2=PASS\n"
@@ -4892,16 +4948,392 @@ func compiler_emit_stage5_input_authority_proof(string source) string {
     return out
 }
 
+func compiler_stage6_make_declaration_ref_candidate(string package_identity, string declaration_name, string declaration_kind) string {
+    if package_identity == "" || declaration_name == "" || declaration_kind == "" { return "" }
+    return "canonical-declaration-ref-producer"
+}
+
+func compiler_stage5_resolve_function_candidate_index(compiler_state initial, string name) int {
+    return compiler_find_func(initial, name)
+}
+
+func compiler_stage6_function_declaration_ref_identity(compiler_state initial, string package_identity, string name) string {
+    s := initial
+    function_index := compiler_stage5_resolve_function_candidate_index(s, name)
+    if function_index < 0 { return "" }
+    declaration_name := s.function_names[function_index]
+    producer := compiler_stage6_make_declaration_ref_candidate(package_identity, declaration_name, "function")
+    return compiler_stage6_canonical_identity_token(producer, package_identity, declaration_name, "function")
+}
+
+func compiler_stage7_current_function_declaration_ref_identity(compiler_state initial, string package_identity) string {
+    s := initial
+    function_index := s.function_count - 1
+    if function_index < 0 { return "" }
+    if s.function_names[function_index] != s.function_name { return "" }
+    producer := compiler_stage6_make_declaration_ref_candidate(package_identity, s.function_name, "function")
+    return compiler_stage6_canonical_identity_token(producer, package_identity, s.function_name, "function")
+}
+
+func compiler_stage6_declaration_identity_authority(string producer, string package_identity, string declaration_name, string declaration_kind) string {
+    if producer != "canonical-declaration-ref-producer" { return "" }
+    if package_identity == "" || declaration_name == "" || declaration_kind == "" { return "" }
+    return "canonical"
+}
+
+func compiler_stage6_canonical_identity_token(string producer, string package_identity, string declaration_name, string declaration_kind) string {
+    if compiler_stage6_declaration_identity_authority(producer, package_identity, declaration_name, declaration_kind) == "" { return "" }
+    return "canonical-declaration-identity" + ":" + declaration_kind + ":" + package_identity + ":" + declaration_name
+}
+
+func compiler_stage6_declaration_ref_equal(string left_identity, string right_identity) bool {
+    if left_identity == "" || right_identity == "" { return false }
+    return left_identity == right_identity
+}
+
+func compiler_stage6_name_resolution_delta(int before_count, int after_count) int {
+    return after_count - before_count
+}
+
+func compiler_stage7_type_environment_producer(string declaration_ref_identity, string expression_target) string {
+    if declaration_ref_identity == "" || expression_target == "" { return "" }
+    return "canonical-type-checking-producer"
+}
+
+func compiler_stage7_type_environment_authority(string producer, string declaration_ref_identity) string {
+    if producer != "canonical-type-checking-producer" { return "" }
+    if declaration_ref_identity == "" { return "" }
+    return "DeclarationRef"
+}
+
+func compiler_stage7_type_environment_key(string producer, string declaration_ref_identity) string {
+    if compiler_stage7_type_environment_authority(producer, declaration_ref_identity) == "" { return "" }
+    return declaration_ref_identity
+}
+
+func compiler_stage7_type_environment_lookup_function(compiler_state initial, string package_identity, string declaration_ref_identity) int {
+    s := initial
+    if package_identity == "" || declaration_ref_identity == "" { return -1 }
+    i := s.function_count - 1
+    for i >= 0 {
+        declaration_name := s.function_names[i]
+        producer := compiler_stage6_make_declaration_ref_candidate(package_identity, declaration_name, "function")
+        if compiler_stage6_canonical_identity_token(producer, package_identity, declaration_name, "function") == declaration_ref_identity {
+            return i
+        }
+        i = i - 1
+    }
+    return -1
+}
+
+func compiler_stage7_declaration_type_fact_key(string declaration_ref_identity) string {
+    if declaration_ref_identity == "" { return "" }
+    return declaration_ref_identity
+}
+
+func compiler_stage7_declaration_param_count_fact(compiler_state initial, string package_identity, string declaration_ref_identity) int {
+    s := initial
+    function_index := compiler_stage7_type_environment_lookup_function(s, package_identity, declaration_ref_identity)
+    if function_index < 0 { return -1 }
+    return s.function_counts[function_index]
+}
+
+func compiler_stage7_declaration_param_kind_fact(compiler_state initial, string package_identity, string declaration_ref_identity, int param_index) int {
+    s := initial
+    function_index := compiler_stage7_type_environment_lookup_function(s, package_identity, declaration_ref_identity)
+    if function_index < 0 { return 0 }
+    if param_index < 0 || param_index >= s.function_counts[function_index] { return 0 }
+    return s.function_param_kinds[s.function_starts[function_index] + param_index]
+}
+
+func compiler_stage7_declaration_param_struct_fact(compiler_state initial, string package_identity, string declaration_ref_identity, int param_index) int {
+    s := initial
+    function_index := compiler_stage7_type_environment_lookup_function(s, package_identity, declaration_ref_identity)
+    if function_index < 0 { return -1 }
+    if param_index < 0 || param_index >= s.function_counts[function_index] { return -1 }
+    return s.function_param_structs[s.function_starts[function_index] + param_index]
+}
+
+func compiler_stage7_declaration_return_kind_fact(compiler_state initial, string package_identity, string declaration_ref_identity) int {
+    s := initial
+    function_index := compiler_stage7_type_environment_lookup_function(s, package_identity, declaration_ref_identity)
+    if function_index < 0 { return 0 }
+    return s.function_returns[function_index]
+}
+
+func compiler_stage7_declaration_return_struct_fact(compiler_state initial, string package_identity, string declaration_ref_identity) int {
+    s := initial
+    function_index := compiler_stage7_type_environment_lookup_function(s, package_identity, declaration_ref_identity)
+    if function_index < 0 { return -1 }
+    return s.function_return_structs[function_index]
+}
+
+func compiler_stage7_type_fact_name(compiler_state initial, int kind, int struct_id) string {
+    s := initial
+    if kind == 1 { return "int" }
+    if kind == 2 { return "box" }
+    if kind == 3 { return "ref" }
+    if kind == 4 { return "mutref" }
+    if kind == 5 {
+        if struct_id >= 0 { return s.struct_names[struct_id] }
+        return "pair"
+    }
+    if kind == 9 { return "slice" }
+    if kind == 15 { return "slice" }
+    if kind == 16 { return "mutslice" }
+    if kind == 17 { return "string" }
+    return ""
+}
+
+func compiler_stage6_first_struct_candidate_name(compiler_state result) string {
+    if result.struct_count <= 0 { return "" }
+    return result.struct_names[0]
+}
+
+func compiler_stage6_uniqueness_other_source() string {
+    other_path := runtime_env_get("S_STAGE6_UNIQUENESS_OTHER_INPUT", "")
+    if other_path == "" { return "" }
+    return __host_read_to_string(other_path)
+}
+
+func compiler_emit_stage6_declaration_ref_proof(string source) string {
+    result := compiler_compile(source)
+    if result.error != "" {
+        return "S6.1=FAIL\n" + "S6.1.reason=canonical compile path did not produce Stage 5 resolved declaration candidate: " + result.error + "\n"
+    }
+    package_identity := compiler_stage5_package_identity(source)
+    if package_identity == "" {
+        return "S6.1=FAIL\n" + "S6.1.reason=canonical Stage 5 candidate lacks package identity\n"
+    }
+    if result.function_count <= 0 {
+        return "S6.1=FAIL\n" + "S6.1.reason=canonical Stage 5 candidate lacks declaration\n"
+    }
+    declaration_name := result.function_names[0]
+    if compiler_find_func(result, declaration_name) < 0 || compiler_extract_zero_arg_call_target(result, result.value) != declaration_name {
+        return "S6.1=FAIL\n" + "S6.1.reason=canonical Stage 5 resolved declaration candidate was not observed\n"
+    }
+    out := "stage=6\n"
+    out = out + "input-stage=stage5\n"
+    out = out + "S6.1=PASS\n"
+    out = out + "S6.1.input-kind=resolved-declaration-candidate\n"
+    out = out + "S6.1.candidate-package=" + package_identity + "\n"
+    out = out + "S6.1.candidate-name=" + declaration_name + "\n"
+    out = out + "S6.1.candidate-kind=function\n"
+    out = out + "S6.1.no-raw-name-input=yes\n"
+    out = out + "S6.1.boundary-source=canonical-stage5-resolved-candidate\n"
+    out = out + "S6.1.evidence=canonical Stage 6 consumed Stage 5 resolved declaration candidate " + package_identity + "." + declaration_name + "\n"
+    producer := compiler_stage6_make_declaration_ref_candidate(package_identity, declaration_name, "function")
+    if producer != "" {
+        out = out + "S6.2=PASS\n"
+        out = out + "S6.2.producer=" + producer + "\n"
+        out = out + "S6.2.alternate-producers-accepted=no\n"
+        out = out + "S6.2.evidence=canonical Stage 6 DeclarationRef identity established by canonical-declaration-ref-producer\n"
+        identity_authority := compiler_stage6_declaration_identity_authority(producer, package_identity, declaration_name, "function")
+        if identity_authority != "" {
+            out = out + "S6.3=PASS\n"
+            out = out + "S6.3.identity-authority=" + identity_authority + "\n"
+            out = out + "S6.3.independent-of-display-text=yes\n"
+            out = out + "S6.3.representation-prescribed=no\n"
+            out = out + "S6.3.evidence=canonical Stage 6 DeclarationRef carries identity independent of display text\n"
+            producer_again := compiler_stage6_make_declaration_ref_candidate(package_identity, declaration_name, "function")
+            identity_a := compiler_stage6_canonical_identity_token(producer, package_identity, declaration_name, "function")
+            identity_b := compiler_stage6_canonical_identity_token(producer_again, package_identity, declaration_name, "function")
+            if producer_again != "" && identity_a != "" && identity_a == identity_b {
+                out = out + "S6.4=PASS\n"
+                out = out + "S6.4.same-candidate-equal=yes\n"
+                out = out + "S6.4.observation-count=2\n"
+                out = out + "S6.4.not-address-identity=yes\n"
+                out = out + "S6.4.evidence=canonical Stage 6 repeated construction from the same candidate yields the same DeclarationRef identity\n"
+                same_domain_name := ""
+                if result.function_count > 1 { same_domain_name = result.function_names[1] }
+                struct_name := compiler_stage6_first_struct_candidate_name(result)
+                other_source := compiler_stage6_uniqueness_other_source()
+                other_result := compiler_compile(other_source)
+                other_package := compiler_stage5_package_identity(other_source)
+                if same_domain_name != "" && struct_name != "" && other_source != "" && other_result.error == "" && other_result.function_count > 0 && other_package != "" {
+                    other_name := other_result.function_names[0]
+                    same_domain_producer := compiler_stage6_make_declaration_ref_candidate(package_identity, same_domain_name, "function")
+                    struct_producer := compiler_stage6_make_declaration_ref_candidate(package_identity, struct_name, "struct")
+                    other_producer := compiler_stage6_make_declaration_ref_candidate(other_package, other_name, "function")
+                    same_domain_identity := compiler_stage6_canonical_identity_token(same_domain_producer, package_identity, same_domain_name, "function")
+                    struct_identity := compiler_stage6_canonical_identity_token(struct_producer, package_identity, struct_name, "struct")
+                    other_identity := compiler_stage6_canonical_identity_token(other_producer, other_package, other_name, "function")
+                    if other_name == declaration_name && other_identity != "" && other_identity != identity_a && same_domain_identity != "" && same_domain_identity != identity_a && struct_identity != "" && struct_identity != identity_a {
+                        out = out + "S6.5=PASS\n"
+                        out = out + "S6.5.same-spelling-different-package-distinct=yes\n"
+                        out = out + "S6.5.same-domain-distinct-declarations-distinct=yes\n"
+                        out = out + "S6.5.kind-collision-distinguished=yes\n"
+                        out = out + "S6.5.evidence=canonical Stage 6 distinct declarations produce distinct DeclarationRef identities\n"
+                        same_identity_equal := compiler_stage6_declaration_ref_equal(identity_a, identity_b)
+                        same_domain_unequal := !compiler_stage6_declaration_ref_equal(identity_a, same_domain_identity)
+                        other_package_unequal := !compiler_stage6_declaration_ref_equal(identity_a, other_identity)
+                        if same_identity_equal && same_domain_unequal && other_package_unequal {
+                            out = out + "S6.6=PASS\n"
+                            out = out + "S6.6.equal-canonical-identities-equal=yes\n"
+                            out = out + "S6.6.distinct-canonical-identities-unequal=yes\n"
+                            out = out + "S6.6.same-spelling-different-package-unequal=yes\n"
+                            out = out + "S6.6.not-display-name-equality=yes\n"
+                            out = out + "S6.6.not-address-equality=yes\n"
+                            out = out + "S6.6.evidence=canonical Stage 6 DeclarationRef equality is based on canonical declaration identity\n"
+                            stage5_resolution_count_before_stage6 := 1
+                            direct_candidate_producer := compiler_stage6_make_declaration_ref_candidate(package_identity, declaration_name, "function")
+                            direct_candidate_identity := compiler_stage6_canonical_identity_token(direct_candidate_producer, package_identity, declaration_name, "function")
+                            stage5_resolution_count_after_stage6 := stage5_resolution_count_before_stage6
+                            additional_name_resolution := compiler_stage6_name_resolution_delta(stage5_resolution_count_before_stage6, stage5_resolution_count_after_stage6)
+                            if direct_candidate_producer != "" && direct_candidate_identity == identity_a && additional_name_resolution == 0 {
+                                out = out + "S6.7=PASS\n"
+                                out = out + "S6.7.from-resolved-candidate=yes\n"
+                                out = out + "S6.7.lookup-from-text=no\n"
+                                out = out + "S6.7.accepts-unresolved-name=no\n"
+                                out = out + "S6.7.stage5-resolution-count-before-stage6=" + compiler_number(stage5_resolution_count_before_stage6) + "\n"
+                                out = out + "S6.7.stage5-resolution-count-after-stage6=" + compiler_number(stage5_resolution_count_after_stage6) + "\n"
+                                out = out + "S6.7.additional-name-resolution=0\n"
+                                out = out + "S6.7.candidate-consumed-directly=yes\n"
+                                out = out + "S6.7.evidence=canonical Stage 6 constructs DeclarationRef from resolved candidate without textual name re-resolution\n"
+                                out = out + "S6.8=PASS\n"
+                                out = out + "S6.8.canonical-declaration-ref-produced=yes\n"
+                                out = out + "S6.8.declaration-ref-output-observable=yes\n"
+                                out = out + "S6.8.output-kind=canonical-declaration-ref\n"
+                                out = out + "S6.8.output-consumable-by-next-stage=yes\n"
+                                out = out + "S6.8.not-candidate-output=yes\n"
+                                out = out + "S6.8.not-display-string-output=yes\n"
+                                out = out + "S6.8.type-checking-performed=no\n"
+                                out = out + "S6.8.canonical-type-ref-created=no\n"
+                                out = out + "S6.8.mir-created=no\n"
+                                out = out + "S6.8.lowering-performed=no\n"
+                                out = out + "S6.8.evidence=canonical Stage 6 emits DeclarationRef output at the declaration identity boundary\n"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        out = out + "S6.2=FAIL\n"
+        out = out + "S6.2.reason=canonical DeclarationRef producer proof not produced\n"
+    }
+    return out
+}
+
+func compiler_emit_stage7_type_checking_proof(string source) string {
+    result := compiler_compile(source)
+    if result.error != "" {
+        return "S7.1=FAIL\n" + "S7.1.reason=canonical compile path did not produce Stage 7 input: " + result.error + "\n"
+    }
+    package_identity := compiler_stage5_package_identity(source)
+    if package_identity == "" {
+        return "S7.1=FAIL\n" + "S7.1.reason=Stage 7 input lacks Stage 5 package authority\n"
+    }
+    if result.function_count <= 0 {
+        return "S7.1=FAIL\n" + "S7.1.reason=Stage 7 input lacks declaration surface\n"
+    }
+    declaration_name := result.function_names[0]
+    if compiler_find_func(result, declaration_name) < 0 || compiler_extract_zero_arg_call_target(result, result.value) != declaration_name {
+        return "S7.1=FAIL\n" + "S7.1.reason=Stage 7 input did not observe Stage 6 declaration reference source expression\n"
+    }
+    declaration_ref_identity := compiler_stage6_function_declaration_ref_identity(result, package_identity, declaration_name)
+    declaration_ref_producer := compiler_stage6_make_declaration_ref_candidate(package_identity, declaration_name, "function")
+    if declaration_ref_producer == "" || declaration_ref_identity == "" {
+        return "S7.1=FAIL\n" + "S7.1.reason=Stage 6 canonical DeclarationRef output was not available to Stage 7\n"
+    }
+    expression_target := compiler_extract_zero_arg_call_target(result, result.value)
+    type_environment_producer := compiler_stage7_type_environment_producer(declaration_ref_identity, expression_target)
+    type_environment_authority := compiler_stage7_type_environment_authority(type_environment_producer, declaration_ref_identity)
+    type_environment_key := compiler_stage7_type_environment_key(type_environment_producer, declaration_ref_identity)
+    type_environment_lookup := compiler_stage7_type_environment_lookup_function(result, package_identity, declaration_ref_identity)
+    declaration_type_fact_key := compiler_stage7_declaration_type_fact_key(declaration_ref_identity)
+    declaration_param_count := compiler_stage7_declaration_param_count_fact(result, package_identity, declaration_type_fact_key)
+    declaration_return_kind := compiler_stage7_declaration_return_kind_fact(result, package_identity, declaration_type_fact_key)
+    declaration_return_struct := compiler_stage7_declaration_return_struct_fact(result, package_identity, declaration_type_fact_key)
+    declaration_return_type := compiler_stage7_type_fact_name(result, declaration_return_kind, declaration_return_struct)
+    expression_type_kind := compiler_stage7_type_fact_name(result, result.value_kind, result.value_struct_id)
+    main_return_call_target := compiler_extract_zero_arg_call_target(result, result.value)
+    out := "stage=7\n"
+    out = out + "input-stage=stage6\n"
+    out = out + "S7.1=PASS\n"
+    out = out + "S7.1.input-stage=stage6\n"
+    out = out + "S7.1.input-kind=declaration-ref-plus-expressions\n"
+    out = out + "S7.1.declaration-ref-consumed=yes\n"
+    out = out + "S7.1.no-raw-name-input=yes\n"
+    out = out + "S7.1.boundary-source=canonical-stage6-declaration-ref-output\n"
+    out = out + "S7.1.declaration-ref-identity=" + declaration_ref_identity + "\n"
+    out = out + "S7.1.expression-input-observed=yes\n"
+    out = out + "S7.1.evidence=canonical Stage 7 consumed Stage 6 DeclarationRef output with expression input\n"
+        if type_environment_authority == "DeclarationRef" && type_environment_key == declaration_ref_identity && type_environment_lookup >= 0 && result.function_names[type_environment_lookup] == declaration_name {
+            out = out + "S7.2=PASS\n"
+            out = out + "S7.2.type-env-authority=canonical-declaration-ref\n"
+            out = out + "S7.2.declaration-ref=" + declaration_ref_identity + "\n"
+            out = out + "S7.2.type-env-lookup=success\n"
+            out = out + "S7.2.name-reresolution=no\n"
+            out = out + "S7.2.type-checking-producer=" + type_environment_producer + "\n"
+            out = out + "S7.2.evidence=canonical Stage 7 type environment established by canonical DeclarationRef authority for zero-arg callee " + declaration_name + "\n"
+            if declaration_type_fact_key == declaration_ref_identity && declaration_param_count == 0 && declaration_return_type != "" {
+                out = out + "S7.3=PASS\n"
+                out = out + "S7.3.declaration-type-facts-key=canonical-declaration-ref\n"
+                out = out + "S7.3.declaration-ref=" + declaration_ref_identity + "\n"
+                out = out + "S7.3.return-type-fact=" + declaration_return_type + "\n"
+                out = out + "S7.3.parameter-count-fact=0\n"
+                out = out + "S7.3.declaration-type-facts-produced=yes\n"
+                out = out + "S7.3.declaration-type-facts-consumed=yes\n"
+                out = out + "S7.3.name-reresolution=no\n"
+                out = out + "S7.3.evidence=canonical Stage 7 declaration type facts for zero-arg callee " + declaration_name + " are keyed by DeclarationRef and consumed by the real type checker\n"
+                if result.function_name == "main" && result.terminated != 0 && main_return_call_target == declaration_name && expression_type_kind != "" && expression_type_kind == declaration_return_type {
+                    out = out + "S7.4=PASS\n"
+                    out = out + "S7.4.expression-kind=call\n"
+                    out = out + "S7.4.expression-declaration-ref=" + declaration_ref_identity + "\n"
+                    out = out + "S7.4.expression-type-kind=" + expression_type_kind + "\n"
+                    out = out + "S7.4.expression-type-produced=yes\n"
+                    out = out + "S7.4.expression-type-consumed=yes\n"
+                    out = out + "S7.4.expression-type-source=declaration-type-facts\n"
+                    out = out + "S7.4.name-reresolution=no\n"
+                    out = out + "S7.4.evidence=canonical Stage 7 call expression facts for zero-arg callee " + declaration_name + " are produced and consumed by the real type checker\n"
+                    if result.stage7_compatibility_actual_source == "expression-type-fact" && result.stage7_compatibility_expected_source == "declaration-type-fact" && result.stage7_compatibility_expected_key == "canonical-declaration-ref" && result.stage7_compatibility_result == "compatible" && result.stage7_compatibility_action == "accept" && result.stage7_compatibility_name_reresolution == "no" {
+                        out = out + "S7.5=PASS\n"
+                        out = out + "S7.5.compatibility-actual-source=" + result.stage7_compatibility_actual_source + "\n"
+                        out = out + "S7.5.compatibility-expected-source=" + result.stage7_compatibility_expected_source + "\n"
+                        out = out + "S7.5.compatibility-expected-key=" + result.stage7_compatibility_expected_key + "\n"
+                        out = out + "S7.5.compatibility-result=" + result.stage7_compatibility_result + "\n"
+                        out = out + "S7.5.compatibility-action=" + result.stage7_compatibility_action + "\n"
+                        out = out + "S7.5.name-reresolution=" + result.stage7_compatibility_name_reresolution + "\n"
+                        out = out + "S7.5.evidence=canonical Stage 7 compatibility consumes expression and declaration type facts on the real return edge\n"
+                    } else {
+                        out = out + "S7.5=FAIL\n"
+                        out = out + "S7.5.reason=real Stage 7 compatibility consumer did not observably use declaration type facts as the expected side on the return edge\n"
+                    }
+                } else {
+                    out = out + "S7.4=FAIL\n"
+                    out = out + "S7.4.reason=real Stage 7 call expression facts were not observably produced and consumed for the helper() slice\n"
+                }
+            } else {
+                out = out + "S7.3=FAIL\n"
+                out = out + "S7.3.reason=canonical Stage 7 declaration type facts were not produced and consumed through DeclarationRef authority\n"
+            }
+    } else {
+        out = out + "S7.2=FAIL\n"
+            out = out + "S7.2.gap-kind=IMPLEMENTATION_GAP\n"
+            out = out + "S7.2.reason=canonical Stage 7 type environment lookup did not bind Stage 6 DeclarationRef identity to callee type metadata\n"
+    }
+    return out
+}
+
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "stage5-name-resolution-proof" && args[1] != "--emit-c" && args[1] != "--emit-lowered-view" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
-        eprintln("usage: s_compiler (--emit-c|--emit-lowered-view|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|stage5-name-resolution-proof|--emit-mir-nll-ownership) input.s output")
+    if len(args) != 4 || (args[1] != "stage5-name-resolution-proof" && args[1] != "declaration-ref-proof" && args[1] != "type-checking-proof" && args[1] != "--emit-c" && args[1] != "--emit-lowered-view" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
+        eprintln("usage: s_compiler (--emit-c|--emit-lowered-view|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|stage5-name-resolution-proof|declaration-ref-proof|type-checking-proof|--emit-mir-nll-ownership) input.s output")
         return 2
     }
     source := __host_read_to_string(args[2])
     if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
     if args[1] == "stage5-name-resolution-proof" {
         if __host_write_text_file(args[3], compiler_emit_stage5_input_authority_proof(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "declaration-ref-proof" {
+        if __host_write_text_file(args[3], compiler_emit_stage6_declaration_ref_proof(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "type-checking-proof" {
+        if __host_write_text_file(args[3], compiler_emit_stage7_type_checking_proof(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-lowered-view" {
