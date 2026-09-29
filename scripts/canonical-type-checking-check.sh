@@ -162,7 +162,8 @@ fi
 if printf '%s\n' "$help_output" | grep -Fq 'type-checking-proof'; then
     proof_status=0
     proof_input="${S_STAGE7_PROOF_INPUT:-$SOURCE_ROOT/test/compiler/stage7_type_checking_basic.s}"
-    "$COMPILER" type-checking-proof "$proof_input" "$RAW_REPORT" || proof_status=$?
+    S_STAGE7_NEGATIVE_PROOF_INPUT="${S_STAGE7_NEGATIVE_PROOF_INPUT:-$SOURCE_ROOT/test/compiler/stage7_type_checking_type_error.s}" \
+        "$COMPILER" type-checking-proof "$proof_input" "$RAW_REPORT" || proof_status=$?
     if [ "$proof_status" -ne 0 ] || [ ! -f "$RAW_REPORT" ]; then
         {
             echo "S7.1=FAIL"
