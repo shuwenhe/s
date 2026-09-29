@@ -75,6 +75,29 @@ if "$COMPILER" canonical-lowering-proof "$input" "$RAW_STAGE10" >/dev/null 2>&1;
        [ "$(proof_value S10.1.semantic-input-consumed "$RAW_STAGE10")" = "yes" ] &&
        [ "$(proof_value S10.1.semantic-reconstruction "$RAW_STAGE10")" = "no" ] &&
        [ -n "$(proof_value S10.1.evidence "$RAW_STAGE10")" ]; then
+        s102_status=$(proof_value S10.2 "$RAW_STAGE10")
+        s102_reason=$(proof_value S10.2.reason "$RAW_STAGE10")
+        if [ "$s102_status" = "PASS" ] && [ -n "$(proof_value S10.2.evidence "$RAW_STAGE10")" ]; then
+            {
+                echo "STAGE 10 - LOWERING -> MIR"
+                echo "Scope: Stage 10 only; consumer audit for Stage 9 semantic output"
+                echo "MIR verification/ownership/layout/ABI/codegen success is NOT required."
+                echo "compiler=$COMPILER"
+                echo "proof-source=stage10-mir-lowering-consumer-audit"
+                echo "S10.1 Canonical Semantic Input Consumption=PASS"
+                echo "S10.1.evidence=$(proof_value S10.1.evidence "$RAW_STAGE10")"
+                echo "S10.2 MIR Output Boundary=PASS"
+                echo "S10.2.evidence=$(proof_value S10.2.evidence "$RAW_STAGE10")"
+                echo "first-unmet-contract=NONE"
+                echo "reason=NONE"
+                echo "stage10-lowering-mir=CLOSED"
+                echo "result=PASS"
+            } > "$TMP_REPORT"
+            mv "$TMP_REPORT" "$REPORT"
+            cat "$REPORT"
+            exit 0
+        fi
+        [ -n "$s102_reason" ] || s102_reason="no observable proof for S10.2 MIR Output Boundary"
         {
             echo "STAGE 10 - LOWERING -> MIR"
             echo "Scope: Stage 10 only; consumer audit for Stage 9 semantic output"
@@ -83,14 +106,16 @@ if "$COMPILER" canonical-lowering-proof "$input" "$RAW_STAGE10" >/dev/null 2>&1;
             echo "proof-source=stage10-mir-lowering-consumer-audit"
             echo "S10.1 Canonical Semantic Input Consumption=PASS"
             echo "S10.1.evidence=$(proof_value S10.1.evidence "$RAW_STAGE10")"
-            echo "first-unmet-contract=NONE"
-            echo "reason=NONE"
-            echo "stage10-lowering-mir=CLOSED"
-            echo "result=PASS"
+            echo "S10.2 MIR Output Boundary=FAIL"
+            echo "S10.2.reason=$s102_reason"
+            echo "first-unmet-contract=S10.2"
+            echo "reason=$s102_reason"
+            echo "stage10-lowering-mir=NOT_CLOSED"
+            echo "result=FAIL"
         } > "$TMP_REPORT"
         mv "$TMP_REPORT" "$REPORT"
         cat "$REPORT"
-        exit 0
+        exit 1
     fi
 fi
 
