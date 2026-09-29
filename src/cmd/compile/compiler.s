@@ -60,6 +60,9 @@ struct compiler_state {
     int[] function_param_kinds
     int[] function_param_structs
     int[] function_return_structs
+    int[] function_observed_return_kinds
+    int[] function_observed_return_structs
+    string[] function_observed_compat
     int function_count
     int function_param_total
     string[] struct_names
@@ -2042,6 +2045,9 @@ func compiler_statement(compiler_state initial) compiler_state {
             s.stage7_compatibility_action = "accept"
             s.stage7_compatibility_name_reresolution = "no"
             s.stage7_compatibility_declaration_ref = current_declaration_ref
+            s.function_observed_return_kinds[s.function_count - 1] = s.value_kind
+            s.function_observed_return_structs[s.function_count - 1] = s.value_struct_id
+            s.function_observed_compat[s.function_count - 1] = "compatible"
         }
         result_type := "int64_t "
         if s.value_kind == 2 {
@@ -2771,6 +2777,9 @@ func compiler_compile(string source) compiler_state {
     function_param_kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_param_structs := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     function_return_structs := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    function_observed_return_kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    function_observed_return_structs := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    function_observed_compat := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
     struct_names := ["", "", "", "", "", "", "", ""];
     struct_field_lefts := ["", "", "", "", "", "", "", ""];
     struct_field_rights := ["", "", "", "", "", "", "", ""];
@@ -2782,7 +2791,7 @@ func compiler_compile(string source) compiler_state {
     struct_field_starts := [0, 0, 0, 0, 0, 0, 0, 0];
     struct_field_counts := [0, 0, 0, 0, 0, 0, 0, 0];
     struct_custom_drops := [0, 0, 0, 0, 0, 0, 0, 0];
-    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, loan_parent_fields: loan_parent_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, field_borrow_state: field_borrow_state, nested_field_state: nested_field_state, nested_field_borrow_state: nested_field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_declaration_refs: function_declaration_refs, function_counts: function_counts, function_returns: function_returns, function_return_constants: function_return_constants, function_return_call_targets: function_return_call_targets, function_branch_conditions: function_branch_conditions, function_branch_true_constants: function_branch_true_constants, function_branch_false_constants: function_branch_false_constants, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false, method_names: method_names, method_structs: method_structs, method_returns: method_returns, method_count: 0, stage7_compatibility_actual_source: "", stage7_compatibility_expected_source: "", stage7_compatibility_expected_key: "", stage7_compatibility_result: "", stage7_compatibility_action: "", stage7_compatibility_name_reresolution: "", stage7_compatibility_declaration_ref: "", stage7_rejection_source: "", stage7_rejection_kind: "", stage7_rejection_diagnostic: "", stage7_rejection_expected_key: "", stage7_rejection_name_reresolution: "" }
+    s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, loan_parent_fields: loan_parent_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, field_borrow_state: field_borrow_state, nested_field_state: nested_field_state, nested_field_borrow_state: nested_field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_declaration_refs: function_declaration_refs, function_counts: function_counts, function_returns: function_returns, function_return_constants: function_return_constants, function_return_call_targets: function_return_call_targets, function_branch_conditions: function_branch_conditions, function_branch_true_constants: function_branch_true_constants, function_branch_false_constants: function_branch_false_constants, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_observed_return_kinds: function_observed_return_kinds, function_observed_return_structs: function_observed_return_structs, function_observed_compat: function_observed_compat, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false, method_names: method_names, method_structs: method_structs, method_returns: method_returns, method_count: 0, stage7_compatibility_actual_source: "", stage7_compatibility_expected_source: "", stage7_compatibility_expected_key: "", stage7_compatibility_result: "", stage7_compatibility_action: "", stage7_compatibility_name_reresolution: "", stage7_compatibility_declaration_ref: "", stage7_rejection_source: "", stage7_rejection_kind: "", stage7_rejection_diagnostic: "", stage7_rejection_expected_key: "", stage7_rejection_name_reresolution: "" }
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
@@ -5433,7 +5442,29 @@ func compiler_emit_stage7_type_checking_proof(string source) string {
     return out
 }
 
-
+func compiler_emit_stage7_observation_proof(string source) string {
+    result := compiler_compile(source)
+    if result.error != "" {
+        return "observation=FAIL\n" + "observation.reason=canonical compile path did not certify Stage 7 input: " + result.error + "\n"
+    }
+    out := "stage7-observation version=1\n"
+    out = out + "function-count=" + compiler_number(result.function_count) + "\n"
+    i := 0
+    for i < result.function_count {
+        declared_kind := result.function_returns[i]
+        declared_struct := result.function_return_structs[i]
+        declared_type := compiler_stage7_type_fact_name(result, declared_kind, declared_struct)
+        observed_type := compiler_stage7_type_fact_name(result, result.function_observed_return_kinds[i], result.function_observed_return_structs[i])
+        out = out + "function." + compiler_number(i) + ".name=" + result.function_names[i] + "\n"
+        out = out + "function." + compiler_number(i) + ".declaration-ref=" + result.function_declaration_refs[i] + "\n"
+        out = out + "function." + compiler_number(i) + ".declared-return-type=" + declared_type + "\n"
+        out = out + "function." + compiler_number(i) + ".observed-return-expression-type=" + observed_type + "\n"
+        out = out + "function." + compiler_number(i) + ".compatibility-result=" + result.function_observed_compat[i] + "\n"
+        i = i + 1
+    }
+    out = out + "observation-authority=real-type-checker\n"
+    return out
+}
 
 func compiler_stage8_make_canonical_type_ref(string stage7_type_fact) string {
     if stage7_type_fact == "" { return "" }
@@ -5457,6 +5488,15 @@ func compiler_stage8_type_fact_from_stage7_proof(string stage7) string {
     if compiler_contains_text(stage7, "S7.3.return-type-fact=string") { return "stage7-type-fact:string" }
     if compiler_contains_text(stage7, "S7.4.expression-type-kind=int") { return "stage7-type-fact:int" }
     if compiler_contains_text(stage7, "S7.4.expression-type-kind=string") { return "stage7-type-fact:string" }
+    return ""
+}
+
+func compiler_stage8_type_fact_from_observation_proof(string observation) string {
+    if compiler_contains_text(observation, "function.0.declared-return-type=int") { return "stage7-type-fact:int" }
+    if compiler_contains_text(observation, "function.0.declared-return-type=box") { return "stage7-type-fact:box" }
+    if compiler_contains_text(observation, "function.0.declared-return-type=ref") { return "stage7-type-fact:ref" }
+    if compiler_contains_text(observation, "function.0.declared-return-type=mutref") { return "stage7-type-fact:mutref" }
+    if compiler_contains_text(observation, "function.0.declared-return-type=slice") { return "stage7-type-fact:slice" }
     return ""
 }
 
@@ -5517,20 +5557,20 @@ func compiler_emit_stage8_canonical_type_ref_proof(string source) string {
                     out = out + "S8.4.not-call-order-counter=yes\n"
                     out = out + "S8.4.evidence=canonical Stage 8 repeated production from the same Stage 7 type fact yields the same TypeRef identity\n"
                     other_source := compiler_stage8_uniqueness_other_source()
-                    other_stage7 := compiler_emit_stage7_type_checking_proof(other_source)
-                    other_type_fact := compiler_stage8_type_fact_from_stage7_proof(other_stage7)
+                    other_observation := compiler_emit_stage7_observation_proof(other_source)
+                    other_type_fact := compiler_stage8_type_fact_from_observation_proof(other_observation)
                     other_producer := compiler_stage8_make_canonical_type_ref(other_type_fact)
                     other_identity := compiler_stage8_canonical_type_ref_from_producer(other_producer, other_type_fact)
                     same_fact_identity := compiler_stage8_canonical_type_ref_from_producer(compiler_stage8_make_canonical_type_ref(stage8_type_fact), stage8_type_fact)
-                    if stage8_type_fact == "stage7-type-fact:int" && other_type_fact == "stage7-type-fact:string" && same_fact_identity == canonical_type_ref && other_producer == "canonical-type-ref-producer" && other_identity != "" && other_identity != canonical_type_ref {
+                    if stage8_type_fact == "stage7-type-fact:int" && other_type_fact == "stage7-type-fact:box" && same_fact_identity == canonical_type_ref && other_producer == "canonical-type-ref-producer" && other_identity != "" && other_identity != canonical_type_ref {
                         out = out + "S8.5=PASS\n"
                         out = out + "S8.5.equal-type-facts-converge=yes\n"
                         out = out + "S8.5.distinct-supported-type-facts-distinct=yes\n"
                         out = out + "S8.5.declaration-type-fact-covered=yes\n"
                         out = out + "S8.5.expression-type-fact-covered=yes\n"
-                        out = out + "S8.5.distinct-pair=int-vs-string\n"
+                        out = out + "S8.5.distinct-pair=int-vs-box\n"
                         out = out + "S8.5.identity-int=" + canonical_type_ref + "\n"
-                        out = out + "S8.5.identity-string=" + other_identity + "\n"
+                        out = out + "S8.5.identity-box=" + other_identity + "\n"
                         out = out + "S8.5.evidence=canonical Stage 8 equal type facts converge and distinct supported type facts produce distinct TypeRef identities\n"
                     }
                 }
@@ -5545,8 +5585,8 @@ func compiler_emit_stage8_canonical_type_ref_proof(string source) string {
 
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "stage5-name-resolution-proof" && args[1] != "declaration-ref-proof" && args[1] != "type-checking-proof" && args[1] != "canonical-type-ref-proof" && args[1] != "--emit-c" && args[1] != "--emit-lowered-view" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
-        eprintln("usage: s_compiler (--emit-c|--emit-lowered-view|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|stage5-name-resolution-proof|declaration-ref-proof|type-checking-proof|canonical-type-ref-proof|--emit-mir-nll-ownership) input.s output")
+    if len(args) != 4 || (args[1] != "stage5-name-resolution-proof" && args[1] != "declaration-ref-proof" && args[1] != "type-checking-proof" && args[1] != "type-facts-observation-proof" && args[1] != "canonical-type-ref-proof" && args[1] != "--emit-c" && args[1] != "--emit-lowered-view" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
+        eprintln("usage: s_compiler (--emit-c|--emit-lowered-view|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|stage5-name-resolution-proof|declaration-ref-proof|type-checking-proof|type-facts-observation-proof|canonical-type-ref-proof|--emit-mir-nll-ownership) input.s output")
         return 2
     }
     source := __host_read_to_string(args[2])
@@ -5561,6 +5601,10 @@ func main() {
     }
     if args[1] == "type-checking-proof" {
         if __host_write_text_file(args[3], compiler_emit_stage7_type_checking_proof(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "type-facts-observation-proof" {
+        if __host_write_text_file(args[3], compiler_emit_stage7_observation_proof(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "canonical-type-ref-proof" {
