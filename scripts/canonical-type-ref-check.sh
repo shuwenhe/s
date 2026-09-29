@@ -165,7 +165,7 @@ if printf '%s
     proof_status=0
     proof_input="${S_STAGE8_PROOF_INPUT:-$SOURCE_ROOT/test/compiler/stage7_type_checking_basic.s}"
     S_STAGE7_NEGATIVE_PROOF_INPUT="${S_STAGE7_NEGATIVE_PROOF_INPUT:-$SOURCE_ROOT/test/compiler/stage7_type_checking_type_error.s}" \
-    S_STAGE8_UNIQUENESS_OTHER_INPUT="${S_STAGE8_UNIQUENESS_OTHER_INPUT:-$SOURCE_ROOT/test/compiler/stage8_canonical_type_ref_string.s}" \
+    S_STAGE8_UNIQUENESS_OTHER_INPUT="${S_STAGE8_UNIQUENESS_OTHER_INPUT:-$SOURCE_ROOT/test/compiler/stage8_canonical_type_ref_box.s}" \
         "$COMPILER" canonical-type-ref-proof "$proof_input" "$RAW_REPORT" || proof_status=$?
     if [ "$proof_status" -ne 0 ] || [ ! -f "$RAW_REPORT" ]; then
         {
