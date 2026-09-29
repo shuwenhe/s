@@ -1,20 +1,20 @@
 #!/bin/bash
 
 ################################################################################
-# canonical-type-checking-check.sh
+# canonical-type-ref-check.sh
 #
-# Stage 7-only gate: Type Checking.
+# Stage 8-only gate: CanonicalTypeRef.
 #
-# This gate does not prove CanonicalTypeRef, layout, MIR, ABI, or codegen. Its
-# first responsibility is deterministic attribution: if Stage 7 is not closed,
-# report the first unmet S7.x contract in S7.1 -> S7.8 order.
+# This gate does not prove Semantic Analysis, MIR, layout, ABI, or codegen. Its
+# first responsibility is deterministic attribution: if Stage 8 is not closed,
+# report the first unmet S8.x contract in S8.1 -> S8.8 order.
 ################################################################################
 
 set -euo pipefail
 
 SOURCE_ROOT="${1:-${S_SOURCE_ROOT:-.}}"
 COMPILER="${SOURCE_ROOT}/bin/s_compiler"
-REPORT="${SOURCE_ROOT}/.bootstrap/stage7/type-checking-gate.txt"
+REPORT="${SOURCE_ROOT}/.bootstrap/stage8/canonical-type-ref-gate.txt"
 RAW_REPORT="${REPORT}.raw.$$"
 TMP_REPORT="${REPORT}.tmp.$$"
 
@@ -23,28 +23,28 @@ trap 'rm -f "$RAW_REPORT" "$TMP_REPORT"' EXIT HUP INT TERM
 
 contract_title() {
     case "$1" in
-        S7.1) echo "Input Boundary" ;;
-        S7.2) echo "Type Environment Authority" ;;
-        S7.3) echo "Declaration Type Facts" ;;
-        S7.4) echo "Expression Type Facts" ;;
-        S7.5) echo "Compatibility Semantics" ;;
-        S7.6) echo "Type Error Rejection" ;;
-        S7.7) echo "No Re-Resolution Or Identity Reconstruction" ;;
-        S7.8) echo "Output Boundary" ;;
+        S8.1) echo "Input Boundary" ;;
+        S8.2) echo "Canonical Type Identity Producer" ;;
+        S8.3) echo "Type Identity Authority" ;;
+        S8.4) echo "Stable Identity" ;;
+        S8.5) echo "Uniqueness / Interning Semantics" ;;
+        S8.6) echo "Equality Semantics" ;;
+        S8.7) echo "No Re-Typechecking Or Identity Reconstruction" ;;
+        S8.8) echo "Output Boundary" ;;
         *) echo "Unknown Contract" ;;
     esac
 }
 
 contract_number() {
     case "$1" in
-        S7.1) echo 1 ;;
-        S7.2) echo 2 ;;
-        S7.3) echo 3 ;;
-        S7.4) echo 4 ;;
-        S7.5) echo 5 ;;
-        S7.6) echo 6 ;;
-        S7.7) echo 7 ;;
-        S7.8) echo 8 ;;
+        S8.1) echo 1 ;;
+        S8.2) echo 2 ;;
+        S8.3) echo 3 ;;
+        S8.4) echo 4 ;;
+        S8.5) echo 5 ;;
+        S8.6) echo 6 ;;
+        S8.7) echo 7 ;;
+        S8.8) echo 8 ;;
         *) echo 1 ;;
     esac
 }
@@ -57,7 +57,8 @@ proof_value() {
 
 contains_forbidden_later_stage_claim() {
     local value=$1
-    printf '%s\n' "$value" | grep -Eq 'CanonicalTypeRef|MIR|layout|ABI|codegen|S8\.'
+    printf '%s
+' "$value" | grep -Eq 'Semantic Analysis|MIR|layout|ABI|codegen|S9\.'
 }
 
 write_report() {
@@ -66,21 +67,20 @@ write_report() {
     local first_unmet="NONE"
     local first_reason="NONE"
     local result="PASS"
-    local stage7="CLOSED"
+    local stage8="CLOSED"
     local contract status evidence reason title
 
     {
-        echo "STAGE 7 - TYPE CHECKING"
-        echo "Scope: Stage 7 only; stop at type reasoning boundary"
-        echo "CanonicalTypeRef success is NOT required."
-        echo "Lowering/MIR/backend success is NOT required."
-        echo "Layout/ABI/codegen success is NOT required."
+        echo "STAGE 8 - CANONICALTYPEREF"
+        echo "Scope: Stage 8 only; stop at canonical type identity boundary"
+        echo "Semantic Analysis success is NOT required."
+        echo "MIR/layout/ABI/codegen success is NOT required."
         echo "compiler=$COMPILER"
         echo "proof-source=$proof_source"
         echo "proof-report=$proof_file"
     } > "$TMP_REPORT"
 
-    for contract in S7.1 S7.2 S7.3 S7.4 S7.5 S7.6 S7.7 S7.8; do
+    for contract in S8.1 S8.2 S8.3 S8.4 S8.5 S8.6 S8.7 S8.8; do
         title=$(contract_title "$contract")
         status=$(proof_value "$contract" "$proof_file")
         evidence=$(proof_value "${contract}.evidence" "$proof_file")
@@ -114,14 +114,14 @@ write_report() {
             first_unmet=$contract
             first_reason=$reason
             result="FAIL"
-            stage7="NOT_CLOSED"
+            stage8="NOT_CLOSED"
         fi
     done
 
     {
         echo "first-unmet-contract=$first_unmet"
         echo "reason=$first_reason"
-        echo "stage7-type-checking=$stage7"
+        echo "stage8-canonical-type-ref=$stage8"
         echo "result=$result"
     } >> "$TMP_REPORT"
 
@@ -134,19 +134,19 @@ write_report() {
     return "$(contract_number "$first_unmet")"
 }
 
-if [ "${S_STAGE7_ALLOW_MOCK_PROOF:-0}" = "1" ] && [ -n "${S_STAGE7_PROOF_REPORT:-}" ]; then
-    if [ ! -f "$S_STAGE7_PROOF_REPORT" ]; then
-        echo "canonical-type-checking-check: mock proof report not found: $S_STAGE7_PROOF_REPORT" >&2
+if [ "${S_STAGE8_ALLOW_MOCK_PROOF:-0}" = "1" ] && [ -n "${S_STAGE8_PROOF_REPORT:-}" ]; then
+    if [ ! -f "$S_STAGE8_PROOF_REPORT" ]; then
+        echo "canonical-type-ref-check: mock proof report not found: $S_STAGE8_PROOF_REPORT" >&2
         exit 2
     fi
-    write_report "mock" "$S_STAGE7_PROOF_REPORT"
+    write_report "mock" "$S_STAGE8_PROOF_REPORT"
     exit $?
 fi
 
 if [ ! -x "$COMPILER" ]; then
     {
-        echo "S7.1=FAIL"
-        echo "S7.1.reason=no executable compiler available to observe canonical Type Checking input boundary"
+        echo "S8.1=FAIL"
+        echo "S8.1.reason=no executable compiler available to observe canonical type identity input boundary"
     } > "$RAW_REPORT"
     write_report "compiler-missing" "$RAW_REPORT"
     exit $?
@@ -154,29 +154,32 @@ fi
 
 help_status=0
 help_output=$($COMPILER help 2>&1) || help_status=$?
-if ! printf '%s\n' "$help_output" | grep -Fq 'type-checking-proof'; then
+if ! printf '%s
+' "$help_output" | grep -Fq 'canonical-type-ref-proof'; then
     help_status=0
     help_output=$($COMPILER --help 2>&1) || help_status=$?
 fi
 
-if printf '%s\n' "$help_output" | grep -Fq 'type-checking-proof'; then
+if printf '%s
+' "$help_output" | grep -Fq 'canonical-type-ref-proof'; then
     proof_status=0
-    proof_input="${S_STAGE7_PROOF_INPUT:-$SOURCE_ROOT/test/compiler/stage7_type_checking_basic.s}"
+    proof_input="${S_STAGE8_PROOF_INPUT:-$SOURCE_ROOT/test/compiler/stage7_type_checking_basic.s}"
     S_STAGE7_NEGATIVE_PROOF_INPUT="${S_STAGE7_NEGATIVE_PROOF_INPUT:-$SOURCE_ROOT/test/compiler/stage7_type_checking_type_error.s}" \
-        "$COMPILER" type-checking-proof "$proof_input" "$RAW_REPORT" || proof_status=$?
+    S_STAGE8_UNIQUENESS_OTHER_INPUT="${S_STAGE8_UNIQUENESS_OTHER_INPUT:-$SOURCE_ROOT/test/compiler/stage8_canonical_type_ref_string.s}" \
+        "$COMPILER" canonical-type-ref-proof "$proof_input" "$RAW_REPORT" || proof_status=$?
     if [ "$proof_status" -ne 0 ] || [ ! -f "$RAW_REPORT" ]; then
         {
-            echo "S7.1=FAIL"
-            echo "S7.1.reason=compiler exposes Stage 7 proof command but did not produce a proof report"
+            echo "S8.1=FAIL"
+            echo "S8.1.reason=compiler exposes Stage 8 proof command but did not produce a proof report"
         } > "$RAW_REPORT"
     fi
-    write_report "compiler-type-checking-proof" "$RAW_REPORT"
+    write_report "compiler-canonical-type-ref-proof" "$RAW_REPORT"
     exit $?
 fi
 
 {
-    echo "S7.1=FAIL"
-    echo "S7.1.reason=no observable Stage 7 proof producer; compiler does not expose type-checking-proof"
+    echo "S8.1=FAIL"
+    echo "S8.1.reason=no observable Stage 8 proof producer; compiler does not expose canonical-type-ref-proof"
 } > "$RAW_REPORT"
 write_report "not-observable" "$RAW_REPORT"
 exit $?

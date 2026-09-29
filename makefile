@@ -2402,6 +2402,11 @@ canonical-type-checking-check: compiler
 	@chmod +x scripts/canonical-type-checking-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-type-checking-check.sh "$(CURDIR)"
 
+.PHONY: canonical-type-ref-check
+canonical-type-ref-check: compiler
+	@chmod +x scripts/canonical-type-ref-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-type-ref-check.sh "$(CURDIR)"
+
 
 .PHONY: canonical-resolution-closure-check
 canonical-resolution-closure-check: bin/s_modular stage0-closure-check
