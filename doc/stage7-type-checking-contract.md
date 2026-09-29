@@ -180,19 +180,33 @@ Failure examples:
 
 ## S7.8 Output Boundary
 
-Stage 7 emits observable type-checking evidence consumable by Stage 8.
+Stage 7 emits observable type-checking evidence consumable by Stage 8. Type facts must preserve enough information to distinguish semantically distinct types expressible by the current canonical S grammar.
+
+Distinguishability scope:
+
+- All semantically distinct type forms expressible by the current canonical S grammar must remain distinguishable at the Stage 7 output boundary.
+- It does NOT require distinctions between hypothetical type forms that the grammar cannot express. In the current grammar, `ref`/`mutref`/`slice`/`mutslice` are terminal type keywords with no component operand, so `ref == ref` is the same semantic type, not a collision.
 
 Required proof:
 
 - Successful output includes typed declaration/expression facts keyed by canonical `DeclarationRef` where declarations are involved.
 - The output can be consumed by Stage 8 without re-running type checking or name resolution.
+- **Type facts distinguish every semantic type form expressible by the current grammar**:
+  - Primitive/terminal type forms (int, box, ref, mutref, slice, mutslice, string) each produce a distinct type fact.
+  - Named types (struct) are keyed by canonical `DeclarationRef`.
 - The proof stops at type facts and does not claim `CanonicalTypeRef`, MIR, layout, ABI, or codegen.
+
+Out of scope (language/type-system evolution backlog):
+
+- Parameterized reference/slice types such as `ref(T)`, `mutref(T)`, `slice(T)`, `**T`, `[]*T`, `*[]T` are not expressible by the current grammar. When the grammar is extended to express them, the type representation, this contract, and the Stage 8 identity contract must be upgraded together.
 
 Failure examples:
 
 - Stage 7 reports only "type check succeeded" with no observable type facts.
 - Stage 7 output requires Stage 8 to repeat type checking.
 - Stage 7 proof includes `CanonicalTypeRef`, MIR, layout, ABI, or codegen claims.
+- Two distinct grammar-expressible type forms (e.g., `ref` vs `mutref`, `slice` vs `mutslice`) produce identical type facts.
+- Named types use ephemeral identifiers that are not bound to `DeclarationRef`.
 
 ## Negative Contract
 
