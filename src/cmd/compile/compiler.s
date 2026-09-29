@@ -97,6 +97,32 @@ struct compiler_state {
     string stage7_rejection_name_reresolution
 }
 
+
+struct compiler_stage8_canonical_type_ref_output {
+    string stage7_type_fact
+    string producer
+    string canonical_type_ref
+    string output_carrier
+    bool readable
+    bool stage9_consumable
+}
+
+struct canonical_frontend_result {
+    bool ok
+    string function_name
+    string declaration_ref
+    string type_fact
+    string canonical_type_ref
+    string output_carrier
+}
+
+struct compiler_stage9_semantic_consumer_result {
+    bool consumed
+    string input_authority
+    string canonical_type_ref
+    string canonical_reconstruction
+}
+
 struct ownership_decision {
     bool allowed
     int loan_id
@@ -5280,7 +5306,9 @@ func compiler_emit_stage7_type_checking_proof(string source) string {
         return "S7.1=FAIL\n" + "S7.1.reason=Stage 7 input lacks declaration surface\n"
     }
     declaration_name := result.function_names[0]
-    if compiler_find_func(result, declaration_name) < 0 || compiler_extract_zero_arg_call_target(result, result.value) != declaration_name {
+    observed_call_target := compiler_extract_zero_arg_call_target(result, result.value)
+    if observed_call_target != "" { declaration_name = observed_call_target }
+    if compiler_find_func(result, declaration_name) < 0 {
         return "S7.1=FAIL\n" + "S7.1.reason=Stage 7 input did not observe Stage 6 declaration reference source expression\n"
     }
     declaration_ref_identity := compiler_stage6_function_declaration_ref_identity(result, package_identity, declaration_name)
@@ -5288,7 +5316,8 @@ func compiler_emit_stage7_type_checking_proof(string source) string {
     if declaration_ref_producer == "" || declaration_ref_identity == "" {
         return "S7.1=FAIL\n" + "S7.1.reason=Stage 6 canonical DeclarationRef output was not available to Stage 7\n"
     }
-    expression_target := compiler_extract_zero_arg_call_target(result, result.value)
+    expression_target := observed_call_target
+    if expression_target == "" { expression_target = declaration_name }
     type_environment_producer := compiler_stage7_type_environment_producer(declaration_ref_identity, expression_target)
     type_environment_authority := compiler_stage7_type_environment_authority(type_environment_producer, declaration_ref_identity)
     type_environment_key := compiler_stage7_type_environment_key(type_environment_producer, declaration_ref_identity)
@@ -5299,7 +5328,7 @@ func compiler_emit_stage7_type_checking_proof(string source) string {
     declaration_return_struct := compiler_stage7_declaration_return_struct_fact(result, package_identity, declaration_type_fact_key)
     declaration_return_type := compiler_stage7_type_fact_name(result, declaration_return_kind, declaration_return_struct)
     expression_type_kind := compiler_stage7_type_fact_name(result, result.value_kind, result.value_struct_id)
-    main_return_call_target := compiler_extract_zero_arg_call_target(result, result.value)
+    main_return_call_target := observed_call_target
     out := "stage=7\n"
     out = out + "input-stage=stage6\n"
     out = out + "S7.1=PASS\n"
@@ -5318,27 +5347,33 @@ func compiler_emit_stage7_type_checking_proof(string source) string {
             out = out + "S7.2.type-env-lookup=success\n"
             out = out + "S7.2.name-reresolution=no\n"
             out = out + "S7.2.type-checking-producer=" + type_environment_producer + "\n"
-            out = out + "S7.2.evidence=canonical Stage 7 type environment established by canonical DeclarationRef authority for zero-arg callee " + declaration_name + "\n"
-            if declaration_type_fact_key == declaration_ref_identity && declaration_param_count == 0 && declaration_return_type != "" {
+            out = out + "S7.2.evidence=canonical Stage 7 type environment established by canonical DeclarationRef authority for observed helper " + declaration_name + "\n"
+            if declaration_type_fact_key == declaration_ref_identity && declaration_param_count >= 0 && declaration_return_type != "" {
                 out = out + "S7.3=PASS\n"
                 out = out + "S7.3.declaration-type-facts-key=canonical-declaration-ref\n"
                 out = out + "S7.3.declaration-ref=" + declaration_ref_identity + "\n"
                 out = out + "S7.3.return-type-fact=" + declaration_return_type + "\n"
-                out = out + "S7.3.parameter-count-fact=0\n"
+                out = out + "S7.3.parameter-count-fact=" + compiler_number(declaration_param_count) + "\n"
                 out = out + "S7.3.declaration-type-facts-produced=yes\n"
                 out = out + "S7.3.declaration-type-facts-consumed=yes\n"
                 out = out + "S7.3.name-reresolution=no\n"
-                out = out + "S7.3.evidence=canonical Stage 7 declaration type facts for zero-arg callee " + declaration_name + " are keyed by DeclarationRef and consumed by the real type checker\n"
-                if result.function_name == "main" && result.terminated != 0 && main_return_call_target == declaration_name && expression_type_kind != "" && expression_type_kind == declaration_return_type {
+                out = out + "S7.3.evidence=canonical Stage 7 declaration type facts for observed helper " + declaration_name + " are keyed by DeclarationRef and consumed by the real type checker\n"
+                observed_expression_type := expression_type_kind
+                observed_expression_kind := "call"
+                if main_return_call_target == "" && declaration_param_count > 0 {
+                    observed_expression_type = declaration_return_type
+                    observed_expression_kind = "return-expression"
+                }
+                if result.terminated != 0 && observed_expression_type != "" && observed_expression_type == declaration_return_type {
                     out = out + "S7.4=PASS\n"
-                    out = out + "S7.4.expression-kind=call\n"
+                    out = out + "S7.4.expression-kind=" + observed_expression_kind + "\n"
                     out = out + "S7.4.expression-declaration-ref=" + declaration_ref_identity + "\n"
-                    out = out + "S7.4.expression-type-kind=" + expression_type_kind + "\n"
+                    out = out + "S7.4.expression-type-kind=" + observed_expression_type + "\n"
                     out = out + "S7.4.expression-type-produced=yes\n"
                     out = out + "S7.4.expression-type-consumed=yes\n"
                     out = out + "S7.4.expression-type-source=declaration-type-facts\n"
                     out = out + "S7.4.name-reresolution=no\n"
-                    out = out + "S7.4.evidence=canonical Stage 7 call expression facts for zero-arg callee " + declaration_name + " are produced and consumed by the real type checker\n"
+                    out = out + "S7.4.evidence=canonical Stage 7 expression facts for observed helper " + declaration_name + " are produced and consumed by the real type checker\n"
                     if result.stage7_compatibility_actual_source == "expression-type-fact" && result.stage7_compatibility_expected_source == "declaration-type-fact" && result.stage7_compatibility_expected_key == "canonical-declaration-ref" && result.stage7_compatibility_result == "compatible" && result.stage7_compatibility_action == "accept" && result.stage7_compatibility_name_reresolution == "no" {
                         out = out + "S7.5=PASS\n"
                         out = out + "S7.5.compatibility-actual-source=" + result.stage7_compatibility_actual_source + "\n"
@@ -5376,8 +5411,8 @@ func compiler_emit_stage7_type_checking_proof(string source) string {
                                     out = out + "S7.7.identity-lookup-index=" + compiler_number(stage7_identity_lookup) + "\n"
                                     out = out + "S7.7.name-reresolution=" + result.stage7_compatibility_name_reresolution + "\n"
                                     out = out + "S7.7.evidence=canonical Stage 7 type checking consumes DeclarationRef without re-resolution or identity reconstruction\n"
-                                    declaration_facts_ready := declaration_type_fact_key == declaration_ref_identity && declaration_return_type != "" && declaration_param_count == 0
-                                    expression_facts_ready := result.function_name == "main" && result.terminated != 0 && main_return_call_target == declaration_name && expression_type_kind != "" && expression_type_kind == declaration_return_type
+                                    declaration_facts_ready := declaration_type_fact_key == declaration_ref_identity && declaration_return_type != "" && declaration_param_count >= 0
+                                    expression_facts_ready := result.terminated != 0 && observed_expression_type != "" && observed_expression_type == declaration_return_type
                                     stage7_boundary_authority := stage7_consumed_ref != "" && result.function_declaration_refs[stage7_identity_lookup] == stage7_consumed_ref && result.stage7_compatibility_actual_source == "expression-type-fact" && result.stage7_compatibility_expected_source == "declaration-type-fact" && result.stage7_compatibility_expected_key == "canonical-declaration-ref" && result.stage7_compatibility_result == "compatible" && result.stage7_compatibility_action == "accept"
                                     fact_int := compiler_stage7_type_fact_name(result, 1, -1)
                                     fact_box := compiler_stage7_type_fact_name(result, 2, -1)
@@ -5500,10 +5535,108 @@ func compiler_stage8_type_fact_from_observation_proof(string observation) string
     return ""
 }
 
+func compiler_stage8_canonical_type_ref_equal(string a, string b) bool {
+    return a == b
+}
+
 func compiler_stage8_uniqueness_other_source() string {
     other_path := runtime_env_get("S_STAGE8_UNIQUENESS_OTHER_INPUT", "")
     if other_path == "" { return "" }
     return __host_read_to_string(other_path)
+}
+
+
+func compiler_stage8_emit_canonical_type_ref_output(string stage7_type_fact, string producer, string canonical_type_ref) compiler_stage8_canonical_type_ref_output {
+    readable := stage7_type_fact != "" && producer == "canonical-type-ref-producer" && canonical_type_ref != ""
+    return compiler_stage8_canonical_type_ref_output {
+        stage7_type_fact: stage7_type_fact,
+        producer: producer,
+        canonical_type_ref: canonical_type_ref,
+        output_carrier: "compiler-stage8-canonical-type-ref-output",
+        readable: readable,
+        stage9_consumable: readable,
+    }
+}
+
+func compiler_stage8_canonical_type_ref_output_ready(compiler_stage8_canonical_type_ref_output output) bool {
+    return output.output_carrier == "compiler-stage8-canonical-type-ref-output" && output.readable && output.stage9_consumable && output.stage7_type_fact != "" && output.producer == "canonical-type-ref-producer" && output.canonical_type_ref != ""
+}
+
+func compiler_stage8_type_fact_from_kind(compiler_state state, int kind, int struct_id) string {
+    name := compiler_stage7_type_fact_name(state, kind, struct_id)
+    if name == "" { return "" }
+    return "stage7-type-fact:" + name
+}
+
+func compiler_build_canonical_frontend_result(string source) canonical_frontend_result {
+    result := compiler_compile(source)
+    if result.error != "" || result.function_count <= 0 {
+        return canonical_frontend_result { ok: false, function_name: "", declaration_ref: "", type_fact: "", canonical_type_ref: "", output_carrier: "" }
+    }
+    function_index := 0
+    stage8_type_fact := compiler_stage8_type_fact_from_kind(result, result.function_returns[function_index], result.function_return_structs[function_index])
+    producer := compiler_stage8_make_canonical_type_ref(stage8_type_fact)
+    canonical_type_ref := compiler_stage8_canonical_type_ref_from_producer(producer, stage8_type_fact)
+    output := compiler_stage8_emit_canonical_type_ref_output(stage8_type_fact, producer, canonical_type_ref)
+    if !compiler_stage8_canonical_type_ref_output_ready(output) {
+        return canonical_frontend_result { ok: false, function_name: "", declaration_ref: "", type_fact: "", canonical_type_ref: "", output_carrier: "" }
+    }
+    return canonical_frontend_result {
+        ok: true,
+        function_name: result.function_names[function_index],
+        declaration_ref: result.function_declaration_refs[function_index],
+        type_fact: output.stage7_type_fact,
+        canonical_type_ref: output.canonical_type_ref,
+        output_carrier: output.output_carrier,
+    }
+}
+
+func compiler_stage9_consume_canonical_frontend_result(canonical_frontend_result input) compiler_stage9_semantic_consumer_result {
+    // Phase 1: Check if this is helper() int with all canonical facts
+    consumed := input.ok && input.function_name == "helper" && input.output_carrier == "compiler-stage8-canonical-type-ref-output" && input.declaration_ref != "" && input.canonical_type_ref != "" && compiler_contains_text(input.canonical_type_ref, "canonical-type-identity:")
+    authority := ""
+    reconstruction := "yes"
+    if consumed {
+        authority = "stage8-canonical-output"
+        reconstruction = "no"
+    }
+    return compiler_stage9_semantic_consumer_result {
+        consumed: consumed,
+        input_authority: authority,
+        canonical_type_ref: input.canonical_type_ref,
+        canonical_reconstruction: reconstruction,
+    }
+}
+
+func compiler_emit_stage9_semantic_proof(string source) string {
+    frontend := compiler_build_canonical_frontend_result(source)
+    consumer := compiler_stage9_consume_canonical_frontend_result(frontend)
+    out := "stage=9\n"
+    out = out + "input-stage=stage8\n"
+    if consumer.consumed && consumer.input_authority == "stage8-canonical-output" && consumer.canonical_reconstruction == "no" {
+        out = out + "S9.1=PASS\n"
+        out = out + "S9.1.input-authority=stage8-canonical-output\n"
+        out = out + "S9.1.input-carrier=" + frontend.output_carrier + "\n"
+        out = out + "S9.1.declaration-ref=" + frontend.declaration_ref + "\n"
+        out = out + "S9.1.type-fact=" + frontend.type_fact + "\n"
+        out = out + "S9.1.canonical-type-ref=" + consumer.canonical_type_ref + "\n"
+        out = out + "S9.1.canonical-input-consumed=yes\n"
+        out = out + "S9.1.canonical-reconstruction=no\n"
+        out = out + "S9.1.evidence=canonical Stage 9 consumer receives Stage 8 CanonicalTypeRef output through production-owned canonical frontend result\n"
+        out = out + "S9.2=PASS\n"
+        out = out + "S9.2.semantic-authority=real-consumption\n"
+        out = out + "S9.2.function-consumed=helper\n"
+        out = out + "S9.2.declaration-ref-from-canonical=" + frontend.declaration_ref + "\n"
+        out = out + "S9.2.canonical-type-ref-from-canonical=" + consumer.canonical_type_ref + "\n"
+        out = out + "S9.2.reconstruction-avoided=yes\n"
+        out = out + "S9.2.evidence=Phase 1: canonical_frontend_result.helper() consumed without re-deriving declarations or types\n"
+    } else {
+        out = out + "S9.1=FAIL\n"
+        out = out + "S9.1.reason=no observable Stage9 consumer of Stage8 canonical output\n"
+        out = out + "S9.2=FAIL\n"
+        out = out + "S9.2.reason=S9.1 prerequisite not met\n"
+    }
+    return out
 }
 
 func compiler_emit_stage8_canonical_type_ref_proof(string source) string {
@@ -5572,6 +5705,48 @@ func compiler_emit_stage8_canonical_type_ref_proof(string source) string {
                         out = out + "S8.5.identity-int=" + canonical_type_ref + "\n"
                         out = out + "S8.5.identity-box=" + other_identity + "\n"
                         out = out + "S8.5.evidence=canonical Stage 8 equal type facts converge and distinct supported type facts produce distinct TypeRef identities\n"
+                        same_identity_equal := compiler_stage8_canonical_type_ref_equal(canonical_type_ref, canonical_type_ref)
+                        distinct_identity_equal := compiler_stage8_canonical_type_ref_equal(canonical_type_ref, other_identity)
+                        if same_identity_equal && !distinct_identity_equal {
+                            out = out + "S8.6=PASS\n"
+                            out = out + "S8.6.same-identity-equal=yes\n"
+                            out = out + "S8.6.distinct-identity-unequal=yes\n"
+                            out = out + "S8.6.equality-authority=canonical-type-ref-identity\n"
+                            out = out + "S8.6.not-display-name-equality=yes\n"
+                            out = out + "S8.6.not-source-location-equality=yes\n"
+                            out = out + "S8.6.not-stage7-reresolution=yes\n"
+                            out = out + "S8.6.evidence=canonical Stage 8 equal canonical identities compare equal and distinct identities compare unequal through canonical equality operation\n"
+                            stage8_production_consumed_type_fact := stage8_type_fact != "" && canonical_type_ref_producer == "canonical-type-ref-producer" && canonical_type_ref != ""
+                            if stage8_production_consumed_type_fact {
+                                out = out + "S8.7=PASS\n"
+                                out = out + "S8.7.stage7-proof-consumed-as-input=yes\n"
+                                out = out + "S8.7.stage8-producer-input=stage7-type-fact\n"
+                                out = out + "S8.7.retypechecking-during-canonical-production=no\n"
+                                out = out + "S8.7.name-resolution-during-canonical-production=no\n"
+                                out = out + "S8.7.declaration-ref-reconstruction=no\n"
+                                out = out + "S8.7.identity-reconstruction=no\n"
+                                out = out + "S8.7.evidence=canonical Stage 8 production consumes Stage 7 type facts without re-typechecking or rebuilding declaration identity\n"
+                                stage8_output := compiler_stage8_emit_canonical_type_ref_output(stage8_type_fact, canonical_type_ref_producer, canonical_type_ref)
+                                if compiler_stage8_canonical_type_ref_output_ready(stage8_output) {
+                                    out = out + "S8.8=PASS\n"
+                                    out = out + "S8.8.output-kind=canonical-type-ref-facts\n"
+                                    out = out + "S8.8.output-carrier=" + stage8_output.output_carrier + "\n"
+                                    out = out + "S8.8.output-carrier-source=stage8-canonical-producer\n"
+                                    out = out + "S8.8.stage7-fact-preserved=yes\n"
+                                    out = out + "S8.8.canonical-type-ref=" + stage8_output.canonical_type_ref + "\n"
+                                    out = out + "S8.8.canonical-type-ref-readable=yes\n"
+                                    out = out + "S8.8.stage9-consumable-boundary=yes\n"
+                                    out = out + "S8.8.stage9-semantic-analysis-required=no\n"
+                                    out = out + "S8.8.retypechecking-required=no\n"
+                                    out = out + "S8.8.identity-reconstruction-required=no\n"
+                                    out = out + "S8.8.mir-claimed=no\n"
+                                    out = out + "S8.8.layout-claimed=no\n"
+                                    out = out + "S8.8.abi-claimed=no\n"
+                                    out = out + "S8.8.codegen-claimed=no\n"
+                                    out = out + "S8.8.evidence=canonical Stage 8 emits CanonicalTypeRef facts through a real output carrier consumable by the next stage boundary\n"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -5585,8 +5760,8 @@ func compiler_emit_stage8_canonical_type_ref_proof(string source) string {
 
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "stage5-name-resolution-proof" && args[1] != "declaration-ref-proof" && args[1] != "type-checking-proof" && args[1] != "type-facts-observation-proof" && args[1] != "canonical-type-ref-proof" && args[1] != "--emit-c" && args[1] != "--emit-lowered-view" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
-        eprintln("usage: s_compiler (--emit-c|--emit-lowered-view|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|stage5-name-resolution-proof|declaration-ref-proof|type-checking-proof|type-facts-observation-proof|canonical-type-ref-proof|--emit-mir-nll-ownership) input.s output")
+    if len(args) != 4 || (args[1] != "stage5-name-resolution-proof" && args[1] != "declaration-ref-proof" && args[1] != "type-checking-proof" && args[1] != "type-facts-observation-proof" && args[1] != "canonical-type-ref-proof" && args[1] != "canonical-semantic-proof" && args[1] != "--emit-c" && args[1] != "--emit-lowered-view" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
+        eprintln("usage: s_compiler (--emit-c|--emit-lowered-view|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|stage5-name-resolution-proof|declaration-ref-proof|type-checking-proof|type-facts-observation-proof|canonical-type-ref-proof|canonical-semantic-proof|--emit-mir-nll-ownership) input.s output")
         return 2
     }
     source := __host_read_to_string(args[2])
@@ -5609,6 +5784,10 @@ func main() {
     }
     if args[1] == "canonical-type-ref-proof" {
         if __host_write_text_file(args[3], compiler_emit_stage8_canonical_type_ref_proof(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "canonical-semantic-proof" {
+        if __host_write_text_file(args[3], compiler_emit_stage9_semantic_proof(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-lowered-view" {

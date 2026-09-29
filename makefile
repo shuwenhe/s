@@ -2407,6 +2407,11 @@ canonical-type-ref-check: compiler
 	@chmod +x scripts/canonical-type-ref-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-type-ref-check.sh "$(CURDIR)"
 
+.PHONY: canonical-semantic-check
+canonical-semantic-check: compiler
+	@chmod +x scripts/canonical-semantic-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-semantic-check.sh "$(CURDIR)"
+
 
 .PHONY: canonical-resolution-closure-check
 canonical-resolution-closure-check: bin/s_modular stage0-closure-check
