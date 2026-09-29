@@ -8,9 +8,24 @@ bin/*
 *.exe
 *.arm64_*
 
+# Compiled binaries (should be rebuilt from source)
+src/cmd/compile/compiler
+src/cmd/compile/seed/s_*
+!src/cmd/compile/seed/*.s  # Keep source files
+src/cmd/compile/internal/tests/probe_*
+test/regression/m1_*
+test/regression/parser_*
+test/min_package_test
+
+# Generated build artifacts
+.build_seed_*/
+scripts/s-package-index.tsv
+misc/scripts/test-*.sh
+misc/reports/
+misc/test-results/
+
 # Build outputs
 /build/
-# build outputs
 build/
 out/
 dist/
