@@ -2417,6 +2417,11 @@ canonical-lowering-check: compiler
 	@chmod +x scripts/canonical-lowering-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-lowering-check.sh "$(CURDIR)"
 
+.PHONY: canonical-mir-verification-check
+canonical-mir-verification-check: compiler
+	@chmod +x scripts/canonical-mir-verification-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-mir-verification-check.sh "$(CURDIR)"
+
 
 .PHONY: canonical-resolution-closure-check
 canonical-resolution-closure-check: bin/s_modular stage0-closure-check

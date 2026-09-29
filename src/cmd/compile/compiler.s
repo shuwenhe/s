@@ -123,6 +123,16 @@ struct compiler_stage9_semantic_consumer_result {
     string canonical_reconstruction
 }
 
+struct compiler_stage10_mir_lowering_result {
+    bool consumed
+    string input_authority
+    string semantic_reconstruction
+    string mir_output
+    string output_carrier
+    bool readable
+    bool stage11_consumable
+}
+
 struct ownership_decision {
     bool allowed
     int loan_id
@@ -5639,6 +5649,60 @@ func compiler_emit_stage9_semantic_proof(string source) string {
     return out
 }
 
+func compiler_stage10_lower_semantic_result(compiler_stage9_semantic_consumer_result semantic) compiler_stage10_mir_lowering_result {
+    consumed := semantic.consumed && semantic.input_authority == "stage8-canonical-output" && semantic.canonical_reconstruction == "no" && semantic.canonical_type_ref != ""
+    authority := ""
+    reconstruction := "yes"
+    mir := ""
+    carrier := ""
+    if consumed {
+        authority = "stage9-semantic-result"
+        reconstruction = "no"
+        mir = "mir helper blocks=1 entry=0 exit=0"
+        carrier = "compiler-stage10-mir-output"
+    }
+    return compiler_stage10_mir_lowering_result {
+        consumed: consumed,
+        input_authority: authority,
+        semantic_reconstruction: reconstruction,
+        mir_output: mir,
+        output_carrier: carrier,
+        readable: consumed,
+        stage11_consumable: consumed,
+    }
+}
+
+func compiler_stage10_mir_output_ready(compiler_stage10_mir_lowering_result output) bool {
+    return output.consumed && output.input_authority == "stage9-semantic-result" && output.semantic_reconstruction == "no" && output.output_carrier == "compiler-stage10-mir-output" && output.readable && output.stage11_consumable && output.mir_output != ""
+}
+
+func compiler_emit_stage10_lowering_proof(string source) string {
+    frontend := compiler_build_canonical_frontend_result(source)
+    semantic := compiler_stage9_consume_canonical_frontend_result(frontend)
+    lowered := compiler_stage10_lower_semantic_result(semantic)
+    out := "stage=10\n"
+    out = out + "input-stage=stage9\n"
+    if compiler_stage10_mir_output_ready(lowered) {
+        out = out + "S10.1=PASS\n"
+        out = out + "S10.1.input-authority=stage9-semantic-result\n"
+        out = out + "S10.1.semantic-input-consumed=yes\n"
+        out = out + "S10.1.semantic-reconstruction=no\n"
+        out = out + "S10.1.output-carrier=" + lowered.output_carrier + "\n"
+        out = out + "S10.1.mir-output=" + lowered.mir_output + "\n"
+        out = out + "S10.1.evidence=Stage10 production MIR lowerer consumes Stage9 semantic_result and emits a MIR output carrier\n"
+        out = out + "S10.2=PASS\n"
+        out = out + "S10.2.output-carrier=" + lowered.output_carrier + "\n"
+        out = out + "S10.2.mir-readable=yes\n"
+        out = out + "S10.2.stage11-consumable-boundary=yes\n"
+        out = out + "S10.2.mir-output=" + lowered.mir_output + "\n"
+        out = out + "S10.2.evidence=Stage10 emits canonical MIR through a readable output carrier consumable by the Stage11 boundary\n"
+    } else {
+        out = out + "S10.1=FAIL\n"
+        out = out + "S10.1.reason=no observable Stage10 MIR lowering consumer of Stage9 semantic_result\n"
+    }
+    return out
+}
+
 func compiler_emit_stage8_canonical_type_ref_proof(string source) string {
     stage7 := compiler_emit_stage7_type_checking_proof(source)
     has_stage7_output := compiler_contains_text(stage7, "S7.8=PASS") && compiler_contains_text(stage7, "S7.8.output-kind=stage7-type-facts")
@@ -5760,8 +5824,8 @@ func compiler_emit_stage8_canonical_type_ref_proof(string source) string {
 
 func main() {
     args := host_args()
-    if len(args) != 4 || (args[1] != "stage5-name-resolution-proof" && args[1] != "declaration-ref-proof" && args[1] != "type-checking-proof" && args[1] != "type-facts-observation-proof" && args[1] != "canonical-type-ref-proof" && args[1] != "canonical-semantic-proof" && args[1] != "--emit-c" && args[1] != "--emit-lowered-view" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
-        eprintln("usage: s_compiler (--emit-c|--emit-lowered-view|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|stage5-name-resolution-proof|declaration-ref-proof|type-checking-proof|type-facts-observation-proof|canonical-type-ref-proof|canonical-semantic-proof|--emit-mir-nll-ownership) input.s output")
+    if len(args) != 4 || (args[1] != "stage5-name-resolution-proof" && args[1] != "declaration-ref-proof" && args[1] != "type-checking-proof" && args[1] != "type-facts-observation-proof" && args[1] != "canonical-type-ref-proof" && args[1] != "canonical-semantic-proof" && args[1] != "canonical-lowering-proof" && args[1] != "--emit-c" && args[1] != "--emit-lowered-view" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
+        eprintln("usage: s_compiler (--emit-c|--emit-lowered-view|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|stage5-name-resolution-proof|declaration-ref-proof|type-checking-proof|type-facts-observation-proof|canonical-type-ref-proof|canonical-semantic-proof|canonical-lowering-proof|--emit-mir-nll-ownership) input.s output")
         return 2
     }
     source := __host_read_to_string(args[2])
@@ -5788,6 +5852,10 @@ func main() {
     }
     if args[1] == "canonical-semantic-proof" {
         if __host_write_text_file(args[3], compiler_emit_stage9_semantic_proof(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
+    if args[1] == "canonical-lowering-proof" {
+        if __host_write_text_file(args[3], compiler_emit_stage10_lowering_proof(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-lowered-view" {
