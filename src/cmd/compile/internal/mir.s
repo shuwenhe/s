@@ -155,9 +155,16 @@ struct mir_point_map {
 // Maintenance rule: every Borrow statement that increments loan_count
 // must ALSO append to BOTH loan_places and loan_borrowed_places.
 // Violation results in L+1 being out-of-sync with all future loans.
+struct mir_move_fact {
+    int point
+    int target
+    mir_operand source
+}
+
 struct mir_ownership_facts {
     ownership_analysis_input input
     string[] ref_names
+    mir_move_fact[] moves
 
     // LEGACY / DEBUG: string representation of borrowed places
     // Used for backward compatibility and diagnostic output only
@@ -274,6 +281,9 @@ func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_o
                     facts.input.outlives_to = append(facts.input.outlives_to, target_ref)
                     facts.input.outlives_count = facts.input.outlives_count + 1
                 }
+                mir_statement::move(move_stmt) : {
+                    facts.moves = append(facts.moves, mir_move_fact { point: point, target: move_stmt.target, source: move_stmt.source })
+                }
                 _ : { }
             }
             stmt_index = stmt_index + 1
@@ -293,6 +303,7 @@ func mir_empty_ownership_facts(int point_count) mir_ownership_facts {
             point_count: point_count, ref_seen int[](), ref_loans int[](), region_points int[](), loan_points int[](), outlives_from int[](), outlives_to int[](), outlives_count 0, loan_count 0,
         },
         ref_names: string[](),
+        moves: mir_move_fact[](),
         loan_places: string[](),
         loan_borrowed_places: mir_place[](),
     }
@@ -417,6 +428,13 @@ func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
     for i < input.loan_count {
         out = out + " | Loan" + std.prelude.to_string(i) + " issued = " + mir_points_string(input.loan_points[i])
         out = out + " place=" + facts.loan_places[i]
+        i = i + 1
+    }
+    i = 0
+    for i < len(facts.moves) {
+        out = out + " | Move" + std.prelude.to_string(i) + " point=P" + std.prelude.to_string(facts.moves[i].point)
+        out = out + " target=" + std.prelude.to_string(facts.moves[i].target)
+        out = out + " source=" + facts.moves[i].source.value
         i = i + 1
     }
     i = 0
