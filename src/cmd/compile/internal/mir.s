@@ -61,6 +61,11 @@ struct mir_eval_stmt {
     string[] args
 }
 
+struct mir_read_stmt {
+    mir_place place
+    result mir_operand
+}
+
 struct mir_move_stmt {
     int target
     source mir_operand
@@ -93,6 +98,7 @@ struct mir_ref_assign_stmt {
 enum mir_statement {
     assign(mir_assign_stmt),
     eval(mir_eval_stmt),
+    read(mir_read_stmt),
     move(mir_move_stmt),
     copy(mir_copy_stmt),
     drop(mir_drop_stmt),
@@ -918,10 +924,22 @@ func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr v
             }
         }
         expr.member(member_expr) : {
-            mir_append_ownership_semantics_from_expr(statements, member_expr.target.unwrap(), result_name)
+            place := mir_place_from_expr(value)
+            if result_name != "" && place.root != "" {
+                statements.push(mir_statement::read(mir_read_stmt {
+                    place: place, result mir_operand { kind: "local", value: result_name, type_name: "unknown" },
+                }))
+            }
+            mir_append_ownership_semantics_from_expr(statements, member_expr.target.unwrap(), "")
         }
         expr.index(index_expr) : {
-            mir_append_ownership_semantics_from_expr(statements, index_expr.target.unwrap(), result_name)
+            place := mir_place_from_expr(value)
+            if result_name != "" && place.root != "" {
+                statements.push(mir_statement::read(mir_read_stmt {
+                    place: place, result mir_operand { kind: "local", value: result_name, type_name: "unknown" },
+                }))
+            }
+            mir_append_ownership_semantics_from_expr(statements, index_expr.target.unwrap(), "")
             mir_append_ownership_semantics_from_expr(statements, index_expr.index.unwrap(), "")
         }
         expr.block(block_expr) : {
