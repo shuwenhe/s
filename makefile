@@ -1678,11 +1678,19 @@ selfhost-bin:
 
 .PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-borrow-dataflow-check mir-drop-elaboration-check mir-place-check mir-movepath-check mir-partial-move-check mir-reinit-check mir-partial-drop-check mir-place-borrow-check mir-ref-liveness-check mir-loan-liveness-check mir-region-constraints-check mir-region-solver-check mir-nll-borrow-check mir-nll-shadow-check mir-real-point-audit-check mir-real-point-map-check mir-real-ownership-facts-check mir-real-ownership-preservation-check mir-real-ownership-extractor-check mir-real-ownership-shared-analysis-check mir-real-ownership-shadow-check mir-nll-real-cfg-check mir-ownership-solver-check mir-ownership-analysis-consistency-check mir-nll-authority-check mir-nll-ownership-check mir-borrow-canonical-authority-check ownership-module-check mir-ownership-lowering-check mir-ownership-pipeline-check mir-nogc-e2e-check no-gc-test
 
+COMPILER_SOURCES := \
+	src/cmd/compile/frontend/core.s \
+	src/cmd/compile/frontend/frontend.s \
+	src/cmd/compile/frontend/stages.s \
+	src/cmd/compile/middlend/mir.s \
+	src/cmd/compile/middlend/stages.s \
+	src/cmd/compile/compiler_main.s
+
 compiler: seed-compiler-bin
 
 	@mkdir -p .bootstrap/compiler bin
 
-	@./bin/s_seed src/cmd/compile/compiler.s .bootstrap/compiler/compiler.ir
+	@./bin/s_seed --compile-unit .bootstrap/compiler/compiler.ir $(COMPILER_SOURCES)
 
 
 

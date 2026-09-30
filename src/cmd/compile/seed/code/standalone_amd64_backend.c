@@ -56,7 +56,10 @@ typedef struct standalone_module {
 } standalone_module;
 static void copy_text(char *dst, size_t cap, const char *src) {
 	if (!src) src = "";
-	snprintf(dst, cap, "%s", src);
+	if (cap == 0) return;
+	size_t i = 0;
+	for (; i + 1 < cap && src[i] != '\0'; i++) dst[i] = src[i];
+	dst[i] = '\0';
 }
 static bool split_ir_record(char *line, char *fields[4]) {
 	size_t count = 0;

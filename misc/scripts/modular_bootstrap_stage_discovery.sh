@@ -208,8 +208,8 @@ candidate_record() {
     printf '\n'
 
     candidate_record seed "trusted C seed via make seed-compiler-bin" bin/s_seed src/cmd/compile/seed/s_seed.c seed-ir
-    candidate_record no-gc "s_seed -> src/cmd/compile/compiler.s -> bin/s_compiler" bin/s_compiler src/cmd/compile/compiler.s emit-c
-    candidate_record wrapper "make bin/s shell driver" bin/s src/cmd/compile/compiler.s emit-c
+    candidate_record no-gc "s_seed -> src/cmd/compile/compiler_main.s -> bin/s_compiler" bin/s_compiler src/cmd/compile/compiler_main.s emit-c
+    candidate_record wrapper "make bin/s shell driver" bin/s src/cmd/compile/compiler_main.s emit-c
     candidate_record darwin-arm64 "make darwin-arm64-bootstrap" bin/s_darwin_arm64 src/cmd/compile/selfhost/compiler.s build
     candidate_record selfhost-native-stage1 "make native-bootstrap" .bootstrap/selfhost/native/stage1 src/cmd/compile/selfhost/compiler.s selfhost-native
     candidate_record selfhost-native-stage2 "make native-bootstrap" .bootstrap/selfhost/native/stage2 src/cmd/compile/selfhost/compiler.s selfhost-native

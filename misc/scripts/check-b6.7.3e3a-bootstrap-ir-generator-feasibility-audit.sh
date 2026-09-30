@@ -52,7 +52,7 @@ fi
 
 canonical_parse_entry=$(status_bool has_text 'func parse_source' src/cmd/compile/internal/syntax src/s)
 canonical_semantic_entry=$(status_bool has_text 'check_source_file' src/cmd/compile/internal)
-canonical_lowered_view_entry=$(status_bool has_text '--emit-lowered-view|canonical-lowered-view version=1' src/cmd/compile/compiler.s src/cmd/compile/internal/ir)
+canonical_lowered_view_entry=$(status_bool has_text '--emit-lowered-view|canonical-lowered-view version=1' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/compiler_main.s src/cmd/compile/internal/ir)
 seed_ir_consumer=$(status_bool has_text 'emit_aot_from_ir_file|emit_native_from_ir_file' src/cmd/compile/seed)
 seed_ir_serializer=$(status_bool has_text 'void generate_code\(IR \*ir, FILE \*output\)|SSEED-TARGET-V1' src/cmd/compile/seed/code/generator.c)
 canonical_full_sseed_emitter=$(status_bool has_text 'SSEED-TARGET-V1|FUNC_BEGIN\|.*FUNC_END\||bootstrap.*ir.*emit|emit.*bootstrap.*ir' src/cmd/compile/internal)
