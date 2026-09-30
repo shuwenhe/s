@@ -97,6 +97,7 @@ const char *ir_op_name(ir_op op) {
 		case IR_PARAM: return "PARAM";
 		case IR_ARG: return "ARG";
 		case IR_CALL: return "CALL";
+		case IR_READ: return "READ";
 		case IR_SROUTINE: return "SROUTINE";
 		case IR_MOV: return "MOV";
 		case IR_ADD: return "ADD";
