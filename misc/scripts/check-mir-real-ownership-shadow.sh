@@ -4,7 +4,7 @@ set -euo pipefail
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 mir_file="$root/src/cmd/compile/internal/mir.s"
 test_file="$root/src/cmd/compile/internal/tests/test_mir.s"
-compiler_file="$root/src/cmd/compile/compiler.s"
+compiler_file="$root/src/cmd/compile/middlend/mir.s"
 driver_file="$root/misc/scripts/s-driver.sh"
 
 require_text() {
