@@ -2422,6 +2422,11 @@ canonical-mir-verification-check: compiler
 	@chmod +x scripts/canonical-mir-verification-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-mir-verification-check.sh "$(CURDIR)"
 
+.PHONY: canonical-ownership-check
+canonical-ownership-check: compiler
+	@chmod +x scripts/canonical-ownership-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-ownership-check.sh "$(CURDIR)"
+
 
 .PHONY: canonical-resolution-closure-check
 canonical-resolution-closure-check: bin/s_modular stage0-closure-check
