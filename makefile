@@ -2422,6 +2422,16 @@ canonical-mir-verification-check: compiler
 	@chmod +x scripts/canonical-mir-verification-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-mir-verification-check.sh "$(CURDIR)"
 
+.PHONY: canonical-mir-read-check
+canonical-mir-read-check:
+	@chmod +x scripts/canonical-mir-read-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-mir-read-check.sh "$(CURDIR)"
+
+.PHONY: canonical-sseed-read-place-check
+canonical-sseed-read-place-check: canonical-mir-read-check
+	@chmod +x scripts/canonical-sseed-read-place-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-sseed-read-place-check.sh "$(CURDIR)"
+
 .PHONY: canonical-ownership-check
 canonical-ownership-check: compiler
 	@chmod +x scripts/canonical-ownership-check.sh
