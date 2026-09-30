@@ -65,6 +65,20 @@ func run_mir_suite() int {
     if count_mir_moves(gate) != 1 {
         return 1
     }
+    gate_points := mir.build_mir_point_map(gate)
+    gate_facts := mir.build_ownership_facts_from_mir(gate, gate_points)
+    if len(gate_facts.moves) != 1 {
+        return 1
+    }
+    if gate_facts.moves[0].point != 0 {
+        return 1
+    }
+    if gate_facts.moves[0].target != 1 {
+        return 1
+    }
+    if gate_facts.moves[0].source.value != "_1" {
+        return 1
+    }
     if count_mir_drops(gate) != 1 {
         return 1
     }
