@@ -178,6 +178,16 @@ static bool collect_operand(standalone_function *fn, const char *operand, compil
 	}
 	return true;
 }
+static bool parse_index_projection(const char *projection, char *index_out, size_t index_cap) {
+	size_t n;
+	if (!projection || strncmp(projection, "index(", 6) != 0) return false;
+	n = strlen(projection);
+	if (n < 8 || projection[n - 1] != ')') return false;
+	if (n - 7 >= index_cap) return false;
+	memcpy(index_out, projection + 6, n - 7);
+	index_out[n - 7] = '\0';
+	return index_out[0] != '\0';
+}
 static void assign_local_registers(standalone_function *fn) {
 	static const char *regs[] = {"%r12", "%r13", "%r14", "%r15"};
 	size_t i;
@@ -191,6 +201,7 @@ static void detect_integer_only(standalone_module *module, standalone_function *
 	for (i = fn->begin; i < fn->end; i++) {
 		standalone_ins *ins = &module->ir.ins[i];
 		if (strcmp(ins->op, "PARAM") == 0 || strcmp(ins->op, "CALL") == 0 ||
+			strcmp(ins->op, "READ") == 0 ||
 			strcmp(ins->op, "INDEX_GET") == 0 || strcmp(ins->op, "INDEX_SET") == 0 ||
 			is_string_literal(ins->result) || is_string_literal(ins->operand1) ||
 			is_string_literal(ins->operand2)) {
@@ -292,6 +303,17 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 		}
 		if (strcmp(ins->op, "CALL") == 0) {
 			if (!collect_operand(current, ins->result, err)) return false;
+			continue;
+		}
+		if (strcmp(ins->op, "READ") == 0) {
+			char index_value[STANDALONE_TEXT_CAP];
+			if (!parse_index_projection(ins->operand2, index_value, sizeof(index_value))) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unsupported standalone READ projection %s", ins->operand2);
+				return false;
+			}
+			if (!collect_operand(current, ins->result, err) ||
+				!collect_operand(current, ins->operand1, err) ||
+				!collect_operand(current, index_value, err)) return false;
 			continue;
 		}
 		if (strcmp(ins->op, "ARG") == 0 || strcmp(ins->op, "RET") == 0 || strcmp(ins->op, "PARAM") == 0) {
@@ -600,6 +622,16 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				!emit_load(out, module, fn, ins->operand1, "%rsi", err) ||
 				!emit_load(out, module, fn, ins->operand2, "%rdx", err)) return false;
 			fprintf(out, "    call s_index_set\n");
+		} else if (strcmp(ins->op, "READ") == 0) {
+			char index_value[STANDALONE_TEXT_CAP];
+			if (!parse_index_projection(ins->operand2, index_value, sizeof(index_value))) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "unsupported standalone READ projection %s", ins->operand2);
+				return false;
+			}
+			if (!emit_load(out, module, fn, ins->operand1, "%rdi", err) ||
+				!emit_load(out, module, fn, index_value, "%rsi", err)) return false;
+			fprintf(out, "    call s_index_get\n");
+			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "RET") == 0) {
 			if (!emit_load(out, module, fn, ins->result, "%rax", err)) return false;
 			fprintf(out, "    jmp .Ls_%s_return\n", symbol);
