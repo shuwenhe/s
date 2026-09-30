@@ -82,6 +82,41 @@ func run_mir_suite() int {
     if count_mir_drops(gate) != 1 {
         return 1
     }
+
+    read_place := mir_place {
+        root: "args",
+        projections: mir_place_projection[] {
+            mir_place_projection { kind: mir_projection_kind::index, value: "1" },
+        },
+    }
+    read_statements := mir_statement[]()
+    read_statements.push(mir_statement::read(mir_read_stmt {
+        place: read_place, result mir_operand { kind: "local", value: "command", type_name: "unknown" },
+    }))
+    read_blocks := mir_basic_block[]()
+    read_blocks.push(mir_basic_block {
+        id: 0,
+        label: "entry", statements read_statements, terminator mir_terminator {
+            kind: "return", condition: option.none, edges mir_control_edge[](),
+        },
+    })
+    read_graph := mir_graph {
+        function_name: "read_place", blocks read_blocks, locals mir_local_slot[](), string trace[](), entry 0, exit 0,
+        borrow_ok: true, borrow_errors: 0, borrow_message: "",
+    }
+    if count_mir_reads(read_graph) != 1 {
+        return 1
+    }
+    switch read_graph.blocks[0].statements[0] {
+        mir_statement::read(read_stmt) : {
+            if read_stmt.place.root != "args" { return 1 }
+            if len(read_stmt.place.projections) != 1 { return 1 }
+            if read_stmt.place.projections[0].kind != mir_projection_kind::index { return 1 }
+            if read_stmt.place.projections[0].value != "1" { return 1 }
+            if read_stmt.result.value != "command" { return 1 }
+        }
+        _ : return 1,
+    }
     stmt0_args := string[]()
     stmt0_args = append(stmt0_args, "stmt0")
     stmt1_args := string[]()
@@ -191,7 +226,27 @@ func run_mir_suite() int {
     if test_real_mir_semantic_order() != 0 {
         return 1
     }
+    if test_real_mir_read_index() != 0 {
+        return 1
+    }
     0
+}
+
+func count_mir_reads(mir_graph graph) int {
+    count := 0
+    i := 0
+    while i < len(graph.blocks) {
+        j := 0
+        while j < len(graph.blocks[i].statements) {
+            switch graph.blocks[i].statements[j] {
+                mir_statement::read(_) : count = count + 1
+                _ : { }
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    count
 }
 
 func count_mir_moves(mir_graph graph) int {
@@ -428,5 +483,46 @@ func test_real_mir_semantic_order() int {
         return 1
     }
     
+    0
+}
+
+func test_real_mir_read_index() int {
+    fixture_path := "src/cmd/compile/internal/tests/fixtures/mir_read_index.s"
+    source_result := syntax.read_source(fixture_path)
+    if source_result.is_err() {
+        return 1
+    }
+    parsed, parse_err := syntax.parse_source(source_result.unwrap())
+    if parse_err.message != "" {
+        return 1
+    }
+    mir_result := lower.lower_main_to_mir(parsed)
+    if mir_result.is_err() {
+        return 1
+    }
+    graph := mir_result.unwrap()
+    found := false
+    block_idx := 0
+    while block_idx < len(graph.blocks) {
+        stmt_idx := 0
+        while stmt_idx < len(graph.blocks[block_idx].statements) {
+            switch graph.blocks[block_idx].statements[stmt_idx] {
+                mir_statement::read(read_stmt) : {
+                    if read_stmt.place.root == "args" && len(read_stmt.place.projections) == 1 &&
+                       read_stmt.place.projections[0].kind == mir_projection_kind::index &&
+                       read_stmt.place.projections[0].value == "1" &&
+                       read_stmt.result.value == "command" {
+                        found = true
+                    }
+                }
+                _ : { }
+            }
+            stmt_idx = stmt_idx + 1
+        }
+        block_idx = block_idx + 1
+    }
+    if !found {
+        return 1
+    }
     0
 }
