@@ -64,7 +64,7 @@ echo ""
 echo "[1/4] Identifying canonical closure..."
 
 # Find all *.s files in src/ that are part of Stage1 reachable closure
-# Priority: src/cmd/compile/modular_build_main.s + its transitive dependencies
+# Priority: src/cmd/compile/pipeline/modular_build_main.s + its transitive dependencies
 if [[ ! -f "$COMPILER" ]]; then
     echo -e "${RED}ERROR: s_compiler not found at $COMPILER${NC}"
     echo "Build the compiler first: make"
@@ -75,7 +75,7 @@ fi
 # For now, scan standard directories that are bootstrapped
 REQUIRED_FILES=(
     # Core compiler infrastructure
-    "src/cmd/compile/modular_build_main.s"
+    "src/cmd/compile/pipeline/modular_build_main.s"
     
     # Essential frontend
     "src/cmd/compile/frontend/scanner.s"

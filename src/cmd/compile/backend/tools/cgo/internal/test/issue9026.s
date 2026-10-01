@@ -1,0 +1,8 @@
+package src.cmd.cgo.internal.test
+func issue9026_unit_name() string {
+    "src/cmd/compile/backend/tools/cgo/internal/test/issue9026"
+}
+
+func issue9026_unit_ready() int {
+    1
+}
