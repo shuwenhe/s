@@ -15,15 +15,15 @@ require_text() {
     fi
 }
 
-require_text src/cmd/compile/internal/mir.s 'struct mir_basic_block {' 'canonical mir_basic_block'
-require_text src/cmd/compile/internal/mir.s 'int id' 'basic block id'
-require_text src/cmd/compile/internal/mir.s 'mir_statement[] statements' 'statement array'
-require_text src/cmd/compile/internal/mir.s 'terminator mir_terminator' 'block terminator'
-require_text src/cmd/compile/internal/mir.s 'struct mir_control_edge {' 'control edge'
-require_text src/cmd/compile/internal/mir.s 'int target' 'edge target'
-require_text src/cmd/compile/internal/mir.s 'struct mir_graph {' 'mir graph'
-require_text src/cmd/compile/internal/mir.s 'int entry' 'graph entry'
-require_text src/cmd/compile/internal/mir.s 'int exit' 'graph exit'
+require_text src/cmd/compile/middlend/mir_model/mir.s 'struct mir_basic_block {' 'canonical mir_basic_block'
+require_text src/cmd/compile/middlend/mir_model/mir.s 'int id' 'basic block id'
+require_text src/cmd/compile/middlend/mir_model/mir.s 'mir_statement[] statements' 'statement array'
+require_text src/cmd/compile/middlend/mir_model/mir.s 'terminator mir_terminator' 'block terminator'
+require_text src/cmd/compile/middlend/mir_model/mir.s 'struct mir_control_edge {' 'control edge'
+require_text src/cmd/compile/middlend/mir_model/mir.s 'int target' 'edge target'
+require_text src/cmd/compile/middlend/mir_model/mir.s 'struct mir_graph {' 'mir graph'
+require_text src/cmd/compile/middlend/mir_model/mir.s 'int entry' 'graph entry'
+require_text src/cmd/compile/middlend/mir_model/mir.s 'int exit' 'graph exit'
 
 require_text src/cmd/compile/internal/ir/lower.s 'func lower_block_to_mir' 'real MIR lowering path'
 require_text src/cmd/compile/internal/ir/lower.s 'make_block(0, "entry"' 'entry block construction'
