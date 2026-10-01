@@ -167,7 +167,7 @@ if ! git -C "$root" diff --quiet -- src/cmd/compile/seed/semantic/analyzer.c 2>/
 fi
 
 canonical_resolver_modified=NO
-if ! git -C "$root" diff --quiet -- src/cmd/compile/internal/semantic.s 2>/dev/null; then
+if ! git -C "$root" diff --quiet -- src/cmd/compile/frontend/semantic.s 2>/dev/null; then
     canonical_resolver_modified=YES
 fi
 

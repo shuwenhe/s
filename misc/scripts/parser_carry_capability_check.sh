@@ -29,7 +29,7 @@ for expected in 17 29; do
         "$expected" "$expected" "$actual" "$build_status" >> "$tmp"
     if [ "$actual" != "$expected" ]; then failed=1; fi
 done
-for source in src/cmd/compile/internal/syntax/syntax.s src/s/parser.s \
+for source in src/cmd/compile/frontend/syntax.s src/s/parser.s \
     src/s/lexer.s src/s/tokens.s src/s/ast.s; do
     if [ ! -f "$root/$source" ]; then
         state=SOURCE_MISSING

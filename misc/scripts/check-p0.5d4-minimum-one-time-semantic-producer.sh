@@ -34,12 +34,12 @@ test -f "$spec" || fail MISSING_SPECIFICATION
 
 evidence=(
     src/cmd/compile/modular_build_main.s
-    src/cmd/compile/internal/syntax/syntax.s
-    src/cmd/compile/internal/semantic.s
+    src/cmd/compile/frontend/syntax.s
+    src/cmd/compile/frontend/semantic.s
     src/cmd/compile/internal/mono/monomorphization.s
     src/cmd/compile/internal/ir/lower.s
     src/cmd/compile/internal/mir.s
-    src/cmd/compile/internal/backend_elf64.s
+    src/cmd/compile/backend/backend_elf64.s
     src/cmd/compile/internal/abi/abiutils.s
     src/env/env.s
     src/cmd/compile/seed/code/generator.c

@@ -8,9 +8,9 @@ mkdir -p "$(dirname -- "$report")"
 
 stage0="$root/src/cmd/compile/stage0/stage0.c"
 modular_main="$root/src/cmd/compile/modular_build_main.s"
-backend="$root/src/cmd/compile/internal/backend_elf64.s"
-syntax="$root/src/cmd/compile/internal/syntax/syntax.s"
-semantic="$root/src/cmd/compile/internal/semantic.s"
+backend="$root/src/cmd/compile/backend/backend_elf64.s"
+syntax="$root/src/cmd/compile/frontend/syntax.s"
+semantic="$root/src/cmd/compile/frontend/semantic.s"
 mono="$root/src/cmd/compile/internal/mono/monomorphization.s"
 ir_lower="$root/src/cmd/compile/internal/ir/lower.s"
 

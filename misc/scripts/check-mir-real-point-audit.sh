@@ -34,9 +34,9 @@ require_text src/cmd/compile/internal/ir/lower.s 'make_edge("false", 3)' 'loop f
 require_text src/cmd/compile/internal/ir/lower.s 'make_block(2, "while.body"' 'loop body block'
 require_text src/cmd/compile/internal/ir/lower.s 'vec1_edge("cond", 1)' 'loop backedge target'
 
-require_text src/cmd/compile/internal/backend_elf64.s 'func execute_mir_graph' 'backend graph consumer'
-require_text src/cmd/compile/internal/backend_elf64.s 'current := graph.entry' 'backend entry use'
-require_text src/cmd/compile/internal/backend_elf64.s 'for si < len(block.statements)' 'backend statement iteration'
-require_text src/cmd/compile/internal/backend_elf64.s 'block.terminator.edges[0].target' 'backend jump target use'
+require_text src/cmd/compile/backend/backend_elf64.s 'func execute_mir_graph' 'backend graph consumer'
+require_text src/cmd/compile/backend/backend_elf64.s 'current := graph.entry' 'backend entry use'
+require_text src/cmd/compile/backend/backend_elf64.s 'for si < len(block.statements)' 'backend statement iteration'
+require_text src/cmd/compile/backend/backend_elf64.s 'block.terminator.edges[0].target' 'backend jump target use'
 
 echo "MIR real point audit passed"
