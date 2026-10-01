@@ -3,7 +3,7 @@
 set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
-semantic="$root/src/cmd/compile/internal/semantic.s"
+semantic="$root/src/cmd/compile/frontend/semantic.s"
 
 require_fixed() {
     local file="$1"
