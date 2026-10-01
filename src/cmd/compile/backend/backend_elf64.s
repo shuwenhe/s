@@ -2777,7 +2777,7 @@ func add_compile_module_candidates(string[] candidates, string root, string tail
         candidates = append(candidates, root + "/src/cmd/compile/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
     }
     if starts_with_local(tail, "internal.abi.") {
-        candidates = append(candidates, root + "/src/cmd/compile/internal/abi/abiutils.s")
+        candidates = append(candidates, root + "/src/cmd/compile/backend/internal/abi/abiutils.s")
     }
 }
 
