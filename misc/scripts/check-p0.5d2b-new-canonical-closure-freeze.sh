@@ -47,7 +47,7 @@ aggregate_hash=NONE
 missing_count=0
 if [ -f "$closure" ]; then
     closure_count=$(wc -l <"$closure" | tr -d ' ')
-    closure_has_entry=$(bool grep -qx 'src/cmd/compile/modular_build_main.s' "$closure")
+    closure_has_entry=$(bool grep -qx 'src/cmd/compile/pipeline/modular_build_main.s' "$closure")
     while IFS= read -r rel; do
         [ -z "$rel" ] && continue
         if [ -f "$root/$rel" ]; then
@@ -88,7 +88,7 @@ if [ "$closure_exists" = YES ] && [ "$closure_has_entry" = YES ] && [ "$missing_
         echo "closure.supersedes=$superseded_hash"
         echo "closure.approval-reason=$approval_reason"
         echo "closure.membership-source=$closure"
-        echo "closure.entry=src/cmd/compile/modular_build_main.s"
+        echo "closure.entry=src/cmd/compile/pipeline/modular_build_main.s"
         echo "closure.freeze-role=canonical-stage1-source-binding"
         echo "closure.p0.5c=SSEED_CUT_GREEN_FROZEN"
         echo "closure.p0.5d.1=TRUST_CONTRACT_DEFINED_FROZEN"
