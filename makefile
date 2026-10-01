@@ -406,7 +406,7 @@ seed-frontend-lexer-check: seed-compiler-bin
 
 	@mkdir -p /tmp/s_seed_frontend_check
 
-	@./bin/s_seed src/cmd/compile/frontend/internal/frontend/lexer.s /tmp/s_seed_frontend_check/lexer.ir
+	@./bin/s_seed src/cmd/compile/frontend/frontend_internal/lexer.s /tmp/s_seed_frontend_check/lexer.ir
 
 	@test -s /tmp/s_seed_frontend_check/lexer.ir
 
@@ -422,7 +422,7 @@ seed-frontend-lexer-check: seed-compiler-bin
 
 seed-frontend-parser-check: seed-compiler-bin seed-frontend-lexer-check
 
-	@./bin/s_seed src/cmd/compile/frontend/internal/frontend/parser.s /tmp/s_seed_frontend_check/parser.ir
+	@./bin/s_seed src/cmd/compile/frontend/frontend_internal/parser.s /tmp/s_seed_frontend_check/parser.ir
 
 	@test -s /tmp/s_seed_frontend_check/parser.ir
 
@@ -2564,7 +2564,7 @@ generic-method-native-e2e-check: modular-generic-mono-pipeline-check
 ownership-check: seed-compiler-bin mir-real-point-audit-check mir-real-point-map-check mir-real-ownership-preservation-check mir-real-ownership-facts-check mir-real-ownership-extractor-check mir-real-ownership-shared-analysis-check mir-real-ownership-shadow-check mir-nll-real-cfg-check mir-ownership-solver-check mir-ownership-analysis-consistency-check mir-nll-shadow-check mir-nll-authority-check mir-ownership-pipeline-check mir-nogc-e2e-check ownership-module-check
 	@echo "Running ownership system semantic validation..."
 	@mkdir -p .bootstrap/ownership
-	@./bin/s_seed src/cmd/compile/internal/ownership_system.s .bootstrap/ownership/ownership_system.ir
+	@./bin/s_seed src/cmd/compile/middlend/ownership_system.s .bootstrap/ownership/ownership_system.ir
 	@./bin/s_seed src/cmd/compile/internal/no_gc_test.s .bootstrap/ownership/no_gc_test.ir
 	@$(MAKE) compiler-check
 	@echo "✓ Ownership/Move/Borrow/Drop/Lifetime compiler checks passed"

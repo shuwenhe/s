@@ -4,7 +4,7 @@ set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 
-lower_file="$root/src/cmd/compile/internal/ir/lower.s"
+lower_file="$root/src/cmd/compile/middlend/ir/lower.s"
 require() {
     local file="$1"
     local pattern="$2"

@@ -33,9 +33,9 @@ evidence=(
     src/s/parser.s
     src/cmd/compile/modular_build_main.s
     src/cmd/compile/frontend/semantic.s
-    src/cmd/compile/internal/ir/lower.s
+    src/cmd/compile/middlend/ir/lower.s
     src/cmd/compile/middlend/mir_model/mir.s
-    src/cmd/compile/internal/ssa_core.s
+    src/cmd/compile/middlend/ssa_core.s
     src/cmd/compile/backend/backend_elf64.s
     src/cmd/compile/internal/tests/test_pipeline_regression.s
     src/cmd/compile/seed/intermediate/ir.c
@@ -45,8 +45,8 @@ evidence=(
     src/cmd/compile/backend/backend/instruction_select.s
     src/cmd/compile/backend/backend/instruction_selector.s
     src/cmd/compile/backend/backend/codegen_x86_64.s
-    src/cmd/compile/internal/ir/ir_builder.s
-    src/cmd/compile/internal/ssa/expand_calls.s
+    src/cmd/compile/middlend/ir/ir_builder.s
+    src/cmd/compile/middlend/ssa/expand_calls.s
 )
 for path in "${evidence[@]}"; do
     test -f "$path" || invalid MISSING_EVIDENCE
