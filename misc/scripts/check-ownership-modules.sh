@@ -12,7 +12,7 @@ for module in \
     drop_model
 do
     "$root/bin/s_seed" \
-        "$root/src/cmd/compile/internal/ownership/$module.s" \
+        "$root/src/cmd/compile/middlend/ownership/$module.s" \
         "$work/$module.ir"
     if [ ! -s "$work/$module.ir" ]; then
         echo "ownership module check: missing IR for $module" >&2

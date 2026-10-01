@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../../.." && pwd)"
 
 MIR_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/mir_model/mir.s"
-ANALYSIS_FILE="$PROJECT_ROOT/src/cmd/compile/internal/ownership/analysis.s"
+ANALYSIS_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/ownership/analysis.s"
 B1_3_GATE="$PROJECT_ROOT/src/cmd/compile/internal/tests/gates/mir-loan-borrowed-place-query-check.sh"
 
 GREEN='\033[0;32m'

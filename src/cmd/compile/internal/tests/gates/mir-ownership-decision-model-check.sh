@@ -8,7 +8,7 @@
 # set -e
 
 # Direct path to analysis.s
-ANALYSIS_FILE="/Users/shuwen/shuwen/s/src/cmd/compile/internal/ownership/analysis.s"
+ANALYSIS_FILE="/Users/shuwen/shuwen/s/src/cmd/compile/middlend/ownership/analysis.s"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -21,7 +21,7 @@ echo "Gate: mir-ownership-decision-model-check"
 echo "Phase: C.3.1a - Decision Model Type Verification"
 echo "================================================================"
 
-ANALYSIS_FILE="/Users/shuwen/shuwen/s/src/cmd/compile/internal/ownership/analysis.s"
+ANALYSIS_FILE="/Users/shuwen/shuwen/s/src/cmd/compile/middlend/ownership/analysis.s"
 
 if [ ! -f "$ANALYSIS_FILE" ]; then
     echo -e "${RED}FAIL${NC}: analysis.s not found at $ANALYSIS_FILE"

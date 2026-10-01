@@ -75,10 +75,10 @@ fi
 
 echo ""
 echo "--- [LAYER 4] Authority Boundary ---"
-check "ownership_analysis_input unchanged" "struct ownership_analysis_input" "$PROJECT_ROOT/src/cmd/compile/internal/ownership/analysis.s"
-check_not "loan_borrowed_places NOT in analysis_input" "ownership_analysis_input.*loan_borrowed_places" "$PROJECT_ROOT/src/cmd/compile/internal/ownership/analysis.s"
-check "borrow_info struct unchanged" "struct borrow_info" "$PROJECT_ROOT/src/cmd/compile/internal/ownership/ownership_state.s"
-check_not "borrow_info does NOT have new mir_place field" "borrow_info.*mir_place" "$PROJECT_ROOT/src/cmd/compile/internal/ownership/ownership_state.s"
+check "ownership_analysis_input unchanged" "struct ownership_analysis_input" "$PROJECT_ROOT/src/cmd/compile/middlend/ownership/analysis.s"
+check_not "loan_borrowed_places NOT in analysis_input" "ownership_analysis_input.*loan_borrowed_places" "$PROJECT_ROOT/src/cmd/compile/middlend/ownership/analysis.s"
+check "borrow_info struct unchanged" "struct borrow_info" "$PROJECT_ROOT/src/cmd/compile/middlend/ownership/ownership_state.s"
+check_not "borrow_info does NOT have new mir_place field" "borrow_info.*mir_place" "$PROJECT_ROOT/src/cmd/compile/middlend/ownership/ownership_state.s"
 
 echo ""
 echo "--- [LAYER 5] Code Quality ---"

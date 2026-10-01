@@ -9,7 +9,7 @@ PASS=true
 CHECKS_PASSED=0
 CHECKS_FAILED=0
 
-ANALYSIS_FILE="/Users/shuwen/shuwen/s/src/cmd/compile/internal/ownership/analysis.s"
+ANALYSIS_FILE="/Users/shuwen/shuwen/s/src/cmd/compile/middlend/ownership/analysis.s"
 
 # Colors
 GREEN='\033[0;32m'

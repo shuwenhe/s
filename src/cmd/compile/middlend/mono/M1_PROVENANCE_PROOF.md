@@ -81,7 +81,7 @@ semantic_result.declarations = [ref]
 
 ### Mono Phase - Receive
 ```s
-File: src/cmd/compile/internal/mono/monomorphization.s
+File: src/cmd/compile/middlend/mono/monomorphization.s
 Function: monomorphize_file(source_file, semantic_result)
 
 mono_context.declarations = semantic_result.declarations

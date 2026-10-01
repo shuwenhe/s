@@ -234,7 +234,7 @@ Relevant evidence and files:
 
 ```text
 src/cmd/compile/internal/semantic.s
-src/cmd/compile/internal/mono/M1_PROVENANCE_PROOF.md
+src/cmd/compile/middlend/mono/M1_PROVENANCE_PROOF.md
 src/cmd/compile/backend/backend_elf64.s
 test/regression/m1_declaration_ref_gate.s
 test/regression/m1_identity_threading_gate.s
