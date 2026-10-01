@@ -34,7 +34,7 @@ grep -qx "canonical-source-hash=$expected" "$tmp/binding" || invalid UNEXPECTED_
 test -f "$spec" || invalid MISSING_AUDIT_DOCUMENT
 
 entry=src/cmd/compile/modular_build_main.s
-lower=src/cmd/compile/internal/ir/lower.s
+lower=src/cmd/compile/middlend/ir/lower.s
 mir=src/cmd/compile/middlend/mir_model/mir.s
 backend=src/cmd/compile/backend/backend_elf64.s
 manifest=.bootstrap/modular/canonical-closure.freeze.manifest
@@ -92,7 +92,7 @@ test "$(wc -l <"$tmp/main-declarations" | tr -d ' ')" = 1 || invalid ENTRY_REQUI
     cat "$tmp/anchors"
     printf '%s\n' '[evidence-sha256]'
     shasum -a 256 "$manifest" "$spec" "$check" "$entry" "$lower" "$mir" "$backend" \
-        src/env/env.s src/result/result.s src/cmd/compile/internal/mono/monomorphization.s
+        src/env/env.s src/result/result.s src/cmd/compile/middlend/mono/monomorphization.s
 } >"$tmp/report"
 publish
 # A completed audit with disproven coverage is still a blocking gate.

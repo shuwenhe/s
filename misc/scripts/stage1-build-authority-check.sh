@@ -11,8 +11,8 @@ modular_main="$root/src/cmd/compile/modular_build_main.s"
 backend="$root/src/cmd/compile/backend/backend_elf64.s"
 syntax="$root/src/cmd/compile/frontend/syntax.s"
 semantic="$root/src/cmd/compile/frontend/semantic.s"
-mono="$root/src/cmd/compile/internal/mono/monomorphization.s"
-ir_lower="$root/src/cmd/compile/internal/ir/lower.s"
+mono="$root/src/cmd/compile/middlend/mono/monomorphization.s"
+ir_lower="$root/src/cmd/compile/middlend/ir/lower.s"
 
 current_build_handler=UNKNOWN
 if rg -q 'return bootstrap_subset_build\(argv\[2\], argv\[4\]\)' "$stage0"; then
