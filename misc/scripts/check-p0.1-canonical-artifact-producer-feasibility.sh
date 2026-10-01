@@ -40,13 +40,13 @@ fi
 
 canonical_parse_entry=$(status_bool has_text 'func parse_source' src/cmd/compile/internal/syntax src/s)
 canonical_semantic_entry=$(status_bool has_text 'check_source_file' src/cmd/compile/frontend/semantic.s src/cmd/compile/backend/backend_elf64.s)
-canonical_mono_entry=$(status_bool has_text 'monomorphize_file' src/cmd/compile/internal/mono/monomorphization.s src/cmd/compile/backend/backend_elf64.s)
-canonical_mir_entry=$(status_bool has_text 'func lower_.*to_mir|lower_main_to_mir|mir_graph' src/cmd/compile/internal/ir/lower.s src/cmd/compile/middlend/mir_model/mir.s)
+canonical_mono_entry=$(status_bool has_text 'monomorphize_file' src/cmd/compile/middlend/mono/monomorphization.s src/cmd/compile/backend/backend_elf64.s)
+canonical_mir_entry=$(status_bool has_text 'func lower_.*to_mir|lower_main_to_mir|mir_graph' src/cmd/compile/middlend/ir/lower.s src/cmd/compile/middlend/mir_model/mir.s)
 canonical_pipeline_edge=$(status_bool has_text 'parse_source.*check_source_file|check_source_file|monomorphize_file|lower_main_to_mir' src/cmd/compile/backend/backend_elf64.s)
 
 mir_structured_authority=$(status_bool has_text 'CANONICAL / SEMANTIC|mir_graph|mir_basic_block|mir_statement|mir_terminator' src/cmd/compile/middlend/mir_model/mir.s)
 mir_deterministic_ids=$(status_bool has_text 'Deterministic dense ids|build_mir_point_map' src/cmd/compile/middlend/mir_model/mir.s)
-mir_lowered_view_exists=$(status_bool has_text 'func lowered_view_from_mir|canonical-lowered-view version=1|view-role=READ_ONLY' src/cmd/compile/internal/ir/lower.s)
+mir_lowered_view_exists=$(status_bool has_text 'func lowered_view_from_mir|canonical-lowered-view version=1|view-role=READ_ONLY' src/cmd/compile/middlend/ir/lower.s)
 mir_to_sseed_adapter_exists=$(status_bool has_text 'emit_.*sseed|sseed_.*emit|mir_.*sseed|sseed_.*mir|bootstrap_ir_from_mir|SSEED-TARGET-V1' src/cmd/compile/middlend/mir_model/mir.s src/cmd/compile/internal/ir src/cmd/compile/backend/backend_elf64.s)
 seed_sseed_consumer=$(status_bool has_text 'emit_aot_from_ir_file|emit_native_from_ir_file|--emit-aot' src/cmd/compile/seed)
 

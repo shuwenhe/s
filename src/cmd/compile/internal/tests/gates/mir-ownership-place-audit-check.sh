@@ -13,11 +13,11 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../../.." && pwd)"
 
 # File locations
 MIR_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/mir_model/mir.s"
-PLACE_MODEL_FILE="$PROJECT_ROOT/src/cmd/compile/internal/ownership/place_model.s"
-BORROW_CHECKER_FILE="$PROJECT_ROOT/src/cmd/compile/internal/ownership/borrow_checker.s"
-OWNERSHIP_STATE_FILE="$PROJECT_ROOT/src/cmd/compile/internal/ownership/ownership_state.s"
-MOVE_CHECKER_FILE="$PROJECT_ROOT/src/cmd/compile/internal/ownership/move_checker.s"
-DROP_CLOSURE_FILE="$PROJECT_ROOT/src/cmd/compile/internal/ownership/ownership_drop_closure.s"
+PLACE_MODEL_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/ownership/place_model.s"
+BORROW_CHECKER_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/ownership/borrow_checker.s"
+OWNERSHIP_STATE_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/ownership/ownership_state.s"
+MOVE_CHECKER_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/ownership/move_checker.s"
+DROP_CLOSURE_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/ownership/ownership_drop_closure.s"
 
 # Color codes
 GREEN='\033[0;32m'
