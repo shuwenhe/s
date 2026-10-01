@@ -562,7 +562,7 @@ bootstrap-convergence: bootstrap-stage0
 
 	@mkdir -p $(SELFHOST_DIR) ./bin
 
-	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --bootstrap src/cmd/compile/main.s $(SELFHOST_DIR)
+	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --bootstrap src/cmd/compile/pipeline/main.s $(SELFHOST_DIR)
 
 	@./src/cmd/dist/checks/write-manifest.sh "$(SELFHOST_DIR)" "$(BOOTSTRAP_MANIFEST)"
 
@@ -1399,7 +1399,7 @@ bootstrap-source-closure:
 
 	@mkdir -p $(SELFHOST_DIR)
 
-	@./src/cmd/dist/source_closure.sh src/cmd/compile/main.s $(SELFHOST_DIR)/sources.txt
+	@./src/cmd/dist/source_closure.sh src/cmd/compile/pipeline/main.s $(SELFHOST_DIR)/sources.txt
 
 	@echo "Bootstrap source closure: $(SELFHOST_DIR)/sources.txt"
 
@@ -1684,7 +1684,7 @@ COMPILER_SOURCES := \
 	src/cmd/compile/frontend/stages.s \
 	src/cmd/compile/middlend/mir.s \
 	src/cmd/compile/middlend/stages.s \
-	src/cmd/compile/compiler_main.s
+	src/cmd/compile/pipeline/compiler_main.s
 
 compiler: seed-compiler-bin
 
@@ -2113,7 +2113,7 @@ modular-bootstrap-compat-audit: seed-compiler-bin package-index
 	@echo "Auditing modular bootstrap compatibility..."
 	@chmod +x misc/scripts/modular_bootstrap_compat_audit.sh
 	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/modular_bootstrap_compat_audit.sh \
-	  src/cmd/compile/modular_build_main.s "$(MODULAR_BOOTSTRAP_COMPAT_REPORT)" >/dev/null
+	  src/cmd/compile/pipeline/modular_build_main.s "$(MODULAR_BOOTSTRAP_COMPAT_REPORT)" >/dev/null
 	@echo "Modular bootstrap compatibility report: $(MODULAR_BOOTSTRAP_COMPAT_REPORT)"
 
 .PHONY: modular-bootstrap-stage-discovery
@@ -2122,7 +2122,7 @@ modular-bootstrap-stage-discovery: modular-bootstrap-compat-audit
 	@chmod +x misc/scripts/modular_bootstrap_stage_discovery.sh
 	@S_SOURCE_ROOT=$(CURDIR) S_BOOTSTRAP_COMPAT_REPORT="$(MODULAR_BOOTSTRAP_COMPAT_REPORT)" \
 	  misc/scripts/modular_bootstrap_stage_discovery.sh \
-	  src/cmd/compile/modular_build_main.s "$(MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT)" >/dev/null
+	  src/cmd/compile/pipeline/modular_build_main.s "$(MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT)" >/dev/null
 	@echo "Modular bootstrap stage discovery report: $(MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT)"
 
 .PHONY: modular-bootstrap-root-audit
@@ -2133,7 +2133,7 @@ modular-bootstrap-root-audit: modular-bootstrap-stage-discovery
 	  S_BOOTSTRAP_COMPAT_REPORT="$(MODULAR_BOOTSTRAP_COMPAT_REPORT)" \
 	  S_BOOTSTRAP_STAGE_REPORT="$(MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT)" \
 	  misc/scripts/modular_bootstrap_root_audit.sh \
-	  src/cmd/compile/modular_build_main.s "$(MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT)" >/dev/null
+	  src/cmd/compile/pipeline/modular_build_main.s "$(MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT)" >/dev/null
 	@echo "Modular bootstrap root audit report: $(MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT)"
 
 .PHONY: modular-bootstrap
@@ -2141,7 +2141,7 @@ modular-bootstrap: stage0-build stage0-closure-check
 	@echo "Bootstrapping canonical modular compiler with explicit C Stage0..."
 	@mkdir -p "$(MODULAR_BOOTSTRAP_DIR)"
 	@{ \
-	  echo "source=src/cmd/compile/modular_build_main.s"; \
+	  echo "source=src/cmd/compile/pipeline/modular_build_main.s"; \
 	  echo "producer=$(STAGE0_BIN)"; \
 	  echo "role=explicit-c-stage0"; \
 	  echo "closure=$(STAGE0_CLOSURE)"; \
@@ -2347,10 +2347,10 @@ stage0-closure-check: package-index
 	@echo "Freezing canonical modular compiler source closure..."
 	@mkdir -p "$(MODULAR_BOOTSTRAP_DIR)"
 	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/source_closure.sh \
-	  src/cmd/compile/modular_build_main.s "$(STAGE0_CLOSURE)"
+	  src/cmd/compile/pipeline/modular_build_main.s "$(STAGE0_CLOSURE)"
 	@chmod +x misc/scripts/stage0_closure_check.sh
 	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/stage0_closure_check.sh \
-	  src/cmd/compile/modular_build_main.s "$(STAGE0_CLOSURE)"
+	  src/cmd/compile/pipeline/modular_build_main.s "$(STAGE0_CLOSURE)"
 
 .PHONY: stage0-freeze-check
 stage0-freeze-check: stage0-build
@@ -2360,7 +2360,7 @@ stage0-freeze-check: stage0-build
 .PHONY: modular-selfhost-check
 modular-selfhost-check: modular-bootstrap
 	@echo "Checking artifact/template ladder only..."
-	@"$(MODULAR_STAGE1_BIN)" --emit-artifact-stage2 src/cmd/compile/modular_build_main.s -o "$(MODULAR_STAGE2_BIN)"
+	@"$(MODULAR_STAGE1_BIN)" --emit-artifact-stage2 src/cmd/compile/pipeline/modular_build_main.s -o "$(MODULAR_STAGE2_BIN)"
 	@test -x "$(MODULAR_STAGE2_BIN)"
 	@"$(MODULAR_STAGE2_BIN)" build test/cli/hello.s -o "$(MODULAR_BOOTSTRAP_DIR)/hello"
 	@test -x "$(MODULAR_BOOTSTRAP_DIR)/hello"

@@ -15,7 +15,7 @@ rm -rf "$tmp"
 mkdir -p "$tmp"
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 
-entry_rel=src/cmd/compile/modular_build_main.s
+entry_rel=src/cmd/compile/pipeline/modular_build_main.s
 entry="$root/$entry_rel"
 
 closure_count=0

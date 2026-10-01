@@ -3,7 +3,7 @@
 set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
-entry_rel="src/cmd/compile/modular_build_main.s"
+entry_rel="src/cmd/compile/pipeline/modular_build_main.s"
 closure="${STAGE0_CLOSURE:-"$root/.bootstrap/modular/canonical-closure.txt"}"
 stage0="${STAGE0_BIN:-"$root/.bootstrap/modular/s_stage0"}"
 stage1="${MODULAR_STAGE1_BIN:-"$root/.bootstrap/modular/s_modular-stage1"}"
