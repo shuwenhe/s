@@ -87,7 +87,7 @@ REQUIRED_FILES=(
     "src/compiler/types/type.s"
     
     # IR generation
-    "src/cmd/compile/internal/mir.s"
+    "src/cmd/compile/middlend/mir_model/mir.s"
     
     # Backend
     "src/cmd/compile/backend/backend_elf64.s"

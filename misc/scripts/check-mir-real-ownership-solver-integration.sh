@@ -15,7 +15,7 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 # 4. No hard-coded fixture values in solver invocation
 
 test_file="$root/src/cmd/compile/internal/tests/test_mir.s"
-mir_file="$root/src/cmd/compile/internal/mir.s"
+mir_file="$root/src/cmd/compile/middlend/mir_model/mir.s"
 fixture_file="$root/src/cmd/compile/internal/tests/fixtures/real_mir_ref_flow.s"
 
 # Step 8.1: Verify dump_ownership_shadow_from_mir is defined in mir.s

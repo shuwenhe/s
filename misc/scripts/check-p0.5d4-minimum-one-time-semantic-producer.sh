@@ -38,7 +38,7 @@ evidence=(
     src/cmd/compile/frontend/semantic.s
     src/cmd/compile/internal/mono/monomorphization.s
     src/cmd/compile/internal/ir/lower.s
-    src/cmd/compile/internal/mir.s
+    src/cmd/compile/middlend/mir_model/mir.s
     src/cmd/compile/backend/backend_elf64.s
     src/cmd/compile/internal/abi/abiutils.s
     src/env/env.s
