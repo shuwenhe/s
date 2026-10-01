@@ -406,7 +406,7 @@ seed-frontend-lexer-check: seed-compiler-bin
 
 	@mkdir -p /tmp/s_seed_frontend_check
 
-	@./bin/s_seed src/cmd/compile/frontend/frontend_internal/lexer.s /tmp/s_seed_frontend_check/lexer.ir
+	@./bin/s_seed src/cmd/compile/frontend/lexer/lexer.s /tmp/s_seed_frontend_check/lexer.ir
 
 	@test -s /tmp/s_seed_frontend_check/lexer.ir
 
