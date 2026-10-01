@@ -246,7 +246,7 @@ func main() int { x := box(1); y := &x; return 0 }')
 probe_switch=$(probe_seed switch 'package main
 func main() int { x := 1; switch x { case 1: return 42 default: return 0 } }')
 probe_s_compiler_entry=$(probe_emit_c "$root/bin/s_compiler" "$entry")
-probe_s_compiler_frontend_parser=$(probe_emit_c "$root/bin/s_compiler" "src/cmd/compile/internal/frontend/parser.s")
+probe_s_compiler_frontend_parser=$(probe_emit_c "$root/bin/s_compiler" "src/cmd/compile/frontend/internal/frontend/parser.s")
 probe_s_wrapper_entry=$(probe_emit_c "$root/bin/s" "$entry")
 
 unsupported_required=0
