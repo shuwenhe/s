@@ -4,8 +4,8 @@ set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 seed="${SEED_COMPILER_BIN:-"$root/bin/s_seed"}"
-semantic="$root/src/cmd/compile/internal/semantic.s"
-backend="$root/src/cmd/compile/internal/backend_elf64.s"
+semantic="$root/src/cmd/compile/frontend/semantic.s"
+backend="$root/src/cmd/compile/backend/backend_elf64.s"
 seed_analyzer="$root/src/cmd/compile/seed/semantic/analyzer.c"
 makefile="$root/Makefile"
 

@@ -3,8 +3,8 @@
 set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
-backend="$root/src/cmd/compile/internal/backend_elf64.s"
-semantic="$root/src/cmd/compile/internal/semantic.s"
+backend="$root/src/cmd/compile/backend/backend_elf64.s"
+semantic="$root/src/cmd/compile/frontend/semantic.s"
 env_source="$root/src/env/env.s"
 
 require_text() {
@@ -43,7 +43,7 @@ fi
 echo "classification=PACKAGE_IDENTITY_AFTER_FLATTENING_GAP"
 echo "source-package-identity=PROVEN path=src/env/env.s package=std.env"
 echo "declaration-witness=src/env/env.s:func args"
-echo "flattening-site=src/cmd/compile/internal/backend_elf64.s:append_source_items"
+echo "flattening-site=src/cmd/compile/backend/backend_elf64.s:append_source_items"
 echo "flattening-behavior=combined.items+=dep.items[i]"
 echo "package-identity-after-flattening=NOT_PROVEN"
 echo "semantic-binding-package-path=ABSENT"

@@ -78,9 +78,9 @@ REQUIRED_FILES=(
     "src/cmd/compile/modular_build_main.s"
     
     # Essential frontend
-    "src/compiler/frontend/scanner.s"
-    "src/compiler/frontend/parser.s"
-    "src/compiler/frontend/ast.s"
+    "src/cmd/compile/frontend/scanner.s"
+    "src/cmd/compile/frontend/parser.s"
+    "src/cmd/compile/frontend/ast.s"
     
     # Type system
     "src/compiler/types/check.s"
@@ -90,7 +90,7 @@ REQUIRED_FILES=(
     "src/cmd/compile/internal/mir.s"
     
     # Backend
-    "src/cmd/compile/internal/backend_elf64.s"
+    "src/cmd/compile/backend/backend_elf64.s"
 )
 
 # Alternative: auto-discover from canonical closure file

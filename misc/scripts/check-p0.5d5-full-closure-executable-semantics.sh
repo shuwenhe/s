@@ -36,7 +36,7 @@ test -f "$spec" || invalid MISSING_AUDIT_DOCUMENT
 entry=src/cmd/compile/modular_build_main.s
 lower=src/cmd/compile/internal/ir/lower.s
 mir=src/cmd/compile/internal/mir.s
-backend=src/cmd/compile/internal/backend_elf64.s
+backend=src/cmd/compile/backend/backend_elf64.s
 manifest=.bootstrap/modular/canonical-closure.freeze.manifest
 : >"$tmp/anchors"
 anchor() {

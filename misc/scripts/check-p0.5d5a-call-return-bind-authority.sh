@@ -32,11 +32,11 @@ test -f "$spec" || invalid MISSING_AUDIT_DOCUMENT
 evidence=(
     src/s/parser.s
     src/cmd/compile/modular_build_main.s
-    src/cmd/compile/internal/semantic.s
+    src/cmd/compile/frontend/semantic.s
     src/cmd/compile/internal/ir/lower.s
     src/cmd/compile/internal/mir.s
     src/cmd/compile/internal/ssa_core.s
-    src/cmd/compile/internal/backend_elf64.s
+    src/cmd/compile/backend/backend_elf64.s
     src/cmd/compile/internal/tests/test_pipeline_regression.s
     src/cmd/compile/seed/intermediate/ir.c
     src/cmd/compile/seed/code/generator.c
