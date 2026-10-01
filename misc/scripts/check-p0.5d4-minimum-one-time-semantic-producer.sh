@@ -40,7 +40,7 @@ evidence=(
     src/cmd/compile/middlend/ir/lower.s
     src/cmd/compile/middlend/mir_model/mir.s
     src/cmd/compile/backend/backend_elf64.s
-    src/cmd/compile/internal/abi/abiutils.s
+    src/cmd/compile/backend/internal/abi/abiutils.s
     src/env/env.s
     src/cmd/compile/seed/code/generator.c
     src/cmd/compile/seed/code/backend_registry.c
