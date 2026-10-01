@@ -118,7 +118,7 @@ parser_status() {
     status_for production-mir "src/cmd/compile/middlend/mir_model/mir.s" "mir|MIR"
     status_for production-ownership "src/cmd/compile/internal/ownership.s src/cmd/compile/internal/ownership/ownership_analysis.s" "ownership|borrow"
     status_for production-nll "src/cmd/compile/internal/ownership/nll_model.s" "nll|lifetime"
-    status_for production-lowering "src/cmd/compile/internal/ir/lower.s src/cmd/compile/internal/backend/ssa_lower.s" "lowering|ssa_lower"
+    status_for production-lowering "src/cmd/compile/internal/ir/lower.s src/cmd/compile/backend/backend/ssa_lower.s" "lowering|ssa_lower"
     status_for production-native-backend "src/cmd/compile/backend/backend_elf64.s" "emit_native|backend_elf64"
     echo
     echo "stage0-freeze-check=PASS"
