@@ -42,9 +42,9 @@ evidence=(
     src/cmd/compile/seed/code/generator.c
     src/cmd/compile/seed/code/standalone_amd64_backend.c
     src/cmd/compile/seed/runtime/runtime.c
-    src/cmd/compile/internal/backend/instruction_select.s
-    src/cmd/compile/internal/backend/instruction_selector.s
-    src/cmd/compile/internal/backend/codegen_x86_64.s
+    src/cmd/compile/backend/backend/instruction_select.s
+    src/cmd/compile/backend/backend/instruction_selector.s
+    src/cmd/compile/backend/backend/codegen_x86_64.s
     src/cmd/compile/internal/ir/ir_builder.s
     src/cmd/compile/internal/ssa/expand_calls.s
 )
