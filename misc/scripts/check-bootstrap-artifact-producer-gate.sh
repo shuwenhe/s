@@ -3,7 +3,7 @@
 set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
-entry_rel="src/cmd/compile/modular_build_main.s"
+entry_rel="src/cmd/compile/pipeline/modular_build_main.s"
 closure="${STAGE0_CLOSURE:-"$root/.bootstrap/modular/canonical-closure.txt"}"
 report="${BOOTSTRAP_ARTIFACT_PRODUCER_GATE_REPORT:-"$root/.bootstrap/modular/bootstrap-artifact-producer-gate.txt"}"
 
@@ -184,7 +184,7 @@ c_producer_canonical_semantics=NOT_PROVEN
 c_producer_deterministic=NOT_PROVEN
 c_producer_status=REJECTED
 
-historical_emit_c_exists=$(status_bool has_text '--emit-c|compiler_emit_c|emit_selfhost_c|compile_selfhost_c' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/compiler_main.s src/cmd/compile/selfhost/compiler.s makefile)
+historical_emit_c_exists=$(status_bool has_text '--emit-c|compiler_emit_c|emit_selfhost_c|compile_selfhost_c' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/pipeline/compiler_main.s src/cmd/compile/selfhost/compiler.s makefile)
 historical_emit_c_verdict=REFERENCE_ONLY
 
 if [ -f "$generated_c_producer" ] && [ -f "$generated_c" ] && [ -f "$generated_c_manifest" ]; then

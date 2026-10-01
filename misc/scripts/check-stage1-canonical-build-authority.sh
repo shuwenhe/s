@@ -72,7 +72,7 @@ if [ -s "$seed_compile_log" ]; then
 fi
 
 canonical_chain_static=NO
-if rg -q 'return compile\.internal\.backend_elf64\.build\(args\[2\], args\[4\], "", false\)' "$root/src/cmd/compile/modular_build_main.s" &&
+if rg -q 'return compile\.internal\.backend_elf64\.build\(args\[2\], args\[4\], "", false\)' "$root/src/cmd/compile/pipeline/modular_build_main.s" &&
    rg -q 'compile\.internal\.syntax\.parse_source\(source\)' "$root/src/cmd/compile/backend/backend_elf64.s" &&
    rg -q 'compile\.internal\.semantic\.check_source_file\(combined, source\)' "$root/src/cmd/compile/backend/backend_elf64.s" &&
    rg -q 'compile\.internal\.mono\.monomorphize_file\(combined\)' "$root/src/cmd/compile/backend/backend_elf64.s" &&

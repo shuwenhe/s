@@ -2,7 +2,7 @@
 set -eu
 
 root=${S_SOURCE_ROOT:-$(pwd)}
-entry=${1:-src/cmd/compile/modular_build_main.s}
+entry=${1:-src/cmd/compile/pipeline/modular_build_main.s}
 report=${2:-"$root/.bootstrap/modular/bootstrap-stage-discovery.txt"}
 compat_report=${S_BOOTSTRAP_COMPAT_REPORT:-"$root/.bootstrap/modular/bootstrap-compat-audit.txt"}
 compat_script=${S_BOOTSTRAP_COMPAT_SCRIPT:-"$root/misc/scripts/modular_bootstrap_compat_audit.sh"}
@@ -208,8 +208,8 @@ candidate_record() {
     printf '\n'
 
     candidate_record seed "trusted C seed via make seed-compiler-bin" bin/s_seed src/cmd/compile/seed/s_seed.c seed-ir
-    candidate_record no-gc "s_seed -> src/cmd/compile/compiler_main.s -> bin/s_compiler" bin/s_compiler src/cmd/compile/compiler_main.s emit-c
-    candidate_record wrapper "make bin/s shell driver" bin/s src/cmd/compile/compiler_main.s emit-c
+    candidate_record no-gc "s_seed -> src/cmd/compile/pipeline/compiler_main.s -> bin/s_compiler" bin/s_compiler src/cmd/compile/pipeline/compiler_main.s emit-c
+    candidate_record wrapper "make bin/s shell driver" bin/s src/cmd/compile/pipeline/compiler_main.s emit-c
     candidate_record darwin-arm64 "make darwin-arm64-bootstrap" bin/s_darwin_arm64 src/cmd/compile/selfhost/compiler.s build
     candidate_record selfhost-native-stage1 "make native-bootstrap" .bootstrap/selfhost/native/stage1 src/cmd/compile/selfhost/compiler.s selfhost-native
     candidate_record selfhost-native-stage2 "make native-bootstrap" .bootstrap/selfhost/native/stage2 src/cmd/compile/selfhost/compiler.s selfhost-native

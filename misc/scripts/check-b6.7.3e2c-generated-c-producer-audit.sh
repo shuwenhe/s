@@ -3,7 +3,7 @@
 set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
-entry_rel="src/cmd/compile/modular_build_main.s"
+entry_rel="src/cmd/compile/pipeline/modular_build_main.s"
 closure="${STAGE0_CLOSURE:-"$root/.bootstrap/modular/canonical-closure.txt"}"
 report="$root/.bootstrap/modular/b6.7.3e2c-generated-c-producer-audit.txt"
 
@@ -36,7 +36,7 @@ if [ -f "$closure" ]; then
     fi
 fi
 
-canonical_emit_c_capability=$(status_bool has_text '--emit-c|compiler_emit_c|emit_selfhost_c|compile_selfhost_c' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/compiler_main.s src/cmd/compile/selfhost/compiler.s makefile)
+canonical_emit_c_capability=$(status_bool has_text '--emit-c|compiler_emit_c|emit_selfhost_c|compile_selfhost_c' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/pipeline/compiler_main.s src/cmd/compile/selfhost/compiler.s makefile)
 host_cc_can_consume_output=UNKNOWN
 if command -v cc >/dev/null 2>&1; then
     host_cc_can_consume_output=YES

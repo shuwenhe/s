@@ -33,7 +33,7 @@ grep -qx "canonical-source-hash=$expected" "$tmp/source-binding" || fail UNEXPEC
 test -f "$spec" || fail MISSING_SPECIFICATION
 
 evidence=(
-    src/cmd/compile/modular_build_main.s
+    src/cmd/compile/pipeline/modular_build_main.s
     src/cmd/compile/frontend/syntax.s
     src/cmd/compile/frontend/semantic.s
     src/cmd/compile/middlend/mono/monomorphization.s

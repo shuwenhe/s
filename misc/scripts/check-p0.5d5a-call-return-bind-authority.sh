@@ -31,7 +31,7 @@ test -f "$spec" || invalid MISSING_AUDIT_DOCUMENT
 
 evidence=(
     src/s/parser.s
-    src/cmd/compile/modular_build_main.s
+    src/cmd/compile/pipeline/modular_build_main.s
     src/cmd/compile/frontend/semantic.s
     src/cmd/compile/middlend/ir/lower.s
     src/cmd/compile/middlend/mir_model/mir.s

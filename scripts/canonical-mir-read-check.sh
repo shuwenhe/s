@@ -7,7 +7,7 @@ TMP_REPORT="${REPORT}.tmp.$$"
 
 MIR_FILE="${SOURCE_ROOT}/src/cmd/compile/middlend/mir_model/mir.s"
 LOWER_FILE="${SOURCE_ROOT}/src/cmd/compile/middlend/ir/lower.s"
-ENTRY_FILE="${SOURCE_ROOT}/src/cmd/compile/modular_build_main.s"
+ENTRY_FILE="${SOURCE_ROOT}/src/cmd/compile/pipeline/modular_build_main.s"
 
 mkdir -p "$(dirname "$REPORT")"
 trap 'rm -f "$TMP_REPORT"' EXIT HUP INT TERM

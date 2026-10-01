@@ -47,7 +47,7 @@ test "$(shasum -a 256 "$tmp/current" | awk '{print $1}')" = "$expected" || fail 
 
 evidence=(
     doc/p0.5d3-first-snapshot-producer-selection.md
-    src/cmd/compile/compiler_main.s
+    src/cmd/compile/pipeline/compiler_main.s
     src/cmd/compile/backend/backend_elf64.s
     .bootstrap/modular/b6.7.3e2c-generated-c-producer-audit.txt
     .bootstrap/modular/p0.1-canonical-artifact-producer-feasibility.txt

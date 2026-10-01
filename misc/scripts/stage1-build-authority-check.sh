@@ -7,7 +7,7 @@ report=${STAGE1_BUILD_AUTHORITY_REPORT:-"$root/.bootstrap/modular/stage1-build-a
 mkdir -p "$(dirname -- "$report")"
 
 stage0="$root/src/cmd/compile/stage0/stage0.c"
-modular_main="$root/src/cmd/compile/modular_build_main.s"
+modular_main="$root/src/cmd/compile/pipeline/modular_build_main.s"
 backend="$root/src/cmd/compile/backend/backend_elf64.s"
 syntax="$root/src/cmd/compile/frontend/syntax.s"
 semantic="$root/src/cmd/compile/frontend/semantic.s"

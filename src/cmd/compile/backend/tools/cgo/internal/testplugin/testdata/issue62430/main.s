@@ -1,0 +1,8 @@
+package src.cmd.cgo.internal.testplugin.testdata.issue62430
+func main_unit_name() string {
+    "src/cmd/compile/backend/tools/cgo/internal/testplugin/testdata/issue62430/main"
+}
+
+func main_unit_ready() int {
+    1
+}

@@ -2,7 +2,7 @@
 set -eu
 
 root=${S_SOURCE_ROOT:-$(pwd)}
-entry=${1:-src/cmd/compile/modular_build_main.s}
+entry=${1:-src/cmd/compile/pipeline/modular_build_main.s}
 report=${2:-"$root/.bootstrap/modular/bootstrap-root-audit.txt"}
 compat_report=${S_BOOTSTRAP_COMPAT_REPORT:-"$root/.bootstrap/modular/bootstrap-compat-audit.txt"}
 compat_script=${S_BOOTSTRAP_COMPAT_SCRIPT:-"$root/misc/scripts/modular_bootstrap_compat_audit.sh"}

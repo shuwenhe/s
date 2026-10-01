@@ -26,7 +26,7 @@ if [ -f "$closure" ]; then
 fi
 
 closure_has_entry=NO
-if [ -f "$closure" ] && grep -qx 'src/cmd/compile/modular_build_main.s' "$closure"; then
+if [ -f "$closure" ] && grep -qx 'src/cmd/compile/pipeline/modular_build_main.s' "$closure"; then
     closure_has_entry=YES
 fi
 

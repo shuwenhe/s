@@ -2,7 +2,7 @@
 set -eu
 
 root=${S_SOURCE_ROOT:-$(pwd)}
-entry=${1:-src/cmd/compile/modular_build_main.s}
+entry=${1:-src/cmd/compile/pipeline/modular_build_main.s}
 report=${2:-"$root/.bootstrap/modular/bootstrap-compat-audit.txt"}
 seed=${S_SEED:-"$root/bin/s_seed"}
 closure_script=${S_CLOSURE_SCRIPT:-"$root/src/cmd/dist/source_closure.sh"}
