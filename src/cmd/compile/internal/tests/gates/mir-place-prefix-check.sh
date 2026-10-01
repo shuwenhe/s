@@ -6,7 +6,7 @@
 GATE_NAME="C.3.1b.2-pre.A4: Structural Prefix"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../../.." && pwd)"
-MIR_FILE="$PROJECT_ROOT/src/cmd/compile/internal/mir.s"
+MIR_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/mir_model/mir.s"
 
 # Colors
 GREEN='\033[0;32m'
