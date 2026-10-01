@@ -27,9 +27,9 @@ status_bool() {
 canonical_parse_entry=$(status_bool has_text 'func parse_source' src/cmd/compile/internal/syntax src/s)
 canonical_semantic_entry=$(status_bool has_text 'check_source_file' src/cmd/compile/internal)
 canonical_mono_entry=$(status_bool has_text 'monomorphize_file' src/cmd/compile/internal/mono)
-canonical_mir_model=$(status_bool has_file src/cmd/compile/internal/mir.s)
-canonical_mir_lowering=$(status_bool has_text 'lower_main_to_mir|lower_function_graph|make_graph' src/cmd/compile/internal/ir src/cmd/compile/internal/mir.s)
-canonical_mir_dump=$(status_bool has_text 'func dump_graph' src/cmd/compile/internal/mir.s src/cmd/compile/internal/ir)
+canonical_mir_model=$(status_bool has_file src/cmd/compile/middlend/mir_model/mir.s)
+canonical_mir_lowering=$(status_bool has_text 'lower_main_to_mir|lower_function_graph|make_graph' src/cmd/compile/internal/ir src/cmd/compile/middlend/mir_model/mir.s)
+canonical_mir_dump=$(status_bool has_text 'func dump_graph' src/cmd/compile/middlend/mir_model/mir.s src/cmd/compile/internal/ir)
 
 seed_ir_format=$(status_bool has_text 'SSEED-TARGET-V1' src/cmd/compile/seed)
 seed_ir_consumer=$(status_bool has_text 'emit_aot_from_ir_file|emit_native_from_ir_file' src/cmd/compile/seed)

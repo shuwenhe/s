@@ -7,7 +7,7 @@
 GATE_NAME="B1.3: Safe Loan→Place Query"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../../.." && pwd)"
-MIR_FILE="$PROJECT_ROOT/src/cmd/compile/internal/mir.s"
+MIR_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/mir_model/mir.s"
 TEST_FILE="$PROJECT_ROOT/src/cmd/compile/internal/tests/test_b1_3_loan_query.s"
 
 # Colors

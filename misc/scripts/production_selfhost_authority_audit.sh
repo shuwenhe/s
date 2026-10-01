@@ -115,7 +115,7 @@ parser_status() {
     parser_status
     status_for production-typecheck "src/cmd/compile/frontend/semantic.s" "semantic|typecheck|check_text"
     status_for production-generics "src/cmd/compile/internal/types2/types2.s" "generic|monomorph|types2"
-    status_for production-mir "src/cmd/compile/internal/mir.s" "mir|MIR"
+    status_for production-mir "src/cmd/compile/middlend/mir_model/mir.s" "mir|MIR"
     status_for production-ownership "src/cmd/compile/internal/ownership.s src/cmd/compile/internal/ownership/ownership_analysis.s" "ownership|borrow"
     status_for production-nll "src/cmd/compile/internal/ownership/nll_model.s" "nll|lifetime"
     status_for production-lowering "src/cmd/compile/internal/ir/lower.s src/cmd/compile/internal/backend/ssa_lower.s" "lowering|ssa_lower"

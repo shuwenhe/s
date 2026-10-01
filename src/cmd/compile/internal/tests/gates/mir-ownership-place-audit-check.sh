@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../../.." && pwd)"
 
 # File locations
-MIR_FILE="$PROJECT_ROOT/src/cmd/compile/internal/mir.s"
+MIR_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/mir_model/mir.s"
 PLACE_MODEL_FILE="$PROJECT_ROOT/src/cmd/compile/internal/ownership/place_model.s"
 BORROW_CHECKER_FILE="$PROJECT_ROOT/src/cmd/compile/internal/ownership/borrow_checker.s"
 OWNERSHIP_STATE_FILE="$PROJECT_ROOT/src/cmd/compile/internal/ownership/ownership_state.s"

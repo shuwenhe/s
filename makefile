@@ -2054,7 +2054,7 @@ mir-nogc-e2e-check: compiler seed-compiler-bin
 
 	@mkdir -p .bootstrap/mir-nogc
 
-	@./bin/s_seed src/cmd/compile/internal/mir_nogc_gate.s .bootstrap/mir-nogc/mir_nogc_gate.ir
+	@./bin/s_seed src/cmd/compile/middlend/mir_model/mir_nogc_gate.s .bootstrap/mir-nogc/mir_nogc_gate.ir
 
 	@misc/scripts/check-mir-nogc-e2e.sh
 
