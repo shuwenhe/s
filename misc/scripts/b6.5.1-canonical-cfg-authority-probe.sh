@@ -45,7 +45,7 @@ mkdir -p "$OUTPUT_DIR"
     
     echo "Step 1a: Find canonical AST"
     echo "  Expected: ast_if_stmt type"
-    echo "  Location: src/cmd/compile/internal/frontend/parser.s"
+    echo "  Location: src/cmd/compile/frontend/internal/frontend/parser.s"
     echo "  Status: ✓ FOUND"
     echo ""
     
