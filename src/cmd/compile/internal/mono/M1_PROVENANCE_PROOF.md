@@ -65,7 +65,7 @@ For each work_item in mono_context.worklist:
 
 ### Semantic Phase
 ```s
-File: src/cmd/compile/internal/semantic.s
+File: src/cmd/compile/frontend/semantic.s
 Function: establish_declaration_identities(...)
 
 struct Point { x: i32; y: i32 }
@@ -104,7 +104,7 @@ work_item.declaration_ref = decl_ref  ← Direct assignment
 
 ### Verification Layer
 ```s
-File: src/cmd/compile/internal/backend_elf64.s
+File: src/cmd/compile/backend/backend_elf64.s
 Function: load_source_graph (M1.1 gate section)
 
 Gate 1: declarations_received
