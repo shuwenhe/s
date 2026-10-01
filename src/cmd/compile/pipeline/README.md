@@ -11,7 +11,7 @@ Current implementation note:
 - `../internal/*` still contains the existing frontend, middle-end, backend, and
   target support code.
 - New stage directories at `../syntax`, `../resolve`, `../semantic`, `../mir`,
-  `../ownership`, `../mono`, `../layout`, `../abi`, `../codegen`, and
+  `../ownership`, `../mono`, `../layout`, `../backend/abi`, `../codegen`, and
   `../object` are the canonical homes for future migrated implementation.
 
 Directory migration must not advance the proven frontier. A frontier advances
