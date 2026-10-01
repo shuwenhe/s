@@ -132,7 +132,7 @@ fi
 {
     echo "bootstrap-root-candidate-audit"
     echo "canonical-closure-source-count=$closure_count"
-    echo "canonical-closure-root=src/cmd/compile/modular_build_main.s"
+    echo "canonical-closure-root=src/cmd/compile/pipeline/modular_build_main.s"
     echo "bootstrap-root-semantic-authority=ALLOWED_IF_BOUNDED"
     echo "thin-bridge-semantic-authority=FORBIDDEN"
     echo "long-term-dual-semantic-authority=FORBIDDEN"

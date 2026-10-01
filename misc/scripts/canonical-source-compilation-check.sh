@@ -66,7 +66,7 @@ fi
 
 closure_status=FAIL
 if [ -s "$closure" ] &&
-   contains_file_line "$closure" "src/cmd/compile/modular_build_main.s"; then
+   contains_file_line "$closure" "src/cmd/compile/pipeline/modular_build_main.s"; then
     closure_status=PASS
 else
     record_fail "canonical-closure-missing-modular-entry"
