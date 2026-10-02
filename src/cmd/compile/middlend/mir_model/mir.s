@@ -102,7 +102,7 @@ enum mir_statement {
     move(mir_move_stmt),
     copy(mir_copy_stmt),
     drop(mir_drop_stmt),
-    borrow(mir_borrow_stmt),
+    mir_borrow(mir_borrow_stmt),
     ref_use(mir_ref_use_stmt),
     ref_assign(mir_ref_assign_stmt),
 }
@@ -258,7 +258,7 @@ func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_o
         for stmt_index < len(graph.blocks[block_index].statements) {
             point := mir_point_id(points, graph.blocks[block_index].id, stmt_index)
             switch graph.blocks[block_index].statements[stmt_index] {
-                mir_statement::borrow(borrow_stmt) : {
+                mir_statement::mir_borrow(borrow_stmt) : {
                     ref_id := mir_ownership_ref_id(&facts, borrow_stmt.ref_name)
                     loan_id := facts.input.loan_count
                     facts.input.loan_count = facts.input.loan_count + 1
@@ -894,7 +894,7 @@ func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr v
             target := borrow_expr.target.unwrap()
             place := mir_place_from_expr(target)
             if result_name != "" && place.root != "" {
-                statements.push(mir_statement::borrow(mir_borrow_stmt {
+                statements.push(mir_statement::mir_borrow(mir_borrow_stmt {
                     ref_name: result_name, place place, mutable borrow_expr.mutable,
                 }))
             }

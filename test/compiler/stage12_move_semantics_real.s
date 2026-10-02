@@ -3,21 +3,18 @@ package main
 // Real move fixture: S12.2 should observe move facts extracted from MIR
 // This fixture contains actual move operations that should appear in MIR
 
-struct Box {
-    value int
+func helper() int {
+    return 7
 }
 
-func main() string {
-    // Move 1: Create box and move it
-    box1 := Box { value: 42 }
+func main() int {
+    // Loan 1: Create owned box and borrow it
+    owner := box(42)
+    reader := &owner
+
+    // Move 1: Create a separate owned box and move it
+    box1 := box(7)
     box2 := box1  // MOVE: box1 value moved to box2
     
-    // Move 2: Function parameter move
-    result := process_box(box2)  // MOVE: box2 value moved into process_box
-    
-    return result
-}
-
-func process_box(b Box) string {
-    return "processed"
+    return *reader + *box2
 }

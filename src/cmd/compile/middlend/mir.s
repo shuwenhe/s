@@ -155,6 +155,22 @@ func compiler_emit_mir(string source, bool elaborate_drop) string {
     while s.token == "." { s = compiler_next(compiler_next(s)) }
     while s.token != "func" && s.token != "" { s = compiler_next(s) }
     s = compiler_expect(s, "func")
+    while s.error == "" && s.token != "main" && s.token != "" {
+        depth := 0
+        while s.error == "" && s.token != "" {
+            if s.token == "{" { depth = depth + 1 }
+            if s.token == "}" {
+                depth = depth - 1
+                if depth <= 0 {
+                    s = compiler_next(s)
+                    break
+                }
+            }
+            s = compiler_next(s)
+        }
+        while s.token != "func" && s.token != "" { s = compiler_next(s) }
+        if s.token == "func" { s = compiler_next(s) }
+    }
     s = compiler_expect(s, "main")
     s = compiler_expect(s, "(")
     s = compiler_expect(s, ")")
@@ -1999,4 +2015,3 @@ func compiler_emit_mir_partial_drop(string source) string {
     }
     return out
 }
-

@@ -42,8 +42,8 @@ func test_b1_3_loan_borrowed_place_query() bool {
         id: 0,
         label: "entry",
         statements: mir_statement[]{
-            mir_statement::borrow(borrow_stmt_l0),
-            mir_statement::borrow(borrow_stmt_l1),
+            mir_statement::mir_borrow(borrow_stmt_l0),
+            mir_statement::mir_borrow(borrow_stmt_l1),
         },
         terminator: mir_terminator_plain(),
     }
@@ -149,7 +149,7 @@ func test_b1_3_legacy_string_compatibility() bool {
         id: 0,
         label: "entry",
         statements: mir_statement[]{
-            mir_statement::borrow(borrow_stmt),
+            mir_statement::mir_borrow(borrow_stmt),
         },
         terminator: mir_terminator_plain(),
     }
