@@ -192,7 +192,7 @@ func run_mir_suite() int {
     if mir.mir_point_id(point_map, 1, 1) != 4 { return 1 }
     if mir.mir_point_id(point_map, 3, 0) != 7 { return 1 }
     fact_statements := mir_statement[]()
-    fact_statements.push(mir_statement::borrow(mir_borrow_stmt {
+    fact_statements.push(mir_statement::mir_borrow(mir_borrow_stmt {
         ref_name: "_2", place mir_place { root: "_1", projections: mir_place_projection[]() }, mutable false,
     }))
     fact_statements.push(mir_statement::ref_assign(mir_ref_assign_stmt {
@@ -335,7 +335,7 @@ func test_real_mir_source_ownership_facts() int {
         j := 0
         while j < len(graph.blocks[i].statements) {
             switch graph.blocks[i].statements[j] {
-                mir_statement::borrow(_) : has_borrow = true
+                mir_statement::mir_borrow(_) : has_borrow = true
                 mir_statement::ref_assign(_) : has_ref_assign = true
                 mir_statement::ref_use(_) : has_ref_use = true
                 _ : { }
@@ -438,7 +438,7 @@ func test_real_mir_semantic_order() int {
         stmt_idx := 0
         while stmt_idx < len(graph.blocks[block_idx].statements) {
             switch graph.blocks[block_idx].statements[stmt_idx] {
-                mir_statement::borrow(_) : {
+                mir_statement::mir_borrow(_) : {
                     borrow_block = block_idx
                     borrow_stmt = stmt_idx
                 }

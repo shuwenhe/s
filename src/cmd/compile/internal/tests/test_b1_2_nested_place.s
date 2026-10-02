@@ -46,7 +46,7 @@ func test_b1_2_borrow_place_preservation() bool {
         id: 0,
         label: "entry",
         statements: mir_statement[]{
-            mir_statement::borrow(borrow_stmt),
+            mir_statement::mir_borrow(borrow_stmt),
         },
         terminator: mir_terminator_plain(),
     }
