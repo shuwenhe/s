@@ -13,7 +13,7 @@ struct syntax_error {
 
 func read_source(string path) (string, syntax_error) {
     switch std.fs.read_to_string(path) {
-        source : source,
+        text : text,
         err : syntax_error {
             message: "failed to read source file: " + path + ": " + err.message, line 0, column 0,
         },
