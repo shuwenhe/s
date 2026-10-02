@@ -707,8 +707,7 @@ func compiler_build_canonical_frontend_result(string source) canonical_frontend_
 }
 
 func compiler_stage9_consume_canonical_frontend_result(canonical_frontend_result input) compiler_stage9_semantic_consumer_result {
-    // Phase 1: Check if this is helper() int with all canonical facts
-    consumed := input.ok && input.function_name == "helper" && input.output_carrier == "compiler-stage8-canonical-type-ref-output" && input.declaration_ref != "" && input.canonical_type_ref != "" && compiler_contains_text(input.canonical_type_ref, "canonical-type-identity:")
+    consumed := input.ok && input.output_carrier == "compiler-stage8-canonical-type-ref-output" && input.declaration_ref != "" && input.canonical_type_ref != "" && compiler_contains_text(input.canonical_type_ref, "canonical-type-identity:")
     authority := ""
     reconstruction := "yes"
     if consumed {
@@ -873,4 +872,3 @@ func compiler_emit_stage8_canonical_type_ref_proof(string source) string {
     }
     return out
 }
-
