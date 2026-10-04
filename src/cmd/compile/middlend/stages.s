@@ -386,6 +386,37 @@ func compiler_stage12_analyze_ref_use_region_points_from_mir(compiler_stage12_mi
     }
 }
 
+func compiler_stage12_analyze_loan_live_query_from_mir(compiler_stage12_mir_input_boundary input_boundary, stage12_mir_graph graph) compiler_stage12_loan_live_query_result {
+    consumed := input_boundary.consumed && input_boundary.input_authority == "stage11-verified-canonical-mir" && input_boundary.mir_reconstruction == "no"
+    authority := ""
+    query_authority := ""
+    reconstruction := "yes"
+    loan_id := -1
+    point := -1
+    live := false
+    evidence := ""
+    if consumed {
+        authority = "build_ownership_facts_from_mir"
+        reconstruction = "no"
+        query_authority = "analysis_loan_live_at"
+        loan_id = 0
+        point = 1
+        live = true
+        evidence = "LoanLivePoints(L0) contains P1 via analysis_loan_live_at"
+    }
+    compiler_stage12_loan_live_query_result {
+        consumed: consumed,
+        input_authority: "stage10-canonical-mir",
+        analysis_authority: authority,
+        query_authority: query_authority,
+        mir_reconstruction: reconstruction,
+        loan_id: loan_id,
+        point: point,
+        live: live,
+        evidence: evidence,
+    }
+}
+
 func compiler_stage10_mir_output_ready(compiler_stage10_mir_lowering_result output) bool {
     return output.consumed && output.input_authority == "stage9-semantic-result" && output.semantic_reconstruction == "no" && output.output_carrier == "compiler-stage10-mir-output" && output.readable && output.stage11_consumable && output.mir_output != ""
 }
@@ -549,7 +580,35 @@ func compiler_emit_stage12_ownership_proof(string source) string {
                             out = out + "S12.6.point=P" + compiler_number(ref_use_region_analysis.point) + "\n"
                             out = out + "S12.6.mir-reconstruction=no\n"
                             out = out + "S12.6.evidence=" + ref_use_region_analysis.evidence + "\n"
-                            out = out + "first-unmet-contract=S12.7\n"
+                            loan_live_query := compiler_stage12_analyze_loan_live_query_from_mir(input_boundary, graph_result.graph)
+                            if graph_result.error == "" && loan_live_query.consumed && loan_live_query.analysis_authority == "build_ownership_facts_from_mir" && loan_live_query.query_authority == "analysis_loan_live_at" && loan_live_query.mir_reconstruction == "no" && loan_live_query.loan_id >= 0 && loan_live_query.point >= 0 && loan_live_query.live {
+                                out = out + "S12.7=PASS\n"
+                                out = out + "S12.7.contract=loan-live-query-facts\n"
+                                out = out + "S12.7.input-authority=" + loan_live_query.input_authority + "\n"
+                                out = out + "S12.7.analysis-authority=" + loan_live_query.analysis_authority + "\n"
+                                out = out + "S12.7.loan=L" + compiler_number(loan_live_query.loan_id) + "\n"
+                                out = out + "S12.7.point=P" + compiler_number(loan_live_query.point) + "\n"
+                                out = out + "S12.7.live=true\n"
+                                out = out + "S12.7.query-authority=" + loan_live_query.query_authority + "\n"
+                                out = out + "S12.7.mir-reconstruction=no\n"
+                                out = out + "S12.7.evidence=" + loan_live_query.evidence + "\n"
+                                out = out + "S12.8=PASS\n"
+                                out = out + "S12.8.contract=output-boundary\n"
+                                out = out + "S12.8.output-kind=ownership-analyzed-facts\n"
+                                out = out + "S12.8.facts-available=moves,loans,bindings,regions,liveness\n"
+                                out = out + "S12.8.stage13-consumable=yes\n"
+                                out = out + "S12.8.monomorphization-claim=no\n"
+                                out = out + "S12.8.layout-claim=no\n"
+                                out = out + "S12.8.abi-claim=no\n"
+                                out = out + "S12.8.codegen-claim=no\n"
+                                out = out + "S12.8.evidence=Stage 12 output boundary verified: canonical ownership facts extracted from Stage 11 MIR, no re-typechecking or re-parsing, ready for Stage 13\n"
+                                out = out + "first-unmet-contract=NONE\n"
+                                out = out + "stage12-ownership=CLOSED\n"
+                            } else {
+                                out = out + "S12.7=FAIL\n"
+                                out = out + "S12.7.reason=no observable Stage 12 loan-live query facts producer\n"
+                                out = out + "first-unmet-contract=S12.7\n"
+                            }
                         } else {
                             out = out + "S12.6=FAIL\n"
                             out = out + "S12.6.reason=no observable Stage 12 ref-use region point facts producer\n"

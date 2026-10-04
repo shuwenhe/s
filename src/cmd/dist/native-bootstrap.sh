@@ -147,11 +147,8 @@ fail() {
 verify_stage() {
 
     S_BOOTSTRAP_READELF="$S_BOOTSTRAP_READELF" \
-
     S_BOOTSTRAP_NM="$S_BOOTSTRAP_NM" \
-
     S_BOOTSTRAP_STRINGS="$S_BOOTSTRAP_STRINGS" \
-
     "$verify" "$1"
 
 }
@@ -195,7 +192,6 @@ compile_native_stage() {
     printf '%s\n' "  compiling $input -> $assembly"
 
     run_with_progress "compiling $input" \
-
         run_with_timeout "$compiler" --emit-asm "$input" "$assembly"
 
     printf '%s\n' "  generated $assembly"
@@ -207,7 +203,6 @@ compile_native_stage() {
     printf '%s\n' "  linking $output"
 
     "$linker" -static -T "$root/src/runtime/linker/nostdlib.ld" \
-
         -o "$output" "$runtime_object" "$object"
 
     printf '%s\n' "  verifying $output"
@@ -233,7 +228,6 @@ run_conformance() {
     printf '%s\n' "  compiling $source -> $assembly"
 
     run_with_progress "compiling $source" \
-
         run_with_timeout "$compiler" --emit-asm "$source" "$assembly"
 
     printf '%s\n' "  generated $assembly"
@@ -245,7 +239,6 @@ run_conformance() {
     printf '%s\n' "  linking $binary"
 
     "$linker" -static -T "$root/src/runtime/linker/nostdlib.ld" \
-
         -o "$binary" "$runtime_object" "$object"
 
     verify_stage "$binary"
@@ -271,7 +264,6 @@ printf '%s\n' "[1/7] seed -> stage1"
 "$seed" "$source_file" "$work/stage1.ir"
 
 S_SOURCE_ROOT="$root" "$seed" --emit-standalone-amd64 \
-
     "$work/stage1.ir" "$work/stage1"
 
 verify_stage "$work/stage1"
@@ -323,9 +315,7 @@ printf '%s\n' "seed dependency audit      PASS"
 printf '%s\n' "[6/7] stage2 compiler smoke test"
 
 run_stage "$work/stage2" --emit-asm \
-
     "$root/test/selfhost/bootstrap_native_selfhost_frontier.s" \
-
     "$work/smoke.S"
 
 printf '%s\n' "stage2 compiler smoke test PASS"
@@ -335,11 +325,9 @@ printf '%s\n' "stage2 compiler smoke test PASS"
 printf '%s\n' "[7/7] conformance"
 
 run_conformance "$work/stage2" \
-
     "$root/test/selfhost/bootstrap_native_selfhost_frontier.s" frontier
 
 run_conformance "$work/stage2" \
-
     "$root/test/selfhost/bootstrap_native_rope.s" rope
 
 printf '%s\n' "conformance                PASS"
