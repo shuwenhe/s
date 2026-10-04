@@ -2,7 +2,7 @@
 set -eu
 
 root=${S_SOURCE_ROOT:-$(pwd)}
-entry=${1:-src/cmd/compile/pipeline/modular_build_main.s}
+entry=${1:-src/cmd/compile/pipeline/main.s}
 report=${2:-"$root/.bootstrap/modular/bootstrap-root-audit.txt"}
 compat_report=${S_BOOTSTRAP_COMPAT_REPORT:-"$root/.bootstrap/modular/bootstrap-compat-audit.txt"}
 compat_script=${S_BOOTSTRAP_COMPAT_SCRIPT:-"$root/misc/scripts/modular_bootstrap_compat_audit.sh"}
@@ -299,7 +299,7 @@ fi
         A-existing-compiler-minimal-gap)
             printf 'Decision=A-existing-compiler-minimal-gap\n'
             printf 'Bootstrap-root=bin/s_darwin_arm64\n'
-            printf 'Required-gap=unit-return function signature compatibility in modular_build_main.s path; remaining feature classes must still be probed after that boundary\n'
+            printf 'Required-gap=unit-return function signature compatibility in main.s path; remaining feature classes must still be probed after that boundary\n'
             ;;
         B-trusted-historical-root)
             printf 'Decision=B-trusted-historical-root\n'

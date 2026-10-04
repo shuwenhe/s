@@ -5,7 +5,7 @@ set -euo pipefail
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 workspace_root="${S_WORKSPACE_ROOT:-$(cd "$root/.." && pwd)}"
 closure="${STAGE0_CLOSURE:-"$root/.bootstrap/modular/canonical-closure.txt"}"
-entry_rel="src/cmd/compile/pipeline/modular_build_main.s"
+entry_rel="src/cmd/compile/pipeline/main.s"
 report="${P04_BOOTSTRAP_ARTIFACT_PROVENANCE_REPORT:-"$root/.bootstrap/modular/p0.4-bootstrap-artifact-provenance-audit.txt"}"
 
 mkdir -p "$(dirname "$report")"

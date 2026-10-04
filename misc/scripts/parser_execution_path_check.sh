@@ -8,7 +8,7 @@ stage0=$root/src/cmd/compile/stage0/stage0.c
 negative=$root/src/cmd/compile/internal/tests/fixtures/parser_authority_reject.s
 closure=$root/.bootstrap/modular/canonical-closure.txt
 canonical_frontend=src/cmd/compile/frontend/syntax.s
-canonical_parser=src/s/parser.s
+canonical_parser=src/cmd/compile/frontend/parser/parser.s
 
 tmp="${report}.tmp.$$"
 trap 'rm -f "$tmp.reject"' EXIT HUP INT TERM
