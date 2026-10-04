@@ -4,7 +4,7 @@ set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 modular_dir="$root/.bootstrap/modular"
-entry_rel="src/cmd/compile/pipeline/modular_build_main.s"
+entry_rel="src/cmd/compile/pipeline/main.s"
 closure="${STAGE0_CLOSURE:-"$modular_dir/canonical-closure.txt"}"
 report="$modular_dir/b6.7.3e2r-bootstrap-artifact-boundary-reevaluation.txt"
 

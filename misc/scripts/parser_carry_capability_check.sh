@@ -29,8 +29,8 @@ for expected in 17 29; do
         "$expected" "$expected" "$actual" "$build_status" >> "$tmp"
     if [ "$actual" != "$expected" ]; then failed=1; fi
 done
-for source in src/cmd/compile/frontend/syntax.s src/s/parser.s \
-    src/s/lexer.s src/s/tokens.s src/s/ast.s; do
+for source in src/cmd/compile/frontend/syntax.s src/cmd/compile/frontend/parser/parser.s \
+    src/cmd/compile/frontend/lexer/lexer.s src/cmd/compile/frontend/token/token.s src/cmd/compile/frontend/ast/ast.s; do
     if [ ! -f "$root/$source" ]; then
         state=SOURCE_MISSING
     elif grep -qxF "$source" "$closure"; then
@@ -40,13 +40,13 @@ for source in src/cmd/compile/frontend/syntax.s src/s/parser.s \
     fi
     printf 'parser-dependency=%s status=%s\n' "$source" "$state" >> "$tmp"
 done
-if rg -n 'func[[:space:]]+parse_s_tokens[[:space:]]*\(' "$root/src" \
-    --glob '*.s' > "$work/parse-s-tokens-definitions.txt"; then
-    printf '%s\n' 'parse-s-tokens-binding=CANDIDATE_DEFINITION_REQUIRES_REVIEW' >> "$tmp"
+if rg -n 'func[[:space:]]+parse_tokens[[:space:]]*\(' "$root/src/cmd/compile/frontend/parser" \
+    --glob '*.s' > "$work/parse-tokens-definitions.txt"; then
+    printf '%s\n' 'parse-tokens-binding=CANDIDATE_DEFINITION_REQUIRES_REVIEW' >> "$tmp"
 else
     status=$?
     [ "$status" -eq 1 ] || exit "$status"
-    printf '%s\n' 'parse-s-tokens-binding=NO_EXPLICIT_S_DEFINITION_FOUND' >> "$tmp"
+    printf '%s\n' 'parse-tokens-binding=NO_EXPLICIT_FRONTEND_PARSER_DEFINITION_FOUND' >> "$tmp"
 fi
 if [ "$failed" -eq 1 ]; then
     printf '%s\n' 'parser-carry-status=BLOCKED' \

@@ -8,7 +8,7 @@ test -x "$compiler"
 test -s "$closure"
 mkdir -p "$out"
 work=$(mktemp -d "$out/canonical-capability.XXXXXX")
-entry=$root/src/cmd/compile/pipeline/modular_build_main.s
+entry=$root/src/cmd/compile/pipeline/main.s
 subset=$root/src/cmd/compile/stage0/bootstrap_subset.c
 report=$work/report.txt
 cp "$closure" "$work/closure.txt"
@@ -86,7 +86,7 @@ fi
        grep -qx 'bootstrap-subset: byte 11: expected bootstrap keyword' "$work/canonical.log" &&
        grep -qx 'bootstrap-subset: byte 11: expected bootstrap keyword' "$work/cmd.log"; then
         echo 'first-blocking-capability=named-package-declaration'
-        echo 'first-blocking-source=src/cmd/compile/pipeline/modular_build_main.s:1'
+        echo 'first-blocking-source=src/cmd/compile/pipeline/main.s:1'
         echo 'first-blocking-implementation=bootstrap_subset.c:bs_unit requires package main'
         echo 'result=BLOCKED'
         echo 'next-cut=single-unit-package-identifier-independent-of-main-function'
@@ -96,7 +96,7 @@ fi
        [ ! -e "$work/canonical-compiler" ] && [ ! -e "$work/import" ] &&
        grep -qx 'import (' "$work/canonical-entry.s"; then
         echo 'first-blocking-capability=import-declaration'
-        echo 'first-blocking-source=src/cmd/compile/pipeline/modular_build_main.s:2'
+        echo 'first-blocking-source=src/cmd/compile/pipeline/main.s:2'
         echo 'first-blocking-implementation=bootstrap_subset.c:bs_unit expects func after package'
         echo 'result=BLOCKED'
         echo 'next-cut=import-declaration-representation-with-explicit-unresolved-dependencies'

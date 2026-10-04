@@ -4,7 +4,7 @@ set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 closure="${STAGE0_CLOSURE:-"$root/.bootstrap/modular/canonical-closure.txt"}"
-entry_rel="src/cmd/compile/pipeline/modular_build_main.s"
+entry_rel="src/cmd/compile/pipeline/main.s"
 report="${P03_BOOTSTRAP_ARTIFACT_LEVEL_REPORT:-"$root/.bootstrap/modular/p0.3-bootstrap-artifact-level-audit.txt"}"
 
 canonical_bootstrap_ir="${CANONICAL_STAGE1_BOOTSTRAP_IR:-"$root/src/cmd/compile/bootstrap/bootstrap.ir"}"

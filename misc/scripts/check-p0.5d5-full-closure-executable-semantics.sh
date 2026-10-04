@@ -33,7 +33,7 @@ grep -qx 'source-binding=MATCH' "$tmp/binding" || invalid SOURCE_BINDING_MISMATC
 grep -qx "canonical-source-hash=$expected" "$tmp/binding" || invalid UNEXPECTED_SOURCE_HASH
 test -f "$spec" || invalid MISSING_AUDIT_DOCUMENT
 
-entry=src/cmd/compile/pipeline/modular_build_main.s
+entry=src/cmd/compile/pipeline/main.s
 lower=src/cmd/compile/middlend/ir/lower.s
 mir=src/cmd/compile/middlend/mir_model/mir.s
 backend=src/cmd/compile/backend/backend_elf64.s
@@ -69,7 +69,7 @@ test "$(wc -l <"$tmp/main-declarations" | tr -d ' ')" = 1 || invalid ENTRY_REQUI
         'MODE=AUDIT_DESIGN_ONLY' 'audit-status=FIRST_MISSING_EDGE_LOCATED' \
         'evidence-kind=PINNED_SOURCE_STATIC_DEDUCTION' "canonical-source-hash=$expected" \
         'source-binding=MATCH' 'canonical-file-count=37' \
-        'Q1-entry=cmd.main@src/cmd/compile/pipeline/modular_build_main.s:19' \
+        'Q1-entry=cmd.main@src/cmd/compile/pipeline/main.s:19' \
         'Q1-executable-entry=NOT_PROVEN' \
         'Q2-reachability=SOURCE_BACKED_LOWER_BOUND_IN_AUDIT_DOCUMENT' \
         'Q2-complete-call-graph=NOT_PROVEN' 'Q2-complete-mono-instance-set=NOT_PROVEN' \

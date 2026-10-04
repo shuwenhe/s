@@ -66,7 +66,7 @@ static size_t count_word(const char *text, const char *word) {
 static void analyze_source(const char *rel, const char *text, size_t len, ClosureStats *stats) {
     stats->files++;
     stats->bytes += len;
-    if (strcmp(rel, "src/cmd/compile/pipeline/modular_build_main.s") == 0) stats->saw_entry = true;
+    if (strcmp(rel, "src/cmd/compile/pipeline/main.s") == 0) stats->saw_entry = true;
     stats->packages += count_word(text, "package");
     stats->imports += count_word(text, "import");
     stats->funcs += count_word(text, "func");
@@ -151,7 +151,7 @@ static void write_canonical_closure_payload(FILE *out, const char *root, const c
     fputs("\";\n\n", out);
     fputs(
         "static int canonical_closure_materialized_probe(void) {\n"
-        "    return strstr(canonical_closure_materialized, \"===FILE:src/cmd/compile/pipeline/modular_build_main.s===\") != NULL &&\n"
+        "    return strstr(canonical_closure_materialized, \"===FILE:src/cmd/compile/pipeline/main.s===\") != NULL &&\n"
         "           strstr(canonical_closure_materialized, \"compile.internal.backend_elf64\") != NULL;\n"
         "}\n\n",
         out);

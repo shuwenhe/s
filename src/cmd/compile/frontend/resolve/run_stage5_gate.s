@@ -55,7 +55,7 @@ func run_stage5_gate_on_file(string filepath) semantic.name_resolution_gate_resu
 }
 
 func test_gate_on_main() int {
-    result := run_stage5_gate_on_file("src/cmd/compile/pipeline/modular_build_main.s")
+    result := run_stage5_gate_on_file("src/cmd/compile/pipeline/main.s")
     
     // Basic sanity check
     if result.total_identifiers == 0 {

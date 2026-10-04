@@ -60,7 +60,7 @@ fi
 set -e
 
 rg -n 'bootstrap_subset_build|bootstrap-subset|--emit-artifact-stage2|artifact-only|if \\(!strcmp\\(argv\\[1\\], "build"\\)\\)' \
-    "$root/src/cmd/compile/stage0" "$root/src/cmd/compile/pipeline/modular_build_main.s" "$root/makefile" >"$callsite_log" || true
+    "$root/src/cmd/compile/stage0" "$root/src/cmd/compile/pipeline/main.s" "$root/makefile" >"$callsite_log" || true
 
 canonical_build=FAIL
 if [ "$canonical_build_status" -eq 0 ]; then
@@ -84,7 +84,7 @@ if grep -q 'bootstrap-subset:' "$generic_log"; then
     fallback_reason=stage1-build-dispatches-directly-to-bootstrap_subset_build
 fi
 
-canonical_entry_callsite="$root/src/cmd/compile/pipeline/modular_build_main.s:37 compile.internal.backend_elf64.build"
+canonical_entry_callsite="$root/src/cmd/compile/pipeline/main.s:37 compile.internal.backend_elf64.build"
 bootstrap_subset_callsite="$root/src/cmd/compile/stage0/stage0.c:161 generated stage1 build handler calls bootstrap_subset_build"
 first_routing_condition="argv[1] == build"
 authority=NOT_PROVEN

@@ -39,7 +39,7 @@ func parse_source(string source) (source_file, syntax_error) {
 }
 
 func parse_tokens(token[] tokens) (source_file, syntax_error) {
-    switch parse_s_tokens(tokens) {
+    switch s.parse_tokens(tokens) {
         ast : ast,
         err : syntax_error {
             message: err.message, line err.line, column err.column,

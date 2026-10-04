@@ -3,7 +3,7 @@
 set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
-entry_rel="src/cmd/compile/pipeline/modular_build_main.s"
+entry_rel="src/cmd/compile/pipeline/main.s"
 closure="${STAGE0_CLOSURE:-"$root/.bootstrap/modular/canonical-closure.txt"}"
 report="${BOOTSTRAP_ARTIFACT_PRODUCER_GATE_REPORT:-"$root/.bootstrap/modular/bootstrap-artifact-producer-gate.txt"}"
 
