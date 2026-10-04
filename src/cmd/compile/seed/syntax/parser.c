@@ -3779,6 +3779,13 @@ static int looks_like_struct_literal(parser *p) {
 			continue;
 		}
 		if (brace_depth == 1 && paren_depth == 0 && bracket_depth == 0) {
+			if (check(p, TOKEN_ASSIGN) || check(p, TOKEN_ASSIGN_DECLARE) ||
+				check(p, TOKEN_SEMICOLON)) {
+				/* Assignment inside a top-level brace block is a statement
+				   body (e.g. a for/if block), never a struct literal. */
+				p->current = saved;
+				return 0;
+			}
 			if (expect_field_name) {
 				if (!match(p, TOKEN_IDENTIFIER)) {
 					p->current = saved;

@@ -99,7 +99,6 @@ report_frontier() {
     report="$work/frontier.unsupported.txt"
 
     if run_with_timeout "$stage1" --report-unsupported \
-
         "$source_file" "$report" >/dev/null 2>&1; then
 
         printf '%s\n' "bootstrap frontier:" >&2
@@ -161,7 +160,6 @@ cmp "$work/stage2" "$work/stage3" ||
 printf '%s\n' "[4/4] generated compiler smoke test"
 
 run_with_timeout "$work/stage3" build "$root/test/selfhost/bootstrap_whole_program.s" \
-
     -o "$work/smoke"
 
 set +e
