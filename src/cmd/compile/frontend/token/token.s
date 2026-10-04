@@ -1,8 +1,87 @@
-package src.cmd.compile.frontend.token
-func token_unit_name() string {
-    "src/cmd/compile/frontend/token/token"
+package s
+import (
+    "std"
+    "std.prelude"
+)
+enum token_kind {
+    ident,
+    int,
+    string,
+    keyword,
+    symbol,
+    eof,
 }
 
-func token_unit_ready() int {
-    1
+struct token {
+    kind token_kind
+    string value
+    int line
+    int column
+}
+
+func token_kind_name(token_kind kind) string {
+    switch kind {
+        token_kind::ident : "ident",
+        token_kind::int : "int",
+        token_kind::string : "string",
+        token_kind::keyword : "keyword",
+        token_kind::symbol : "symbol",
+        token_kind::eof : "eof",
+    }
+}
+
+func dump_tokens(token[] tokens) string {
+    out := ""
+    for _for_idx_31 := 0; _for_idx_31 < len(tokens); _for_idx_31++ {
+        token := tokens[_for_idx_31]
+        if out != "" {
+            out = out + "\n"
+        }
+        out =
+            out
+            + std.prelude.to_string(token.line)
+            + ":"
+            + std.prelude.to_string(token.column)
+            + " "
+            + token_kind_name(token.kind)
+            + " "
+            + token.value
+    }
+    out
+}
+
+func is_keyword(string text) bool {
+    switch text {
+        "package" : true,
+        "use" : true,
+        "as" : true,
+        "pub" : true,
+        "func" : true,
+        "const" : true,
+        "var" : true,
+        "static" : true,
+        "struct" : true,
+        "enum" : true,
+        "trait" : true,
+        "for" : true,
+        "if" : true,
+        "else" : true,
+        "while" : true,
+        "switch" : true,
+        "select" : true,
+        "case" : true,
+        "default" : true,
+        "return" : true,
+        "break" : true,
+        "continue" : true,
+        "sroutine" : true,
+        "true" : true,
+        "false" : true,
+        "nil" : true,
+        "unsafe" : true,
+        "extern" : true,
+        "where" : true,
+        "in" : true,
+        _ : false,
+    }
 }

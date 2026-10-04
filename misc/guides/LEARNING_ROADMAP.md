@@ -171,7 +171,7 @@ The goal is to prove:
 
 ```text
 Stage1
-  -> canonical modular_build_main.s
+  -> canonical main.s
   -> compile.internal.backend_elf64.build
   -> canonical parser / semantic / mono / MIR / backend
   -> executable Stage2
@@ -192,7 +192,7 @@ makefile
 misc/scripts/stage1-canonical-entry-linkage-check.sh
 misc/scripts/check-b6.7.3e-stage1-build-authority-handoff.sh
 misc/scripts/check-b6.7.3e1-canonical-build-runtime-target-audit.sh
-src/cmd/compile/pipeline/modular_build_main.s
+src/cmd/compile/pipeline/main.s
 src/cmd/compile/backend/backend_elf64.s
 ```
 
