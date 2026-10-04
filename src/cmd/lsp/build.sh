@@ -135,15 +135,10 @@ echo "  • Compiling server..."
 echo "🔗 Linking..."
 
 "$COMPILER" -o "$BIN_DIR/s_lsp" \
-
     "$LSP_DIR/lsp_protocol.o" \
-
     "$LSP_DIR/document_manager.o" \
-
     "$LSP_DIR/lsp_handler.o" \
-
     "$LSP_DIR/jsonrpc.o" \
-
     "$LSP_DIR/server.o" 2>&1 || {
 
     echo "❌ Failed to link"

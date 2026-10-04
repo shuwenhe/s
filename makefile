@@ -137,37 +137,21 @@ seed-tests:
 	@mkdir -p ./bin
 
 	@gcc -std=c11 -Wall -Wextra -Werror -DSEED_COMPILE_ONLY \
-
 	  -o ./bin/seed_tests \
-
 	  src/cmd/compile/seed/testing/tests.c \
-
 	  src/cmd/compile/seed/s_seed.c \
-
 	  src/cmd/compile/seed/bootstrap/bootstrap.c \
-
 	  src/cmd/compile/seed/lexical/lexer.c \
-
 	  src/cmd/compile/seed/lexical/selfhost_bridge.c \
-
 	  src/cmd/compile/seed/error/error.c \
-
 	  src/cmd/compile/seed/syntax/parser.c \
-
 	  src/cmd/compile/seed/semantic/analyzer.c \
-
 	  src/cmd/compile/seed/intermediate/ir.c \
-
 	  src/cmd/compile/seed/code/generator.c \
-
 	  src/cmd/compile/seed/code/backend_registry.c \
-
 	  src/cmd/compile/seed/code/native_backend.c \
-
 	  src/cmd/compile/seed/code/standalone_amd64_backend.c \
-
 	  src/cmd/compile/seed/runtime/network_windows.c \
-
 	  src/cmd/compile/seed/runtime/runtime.c
 
 	@./bin/seed_tests
@@ -191,37 +175,21 @@ seed-runtime-regression-bin:
 	@mkdir -p ./bin
 
 	@gcc -std=c11 -Wall -Wextra -Werror -pthread -DSEED_COMPILE_ONLY \
-
 	  -o ./bin/seed_runtime_regression \
-
 	  src/cmd/compile/seed/testing/runtime_regression.c \
-
 	  src/cmd/compile/seed/s_seed.c \
-
 	  src/cmd/compile/seed/bootstrap/bootstrap.c \
-
 	  src/cmd/compile/seed/lexical/lexer.c \
-
 	  src/cmd/compile/seed/lexical/selfhost_bridge.c \
-
 	  src/cmd/compile/seed/error/error.c \
-
 	  src/cmd/compile/seed/syntax/parser.c \
-
 	  src/cmd/compile/seed/semantic/analyzer.c \
-
 	  src/cmd/compile/seed/intermediate/ir.c \
-
 	  src/cmd/compile/seed/code/generator.c \
-
 	  src/cmd/compile/seed/code/backend_registry.c \
-
 	  src/cmd/compile/seed/code/native_backend.c \
-
 	  src/cmd/compile/seed/code/standalone_amd64_backend.c \
-
 	  src/cmd/compile/seed/runtime/network_windows.c \
-
 	  src/cmd/compile/seed/runtime/runtime.c
 
 
@@ -241,17 +209,14 @@ seed-aot-test: seed-compiler-bin
 	@./bin/s_seed test/aot/basic.s /tmp/s_seed_aot_test/basic.ir
 
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=linux S_TARGET_ARCH=amd64 \
-
 	  ./bin/s_seed --emit-aot /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/basic
 
 	@set +e; /tmp/s_seed_aot_test/basic; status=$$?; set -e; test $$status -eq 42
 
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-aot-asm \
-
 	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/basic.S
 
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-aot-obj \
-
 	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/basic.o
 
 	@file /tmp/s_seed_aot_test/basic | grep -q 'ELF 64-bit.*executable'
@@ -261,17 +226,14 @@ seed-aot-test: seed-compiler-bin
 	@! grep -a -q 'SSEED-TARGET-V1' /tmp/s_seed_aot_test/basic
 
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-bin \
-
 	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/embedded
 
 	@S_SOURCE_ROOT=$(CURDIR) /tmp/s_seed_aot_test/embedded --emit-aot \
-
 	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/from_embedded
 
 	@set +e; /tmp/s_seed_aot_test/from_embedded; status=$$?; set -e; test $$status -eq 42
 
 	@! S_TARGET_OS=darwin S_TARGET_ARCH=arm64 ./bin/s_seed --emit-aot \
-
 	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/unsupported 2>/dev/null
 
 	@echo "Seed AOT compilation test passed"
@@ -315,13 +277,9 @@ sroutine-check: selfhost
 	@./bin/s --emit-bin /tmp/s_sroutine_check/sroutine_deadlock_test.ir /tmp/s_sroutine_check/sroutine_deadlock_test
 
 	@if /tmp/s_sroutine_check/sroutine_deadlock_test >/tmp/s_sroutine_check/deadlock.out 2>&1; then \
-
 		echo "expected sroutine deadlock detection"; exit 1; \
-
 	else \
-
 		rg -q "channel deadlock" /tmp/s_sroutine_check/deadlock.out; \
-
 	fi
 
 
@@ -445,61 +403,49 @@ bootstrap-capability-report: seed-compiler-bin
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/capability/compiler.ir
 
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
-
 	  $(SELFHOST_DIR)/capability/compiler.ir $(SELFHOST_DIR)/capability/compiler
 
 	@$(SELFHOST_DIR)/capability/compiler --report-unsupported \
-
 	  src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/capability/unsupported.txt
 
 	@! grep -q '|package|' $(SELFHOST_DIR)/capability/unsupported.txt
 
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_package_valid.s $(SELFHOST_DIR)/capability/package-valid
 
 	@set +e; $(SELFHOST_DIR)/capability/package-valid; status=$$?; set -e; test $$status -eq 42
 
 	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_package_invalid.s $(SELFHOST_DIR)/capability/package-invalid >/dev/null 2>&1
 
 	@! grep -q '|extern-intrinsic|' $(SELFHOST_DIR)/capability/unsupported.txt
 
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_intrinsic_valid.s $(SELFHOST_DIR)/capability/intrinsic-valid
 
 	@set +e; $(SELFHOST_DIR)/capability/intrinsic-valid; status=$$?; set -e; test $$status -eq 42
 
 	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_intrinsic_invalid.s $(SELFHOST_DIR)/capability/intrinsic-invalid >/dev/null 2>&1
 
 	@! grep -q '|bool|' $(SELFHOST_DIR)/capability/unsupported.txt
 
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_bool_cross_function.s $(SELFHOST_DIR)/capability/bool-cross-function
 
 	@set +e; $(SELFHOST_DIR)/capability/bool-cross-function; status=$$?; set -e; test $$status -eq 42
 
 	@if grep -q '|string|' $(SELFHOST_DIR)/capability/unsupported.txt; then \
-
 	  echo "string capability is still reported unsupported" >&2; exit 1; \
-
 	fi
 
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_string_abi_length.s $(SELFHOST_DIR)/capability/string-abi-length
 
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_string_abi_local.s $(SELFHOST_DIR)/capability/string-abi-local
 
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_string_abi_branch.s $(SELFHOST_DIR)/capability/string-abi-branch
 
 	@set +e; $(SELFHOST_DIR)/capability/string-abi-length; status=$$?; set -e; test $$status -eq 42
@@ -509,39 +455,30 @@ bootstrap-capability-report: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/capability/string-abi-branch; status=$$?; set -e; test $$status -eq 42
 
 	@if grep -q '|multiple-functions|' $(SELFHOST_DIR)/capability/unsupported.txt; then \
-
 	  echo "whole-program capability is still reported unsupported" >&2; exit 1; \
-
 	fi
 
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_whole_program.s $(SELFHOST_DIR)/capability/whole-program
 
 	@set +e; $(SELFHOST_DIR)/capability/whole-program; status=$$?; set -e; test $$status -eq 42
 
 	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_duplicate_function.s $(SELFHOST_DIR)/capability/duplicate-function >/dev/null 2>&1
 
 	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_invalid_signature.s $(SELFHOST_DIR)/capability/invalid-signature >/dev/null 2>&1
 
 	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_unknown_function.s $(SELFHOST_DIR)/capability/unknown-function >/dev/null 2>&1
 
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_intrinsic_string_arg.s $(SELFHOST_DIR)/capability/intrinsic-string-arg
 
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_intrinsic_string_return.s $(SELFHOST_DIR)/capability/intrinsic-string-return
 
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
-
 	  test/selfhost/bootstrap_intrinsic_scalar_return.s $(SELFHOST_DIR)/capability/intrinsic-scalar-return
 
 	@set +e; $(SELFHOST_DIR)/capability/intrinsic-string-arg; status=$$?; set -e; test $$status -eq 42
@@ -573,7 +510,6 @@ bootstrap-convergence: bootstrap-stage0
 bootstrap-pure-s: bootstrap-stage0
 
 	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/native-bootstrap.sh \
-
 	  $(SELFHOST_DIR)
 
 
@@ -611,7 +547,6 @@ darwin-arm64-hosted-compiler: seed-compiler-bin
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/darwin-arm64/compiler.ir
 
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=darwin S_TARGET_ARCH=arm64 \
-
 	  ./bin/s_seed --emit-aot $(SELFHOST_DIR)/darwin-arm64/compiler.ir ./bin/s_darwin_arm64
 
 	@file ./bin/s_darwin_arm64 | grep -q 'Mach-O 64-bit executable arm64'
@@ -631,9 +566,7 @@ darwin-arm64-slice-check: darwin-arm64-hosted-compiler
 	@clang -arch arm64 -mmacosx-version-min=14.0 -c -o $(SELFHOST_DIR)/darwin-arm64/basic.o $(SELFHOST_DIR)/darwin-arm64/basic.s
 
 	@ld -arch arm64 -e _start -platform_version macos 14.0 14.0 \
-
 	  -syslibroot "$$(xcrun --show-sdk-path)" -lSystem \
-
 	  -o $(SELFHOST_DIR)/darwin-arm64/basic $(SELFHOST_DIR)/darwin-arm64/basic.o
 
 	@$(SELFHOST_DIR)/darwin-arm64/basic; rc=$$?; test $$rc -eq 42
@@ -737,7 +670,6 @@ $(NATIVE_BOOTSTRAP_STAMP): $(NATIVE_BOOTSTRAP_INPUTS)
 	@mkdir -p "$(NATIVE_BOOTSTRAP_DIR)"
 
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./src/cmd/dist/native-bootstrap.sh \
-
 	  "$(NATIVE_BOOTSTRAP_DIR)"
 
 	@touch "$@"
@@ -749,7 +681,6 @@ $(NATIVE_BOOTSTRAP_STAMP): $(NATIVE_BOOTSTRAP_INPUTS)
 direct-bootstrap:
 
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./src/cmd/dist/direct-bootstrap.sh \
-
 	  $(SELFHOST_DIR)/direct
 
 
@@ -798,51 +729,34 @@ native-codegen-check: seed-compiler-bin
 	@mkdir -p $(SELFHOST_DIR)/native-codegen
 
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s \
-
 	  $(SELFHOST_DIR)/native-codegen/compiler.ir
 
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
-
 	  $(SELFHOST_DIR)/native-codegen/compiler.ir \
-
 	  $(SELFHOST_DIR)/native-codegen/compiler
 
 	@./misc/scripts/verify_true_selfhost.sh \
-
 	  $(SELFHOST_DIR)/native-codegen/compiler
 
 	@for case_name in expr locals control call loop array logical multicall; do \
-
 	  source_file=test/selfhost/bootstrap_native_$$case_name.s; \
-
 	  output_file=$(SELFHOST_DIR)/native-codegen/$$case_name; \
-
 	  $(SELFHOST_DIR)/native-codegen/compiler --emit-native \
-
 	    $$source_file $$output_file || exit 1; \
-
 	  ./misc/scripts/verify_true_selfhost.sh $$output_file || exit 1; \
-
 	  set +e; timeout 5s $$output_file >/dev/null; status=$$?; set -e; \
-
 	  test $$status -eq 42 || exit 1; \
-
 	done
 
 	@$(SELFHOST_DIR)/native-codegen/compiler --emit-native \
-
 	  test/selfhost/bootstrap_native_string.s \
-
 	  $(SELFHOST_DIR)/native-codegen/string
 
 	@./misc/scripts/verify_true_selfhost.sh \
-
 	  $(SELFHOST_DIR)/native-codegen/string
 
 	@set +e; timeout 5s $(SELFHOST_DIR)/native-codegen/string \
-
 	  >$(SELFHOST_DIR)/native-codegen/string.out; status=$$?; set -e; \
-
 	  test $$status -eq 42
 
 	@test "$$(cat $(SELFHOST_DIR)/native-codegen/string.out)" = "selfhost-string"
@@ -858,13 +772,11 @@ bootstrap-slice1-check: seed-compiler-bin
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice1/compiler.ir
 
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
-
 	  $(SELFHOST_DIR)/slice1/compiler.ir $(SELFHOST_DIR)/slice1/compiler
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/compiler
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-asm test/selfhost/bootstrap_asm_string.s \
-
 	  $(SELFHOST_DIR)/slice1/asm-string.S
 
 	@as --64 -o $(SELFHOST_DIR)/slice1/asm-string.o $(SELFHOST_DIR)/slice1/asm-string.S
@@ -872,7 +784,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@as --64 -o $(SELFHOST_DIR)/slice1/asm-runtime.o src/runtime/selfhost_linux_amd64.S
 
 	@ld -static -T src/runtime/linker/nostdlib.ld -o $(SELFHOST_DIR)/slice1/asm-string \
-
 	  $(SELFHOST_DIR)/slice1/asm-runtime.o $(SELFHOST_DIR)/slice1/asm-string.o
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/asm-string
@@ -880,17 +791,14 @@ bootstrap-slice1-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice1/asm-string; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1.s \
-
 	  $(SELFHOST_DIR)/slice1/program.ir
 
 	@grep -q '^RET|42|_|_$$' $(SELFHOST_DIR)/slice1/program.ir
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-bin test/selfhost/bootstrap_slice1.s \
-
 	  $(SELFHOST_DIR)/slice1/program
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-bin test/selfhost/bootstrap_slice1.s \
-
 	  $(SELFHOST_DIR)/slice1/program.repeat
 
 	@cmp $(SELFHOST_DIR)/slice1/program $(SELFHOST_DIR)/slice1/program.repeat
@@ -900,31 +808,25 @@ bootstrap-slice1-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice1/program; status=$$?; set -e; test $$status -eq 42
 
 	@! $(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1_divzero.s \
-
 	  $(SELFHOST_DIR)/slice1/divzero.ir >/dev/null 2>&1
 
 	@! $(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1_malformed.s \
-
 	  $(SELFHOST_DIR)/slice1/malformed.ir >/dev/null 2>&1
 
 	@! $(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1_no_return.s \
-
 	  $(SELFHOST_DIR)/slice1/no-return.ir >/dev/null 2>&1
 
 	@$(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1_binding.s \
-
 	  $(SELFHOST_DIR)/slice1/binding.ir
 
 	@grep -q '^RET|42|_|_$$' $(SELFHOST_DIR)/slice1/binding.ir
 
 	@$(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1_control.s \
-
 	  $(SELFHOST_DIR)/slice1/control.ir
 
 	@grep -q '^RET|42|_|_$$' $(SELFHOST_DIR)/slice1/control.ir
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_expr.s \
-
 	  $(SELFHOST_DIR)/slice1/native-expression
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-expression
@@ -934,7 +836,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-expression | grep -q 'imul'
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_control.s \
-
 	  $(SELFHOST_DIR)/slice1/native-control
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-control
@@ -944,7 +845,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-control | grep -q 'je'
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_control_nested.s \
-
 	  $(SELFHOST_DIR)/slice1/native-control-nested
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-control-nested
@@ -952,7 +852,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice1/native-control-nested; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_locals.s \
-
 	  $(SELFHOST_DIR)/slice1/native-locals
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-locals
@@ -962,7 +861,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-locals | grep -q '(%rbp)'
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_call.s \
-
 	  $(SELFHOST_DIR)/slice1/native-call
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-call
@@ -972,7 +870,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-call | grep -q 'call.*%rax'
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_call6.s \
-
 	  $(SELFHOST_DIR)/slice1/native-call6
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-call6
@@ -982,7 +879,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-call6 | grep -q '%r9'
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_loop.s \
-
 	  $(SELFHOST_DIR)/slice1/native-loop
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-loop
@@ -992,7 +888,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-loop | grep -q 'jmp'
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_string.s \
-
 	  $(SELFHOST_DIR)/slice1/native-string
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-string
@@ -1002,7 +897,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@test "$$(cat $(SELFHOST_DIR)/slice1/native-string.out)" = "selfhost-string"
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_array.s \
-
 	  $(SELFHOST_DIR)/slice1/native-array
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-array
@@ -1010,7 +904,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice1/native-array; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_multicall.s \
-
 	  $(SELFHOST_DIR)/slice1/native-multicall
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-multicall
@@ -1020,7 +913,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-multicall | grep -c 'call.*%rax')" -ge 2
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_multicall_args.s \
-
 	  $(SELFHOST_DIR)/slice1/native-multicall-args
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-multicall-args
@@ -1030,7 +922,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-multicall-args | grep -c 'call.*%rax')" -ge 2
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_function_loop.s \
-
 	  $(SELFHOST_DIR)/slice1/native-function-loop
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-function-loop
@@ -1040,7 +931,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-function-loop | grep -q 'jmp'
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_function_control.s \
-
 	  $(SELFHOST_DIR)/slice1/native-function-control
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-function-control
@@ -1050,7 +940,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-function-control | grep -q 'je'
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_logical.s \
-
 	  $(SELFHOST_DIR)/slice1/native-logical
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-logical
@@ -1058,7 +947,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice1/native-logical; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_typed_locals.s \
-
 	  $(SELFHOST_DIR)/slice1/native-typed-locals
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-typed-locals
@@ -1066,7 +954,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice1/native-typed-locals; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_large_function.s \
-
 	  $(SELFHOST_DIR)/slice1/native-large-function
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-large-function
@@ -1074,7 +961,6 @@ bootstrap-slice1-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice1/native-large-function; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_copy.s \
-
 	  $(SELFHOST_DIR)/slice1/native-copy
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-copy
@@ -1082,23 +968,19 @@ bootstrap-slice1-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice1/native-copy; status=$$?; set -e; test $$status -eq 2
 
 	@set +e; $(SELFHOST_DIR)/slice1/native-copy $(SELFHOST_DIR)/slice1/missing-input \
-
 	  $(SELFHOST_DIR)/slice1/missing-output; status=$$?; set -e; test $$status -eq 1
 
 	@$(SELFHOST_DIR)/slice1/native-copy test/selfhost/bootstrap_native_copy_input.txt \
-
 	  $(SELFHOST_DIR)/slice1/native-copy.out
 
 	@cmp test/selfhost/bootstrap_native_copy_input.txt $(SELFHOST_DIR)/slice1/native-copy.out
 
 	@$(SELFHOST_DIR)/slice1/native-copy src/cmd/compile/selfhost/compiler.s \
-
 	  $(SELFHOST_DIR)/slice1/native-copy-large.out
 
 	@cmp src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice1/native-copy-large.out
 
 	@! $(SELFHOST_DIR)/slice1/compiler --emit-native src/cmd/compile/selfhost/compiler.s \
-
 	  $(SELFHOST_DIR)/slice1/not-yet-selfhosted >/dev/null 2>&1
 
 	@echo "Bootstrap slice 1 passed: static S compiler produced a runnable program"
@@ -1112,13 +994,11 @@ bootstrap-slice2-check: seed-compiler-bin
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice2/compiler.ir
 
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
-
 	  $(SELFHOST_DIR)/slice2/compiler.ir $(SELFHOST_DIR)/slice2/compiler
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice2/compiler
 
 	@$(SELFHOST_DIR)/slice2/compiler --emit-native test/selfhost/bootstrap_native_expr.s \
-
 	  $(SELFHOST_DIR)/slice2/native-expression
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice2/native-expression
@@ -1126,7 +1006,6 @@ bootstrap-slice2-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice2/native-expression; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice2/compiler --emit-native test/selfhost/bootstrap_native_control.s \
-
 	  $(SELFHOST_DIR)/slice2/native-control
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice2/native-control
@@ -1134,7 +1013,6 @@ bootstrap-slice2-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice2/native-control; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice2/compiler --emit-native test/selfhost/bootstrap_native_locals.s \
-
 	  $(SELFHOST_DIR)/slice2/native-locals
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice2/native-locals
@@ -1154,13 +1032,11 @@ bootstrap-slice3-check: seed-compiler-bin
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice3/compiler.ir
 
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
-
 	  $(SELFHOST_DIR)/slice3/compiler.ir $(SELFHOST_DIR)/slice3/compiler
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/compiler
 
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_call.s \
-
 	  $(SELFHOST_DIR)/slice3/native-call
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-call
@@ -1168,7 +1044,6 @@ bootstrap-slice3-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice3/native-call; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_loop.s \
-
 	  $(SELFHOST_DIR)/slice3/native-loop
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-loop
@@ -1176,7 +1051,6 @@ bootstrap-slice3-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice3/native-loop; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_string.s \
-
 	  $(SELFHOST_DIR)/slice3/native-string
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-string
@@ -1186,7 +1060,6 @@ bootstrap-slice3-check: seed-compiler-bin
 	@test "$$(cat $(SELFHOST_DIR)/slice3/native-string.out)" = "selfhost-string"
 
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_array.s \
-
 	  $(SELFHOST_DIR)/slice3/native-array
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-array
@@ -1194,7 +1067,6 @@ bootstrap-slice3-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice3/native-array; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_multicall.s \
-
 	  $(SELFHOST_DIR)/slice3/native-multicall
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-multicall
@@ -1204,7 +1076,6 @@ bootstrap-slice3-check: seed-compiler-bin
 	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice3/native-multicall | grep -c 'call.*%rax')" -ge 2
 
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_multicall_args.s \
-
 	  $(SELFHOST_DIR)/slice3/native-multicall-args
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-multicall-args
@@ -1214,7 +1085,6 @@ bootstrap-slice3-check: seed-compiler-bin
 	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice3/native-multicall-args | grep -c 'call.*%rax')" -ge 2
 
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_copy.s \
-
 	  $(SELFHOST_DIR)/slice3/native-copy
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-copy
@@ -1222,11 +1092,9 @@ bootstrap-slice3-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice3/native-copy; status=$$?; set -e; test $$status -eq 2
 
 	@set +e; $(SELFHOST_DIR)/slice3/native-copy $(SELFHOST_DIR)/slice3/missing-input \
-
 	  $(SELFHOST_DIR)/slice3/missing-output; status=$$?; set -e; test $$status -eq 1
 
 	@$(SELFHOST_DIR)/slice3/native-copy test/selfhost/bootstrap_native_copy_input.txt \
-
 	  $(SELFHOST_DIR)/slice3/native-copy.out
 
 	@cmp test/selfhost/bootstrap_native_copy_input.txt $(SELFHOST_DIR)/slice3/native-copy.out
@@ -1242,13 +1110,11 @@ bootstrap-slice4-check: seed-compiler-bin
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice4/compiler.ir
 
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
-
 	  $(SELFHOST_DIR)/slice4/compiler.ir $(SELFHOST_DIR)/slice4/compiler
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/compiler
 
 	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_function_loop.s \
-
 	  $(SELFHOST_DIR)/slice4/native-function-loop
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-function-loop
@@ -1256,7 +1122,6 @@ bootstrap-slice4-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice4/native-function-loop; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_function_control.s \
-
 	  $(SELFHOST_DIR)/slice4/native-function-control
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-function-control
@@ -1264,7 +1129,6 @@ bootstrap-slice4-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice4/native-function-control; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_logical.s \
-
 	  $(SELFHOST_DIR)/slice4/native-logical
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-logical
@@ -1272,7 +1136,6 @@ bootstrap-slice4-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice4/native-logical; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_typed_locals.s \
-
 	  $(SELFHOST_DIR)/slice4/native-typed-locals
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-typed-locals
@@ -1280,7 +1143,6 @@ bootstrap-slice4-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice4/native-typed-locals; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_large_function.s \
-
 	  $(SELFHOST_DIR)/slice4/native-large-function
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-large-function
@@ -1298,13 +1160,11 @@ bootstrap-slice5-check: seed-compiler-bin
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice5/compiler.ir
 
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
-
 	  $(SELFHOST_DIR)/slice5/compiler.ir $(SELFHOST_DIR)/slice5/compiler
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/compiler
 
 	@$(SELFHOST_DIR)/slice5/compiler --emit-native test/selfhost/bootstrap_native_multicall.s \
-
 	  $(SELFHOST_DIR)/slice5/native-multicall
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-multicall
@@ -1312,7 +1172,6 @@ bootstrap-slice5-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice5/native-multicall; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice5/compiler --emit-native test/selfhost/bootstrap_native_multicall_args.s \
-
 	  $(SELFHOST_DIR)/slice5/native-multicall-args
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-multicall-args
@@ -1324,7 +1183,6 @@ bootstrap-slice5-check: seed-compiler-bin
 	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice5/native-multicall-args | grep -c 'call.*%rax')" -ge 2
 
 	@$(SELFHOST_DIR)/slice5/compiler --emit-native test/selfhost/bootstrap_native_call6.s \
-
 	  $(SELFHOST_DIR)/slice5/native-call6
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-call6
@@ -1332,7 +1190,6 @@ bootstrap-slice5-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice5/native-call6; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice5/compiler --emit-native test/selfhost/bootstrap_native_call8.s \
-
 	  $(SELFHOST_DIR)/slice5/native-call8
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-call8
@@ -1350,7 +1207,6 @@ bootstrap-slice6-check: seed-compiler-bin
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice6/compiler.ir
 
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
-
 	  $(SELFHOST_DIR)/slice6/compiler.ir $(SELFHOST_DIR)/slice6/compiler
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice6/compiler
@@ -1358,13 +1214,11 @@ bootstrap-slice6-check: seed-compiler-bin
 	@as --64 -o $(SELFHOST_DIR)/slice6/asm-runtime.o src/runtime/selfhost_linux_amd64.S
 
 	@$(SELFHOST_DIR)/slice6/compiler --emit-asm test/selfhost/bootstrap_asm_branch_strings.s \
-
 	  $(SELFHOST_DIR)/slice6/branch-strings.S
 
 	@as --64 -o $(SELFHOST_DIR)/slice6/branch-strings.o $(SELFHOST_DIR)/slice6/branch-strings.S
 
 	@ld -static -T src/runtime/linker/nostdlib.ld -o $(SELFHOST_DIR)/slice6/branch-strings \
-
 	  $(SELFHOST_DIR)/slice6/asm-runtime.o $(SELFHOST_DIR)/slice6/branch-strings.o
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice6/branch-strings
@@ -1372,13 +1226,11 @@ bootstrap-slice6-check: seed-compiler-bin
 	@set +e; $(SELFHOST_DIR)/slice6/branch-strings; status=$$?; set -e; test $$status -eq 42
 
 	@$(SELFHOST_DIR)/slice6/compiler --emit-asm test/selfhost/bootstrap_asm_string.s \
-
 	  $(SELFHOST_DIR)/slice6/string-compare.S
 
 	@as --64 -o $(SELFHOST_DIR)/slice6/string-compare.o $(SELFHOST_DIR)/slice6/string-compare.S
 
 	@ld -static -T src/runtime/linker/nostdlib.ld -o $(SELFHOST_DIR)/slice6/string-compare \
-
 	  $(SELFHOST_DIR)/slice6/asm-runtime.o $(SELFHOST_DIR)/slice6/string-compare.o
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice6/string-compare
@@ -1408,13 +1260,9 @@ bootstrap-source-closure:
 selfhost-nostdlib:
 
 	@if [ ! -x ./bin/s_nostdlib ]; then \
-
 		echo "selfhost-nostdlib: missing ./bin/s_nostdlib" >&2; \
-
 		echo "the pure-S native compiler/linker path is not implemented yet" >&2; \
-
 		exit 1; \
-
 	fi
 
 	@./misc/scripts/verify_true_selfhost.sh ./bin/s_nostdlib
@@ -1432,9 +1280,7 @@ selfhost-runtime-check:
 	@as --64 -o $(SELFHOST_DIR)/nostdlib/runtime_probe.o test/selfhost/nostdlib_runtime_probe_amd64.S
 
 	@ld -static -T src/runtime/linker/nostdlib.ld -o $(SELFHOST_DIR)/nostdlib/runtime_probe \
-
 	  $(SELFHOST_DIR)/nostdlib/runtime.o \
-
 	  $(SELFHOST_DIR)/nostdlib/runtime_probe.o
 
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/nostdlib/runtime_probe
@@ -1633,21 +1479,13 @@ build-parallel:
 	@echo "Building seed compiler, tests, and regression tests in parallel ($(PARALLEL_JOBS) jobs)..."
 
 	@set -e; \
-
 	$(MAKE) seed-compiler-bin & seed_pid=$$!; \
-
 	$(MAKE) seed-tests & tests_pid=$$!; \
-
 	$(MAKE) seed-runtime-regression-bin & regression_pid=$$!; \
-
 	status=0; \
-
 	wait $$seed_pid || status=$$?; \
-
 	wait $$tests_pid || status=$$?; \
-
 	wait $$regression_pid || status=$$?; \
-
 	exit $$status
 
 	@echo "✓ All builds completed"
@@ -1663,11 +1501,8 @@ selfhost-full: build-parallel selfhost selfhost-check
 selfhost-bin:
 
 	@if [[ -z "$(COMPILER)" ]]; then \
-
 		echo "error: no compiler found; set COMPILER=/app/s/bin/c_arm64_YYYYMMDDHHMMSS" >&2; \
-
 		exit 1; \
-
 	fi
 
 	./scripts/selfhost_emit_bin.sh "$(COMPILER)" "$(OUT_BIN)" "$(OUT_IR)" "$(WORK_DIR)"
@@ -1695,9 +1530,7 @@ compiler: seed-compiler-bin
 
 
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$$(uname -s | tr '[:upper:]' '[:lower:]') \
-
 	  S_TARGET_ARCH=$$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/') \
-
 	  ./bin/s_seed --emit-bin .bootstrap/compiler/compiler.ir ./bin/s_compiler
 
 	@cp misc/scripts/s-driver.sh ./bin/s
