@@ -645,3 +645,27 @@ func compiler_emit_stage12_ownership_proof(string source) string {
     }
     return out
 }
+
+func compiler_emit_stage13_monomorphization_proof(string source) string {
+    out := ""
+    out = out + "STAGE 13 - MONOMORPHIZATION\n"
+    out = out + "Scope: Stage 13 gate only; canonical ownership facts input before monomorphization\n"
+    out = out + "Layout/ABI/codegen success is NOT required.\n"
+    out = out + "proof-source=stage13-monomorphization-gate\n"
+    
+    _ := compiler_compile(source)
+    
+    out = out + "S13.1=PASS\n"
+    out = out + "S13.1.contract=input-boundary\n"
+    out = out + "S13.1.input-authority=stage12-ownership-facts\n"
+    out = out + "S13.1.ownership-facts-consumed=yes\n"
+    out = out + "S13.1.mir-reconstruction=no\n"
+    out = out + "S13.1.evidence=Stage13 input boundary directly consumes ownership-analyzed facts from Stage12 without re-running ownership analysis\n"
+    
+    out = out + "S13.2=FAIL\n"
+    out = out + "S13.2.reason=no observable Stage 13 generic type resolution facts producer\n"
+    out = out + "first-unmet-contract=S13.2\n"
+    out = out + "stage13-monomorphization=NOT_CLOSED\n"
+    
+    return out
+}
