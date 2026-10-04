@@ -30,8 +30,8 @@ grep -qx "canonical-source-hash=$expected" "$tmp/binding" || invalid UNEXPECTED_
 test -f "$spec" || invalid MISSING_AUDIT_DOCUMENT
 
 evidence=(
-    src/s/parser.s
-    src/cmd/compile/pipeline/modular_build_main.s
+    src/cmd/compile/frontend/parser/parser.s
+    src/cmd/compile/pipeline/main.s
     src/cmd/compile/frontend/semantic.s
     src/cmd/compile/middlend/ir/lower.s
     src/cmd/compile/middlend/mir_model/mir.s

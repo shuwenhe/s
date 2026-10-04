@@ -28,7 +28,7 @@ set -e
 
 # Configuration
 SOURCE_ROOT="${1:-.}"
-COMPILER="${SOURCE_ROOT}/bin/s_compiler"
+COMPILER="${SOURCE_ROOT}/bin/s_modular"
 TEMP_DIR="/tmp/parser-closure-check-$$"
 CLOSURE_FILE="${SOURCE_ROOT}/.parser-closure-manifest"
 
@@ -64,23 +64,25 @@ echo ""
 echo "[1/4] Identifying canonical closure..."
 
 # Find all *.s files in src/ that are part of Stage1 reachable closure
-# Priority: src/cmd/compile/pipeline/modular_build_main.s + its transitive dependencies
+# Priority: src/cmd/compile/pipeline/main.s + its transitive dependencies
 if [[ ! -f "$COMPILER" ]]; then
-    echo -e "${RED}ERROR: s_compiler not found at $COMPILER${NC}"
+    echo -e "${RED}ERROR: s_modular not found at $COMPILER${NC}"
     echo "Build the compiler first: make"
     exit 1
 fi
 
-# Get the canonical closure by analyzing modular_build_main.s
+# Get the canonical closure by analyzing main.s
 # For now, scan standard directories that are bootstrapped
 REQUIRED_FILES=(
     # Core compiler infrastructure
-    "src/cmd/compile/pipeline/modular_build_main.s"
+    "src/cmd/compile/pipeline/main.s"
     
     # Essential frontend
-    "src/cmd/compile/frontend/scanner.s"
-    "src/cmd/compile/frontend/parser.s"
-    "src/cmd/compile/frontend/ast.s"
+    "src/cmd/compile/frontend/syntax.s"
+    "src/cmd/compile/frontend/parser/parser.s"
+    "src/cmd/compile/frontend/lexer/lexer.s"
+    "src/cmd/compile/frontend/token/token.s"
+    "src/cmd/compile/frontend/ast/ast.s"
     
     # Type system
     "src/compiler/types/check.s"
