@@ -11,7 +11,7 @@ echo
 
 # Current error symptom
 echo "Current Error Symptom:"
-echo "  Location: modular_build_main.s:20"
+echo "  Location: main.s:20"
 echo "  Message:  error[5] at 20:25: type 'any' has no method 'args'"
 echo "  Code:     args := std.env.args()"
 echo

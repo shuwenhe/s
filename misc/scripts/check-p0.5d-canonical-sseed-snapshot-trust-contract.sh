@@ -48,7 +48,7 @@ canonical_snapshot_hash=NONE
 source_binding_status=MISSING
 if [ -f "$closure" ]; then
     closure_count=$(wc -l <"$closure" | tr -d ' ')
-    if [ "$closure_count" -gt 0 ] && grep -qx 'src/cmd/compile/pipeline/modular_build_main.s' "$closure"; then
+    if [ "$closure_count" -gt 0 ] && grep -qx 'src/cmd/compile/pipeline/main.s' "$closure"; then
         canonical_snapshot=FOUND
     fi
     tmp_hashes="${TMPDIR:-/tmp}/s-p05d-closure-hashes.$$"

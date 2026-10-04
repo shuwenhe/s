@@ -2808,18 +2808,18 @@ func add_std_layout_candidates(string[] candidates, string root, string tail) ()
 
 func add_s_module_candidates(string[] candidates, string root, string symbol) () {
     if symbol == "parse_source" || symbol == "parse_tokens" {
-        candidates = append(candidates, root + "/src/s/parser.s")
+        candidates = append(candidates, root + "/src/cmd/compile/frontend/parser/parser.s")
     }
     if symbol == "tokenize" || symbol == "lexer" {
-        candidates = append(candidates, root + "/src/s/lexer.s")
+        candidates = append(candidates, root + "/src/cmd/compile/frontend/lexer/lexer.s")
     }
     if symbol == "token" || symbol == "token_kind" {
-        candidates = append(candidates, root + "/src/s/tokens.s")
+        candidates = append(candidates, root + "/src/cmd/compile/frontend/token/token.s")
     }
-    candidates = append(candidates, root + "/src/s/ast.s")
-    candidates = append(candidates, root + "/src/s/parser.s")
-    candidates = append(candidates, root + "/src/s/lexer.s")
-    candidates = append(candidates, root + "/src/s/tokens.s")
+    candidates = append(candidates, root + "/src/cmd/compile/frontend/ast/ast.s")
+    candidates = append(candidates, root + "/src/cmd/compile/frontend/parser/parser.s")
+    candidates = append(candidates, root + "/src/cmd/compile/frontend/lexer/lexer.s")
+    candidates = append(candidates, root + "/src/cmd/compile/frontend/token/token.s")
 }
 
 func module_search_roots() string[] {
@@ -3662,9 +3662,9 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
                 return expr_result.unwrap_err()
             }
             env.push(binding {
-                name: value.name, value: expr_result.unwrap(),
+                name: value.name, value: expr_result.unwrap()
             })
-        },
+        }
         stmt.assign(value) : {
             expr_result := eval_expr(value.value, source, env, writes, runtime)
             if expr_result.is_err() {
@@ -3682,10 +3682,10 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
             }
             release_owned_value(env.get(index).unwrap().value, runtime, replacement_id)
             env.set(index, binding {
-                name: value.name, value: replacement,
+                name: value.name, value: replacement
             })
             ()
-        },
+        }
         stmt.increment(value) : {
             index := find_binding_index(env, value.name)
             if index < 0 {
@@ -3695,14 +3695,14 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
             switch current {
                 value.int(number) : {
                     env.set(index, binding {
-                        name: value.name, value value.int(number + 1),
+                        name: value.name, value value.int(number + 1)
                     })
                     ()
                 }
-                _ : backend_error { message: "backend error: increment expects int for " + value.name },
+                _ : backend_error { message: "backend error: increment expects int for " + value.name }
             }
-        },
-        stmt.c_for(value) : execute_c_for(value, source, env, writes, runtime),
+        }
+        stmt.c_for(value) : execute_c_for(value, source, env, writes, runtime)
         stmt.return(ret_stmt) : {
             returned := value.unit(unit_value {})
             switch ret_stmt.value {
@@ -3713,21 +3713,21 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
                     }
                     returned = expr_result.unwrap()
                 }
-                option.none : (),
+                option.none : ()
             }
             set_control(env, control_return_active, value.bool(true))
             set_control(env, control_return_value, returned)
             ()
-        },
+        }
         stmt.expr(value) : {
             expr_result := eval_expr(value.expr, source, env, writes, runtime)
             if expr_result.is_err() {
                 return expr_result.unwrap_err()
             }
             ()
-        },
-        stmt.defer(_) : (),
-        stmt.sroutine(value) : execute_sroutine_stmt(value, source, env, writes, runtime),
+        }
+        stmt.defer(_) : ()
+        stmt.sroutine(value) : execute_sroutine_stmt(value, source, env, writes, runtime)
     }
 }
 
