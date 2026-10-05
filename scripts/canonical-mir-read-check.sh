@@ -5,7 +5,7 @@ SOURCE_ROOT="${1:-${S_SOURCE_ROOT:-.}}"
 REPORT="${SOURCE_ROOT}/.bootstrap/mir-a1/canonical-mir-read-gate.txt"
 TMP_REPORT="${REPORT}.tmp.$$"
 
-MIR_FILE="${SOURCE_ROOT}/src/cmd/compile/middlend/mir_model/mir.s"
+MIR_FILE="${SOURCE_ROOT}/src/cmd/compile/middlend/mir/mir.s"
 LOWER_FILE="${SOURCE_ROOT}/src/cmd/compile/middlend/ir/lower.s"
 ENTRY_FILE="${SOURCE_ROOT}/src/cmd/compile/pipeline/main.s"
 
