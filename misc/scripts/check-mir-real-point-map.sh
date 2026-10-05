@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-mir_file="src/cmd/compile/middlend/mir_model/mir.s"
+mir_file="src/cmd/compile/middlend/mir/mir.s"
 test_file="src/cmd/compile/internal/tests/test_mir.s"
 
 grep -q "struct mir_point" "$mir_file"

@@ -1,141 +1,64 @@
 PREFIX ?= $(HOME)/.local
-
-.DEFAULT_GOAL := run
-
+.DEFAULT_GOAL := show-all-targets
 INSTALL_BIN_DIR ?= $(PREFIX)/bin
-
 INSTALL_PROGRAM ?= install
-
 SUDO ?=
-
 VERBOSE ?= 1
-
 SELFHOST_DIR ?= $(CURDIR)/.bootstrap/selfhost
-
 BOOTSTRAP_MANIFEST ?= $(SELFHOST_DIR)/manifest.txt
-
 NATIVE_BOOTSTRAP_DIR := $(SELFHOST_DIR)/native
-
 NATIVE_BOOTSTRAP_STAMP := $(NATIVE_BOOTSTRAP_DIR)/.complete
-
 MODULAR_BOOTSTRAP_DIR ?= $(CURDIR)/.bootstrap/modular
-
 MODULAR_BOOTSTRAP_BIN ?= $(MODULAR_BOOTSTRAP_DIR)/s_modular
-
 MODULAR_BOOTSTRAP_IR ?= $(MODULAR_BOOTSTRAP_DIR)/s_modular.ir
-
 MODULAR_BOOTSTRAP_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-report.txt
-
 PRODUCTION_AUTHORITY_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/production-authority-report.txt
-
 PARSER_AUTHORITY_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/parser-authority-report.txt
-
 PARSER_EXECUTION_PATH_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/parser-execution-path-report.txt
-
 MODULAR_BOOTSTRAP_COMPAT_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-compat-audit.txt
-
 MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-stage-discovery.txt
-
 MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-root-audit.txt
-
 STAGE0_BIN ?= $(MODULAR_BOOTSTRAP_DIR)/s_stage0
-
 STAGE0_CLOSURE ?= $(MODULAR_BOOTSTRAP_DIR)/canonical-closure.txt
-
 MODULAR_STAGE1_BIN ?= $(MODULAR_BOOTSTRAP_DIR)/s_modular-stage1
-
 MODULAR_STAGE2_BIN ?= $(MODULAR_BOOTSTRAP_DIR)/s_modular-stage2
-
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
-
 S_HOST_OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
-
 S_HOST_ARCH := $(shell uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
-
 S_TARGET_OS ?= $(S_HOST_OS)
-
 S_TARGET_ARCH ?= $(S_HOST_ARCH)
-
-
-
-
-
-
 RUN_COMPILER_TARGET := compiler
-
 RUN_COMPILER_BIN := ./bin/s
-
-
-
 target-info: seed-compiler-bin
-
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./misc/scripts/target-info.sh
-
 	@S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./bin/s_seed --target-info
-
-
-
 target-config-check: seed-compiler-bin
-
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=linux S_TARGET_ARCH=amd64 ./misc/scripts/target-info.sh | grep -q '^standalone_backend=linux/amd64 ELF$$'
-
 	@S_TARGET_OS=linux S_TARGET_ARCH=amd64 ./bin/s_seed --target-info | grep -q '^standalone backend: available$$'
-
 	@S_TARGET_OS=darwin S_TARGET_ARCH=arm64 ./bin/s_seed --target-info | grep -q '^configured target: darwin/arm64 (macho)$$'
-
 	@S_TARGET_OS=darwin S_TARGET_ARCH=arm64 ./bin/s_seed --target-info | grep -q '^standalone backend: available$$'
-
 	@! S_TARGET_OS=plan9 S_TARGET_ARCH=amd64 ./bin/s_seed --target-info >/dev/null 2>&1
-
 	@echo "Target configuration checks passed"
-
-
-
-
 run: $(RUN_COMPILER_TARGET)
-
 	@mkdir -p "$(INSTALL_BIN_DIR)"
-
 	@$(if $(filter 1,$(VERBOSE)),echo "Installing no-GC S compiler driver for $$(uname -m)...";)
-
 	@$(if $(filter 1,$(VERBOSE)),echo "Installing wrapper for $(RUN_COMPILER_BIN) to $(INSTALL_BIN_DIR)/s...";)
-
 	@set -e; tmp="$$(mktemp "$${TMPDIR:-/tmp}/s-install.XXXXXX")"; \
 	  printf '%s\n' '#!/bin/sh' 'export S_MODULAR_COMPILER=/nonexistent/s_modular' 'exec "$(CURDIR)/bin/s" "$$@"' > "$$tmp"; \
 	  chmod 0755 "$$tmp"; \
 	  $(SUDO) $(INSTALL_PROGRAM) -m 0755 "$$tmp" "$(INSTALL_BIN_DIR)/s"; \
 	  rm -f "$$tmp"
-
 	@$(if $(filter 1,$(VERBOSE)),echo "No-GC S compiler installed successfully.";)
-
-
-
 build-x86_64: bin/s
-
 	@echo "✓ S compiler ready for x86_64 (bootstrap: bin/s)"
-
-
-
 build-arm64: bin/s
-
 	@echo "✓ S compiler ready for ARM64 (bootstrap: bin/s)"
-
-
-
 bin/s:
-
 	@echo "error: bin/s not found. Please run: git clone --depth 1 https://github.com/shuwenhe/s.git"
-
 	@exit 1
-
-
-
 seed-tests:
-
 	@echo "Building seed runtime/parser tests..."
-
 	@mkdir -p ./bin
-
 	@gcc -std=c11 -Wall -Wextra -Werror -DSEED_COMPILE_ONLY \
 	  -o ./bin/seed_tests \
 	  src/cmd/compile/seed/testing/tests.c \
@@ -153,27 +76,14 @@ seed-tests:
 	  src/cmd/compile/seed/code/standalone_amd64_backend.c \
 	  src/cmd/compile/seed/runtime/network_windows.c \
 	  src/cmd/compile/seed/runtime/runtime.c
-
 	@./bin/seed_tests
-
-
-
 seed-enum-check: seed-compiler-bin
-
 	@./bin/s_seed test/selfhost/bootstrap_enum_seed.s /tmp/s_enum_seed.ir
-
 	@rg -q '^RET\\|42\\|' /tmp/s_enum_seed.ir
-
 	@echo "seed enum lowering passed"
-
-
-
 seed-runtime-regression-bin:
-
 	@echo "Building seed runtime regression tests..."
-
 	@mkdir -p ./bin
-
 	@gcc -std=c11 -Wall -Wextra -Werror -pthread -DSEED_COMPILE_ONLY \
 	  -o ./bin/seed_runtime_regression \
 	  src/cmd/compile/seed/testing/runtime_regression.c \
@@ -191,115 +101,57 @@ seed-runtime-regression-bin:
 	  src/cmd/compile/seed/code/standalone_amd64_backend.c \
 	  src/cmd/compile/seed/runtime/network_windows.c \
 	  src/cmd/compile/seed/runtime/runtime.c
-
-
-
 seed-runtime-regression: seed-runtime-regression-bin
-
 	@./bin/seed_runtime_regression
-
-
-
 .PHONY: seed-aot-test
-
 seed-aot-test: seed-compiler-bin
-
 	@mkdir -p /tmp/s_seed_aot_test
-
 	@./bin/s_seed test/aot/basic.s /tmp/s_seed_aot_test/basic.ir
-
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=linux S_TARGET_ARCH=amd64 \
 	  ./bin/s_seed --emit-aot /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/basic
-
 	@set +e; /tmp/s_seed_aot_test/basic; status=$$?; set -e; test $$status -eq 42
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-aot-asm \
 	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/basic.S
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-aot-obj \
 	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/basic.o
-
 	@file /tmp/s_seed_aot_test/basic | grep -q 'ELF 64-bit.*executable'
-
 	@file /tmp/s_seed_aot_test/basic.o | grep -q 'ELF 64-bit.*relocatable'
-
 	@! grep -a -q 'SSEED-TARGET-V1' /tmp/s_seed_aot_test/basic
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-bin \
 	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/embedded
-
 	@S_SOURCE_ROOT=$(CURDIR) /tmp/s_seed_aot_test/embedded --emit-aot \
 	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/from_embedded
-
 	@set +e; /tmp/s_seed_aot_test/from_embedded; status=$$?; set -e; test $$status -eq 42
-
 	@! S_TARGET_OS=darwin S_TARGET_ARCH=arm64 ./bin/s_seed --emit-aot \
 	  /tmp/s_seed_aot_test/basic.ir /tmp/s_seed_aot_test/unsupported 2>/dev/null
-
 	@echo "Seed AOT compilation test passed"
-
-
-
 seed-network-tests: seed-runtime-regression-bin
-
 	@./bin/seed_runtime_regression --network-only
-
-
-
 sroutine-check: selfhost
-
 	@mkdir -p /tmp/s_sroutine_check
-
 	@./bin/s src/runtime/sroutine_abi.s /tmp/s_sroutine_check/sroutine_abi.ir
-
 	@test -s /tmp/s_sroutine_check/sroutine_abi.ir
-
 	@./bin/s src/net/sroutine_demo.s /tmp/s_sroutine_check/sroutine_demo.ir
-
 	@test -s /tmp/s_sroutine_check/sroutine_demo.ir
-
 	@./bin/s --emit-bin /tmp/s_sroutine_check/sroutine_demo.ir /tmp/s_sroutine_check/sroutine_demo
-
 	@/tmp/s_sroutine_check/sroutine_demo
-
 	@./bin/s test/runtime/sroutine_abi_test.s /tmp/s_sroutine_check/sroutine_abi_test.ir
-
 	@test -s /tmp/s_sroutine_check/sroutine_abi_test.ir
-
 	@./bin/s --emit-bin /tmp/s_sroutine_check/sroutine_abi_test.ir /tmp/s_sroutine_check/sroutine_abi_test
-
 	@/tmp/s_sroutine_check/sroutine_abi_test
-
 	@./bin/s test/runtime/sroutine_deadlock_test.s /tmp/s_sroutine_check/sroutine_deadlock_test.ir
-
 	@test -s /tmp/s_sroutine_check/sroutine_deadlock_test.ir
-
 	@./bin/s --emit-bin /tmp/s_sroutine_check/sroutine_deadlock_test.ir /tmp/s_sroutine_check/sroutine_deadlock_test
-
 	@if /tmp/s_sroutine_check/sroutine_deadlock_test >/tmp/s_sroutine_check/deadlock.out 2>&1; then \
 		echo "expected sroutine deadlock detection"; exit 1; \
 	else \
 		rg -q "channel deadlock" /tmp/s_sroutine_check/deadlock.out; \
 	fi
-
-
-
-
-
 SEED_COMPILER_SOURCES := $(wildcard src/cmd/compile/seed/*.c src/cmd/compile/seed/*/*.c src/cmd/compile/seed/*/*/*.c src/cmd/compile/seed/*/*/*/*.c src/cmd/compile/seed/*/*.h src/cmd/compile/seed/*/*/*.h)
-
-
-
 seed-compiler-bin: bin/s_seed
-
-
-
 bin/s_seed: $(SEED_COMPILER_SOURCES)
-
 	@mkdir -p ./bin
-
 	@echo "Building seed compiler..."
-
 	@set -e; tmp="$$(mktemp ./bin/s_seed.XXXXXX)"; trap 'rm -f "$$tmp"' EXIT HUP INT TERM; \
 	  gcc -std=c11 -Wall -Wextra -Werror \
 	  -o "$$tmp" \
@@ -319,425 +171,198 @@ bin/s_seed: $(SEED_COMPILER_SOURCES)
 	  src/cmd/compile/seed/runtime/runtime.c; \
 	  mv "$$tmp" ./bin/s_seed; \
 	  trap - EXIT HUP INT TERM
-
-
-
 seed-c-abi-test: seed-compiler-bin
-
 	@mkdir -p /tmp/s_seed_c_abi_test
-
 	@./bin/s_seed test/c_abi/add.s /tmp/s_seed_c_abi_test/add.ir
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-shared /tmp/s_seed_c_abi_test/add.ir /tmp/s_seed_c_abi_test/libs_add.$$(if [ "$$(uname -s)" = Darwin ]; then echo dylib; else echo so; fi)
-
 	@gcc -std=c11 -Wall -Wextra -Werror -o /tmp/s_seed_c_abi_test/caller test/c_abi/caller.c $$(if [ "$$(uname -s)" = Darwin ]; then echo; else echo -ldl; fi)
-
 	@/tmp/s_seed_c_abi_test/caller /tmp/s_seed_c_abi_test/libs_add.$$(if [ "$$(uname -s)" = Darwin ]; then echo dylib; else echo so; fi)
-
-
-
 .PHONY: seed-module-link-test
-
 seed-module-link-test: seed-compiler-bin
-
 	@mkdir -p /tmp/s_seed_module_link_test
-
 	@./bin/s_seed test/modules/provider.s /tmp/s_seed_module_link_test/provider.ir
-
 	@./bin/s_seed test/modules/main.s /tmp/s_seed_module_link_test/main.ir
-
 	@./bin/s_seed --link-ir /tmp/s_seed_module_link_test/program.ir /tmp/s_seed_module_link_test/provider.ir /tmp/s_seed_module_link_test/main.ir
-
 	@! ./bin/s_seed --link-ir /tmp/s_seed_module_link_test/duplicate.ir /tmp/s_seed_module_link_test/provider.ir /tmp/s_seed_module_link_test/provider.ir >/dev/null 2>&1
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-bin /tmp/s_seed_module_link_test/program.ir /tmp/s_seed_module_link_test/program
-
 	@/tmp/s_seed_module_link_test/program
-
 	@echo "Seed multi-module IR link test passed."
-
-
-
 .PHONY: seed-frontend-lexer-check
-
 seed-frontend-lexer-check: seed-compiler-bin
-
 	@mkdir -p /tmp/s_seed_frontend_check
-
 	@./bin/s_seed src/cmd/compile/frontend/lexer/lexer.s /tmp/s_seed_frontend_check/lexer.ir
-
 	@test -s /tmp/s_seed_frontend_check/lexer.ir
-
 	@rg -q '^CALL\|.*__string_len\|' /tmp/s_seed_frontend_check/lexer.ir
-
 	@rg -q '^PARAM\|lex\|' /tmp/s_seed_frontend_check/lexer.ir
-
 	@echo "Seed frontend lexer IR check passed"
-
-
-
 .PHONY: seed-frontend-parser-check
-
 seed-frontend-parser-check: seed-compiler-bin seed-frontend-lexer-check
-
 	@./bin/s_seed src/cmd/compile/frontend/frontend_internal/parser.s /tmp/s_seed_frontend_check/parser.ir
-
 	@test -s /tmp/s_seed_frontend_check/parser.ir
-
 	@rg -q '^CALL\|.*parser_next_token\|' /tmp/s_seed_frontend_check/parser.ir
-
 	@echo "Seed frontend parser IR check passed"
-
-
-
 bootstrap-stage0: seed-compiler-bin
-
 	@echo "Bootstrap stage0 ready: ./bin/s_seed (trusted C seed)"
-
-
-
 bootstrap-capability-report: seed-compiler-bin
-
 	@mkdir -p $(SELFHOST_DIR)/capability
-
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/capability/compiler.ir
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
 	  $(SELFHOST_DIR)/capability/compiler.ir $(SELFHOST_DIR)/capability/compiler
-
 	@$(SELFHOST_DIR)/capability/compiler --report-unsupported \
 	  src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/capability/unsupported.txt
-
 	@! grep -q '|package|' $(SELFHOST_DIR)/capability/unsupported.txt
-
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_package_valid.s $(SELFHOST_DIR)/capability/package-valid
-
 	@set +e; $(SELFHOST_DIR)/capability/package-valid; status=$$?; set -e; test $$status -eq 42
-
 	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_package_invalid.s $(SELFHOST_DIR)/capability/package-invalid >/dev/null 2>&1
-
 	@! grep -q '|extern-intrinsic|' $(SELFHOST_DIR)/capability/unsupported.txt
-
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_intrinsic_valid.s $(SELFHOST_DIR)/capability/intrinsic-valid
-
 	@set +e; $(SELFHOST_DIR)/capability/intrinsic-valid; status=$$?; set -e; test $$status -eq 42
-
 	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_intrinsic_invalid.s $(SELFHOST_DIR)/capability/intrinsic-invalid >/dev/null 2>&1
-
 	@! grep -q '|bool|' $(SELFHOST_DIR)/capability/unsupported.txt
-
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_bool_cross_function.s $(SELFHOST_DIR)/capability/bool-cross-function
-
 	@set +e; $(SELFHOST_DIR)/capability/bool-cross-function; status=$$?; set -e; test $$status -eq 42
-
 	@if grep -q '|string|' $(SELFHOST_DIR)/capability/unsupported.txt; then \
 	  echo "string capability is still reported unsupported" >&2; exit 1; \
 	fi
-
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_string_abi_length.s $(SELFHOST_DIR)/capability/string-abi-length
-
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_string_abi_local.s $(SELFHOST_DIR)/capability/string-abi-local
-
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_string_abi_branch.s $(SELFHOST_DIR)/capability/string-abi-branch
-
 	@set +e; $(SELFHOST_DIR)/capability/string-abi-length; status=$$?; set -e; test $$status -eq 42
-
 	@set +e; $(SELFHOST_DIR)/capability/string-abi-local; status=$$?; set -e; test $$status -eq 42
-
 	@set +e; $(SELFHOST_DIR)/capability/string-abi-branch; status=$$?; set -e; test $$status -eq 42
-
 	@if grep -q '|multiple-functions|' $(SELFHOST_DIR)/capability/unsupported.txt; then \
 	  echo "whole-program capability is still reported unsupported" >&2; exit 1; \
 	fi
-
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_whole_program.s $(SELFHOST_DIR)/capability/whole-program
-
 	@set +e; $(SELFHOST_DIR)/capability/whole-program; status=$$?; set -e; test $$status -eq 42
-
 	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_duplicate_function.s $(SELFHOST_DIR)/capability/duplicate-function >/dev/null 2>&1
-
 	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_invalid_signature.s $(SELFHOST_DIR)/capability/invalid-signature >/dev/null 2>&1
-
 	@! $(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_unknown_function.s $(SELFHOST_DIR)/capability/unknown-function >/dev/null 2>&1
-
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_intrinsic_string_arg.s $(SELFHOST_DIR)/capability/intrinsic-string-arg
-
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_intrinsic_string_return.s $(SELFHOST_DIR)/capability/intrinsic-string-return
-
 	@$(SELFHOST_DIR)/capability/compiler --emit-native \
 	  test/selfhost/bootstrap_intrinsic_scalar_return.s $(SELFHOST_DIR)/capability/intrinsic-scalar-return
-
 	@set +e; $(SELFHOST_DIR)/capability/intrinsic-string-arg; status=$$?; set -e; test $$status -eq 42
-
 	@set +e; $(SELFHOST_DIR)/capability/intrinsic-string-return; status=$$?; set -e; test $$status -eq 42
-
 	@set +e; $(SELFHOST_DIR)/capability/intrinsic-scalar-return; status=$$?; set -e; test $$status -eq 42
-
 	@grep -q '^semantic|.*|for-loop|' $(SELFHOST_DIR)/capability/unsupported.txt
-
 	@grep -q '^codegen|.*|stack-arguments|' $(SELFHOST_DIR)/capability/unsupported.txt
-
 	@echo "Bootstrap capability report: $(SELFHOST_DIR)/capability/unsupported.txt"
-
-
-
 bootstrap-convergence: bootstrap-stage0
-
 	@mkdir -p $(SELFHOST_DIR) ./bin
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --bootstrap src/cmd/compile/pipeline/main.s $(SELFHOST_DIR)
-
 	@./src/cmd/dist/checks/write-manifest.sh "$(SELFHOST_DIR)" "$(BOOTSTRAP_MANIFEST)"
-
 	@echo "Bootstrap convergence passed: stage2.ir == stage3.ir"
-
-
-
 bootstrap-pure-s: bootstrap-stage0
-
 	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/native-bootstrap.sh \
 	  $(SELFHOST_DIR)
-
-
-
-
-
 selfhost: native-bootstrap
-
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/native/stage2 ./bin/s
-
 	@echo "Installed S self-hosted compiler: ./bin/s"
-
 	@echo "Verified bootstrap chain: seed -> stage1 -> stage2 -> stage3"
-
-
-
 seed-hosted-selfhost: bootstrap-convergence
-
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/stage2 ./bin/s
-
 	@echo "Installed seed-hosted S compiler: ./bin/s"
-
 	@echo "Note: this artifact is not yet a true native self-hosted compiler"
-
-
-
-
-
-
-
 darwin-arm64-hosted-compiler: seed-compiler-bin
-
 	@mkdir -p $(SELFHOST_DIR)/darwin-arm64 ./bin
-
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/darwin-arm64/compiler.ir
-
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=darwin S_TARGET_ARCH=arm64 \
 	  ./bin/s_seed --emit-aot $(SELFHOST_DIR)/darwin-arm64/compiler.ir ./bin/s_darwin_arm64
-
 	@file ./bin/s_darwin_arm64 | grep -q 'Mach-O 64-bit executable arm64'
-
 	@echo "Installed Darwin/arm64 hosted S compiler: ./bin/s_darwin_arm64"
-
-
-
-
-
 darwin-arm64-slice-check: darwin-arm64-hosted-compiler
-
 	@mkdir -p $(SELFHOST_DIR)/darwin-arm64
-
 	@./bin/s_darwin_arm64 --emit-asm-darwin-arm64 test/aot/basic.s $(SELFHOST_DIR)/darwin-arm64/basic.s
-
 	@clang -arch arm64 -mmacosx-version-min=14.0 -c -o $(SELFHOST_DIR)/darwin-arm64/basic.o $(SELFHOST_DIR)/darwin-arm64/basic.s
-
 	@ld -arch arm64 -e _start -platform_version macos 14.0 14.0 \
 	  -syslibroot "$$(xcrun --show-sdk-path)" -lSystem \
 	  -o $(SELFHOST_DIR)/darwin-arm64/basic $(SELFHOST_DIR)/darwin-arm64/basic.o
-
 	@$(SELFHOST_DIR)/darwin-arm64/basic; rc=$$?; test $$rc -eq 42
-
 	@file $(SELFHOST_DIR)/darwin-arm64/basic | grep -q 'Mach-O 64-bit executable arm64'
-
 	@echo "Darwin/arm64 direct S backend slice passed"
-
-
-
 native-selfhost: selfhost
-
-
-
 selfhost-lexer-check: seed-compiler-bin
-
 	@mkdir -p $(SELFHOST_DIR) ./bin
-
 	@./bin/s_seed src/cmd/compile/selfhost/lexer.s $(SELFHOST_DIR)/lexer.ir
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 $(SELFHOST_DIR)/lexer.ir $(SELFHOST_DIR)/s_lexer
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/s_lexer
-
 	@./bin/s_seed --dump-tokens test/selfhost/lexer_fixture.s $(SELFHOST_DIR)/tokens.seed
-
 	@$(SELFHOST_DIR)/s_lexer test/selfhost/lexer_fixture.s $(SELFHOST_DIR)/tokens.s
-
 	@cmp $(SELFHOST_DIR)/tokens.seed $(SELFHOST_DIR)/tokens.s
-
 	@./bin/s_seed --dump-tokens test/selfhost/lexer_unterminated_string.s $(SELFHOST_DIR)/unterminated-string.seed
-
 	@$(SELFHOST_DIR)/s_lexer test/selfhost/lexer_unterminated_string.s $(SELFHOST_DIR)/unterminated-string.s
-
 	@cmp $(SELFHOST_DIR)/unterminated-string.seed $(SELFHOST_DIR)/unterminated-string.s
-
 	@./bin/s_seed --dump-tokens test/selfhost/lexer_unterminated_comment.s $(SELFHOST_DIR)/unterminated-comment.seed
-
 	@$(SELFHOST_DIR)/s_lexer test/selfhost/lexer_unterminated_comment.s $(SELFHOST_DIR)/unterminated-comment.s
-
 	@cmp $(SELFHOST_DIR)/unterminated-comment.seed $(SELFHOST_DIR)/unterminated-comment.s
-
 	@./bin/s_seed --dump-tokens test/selfhost/lexer_illegal_char.s $(SELFHOST_DIR)/illegal-char.seed
-
 	@$(SELFHOST_DIR)/s_lexer test/selfhost/lexer_illegal_char.s $(SELFHOST_DIR)/illegal-char.s
-
 	@cmp $(SELFHOST_DIR)/illegal-char.seed $(SELFHOST_DIR)/illegal-char.s
-
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/s_lexer ./bin/s_lexer
-
 	@echo "Standalone S lexer check passed: S token stream == seed token stream"
-
-
-
 selfhost-check: selfhost selfhost-lexer-check
-
 	@./bin/s test/c_abi/add.s $(SELFHOST_DIR)/final-check.ir
-
 	@S_LEXER_MODE=selfhost S_SELFHOST_LEXER=$(SELFHOST_DIR)/s_lexer ./bin/s test/c_abi/add.s $(SELFHOST_DIR)/s-lexer-parser.ir
-
 	@cmp $(SELFHOST_DIR)/final-check.ir $(SELFHOST_DIR)/s-lexer-parser.ir
-
 	@cmp $(SELFHOST_DIR)/native/stage2.S $(SELFHOST_DIR)/native/stage3.S
-
 	@echo "Native bootstrap check passed: stage2 == stage3 and S Lexer -> Parser IR matches seed"
-
-
-
 true-selfhost-check: selfhost-check
-
 	@./misc/scripts/verify_true_selfhost.sh ./bin/s
-
 	@echo "True self-host check passed: ./bin/s does not link the C seed compiler"
-
-
-
 bootstrap-audit: selfhost
-
 	@./src/cmd/dist/checks/audit.sh "$(SELFHOST_DIR)/native" ./bin/s
-
-
-
-
-
-
 NATIVE_BOOTSTRAP_INPUTS := \
   $(SEED_COMPILER_SOURCES) \
   src/cmd/compile/selfhost/compiler.s \
   src/cmd/dist/native-bootstrap.sh \
   src/runtime/selfhost_linux_amd64.S \
   src/runtime/linker/nostdlib.ld
-
-
-
 native-bootstrap: seed-compiler-bin $(NATIVE_BOOTSTRAP_STAMP)
-
-
-
 $(NATIVE_BOOTSTRAP_STAMP): $(NATIVE_BOOTSTRAP_INPUTS)
-
 	@mkdir -p "$(NATIVE_BOOTSTRAP_DIR)"
-
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./src/cmd/dist/native-bootstrap.sh \
 	  "$(NATIVE_BOOTSTRAP_DIR)"
-
 	@touch "$@"
-
-
-
-
-
 direct-bootstrap:
-
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./src/cmd/dist/direct-bootstrap.sh \
 	  $(SELFHOST_DIR)/direct
-
-
-
-
-
-
-
 selfhost_strict: direct-bootstrap
-
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/direct/stage2 ./bin/s
-
 	@echo "Installed strict native self-hosted S compiler: ./bin/s"
-
 	@./misc/scripts/verify_true_selfhost.sh ./bin/s
-
 	@echo "Strict self-host check passed: ./bin/s does not link the C seed compiler"
-
-
-
 native-bootstrap-install: native-bootstrap
-
 	@$(MAKE) native-selfhost
-
-
-
 bootstrap-subset-check: seed-compiler-bin
-
 	@mkdir -p $(SELFHOST_DIR)/subset
-
 	@./bin/s_seed test/selfhost/subset_valid.s $(SELFHOST_DIR)/subset/valid.ir
-
 	@! ./bin/s_seed test/selfhost/subset_invalid_let.s $(SELFHOST_DIR)/subset/invalid-let.ir >/dev/null 2>&1
-
 	@! ./bin/s_seed test/selfhost/subset_invalid_var.s $(SELFHOST_DIR)/subset/invalid-var.ir >/dev/null 2>&1
-
 	@echo "Bootstrap declaration subset check passed"
-
-
-
-
-
-
 native-codegen-check: seed-compiler-bin
-
 	@mkdir -p $(SELFHOST_DIR)/native-codegen
-
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s \
 	  $(SELFHOST_DIR)/native-codegen/compiler.ir
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
 	  $(SELFHOST_DIR)/native-codegen/compiler.ir \
 	  $(SELFHOST_DIR)/native-codegen/compiler
-
 	@./misc/scripts/verify_true_selfhost.sh \
 	  $(SELFHOST_DIR)/native-codegen/compiler
-
 	@for case_name in expr locals control call loop array logical multicall; do \
 	  source_file=test/selfhost/bootstrap_native_$$case_name.s; \
 	  output_file=$(SELFHOST_DIR)/native-codegen/$$case_name; \
@@ -747,737 +372,402 @@ native-codegen-check: seed-compiler-bin
 	  set +e; timeout 5s $$output_file >/dev/null; status=$$?; set -e; \
 	  test $$status -eq 42 || exit 1; \
 	done
-
 	@$(SELFHOST_DIR)/native-codegen/compiler --emit-native \
 	  test/selfhost/bootstrap_native_string.s \
 	  $(SELFHOST_DIR)/native-codegen/string
-
 	@./misc/scripts/verify_true_selfhost.sh \
 	  $(SELFHOST_DIR)/native-codegen/string
-
 	@set +e; timeout 5s $(SELFHOST_DIR)/native-codegen/string \
 	  >$(SELFHOST_DIR)/native-codegen/string.out; status=$$?; set -e; \
 	  test $$status -eq 42
-
 	@test "$$(cat $(SELFHOST_DIR)/native-codegen/string.out)" = "selfhost-string"
-
 	@echo "Native codegen gate passed: S emitted runnable ELF files directly"
-
-
-
 bootstrap-slice1-check: seed-compiler-bin
-
 	@mkdir -p $(SELFHOST_DIR)/slice1
-
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice1/compiler.ir
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
 	  $(SELFHOST_DIR)/slice1/compiler.ir $(SELFHOST_DIR)/slice1/compiler
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/compiler
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-asm test/selfhost/bootstrap_asm_string.s \
 	  $(SELFHOST_DIR)/slice1/asm-string.S
-
 	@as --64 -o $(SELFHOST_DIR)/slice1/asm-string.o $(SELFHOST_DIR)/slice1/asm-string.S
-
 	@as --64 -o $(SELFHOST_DIR)/slice1/asm-runtime.o src/runtime/selfhost_linux_amd64.S
-
 	@ld -static -T src/runtime/linker/nostdlib.ld -o $(SELFHOST_DIR)/slice1/asm-string \
 	  $(SELFHOST_DIR)/slice1/asm-runtime.o $(SELFHOST_DIR)/slice1/asm-string.o
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/asm-string
-
 	@set +e; $(SELFHOST_DIR)/slice1/asm-string; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1.s \
 	  $(SELFHOST_DIR)/slice1/program.ir
-
 	@grep -q '^RET|42|_|_$$' $(SELFHOST_DIR)/slice1/program.ir
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-bin test/selfhost/bootstrap_slice1.s \
 	  $(SELFHOST_DIR)/slice1/program
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-bin test/selfhost/bootstrap_slice1.s \
 	  $(SELFHOST_DIR)/slice1/program.repeat
-
 	@cmp $(SELFHOST_DIR)/slice1/program $(SELFHOST_DIR)/slice1/program.repeat
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/program
-
 	@set +e; $(SELFHOST_DIR)/slice1/program; status=$$?; set -e; test $$status -eq 42
-
 	@! $(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1_divzero.s \
 	  $(SELFHOST_DIR)/slice1/divzero.ir >/dev/null 2>&1
-
 	@! $(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1_malformed.s \
 	  $(SELFHOST_DIR)/slice1/malformed.ir >/dev/null 2>&1
-
 	@! $(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1_no_return.s \
 	  $(SELFHOST_DIR)/slice1/no-return.ir >/dev/null 2>&1
-
 	@$(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1_binding.s \
 	  $(SELFHOST_DIR)/slice1/binding.ir
-
 	@grep -q '^RET|42|_|_$$' $(SELFHOST_DIR)/slice1/binding.ir
-
 	@$(SELFHOST_DIR)/slice1/compiler test/selfhost/bootstrap_slice1_control.s \
 	  $(SELFHOST_DIR)/slice1/control.ir
-
 	@grep -q '^RET|42|_|_$$' $(SELFHOST_DIR)/slice1/control.ir
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_expr.s \
 	  $(SELFHOST_DIR)/slice1/native-expression
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-expression
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-expression; status=$$?; set -e; test $$status -eq 42
-
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-expression | grep -q 'imul'
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_control.s \
 	  $(SELFHOST_DIR)/slice1/native-control
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-control
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-control; status=$$?; set -e; test $$status -eq 42
-
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-control | grep -q 'je'
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_control_nested.s \
 	  $(SELFHOST_DIR)/slice1/native-control-nested
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-control-nested
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-control-nested; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_locals.s \
 	  $(SELFHOST_DIR)/slice1/native-locals
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-locals
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-locals; status=$$?; set -e; test $$status -eq 42
-
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-locals | grep -q '(%rbp)'
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_call.s \
 	  $(SELFHOST_DIR)/slice1/native-call
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-call
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-call; status=$$?; set -e; test $$status -eq 42
-
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-call | grep -q 'call.*%rax'
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_call6.s \
 	  $(SELFHOST_DIR)/slice1/native-call6
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-call6
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-call6; status=$$?; set -e; test $$status -eq 42
-
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-call6 | grep -q '%r9'
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_loop.s \
 	  $(SELFHOST_DIR)/slice1/native-loop
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-loop
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-loop; status=$$?; set -e; test $$status -eq 42
-
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-loop | grep -q 'jmp'
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_string.s \
 	  $(SELFHOST_DIR)/slice1/native-string
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-string
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-string >$(SELFHOST_DIR)/slice1/native-string.out; status=$$?; set -e; test $$status -eq 42
-
 	@test "$$(cat $(SELFHOST_DIR)/slice1/native-string.out)" = "selfhost-string"
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_array.s \
 	  $(SELFHOST_DIR)/slice1/native-array
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-array
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-array; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_multicall.s \
 	  $(SELFHOST_DIR)/slice1/native-multicall
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-multicall
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-multicall; status=$$?; set -e; test $$status -eq 42
-
 	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-multicall | grep -c 'call.*%rax')" -ge 2
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_multicall_args.s \
 	  $(SELFHOST_DIR)/slice1/native-multicall-args
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-multicall-args
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-multicall-args; status=$$?; set -e; test $$status -eq 42
-
 	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-multicall-args | grep -c 'call.*%rax')" -ge 2
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_function_loop.s \
 	  $(SELFHOST_DIR)/slice1/native-function-loop
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-function-loop
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-function-loop; status=$$?; set -e; test $$status -eq 42
-
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-function-loop | grep -q 'jmp'
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_function_control.s \
 	  $(SELFHOST_DIR)/slice1/native-function-control
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-function-control
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-function-control; status=$$?; set -e; test $$status -eq 42
-
 	@objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice1/native-function-control | grep -q 'je'
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_logical.s \
 	  $(SELFHOST_DIR)/slice1/native-logical
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-logical
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-logical; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_typed_locals.s \
 	  $(SELFHOST_DIR)/slice1/native-typed-locals
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-typed-locals
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-typed-locals; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_large_function.s \
 	  $(SELFHOST_DIR)/slice1/native-large-function
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-large-function
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-large-function; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice1/compiler --emit-native test/selfhost/bootstrap_native_copy.s \
 	  $(SELFHOST_DIR)/slice1/native-copy
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice1/native-copy
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-copy; status=$$?; set -e; test $$status -eq 2
-
 	@set +e; $(SELFHOST_DIR)/slice1/native-copy $(SELFHOST_DIR)/slice1/missing-input \
 	  $(SELFHOST_DIR)/slice1/missing-output; status=$$?; set -e; test $$status -eq 1
-
 	@$(SELFHOST_DIR)/slice1/native-copy test/selfhost/bootstrap_native_copy_input.txt \
 	  $(SELFHOST_DIR)/slice1/native-copy.out
-
 	@cmp test/selfhost/bootstrap_native_copy_input.txt $(SELFHOST_DIR)/slice1/native-copy.out
-
 	@$(SELFHOST_DIR)/slice1/native-copy src/cmd/compile/selfhost/compiler.s \
 	  $(SELFHOST_DIR)/slice1/native-copy-large.out
-
 	@cmp src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice1/native-copy-large.out
-
 	@! $(SELFHOST_DIR)/slice1/compiler --emit-native src/cmd/compile/selfhost/compiler.s \
 	  $(SELFHOST_DIR)/slice1/not-yet-selfhosted >/dev/null 2>&1
-
 	@echo "Bootstrap slice 1 passed: static S compiler produced a runnable program"
-
-
-
 bootstrap-slice2-check: seed-compiler-bin
-
 	@mkdir -p $(SELFHOST_DIR)/slice2
-
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice2/compiler.ir
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
 	  $(SELFHOST_DIR)/slice2/compiler.ir $(SELFHOST_DIR)/slice2/compiler
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice2/compiler
-
 	@$(SELFHOST_DIR)/slice2/compiler --emit-native test/selfhost/bootstrap_native_expr.s \
 	  $(SELFHOST_DIR)/slice2/native-expression
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice2/native-expression
-
 	@set +e; $(SELFHOST_DIR)/slice2/native-expression; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice2/compiler --emit-native test/selfhost/bootstrap_native_control.s \
 	  $(SELFHOST_DIR)/slice2/native-control
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice2/native-control
-
 	@set +e; $(SELFHOST_DIR)/slice2/native-control; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice2/compiler --emit-native test/selfhost/bootstrap_native_locals.s \
 	  $(SELFHOST_DIR)/slice2/native-locals
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice2/native-locals
-
 	@set +e; $(SELFHOST_DIR)/slice2/native-locals; status=$$?; set -e; test $$status -eq 42
-
 	@sh ./src/cmd/dist/checks/bootstrap-frontier.sh src/cmd/compile/selfhost/compiler.s
-
 	@echo "Bootstrap slice 2 passed: native expression/control/locals frontier"
-
-
-
 bootstrap-slice3-check: seed-compiler-bin
-
 	@mkdir -p $(SELFHOST_DIR)/slice3
-
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice3/compiler.ir
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
 	  $(SELFHOST_DIR)/slice3/compiler.ir $(SELFHOST_DIR)/slice3/compiler
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/compiler
-
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_call.s \
 	  $(SELFHOST_DIR)/slice3/native-call
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-call
-
 	@set +e; $(SELFHOST_DIR)/slice3/native-call; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_loop.s \
 	  $(SELFHOST_DIR)/slice3/native-loop
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-loop
-
 	@set +e; $(SELFHOST_DIR)/slice3/native-loop; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_string.s \
 	  $(SELFHOST_DIR)/slice3/native-string
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-string
-
 	@set +e; $(SELFHOST_DIR)/slice3/native-string >$(SELFHOST_DIR)/slice3/native-string.out; status=$$?; set -e; test $$status -eq 42
-
 	@test "$$(cat $(SELFHOST_DIR)/slice3/native-string.out)" = "selfhost-string"
-
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_array.s \
 	  $(SELFHOST_DIR)/slice3/native-array
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-array
-
 	@set +e; $(SELFHOST_DIR)/slice3/native-array; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_multicall.s \
 	  $(SELFHOST_DIR)/slice3/native-multicall
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-multicall
-
 	@set +e; $(SELFHOST_DIR)/slice3/native-multicall; status=$$?; set -e; test $$status -eq 42
-
 	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice3/native-multicall | grep -c 'call.*%rax')" -ge 2
-
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_multicall_args.s \
 	  $(SELFHOST_DIR)/slice3/native-multicall-args
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-multicall-args
-
 	@set +e; $(SELFHOST_DIR)/slice3/native-multicall-args; status=$$?; set -e; test $$status -eq 42
-
 	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice3/native-multicall-args | grep -c 'call.*%rax')" -ge 2
-
 	@$(SELFHOST_DIR)/slice3/compiler --emit-native test/selfhost/bootstrap_native_copy.s \
 	  $(SELFHOST_DIR)/slice3/native-copy
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice3/native-copy
-
 	@set +e; $(SELFHOST_DIR)/slice3/native-copy; status=$$?; set -e; test $$status -eq 2
-
 	@set +e; $(SELFHOST_DIR)/slice3/native-copy $(SELFHOST_DIR)/slice3/missing-input \
 	  $(SELFHOST_DIR)/slice3/missing-output; status=$$?; set -e; test $$status -eq 1
-
 	@$(SELFHOST_DIR)/slice3/native-copy test/selfhost/bootstrap_native_copy_input.txt \
 	  $(SELFHOST_DIR)/slice3/native-copy.out
-
 	@cmp test/selfhost/bootstrap_native_copy_input.txt $(SELFHOST_DIR)/slice3/native-copy.out
-
 	@echo "Bootstrap slice 3 passed: native call/loop/string/array/multicall/copy frontier"
-
-
-
 bootstrap-slice4-check: seed-compiler-bin
-
 	@mkdir -p $(SELFHOST_DIR)/slice4
-
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice4/compiler.ir
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
 	  $(SELFHOST_DIR)/slice4/compiler.ir $(SELFHOST_DIR)/slice4/compiler
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/compiler
-
 	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_function_loop.s \
 	  $(SELFHOST_DIR)/slice4/native-function-loop
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-function-loop
-
 	@set +e; $(SELFHOST_DIR)/slice4/native-function-loop; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_function_control.s \
 	  $(SELFHOST_DIR)/slice4/native-function-control
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-function-control
-
 	@set +e; $(SELFHOST_DIR)/slice4/native-function-control; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_logical.s \
 	  $(SELFHOST_DIR)/slice4/native-logical
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-logical
-
 	@set +e; $(SELFHOST_DIR)/slice4/native-logical; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_typed_locals.s \
 	  $(SELFHOST_DIR)/slice4/native-typed-locals
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-typed-locals
-
 	@set +e; $(SELFHOST_DIR)/slice4/native-typed-locals; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice4/compiler --emit-native test/selfhost/bootstrap_native_large_function.s \
 	  $(SELFHOST_DIR)/slice4/native-large-function
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice4/native-large-function
-
 	@set +e; $(SELFHOST_DIR)/slice4/native-large-function; status=$$?; set -e; test $$status -eq 42
-
 	@echo "Bootstrap slice 4 passed: function control/logical/typed locals/large function frontier"
-
-
-
 bootstrap-slice5-check: seed-compiler-bin
-
 	@mkdir -p $(SELFHOST_DIR)/slice5
-
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice5/compiler.ir
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
 	  $(SELFHOST_DIR)/slice5/compiler.ir $(SELFHOST_DIR)/slice5/compiler
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/compiler
-
 	@$(SELFHOST_DIR)/slice5/compiler --emit-native test/selfhost/bootstrap_native_multicall.s \
 	  $(SELFHOST_DIR)/slice5/native-multicall
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-multicall
-
 	@set +e; $(SELFHOST_DIR)/slice5/native-multicall; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice5/compiler --emit-native test/selfhost/bootstrap_native_multicall_args.s \
 	  $(SELFHOST_DIR)/slice5/native-multicall-args
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-multicall-args
-
 	@set +e; $(SELFHOST_DIR)/slice5/native-multicall-args; status=$$?; set -e; test $$status -eq 42
-
 	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice5/native-multicall | grep -c 'call.*%rax')" -ge 2
-
 	@test "$$(objdump -D -b binary -m i386:x86-64 $(SELFHOST_DIR)/slice5/native-multicall-args | grep -c 'call.*%rax')" -ge 2
-
 	@$(SELFHOST_DIR)/slice5/compiler --emit-native test/selfhost/bootstrap_native_call6.s \
 	  $(SELFHOST_DIR)/slice5/native-call6
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-call6
-
 	@set +e; $(SELFHOST_DIR)/slice5/native-call6; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice5/compiler --emit-native test/selfhost/bootstrap_native_call8.s \
 	  $(SELFHOST_DIR)/slice5/native-call8
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice5/native-call8
-
 	@set +e; $(SELFHOST_DIR)/slice5/native-call8; status=$$?; set -e; test $$status -eq 42
-
 	@echo "Bootstrap slice 5 passed: multi-call and register/stack argument passing frontier"
-
-
-
 bootstrap-slice6-check: seed-compiler-bin
-
 	@mkdir -p $(SELFHOST_DIR)/slice6
-
 	@./bin/s_seed src/cmd/compile/selfhost/compiler.s $(SELFHOST_DIR)/slice6/compiler.ir
-
 	@S_SOURCE_ROOT=$(CURDIR) ./bin/s_seed --emit-standalone-amd64 \
 	  $(SELFHOST_DIR)/slice6/compiler.ir $(SELFHOST_DIR)/slice6/compiler
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice6/compiler
-
 	@as --64 -o $(SELFHOST_DIR)/slice6/asm-runtime.o src/runtime/selfhost_linux_amd64.S
-
 	@$(SELFHOST_DIR)/slice6/compiler --emit-asm test/selfhost/bootstrap_asm_branch_strings.s \
 	  $(SELFHOST_DIR)/slice6/branch-strings.S
-
 	@as --64 -o $(SELFHOST_DIR)/slice6/branch-strings.o $(SELFHOST_DIR)/slice6/branch-strings.S
-
 	@ld -static -T src/runtime/linker/nostdlib.ld -o $(SELFHOST_DIR)/slice6/branch-strings \
 	  $(SELFHOST_DIR)/slice6/asm-runtime.o $(SELFHOST_DIR)/slice6/branch-strings.o
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice6/branch-strings
-
 	@set +e; $(SELFHOST_DIR)/slice6/branch-strings; status=$$?; set -e; test $$status -eq 42
-
 	@$(SELFHOST_DIR)/slice6/compiler --emit-asm test/selfhost/bootstrap_asm_string.s \
 	  $(SELFHOST_DIR)/slice6/string-compare.S
-
 	@as --64 -o $(SELFHOST_DIR)/slice6/string-compare.o $(SELFHOST_DIR)/slice6/string-compare.S
-
 	@ld -static -T src/runtime/linker/nostdlib.ld -o $(SELFHOST_DIR)/slice6/string-compare \
 	  $(SELFHOST_DIR)/slice6/asm-runtime.o $(SELFHOST_DIR)/slice6/string-compare.o
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/slice6/string-compare
-
 	@set +e; $(SELFHOST_DIR)/slice6/string-compare; status=$$?; set -e; test $$status -eq 42
-
 	@echo "Bootstrap slice 6 passed: string compare and branch-string frontier"
-
-
-
 pure-s-bootstrap-check: native-bootstrap selfhost-runtime-check selfhost-lexer-check
-
 	@echo "Pure-S bootstrap passed: stage2/stage3 converge without a seed dependency"
-
-
-
 bootstrap-source-closure:
-
 	@mkdir -p $(SELFHOST_DIR)
-
 	@./src/cmd/dist/source_closure.sh src/cmd/compile/pipeline/main.s $(SELFHOST_DIR)/sources.txt
-
 	@echo "Bootstrap source closure: $(SELFHOST_DIR)/sources.txt"
-
-
-
 selfhost-nostdlib:
-
 	@if [ ! -x ./bin/s_nostdlib ]; then \
 		echo "selfhost-nostdlib: missing ./bin/s_nostdlib" >&2; \
 		echo "the pure-S native compiler/linker path is not implemented yet" >&2; \
 		exit 1; \
 	fi
-
 	@./misc/scripts/verify_true_selfhost.sh ./bin/s_nostdlib
-
 	@echo "Verified no-libc self-hosted compiler: ./bin/s_nostdlib"
-
-
-
 selfhost-runtime-check:
-
 	@mkdir -p $(SELFHOST_DIR)/nostdlib
-
 	@as --64 -o $(SELFHOST_DIR)/nostdlib/runtime.o src/runtime/selfhost_linux_amd64.S
-
 	@as --64 -o $(SELFHOST_DIR)/nostdlib/runtime_probe.o test/selfhost/nostdlib_runtime_probe_amd64.S
-
 	@ld -static -T src/runtime/linker/nostdlib.ld -o $(SELFHOST_DIR)/nostdlib/runtime_probe \
 	  $(SELFHOST_DIR)/nostdlib/runtime.o \
 	  $(SELFHOST_DIR)/nostdlib/runtime_probe.o
-
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/nostdlib/runtime_probe
-
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
-
 	@echo "No-libc Linux/amd64 runtime check passed"
-
-
-
 .PHONY: benchmark help no-gc-mvp no-gc-mvp-check target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check s-syntax-check s-semantic-check s-compiler-integration-check s-e2e-check s-validation-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test darwin-arm64-hosted-compiler darwin-arm64-slice-check test-quick test-full build-parallel selfhost-full stage0-build stage0-closure-check modular-selfhost-check production-selfhost-check
-
-
-
 benchmark: compiler
-
 	@sh test/benchmarks/run.sh
-
 no-gc-mvp:
-
 	@sed -n '1,220p' doc/no-gc-mvp.md
-
-
-
 no-gc-mvp-check: compiler-check
-
 	@echo "No-GC MVP acceptance checks passed"
-
-
-
 verify-true-selfhost:
-
 	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
-
-
-
+.PHONY: show-all-targets
+show-all-targets:
+	@echo "=========================================="
+	@echo "Available Make Commands (170 targets)"
+	@echo "=========================================="
+	@echo ""
+	@make -qp 2>/dev/null | grep "^[a-zA-Z_][a-zA-Z0-9_-]*:" | sed 's/:.*//g' | sort -u | awk '{printf "  make %-50s\n", $$1}'
+	@echo ""
 help:
-
 	@echo "  make benchmark              # Compare S AOT, C, and Go on the loop benchmark"
-
 	@echo "  make run"
-
 	@echo "  make build-x86_64"
-
 	@echo "  make build-arm64"
-
 	@echo "  make target-info S_TARGET_OS=linux S_TARGET_ARCH=amd64"
-
 	@echo "  make target-config-check"
-
 	@echo "  make darwin-arm64-hosted-compiler # Build a native macOS/ARM64 S compiler"
-
 	@echo "  make darwin-arm64-slice-check     # Verify direct S -> Mach-O/ARM64 codegen"
-
 	@echo "  make seed-tests"
-
 	@echo "  make seed-runtime-regression"
-
 	@echo "  make seed-network-tests"
-
 	@echo "  make seed-c-abi-test"
-
 	@echo "  make compiler                # Build the no-GC ownership compiler driver"
-
 	@echo "  make compiler-check          # Verify no-GC ownership compiler behavior"
-
 	@echo "  make no-gc-mvp              # Show the current no-GC MVP scope"
-
 	@echo "  make no-gc-mvp-check        # Run the no-GC MVP acceptance checks"
-
 	@echo "  make benchmark               # Compare no-GC S with available toolchains"
-
 	@echo "  make bootstrap-stage0       # Build the trusted C stage0 compiler"
-
 	@echo "  make bootstrap-convergence  # Compatibility seed-hosted IR convergence"
-
 	@echo "  make bootstrap-pure-s       # Run the pure-S bootstrap entrypoint"
-
 	@echo "  make bootstrap-audit        # Report provenance and forbidden dependencies"
-
 	@echo "  make native-bootstrap       # Build and compare pure-S stage1 -> stage2 -> stage3 binaries"
-
 	@echo "  make direct-bootstrap       # Require S -> direct ELF stage2/stage3 convergence (no as/ld)"
-
 	@echo "  make native-bootstrap-install # Install converged native stage2 as bin/s"
-
 	@echo "  make native-selfhost          # Install the native bootstrap result as bin/s"
-
 	@echo "  make native-codegen-check     # Verify S emits runnable ELF directly"
-
 	@echo "  make bootstrap-subset-check # Enforce the frozen bootstrap declaration syntax"
-
 	@echo "  make bootstrap-slice1-check # Build and exercise the first static pure-S compiler slice"
-
 	@echo "  make bootstrap-slice2-check # Report the next native bootstrap frontier"
-
 	@echo "  make bootstrap-slice3-check # Exercise native call/loop/string/array/multicall/copy"
-
 	@echo "  make bootstrap-slice4-check # Exercise function control/logical/typed locals/large function"
-
 	@echo "  make bootstrap-slice5-check # Exercise multi-call and argument passing frontier"
-
 	@echo "  make bootstrap-slice6-check # Exercise string compare and branch-string frontier"
-
 	@echo "  see doc/bootstrap.md         # Bootstrap ladder notes and slice rationale"
-
 	@echo "  make pure-s-bootstrap-check # Run every implemented no-seed bootstrap frontier"
-
 	@echo "  make bootstrap-source-closure # Resolve the pure-S compiler source closure"
-
 	@echo "  make selfhost                # Install the native self-hosted compiler"
-
 	@echo "  make seed-hosted-selfhost    # Install the seed-hosted compatibility path"
-
 	@echo "  make selfhost-check"
-
 	@echo "  make true-selfhost-check      # Reject a compiler that still links the C seed"
-
 	@echo "  make selfhost-nostdlib        # Build without C library (experimental)"
-
 	@echo "  make selfhost-runtime-check   # Verify the no-libc Linux/amd64 runtime"
-
 	@echo "  make selfhost-lexer-check"
-
 	@echo "  make s-validation-check       # Run S syntax, semantic, compiler integration, and E2E gates"
-
 	@echo "  PARALLEL BUILDS:"
-
 	@echo "  make test-quick               # Run quick tests only"
-
 	@echo "  make test-full                # Run all tests in parallel"
-
 	@echo "  make build-parallel           # Build all tools in parallel"
-
 	@echo "  make selfhost-full            # Complete bootstrapping with parallel jobs"
-
 	@echo "  CONFIGURATION:"
-
 	@echo "  make PARALLEL_JOBS=8          # Override CPU count (default: nproc)"
-
 	@echo "  override install dir: make INSTALL_BIN_DIR=/usr/local/bin SUDO=sudo"
-
-
-
 test-quick: seed-tests compiler-check
-
 	@echo "✓ Quick tests passed"
-
-
-
 test-full: seed-compiler-bin
-
 	@echo "Running test suites with isolated runtime resources..."
-
 	@$(MAKE) seed-tests
-
 	@$(MAKE) seed-runtime-regression
-
 	@$(MAKE) compiler-check
-
 	@echo "✓ All tests passed"
-
-
 s-syntax-check: seed-frontend-parser-check
 	@mkdir -p /tmp/s_validation_check
 	@./bin/s_seed test/simple_test.s /tmp/s_validation_check/sample.ir
 	@test -s /tmp/s_validation_check/sample.ir
 	@rg -q '^FUNC_BEGIN\|main\|' /tmp/s_validation_check/sample.ir
 	@echo "✓ 语法编译验证 passed"
-
-
 s-semantic-check: compiler-check
 	@echo "✓ 语义正确性 passed"
-
-
 s-compiler-integration-check: compiler
 	@mkdir -p .bootstrap/s-validation
 	@S_MODULAR_COMPILER=/nonexistent/s_modular ./bin/s test/simple_test.s -o .bootstrap/s-validation/simple
 	@test -x .bootstrap/s-validation/simple
 	@! S_MODULAR_COMPILER=/nonexistent/s_modular ./bin/s test/compiler/check.s -o .bootstrap/s-validation/check_fail >/tmp/s_compiler_integration_negative.out 2>&1
 	@echo "✓ 编译器集成 passed"
-
-
 s-e2e-check: s-compiler-integration-check
 	@set +e; ./.bootstrap/s-validation/simple; status=$$?; set -e; test $$status -eq 42
 	@echo "✓ 端到端测试 passed"
-
-
 s-validation-check: s-syntax-check s-semantic-check s-compiler-integration-check s-e2e-check
 	@echo "S validation matrix passed"
-
-
-
 build-parallel:
-
 	@echo "Building seed compiler, tests, and regression tests in parallel ($(PARALLEL_JOBS) jobs)..."
-
 	@set -e; \
 	$(MAKE) seed-compiler-bin & seed_pid=$$!; \
 	$(MAKE) seed-tests & tests_pid=$$!; \
@@ -1487,429 +777,195 @@ build-parallel:
 	wait $$tests_pid || status=$$?; \
 	wait $$regression_pid || status=$$?; \
 	exit $$status
-
 	@echo "✓ All builds completed"
-
-
-
 selfhost-full: build-parallel selfhost selfhost-check
-
 	@echo "✓ Full self-host bootstrapping completed"
-
-
-
 selfhost-bin:
-
 	@if [[ -z "$(COMPILER)" ]]; then \
 		echo "error: no compiler found; set COMPILER=/app/s/bin/c_arm64_YYYYMMDDHHMMSS" >&2; \
 		exit 1; \
 	fi
-
 	./scripts/selfhost_emit_bin.sh "$(COMPILER)" "$(OUT_BIN)" "$(OUT_IR)" "$(WORK_DIR)"
-
-
-
-
-
 .PHONY: compiler compiler-check compiler-s-check mir-cfg-check mir-move-dataflow-check mir-borrow-dataflow-check mir-drop-elaboration-check mir-place-check mir-movepath-check mir-partial-move-check mir-reinit-check mir-partial-drop-check mir-place-borrow-check mir-ref-liveness-check mir-loan-liveness-check mir-region-constraints-check mir-region-solver-check mir-nll-borrow-check mir-nll-shadow-check mir-real-point-audit-check mir-real-point-map-check mir-real-ownership-facts-check mir-real-ownership-preservation-check mir-real-ownership-extractor-check mir-real-ownership-shared-analysis-check mir-real-ownership-shadow-check mir-nll-real-cfg-check mir-ownership-solver-check mir-ownership-analysis-consistency-check mir-nll-authority-check mir-nll-ownership-check mir-borrow-canonical-authority-check ownership-module-check mir-ownership-lowering-check mir-ownership-pipeline-check mir-nogc-e2e-check no-gc-test
-
 COMPILER_SOURCES := \
 	src/cmd/compile/frontend/core.s \
 	src/cmd/compile/frontend/frontend.s \
 	src/cmd/compile/frontend/stages.s \
-	src/cmd/compile/middlend/mir.s \
+	src/cmd/compile/middlend/mir/compiler_emit.s \
 	src/cmd/compile/middlend/stages.s \
 	src/cmd/compile/pipeline/compiler_main.s
-
 compiler: seed-compiler-bin
-
 	@mkdir -p .bootstrap/compiler bin
-
 	@./bin/s_seed --compile-unit .bootstrap/compiler/compiler.ir $(COMPILER_SOURCES)
-
-
-
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$$(uname -s | tr '[:upper:]' '[:lower:]') \
 	  S_TARGET_ARCH=$$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/') \
 	  ./bin/s_seed --emit-bin .bootstrap/compiler/compiler.ir ./bin/s_compiler
-
 	@cp misc/scripts/s-driver.sh ./bin/s
-
 	@chmod +x ./bin/s
-
-
-
 compiler-check: compiler
-
 	@$(MAKE) compiler-s-check
-
-
-
+.PHONY: install
+install: compiler
+	@mkdir -p "$(INSTALL_BIN_DIR)"
+	@$(INSTALL_PROGRAM) -m 0755 ./bin/s_compiler "$(INSTALL_BIN_DIR)/s"
+	@echo "Installed S compiler to: $(INSTALL_BIN_DIR)/s"
+	@echo "Usage: $(INSTALL_BIN_DIR)/s <file.s>"
 compiler-s-check: compiler
-
 	@mkdir -p .bootstrap/compiler
-
 	@misc/scripts/check-nogc-compiler.sh
-
-
-
 mir-cfg-check: compiler
-
 	@echo "Running MIR CFG check..."
-
 	@misc/scripts/check-mir-cfg.sh
-
 	@echo "✓ MIR CFG check passed"
-
-
-
 mir-move-dataflow-check: compiler
-
 	@echo "Running MIR move dataflow check..."
-
 	@misc/scripts/check-mir-move-dataflow.sh
-
 	@echo "✓ MIR move dataflow check passed"
-
-
-
 mir-borrow-dataflow-check: compiler
-
 	@echo "Running MIR borrow dataflow check..."
-
 	@misc/scripts/check-mir-borrow-dataflow.sh
-
 	@echo "✓ MIR borrow dataflow check passed"
-
-
-
 mir-drop-elaboration-check: compiler
-
 	@echo "Running MIR drop elaboration check..."
-
 	@misc/scripts/check-mir-drop-elaboration.sh
-
 	@echo "✓ MIR drop elaboration check passed"
-
-
-
 mir-place-check: compiler
-
 	@echo "Running MIR place check..."
-
 	@misc/scripts/check-mir-place.sh
-
 	@echo "✓ MIR place check passed"
-
-
-
 mir-movepath-check: compiler
-
 	@echo "Running MIR movepath check..."
-
 	@misc/scripts/check-mir-movepath.sh
-
 	@echo "✓ MIR movepath check passed"
-
-
-
 mir-partial-move-check: compiler
-
 	@echo "Running MIR partial move check..."
-
 	@misc/scripts/check-mir-partial-move.sh
-
 	@echo "✓ MIR partial move check passed"
-
-
-
 mir-reinit-check: compiler
-
 	@echo "Running MIR reinit check..."
-
 	@misc/scripts/check-mir-reinit.sh
-
 	@echo "✓ MIR reinit check passed"
-
-
-
 mir-partial-drop-check: compiler
-
 	@echo "Running MIR partial drop check..."
-
 	@misc/scripts/check-mir-partial-drop.sh
-
 	@echo "✓ MIR partial drop check passed"
-
-
-
 mir-place-borrow-check: compiler
-
 	@echo "Running MIR place borrow check..."
-
 	@misc/scripts/check-mir-place-borrow.sh
-
 	@echo "✓ MIR place borrow check passed"
-
-
-
 mir-ref-liveness-check: compiler
-
 	@echo "Running MIR reference liveness check..."
-
 	@chmod +x misc/scripts/check-mir-ref-liveness.sh
-
 	@misc/scripts/check-mir-ref-liveness.sh
-
 	@echo "✓ MIR reference liveness check passed"
-
-
-
 mir-loan-liveness-check: compiler
-
 	@echo "Running MIR loan liveness check..."
-
 	@misc/scripts/check-mir-loan-liveness.sh
-
 	@echo "✓ MIR loan liveness check passed"
-
-
-
 mir-region-constraints-check: compiler
-
 	@echo "Running MIR region constraints check..."
-
 	@misc/scripts/check-mir-region-constraints.sh
-
 	@echo "✓ MIR region constraints check passed"
-
-
-
 mir-region-solver-check: compiler
-
 	@echo "Running MIR region solver check..."
-
 	@misc/scripts/check-mir-region-solver.sh
-
 	@echo "✓ MIR region solver check passed"
-
-
-
 mir-nll-borrow-check: compiler
-
 	@echo "Running MIR NLL borrow check..."
-
 	@misc/scripts/check-mir-nll-borrow.sh
-
 	@echo "✓ MIR NLL borrow check passed"
-
-
 mir-nll-shadow-check: compiler
-
 	@echo "Running MIR NLL shadow check..."
-
 	@misc/scripts/check-mir-nll-shadow.sh
-
 	@echo "✓ MIR NLL shadow check passed"
-
-
 mir-real-point-audit-check: compiler
-
 	@echo "Running MIR real point audit..."
-
 	@misc/scripts/check-mir-real-point-audit.sh
-
 	@echo "✓ MIR real point audit passed"
-
-
 mir-real-point-map-check: compiler
-
 	@echo "Running MIR real point map check..."
-
 	@misc/scripts/check-mir-real-point-map.sh
-
 	@echo "✓ MIR real point map check passed"
-
-
 mir-real-ownership-facts-check: compiler
-
 	@echo "Running MIR real ownership facts audit..."
-
 	@misc/scripts/check-mir-real-ownership-facts.sh
-
 	@echo "✓ MIR real ownership facts audit passed"
-
-
 mir-real-ownership-preservation-check: compiler
-
 	@echo "Running MIR real ownership semantic preservation check..."
-
 	@misc/scripts/check-mir-real-ownership-preservation.sh
-
 	@echo "✓ MIR real ownership semantic preservation check passed"
-
-
 mir-real-ownership-extractor-check: compiler
-
 	@echo "Running MIR real ownership extractor check..."
-
 	@misc/scripts/check-mir-real-ownership-extractor.sh
-
 	@echo "✓ MIR real ownership extractor check passed"
-
-
 mir-real-ownership-shared-analysis-check: compiler
-
 	@echo "Running MIR real ownership shared analysis check..."
-
 	@misc/scripts/check-mir-real-ownership-shared-analysis.sh
-
 	@echo "✓ MIR real ownership shared analysis check passed"
-
-
 mir-real-ownership-shadow-check: compiler
-
 	@echo "Running MIR real ownership shadow solver check..."
-
 	@misc/scripts/check-mir-real-ownership-shadow.sh
-
 	@echo "✓ MIR real ownership shadow solver check passed"
-
-
 mir-nll-real-cfg-check: compiler
-
 	@echo "Running MIR NLL real CFG binding check..."
-
 	@misc/scripts/check-mir-nll-real-cfg.sh
-
 	@echo "✓ MIR NLL real CFG binding check passed"
-
-
 mir-ownership-solver-check: compiler
-
 	@echo "Running MIR ownership solver check..."
-
 	@misc/scripts/check-mir-ownership-solver.sh
-
 	@echo "✓ MIR ownership solver check passed"
-
-
 mir-ownership-analysis-consistency-check: compiler
-
 	@echo "Running MIR ownership analysis consistency check..."
-
 	@misc/scripts/check-mir-ownership-analysis-consistency.sh
-
 	@echo "✓ MIR ownership analysis consistency check passed"
-
-
 mir-nll-authority-check: compiler
-
 	@echo "Running MIR NLL authority check..."
-
 	@misc/scripts/check-mir-nll-authority.sh
-
 	@echo "✓ MIR NLL authority check passed"
-
-
-
 mir-nll-no-legacy-authority-check: compiler
-
 	@echo "Running MIR NLL no-legacy-authority check..."
-
 	@misc/scripts/check-mir-nll-no-legacy-authority.sh
-
 	@echo "✓ MIR NLL no-legacy-authority check passed"
-
-
-
 mir-nll-lifetime-authority-check: compiler
-
 	@echo "Running MIR NLL lifetime-authority check..."
-
 	@misc/scripts/check-mir-nll-lifetime-authority.sh
-
 	@echo "✓ MIR NLL lifetime-authority check passed"
-
-
-
 mir-nll-ownership-check: compiler
-
 	@echo "Running MIR NLL ownership check..."
-
 	@misc/scripts/check-mir-nll-ownership.sh
-
 	@echo "✓ MIR NLL ownership check passed"
-
-
 mir-borrow-canonical-authority-check: compiler
-
 	@echo "Running MIR borrow canonical authority audit..."
-
 	@bash src/cmd/compile/internal/tests/gates/mir-borrow-canonical-authority-check.sh
-
 	@echo "✓ MIR borrow canonical authority audit passed"
-
-
-
 ownership-module-check: compiler
-
 	@echo "Running ownership module contracts check..."
-
 	@misc/scripts/check-ownership-modules.sh
-
 	@echo "✓ Ownership module contracts check passed"
-
-
-
 mir-ownership-lowering-check: compiler
-
 	@echo "Running MIR ownership lowering check..."
-
 	@misc/scripts/check-mir-ownership-lowering.sh
-
 	@echo "✓ MIR ownership lowering check passed"
-
-
 mir-ownership-pipeline-check: compiler seed-compiler-bin
-
 	@echo "Running real MIR ownership pipeline gate..."
-
 	@misc/scripts/check-mir-ownership-pipeline.sh
-
 	@echo "✓ Real MIR ownership pipeline gate passed"
-
-
-
 mir-nogc-e2e-check: compiler seed-compiler-bin
-
 	@echo "Running MIR no-GC ownership/move/borrow/drop e2e gate..."
-
 	@mkdir -p .bootstrap/mir-nogc
-
-	@./bin/s_seed src/cmd/compile/middlend/mir_model/mir_nogc_gate.s .bootstrap/mir-nogc/mir_nogc_gate.ir
-
+	@./bin/s_seed src/cmd/compile/middlend/mir/mir_nogc_gate.s .bootstrap/mir-nogc/mir_nogc_gate.ir
 	@misc/scripts/check-mir-nogc-e2e.sh
-
 	@echo "✓ MIR no-GC e2e check passed"
-
-
-
 no-gc-test: compiler-check
-
 	@echo "No-GC memory system tests passed"
-
-
 # ================================================================
 # Modular Compiler Targets
 # ================================================================
-
 .PHONY: package-index
 package-index:
 	@echo "Generating package index..."
 	@bash scripts/gen_package_index.sh $(CURDIR)/scripts/s-package-index.tsv
 	@echo "Package index ready: $(CURDIR)/scripts/s-package-index.tsv"
-
 .PHONY: bin/s_modular
 bin/s_modular: seed-compiler-bin package-index
 	@echo "Building modular compiler..."
@@ -1940,7 +996,6 @@ bin/s_modular: seed-compiler-bin package-index
 	  printf '%s\n' 'esac'; \
 	} > ./bin/s_modular
 	@chmod +x ./bin/s_modular
-
 .PHONY: modular-bootstrap-compat-audit
 modular-bootstrap-compat-audit: seed-compiler-bin package-index
 	@echo "Auditing modular bootstrap compatibility..."
@@ -1948,7 +1003,6 @@ modular-bootstrap-compat-audit: seed-compiler-bin package-index
 	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/modular_bootstrap_compat_audit.sh \
 	  src/cmd/compile/pipeline/main.s "$(MODULAR_BOOTSTRAP_COMPAT_REPORT)" >/dev/null
 	@echo "Modular bootstrap compatibility report: $(MODULAR_BOOTSTRAP_COMPAT_REPORT)"
-
 .PHONY: modular-bootstrap-stage-discovery
 modular-bootstrap-stage-discovery: modular-bootstrap-compat-audit
 	@echo "Discovering modular bootstrap stages..."
@@ -1957,7 +1011,6 @@ modular-bootstrap-stage-discovery: modular-bootstrap-compat-audit
 	  misc/scripts/modular_bootstrap_stage_discovery.sh \
 	  src/cmd/compile/pipeline/main.s "$(MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT)" >/dev/null
 	@echo "Modular bootstrap stage discovery report: $(MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT)"
-
 .PHONY: modular-bootstrap-root-audit
 modular-bootstrap-root-audit: modular-bootstrap-stage-discovery
 	@echo "Auditing modular bootstrap root..."
@@ -1968,7 +1021,6 @@ modular-bootstrap-root-audit: modular-bootstrap-stage-discovery
 	  misc/scripts/modular_bootstrap_root_audit.sh \
 	  src/cmd/compile/pipeline/main.s "$(MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT)" >/dev/null
 	@echo "Modular bootstrap root audit report: $(MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT)"
-
 .PHONY: modular-bootstrap
 modular-bootstrap: stage0-build stage0-closure-check
 	@echo "Bootstrapping canonical modular compiler with explicit C Stage0..."
@@ -1987,194 +1039,162 @@ modular-bootstrap: stage0-build stage0-closure-check
 	@echo "explicit-bootstrap-root=ESTABLISHED" >>"$(MODULAR_BOOTSTRAP_REPORT)"
 	@echo "canonical-source-compilation=NOT_PROVEN" >>"$(MODULAR_BOOTSTRAP_REPORT)"
 	@echo "production-compiler-bootstrap=NOT_PROVEN" >>"$(MODULAR_BOOTSTRAP_REPORT)"
-
 .PHONY: canonical-source-compilation-check
 canonical-source-compilation-check: modular-bootstrap
 	@echo "Checking canonical source compilation authority..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-source-compilation-check.sh
-
 .PHONY: stage1-delegation-authority-check
 stage1-delegation-authority-check: modular-bootstrap
 	@echo "Checking stage1 delegation authority..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/stage1-delegation-authority-check.sh
-
 .PHONY: generic-production-path-check
 generic-production-path-check: canonical-source-compilation-check
 	@echo "Checking generic production invocation path..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/generic-production-path-check.sh
-
 .PHONY: stage1-generic-dispatch-check
 stage1-generic-dispatch-check: canonical-source-compilation-check
 	@echo "Checking stage1 generic dispatch authority..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/stage1-generic-dispatch-check.sh
-
 .PHONY: stage1-build-authority-check
 stage1-build-authority-check:
 	@echo "Checking stage1 build authority replacement edge..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/stage1-build-authority-check.sh
-
 .PHONY: stage1-canonical-build-dispatch-check
 stage1-canonical-build-dispatch-check: modular-bootstrap
 	@echo "Checking stage1 canonical build dispatch..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/stage1-canonical-build-dispatch-check.sh
-
 .PHONY: stage1-canonical-entry-linkage-check
 stage1-canonical-entry-linkage-check: modular-bootstrap
 	@echo "Checking stage1 canonical entry linkage..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/stage1-canonical-entry-linkage-check.sh
-
 .PHONY: stage1-bootstrap-mechanism-audit
 stage1-bootstrap-mechanism-audit: modular-bootstrap
 	@echo "Auditing stage1 bootstrap mechanism..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/stage1-bootstrap-mechanism-audit.sh
-
 .PHONY: canonical-bootstrap-capability-gap-audit
 canonical-bootstrap-capability-gap-audit: modular-bootstrap
 	@echo "Auditing canonical bootstrap capability gap..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-capability-gap-audit.sh
-
 .PHONY: canonical-thin-bootstrap-bridge-design-check
 canonical-thin-bootstrap-bridge-design-check:
 	@echo "Checking canonical thin bootstrap bridge design boundary..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-thin-bootstrap-bridge-design-check.sh
-
 .PHONY: canonical-bootstrap-p1-transport-probe
 canonical-bootstrap-p1-transport-probe: canonical-thin-bootstrap-bridge-design-check
 	@echo "Running canonical bootstrap P1 transport probe..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-p1-transport-probe.sh
-
 .PHONY: bootstrap-root-candidate-audit
 bootstrap-root-candidate-audit:
 	@echo "Auditing bootstrap root candidates..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/bootstrap-root-candidate-audit.sh
-
 .PHONY: canonical-bootstrap-root-strategy-design-check
 canonical-bootstrap-root-strategy-design-check:
 	@echo "Checking canonical bootstrap root strategy design..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-root-strategy-design-check.sh
-
 .PHONY: canonical-bootstrap-ir-feasibility-probe
 canonical-bootstrap-ir-feasibility-probe: canonical-bootstrap-root-strategy-design-check
 	@echo "Probing canonical bootstrap IR feasibility..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-ir-feasibility-probe.sh
-
 .PHONY: canonical-bootstrap-ir-representative-slice-probe
 canonical-bootstrap-ir-representative-slice-probe: canonical-bootstrap-ir-feasibility-probe
 	@echo "Probing canonical bootstrap representative IR slice..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-ir-representative-slice-probe.sh
-
 .PHONY: canonical-bootstrap-ir-emission-audit
 canonical-bootstrap-ir-emission-audit: canonical-bootstrap-ir-representative-slice-probe
 	@echo "Auditing canonical bootstrap IR emission path..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-ir-emission-audit.sh
-
 .PHONY: canonical-drop-lowering-integration-audit
 canonical-drop-lowering-integration-audit:
 	@echo "Auditing canonical drop lowering integration..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-drop-lowering-integration-audit.sh
-
 .PHONY: canonical-symbol-bootstrap-requirements-audit
 canonical-symbol-bootstrap-requirements-audit:
 	@echo "Auditing canonical symbol bootstrap requirements..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-symbol-bootstrap-requirements-audit.sh
-
 .PHONY: canonical-drop-authority-completion-audit
 canonical-drop-authority-completion-audit: canonical-drop-lowering-integration-audit
 	@echo "Auditing canonical drop authority completion..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-drop-authority-completion-audit.sh
-
 .PHONY: bootstrap-root-strategy-decision
 bootstrap-root-strategy-decision: canonical-bootstrap-ir-emission-audit canonical-drop-authority-completion-audit canonical-symbol-bootstrap-requirements-audit
 	@echo "Recording bootstrap root strategy decision..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/bootstrap-root-strategy-decision.sh
-
 .PHONY: bootstrap-ir-snapshot-boundary-design-check
 bootstrap-ir-snapshot-boundary-design-check: bootstrap-root-strategy-decision
 	@echo "Checking bootstrap IR snapshot boundary contract..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/bootstrap-ir-snapshot-boundary-design-check.sh
-
 .PHONY: bootstrap-ir-serialization-format-design-check
 bootstrap-ir-serialization-format-design-check: bootstrap-ir-snapshot-boundary-design-check
 	@echo "Checking bootstrap IR serialization format contract..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/bootstrap-ir-serialization-format-design-check.sh
-
 .PHONY: bootstrap-ir-artifact-schema-design-check
 bootstrap-ir-artifact-schema-design-check: bootstrap-ir-serialization-format-design-check
 	@echo "Checking bootstrap IR artifact schema contract..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/bootstrap-ir-artifact-schema-design-check.sh
-
 .PHONY: bootstrap-ir-equivalence-regeneration-design-check
 bootstrap-ir-equivalence-regeneration-design-check: bootstrap-ir-artifact-schema-design-check
 	@echo "Checking bootstrap IR equivalence and regeneration contract..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/bootstrap-ir-equivalence-regeneration-design-check.sh
-
 .PHONY: canonical-bootstrap-ir-minimal-emission-check
 canonical-bootstrap-ir-minimal-emission-check: bootstrap-ir-equivalence-regeneration-design-check
 	@echo "Checking minimal canonical bootstrap IR emission..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-ir-minimal-emission-check.sh
-
 .PHONY: canonical-bootstrap-ir-direct-state-emission-check
 canonical-bootstrap-ir-direct-state-emission-check: canonical-bootstrap-ir-minimal-emission-check
 	@echo "Checking direct canonical bootstrap IR state emission..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-ir-direct-state-emission-check.sh
-
 .PHONY: canonical-bootstrap-ir-function-call-check
 canonical-bootstrap-ir-function-call-check: canonical-bootstrap-ir-direct-state-emission-check
 	@echo "Checking canonical bootstrap IR direct function call coverage..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-ir-function-call-check.sh
-
 .PHONY: canonical-bootstrap-ir-cfg-branch-check
 canonical-bootstrap-ir-cfg-branch-check: canonical-bootstrap-ir-function-call-check
 	@echo "Checking canonical bootstrap IR CFG branch coverage..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-bootstrap-ir-cfg-branch-check.sh
-
 .PHONY: canonical-mir-bootstrap-sufficiency-audit
 canonical-mir-bootstrap-sufficiency-audit: seed-compiler-bin
 	@echo "Auditing canonical MIR bootstrap sufficiency..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 bash ./misc/scripts/canonical-mir-bootstrap-sufficiency-audit.sh
-
 .PHONY: canonical-post-mir-lowering-authority-audit
 canonical-post-mir-lowering-authority-audit: seed-compiler-bin
 	@echo "Auditing canonical post-MIR lowering authority..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 bash ./misc/scripts/canonical-post-mir-lowering-authority-audit.sh
-
 .PHONY: stage0-build
 stage0-build:
 	@echo "Building explicit C Stage0..."
 	@mkdir -p "$(MODULAR_BOOTSTRAP_DIR)"
 	@cc -std=c11 -O2 -Wall -Wextra -Werror -o "$(STAGE0_BIN)" src/cmd/compile/stage0/stage0.c
 	@echo "Stage0 ready: $(STAGE0_BIN)"
-
 .PHONY: stage0-closure-check
 stage0-closure-check: package-index
 	@echo "Freezing canonical modular compiler source closure..."
@@ -2184,12 +1204,10 @@ stage0-closure-check: package-index
 	@chmod +x misc/scripts/stage0_closure_check.sh
 	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/stage0_closure_check.sh \
 	  src/cmd/compile/pipeline/main.s "$(STAGE0_CLOSURE)"
-
 .PHONY: stage0-freeze-check
 stage0-freeze-check: stage0-build
 	@chmod +x misc/scripts/stage0_freeze_check.sh
 	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/stage0_freeze_check.sh
-
 .PHONY: modular-selfhost-check
 modular-selfhost-check: modular-bootstrap
 	@echo "Checking artifact/template ladder only..."
@@ -2200,14 +1218,12 @@ modular-selfhost-check: modular-bootstrap
 	@"$(MODULAR_BOOTSTRAP_DIR)/hello" >"$(MODULAR_BOOTSTRAP_DIR)/hello.out"
 	@grep -qx "hello from S" "$(MODULAR_BOOTSTRAP_DIR)/hello.out"
 	@echo "artifact-ladder=PASS; canonical-source-compilation=NOT_PROVEN; production-compiler-bootstrap=NOT_PROVEN"
-
 .PHONY: parser-authority-check
 parser-authority-check: modular-bootstrap stage0-freeze-check
 	@echo "Checking parser authority execution path..."
 	@chmod +x misc/scripts/parser_authority_check.sh
 	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/parser_authority_check.sh \
 	  "$(MODULAR_STAGE1_BIN)" "$(PARSER_AUTHORITY_REPORT)"
-
 .PHONY: canonical-parser-closure-check
 canonical-parser-closure-check: bin/s_modular stage0-closure-check
 	@echo "Checking Stage 3 canonical parser closure..."
@@ -2216,24 +1232,20 @@ canonical-parser-closure-check: bin/s_modular stage0-closure-check
 	  misc/scripts/canonical-parser-closure-check.sh \
 	  "$(CURDIR)/bin/s_modular" "$(STAGE0_CLOSURE)" \
 	  "$(MODULAR_BOOTSTRAP_DIR)/canonical-parser-closure-report.txt"
-
-.PHONY: compile-pipeline-check
-compile-pipeline-check:
+.PHONY: pipeline
+pipeline:
 	@echo "Running S Compiler Canonical Pipeline Check..."
 	@chmod +x scripts/compile-pipeline-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/compile-pipeline-check.sh
-
 .PHONY: stage5-name-resolution-check
 stage5-name-resolution-check: bin/s_compiler
 	@echo "Checking Stage 5 Name → Declaration Resolution Authority..."
 	@mkdir -p $(MODULAR_BOOTSTRAP_DIR)/stage5
 	@chmod +x scripts/canonical-name-resolution-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-name-resolution-check.sh "$(CURDIR)"
-
 .PHONY: canonical-name-resolution-check
 canonical-name-resolution-check:
 	@$(MAKE) stage5-name-resolution-check
-
 .PHONY: canonical-declaration-ref-check
 canonical-declaration-ref-check: compiler
 	@chmod +x scripts/canonical-declaration-ref-check.sh
@@ -2242,43 +1254,34 @@ canonical-declaration-ref-check: compiler
 canonical-type-checking-check: compiler
 	@chmod +x scripts/canonical-type-checking-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-type-checking-check.sh "$(CURDIR)"
-
 .PHONY: canonical-type-ref-check
 canonical-type-ref-check: compiler
 	@chmod +x scripts/canonical-type-ref-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-type-ref-check.sh "$(CURDIR)"
-
 .PHONY: canonical-semantic-check
 canonical-semantic-check: compiler
 	@chmod +x scripts/canonical-semantic-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-semantic-check.sh "$(CURDIR)"
-
 .PHONY: canonical-lowering-check
 canonical-lowering-check: compiler
 	@chmod +x scripts/canonical-lowering-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-lowering-check.sh "$(CURDIR)"
-
 .PHONY: canonical-mir-verification-check
 canonical-mir-verification-check: compiler
 	@chmod +x scripts/canonical-mir-verification-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-mir-verification-check.sh "$(CURDIR)"
-
 .PHONY: canonical-mir-read-check
 canonical-mir-read-check:
 	@chmod +x scripts/canonical-mir-read-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-mir-read-check.sh "$(CURDIR)"
-
 .PHONY: canonical-sseed-read-place-check
 canonical-sseed-read-place-check: canonical-mir-read-check
 	@chmod +x scripts/canonical-sseed-read-place-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-sseed-read-place-check.sh "$(CURDIR)"
-
 .PHONY: canonical-ownership-check
 canonical-ownership-check: compiler
 	@chmod +x scripts/canonical-ownership-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-ownership-check.sh "$(CURDIR)"
-
-
 .PHONY: canonical-resolution-closure-check
 canonical-resolution-closure-check: bin/s_modular stage0-closure-check
 	@echo "Checking Stage 5/6 canonical resolution/declaration-ref closure..."
@@ -2287,40 +1290,33 @@ canonical-resolution-closure-check: bin/s_modular stage0-closure-check
 	  misc/scripts/canonical-resolution-closure-check.sh \
 	  "$(CURDIR)/bin/s_modular" "$(STAGE0_CLOSURE)" \
 	  "$(MODULAR_BOOTSTRAP_DIR)/canonical-resolution-closure-report.txt"
-
 .PHONY: parser-execution-path-check
 parser-execution-path-check: modular-bootstrap
 	@echo "Tracing parser execution path..."
 	@chmod +x misc/scripts/parser_execution_path_check.sh
 	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/parser_execution_path_check.sh \
 	  "$(MODULAR_STAGE1_BIN)" "$(PARSER_EXECUTION_PATH_REPORT)"
-
 .PHONY: parser-carry-capability-check
 parser-carry-capability-check: modular-bootstrap stage0-freeze-check
 	@S_SOURCE_ROOT=$(CURDIR) sh misc/scripts/parser_carry_capability_check.sh \
 	  "$(MODULAR_STAGE1_BIN)" "$(STAGE0_CLOSURE)" "$(MODULAR_BOOTSTRAP_DIR)/parser-carry-capability-report.txt"
-
 .PHONY: stage1-source-execution-check
 stage1-source-execution-check: modular-bootstrap stage0-freeze-check
 	@sh misc/scripts/stage1_source_execution_check.sh "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_DIR)"
-
 .PHONY: stage1-import-carry-check
 stage1-import-carry-check: stage1-source-execution-check
 	@S_SOURCE_ROOT=$(CURDIR) sh misc/scripts/stage1_import_carry_check.sh "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_DIR)"
-
 .PHONY: production-selfhost-check
 .PHONY: canonical-bootstrap-capability-check
 canonical-bootstrap-capability-check: stage1-import-carry-check
 	@S_SOURCE_ROOT=$(CURDIR) sh misc/scripts/canonical_bootstrap_capability_check.sh \
 	  "$(MODULAR_STAGE1_BIN)" "$(STAGE0_CLOSURE)" "$(MODULAR_BOOTSTRAP_DIR)"
-
 production-selfhost-check: modular-selfhost-check stage1-source-execution-check parser-execution-path-check parser-authority-check
 	@echo "Auditing production compiler authority..."
 	@chmod +x misc/scripts/production_selfhost_authority_audit.sh
 	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/production_selfhost_authority_audit.sh \
 	  "$(PRODUCTION_AUTHORITY_REPORT)" "$(STAGE0_CLOSURE)" "$(MODULAR_BOOTSTRAP_REPORT)" "$(PARSER_AUTHORITY_REPORT)" "$(MODULAR_BOOTSTRAP_DIR)/stage1-source-execution-report.txt"
 	@grep -qx "production-authority=NOT_YET_PROVEN" "$(PRODUCTION_AUTHORITY_REPORT)"
-
 .PHONY: modular-bootstrap-check
 modular-bootstrap-check: modular-bootstrap
 	@echo "Checking canonical modular bootstrap artifact..."
@@ -2331,25 +1327,21 @@ modular-bootstrap-check: modular-bootstrap
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src "$(MODULAR_BOOTSTRAP_BIN)" --help >/dev/null
 	@strings "$(MODULAR_BOOTSTRAP_BIN)" | grep -Eq 's_modular|compile.internal.syntax|backend_elf64'
 	@echo "Modular bootstrap check passed"
-
 .PHONY: modular-test-help
 modular-test-help: bin/s_modular
 	@echo "Testing modular compiler --help..."
 	@S_PROJECT_ROOT=$(CURDIR) ./bin/s_modular --help
 	@echo "✓ Modular compiler help works"
-
 .PHONY: modular-native-driver-check
 modular-native-driver-check: bin/s_modular
 	@echo "Checking modular driver authority..."
 	@! grep -Eq 'SEED_COMPILER|bin/s_seed|s_seed --emit|s_seed "' ./bin/s_modular
 	@echo "Modular driver authority check passed"
-
 .PHONY: modular-generic-parse-check
 modular-generic-parse-check: modular-native-driver-check package-index
 	@echo "Checking canonical modular generic parsing..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./bin/s_modular ast test/compiler/generic_method_native_e2e.s
-
 .PHONY: modular-generic-mono-pipeline-check
 modular-generic-mono-pipeline-check: modular-generic-parse-check
 	@echo "Checking canonical generic method mono pipeline..."
@@ -2359,13 +1351,11 @@ modular-generic-mono-pipeline-check: modular-generic-parse-check
 	@test -s .bootstrap/generic-method-e2e/generic_method.export
 	@grep -q 'method Box\[int\]\.get__mono_int' .bootstrap/generic-method-e2e/generic_method.export
 	@! grep -q 'method Box\[T\]\.get generics=T' .bootstrap/generic-method-e2e/generic_method.export
-
 .PHONY: generic-function-native-e2e-check
 generic-function-native-e2e-check: bin/s_modular package-index
 	@echo "Checking generic function native E2E..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/generic-function-native-e2e-check.sh ./bin/s
-
 .PHONY: modular-gate-b
 modular-gate-b: bin/s_modular package-index
 	@echo "Gate B: Testing modular compilation (simple_test.s -> native -> 42)..."
@@ -2381,7 +1371,6 @@ modular-gate-b: bin/s_modular package-index
 		echo "✗ Gate B failed: program returned $$EXIT_CODE (expected 42)"; \
 		exit 1; \
 	fi
-
 .PHONY: generic-method-native-e2e-check
 generic-method-native-e2e-check: modular-generic-mono-pipeline-check
 	@echo "Generic receiver method native E2E: Box[int].get() -> 42..."
@@ -2392,7 +1381,6 @@ generic-method-native-e2e-check: modular-generic-mono-pipeline-check
 		echo "Generic receiver method native E2E failed: program returned $$status (expected 42)"; \
 		exit 1; \
 	 fi
-
 .PHONY: ownership-check
 ownership-check: seed-compiler-bin mir-real-point-audit-check mir-real-point-map-check mir-real-ownership-preservation-check mir-real-ownership-facts-check mir-real-ownership-extractor-check mir-real-ownership-shared-analysis-check mir-real-ownership-shadow-check mir-nll-real-cfg-check mir-ownership-solver-check mir-ownership-analysis-consistency-check mir-nll-shadow-check mir-nll-authority-check mir-ownership-pipeline-check mir-nogc-e2e-check ownership-module-check
 	@echo "Running ownership system semantic validation..."
