@@ -681,7 +681,8 @@ verify-true-selfhost:
 .PHONY: show-all-targets
 show-all-targets:
 	@echo "  make pipeline"; \
-	make -qp 2>/dev/null | grep "^[a-zA-Z_][a-zA-Z0-9_-]*:" | sed 's/:.*//g' | grep -v "^pipeline$$" | sort -u | awk '{printf "  make %-50s\n", $$1}'
+	echo "  make install"; \
+	make -qp 2>/dev/null | grep "^[a-zA-Z_][a-zA-Z0-9_-]*:" | sed 's/:.*//g' | grep -v "^pipeline$$" | grep -v "^install$$" | sort -u | awk '{printf "  make %-50s\n", $$1}'
 help:
 	@echo "  make benchmark              # Compare S AOT, C, and Go on the loop benchmark"
 	@echo "  make run"
