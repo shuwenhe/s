@@ -61,7 +61,7 @@ mkdir -p "$OUTPUT_DIR"
     
     echo "Step 1c: Find canonical MIR structures"
     echo "  Expected: mir_basic_block[], mir_terminator, mir_control_edge"
-    echo "  Location: src/cmd/compile/middlend/mir_model/mir.s"
+    echo "  Location: src/cmd/compile/middlend/mir/mir.s"
     echo "  Structures:"
     echo "    struct mir_basic_block {"
     echo "        int id"

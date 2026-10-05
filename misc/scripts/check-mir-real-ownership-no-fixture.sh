@@ -15,7 +15,7 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 #  4. Verify structure (no hard-coded expected values)
 
 test_file="$root/src/cmd/compile/internal/tests/test_mir.s"
-mir_file="$root/src/cmd/compile/middlend/mir_model/mir.s"
+mir_file="$root/src/cmd/compile/middlend/mir/mir.s"
 
 # Step 7a: Verify synthetic MIR test exists (unit test baseline)
 if ! grep -q "fact_graph :=" "$test_file"; then
