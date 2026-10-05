@@ -807,8 +807,6 @@ install: compiler
 	@$(INSTALL_PROGRAM) -m 0755 ./bin/s_compiler "$(INSTALL_BIN_DIR)/s"
 	@echo "Installed S compiler to: $(INSTALL_BIN_DIR)/s"
 	@echo "Usage: $(INSTALL_BIN_DIR)/s <file.s>"
-.PHONY: s
-s: install
 compiler-s-check: compiler
 	@mkdir -p .bootstrap/compiler
 	@misc/scripts/check-nogc-compiler.sh
