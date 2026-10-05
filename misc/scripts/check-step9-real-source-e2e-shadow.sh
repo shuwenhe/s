@@ -28,7 +28,7 @@ shadow_output_format_ok() {
     return 0
 }
 
-mir_file="$root/src/cmd/compile/middlend/mir_model/mir.s"
+mir_file="$root/src/cmd/compile/middlend/mir/mir.s"
 test_file="$root/src/cmd/compile/internal/tests/test_mir.s"
 fixture_file="$root/src/cmd/compile/internal/tests/fixtures/real_mir_ref_flow.s"
 

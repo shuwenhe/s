@@ -11,7 +11,7 @@ GATE_PHASE="discovery"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../../.." && pwd)"
 
-MIR_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/mir_model/mir.s"
+MIR_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/mir/mir.s"
 LOWERING_DIR="$PROJECT_ROOT/src/cmd/compile/internal"
 
 # Color codes

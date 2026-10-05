@@ -3,8 +3,8 @@ set -euo pipefail
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 analysis_file="$root/src/cmd/compile/middlend/ownership/analysis.s"
-mir_file="$root/src/cmd/compile/middlend/mir_model/mir.s"
-compiler_file="$root/src/cmd/compile/middlend/mir.s"
+mir_file="$root/src/cmd/compile/middlend/mir/mir.s"
+compiler_file="$root/src/cmd/compile/middlend/mir/compiler_emit.s"
 
 require_text() {
     file=$1
