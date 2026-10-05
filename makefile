@@ -680,12 +680,8 @@ verify-true-selfhost:
 	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
 .PHONY: show-all-targets
 show-all-targets:
-	@echo "=========================================="
-	@echo "Available Make Commands (170 targets)"
-	@echo "=========================================="
-	@echo ""
-	@make -qp 2>/dev/null | grep "^[a-zA-Z_][a-zA-Z0-9_-]*:" | sed 's/:.*//g' | sort -u | awk '{printf "  make %-50s\n", $$1}'
-	@echo ""
+	@echo "  make pipeline"; \
+	make -qp 2>/dev/null | grep "^[a-zA-Z_][a-zA-Z0-9_-]*:" | sed 's/:.*//g' | grep -v "^pipeline$$" | sort -u | awk '{printf "  make %-50s\n", $$1}'
 help:
 	@echo "  make benchmark              # Compare S AOT, C, and Go on the loop benchmark"
 	@echo "  make run"
@@ -745,7 +741,7 @@ test-full: seed-compiler-bin
 	@echo "Running test suites with isolated runtime resources..."
 	@$(MAKE) seed-tests
 	@$(MAKE) seed-runtime-regression
-	@$(MAKE) compiler-check
+	@$(MAKE) compiler-checmake pipelinek
 	@echo "✓ All tests passed"
 s-syntax-check: seed-frontend-parser-check
 	@mkdir -p /tmp/s_validation_check
@@ -810,6 +806,8 @@ install: compiler
 	@$(INSTALL_PROGRAM) -m 0755 ./bin/s_compiler "$(INSTALL_BIN_DIR)/s"
 	@echo "Installed S compiler to: $(INSTALL_BIN_DIR)/s"
 	@echo "Usage: $(INSTALL_BIN_DIR)/s <file.s>"
+.PHONY: s
+s: install
 compiler-s-check: compiler
 	@mkdir -p .bootstrap/compiler
 	@misc/scripts/check-nogc-compiler.sh
@@ -1234,7 +1232,6 @@ canonical-parser-closure-check: bin/s_modular stage0-closure-check
 	  "$(MODULAR_BOOTSTRAP_DIR)/canonical-parser-closure-report.txt"
 .PHONY: pipeline
 pipeline:
-	@echo "Running S Compiler Canonical Pipeline Check..."
 	@chmod +x scripts/compile-pipeline-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/compile-pipeline-check.sh
 .PHONY: stage5-name-resolution-check
