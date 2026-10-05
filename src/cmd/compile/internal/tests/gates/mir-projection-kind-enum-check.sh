@@ -11,7 +11,7 @@ GATE_PHASE="implementation"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../../.." && pwd)"
 
-MIR_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/mir_model/mir.s"
+MIR_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/mir/mir.s"
 
 # Color codes
 GREEN='\033[0;32m'

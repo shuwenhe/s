@@ -58,7 +58,7 @@ canonical_object_artifact="$root/src/cmd/compile/bootstrap/stage1.o"
 canonical_native_artifact="$root/src/cmd/compile/bootstrap/stage1"
 
 mir_producer_path=$(status_bool has_text 'lower_main_to_mir|mir_graph|build_ownership_facts_from_mir' src/cmd/compile/internal)
-mir_has_language_decisions=$(status_bool has_text 'ownership|borrow|drop|generic|method|monomorph|type_name|check_source_file' src/cmd/compile/middlend/mir_model/mir.s src/cmd/compile/middlend/ir/lower.s src/cmd/compile/middlend/mono/monomorphization.s src/cmd/compile/backend/backend_elf64.s)
+mir_has_language_decisions=$(status_bool has_text 'ownership|borrow|drop|generic|method|monomorph|type_name|check_source_file' src/cmd/compile/middlend/mir/mir.s src/cmd/compile/middlend/ir/lower.s src/cmd/compile/middlend/mono/monomorphization.s src/cmd/compile/backend/backend_elf64.s)
 lowered_view_exists=$(status_bool has_text 'canonical-lowered-view version=1|lowered_view_from_mir' src/cmd/compile/middlend/ir/lower.s src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/pipeline/compiler_main.s misc/scripts)
 sseed_consumer_exists=$(status_bool has_text 'emit_aot_from_ir_file|--emit-aot|SSEED-TARGET-V1' src/cmd/compile/seed makefile)
 sseed_consumer_reparses_s=NO

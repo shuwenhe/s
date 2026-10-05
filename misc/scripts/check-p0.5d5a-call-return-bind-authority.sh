@@ -34,7 +34,7 @@ evidence=(
     src/cmd/compile/pipeline/main.s
     src/cmd/compile/frontend/semantic.s
     src/cmd/compile/middlend/ir/lower.s
-    src/cmd/compile/middlend/mir_model/mir.s
+    src/cmd/compile/middlend/mir/mir.s
     src/cmd/compile/middlend/ssa_core.s
     src/cmd/compile/backend/backend_elf64.s
     src/cmd/compile/internal/tests/test_pipeline_regression.s
