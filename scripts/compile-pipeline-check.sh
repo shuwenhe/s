@@ -78,12 +78,7 @@ PROVEN_FRONTIER=0
 EXECUTION_FRONTIER=0
 
 print_header() {
-    echo ""
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${BLUE}S COMPILER CANONICAL PIPELINE${NC}"
-    echo -e "${BLUE}Proof-State Harness${NC}"
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
+    :
 }
 
 color_execution_status() {
