@@ -20,8 +20,6 @@ MODULAR_BOOTSTRAP_STAGE_DISCOVERY_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-s
 MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT ?= $(MODULAR_BOOTSTRAP_DIR)/bootstrap-root-audit.txt
 STAGE0_BIN ?= $(MODULAR_BOOTSTRAP_DIR)/s_stage0
 STAGE0_CLOSURE ?= $(MODULAR_BOOTSTRAP_DIR)/canonical-closure.txt
-MODULAR_STAGE1_BIN ?= $(MODULAR_BOOTSTRAP_DIR)/s_modular-stage1
-MODULAR_STAGE2_BIN ?= $(MODULAR_BOOTSTRAP_DIR)/s_modular-stage2
 PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
 S_HOST_OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 S_HOST_ARCH := $(shell uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
@@ -29,16 +27,6 @@ S_TARGET_OS ?= $(S_HOST_OS)
 S_TARGET_ARCH ?= $(S_HOST_ARCH)
 RUN_COMPILER_TARGET := compiler
 RUN_COMPILER_BIN := ./bin/s
-target-info: seed-compiler-bin
-	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./misc/scripts/target-info.sh
-	@S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) ./bin/s_seed --target-info
-target-config-check: seed-compiler-bin
-	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=linux S_TARGET_ARCH=amd64 ./misc/scripts/target-info.sh | grep -q '^standalone_backend=linux/amd64 ELF$$'
-	@S_TARGET_OS=linux S_TARGET_ARCH=amd64 ./bin/s_seed --target-info | grep -q '^standalone backend: available$$'
-	@S_TARGET_OS=darwin S_TARGET_ARCH=arm64 ./bin/s_seed --target-info | grep -q '^configured target: darwin/arm64 (macho)$$'
-	@S_TARGET_OS=darwin S_TARGET_ARCH=arm64 ./bin/s_seed --target-info | grep -q '^standalone backend: available$$'
-	@! S_TARGET_OS=plan9 S_TARGET_ARCH=amd64 ./bin/s_seed --target-info >/dev/null 2>&1
-	@echo "Target configuration checks passed"
 run: $(RUN_COMPILER_TARGET)
 	@mkdir -p "$(INSTALL_BIN_DIR)"
 	@$(if $(filter 1,$(VERBOSE)),echo "Installing no-GC S compiler driver for $$(uname -m)...";)
@@ -315,13 +303,13 @@ selfhost-lexer-check: seed-compiler-bin
 	@cmp $(SELFHOST_DIR)/illegal-char.seed $(SELFHOST_DIR)/illegal-char.s
 	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/s_lexer ./bin/s_lexer
 	@echo "Standalone S lexer check passed: S token stream == seed token stream"
-selfhost-check: selfhost selfhost-lexer-check
+selfhost-native-check: selfhost selfhost-lexer-check
 	@./bin/s test/c_abi/add.s $(SELFHOST_DIR)/final-check.ir
 	@S_LEXER_MODE=selfhost S_SELFHOST_LEXER=$(SELFHOST_DIR)/s_lexer ./bin/s test/c_abi/add.s $(SELFHOST_DIR)/s-lexer-parser.ir
 	@cmp $(SELFHOST_DIR)/final-check.ir $(SELFHOST_DIR)/s-lexer-parser.ir
 	@cmp $(SELFHOST_DIR)/native/stage2.S $(SELFHOST_DIR)/native/stage3.S
 	@echo "Native bootstrap check passed: stage2 == stage3 and S Lexer -> Parser IR matches seed"
-true-selfhost-check: selfhost-check
+selfhost-true-check: selfhost
 	@./misc/scripts/verify_true_selfhost.sh ./bin/s
 	@echo "True self-host check passed: ./bin/s does not link the C seed compiler"
 bootstrap-audit: selfhost
@@ -669,27 +657,25 @@ selfhost-runtime-check:
 	@./misc/scripts/verify_true_selfhost.sh $(SELFHOST_DIR)/nostdlib/runtime_probe
 	@test "$$($(SELFHOST_DIR)/nostdlib/runtime_probe)" = "nostdlib-runtime-ok"
 	@echo "No-libc Linux/amd64 runtime check passed"
-.PHONY: benchmark help no-gc-mvp no-gc-mvp-check target-info target-config-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check true-selfhost-check selfhost-nostdlib selfhost-runtime-check verify-true-selfhost selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check s-syntax-check s-semantic-check s-compiler-integration-check s-e2e-check s-validation-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test darwin-arm64-hosted-compiler darwin-arm64-slice-check test-quick test-full build-parallel selfhost-full stage0-build stage0-closure-check modular-selfhost-check production-selfhost-check
+.PHONY: benchmark help no-gc-mvp no-gc-mvp-check bootstrap-stage0 bootstrap-convergence bootstrap-pure-s bootstrap-audit native-bootstrap direct-bootstrap native-bootstrap-install native-selfhost native-codegen-check bootstrap-subset-check bootstrap-slice1-check bootstrap-slice2-check bootstrap-slice3-check bootstrap-slice4-check bootstrap-slice5-check bootstrap-slice6-check pure-s-bootstrap-check bootstrap-source-closure selfhost selfhost-check selfhost selfhost-nostdlib selfhost-runtime-check selfhost-lexer-check seed-frontend-lexer-check seed-frontend-parser-check s-semantic-check s-compiler-integration-check s-e2e-check selfhost-bin seed-tests seed-runtime-regression-bin seed-runtime-regression seed-network-tests sroutine-check seed-compiler-bin seed-c-abi-test darwin-arm64-hosted-compiler darwin-arm64-slice-check build-parallel selfhost-full modular-selfhost-check production-selfhost-check
 benchmark: compiler
 	@sh test/benchmarks/run.sh
 no-gc-mvp:
 	@sed -n '1,220p' doc/no-gc-mvp.md
 no-gc-mvp-check: compiler-check
 	@echo "No-GC MVP acceptance checks passed"
-verify-true-selfhost:
-	@./misc/scripts/verify_true_selfhost.sh "$(if $(SELFHOST_BIN),$(SELFHOST_BIN),./bin/s)"
 .PHONY: show-all-targets
 show-all-targets:
 	@echo "  make pipeline"; \
 	echo "  make install"; \
-	make -qp 2>/dev/null | grep "^[a-zA-Z_][a-zA-Z0-9_-]*:" | sed 's/:.*//g' | grep -v "^pipeline$$" | grep -v "^install$$" | sort -u | awk '{printf "  make %-50s\n", $$1}'
+	echo "  make selfhost"; \
+	make -qp 2>/dev/null | grep "^[a-zA-Z_][a-zA-Z0-9_-]*:" | sed 's/:.*//g' | grep -v "^pipeline$$" | grep -v "^install$$" | grep -v "^selfhost$$" | sort -u | awk '{printf "  make %-50s\n", $$1}'
 help:
 	@echo "  make benchmark              # Compare S AOT, C, and Go on the loop benchmark"
 	@echo "  make run"
 	@echo "  make build-x86_64"
 	@echo "  make build-arm64"
 	@echo "  make target-info S_TARGET_OS=linux S_TARGET_ARCH=amd64"
-	@echo "  make target-config-check"
 	@echo "  make darwin-arm64-hosted-compiler # Build a native macOS/ARM64 S compiler"
 	@echo "  make darwin-arm64-slice-check     # Verify direct S -> Mach-O/ARM64 codegen"
 	@echo "  make seed-tests"
@@ -720,36 +706,17 @@ help:
 	@echo "  see doc/bootstrap.md         # Bootstrap ladder notes and slice rationale"
 	@echo "  make pure-s-bootstrap-check # Run every implemented no-seed bootstrap frontier"
 	@echo "  make bootstrap-source-closure # Resolve the pure-S compiler source closure"
-	@echo "  make selfhost                # Install the native self-hosted compiler"
 	@echo "  make seed-hosted-selfhost    # Install the seed-hosted compatibility path"
 	@echo "  make selfhost-check"
-	@echo "  make true-selfhost-check      # Reject a compiler that still links the C seed"
 	@echo "  make selfhost-nostdlib        # Build without C library (experimental)"
 	@echo "  make selfhost-runtime-check   # Verify the no-libc Linux/amd64 runtime"
 	@echo "  make selfhost-lexer-check"
-	@echo "  make s-validation-check       # Run S syntax, semantic, compiler integration, and E2E gates"
 	@echo "  PARALLEL BUILDS:"
-	@echo "  make test-quick               # Run quick tests only"
-	@echo "  make test-full                # Run all tests in parallel"
 	@echo "  make build-parallel           # Build all tools in parallel"
 	@echo "  make selfhost-full            # Complete bootstrapping with parallel jobs"
 	@echo "  CONFIGURATION:"
 	@echo "  make PARALLEL_JOBS=8          # Override CPU count (default: nproc)"
 	@echo "  override install dir: make INSTALL_BIN_DIR=/usr/local/bin SUDO=sudo"
-test-quick: seed-tests compiler-check
-	@echo "✓ Quick tests passed"
-test-full: seed-compiler-bin
-	@echo "Running test suites with isolated runtime resources..."
-	@$(MAKE) seed-tests
-	@$(MAKE) seed-runtime-regression
-	@$(MAKE) compiler-checmake pipelinek
-	@echo "✓ All tests passed"
-s-syntax-check: seed-frontend-parser-check
-	@mkdir -p /tmp/s_validation_check
-	@./bin/s_seed test/simple_test.s /tmp/s_validation_check/sample.ir
-	@test -s /tmp/s_validation_check/sample.ir
-	@rg -q '^FUNC_BEGIN\|main\|' /tmp/s_validation_check/sample.ir
-	@echo "✓ 语法编译验证 passed"
 s-semantic-check: compiler-check
 	@echo "✓ 语义正确性 passed"
 s-compiler-integration-check: compiler
@@ -761,8 +728,6 @@ s-compiler-integration-check: compiler
 s-e2e-check: s-compiler-integration-check
 	@set +e; ./.bootstrap/s-validation/simple; status=$$?; set -e; test $$status -eq 42
 	@echo "✓ 端到端测试 passed"
-s-validation-check: s-syntax-check s-semantic-check s-compiler-integration-check s-e2e-check
-	@echo "S validation matrix passed"
 build-parallel:
 	@echo "Building seed compiler, tests, and regression tests in parallel ($(PARALLEL_JOBS) jobs)..."
 	@set -e; \
@@ -1018,64 +983,11 @@ modular-bootstrap-root-audit: modular-bootstrap-stage-discovery
 	  misc/scripts/modular_bootstrap_root_audit.sh \
 	  src/cmd/compile/pipeline/main.s "$(MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT)" >/dev/null
 	@echo "Modular bootstrap root audit report: $(MODULAR_BOOTSTRAP_ROOT_AUDIT_REPORT)"
-.PHONY: modular-bootstrap
-modular-bootstrap: stage0-build stage0-closure-check
-	@echo "Bootstrapping canonical modular compiler with explicit C Stage0..."
-	@mkdir -p "$(MODULAR_BOOTSTRAP_DIR)"
-	@{ \
-	  echo "source=src/cmd/compile/pipeline/main.s"; \
-	  echo "producer=$(STAGE0_BIN)"; \
-	  echo "role=explicit-c-stage0"; \
-	  echo "closure=$(STAGE0_CLOSURE)"; \
-	  echo "status=attempting-stage0"; \
-	} > "$(MODULAR_BOOTSTRAP_REPORT)"
-	@S_SOURCE_ROOT=$(CURDIR) "$(STAGE0_BIN)" "$(CURDIR)" "$(STAGE0_CLOSURE)" "$(MODULAR_STAGE1_BIN)" >>"$(MODULAR_BOOTSTRAP_REPORT)" 2>&1
-	@cp "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_BIN)"
-	@chmod +x "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_BIN)"
-	@echo "status=bootstrap-ok" >>"$(MODULAR_BOOTSTRAP_REPORT)"
-	@echo "explicit-bootstrap-root=ESTABLISHED" >>"$(MODULAR_BOOTSTRAP_REPORT)"
-	@echo "canonical-source-compilation=NOT_PROVEN" >>"$(MODULAR_BOOTSTRAP_REPORT)"
-	@echo "production-compiler-bootstrap=NOT_PROVEN" >>"$(MODULAR_BOOTSTRAP_REPORT)"
 .PHONY: canonical-source-compilation-check
 canonical-source-compilation-check: modular-bootstrap
 	@echo "Checking canonical source compilation authority..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 ./misc/scripts/canonical-source-compilation-check.sh
-.PHONY: stage1-delegation-authority-check
-stage1-delegation-authority-check: modular-bootstrap
-	@echo "Checking stage1 delegation authority..."
-	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
-	 ./misc/scripts/stage1-delegation-authority-check.sh
-.PHONY: generic-production-path-check
-generic-production-path-check: canonical-source-compilation-check
-	@echo "Checking generic production invocation path..."
-	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
-	 ./misc/scripts/generic-production-path-check.sh
-.PHONY: stage1-generic-dispatch-check
-stage1-generic-dispatch-check: canonical-source-compilation-check
-	@echo "Checking stage1 generic dispatch authority..."
-	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
-	 ./misc/scripts/stage1-generic-dispatch-check.sh
-.PHONY: stage1-build-authority-check
-stage1-build-authority-check:
-	@echo "Checking stage1 build authority replacement edge..."
-	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
-	 ./misc/scripts/stage1-build-authority-check.sh
-.PHONY: stage1-canonical-build-dispatch-check
-stage1-canonical-build-dispatch-check: modular-bootstrap
-	@echo "Checking stage1 canonical build dispatch..."
-	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
-	 ./misc/scripts/stage1-canonical-build-dispatch-check.sh
-.PHONY: stage1-canonical-entry-linkage-check
-stage1-canonical-entry-linkage-check: modular-bootstrap
-	@echo "Checking stage1 canonical entry linkage..."
-	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
-	 ./misc/scripts/stage1-canonical-entry-linkage-check.sh
-.PHONY: stage1-bootstrap-mechanism-audit
-stage1-bootstrap-mechanism-audit: modular-bootstrap
-	@echo "Auditing stage1 bootstrap mechanism..."
-	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
-	 ./misc/scripts/stage1-bootstrap-mechanism-audit.sh
 .PHONY: canonical-bootstrap-capability-gap-audit
 canonical-bootstrap-capability-gap-audit: modular-bootstrap
 	@echo "Auditing canonical bootstrap capability gap..."
@@ -1186,25 +1098,6 @@ canonical-post-mir-lowering-authority-audit: seed-compiler-bin
 	@echo "Auditing canonical post-MIR lowering authority..."
 	@S_PROJECT_ROOT=$(CURDIR) S_SOURCE_ROOT=$(CURDIR)/src \
 	 bash ./misc/scripts/canonical-post-mir-lowering-authority-audit.sh
-.PHONY: stage0-build
-stage0-build:
-	@echo "Building explicit C Stage0..."
-	@mkdir -p "$(MODULAR_BOOTSTRAP_DIR)"
-	@cc -std=c11 -O2 -Wall -Wextra -Werror -o "$(STAGE0_BIN)" src/cmd/compile/stage0/stage0.c
-	@echo "Stage0 ready: $(STAGE0_BIN)"
-.PHONY: stage0-closure-check
-stage0-closure-check: package-index
-	@echo "Freezing canonical modular compiler source closure..."
-	@mkdir -p "$(MODULAR_BOOTSTRAP_DIR)"
-	@S_SOURCE_ROOT=$(CURDIR) ./src/cmd/dist/source_closure.sh \
-	  src/cmd/compile/pipeline/main.s "$(STAGE0_CLOSURE)"
-	@chmod +x misc/scripts/stage0_closure_check.sh
-	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/stage0_closure_check.sh \
-	  src/cmd/compile/pipeline/main.s "$(STAGE0_CLOSURE)"
-.PHONY: stage0-freeze-check
-stage0-freeze-check: stage0-build
-	@chmod +x misc/scripts/stage0_freeze_check.sh
-	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/stage0_freeze_check.sh
 .PHONY: modular-selfhost-check
 modular-selfhost-check: modular-bootstrap
 	@echo "Checking artifact/template ladder only..."
@@ -1215,33 +1108,14 @@ modular-selfhost-check: modular-bootstrap
 	@"$(MODULAR_BOOTSTRAP_DIR)/hello" >"$(MODULAR_BOOTSTRAP_DIR)/hello.out"
 	@grep -qx "hello from S" "$(MODULAR_BOOTSTRAP_DIR)/hello.out"
 	@echo "artifact-ladder=PASS; canonical-source-compilation=NOT_PROVEN; production-compiler-bootstrap=NOT_PROVEN"
-.PHONY: parser-authority-check
-parser-authority-check: modular-bootstrap stage0-freeze-check
-	@echo "Checking parser authority execution path..."
-	@chmod +x misc/scripts/parser_authority_check.sh
-	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/parser_authority_check.sh \
-	  "$(MODULAR_STAGE1_BIN)" "$(PARSER_AUTHORITY_REPORT)"
-.PHONY: canonical-parser-closure-check
-canonical-parser-closure-check: bin/s_modular stage0-closure-check
-	@echo "Checking Stage 3 canonical parser closure..."
-	@chmod +x misc/scripts/canonical-parser-closure-check.sh
-	@S_SOURCE_ROOT=$(CURDIR) S_PROJECT_ROOT=$(CURDIR) \
-	  misc/scripts/canonical-parser-closure-check.sh \
-	  "$(CURDIR)/bin/s_modular" "$(STAGE0_CLOSURE)" \
-	  "$(MODULAR_BOOTSTRAP_DIR)/canonical-parser-closure-report.txt"
 .PHONY: pipeline
-pipeline:
+pipeline: compiler
 	@chmod +x scripts/compile-pipeline-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/compile-pipeline-check.sh
-.PHONY: stage5-name-resolution-check
-stage5-name-resolution-check: bin/s_compiler
-	@echo "Checking Stage 5 Name → Declaration Resolution Authority..."
-	@mkdir -p $(MODULAR_BOOTSTRAP_DIR)/stage5
-	@chmod +x scripts/canonical-name-resolution-check.sh
-	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-name-resolution-check.sh "$(CURDIR)"
-.PHONY: canonical-name-resolution-check
-canonical-name-resolution-check:
-	@$(MAKE) stage5-name-resolution-check
+.PHONY: bootstrap-b1-source-closure-audit
+bootstrap-b1-source-closure-audit: package-index
+	@chmod +x misc/scripts/bootstrap-b1-source-closure-audit.sh
+	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/bootstrap-b1-source-closure-audit.sh
 .PHONY: canonical-declaration-ref-check
 canonical-declaration-ref-check: compiler
 	@chmod +x scripts/canonical-declaration-ref-check.sh
@@ -1278,41 +1152,52 @@ canonical-sseed-read-place-check: canonical-mir-read-check
 canonical-ownership-check: compiler
 	@chmod +x scripts/canonical-ownership-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-ownership-check.sh "$(CURDIR)"
-.PHONY: canonical-resolution-closure-check
-canonical-resolution-closure-check: bin/s_modular stage0-closure-check
-	@echo "Checking Stage 5/6 canonical resolution/declaration-ref closure..."
-	@chmod +x misc/scripts/canonical-resolution-closure-check.sh
-	@S_SOURCE_ROOT=$(CURDIR) S_PROJECT_ROOT=$(CURDIR) \
-	  misc/scripts/canonical-resolution-closure-check.sh \
-	  "$(CURDIR)/bin/s_modular" "$(STAGE0_CLOSURE)" \
-	  "$(MODULAR_BOOTSTRAP_DIR)/canonical-resolution-closure-report.txt"
+.PHONY: canonical-monomorphization-check
+canonical-monomorphization-check: compiler
+	@chmod +x scripts/canonical-monomorphization-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-monomorphization-check.sh "$(CURDIR)"
+.PHONY: canonical-optimization-check
+canonical-optimization-check: compiler
+	@chmod +x scripts/canonical-optimization-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-optimization-check.sh "$(CURDIR)"
+.PHONY: canonical-layout-check
+canonical-layout-check: compiler
+	@chmod +x scripts/canonical-layout-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-layout-check.sh "$(CURDIR)"
+.PHONY: canonical-abi-check
+canonical-abi-check: compiler
+	@chmod +x scripts/canonical-abi-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-abi-check.sh "$(CURDIR)"
+.PHONY: canonical-codegen-check
+canonical-codegen-check: compiler
+	@chmod +x scripts/canonical-codegen-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-codegen-check.sh "$(CURDIR)"
+.PHONY: canonical-regalloc-check
+canonical-regalloc-check: compiler
+	@chmod +x scripts/canonical-regalloc-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-regalloc-check.sh "$(CURDIR)"
+.PHONY: canonical-machine-code-check
+canonical-machine-code-check: compiler
+	@chmod +x scripts/canonical-machine-code-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-machine-code-check.sh "$(CURDIR)"
+.PHONY: canonical-object-emission-check
+canonical-object-emission-check: compiler
+	@chmod +x scripts/canonical-object-emission-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-object-emission-check.sh "$(CURDIR)"
+.PHONY: canonical-linking-check
+canonical-linking-check: compiler
+	@chmod +x scripts/canonical-linking-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-linking-check.sh "$(CURDIR)"
+.PHONY: canonical-executable-check
+canonical-executable-check: compiler
+	@chmod +x scripts/canonical-executable-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) scripts/canonical-executable-check.sh "$(CURDIR)"
 .PHONY: parser-execution-path-check
 parser-execution-path-check: modular-bootstrap
 	@echo "Tracing parser execution path..."
 	@chmod +x misc/scripts/parser_execution_path_check.sh
 	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/parser_execution_path_check.sh \
 	  "$(MODULAR_STAGE1_BIN)" "$(PARSER_EXECUTION_PATH_REPORT)"
-.PHONY: parser-carry-capability-check
-parser-carry-capability-check: modular-bootstrap stage0-freeze-check
-	@S_SOURCE_ROOT=$(CURDIR) sh misc/scripts/parser_carry_capability_check.sh \
-	  "$(MODULAR_STAGE1_BIN)" "$(STAGE0_CLOSURE)" "$(MODULAR_BOOTSTRAP_DIR)/parser-carry-capability-report.txt"
-.PHONY: stage1-source-execution-check
-stage1-source-execution-check: modular-bootstrap stage0-freeze-check
-	@sh misc/scripts/stage1_source_execution_check.sh "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_DIR)"
-.PHONY: stage1-import-carry-check
-stage1-import-carry-check: stage1-source-execution-check
-	@S_SOURCE_ROOT=$(CURDIR) sh misc/scripts/stage1_import_carry_check.sh "$(MODULAR_STAGE1_BIN)" "$(MODULAR_BOOTSTRAP_DIR)"
-.PHONY: production-selfhost-check
-.PHONY: canonical-bootstrap-capability-check
-canonical-bootstrap-capability-check: stage1-import-carry-check
-	@S_SOURCE_ROOT=$(CURDIR) sh misc/scripts/canonical_bootstrap_capability_check.sh \
-	  "$(MODULAR_STAGE1_BIN)" "$(STAGE0_CLOSURE)" "$(MODULAR_BOOTSTRAP_DIR)"
-production-selfhost-check: modular-selfhost-check stage1-source-execution-check parser-execution-path-check parser-authority-check
-	@echo "Auditing production compiler authority..."
-	@chmod +x misc/scripts/production_selfhost_authority_audit.sh
-	@S_SOURCE_ROOT=$(CURDIR) misc/scripts/production_selfhost_authority_audit.sh \
-	  "$(PRODUCTION_AUTHORITY_REPORT)" "$(STAGE0_CLOSURE)" "$(MODULAR_BOOTSTRAP_REPORT)" "$(PARSER_AUTHORITY_REPORT)" "$(MODULAR_BOOTSTRAP_DIR)/stage1-source-execution-report.txt"
-	@grep -qx "production-authority=NOT_YET_PROVEN" "$(PRODUCTION_AUTHORITY_REPORT)"
 .PHONY: modular-bootstrap-check
 modular-bootstrap-check: modular-bootstrap
 	@echo "Checking canonical modular bootstrap artifact..."

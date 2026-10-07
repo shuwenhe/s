@@ -50,6 +50,35 @@ write_s13_fail_report() {
     return 1
 }
 
+write_s13_pass_report() {
+    {
+        echo "STAGE 13 - MONOMORPHIZATION"
+        echo "Scope: Stage 13 gate only; canonical ownership facts input before monomorphization"
+        echo "Layout/ABI/codegen success is NOT required."
+        echo "compiler=$COMPILER"
+        echo "proof-source=stage13-monomorphization-gate"
+        echo "S13.1=PASS"
+        echo "S13.1.contract=$(proof_value S13.1.contract "$RAW_STAGE13")"
+        echo "S13.1.input-authority=$(proof_value S13.1.input-authority "$RAW_STAGE13")"
+        echo "S13.1.ownership-facts-consumed=$(proof_value S13.1.ownership-facts-consumed "$RAW_STAGE13")"
+        echo "S13.1.mir-reconstruction=$(proof_value S13.1.mir-reconstruction "$RAW_STAGE13")"
+        echo "S13.1.evidence=$(proof_value S13.1.evidence "$RAW_STAGE13")"
+        echo "S13.2=PASS"
+        echo "S13.2.contract=$(proof_value S13.2.contract "$RAW_STAGE13")"
+        echo "S13.2.input-authority=$(proof_value S13.2.input-authority "$RAW_STAGE13")"
+        echo "S13.2.producer=$(proof_value S13.2.producer "$RAW_STAGE13")"
+        echo "S13.2.data-structure=$(proof_value S13.2.data-structure "$RAW_STAGE13")"
+        echo "S13.2.consumer=$(proof_value S13.2.consumer "$RAW_STAGE13")"
+        echo "S13.2.observable=$(proof_value S13.2.observable "$RAW_STAGE13")"
+        echo "S13.2.evidence=$(proof_value S13.2.evidence "$RAW_STAGE13")"
+        echo "stage13-monomorphization=$(proof_value stage13-monomorphization "$RAW_STAGE13")"
+        echo "result=PASS"
+    } > "$TMP_REPORT"
+    mv "$TMP_REPORT" "$REPORT"
+    cat "$REPORT"
+    return 0
+}
+
 if [ ! -x "$COMPILER" ]; then
     write_s13_fail_report "S13.1" "compiler not found or not executable: $COMPILER"
     exit $?
@@ -71,6 +100,18 @@ if [ "$(proof_value S13.1 "$RAW_STAGE13")" = "PASS" ] &&
    [ "$(proof_value S13.1.ownership-facts-consumed "$RAW_STAGE13")" = "yes" ] &&
    [ "$(proof_value S13.1.mir-reconstruction "$RAW_STAGE13")" = "no" ] &&
    [ -n "$(proof_value S13.1.evidence "$RAW_STAGE13")" ]; then
+    if [ "$(proof_value S13.2 "$RAW_STAGE13")" = "PASS" ] &&
+       [ "$(proof_value S13.2.contract "$RAW_STAGE13")" = "generic-type-resolution-facts-producer" ] &&
+       [ "$(proof_value S13.2.input-authority "$RAW_STAGE13")" = "stage12-ownership-facts" ] &&
+       [ -n "$(proof_value S13.2.producer "$RAW_STAGE13")" ] &&
+       [ -n "$(proof_value S13.2.data-structure "$RAW_STAGE13")" ] &&
+       [ -n "$(proof_value S13.2.consumer "$RAW_STAGE13")" ] &&
+       [ "$(proof_value S13.2.observable "$RAW_STAGE13")" = "yes" ] &&
+       [ -n "$(proof_value S13.2.evidence "$RAW_STAGE13")" ] &&
+       [ "$(proof_value stage13-monomorphization "$RAW_STAGE13")" = "CLOSED" ]; then
+        write_s13_pass_report
+        exit $?
+    fi
     if [ "$(proof_value first-unmet-contract "$RAW_STAGE13")" = "S13.2" ]; then
         write_s13_fail_report "S13.2" "$(proof_value S13.2.reason "$RAW_STAGE13")"
         exit $?
