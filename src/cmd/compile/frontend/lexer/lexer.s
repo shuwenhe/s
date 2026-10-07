@@ -18,8 +18,8 @@ struct lexer {
 }
 
 func new_lexer(string source) lexer {
-    lexer {
-        source: source, index 0, line 1, column 1,
+    return lexer {
+        source: source, index: 0, line: 1, column: 1,
     }
 }
 
@@ -41,38 +41,38 @@ func (lexer* self) tokenize() (token[], lex_error) {
                 token_kind::ident
             }
             tokens.push(token {
-                kind: kind, value value, line start_line, column start_column,
+                kind: kind, value: value, line: start_line, column: start_column,
             })
             continue
         }
         if is_digit(ch) {
             tokens.push(token {
-                kind: token_kind::int, value self.read_number(), line start_line, column start_column,
+                kind: token_kind::int, value: self.read_number(), line: start_line, column: start_column,
             })
             continue
         }
         if ch == "\"" {
             tokens.push(token {
-                kind: token_kind::string, value self.read_string(), line start_line, column start_column,
+                kind: token_kind::string, value: self.read_string(), line: start_line, column: start_column,
             })
             continue
         }
         if ch == '(' || ch == ')' {
             tokens.push(token {
-                kind: token_kind::symbol, value self.read_symbol(), line start_line, column start_column,
+                kind: token_kind::symbol, value: self.read_symbol(), line: start_line, column: start_column,
             })
             continue
         }
         tokens.push(token {
-            kind: token_kind::symbol, value self.read_symbol(), line start_line, column start_column,
+            kind: token_kind::symbol, value: self.read_symbol(), line: start_line, column: start_column,
         })
-        }
-        tokens.push(token {
-            kind: token_kind::eof,
-            value: "<eof>", line self.line, column self.column,
-        })
-        tokens
     }
+    tokens.push(token {
+        kind: token_kind::eof,
+        value: "<eof>", line: self.line, column: self.column,
+    })
+    return tokens
+}
 
 func (lexer* self) skip_ignored() ((), lex_error) {
     for !self.is_eof() {
@@ -81,17 +81,28 @@ func (lexer* self) skip_ignored() ((), lex_error) {
             self.advance()
             continue
         }
-        if self.match_text("
+        if self.match_text("//") {
             for !self.is_eof() && self.peek() != "\n" {
                 self.advance()
             }
             continue
         }
-        if self.match_text("") {
+        if self.match_text("/*") {
+            int depth = 1
+            self.advance()
+            self.advance()
+            for !self.is_eof() {
+                if self.match_text("*/") {
                     depth = depth - 1
                     self.advance()
                     self.advance()
+                    if depth == 0 {
+                        break
+                    }
                     continue
+                }
+                if self.match_text("/*") {
+                    depth = depth + 1
                 }
                 self.advance()
             }
@@ -99,8 +110,7 @@ func (lexer* self) skip_ignored() ((), lex_error) {
         }
         break
     }
-    (), lex_error empty
-    return empty
+    return (), lex_error{}
 }
 
 func (lexer* self) read_identifier() (string, lex_error) {
@@ -112,7 +122,7 @@ func (lexer* self) read_identifier() (string, lex_error) {
         }
         out = out + self.advance()
     }
-    out
+    return out
 }
 
 func (lexer* self) read_number() (string, lex_error) {
@@ -124,7 +134,7 @@ func (lexer* self) read_number() (string, lex_error) {
         }
         out = out + self.advance()
     }
-    out
+    return out
 }
 
 func (lexer* self) read_string() (string, lex_error) {
@@ -136,14 +146,14 @@ func (lexer* self) read_string() (string, lex_error) {
             if self.is_eof() {
                 return self.error("unterminated escape sequence")
             }
-            string ch = self.advance()
+            ch = self.advance()
             continue
         }
         if ch == "\"" {
             return out
         }
     }
-    self.error("unterminated string literal")
+    return self.error("unterminated string literal")
 }
 
 func (lexer* self) read_symbol() (string, lex_error) {
@@ -187,14 +197,14 @@ func (lexer* self) match_text(string text) bool {
     if self.index + std.prelude.len(text) > std.prelude.len(self.source) {
         return false
     }
-    std.prelude.slice(self.source, self.index, self.index + std.prelude.len(text)) == text
+    return std.prelude.slice(self.source, self.index, self.index + std.prelude.len(text)) == text
 }
 
 func (lexer* self) peek() (string, lex_error) {
     if self.is_eof() {
         return self.error("unexpected eof")
     }
-    std.prelude.char_at(self.source, self.index)
+    return std.prelude.char_at(self.source, self.index)
 }
 
 func (lexer* self) advance() (string, lex_error) {
@@ -209,16 +219,16 @@ func (lexer* self) advance() (string, lex_error) {
     } else {
         self.column = self.column + 1
     }
-    ch
+    return ch
 }
 
 func (lexer* self) is_eof() bool {
-    self.index >= std.prelude.len(self.source)
+    return self.index >= std.prelude.len(self.source)
 }
 
 func (lexer* self) error(string message) lex_error {
-    lex_error {
-        message: message, line self.line, column self.column,
+    return lex_error {
+        message: message, line: self.line, column: self.column,
     }
 }
 
