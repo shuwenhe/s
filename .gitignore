@@ -48,6 +48,22 @@ venv/
 env/
 __pycache__/
 *.pyc
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Compiler intermediate representation
+*.ir
+
+# Test and benchmark outputs
+*.test
+*.bench
+test-results.txt
 pip-wheel-metadata/
 *.egg-info/
 
