@@ -2,7 +2,7 @@
 set -eu
 
 root=${S_SOURCE_ROOT:-$(pwd)}
-entry=${1:-src/cmd/compile/pipeline/main.s}
+entry=${1:-src/cmd/compile/main.s}
 report=${2:-"$root/.bootstrap/modular/bootstrap-root-audit.txt"}
 compat_report=${S_BOOTSTRAP_COMPAT_REPORT:-"$root/.bootstrap/modular/bootstrap-compat-audit.txt"}
 compat_script=${S_BOOTSTRAP_COMPAT_SCRIPT:-"$root/misc/scripts/modular_bootstrap_compat_audit.sh"}
@@ -282,7 +282,7 @@ fi
     printf 'candidate=seed-direct-entry result=%s\n' "$seed_entry"
     printf 'candidate=no-gc-bin-s_compiler result=%s\n' "$nogc_entry"
     printf 'verdict=NOT_VIABLE_ROOT\n'
-    printf 'reason=existing scripts target selfhost/compiler.s or require a runnable stage/root; direct candidates fail before canonical closure authority\n\n'
+    printf 'reason=existing scripts target split selfhost sources or require a runnable stage/root; direct candidates fail before canonical closure authority\n\n'
 
     printf 'Priority 4: minimum explicit stage0 capability set\n'
     printf 'Minimum-stage0-capabilities:\n'
