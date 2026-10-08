@@ -18,7 +18,7 @@ if grep -Fxq "$signature" "$meta"; then
 fi
 
 set +e
-"$root/bin/s_seed" "$root/src/cmd/compile/pipeline/main.s" "$tmp/modular_build_main.ir" >"$tmp/seed.log" 2>&1
+"$root/bin/s_seed" "$root/src/cmd/compile/main.s" "$tmp/modular_build_main.ir" >"$tmp/seed.log" 2>&1
 status=$?
 set -e
 

@@ -15,7 +15,7 @@ rm -rf "$tmp"
 mkdir -p "$tmp"
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 
-entry_rel=src/cmd/compile/pipeline/main.s
+entry_rel=src/cmd/compile/main.s
 entry="$root/$entry_rel"
 
 closure_count=0
@@ -157,10 +157,10 @@ selfhost_emission_native=PARTIAL
 selfhost_emission_multi_object_linkage=UNKNOWN
 selfhost_emission_callable_entry_abi=PARTIAL
 
-if rg -q -e '--emit-native|emit_native_' "$root/src/cmd/compile/selfhost/compiler.s" 2>/dev/null; then
+if rg -q -e '--emit-native|emit_native_' "$root/src/cmd/compile/backend/selfhost" "$root/src/cmd/compile" 2>/dev/null; then
     selfhost_emission_native=YES
 fi
-if rg -q -e '--emit-c|emit_selfhost_c|compile_selfhost_c' "$root/src/cmd/compile/selfhost/compiler.s" 2>/dev/null; then
+if rg -q -e '--emit-c|emit_selfhost_c|compile_selfhost_c' "$root/src/cmd/compile/backend/selfhost" "$root/src/cmd/compile" 2>/dev/null; then
     selfhost_emission_object=PARTIAL
 fi
 
@@ -234,7 +234,7 @@ native_viability=PARTIAL
     echo "matrix=Emission,callable entry ABI,YES,$stage0_emission_callable_entry_abi,$seed_emission_callable_entry_abi,$selfhost_emission_callable_entry_abi,$native_emission_callable_entry_abi"
     echo "candidate=C-stage0/bootstrap_subset viability=$stage0_viability reason=would-require-duplicating-canonical-parser-semantic-authority"
     echo "candidate=s_seed viability=$seed_viability reason=nearest-existing-root-with-IR-AOT-but-current-canonical-entry-probe-fails-before-downstream-capabilities"
-    echo "candidate=selfhost/compiler.s viability=$selfhost_viability reason=has-native-capability-evidence-but-targets-historical-selfhost-compiler-not-37-file-canonical-closure"
+    echo "candidate=compile/selfhost-sources.txt viability=$selfhost_viability reason=has-native-capability-evidence-but-targets-historical-selfhost-compiler-not-37-file-canonical-closure"
     echo "candidate=native/AOT backend viability=$native_viability reason=emission-capability-exists-but-needs-frontend/semantic-consumer"
     echo "minimal-bootstrap-gap=[$minimal_gap]"
     echo "smallest-existing-root=$smallest_root"

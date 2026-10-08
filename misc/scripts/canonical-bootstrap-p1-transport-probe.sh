@@ -3,7 +3,7 @@ set -eu
 
 root=${S_PROJECT_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)}
 seed=${SEED_COMPILER_BIN:-"$root/bin/s_seed"}
-entry=${CANONICAL_BOOTSTRAP_ENTRY:-"$root/src/cmd/compile/pipeline/main.s"}
+entry=${CANONICAL_BOOTSTRAP_ENTRY:-"$root/src/cmd/compile/main.s"}
 report=${CANONICAL_BOOTSTRAP_P1_TRANSPORT_REPORT:-"$root/.bootstrap/modular/canonical-bootstrap-p1-transport-probe.txt"}
 
 mkdir -p "$(dirname -- "$report")"
@@ -77,7 +77,7 @@ if ! cmp -s "$entry" "$transported"; then
 fi
 
 compiler_source_modified=NO
-if git -C "$root" diff --quiet -- src/cmd/compile/seed src/cmd/compile/stage0 src/cmd/compile/internal src/cmd/compile/pipeline/main.s; then
+if git -C "$root" diff --quiet -- src/cmd/compile/seed src/cmd/compile/stage0 src/cmd/compile/internal src/cmd/compile/main.s; then
     compiler_source_modified=NO
 else
     compiler_source_modified=YES
