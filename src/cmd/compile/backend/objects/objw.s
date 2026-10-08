@@ -1,4 +1,4 @@
-package compile.internal.objw
+package compile.internal.objects
 func objw_unit_name() string {
     "objw/objw.s"
 }
