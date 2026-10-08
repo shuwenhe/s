@@ -1,4 +1,4 @@
-package middleend
+package middlend
 
 const ir_value_const = 1
 const ir_value_var = 2
