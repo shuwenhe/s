@@ -6,9 +6,6 @@ import (
     "std.option"
 )
 
-// M2 MINIMAL: Primitive, Declared, Pointer only
-// Reference, Slice, FixedArray deferred to Phase 2
-
 enum canonical_type_kind {
     primitive_kind,
     declared_kind,
@@ -18,17 +15,16 @@ enum canonical_type_kind {
 struct canonical_type {
     kind canonical_type_kind
     
-    // For primitive_kind: name of primitive (int, bool, string, etc.)
+    
     primitive_name string
     
-    // For declared_kind: reference to the declaration
+    
     declared_ref option[semantic.declaration_ref]
     
-    // For pointer_kind: child type
+    
     child option[canonical_type]
 }
 
-// Construct Primitive(kind)
 func primitive(string name) canonical_type {
     canonical_type {
         kind: canonical_type_kind.primitive_kind,
@@ -38,7 +34,6 @@ func primitive(string name) canonical_type {
     }
 }
 
-// Construct Declared(DeclarationRef)
 func declared(semantic.declaration_ref ref) canonical_type {
     canonical_type {
         kind: canonical_type_kind.declared_kind,
@@ -48,7 +43,6 @@ func declared(semantic.declaration_ref ref) canonical_type {
     }
 }
 
-// Construct Pointer(Type)
 func pointer(canonical_type inner) canonical_type {
     canonical_type {
         kind: canonical_type_kind.pointer_kind,
@@ -58,21 +52,19 @@ func pointer(canonical_type inner) canonical_type {
     }
 }
 
-// canonical_same_type: Semantic equality of types
-// Recursively compares structure and identity
 func canonical_same_type(canonical_type left, canonical_type right) bool {
-    // Kind must match
+    
     if left.kind != right.kind {
         return false
     }
     
     switch left.kind {
         canonical_type_kind.primitive_kind : {
-            // Primitives equal iff names equal
+            
             return left.primitive_name == right.primitive_name
         }
         canonical_type_kind.declared_kind : {
-            // Declared types equal iff DeclarationRefs equal
+            
             if left.declared_ref.is_none() || right.declared_ref.is_none() {
                 return left.declared_ref.is_none() && right.declared_ref.is_none()
             }
@@ -82,7 +74,7 @@ func canonical_same_type(canonical_type left, canonical_type right) bool {
             )
         }
         canonical_type_kind.pointer_kind : {
-            // Pointers equal iff children equal (recursive)
+            
             if left.child.is_none() || right.child.is_none() {
                 return left.child.is_none() && right.child.is_none()
             }
@@ -96,7 +88,6 @@ func canonical_same_type(canonical_type left, canonical_type right) bool {
     false
 }
 
-// canonical_type_to_string: For debugging
 func canonical_type_to_string(canonical_type t) string {
     switch t.kind {
         canonical_type_kind.primitive_kind : {
@@ -118,10 +109,8 @@ func canonical_type_to_string(canonical_type t) string {
     "invalid"
 }
 
-// M2 TypeSystem: Construct CanonicalType from string type and declarations
-// Handles forms like "Point", "Point*", "Point**", etc.
 func construct_canonical_from_string(string type_str, semantic.declaration_ref[] declarations) canonical_type {
-    // Count pointer prefix depth
+    
     pointer_depth := 0
     i := 0
     for i < std.prelude.len(type_str) && string(type_str[i]) == "*" {
@@ -129,10 +118,10 @@ func construct_canonical_from_string(string type_str, semantic.declaration_ref[]
         i = i + 1
     }
     
-    // Extract base type name (remaining after pointer stripping)
+    
     base_name := type_str[pointer_depth:]
     
-    // Resolve base name
+    
     base_canonical := canonical_type {
         kind: canonical_type_kind.primitive_kind,
         primitive_name: "",
@@ -140,21 +129,21 @@ func construct_canonical_from_string(string type_str, semantic.declaration_ref[]
         child: std.option.none,
     }
     
-    // Check if it's a primitive
+    
     if base_name == "int" || base_name == "bool" || base_name == "string" {
         base_canonical = primitive(base_name)
     } else {
-        // Try to find in declarations
+        
         found := semantic.find_struct_declaration(declarations, base_name)
         if found.is_some() {
             base_canonical = declared(found.unwrap())
         } else {
-            // Fallback: create as primitive with the name (may be error later)
+            
             base_canonical = primitive(base_name)
         }
     }
     
-    // Wrap with Pointer for each * prefix
+    
     result := base_canonical
     j := 0
     for j < pointer_depth {

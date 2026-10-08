@@ -97,7 +97,6 @@ struct compiler_state {
     string stage7_rejection_name_reresolution
 }
 
-
 struct compiler_stage8_canonical_type_ref_output {
     string stage7_type_fact
     string producer

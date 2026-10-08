@@ -1537,7 +1537,7 @@ func normalize_go_symbol(string text) string {
 
 func strip_go_asm_comment(string line) string {
     out := line
-    slash := index_of(out, "//")
+    slash := index_of(out, "
     if slash >= 0 {
         out = std.prelude.slice(out, 0, slash)
     }
@@ -2511,8 +2511,8 @@ func load_source_graph(string path, string source) (source_file, backend_error) 
             return backend_error { message: "monomorphization failed: unresolved generic residue" }
         }
         
-        // M1.1 Gate: Strict identity threading verification
-        // Proves: DeclarationRef flows from Semantic→Mono as value
+        
+        
         if !mono_result.m1_gate.declarations_received {
             return backend_error { message: "M1 gate FAILED: no declarations received from semantic phase" }
         }
@@ -2529,9 +2529,9 @@ func load_source_graph(string path, string source) (source_file, backend_error) 
             return backend_error { message: "M1 gate FAILED: some declaration_refs missing path" }
         }
         
-        // M1.1 PROVENANCE GATE: Verify refs come from semantic, not reconstructed
-        // This is the critical distinction: having a ref is not enough
-        // The ref must be traceable back to semantic declarations
+        
+        
+        
         if !mono_result.m1_gate.all_refs_traced_to_semantic {
             return backend_error { message: "M1 gate FAILED: PROVENANCE - some work_item refs not found in semantic declarations - indicates reconstruction or re-lookup" }
         }

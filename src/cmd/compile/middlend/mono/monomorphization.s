@@ -207,20 +207,20 @@ func find_declaration_ref_for_item(mono_context ctx, string item_kind, string ge
     i := 0
     for i < len(ctx.declarations) {
         decl := ctx.declarations[i]
-        // Match declaration_kind to item_kind
+        
         expected_kind := match item_kind {
             case "function": compile.internal.semantic.function_kind
             case "method": compile.internal.semantic.method_kind
             case "struct": compile.internal.semantic.struct_kind
             default: compile.internal.semantic.function_kind
         }
-        // Check if this declaration matches the item
+        
         if decl.kind == expected_kind && decl.path == generic_name {
             return decl
         }
         i = i + 1
     }
-    // Return empty declaration_ref if not found
+    
     compile.internal.semantic.declaration_ref {
         package_path: "",
         kind: compile.internal.semantic.function_kind,
@@ -269,7 +269,7 @@ func verify_identity_threading(mono_context ctx) m1_identity_verification {
                 verification.all_refs_have_valid_path = false
             }
             
-            // PROVENANCE CHECK: Can this ref be traced back to semantic declarations?
+            
             found_in_semantic := false
             j := 0
             for j < len(ctx.declarations) {

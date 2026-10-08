@@ -1,23 +1,5 @@
 package compile.pipeline
 
-// Canonical pipeline invariant:
-//
-// A stage may consume only:
-//   1. the canonical artifact produced by its immediate predecessor, or
-//   2. immutable earlier-stage context explicitly declared in the transition
-//      contract.
-//
-// A stage must not reconstruct its input by:
-//   - reparsing source
-//   - rescanning source text
-//   - parsing proof output
-//   - re-resolving names
-//   - rebuilding semantic facts owned by an earlier stage
-//
-// Artifacts are compiler facts.
-// Proof output is an observation of facts for gates, audits, and humans.
-// Proof output must never be a semantic input to another compiler stage.
-
 struct artifact_kind {
     string name
 }

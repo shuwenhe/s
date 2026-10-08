@@ -120,8 +120,6 @@ struct struct_binding {
     string name
 }
 
-
-
 struct declaration_ref {
     string package_path
     declaration_kind kind
@@ -159,8 +157,6 @@ func declaration_ref_display(declaration_ref ref) string {
     "unknown"
 }
 
-// M2: Query declaration by struct name
-// Resolves type name "Point" to its DeclarationRef
 func find_struct_declaration(declaration_ref[] declarations, string struct_name) option[declaration_ref] {
     i := 0
     for i < std.prelude.len(declarations) {
@@ -172,60 +168,57 @@ func find_struct_declaration(declaration_ref[] declarations, string struct_name)
     std.option.none
 }
 
-// M2 REACHABILITY GATE: Test CanonicalType construction path
-// Returns 0 if gate passes (CanonicalType path is reachable)
-// Returns non-0 if gate fails (path not reachable or errors)
 func validate_canonical_type_construction(function_binding[] functions, declaration_ref[] declarations) int {
-    // Gate only triggers if we have functions and declarations
+    
     if std.prelude.len(functions) == 0 || std.prelude.len(declarations) == 0 {
-        return 0  // Pass: no test data
+        return 0  
     }
     
-    // Iterate over functions and test each parameter type
+    
     fi := 0
     for fi < std.prelude.len(functions) {
         func_binding := functions[fi]
         
-        // Test each parameter type
+        
         pi := 0
         for pi < std.prelude.len(func_binding.param_types) {
             param_type := func_binding.param_types[pi]
             
-            // CRITICAL: Call construct_canonical_from_string()
-            // If this executes without error, path is REACHABLE
+            
+            
             canonical := compile.internal.canonical_type.construct_canonical_from_string(
                 param_type,
                 declarations
             )
             
-            // Gate verification: Check structure for types like "**Point"
-            // Must be: Pointer -> Pointer -> Declared
+            
+            
             if param_type == "**Point" {
-                // Verify we got a Pointer
+                
                 if canonical.kind != compile.internal.canonical_type.canonical_type_kind.pointer_kind {
-                    return 1  // FAILED: expected Pointer at depth 1
+                    return 1  
                 }
                 
-                // Verify child exists
+                
                 if canonical.child.is_none() {
-                    return 2  // FAILED: expected non-null child
+                    return 2  
                 }
                 
-                // Verify child is also Pointer
+                
                 child := canonical.child.unwrap()
                 if child.kind != compile.internal.canonical_type.canonical_type_kind.pointer_kind {
-                    return 3  // FAILED: expected Pointer at depth 2
+                    return 3  
                 }
                 
-                // Verify grandchild exists
+                
                 if child.child.is_none() {
-                    return 4  // FAILED: expected non-null grandchild
+                    return 4  
                 }
                 
-                // Verify grandchild is Declared
+                
                 grandchild := child.child.unwrap()
                 if grandchild.kind != compile.internal.canonical_type.canonical_type_kind.declared_kind {
-                    return 5  // FAILED: expected Declared at depth 3
+                    return 5  
                 }
             }
             
@@ -235,41 +228,38 @@ func validate_canonical_type_construction(function_binding[] functions, declarat
         fi = fi + 1
     }
     
-    return 0  // Gate passed
+    return 0  
 }
 
-// M2 EQUALITY DECISION GATE: Verify canonical_same_type() is used for real decisions
-// Returns 0 if gate passes
-// Returns non-0 if gate fails (canonical equality not used)
 func validate_canonical_equality_decision(function_binding[] functions, declaration_ref[] declarations) int {
-    // Test case 1: **Point vs **Point should be SAME
-    // Test case 2: **Point vs *Point should be DIFFERENT
+    
+    
     
     t1 := compile.internal.canonical_type.construct_canonical_from_string("**Point", declarations)
     t2 := compile.internal.canonical_type.construct_canonical_from_string("**Point", declarations)
     t3 := compile.internal.canonical_type.construct_canonical_from_string("*Point", declarations)
     
-    // Verify: t1 == t2 via canonical_same_type
+    
     same := compile.internal.canonical_type.canonical_same_type(t1, t2)
     if !same {
-        return 1  // FAILED: **Point should equal **Point
+        return 1  
     }
     
-    // Verify: t1 != t3 via canonical_same_type
+    
     different := compile.internal.canonical_type.canonical_same_type(t1, t3)
     if different {
-        return 2  // FAILED: **Point should NOT equal *Point
+        return 2  
     }
     
-    // M2 REAL DECISION TEST: Verify parameter matching logic
-    // Simulate: consume_point_pp expects **Point, receives **Point (should ACCEPT)
-    // Simulate: consume_point_pp expects **Point, receives *Point (should REJECT)
     
-    // This gate proves canonical_same_type() output is correct
-    // Final step: wire it into real try_match_signature
-    // Status: DECISION LOGIC VERIFIED, awaiting integration point
     
-    return 0  // Gate passed
+    
+    
+    
+    
+    
+    
+    return 0  
 }
 
 func check_text(string source) int {
@@ -448,8 +438,8 @@ func check_source_file(source_file file, string source) semantic_result {
     consts := collect_consts(file, functions, traits, source, diagnostics)
     structs := collect_structs(file)
     
-    // M2: Establish declarations BEFORE type checking
-    // So that infer_expr can use CanonicalType
+    
+    
     declarations := establish_declaration_identities(functions, traits, consts, structs)
     
     validate_function_set(functions, source, diagnostics)
@@ -459,7 +449,7 @@ func check_source_file(source_file file, string source) semantic_result {
         i = i + 1
     }
     
-    // M2 EQUALITY DECISION GATE: Verify canonical_same_type() is used
+    
     m2_equality_gate_result := validate_canonical_equality_decision(functions, declarations)
     if m2_equality_gate_result != 0 {
         add_error(source, diagnostics, "m2-eq-gate-001", "canonical equality not used in decision", "package")
@@ -484,8 +474,6 @@ func collect_structs(source_file file) struct_binding[] {
     }
     out
 }
-
-
 
 func establish_declaration_identities(function_binding[] functions, trait_binding[] traits, const_binding[] consts, struct_binding[] structs) declaration_ref[] {
     declarations := declaration_ref[]()
@@ -2665,15 +2653,15 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
         expected_type_str := binding.param_types[i]
         actual_type_str := arg_types[i]
         
-        // M2: For pointer types, use canonical type comparison
+        
         matched := false
         if starts_with(expected_type_str, "*") && starts_with(actual_type_str, "*") {
-            // M2 REAL DECISION: Construct canonical types and use canonical_same_type
+            
             expected_canonical := compile.internal.canonical_type.construct_canonical_from_string(expected_type_str, declarations)
             actual_canonical := compile.internal.canonical_type.construct_canonical_from_string(actual_type_str, declarations)
             matched = compile.internal.canonical_type.canonical_same_type(expected_canonical, actual_canonical)
         } else {
-            // Old path for non-pointer types (temporary until full M2 integration)
+            
             expected_ref := compile.internal.typesys.parse_type_ref(expected_type_str)
             actual_ref := compile.internal.typesys.parse_type_ref(actual_type_str)
             if is_unknown(actual_ref.canonical) {
@@ -2694,7 +2682,7 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
             }
         }
         
-        // M2: Score calculation for pointers still uses old path (temporary)
+        
         if !starts_with(binding.param_types[i], "*") {
             expected_ref := compile.internal.typesys.parse_type_ref(binding.param_types[i])
             actual_ref := compile.internal.typesys.parse_type_ref(arg_types[i])
