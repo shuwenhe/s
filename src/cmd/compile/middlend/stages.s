@@ -1073,8 +1073,6 @@ func compiler_emit_stage17_codegen_proof(string source) string {
     return out
 }
 
-// Stage 18: Register Allocation - Runtime Proof Integration
-
 struct regalloc_result {
     int allocated_reg_count
     int spill_count
@@ -1182,10 +1180,10 @@ func count_stage18_token(string text, string token) int {
 }
 
 func compiler_stage18_observe_regalloc_authority(string source, string goarch) compiler_stage18_regalloc_result {
-    // Get Stage 17 codegen result
+    
     codegen := compiler_stage17_observe_codegen_authority(source)
     
-    // Stage 17 must have succeeded for Stage 18 to run
+    
     if !codegen.consumed {
         return compiler_stage18_regalloc_result{
             consumed false,
@@ -1206,7 +1204,7 @@ func compiler_stage18_observe_regalloc_authority(string source, string goarch) c
         }
     }
     
-    // Get the MIR from Stage 16/17 processing
+    
     graph_result := compiler_stage10_lower_source_to_canonical_mir(source)
     if graph_result.error != "" {
         return compiler_stage18_regalloc_result{
@@ -1228,22 +1226,22 @@ func compiler_stage18_observe_regalloc_authority(string source, string goarch) c
         }
     }
     
-    // Extract the optimized MIR from the graph
+    
     mir_text := graph_result.mir_output
     
-    // Count virtual registers in the MIR
+    
     value_count := parse_number_after(mir_text, "values=")
     if value_count <= 0 {
-        value_count = 10  // Default fallback
+        value_count = 10  
     }
     
-    // Invoke the REAL production register allocator
+    
     allocation := linear_scan_regalloc_with_spill(mir_text, value_count, goarch)
     
-    // Compute quality metrics
+    
     regalloc_quality := compute_regalloc_quality(allocation, parse_number_after(mir_text, "blocks="))
     
-    // Format evidence
+    
     evidence_text := "Canonical register allocation executed via linear_scan_regalloc_with_spill. "
     evidence_text = evidence_text + "Real MIR input consumed (no reconstruction). "
     evidence_text = evidence_text + "Allocated registers: " + int_to_string(allocation.allocated_reg_count) + ". "
@@ -1271,8 +1269,8 @@ func compiler_stage18_observe_regalloc_authority(string source, string goarch) c
 }
 
 func compiler_emit_stage18_regalloc_proof(string source) string {
-    // Determine target architecture
-    goarch := "amd64"  // Default, could be parameterized
+    
+    goarch := "amd64"  
     
     regalloc := compiler_stage18_observe_regalloc_authority(source, goarch)
     out := ""
@@ -1292,7 +1290,7 @@ func compiler_emit_stage18_regalloc_proof(string source) string {
         return out
     }
     
-    // S18.1: Input Authority (canonical Stage 17 output)
+    
     out = out + "S18.1=PASS\n"
     out = out + "S18.1.contract=canonical-regalloc-input-authority\n"
     out = out + "S18.1.input-authority=" + regalloc.input_authority + "\n"
@@ -1300,7 +1298,7 @@ func compiler_emit_stage18_regalloc_proof(string source) string {
     out = out + "S18.1.reconstruction=" + regalloc.reconstruction + "\n"
     out = out + "S18.1.evidence=" + regalloc.evidence + "\n"
     
-    // S18.2: Allocator Execution (real production register allocator)
+    
     out = out + "S18.2=PASS\n"
     out = out + "S18.2.contract=production-allocator-execution\n"
     out = out + "S18.2.allocator-executed=" + regalloc.fact_allocator_executed + "\n"
@@ -1309,25 +1307,25 @@ func compiler_emit_stage18_regalloc_proof(string source) string {
     out = out + "S18.2.virtual-registers-analyzed=" + int_to_string(regalloc.virtual_registers_analyzed) + "\n"
     out = out + "S18.2.physical-registers-used=" + int_to_string(regalloc.physical_registers_used) + "\n"
     
-    // S18.3: Virtual Register Tracking
+    
     out = out + "S18.3=PASS\n"
     out = out + "S18.3.contract=virtual-register-facts\n"
     out = out + "S18.3.fact-virtual-register=" + regalloc.fact_virtual_register + "\n"
     
-    // S18.4: Physical Register and Spill Assignment
+    
     out = out + "S18.4=PASS\n"
     out = out + "S18.4.contract=physical-register-spill-assignment\n"
     out = out + "S18.4.fact-physical-register-or-spill=" + regalloc.fact_physical_register_or_spill + "\n"
     out = out + "S18.4.spill-slots-allocated=" + int_to_string(regalloc.spill_slots_allocated) + "\n"
     out = out + "S18.4.spill-reload-count=" + int_to_string(regalloc.spill_reloads_generated) + "\n"
     
-    // S18.5: Quality Metrics
+    
     out = out + "S18.5=PASS\n"
     out = out + "S18.5.contract=regalloc-quality-metrics\n"
     out = out + "S18.5.quality-score=" + regalloc.regalloc_quality_score + "\n"
     out = out + "S18.5.reconstruction-confirmed=no\n"
     
-    // Stage 18 is CLOSED
+    
     out = out + "stage18-regalloc=CLOSED\n"
     out = out + "result=PASS\n"
     
