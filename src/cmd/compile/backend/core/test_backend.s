@@ -1,4 +1,4 @@
-package test_backend
+package backend
 import (
     "compile.internal.backend"
 )
