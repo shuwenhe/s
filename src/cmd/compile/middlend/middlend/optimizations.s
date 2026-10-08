@@ -1,4 +1,4 @@
-package middleend
+package middlend
 
 const opt_constant_folding = 1
 const opt_dead_code_elimination = 2

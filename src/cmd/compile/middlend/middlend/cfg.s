@@ -1,4 +1,4 @@
-package middleend
+package middlend
 
 struct control_flow_graph {
     ir_function function
