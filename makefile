@@ -45,10 +45,10 @@ bin/s_seed: $(SEED_COMPILER_SOURCES)
 
 # ============================================================================
 # Native Bootstrap (self-hosted compiler)
+# DEPRECATED: Use 'make native-bootstrap-imports' for modern import-driven approach
 # ============================================================================
 NATIVE_BOOTSTRAP_INPUTS := \
   $(SEED_COMPILER_SOURCES) \
-  src/cmd/compile/selfhost-sources.txt \
   src/cmd/compile/frontend/selfhost/source_scan.s \
   src/cmd/compile/middlend/selfhost/const_eval.s \
   src/cmd/compile/backend/selfhost/elf_slices.s \
@@ -56,12 +56,13 @@ NATIVE_BOOTSTRAP_INPUTS := \
   src/cmd/compile/backend/selfhost/asm_arm64.s \
   src/cmd/compile/main.s \
   src/cmd/compile/backend/selfhost/c_emit.s \
-  src/cmd/dist/materialize-selfhost-source.sh \
   src/cmd/dist/native-bootstrap.sh \
   src/runtime/selfhost_linux_amd64.S \
   src/runtime/linker/nostdlib.ld
 
 native-bootstrap: seed-compiler-bin $(NATIVE_BOOTSTRAP_STAMP)
+	@echo "⚠️  DEPRECATED: Use 'make native-bootstrap-imports' instead"
+	@echo "    (This uses the old manifest-based approach)"
 
 $(NATIVE_BOOTSTRAP_STAMP): $(NATIVE_BOOTSTRAP_INPUTS)
 	@mkdir -p "$(NATIVE_BOOTSTRAP_DIR)"
@@ -72,6 +73,92 @@ $(NATIVE_BOOTSTRAP_STAMP): $(NATIVE_BOOTSTRAP_INPUTS)
 .PHONY: native-bootstrap-diagnostic-check
 native-bootstrap-diagnostic-check:
 	@S_SOURCE_ROOT=$(CURDIR) ./test/native-bootstrap-diagnostic/check.sh
+
+# ============================================================================
+# Native Bootstrap (Import-Driven Model - No Manifest)
+# ============================================================================
+# New bootstrap approach: automatic import resolution (like Go compiler)
+# Files resolve dependencies via import statements, no manifest needed
+
+NATIVE_BOOTSTRAP_IMPORTS_INPUTS := \
+  $(SEED_COMPILER_SOURCES) \
+  src/cmd/compile/main.s \
+  src/cmd/compile/frontend/selfhost/frontend.s \
+  src/cmd/compile/middlend/selfhost/middlend.s \
+  src/cmd/compile/backend/selfhost/backend.s \
+  src/cmd/compile/frontend/selfhost/source_scan.s \
+  src/cmd/compile/middlend/selfhost/const_eval.s \
+  src/cmd/compile/backend/selfhost/elf_slices.s \
+  src/cmd/compile/backend/selfhost/asm_amd64.s \
+  src/cmd/compile/backend/selfhost/asm_arm64.s \
+  src/cmd/compile/backend/selfhost/c_emit.s \
+  src/cmd/dist/native-bootstrap-no-manifest.sh
+
+.PHONY: native-bootstrap-imports
+native-bootstrap-imports: seed-compiler-bin
+	@mkdir -p .bootstrap/native-imports
+	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) \
+	  ./src/cmd/dist/native-bootstrap-no-manifest.sh .bootstrap/native-imports
+	@echo "✓ Import-driven bootstrap complete (.bootstrap/native-imports)"
+
+.PHONY: validate-imports
+validate-imports:
+	@echo "Validating import statements for bootstrap..."
+	@if grep -q "cmd.compile.frontend.selfhost" src/cmd/compile/main.s; then \
+	  echo "  ✓ main.s imports frontend.selfhost"; \
+	else \
+	  echo "  ✗ main.s missing frontend.selfhost import"; exit 1; \
+	fi
+	@if grep -q "cmd.compile.middlend.selfhost" src/cmd/compile/main.s; then \
+	  echo "  ✓ main.s imports middlend.selfhost"; \
+	else \
+	  echo "  ✗ main.s missing middlend.selfhost import"; exit 1; \
+	fi
+	@if grep -q "cmd.compile.backend.selfhost" src/cmd/compile/main.s; then \
+	  echo "  ✓ main.s imports backend.selfhost"; \
+	else \
+	  echo "  ✗ main.s missing backend.selfhost import"; exit 1; \
+	fi
+	@if grep -q "^import" src/cmd/compile/frontend/selfhost/frontend.s; then \
+	  echo "  ✓ frontend.s has imports"; \
+	else \
+	  echo "  ✗ frontend.s missing imports"; exit 1; \
+	fi
+	@if grep -q "^import" src/cmd/compile/middlend/selfhost/middlend.s; then \
+	  echo "  ✓ middlend.s has imports"; \
+	else \
+	  echo "  ✗ middlend.s missing imports"; exit 1; \
+	fi
+	@if grep -q "^import" src/cmd/compile/backend/selfhost/backend.s; then \
+	  echo "  ✓ backend.s has imports"; \
+	else \
+	  echo "  ✗ backend.s missing imports"; exit 1; \
+	fi
+	@echo "✓ All bootstrap imports validated"
+
+.PHONY: test-bootstrap-both
+test-bootstrap-both: clean
+	@echo "=== Testing Both Bootstrap Methods ==="
+	@echo ""
+	@echo "1. Original (manifest-based):"
+	@make native-bootstrap || echo "  [FAILED]"
+	@echo ""
+	@echo "2. New (import-driven):"
+	@make native-bootstrap-imports || echo "  [FAILED]"
+	@echo ""
+	@echo "=== Comparison ==="
+	@echo "Manifest-based:  .bootstrap/selfhost/native/stage2"
+	@echo "Import-driven:   .bootstrap/native-imports/stage2"
+	@if [ -f .bootstrap/selfhost/native/stage2 ] && [ -f .bootstrap/native-imports/stage2 ]; then \
+	  if cmp -s .bootstrap/selfhost/native/stage2 .bootstrap/native-imports/stage2; then \
+	    echo "✓ Both methods produce identical binaries!"; \
+	  else \
+	    echo "✗ Binaries differ (investigation needed)"; \
+	  fi \
+	else \
+	  echo "✗ One or both bootstrap methods failed"; \
+	fi
+
 
 # ============================================================================
 # Compiler (no-GC S compiler in S language)
@@ -145,3 +232,7 @@ help:
 	@echo "  make install"
 	@echo "  make selfhost"
 	@echo "  make clean"
+	@echo ""
+	@echo "  make native-bootstrap-imports - Bootstrap with import-driven model (experimental)"
+	@echo "  make validate-imports          - Validate import statements"
+	@echo "  make test-bootstrap-both       - Test both bootstrap methods"

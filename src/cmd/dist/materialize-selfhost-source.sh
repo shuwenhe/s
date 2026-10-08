@@ -1,4 +1,15 @@
 #!/bin/sh
+# DEPRECATED: This script is no longer used.
+#
+# This was part of the old manifest-based bootstrap approach.
+# The S compiler now uses import-driven bootstrap (similar to Go).
+# See: docs/BOOTSTRAP_MODERNIZATION.md
+#
+# The manifest file (selfhost-sources.txt) has been removed.
+# All imports are now declared in src/cmd/compile/main.s and aggregate packages.
+#
+# This script is kept for historical reference only.
+
 set -eu
 
 root=${S_SOURCE_ROOT:-$(pwd)}
@@ -7,6 +18,7 @@ manifest=${S_BOOTSTRAP_SOURCE_MANIFEST:-"$root/src/cmd/compile/selfhost-sources.
 
 [ -f "$manifest" ] || {
     printf '%s\n' "selfhost source manifest not found: $manifest" >&2
+    printf '%s\n' "(NOTE: This script is deprecated. Use native-bootstrap-imports instead.)" >&2
     exit 1
 }
 

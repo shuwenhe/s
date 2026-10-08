@@ -1,5 +1,12 @@
 package cmd
 import (
+    // Self-hosted bootstrap aggregate packages
+    // These enable import-driven bootstrap (Go-style)
+    "cmd.compile.frontend.selfhost"
+    "cmd.compile.middlend.selfhost"
+    "cmd.compile.backend.selfhost"
+    
+    // Regular compiler components
     "compile.internal.backend_elf64"
     "compile.internal.semantic"
     "compile.internal.syntax"
