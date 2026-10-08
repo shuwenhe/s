@@ -6,27 +6,19 @@ import (
     "std.prelude"
 )
 
-// ============================================================
-// Stage 5: Name Resolution Authority Gate
-// ============================================================
-// Purpose: Verify that every identifier in the canonical closure
-// can be resolved to at least one declaration (and qualified names
-// resolve to exactly one).
-// ============================================================
-
 struct name_resolution_candidate {
     string package_path
     string name
-    string kind              // "function", "const", "struct", "trait", "local"
-    string source_location   // For debugging
+    string kind              
+    string source_location   
 }
 
 struct identifier_resolution {
     string identifier_text
-    bool is_qualified       // true if std.env.args, false if args
+    bool is_qualified       
     name_resolution_candidate[] candidates
     int errors
-    string resolution_status  // "resolved_exact", "resolved_ambiguous", "unresolved"
+    string resolution_status  
 }
 
 struct name_resolution_gate_result {
@@ -36,12 +28,8 @@ struct name_resolution_gate_result {
     int unresolved
     int qualified_with_multiple_matches
     identifier_resolution[] details
-    int gate_pass  // 1 if PASS, 0 if FAIL
+    int gate_pass  
 }
-
-// ============================================================
-// Gate Entry Point
-// ============================================================
 
 func canonical_name_resolution_check(source_file file, function_binding[] functions, trait_binding[] traits, const_binding[] consts, struct_binding[] structs) name_resolution_gate_result {
     result := name_resolution_gate_result {
@@ -54,12 +42,12 @@ func canonical_name_resolution_check(source_file file, function_binding[] functi
         gate_pass: 1,
     }
     
-    // Collect all identifiers from AST
+    
     all_identifiers := collect_all_identifiers_from_items(file.items)
     
     result.total_identifiers = std.prelude.len(all_identifiers)
     
-    // Resolve each identifier
+    
     i := 0
     for i < std.prelude.len(all_identifiers) {
         id := all_identifiers[i]
@@ -76,7 +64,7 @@ func canonical_name_resolution_check(source_file file, function_binding[] functi
             result.gate_pass = 0
         }
         
-        // Qualified names should resolve to exactly one
+        
         if id.is_qualified && std.prelude.len(resolution.candidates) > 1 {
             result.qualified_with_multiple_matches = result.qualified_with_multiple_matches + 1
             result.gate_pass = 0
@@ -87,10 +75,6 @@ func canonical_name_resolution_check(source_file file, function_binding[] functi
     
     result
 }
-
-// ============================================================
-// Identifier Collection
-// ============================================================
 
 struct identifier_info {
     string identifier_text
@@ -223,14 +207,14 @@ func append_from_stmt(identifier_info[] acc, s.stmt st) identifier_info[] {
 func append_from_expr(identifier_info[] acc, s.expr e) identifier_info[] {
     switch e {
         s.expr::name(name_val) : {
-            // Simple identifier
+            
             acc = append(acc, identifier_info {
                 identifier_text: name_val.name,
                 is_qualified: false,
             })
         }
         s.expr::member(member_val) : {
-            // Could be qualified: std.env.args
+            
             path := qualified_expr_path_gate(member_val)
             if path != "" {
                 acc = append(acc, identifier_info {
@@ -288,19 +272,15 @@ func append_from_expr(identifier_info[] acc, s.expr e) identifier_info[] {
     acc
 }
 
-// ============================================================
-// Name Resolution
-// ============================================================
-
 func resolve_identifier_to_candidates(string identifier, bool is_qualified, string current_package, function_binding[] functions, trait_binding[] traits, const_binding[] consts, struct_binding[] structs) identifier_resolution {
     candidates := name_resolution_candidate[]()
     
     if is_qualified {
-        // Qualified name: package.name or package.Type.method
+        
         pkg_part := qualified_package_part(identifier)
         name_part := qualified_decl_part(identifier)
         
-        // Look in functions
+        
         matched_functions := lookup_qualified_functions(functions, pkg_part, name_part)
         i := 0
         for i < std.prelude.len(matched_functions) {
@@ -313,7 +293,7 @@ func resolve_identifier_to_candidates(string identifier, bool is_qualified, stri
             i = i + 1
         }
         
-        // Look in consts
+        
         i = 0
         for i < std.prelude.len(consts) {
             if consts[i].package_path == pkg_part && consts[i].name == name_part {
@@ -327,7 +307,7 @@ func resolve_identifier_to_candidates(string identifier, bool is_qualified, stri
             i = i + 1
         }
         
-        // Look in structs
+        
         i = 0
         for i < std.prelude.len(structs) {
             if structs[i].package_path == pkg_part && structs[i].name == name_part {
@@ -342,8 +322,8 @@ func resolve_identifier_to_candidates(string identifier, bool is_qualified, stri
         }
         
     } else {
-        // Unqualified name: just "args"
-        // First check functions
+        
+        
         matched_functions := lookup_functions(functions, identifier)
         i := 0
         for i < std.prelude.len(matched_functions) {
@@ -356,7 +336,7 @@ func resolve_identifier_to_candidates(string identifier, bool is_qualified, stri
             i = i + 1
         }
         
-        // Check consts
+        
         i = 0
         for i < std.prelude.len(consts) {
             if consts[i].name == identifier {
@@ -370,7 +350,7 @@ func resolve_identifier_to_candidates(string identifier, bool is_qualified, stri
             i = i + 1
         }
         
-        // Check structs
+        
         i = 0
         for i < std.prelude.len(structs) {
             if structs[i].name == identifier {
@@ -398,10 +378,6 @@ func resolve_identifier_to_candidates(string identifier, bool is_qualified, stri
     }
 }
 
-// ============================================================
-// Gate Reporting
-// ============================================================
-
 func print_name_resolution_gate_result(name_resolution_gate_result result) {
     std.prelude.println("canonical-name-resolution-check")
     std.prelude.println("  total-identifiers       = " + to_string(result.total_identifiers))
@@ -415,7 +391,7 @@ func print_name_resolution_gate_result(name_resolution_gate_result result) {
     } else {
         std.prelude.println("  result                  = FAIL")
         
-        // Print first blocker
+        
         i := 0
         for i < std.prelude.len(result.details) {
             if result.details[i].resolution_status != "resolved_exact" {
@@ -426,10 +402,6 @@ func print_name_resolution_gate_result(name_resolution_gate_result result) {
         }
     }
 }
-
-// ============================================================
-// Helper: Extract qualified path from member expression
-// ============================================================
 
 func qualified_expr_path_gate(s.expr_member member_val) string {
     switch member_val.target.value {
