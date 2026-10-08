@@ -1,4 +1,4 @@
-package register_allocator
+package backend
 
 struct live_range {
     int value_id
