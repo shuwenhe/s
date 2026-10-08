@@ -4,7 +4,7 @@ set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 modular_dir="$root/.bootstrap/modular"
-entry_rel="src/cmd/compile/pipeline/main.s"
+entry_rel="src/cmd/compile/main.s"
 closure="${STAGE0_CLOSURE:-"$modular_dir/canonical-closure.txt"}"
 
 tmp="${TMPDIR:-/tmp}/b6.7.3e2-stage1-producer.$$"

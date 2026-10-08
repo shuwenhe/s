@@ -2601,8 +2601,8 @@ func string_vec_contains(string[] values, string value) bool {
 func should_skip_semantic_check(string path) bool {
     has_substring(path, "/src/cmd/compile/internal/")
         || starts_with_local(path, "src/cmd/compile/internal/")
-        || ends_with_local(path, "/src/cmd/compile/pipeline/main.s")
-        || path == "src/cmd/compile/pipeline/main.s"
+        || ends_with_local(path, "/src/cmd/compile/main.s")
+        || path == "src/cmd/compile/main.s"
 }
 
 func resolve_module_source_path(string module) option[string] {

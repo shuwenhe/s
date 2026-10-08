@@ -4,7 +4,7 @@ set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 modular_dir="$root/.bootstrap/modular"
-entry_rel="src/cmd/compile/pipeline/main.s"
+entry_rel="src/cmd/compile/main.s"
 closure="${STAGE0_CLOSURE:-"$modular_dir/canonical-closure.txt"}"
 report="$modular_dir/b6.7.3e2r-bootstrap-artifact-boundary-reevaluation.txt"
 
@@ -64,7 +64,7 @@ e3a_existing_generator=$(field_from "$tmp/e3a.report" existing-non-circular-gene
 e3a_blocker=$(field_from "$tmp/e3a.report" first-structural-blocker)
 
 seed_ir_consumer=$(status_bool has_text 'emit_aot_from_ir_file|emit_native_from_ir_file' src/cmd/compile/seed)
-canonical_emit_c_entry=$(status_bool has_text '--emit-c|compiler_emit_c|emit_selfhost_c|compile_selfhost_c' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/pipeline/compiler_main.s src/cmd/compile/selfhost/compiler.s makefile)
+canonical_emit_c_entry=$(status_bool has_text '--emit-c|compiler_emit_c|emit_selfhost_c|compile_selfhost_c' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/compiler_main.s src/cmd/compile/backend/selfhost src/cmd/compile makefile)
 canonical_parser=$(status_bool has_text 'func parse_source' src/cmd/compile/internal/syntax src/s)
 canonical_semantic=$(status_bool has_text 'check_source_file' src/cmd/compile/internal)
 canonical_backend_build=$(status_bool has_text '^func build\(' src/cmd/compile/backend/backend_elf64.s)

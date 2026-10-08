@@ -38,12 +38,12 @@ seed_ir_serializer=$(status_bool has_text 'generate_code' src/cmd/compile/seed/c
 existing_seed_ir_emitter=NO
 if has_text 'SSEED-TARGET-V1|FUNC_BEGIN\|.*FUNC_END\||bootstrap.*ir.*emit|emit.*bootstrap.*ir' src/cmd/compile/internal; then
     existing_seed_ir_emitter=YES
-elif has_text 'SSEED-TARGET-V1|FUNC_BEGIN\|.*FUNC_END\|' src/cmd/compile/selfhost; then
+elif has_text 'SSEED-TARGET-V1|FUNC_BEGIN\|.*FUNC_END\|' src/cmd/compile; then
     existing_seed_ir_emitter=PARTIAL_SELFHOST_ONLY
 fi
 
 existing_bootstrap_ir_adapter=NO
-if has_text 'bootstrap.*SSEED|SSEED.*bootstrap|seed.*ir.*adapter|adapter.*seed.*ir' src/cmd/compile/internal src/cmd/compile/selfhost; then
+if has_text 'bootstrap.*SSEED|SSEED.*bootstrap|seed.*ir.*adapter|adapter.*seed.*ir' src/cmd/compile/internal src/cmd/compile; then
     existing_bootstrap_ir_adapter=YES
 fi
 

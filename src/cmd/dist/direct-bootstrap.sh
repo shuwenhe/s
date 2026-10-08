@@ -9,7 +9,9 @@ work=${1:-"$root/.bootstrap/direct"}
 
 stage1=${S_DIRECT_BOOTSTRAP_STAGE1:-"$root/bin/s"}
 
-source_file=${S_BOOTSTRAP_SOURCE:-"$root/src/cmd/compile/selfhost/compiler.s"}
+source_file=${S_BOOTSTRAP_SOURCE:-"$work/compiler.s"}
+
+materialize_source="$root/src/cmd/dist/materialize-selfhost-source.sh"
 
 verify="$root/misc/scripts/verify_true_selfhost.sh"
 
@@ -115,15 +117,18 @@ report_frontier() {
 
 
 
+mkdir -p "$work"
+
+if [ -z "${S_BOOTSTRAP_SOURCE:-}" ]; then
+    [ -x "$materialize_source" ] || fail "selfhost source materializer not found: $materialize_source"
+    "$materialize_source" "$source_file"
+fi
+
 [ -x "$stage1" ] || fail "stage1 compiler not found: $stage1"
 
 [ -f "$source_file" ] || fail "compiler source not found: $source_file"
 
 [ -x "$verify" ] || fail "self-host verifier not found: $verify"
-
-
-
-mkdir -p "$work"
 
 
 

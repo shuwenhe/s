@@ -4,6 +4,9 @@ import (
     "std.prelude"
     "std.result"
 )
+
+extern "intrinsic" func __host_byte_at(string text, int index) int;
+
 struct lex_error {
     string message
     int line
@@ -362,4 +365,252 @@ func is_single_symbol(string ch) bool {
 
 func is_keyword(string value) bool {
     return value == "func"
+}
+
+// Compatibility token dump implementation merged from the former root lexer.
+func selfhost_dump_is_digit(string ch) bool {
+    return ch >= "0" && ch <= "9"
+}
+
+func selfhost_dump_is_alpha(string ch) bool {
+    return (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || ch == "_"
+}
+
+func selfhost_dump_is_ident_continue(string ch) bool {
+    return selfhost_dump_is_alpha(ch) || selfhost_dump_is_digit(ch)
+}
+
+func selfhost_dump_keyword_kind(string text) string {
+    if text == "func" { return "FN" }
+    if text == "package" { return "PACKAGE" }
+    if text == "use" { return "USE" }
+    if text == "as" { return "AS" }
+    if text == "if" { return "IF" }
+    if text == "else" { return "ELSE" }
+    if text == "for" { return "FOR" }
+    if text == "while" { return "WHILE" }
+    if text == "return" { return "RETURN" }
+    if text == "break" { return "BREAK" }
+    if text == "continue" { return "CONTINUE" }
+    if text == "true" { return "TRUE" }
+    if text == "false" { return "FALSE" }
+    return "IDENTIFIER"
+}
+
+func selfhost_dump_symbol_kind(string text) string {
+    if text == "+" { return "+" }
+    if text == "-" { return "-" }
+    if text == "*" { return "*" }
+    if text == "/" { return "/" }
+    if text == "%" { return "%" }
+    if text == "!" { return "!" }
+    if text == "=" { return "=" }
+    if text == ":=" { return ":=" }
+    if text == "==" { return "==" }
+    if text == "!=" { return "!=" }
+    if text == "&&" { return "&&" }
+    if text == "&" { return "&" }
+    if text == "||" { return "||" }
+    if text == "<" { return "<" }
+    if text == "<=" { return "<=" }
+    if text == ">" { return ">" }
+    if text == ">=" { return ">=" }
+    if text == "(" { return "(" }
+    if text == ")" { return ")" }
+    if text == "[" { return "[" }
+    if text == "]" { return "]" }
+    if text == "{" { return "{" }
+    if text == "}" { return "}" }
+    if text == "," { return "," }
+    if text == "." { return "." }
+    if text == ":" { return ":" }
+    if text == ";" { return ";" }
+    return "unknown"
+}
+
+func selfhost_dump_digit_text(int value) string {
+    if value == 0 { return "0" }
+    if value == 1 { return "1" }
+    if value == 2 { return "2" }
+    if value == 3 { return "3" }
+    if value == 4 { return "4" }
+    if value == 5 { return "5" }
+    if value == 6 { return "6" }
+    if value == 7 { return "7" }
+    if value == 8 { return "8" }
+    return "9"
+}
+
+func selfhost_dump_int_text(int value) string {
+    if value < 10 { return selfhost_dump_digit_text(value) }
+    return selfhost_dump_int_text(value / 10) + selfhost_dump_digit_text(value % 10)
+}
+
+func selfhost_dump_hex_digit(int value) string {
+    if value < 10 { return selfhost_dump_digit_text(value) }
+    if value == 10 { return "a" }
+    if value == 11 { return "b" }
+    if value == 12 { return "c" }
+    if value == 13 { return "d" }
+    if value == 14 { return "e" }
+    return "f"
+}
+
+func selfhost_dump_hex_text(string text) string {
+    string output = ""
+    int index = 0
+    for index < len(text) {
+        int value = __host_byte_at(text, index)
+        output = output + selfhost_dump_hex_digit(value / 16) + selfhost_dump_hex_digit(value % 16)
+        index = index + 1
+    }
+    return output
+}
+
+func selfhost_dump_lexer_error(string code, int line, int column, string message) string {
+    return "ERROR|" + code + "|" + selfhost_dump_int_text(line) + "|" + selfhost_dump_int_text(column) + "|" + message + "\n"
+}
+
+func selfhost_dump_append_token(string output, string kind, string lexeme, int line, int column) string {
+    return output + kind + "|" + selfhost_dump_hex_text(lexeme) + "|" + selfhost_dump_int_text(line) + "|" + selfhost_dump_int_text(column) + "\n"
+}
+
+func selfhost_dump_tokens(string source) string {
+    string output = ""
+    int i = 0
+    int line = 1
+    int column = 1
+    int source_len = len(source)
+    for i < source_len {
+        string ch = std.prelude.char_at(source, i)
+        if ch == " " || ch == "\t" || ch == "\r" {
+            i = i + 1
+            column = column + 1
+            continue
+        }
+        if ch == "\n" {
+            i = i + 1
+            line = line + 1
+            column = 1
+            continue
+        }
+        if ch == "/" && i + 1 < source_len && std.prelude.char_at(source, i + 1) == "/" {
+            i = i + 2
+            column = column + 2
+            for i < source_len && std.prelude.char_at(source, i) != "\n" {
+                i = i + 1
+                column = column + 1
+            }
+            continue
+        }
+        if ch == "/" && i + 1 < source_len && std.prelude.char_at(source, i + 1) == "*" {
+			int comment_line = line
+			int comment_column = column
+            i = i + 2
+            column = column + 2
+            for i + 1 < source_len && !(std.prelude.char_at(source, i) == "*" && std.prelude.char_at(source, i + 1) == "/") {
+                if std.prelude.char_at(source, i) == "\n" {
+                    line = line + 1
+                    column = 1
+                } else {
+                    column = column + 1
+                }
+                i = i + 1
+            }
+            if i + 1 < source_len {
+                i = i + 2
+                column = column + 2
+			} else {
+				return selfhost_dump_lexer_error("SYNTAX", comment_line, comment_column, "unterminated block comment")
+            }
+            continue
+        }
+        int token_line = line
+        int token_column = column
+        if selfhost_dump_is_alpha(ch) {
+            int start = i
+            for i < source_len && selfhost_dump_is_ident_continue(std.prelude.char_at(source, i)) {
+                i = i + 1
+                column = column + 1
+            }
+            string lexeme = std.prelude.slice(source, start, i)
+            output = selfhost_dump_append_token(output, selfhost_dump_keyword_kind(lexeme), lexeme, token_line, token_column)
+            continue
+        }
+        if selfhost_dump_is_digit(ch) {
+            int start = i
+            for i < source_len && selfhost_dump_is_digit(std.prelude.char_at(source, i)) {
+                i = i + 1
+                column = column + 1
+            }
+			if i + 1 < source_len && std.prelude.char_at(source, i) == "." && selfhost_dump_is_digit(std.prelude.char_at(source, i + 1)) {
+				i = i + 1
+				column = column + 1
+				for i < source_len && selfhost_dump_is_digit(std.prelude.char_at(source, i)) {
+					i = i + 1
+					column = column + 1
+				}
+			}
+			if i < source_len && (std.prelude.char_at(source, i) == "e" || std.prelude.char_at(source, i) == "E") {
+				int exponent_i = i
+				int exponent_column = column
+				i = i + 1
+				column = column + 1
+				if i < source_len && (std.prelude.char_at(source, i) == "+" || std.prelude.char_at(source, i) == "-") {
+					i = i + 1
+					column = column + 1
+				}
+				if i < source_len && selfhost_dump_is_digit(std.prelude.char_at(source, i)) {
+					for i < source_len && selfhost_dump_is_digit(std.prelude.char_at(source, i)) {
+						i = i + 1
+						column = column + 1
+					}
+				} else {
+					i = exponent_i
+					column = exponent_column
+				}
+			}
+            string lexeme = std.prelude.slice(source, start, i)
+            output = selfhost_dump_append_token(output, "NUMBER", lexeme, token_line, token_column)
+            continue
+        }
+        if ch == "\"" {
+            i = i + 1
+            column = column + 1
+            int start = i
+            for i < source_len && std.prelude.char_at(source, i) != "\"" && std.prelude.char_at(source, i) != "\n" {
+                if std.prelude.char_at(source, i) == "\\" && i + 1 < source_len {
+                    i = i + 2
+                    column = column + 2
+                } else {
+                    i = i + 1
+                    column = column + 1
+                }
+            }
+			if i >= source_len || std.prelude.char_at(source, i) != "\"" {
+				return selfhost_dump_lexer_error("UNTERMINATED_STRING", token_line, token_column, "unterminated string literal")
+			}
+            string lexeme = std.prelude.slice(source, start, i)
+            output = selfhost_dump_append_token(output, "STRING", lexeme, token_line, token_column)
+            if i < source_len && std.prelude.char_at(source, i) == "\"" {
+                i = i + 1
+                column = column + 1
+            }
+            continue
+        }
+        string symbol = ch
+        if i + 1 < source_len {
+            string pair = std.prelude.slice(source, i, i + 2)
+            if pair == ":=" || pair == "==" || pair == "!=" || pair == "<=" || pair == ">=" || pair == "&&" || pair == "||" {
+                symbol = pair
+            }
+        }
+        output = selfhost_dump_append_token(output, selfhost_dump_symbol_kind(symbol), symbol, token_line, token_column)
+		if selfhost_dump_symbol_kind(symbol) == "unknown" {
+			return selfhost_dump_lexer_error("ILLEGAL_CHAR", token_line, token_column, "illegal character: " + symbol)
+		}
+        i = i + len(symbol)
+        column = column + len(symbol)
+    }
+    return selfhost_dump_append_token(output, "EOF", "", line, column)
 }

@@ -48,7 +48,15 @@ bin/s_seed: $(SEED_COMPILER_SOURCES)
 # ============================================================================
 NATIVE_BOOTSTRAP_INPUTS := \
   $(SEED_COMPILER_SOURCES) \
-  src/cmd/compile/selfhost/compiler.s \
+  src/cmd/compile/selfhost-sources.txt \
+  src/cmd/compile/frontend/selfhost/source_scan.s \
+  src/cmd/compile/middlend/selfhost/const_eval.s \
+  src/cmd/compile/backend/selfhost/elf_slices.s \
+  src/cmd/compile/backend/selfhost/asm_amd64.s \
+  src/cmd/compile/backend/selfhost/asm_arm64.s \
+  src/cmd/compile/main.s \
+  src/cmd/compile/backend/selfhost/c_emit.s \
+  src/cmd/dist/materialize-selfhost-source.sh \
   src/cmd/dist/native-bootstrap.sh \
   src/runtime/selfhost_linux_amd64.S \
   src/runtime/linker/nostdlib.ld
@@ -74,7 +82,7 @@ COMPILER_SOURCES := \
 	src/cmd/compile/frontend/stages.s \
 	src/cmd/compile/middlend/mir/compiler_emit.s \
 	src/cmd/compile/middlend/stages.s \
-	src/cmd/compile/pipeline/compiler_main.s
+	src/cmd/compile/compiler_main.s
 
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
@@ -111,8 +119,29 @@ pipeline: compiler
 	@chmod +x scripts/compile-pipeline-check.sh
 	@S_SOURCE_ROOT=$(CURDIR) scripts/compile-pipeline-check.sh
 
+# ============================================================================
+# Cleanup
+# ============================================================================
+.PHONY: clean
+clean:
+	@echo "Cleaning all generated files..."
+	@rm -rf .bootstrap/oom-* \
+	        .bootstrap/full-native-bootstrap-* \
+	        .bootstrap/memory-investigation \
+	        .bootstrap/split-check \
+	        .bootstrap/stage[0-9] \
+	        .bootstrap/stage[0-9][0-9] \
+	        .bootstrap/stage*-* \
+	        .bootstrap/stage2-stage3-diagnostic \
+	        .bootstrap/compiler \
+	        .bootstrap/native \
+	        .bootstrap/selfhost \
+	        bin/s_seed bin/s_compiler bin/s
+	@echo "✓ Cleaned: all build artifacts and generated files"
+
 .PHONY: help
 help:
-	@echo "make pipeline"
-	@echo "make install"
-	@echo "make selfhost"
+	@echo "  make pipeline"
+	@echo "  make install"
+	@echo "  make selfhost"
+	@echo "  make clean"

@@ -8,7 +8,6 @@ import (
 extern "intrinsic" func host_args() string[];
 func main() {
     args := host_args()
-    compiler_src := "./src/cmd/compile/selfhost/compiler.s"
     output_dir := "./.bootstrap/selfhost"
     if len(args) == 2 {
         output_dir = args[1]
@@ -17,7 +16,9 @@ func main() {
         return 2
     }
     seed_compiler := "./bin/s_seed"
-    ir_codegen_bin := "./src/cmd/compile/selfhost/ir_to_binary"
+    ir_codegen_bin := "./src/cmd/compile/ir_to_binary"
+    materializer := "./src/cmd/dist/materialize-selfhost-source.sh"
+    compiler_src := output_dir + "/compiler.s"
     std.io.eprintln("")
     std.io.eprintln("=== S Compiler Pure S Bootstrap ===")
     std.io.eprintln("")
@@ -26,6 +27,10 @@ func main() {
     std.io.eprintln("seed: " + seed_compiler)
     std.io.eprintln("ir-codegen: " + ir_codegen_bin)
     if !ensure_dir(output_dir) {
+        return 1
+    }
+    if std.process.run_process([materializer, compiler_src]) != 0 {
+        std.io.eprintln("bootstrap failed: unable to materialize selfhost compiler source")
         return 1
     }
     return bootstrap_three_stage(compiler_src, output_dir, seed_compiler, ir_codegen_bin)

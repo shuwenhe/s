@@ -9,7 +9,9 @@ work=${1:-"$root/.bootstrap/native"}
 
 seed=${S_BOOTSTRAP_SEED:-"$root/bin/s_seed"}
 
-source_file=${S_BOOTSTRAP_SOURCE:-"$root/src/cmd/compile/selfhost/compiler.s"}
+source_file=${S_BOOTSTRAP_SOURCE:-"$work/compiler.s"}
+
+materialize_source="$root/src/cmd/dist/materialize-selfhost-source.sh"
 
 verify="$root/misc/scripts/verify_true_selfhost.sh"
 
@@ -155,15 +157,18 @@ verify_stage() {
 
 
 
+mkdir -p "$work"
+
+if [ -z "${S_BOOTSTRAP_SOURCE:-}" ]; then
+    [ -x "$materialize_source" ] || fail "selfhost source materializer not found: $materialize_source"
+    "$materialize_source" "$source_file"
+fi
+
 [ -x "$seed" ] || fail "trusted seed compiler not found: $seed"
 
 [ -f "$source_file" ] || fail "compiler source not found: $source_file"
 
 [ -x "$verify" ] || fail "self-host verifier not found: $verify"
-
-
-
-mkdir -p "$work"
 
 
 

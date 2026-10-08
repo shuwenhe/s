@@ -2,7 +2,7 @@
 set -eu
 
 root=${S_SOURCE_ROOT:-$(pwd)}
-entry=${1:-src/cmd/compile/pipeline/main.s}
+entry=${1:-src/cmd/compile/main.s}
 report=${2:-"$root/.bootstrap/modular/bootstrap-stage-discovery.txt"}
 compat_report=${S_BOOTSTRAP_COMPAT_REPORT:-"$root/.bootstrap/modular/bootstrap-compat-audit.txt"}
 compat_script=${S_BOOTSTRAP_COMPAT_SCRIPT:-"$root/misc/scripts/modular_bootstrap_compat_audit.sh"}
@@ -208,17 +208,17 @@ candidate_record() {
     printf '\n'
 
     candidate_record seed "trusted C seed via make seed-compiler-bin" bin/s_seed src/cmd/compile/seed/s_seed.c seed-ir
-    candidate_record no-gc "s_seed -> src/cmd/compile/pipeline/compiler_main.s -> bin/s_compiler" bin/s_compiler src/cmd/compile/pipeline/compiler_main.s emit-c
-    candidate_record wrapper "make bin/s shell driver" bin/s src/cmd/compile/pipeline/compiler_main.s emit-c
-    candidate_record darwin-arm64 "make darwin-arm64-bootstrap" bin/s_darwin_arm64 src/cmd/compile/selfhost/compiler.s build
-    candidate_record selfhost-native-stage1 "make native-bootstrap" .bootstrap/selfhost/native/stage1 src/cmd/compile/selfhost/compiler.s selfhost-native
-    candidate_record selfhost-native-stage2 "make native-bootstrap" .bootstrap/selfhost/native/stage2 src/cmd/compile/selfhost/compiler.s selfhost-native
-    candidate_record selfhost-slice1 "make bootstrap-slice1-check" .bootstrap/selfhost/slice1/compiler src/cmd/compile/selfhost/compiler.s selfhost-native
-    candidate_record selfhost-slice2 "make bootstrap-slice2-check" .bootstrap/selfhost/slice2/compiler src/cmd/compile/selfhost/compiler.s selfhost-native
-    candidate_record selfhost-slice3 "make bootstrap-slice3-check" .bootstrap/selfhost/slice3/compiler src/cmd/compile/selfhost/compiler.s selfhost-native
-    candidate_record selfhost-slice4 "make bootstrap-slice4-check" .bootstrap/selfhost/slice4/compiler src/cmd/compile/selfhost/compiler.s selfhost-native
-    candidate_record selfhost-slice5 "make bootstrap-slice5-check" .bootstrap/selfhost/slice5/compiler src/cmd/compile/selfhost/compiler.s selfhost-native
-    candidate_record native-codegen "make native-codegen-check" .bootstrap/selfhost/native-codegen/compiler src/cmd/compile/selfhost/compiler.s selfhost-native
+    candidate_record no-gc "s_seed -> src/cmd/compile/compiler_main.s -> bin/s_compiler" bin/s_compiler src/cmd/compile/compiler_main.s emit-c
+    candidate_record wrapper "make bin/s shell driver" bin/s src/cmd/compile/compiler_main.s emit-c
+    candidate_record darwin-arm64 "make darwin-arm64-bootstrap" bin/s_darwin_arm64 src/cmd/compile/selfhost-sources.txt build
+    candidate_record selfhost-native-stage1 "make native-bootstrap" .bootstrap/selfhost/native/stage1 src/cmd/compile/selfhost-sources.txt selfhost-native
+    candidate_record selfhost-native-stage2 "make native-bootstrap" .bootstrap/selfhost/native/stage2 src/cmd/compile/selfhost-sources.txt selfhost-native
+    candidate_record selfhost-slice1 "make bootstrap-slice1-check" .bootstrap/selfhost/slice1/compiler src/cmd/compile/selfhost-sources.txt selfhost-native
+    candidate_record selfhost-slice2 "make bootstrap-slice2-check" .bootstrap/selfhost/slice2/compiler src/cmd/compile/selfhost-sources.txt selfhost-native
+    candidate_record selfhost-slice3 "make bootstrap-slice3-check" .bootstrap/selfhost/slice3/compiler src/cmd/compile/selfhost-sources.txt selfhost-native
+    candidate_record selfhost-slice4 "make bootstrap-slice4-check" .bootstrap/selfhost/slice4/compiler src/cmd/compile/selfhost-sources.txt selfhost-native
+    candidate_record selfhost-slice5 "make bootstrap-slice5-check" .bootstrap/selfhost/slice5/compiler src/cmd/compile/selfhost-sources.txt selfhost-native
+    candidate_record native-codegen "make native-codegen-check" .bootstrap/selfhost/native-codegen/compiler src/cmd/compile/selfhost-sources.txt selfhost-native
 
     printf 'Git history signals:\n'
     if git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -229,7 +229,7 @@ candidate_record() {
     printf '\n'
 
     printf 'Decision=B-thin-bootstrap-bridge\n'
-    printf 'Reason=no discovered executable artifact can consume the 55-file canonical modular compiler closure; existing selfhost/slice paths are useful stage machinery but currently target src/cmd/compile/selfhost/compiler.s, not the canonical modular compiler closure.\n'
+    printf 'Reason=no discovered executable artifact can consume the 55-file canonical modular compiler closure; existing selfhost/slice paths are useful stage machinery but currently target split selfhost sources, not the canonical modular compiler closure.\n'
     printf 'Shortest-chain=UNAVAILABLE\n'
     printf 'Recommended-next=write staged-bootstrap design for a thin bridge that reuses canonical parser/semantic/mono/backend and does not expand s_seed into the modern compiler.\n'
     printf 'status=blocked-no-reusable-existing-stage\n'
