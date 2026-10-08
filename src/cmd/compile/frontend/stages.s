@@ -660,7 +660,6 @@ func compiler_stage8_uniqueness_other_source() string {
     return __host_read_to_string(other_path)
 }
 
-
 func compiler_stage8_emit_canonical_type_ref_output(string stage7_type_fact, string producer, string canonical_type_ref) compiler_stage8_canonical_type_ref_output {
     readable := stage7_type_fact != "" && producer == "canonical-type-ref-producer" && canonical_type_ref != ""
     return compiler_stage8_canonical_type_ref_output {
@@ -752,7 +751,6 @@ func compiler_emit_stage9_semantic_proof(string source) string {
     }
     return out
 }
-
 
 func compiler_emit_stage8_canonical_type_ref_proof(string source) string {
     stage7 := compiler_emit_stage7_type_checking_proof(source)

@@ -84,18 +84,13 @@ func (lexer* self) skip_ignored() ((), lex_error) {
             self.advance()
             continue
         }
-        if self.match_text("//") {
+        if self.match_text("
             for !self.is_eof() && self.peek() != "\n" {
                 self.advance()
             }
             continue
         }
-        if self.match_text("/*") {
-            int depth = 1
-            self.advance()
-            self.advance()
-            for !self.is_eof() {
-                if self.match_text("*/") {
+        if self.match_text("") {
                     depth = depth - 1
                     self.advance()
                     self.advance()
@@ -367,7 +362,6 @@ func is_keyword(string value) bool {
     return value == "func"
 }
 
-// Compatibility token dump implementation merged from the former root lexer.
 func selfhost_dump_is_digit(string ch) bool {
     return ch >= "0" && ch <= "9"
 }
