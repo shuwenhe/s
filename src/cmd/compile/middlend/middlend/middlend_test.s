@@ -1,4 +1,4 @@
-package middleend
+package middlend
 
 func test_ir_basic_types() {
 
