@@ -3,7 +3,7 @@
 set -euo pipefail
 
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
-entry_rel="src/cmd/compile/pipeline/main.s"
+entry_rel="src/cmd/compile/main.s"
 closure="${STAGE0_CLOSURE:-"$root/.bootstrap/modular/canonical-closure.txt"}"
 report="$root/.bootstrap/modular/b6.7.3e0a-bootstrap-root-candidate-audit.txt"
 
@@ -83,16 +83,16 @@ checked_in_ir_stage2=NO
 [ -f "$root/src/cmd/compile/seed/stage2.ir" ] && checked_in_ir_stage2=YES
 
 selfhost_source_present=NO
-[ -f "$root/src/cmd/compile/selfhost/compiler.s" ] && selfhost_source_present=YES
-selfhost_ladder_present=$(status_bool has_text 'stage2.ir|stage3.ir|bootstrap_three_stage|stage2.*stage3' src/cmd/compile/selfhost makefile src/cmd/dist)
-slice_ladder_present=$(status_bool has_text 'bootstrap-slice|slice[0-9]' makefile test src/cmd/compile/selfhost)
+[ -f "$root/src/cmd/compile/selfhost-sources.txt" ] && selfhost_source_present=YES
+selfhost_ladder_present=$(status_bool has_text 'stage2.ir|stage3.ir|bootstrap_three_stage|stage2.*stage3' src/cmd/compile makefile src/cmd/dist)
+slice_ladder_present=$(status_bool has_text 'bootstrap-slice|slice[0-9]' makefile test src/cmd/compile)
 convergence_gate_present=$(status_bool has_text 'stage2.*stage3|Stage2.*Stage3|cmp .*stage2.*stage3|bootstrap-convergence' makefile misc/scripts src/cmd/compile)
 
 git_history_available=NO
 if git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     git_history_available=YES
     git -C "$root" log --all --oneline --decorate --max-count=80 --grep='bootstrap\|selfhost\|stage\|compiler\|s_seed\|s_darwin' >"$tmp/history.log" 2>/dev/null || :
-    git -C "$root" log --all --name-only --pretty=format: -- bin .bootstrap src/cmd/compile/selfhost src/cmd/compile/seed/stage1.ir src/cmd/compile/seed/stage2.ir 2>/dev/null |
+    git -C "$root" log --all --name-only --pretty=format: -- bin .bootstrap src/cmd/compile src/cmd/compile/seed/stage1.ir src/cmd/compile/seed/stage2.ir 2>/dev/null |
         sed '/^$/d' | LC_ALL=C sort -u >"$tmp/history-assets.log" || :
 else
     : >"$tmp/history.log"

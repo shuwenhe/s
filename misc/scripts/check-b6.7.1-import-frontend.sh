@@ -33,11 +33,11 @@ make -C "$root" seed-compiler-bin >/dev/null
 
 closure="$tmp/closure.txt"
 S_SOURCE_ROOT="$root" "$root/src/cmd/dist/source_closure.sh" \
-  src/cmd/compile/pipeline/main.s "$closure" >/dev/null
+  src/cmd/compile/main.s "$closure" >/dev/null
 
 set +e
 S_SOURCE_ROOT="$root" "$root/bin/s_seed" \
-  "$root/src/cmd/compile/pipeline/main.s" "$tmp/modular.ir" >"$tmp/seed.log" 2>&1
+  "$root/src/cmd/compile/main.s" "$tmp/modular.ir" >"$tmp/seed.log" 2>&1
 status=$?
 set -e
 

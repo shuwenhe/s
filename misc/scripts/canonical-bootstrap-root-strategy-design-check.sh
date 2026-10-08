@@ -12,7 +12,7 @@ if rg -q -e '--emit-aot|--emit-aot-obj|--emit-standalone-amd64|--emit-bin' "$roo
 fi
 
 selfhost_emit_c=NO
-if rg -q -e '--emit-c|emit_selfhost_c|compile_selfhost_c' "$root/src/cmd/compile/selfhost/compiler.s" "$root/makefile" 2>/dev/null; then
+if rg -q -e '--emit-c|emit_selfhost_c|compile_selfhost_c' "$root/src/cmd/compile/backend/selfhost" "$root/src/cmd/compile" "$root/makefile" 2>/dev/null; then
     selfhost_emit_c=YES
 fi
 

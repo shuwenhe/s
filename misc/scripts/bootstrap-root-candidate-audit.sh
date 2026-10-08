@@ -13,7 +13,7 @@ if [ -f "$closure" ]; then
 fi
 
 has_selfhost_source=NO
-[ -f "$root/src/cmd/compile/selfhost/compiler.s" ] && has_selfhost_source=YES
+[ -f "$root/src/cmd/compile/selfhost-sources.txt" ] && has_selfhost_source=YES
 
 has_seed=NO
 [ -x "$root/bin/s_seed" ] && has_seed=YES
@@ -58,12 +58,12 @@ fi
 candidate_a_viability=PARTIAL
 candidate_a_risk=medium
 candidate_a_artifact=SOURCE
-candidate_a_regen='s_seed -> selfhost/compiler.s -> stage2/stage3 convergence'
-candidate_a_reason='historical selfhost chain exists, but target is selfhost/compiler.s rather than 37-file canonical modular closure'
+candidate_a_regen='s_seed -> compile/selfhost-sources.txt materialized source -> stage2/stage3 convergence'
+candidate_a_reason='historical selfhost chain exists, but target is split selfhost sources rather than 37-file canonical modular closure'
 if [ "$has_selfhost_source" != YES ]; then
     candidate_a_viability=UNKNOWN
     candidate_a_risk=unknown
-    candidate_a_reason='selfhost/compiler.s source missing'
+    candidate_a_reason='compile/selfhost-sources.txt source manifest missing'
 fi
 
 candidate_b_viability=PARTIAL
@@ -132,7 +132,7 @@ fi
 {
     echo "bootstrap-root-candidate-audit"
     echo "canonical-closure-source-count=$closure_count"
-    echo "canonical-closure-root=src/cmd/compile/pipeline/main.s"
+    echo "canonical-closure-root=src/cmd/compile/main.s"
     echo "bootstrap-root-semantic-authority=ALLOWED_IF_BOUNDED"
     echo "thin-bridge-semantic-authority=FORBIDDEN"
     echo "long-term-dual-semantic-authority=FORBIDDEN"
@@ -142,7 +142,7 @@ fi
     echo "  viability=$candidate_a_viability"
     echo "  risk=$candidate_a_risk"
     echo "  non-circular=YES"
-    echo "  semantic-authority-source=src/cmd/compile/selfhost/compiler.s"
+    echo "  semantic-authority-source=src/cmd/compile/selfhost-sources.txt"
     echo "  trusted-code-size=large"
     echo "  canonical-equivalence=NOT_PROVEN"
     echo "  reproducibility=$has_convergence_gate"

@@ -42,7 +42,7 @@ current_closure_hash=NONE
 hash_algorithm_available=YES
 if [ -f "$closure" ]; then
     closure_count=$(wc -l <"$closure" | tr -d ' ')
-    closure_has_entry=$(bool grep -qx 'src/cmd/compile/pipeline/main.s' "$closure")
+    closure_has_entry=$(bool grep -qx 'src/cmd/compile/main.s' "$closure")
     while IFS= read -r rel; do
         [ -z "$rel" ] && continue
         if [ -f "$root/$rel" ]; then

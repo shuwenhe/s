@@ -3,7 +3,7 @@ set -eu
 
 root=${S_SOURCE_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)}
 compiler="$root/bin/s_compiler"
-source="$root/src/cmd/compile/pipeline/compiler_main.s"
+source="$root/src/cmd/compile/compiler_main.s"
 report="$root/.bootstrap/bootstrap-authority/b1-canonical-build-dispatch.txt"
 tmp_report="$report.tmp.$$"
 work="${TMPDIR:-/tmp}/s-b1-canonical-build-dispatch.$$"

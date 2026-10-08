@@ -4,7 +4,8 @@ set -u
 root=${S_SOURCE_ROOT:-$(pwd)}
 work=${1:-"$root/.bootstrap/stage2-stage3-diagnostic"}
 stage2=${S_STAGE2_COMPILER:-"$root/.bootstrap/selfhost/native/stage2"}
-source_file=${S_BOOTSTRAP_SOURCE:-"$root/src/cmd/compile/selfhost/compiler.s"}
+source_file=${S_BOOTSTRAP_SOURCE:-"$work/compiler.s"}
+materialize_source="$root/src/cmd/dist/materialize-selfhost-source.sh"
 runtime_object=${S_BOOTSTRAP_RUNTIME_OBJECT:-"$root/.bootstrap/selfhost/native/selfhost_runtime.o"}
 linker_script=${S_BOOTSTRAP_LINKER_SCRIPT:-"$root/src/runtime/linker/nostdlib.ld"}
 timeout_seconds=${S_BOOTSTRAP_TIMEOUT:-120}
@@ -30,6 +31,14 @@ stage3_obj="$work/stage3.o"
 stage3_bin="$work/stage3"
 
 mkdir -p "$work"
+
+if [ -z "${S_BOOTSTRAP_SOURCE:-}" ]; then
+    if [ ! -x "$materialize_source" ]; then
+        printf '%s\n' "stage2-stage3 diagnostic failed: selfhost source materializer not found: $materialize_source" >&2
+        exit 1
+    fi
+    "$materialize_source" "$source_file"
+fi
 
 git_commit() {
     git -C "$root" rev-parse HEAD 2>/dev/null || printf '%s\n' unknown
