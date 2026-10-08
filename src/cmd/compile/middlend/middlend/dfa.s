@@ -1,4 +1,4 @@
-package middleend
+package middlend
 
 struct dataflow_analysis {
     ir_function function

@@ -51,7 +51,7 @@ mkdir -p "$OUTPUT_DIR"
     
     echo "Step 1b: Find canonical IR conversion"
     echo "  Expected: ir_builder_visit_if_stmt() function"
-    echo "  Location: src/cmd/compile/middlend/middleend/ir_builder.s:181"
+    echo "  Location: src/cmd/compile/middlend/middlend/ir_builder.s:181"
     echo "  Evidence:"
     echo "    - Creates true_block_id, false_block_id"
     echo "    - Creates condbr instruction with cond_value"
