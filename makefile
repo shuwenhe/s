@@ -61,6 +61,10 @@ $(NATIVE_BOOTSTRAP_STAMP): $(NATIVE_BOOTSTRAP_INPUTS)
 	  "$(NATIVE_BOOTSTRAP_DIR)"
 	@touch "$@"
 
+.PHONY: native-bootstrap-diagnostic-check
+native-bootstrap-diagnostic-check:
+	@S_SOURCE_ROOT=$(CURDIR) ./test/native-bootstrap-diagnostic/check.sh
+
 # ============================================================================
 # Compiler (no-GC S compiler in S language)
 # ============================================================================
