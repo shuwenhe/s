@@ -1,4 +1,4 @@
-package middleend
+package middlend
 
 import (
     "cmd.compile.internal"
