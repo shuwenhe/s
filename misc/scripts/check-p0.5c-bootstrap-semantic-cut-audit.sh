@@ -35,7 +35,7 @@ canonical_snapshot=NOT_FOUND
 canonical_snapshot_hash=NONE
 if [ -f "$closure" ]; then
     closure_count=$(wc -l <"$closure" | tr -d ' ')
-    if [ "$closure_count" -gt 0 ] && grep -qx 'src/cmd/compile/pipeline/main.s' "$closure"; then
+    if [ "$closure_count" -gt 0 ] && grep -qx 'src/cmd/compile/main.s' "$closure"; then
         canonical_snapshot=FOUND
     fi
     tmp_hashes="${TMPDIR:-/tmp}/s-p05c-closure-hashes.$$"
@@ -59,7 +59,7 @@ canonical_native_artifact="$root/src/cmd/compile/bootstrap/stage1"
 
 mir_producer_path=$(status_bool has_text 'lower_main_to_mir|mir_graph|build_ownership_facts_from_mir' src/cmd/compile/internal)
 mir_has_language_decisions=$(status_bool has_text 'ownership|borrow|drop|generic|method|monomorph|type_name|check_source_file' src/cmd/compile/middlend/mir/mir.s src/cmd/compile/middlend/ir/lower.s src/cmd/compile/middlend/mono/monomorphization.s src/cmd/compile/backend/backend_elf64.s)
-lowered_view_exists=$(status_bool has_text 'canonical-lowered-view version=1|lowered_view_from_mir' src/cmd/compile/middlend/ir/lower.s src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/pipeline/compiler_main.s misc/scripts)
+lowered_view_exists=$(status_bool has_text 'canonical-lowered-view version=1|lowered_view_from_mir' src/cmd/compile/middlend/ir/lower.s src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/compiler_main.s misc/scripts)
 sseed_consumer_exists=$(status_bool has_text 'emit_aot_from_ir_file|--emit-aot|SSEED-TARGET-V1' src/cmd/compile/seed makefile)
 sseed_consumer_reparses_s=NO
 if has_text 'if .*\\.s|compile_to_buffer|semantic_analyze|parse_program' src/cmd/compile/seed/s_seed.c src/cmd/compile/seed/code/backend_registry.c; then

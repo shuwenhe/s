@@ -7,7 +7,7 @@ closure=${2:?usage: production_selfhost_authority_audit.sh REPORT CLOSURE BOOTST
 bootstrap_report=${3:?usage: production_selfhost_authority_audit.sh REPORT CLOSURE BOOTSTRAP_REPORT}
 parser_report=${4:-}
 source_report=${5:-}
-entry=src/cmd/compile/pipeline/main.s
+entry=src/cmd/compile/main.s
 
 status_for() {
     label=$1

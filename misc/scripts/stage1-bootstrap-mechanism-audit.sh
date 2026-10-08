@@ -15,7 +15,7 @@ rm -rf "$tmp"
 mkdir -p "$tmp"
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 
-entry_rel=src/cmd/compile/pipeline/main.s
+entry_rel=src/cmd/compile/main.s
 entry="$root/$entry_rel"
 stage1_c="$stage1.c"
 
@@ -56,7 +56,7 @@ if [ "${seed_status:-127}" -eq 0 ] && [ -s "$seed_ir" ]; then
 fi
 
 existing_s_to_c_path=NO
-if rg -q -e '--emit-c|compile_selfhost_c|emit_selfhost_c' "$root/makefile" "$root/src/cmd/compile/selfhost" 2>/dev/null; then
+if rg -q -e '--emit-c|compile_selfhost_c|emit_selfhost_c' "$root/makefile" "$root/src/cmd/compile" 2>/dev/null; then
     existing_s_to_c_path=PARTIAL_SELFHOST
 fi
 
@@ -68,7 +68,7 @@ fi
 
 existing_s_to_native_path=NO
 if rg -q -e '--emit-aot|--emit-standalone-amd64|--emit-native|emit_native_from_ir_file' \
-    "$root/makefile" "$root/src/cmd/compile/seed" "$root/src/cmd/compile/selfhost" 2>/dev/null; then
+    "$root/makefile" "$root/src/cmd/compile/seed" "$root/src/cmd/compile" 2>/dev/null; then
     existing_s_to_native_path=YES
 fi
 

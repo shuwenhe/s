@@ -45,24 +45,24 @@ if [ -x "$root/misc/scripts/check-mir-nll-ownership.sh" ]; then
 fi
 
 drop_decision_producer=UNKNOWN
-if has_text 'compiler_emit_mir.*drop|mir_append_scope_drops|drop_decision|drop_flag_cleanup_names' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/pipeline/compiler_main.s src/cmd/compile/internal; then
+if has_text 'compiler_emit_mir.*drop|mir_append_scope_drops|drop_decision|drop_flag_cleanup_names' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/compiler_main.s src/cmd/compile/internal; then
     drop_decision_producer=CANONICAL_MIR_DROP_PATH
 fi
 
 drop_decision_input=UNKNOWN
-if has_text 'moved|dropped|drop_state|partial move|ownership|borrow|events' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/pipeline/compiler_main.s src/cmd/compile/internal; then
+if has_text 'moved|dropped|drop_state|partial move|ownership|borrow|events' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/compiler_main.s src/cmd/compile/internal; then
     drop_decision_input=OWNERSHIP_MOVE_BORROW_STATE
 fi
 
 drop_decision_point=UNKNOWN
-if has_text 'emit-mir-after-drop|emit-mir-partial-drop|mir_append_scope_drops|compiler_emit_mir_partial_drop' misc/scripts src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/pipeline/compiler_main.s src/cmd/compile/internal; then
+if has_text 'emit-mir-after-drop|emit-mir-partial-drop|mir_append_scope_drops|compiler_emit_mir_partial_drop' misc/scripts src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/compiler_main.s src/cmd/compile/internal; then
     drop_decision_point=POST_MIR_DROP_ELABORATION_BEFORE_BOOTSTRAP_SNAPSHOT
 fi
 
 drop_record_population_authority=UNKNOWN
 if has_text 'mir_statement::drop' src/cmd/compile/internal || \
-   has_text 'Drop\(' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/pipeline/compiler_main.s src/cmd/compile/internal || \
-   has_text 'compiler_emit_mir_partial_drop' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/pipeline/compiler_main.s || \
+   has_text 'Drop\(' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/compiler_main.s src/cmd/compile/internal || \
+   has_text 'compiler_emit_mir_partial_drop' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/compiler_main.s || \
    has_text 'mir_append_scope_drops' src/cmd/compile/internal; then
     drop_record_population_authority=CANONICAL_DROP_ELABORATION
 fi
@@ -71,7 +71,7 @@ drop_record_consumption_authority=UNKNOWN
 if has_text 'emit-mir-after-drop' misc/scripts || \
    has_text 'emit-mir-partial-drop' misc/scripts || \
    has_text 'validate_drop_contract_chain' src/cmd/compile/internal || \
-   has_text 'Drop\(' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/pipeline/compiler_main.s src/cmd/compile/internal; then
+   has_text 'Drop\(' src/cmd/compile/frontend src/cmd/compile/middlend src/cmd/compile/compiler_main.s src/cmd/compile/internal; then
     drop_record_consumption_authority=CANONICAL_MIR_OR_BACKEND_ARTIFACT_PATH
 fi
 

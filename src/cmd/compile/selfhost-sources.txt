@@ -1,0 +1,7 @@
+src/cmd/compile/frontend/selfhost/source_scan.s
+src/cmd/compile/middlend/selfhost/const_eval.s
+src/cmd/compile/backend/selfhost/elf_slices.s
+src/cmd/compile/backend/selfhost/asm_amd64.s
+src/cmd/compile/backend/selfhost/asm_arm64.s
+extract:selfhost-main:src/cmd/compile/main.s
+src/cmd/compile/backend/selfhost/c_emit.s
