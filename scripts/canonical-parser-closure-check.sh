@@ -28,7 +28,7 @@ set -e
 
 # Configuration
 SOURCE_ROOT="${1:-.}"
-COMPILER="${SOURCE_ROOT}/bin/s_modular"
+COMPILER="${SOURCE_ROOT}/bin/s_seed"
 TEMP_DIR="/tmp/parser-closure-check-$$"
 CLOSURE_FILE="${SOURCE_ROOT}/.parser-closure-manifest"
 
@@ -63,36 +63,22 @@ echo "========================================"
 echo ""
 echo "[1/4] Identifying canonical closure..."
 
-# Find all *.s files in src/ that are part of Stage1 reachable closure
-# Priority: src/cmd/compile/pipeline/main.s + its transitive dependencies
+# Find all *.s files that make up the canonical no-GC compiler closure.
+# This matches the makefile's COMPILER_SOURCES and proves the seed front end can
+# parse the exact sources used to build bin/s_compiler.
 if [[ ! -f "$COMPILER" ]]; then
-    echo -e "${RED}ERROR: s_modular not found at $COMPILER${NC}"
+    echo -e "${RED}ERROR: s_seed not found at $COMPILER${NC}"
     echo "Build the compiler first: make"
     exit 1
 fi
 
-# Get the canonical closure by analyzing main.s
-# For now, scan standard directories that are bootstrapped
 REQUIRED_FILES=(
-    # Core compiler infrastructure
-    "src/cmd/compile/pipeline/main.s"
-    
-    # Essential frontend
-    "src/cmd/compile/frontend/syntax.s"
-    "src/cmd/compile/frontend/parser/parser.s"
-    "src/cmd/compile/frontend/lexer/lexer.s"
-    "src/cmd/compile/frontend/token/token.s"
-    "src/cmd/compile/frontend/ast/ast.s"
-    
-    # Type system
-    "src/compiler/types/check.s"
-    "src/compiler/types/type.s"
-    
-    # IR generation
-    "src/cmd/compile/middlend/mir/mir.s"
-    
-    # Backend
-    "src/cmd/compile/backend/backend_elf64.s"
+    "src/cmd/compile/frontend/core.s"
+    "src/cmd/compile/frontend/frontend.s"
+    "src/cmd/compile/frontend/stages.s"
+    "src/cmd/compile/middlend/mir/compiler_emit.s"
+    "src/cmd/compile/middlend/stages.s"
+    "src/cmd/compile/pipeline/compiler_main.s"
 )
 
 # Alternative: auto-discover from canonical closure file
@@ -124,12 +110,12 @@ for srcfile in "${REQUIRED_FILES[@]}"; do
         continue
     fi
     
-    REQUIRED_FILES+=("$srcfile")
-    
-    # Try to parse
-    output_ast="${TEMP_DIR}/$(basename "$srcfile").ast"
-    
-    if "$COMPILER" ast "$fullpath" > "$output_ast" 2>&1; then
+    # Compile each file as a one-file unit. The seed compiler's compile-unit
+    # path runs lexer+parser before later stages; parse failures are reported
+    # with locations and make this gate fail.
+    output_ast="${TEMP_DIR}/$(basename "$srcfile").ir"
+
+    if "$COMPILER" --compile-unit "$output_ast" "$fullpath" > "${output_ast}.log" 2>&1; then
         PARSED_FILES+=("$srcfile")
         echo -e "${GREEN}✓${NC} $srcfile"
     else
@@ -137,7 +123,7 @@ for srcfile in "${REQUIRED_FILES[@]}"; do
         ERROR_COUNT=$((ERROR_COUNT + 1))
         
         # Extract error details
-        error_output=$(<"$output_ast")
+        error_output=$(<"${output_ast}.log")
         PARSE_ERROR_DETAILS+="
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: $srcfile

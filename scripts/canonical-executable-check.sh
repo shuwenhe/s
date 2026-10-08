@@ -3,7 +3,7 @@ set -eu
 
 SOURCE_ROOT="${1:-${S_SOURCE_ROOT:-.}}"
 COMPILER="${SOURCE_ROOT}/bin/s_compiler"
-DRIVER="${SOURCE_ROOT}/bin/s_modular"
+DRIVER="${SOURCE_ROOT}/bin/s"
 REPORT="${SOURCE_ROOT}/.bootstrap/stage22/canonical-executable-gate.txt"
 TMP_REPORT="${REPORT}.tmp.$$"
 BACKEND="${SOURCE_ROOT}/src/cmd/compile/backend/backend_elf64.s"
@@ -87,7 +87,7 @@ fi
     echo "S22.2.command=compile.pipeline.main build"
     echo "S22.2.backend=compile.internal.backend_elf64.build"
     echo "S22.3=PASS"
-    echo "S22.3.driver=bin/s_modular"
+    echo "S22.3.driver=bin/s"
     echo "S22.3.fixture=test/simple_test.s"
     echo "S22.3.executable=yes"
     echo "stage22-executable=CLOSED"

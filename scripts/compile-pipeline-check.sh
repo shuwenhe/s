@@ -47,7 +47,7 @@ mkdir -p "$REPORT_DIR" "$TMP_DIR"
 declare -a PIPELINE=(
     "1:Source:source-closure-check:N/A:optional"
     "2:Lexer:lexer-closure-check:N/A:optional"
-    "3:Parser:canonical-parser-closure-check:bin/s_modular:required"
+    "3:Parser:canonical-parser-closure-check:bin/s_seed:required"
     "4:AST:ast-validation-check:N/A:optional"
     "5:Name/Import Resolution:canonical-name-resolution-check:bin/s_compiler:required"
     "6:DeclarationRef:canonical-declaration-ref-check:bin/s_compiler:required"
@@ -116,7 +116,7 @@ run_stage() {
     local gate_script=$3
     local gate_target=$4
     local requirement=$5
-    local gate_path="scripts/${gate_script}.sh"
+    local gate_path="${SOURCE_ROOT}/scripts/${gate_script}.sh"
     local stage_output="${TMP_DIR}/stage-${stage_num}.out"
     local execution_status=""
     local proof_status=""
@@ -136,7 +136,7 @@ run_stage() {
             return 0
         fi
     else
-        if ! make "$gate_script" > "$stage_output" 2>&1; then
+        if ! "$gate_path" "$SOURCE_ROOT" > "$stage_output" 2>&1; then
             execution_status="FAIL"
             proof_status="FAILED"
             reason="gate $gate_script failed"
