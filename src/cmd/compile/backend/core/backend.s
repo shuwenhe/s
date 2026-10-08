@@ -1,4 +1,4 @@
-package compile.internal.backend
+package backend
 import (
     "compile.internal.backend_elf64"
 )

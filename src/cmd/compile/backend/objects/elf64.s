@@ -1,4 +1,4 @@
-package compile.internal.obj
+package compile.internal.objects
 import (
     "compile.internal"
 )
