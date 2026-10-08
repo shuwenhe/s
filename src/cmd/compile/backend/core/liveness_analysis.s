@@ -1,4 +1,4 @@
-package liveness_analysis
+package backend
 
 struct liveness_set {
     int[] live_in

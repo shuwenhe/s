@@ -1,4 +1,4 @@
-package compile.internal.objw
+package compile.internal.objects
 func prog_unit_name() string {
     "objw/prog.s"
 }
