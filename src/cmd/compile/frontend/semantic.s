@@ -613,7 +613,7 @@ func validate_recovery_semantics(string source, semantic_error[] diagnostics) in
         errors = errors + add_error(source, diagnostics, "e3027", "recover coverage exceeds deferred handlers", "recover")
     }
     if panic_count > 0 && count_token_text(source, "return") == 0 {
-        errors = errors + add_error(source, diagnostics, "e3032", "panic path requires explicit return or recovery bridge", "panic"
+        errors = errors + add_error(source, diagnostics, "e3032", "panic path requires explicit return or recovery bridge", "panic")
     }
     if recover_count > 0 && panic_count == 0 {
         errors = errors + add_error(source, diagnostics, "e3033", "recover without panic path may break semantic equivalence", "recover")
@@ -1368,7 +1368,7 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
     result := infer_block_expr(method.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.kindname) {
         if !compile.internal.typesys.same_type(expected_return, result.kindname) {
-            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "method return type mismatch", method.sig.name
+            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "method return type mismatch", method.sig.name)
         }
     }
     pre_errors + result.errors
@@ -1413,7 +1413,7 @@ func check_function(function_decl function_decl, function_binding[] functions, t
     result := infer_block_expr(function_decl.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics, declarations)
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.kindname) {
         if !compile.internal.typesys.same_type(expected_return, result.kindname) {
-            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "function return type mismatch", function_decl.sig.name
+            return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "function return type mismatch", function_decl.sig.name)
         }
     }
     pre_errors + result.errors
@@ -1456,7 +1456,7 @@ func validate_function_signature(function_decl function_decl, string source, sem
     switch function_decl.sig.return_type {
         option.some(rt) : {
             if compile.internal.typesys.has_unknown_component(rt) {
-                errors = errors + add_error(source, diagnostics, "e3014", "return type has unknown component", function_decl.sig.name
+                errors = errors + add_error(source, diagnostics, "e3014", "return type has unknown component", function_decl.sig.name)
             }
             if !declared_type_is_safe(rt) {
                 errors = errors + add_error(source, diagnostics, "e3063", "return type cannot be resolved at compile time", function_decl.sig.name)
@@ -1539,10 +1539,10 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
             rhs := infer_expr(value.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors := rhs.errors
             if is_unknown(target_type) {
-                return errors + add_error(source, diagnostics, "e3002", "assignment to undefined name", value.name
+                return errors + add_error(source, diagnostics, "e3002", "assignment to undefined name", value.name)
             }
             if !types_compatible(target_type, rhs.kindname) {
-                return errors + add_error(source, diagnostics, "e3003", "assignment type mismatch", value.name
+                return errors + add_error(source, diagnostics, "e3003", "assignment type mismatch", value.name)
             }
             switch value.value {
                 expr::name(name_value) : errors = errors + check_move_value(name_value.name, rhs.kindname, borrow_state, source, diagnostics),
@@ -1556,7 +1556,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
                 return add_error(source, diagnostics, "e3056", "cannot mutate a borrowed value", value.name)
             }
             if !types_compatible("int", ty) {
-                return add_error(source, diagnostics, "e3005", "increment requires int", value.name
+                return add_error(source, diagnostics, "e3005", "increment requires int", value.name)
             }
             0
         }
@@ -1578,13 +1578,13 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
                 option.some(expr) : {
                     expr_result := infer_expr(expr, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
                     if is_borrow_expr(expr) {
-                        return expr_result.errors + add_error(source, diagnostics, "e3053", "cannot return a reference to a local value because it does not live long enough", "return"
+                        return expr_result.errors + add_error(source, diagnostics, "e3053", "cannot return a reference to a local value because it does not live long enough", "return")
                     }
                     if expected_return == "()" {
-                        return expr_result.errors + add_error(source, diagnostics, "e3007", "unexpected return value", "return"
+                        return expr_result.errors + add_error(source, diagnostics, "e3007", "unexpected return value", "return")
                     }
                     if !types_compatible(expected_return, expr_result.kindname) {
-                        return expr_result.errors + add_error(source, diagnostics, "e3008", "return type mismatch", "return"
+                        return expr_result.errors + add_error(source, diagnostics, "e3008", "return type mismatch", "return")
                     }
                     switch expr {
                         expr::name(name_value) : expr_result.errors = expr_result.errors + check_move_value(name_value.name, expr_result.kindname, borrow_state, source, diagnostics),
@@ -1596,7 +1596,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
                     if expected_return == "()" {
                         return 0
                     }
-                    add_error(source, diagnostics, "e3009", "missing return value", "return"
+                    add_error(source, diagnostics, "e3009", "missing return value", "return")
                 }
             }
         }
@@ -2085,7 +2085,7 @@ func bind_pattern(pattern pattern, string expected_type, type_binding[] bindings
             if base == "option" {
                 if variant == "some" {
                     if std.prelude.len(value.args) != 1 {
-                        return add_error(source, diagnostics, "e2004", "some payload arity mismatch", value.path
+                        return add_error(source, diagnostics, "e2004", "some payload arity mismatch", value.path)
                     }
                     return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics
                 }
@@ -2093,24 +2093,24 @@ func bind_pattern(pattern pattern, string expected_type, type_binding[] bindings
                     if std.prelude.len(value.args) == 0 {
                         return 0
                     }
-                    return add_error(source, diagnostics, "e2004", "none must not have payload", value.path
+                    return add_error(source, diagnostics, "e2004", "none must not have payload", value.path)
                 }
-                return add_error(source, diagnostics, "e2006", "invalid option constructor", value.path
+                return add_error(source, diagnostics, "e2006", "invalid option constructor", value.path)
             }
             if base == "result" {
                 if variant == "ok" {
                     if std.prelude.len(value.args) != 1 {
-                        return add_error(source, diagnostics, "e2004", "ok payload arity mismatch", value.path
+                        return add_error(source, diagnostics, "e2004", "ok payload arity mismatch", value.path)
                     }
                     return bind_pattern(value.args[0], first_type_arg(expected_type), bindings, source, diagnostics
                 }
                 if variant == "err" {
                     if std.prelude.len(value.args) != 1 {
-                        return add_error(source, diagnostics, "e2004", "err payload arity mismatch", value.path
+                        return add_error(source, diagnostics, "e2004", "err payload arity mismatch", value.path)
                     }
                     return bind_pattern(value.args[0], second_type_arg(expected_type), bindings, source, diagnostics
                 }
-                return add_error(source, diagnostics, "e2006", "invalid result constructor", value.path
+                return add_error(source, diagnostics, "e2006", "invalid result constructor", value.path)
             }
             add_error(source, diagnostics, "e2006", "variant pattern not allowed for this type", value.path)
         }
