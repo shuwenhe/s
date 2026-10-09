@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func parser_test_case_name() string {
-    "syntax/parser_test.s"
+    "parser/syntax/parser_test.s"
 }
 
 func parser_test_case_pass() int {

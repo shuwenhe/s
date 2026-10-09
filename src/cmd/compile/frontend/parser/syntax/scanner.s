@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func scanner_module_name() string {
-    "syntax/scanner.s"
+    "parser/syntax/scanner.s"
 }
 
 func scanner_module_apply() int {
