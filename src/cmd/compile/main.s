@@ -1,12 +1,5 @@
 package cmd
 import (
-    
-    
-    "cmd.compile.frontend.selfhost"
-    "cmd.compile.middlend.selfhost"
-    "cmd.compile.backend.selfhost"
-    
-    
     "compile.internal.backend_elf64"
     "compile.internal.semantic"
     "compile.internal.syntax"
@@ -167,4 +160,3 @@ func run_tests(string fixtures_root) int {
     std.io.eprintln("test: ok")
     return 0
 }
-

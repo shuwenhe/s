@@ -285,6 +285,160 @@ static void resolve_import_signature(const char *module_path, int *min_arity, in
 	*max_arity = spec->max_arity;
 	*return_type = spec->return_type;
 }
+static int append_import_signature(compile_error *err, const char *name, int min_arity, int max_arity, const char *return_type) {
+	signature_spec spec;
+	signature_spec *next;
+	if (!name || !return_type || find_signature(import_signatures, import_signatures_len, name)) {
+		return 1;
+	}
+	spec.name = dup_cstr(name);
+	spec.min_arity = min_arity;
+	spec.max_arity = max_arity;
+	spec.return_type = dup_cstr(return_type);
+	if (!spec.name || !spec.return_type) {
+		free(spec.name);
+		free(spec.return_type);
+		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+		return 0;
+	}
+	next = (signature_spec *)realloc(import_signatures, (import_signatures_len + 1) * sizeof(signature_spec));
+	if (!next) {
+		free(spec.name);
+		free(spec.return_type);
+		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+		return 0;
+	}
+	import_signatures = next;
+	import_signatures[import_signatures_len++] = spec;
+	return 1;
+}
+static int module_path_to_source_candidate(const char *root, const char *module_path, int style, char *out, size_t out_size) {
+	char rel[512];
+	size_t i;
+	size_t used = 0;
+	int n;
+	if (!root || !module_path || !out || out_size == 0) return 0;
+	for (i = 0; module_path[i] && used + 1 < sizeof(rel); i++) {
+		rel[used++] = module_path[i] == '.' ? '/' : module_path[i];
+	}
+	if (module_path[i]) return 0;
+	rel[used] = '\0';
+	if (style == 0 && strncmp(rel, "std/", 4) == 0) {
+		const char *std_rel = rel + 4;
+		n = snprintf(out, out_size, "%s/src/%s/%s.s", root, std_rel, strrchr(std_rel, '/') ? strrchr(std_rel, '/') + 1 : std_rel);
+	} else if (style == 1) {
+		n = snprintf(out, out_size, "%s/src/%s.s", root, rel);
+	} else {
+		n = snprintf(out, out_size, "%s/src/%s/%s.s", root, rel, strrchr(rel, '/') ? strrchr(rel, '/') + 1 : rel);
+	}
+	return n > 0 && (size_t)n < out_size;
+}
+static char *read_text_file_if_exists(const char *path) {
+	FILE *fp;
+	long n;
+	size_t read_n;
+	char *buf;
+	fp = fopen(path, "rb");
+	if (!fp) return NULL;
+	if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return NULL; }
+	n = ftell(fp);
+	if (n < 0) { fclose(fp); return NULL; }
+	if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return NULL; }
+	buf = (char *)malloc((size_t)n + 1);
+	if (!buf) { fclose(fp); return NULL; }
+	read_n = fread(buf, 1, (size_t)n, fp);
+	fclose(fp);
+	if (read_n != (size_t)n) { free(buf); return NULL; }
+	buf[n] = '\0';
+	return buf;
+}
+static int count_signature_params(const char *start, const char *end) {
+	const char *p = start;
+	int count = 0;
+	while (p < end && isspace((unsigned char)*p)) p++;
+	if (p >= end) return 0;
+	count = 1;
+	for (; p < end; p++) {
+		if (*p == ',') count++;
+	}
+	return count;
+}
+static char *parse_return_type_after_params(const char *p) {
+	const char *start;
+	const char *end;
+	while (*p && isspace((unsigned char)*p)) p++;
+	if (*p == '{' || *p == '\n' || *p == '\r' || *p == '\0') return dup_cstr(TYPE_UNIT);
+	start = p;
+	while (*p && *p != '{' && *p != '\n' && *p != '\r') p++;
+	end = p;
+	while (end > start && isspace((unsigned char)end[-1])) end--;
+	if (end <= start) return dup_cstr(TYPE_UNIT);
+	{
+		size_t len = (size_t)(end - start);
+		char *out = (char *)malloc(len + 1);
+		if (!out) return NULL;
+		memcpy(out, start, len);
+		out[len] = '\0';
+		return out;
+	}
+}
+static int load_module_source_signatures(compile_error *err, const char *module_path) {
+	const char *root = getenv("S_SOURCE_ROOT");
+	char path[1024];
+	char *source = NULL;
+	char *p;
+	int style;
+	if (!module_path) return 1;
+	if (!root || root[0] == '\0') root = ".";
+	for (style = 0; style < 3 && !source; style++) {
+		if (module_path_to_source_candidate(root, module_path, style, path, sizeof(path))) {
+			source = read_text_file_if_exists(path);
+		}
+	}
+	if (!source) return 1;
+	p = source;
+	while ((p = strstr(p, "func ")) != NULL) {
+		char *name_start = p + 5;
+		char *name_end;
+		char *params_start;
+		char *params_end;
+		char *return_type;
+		char full_name[512];
+		int arity;
+		int n;
+		while (*name_start && isspace((unsigned char)*name_start)) name_start++;
+		if (*name_start == '(') { p = name_start + 1; continue; }
+		name_end = name_start;
+		while (*name_end && (isalnum((unsigned char)*name_end) || *name_end == '_')) name_end++;
+		if (name_end == name_start || *name_end != '(') { p = name_end; continue; }
+		params_start = name_end + 1;
+		params_end = strchr(params_start, ')');
+		if (!params_end) { p = params_start; continue; }
+		return_type = parse_return_type_after_params(params_end + 1);
+		if (!return_type) {
+			free(source);
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			return 0;
+		}
+		n = snprintf(full_name, sizeof(full_name), "%s.%.*s", module_path, (int)(name_end - name_start), name_start);
+		if (n <= 0 || (size_t)n >= sizeof(full_name)) {
+			free(return_type);
+			free(source);
+			error_set(err, ERR_SEMANTIC, 0, 0, "import signature path too long");
+			return 0;
+		}
+		arity = count_signature_params(params_start, params_end);
+		if (!append_import_signature(err, full_name, arity, arity, return_type)) {
+			free(return_type);
+			free(source);
+			return 0;
+		}
+		free(return_type);
+		p = params_end + 1;
+	}
+	free(source);
+	return 1;
+}
 
 static scope *scope_push(scope *parent) {
 	scope *s = (scope *)calloc(1, sizeof(scope));
@@ -1633,6 +1787,9 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					int min_arity;
 					int max_arity;
 					const char *ret_type;
+					if (!load_module_source_signatures(ctx->err, decl->as.use_decl.module_path)) {
+						return 0;
+					}
 					resolve_import_signature(decl->as.use_decl.module_path, &min_arity, &max_arity, &ret_type);
 					status = scope_define(ctx->current_scope,
 						decl->as.use_decl.alias,

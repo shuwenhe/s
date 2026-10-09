@@ -7,7 +7,7 @@ DRIVER="${SOURCE_ROOT}/bin/s"
 REPORT="${SOURCE_ROOT}/.bootstrap/stage22/canonical-executable-gate.txt"
 TMP_REPORT="${REPORT}.tmp.$$"
 BACKEND="${SOURCE_ROOT}/src/cmd/compile/backend/backend_elf64.s"
-PIPELINE_MAIN="${SOURCE_ROOT}/src/cmd/compile/pipeline/main.s"
+PIPELINE_MAIN="${SOURCE_ROOT}/src/cmd/compile/main.s"
 TEST_FILE="${SOURCE_ROOT}/test/simple_test.s"
 WORK_DIR="${SOURCE_ROOT}/.bootstrap/stage22/run.$$"
 

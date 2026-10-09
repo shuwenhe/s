@@ -6,8 +6,8 @@ COMPILER="${SOURCE_ROOT}/bin/s_compiler"
 REPORT="${SOURCE_ROOT}/.bootstrap/stage19/canonical-machine-code-gate.txt"
 TMP_REPORT="${REPORT}.tmp.$$"
 BACKEND="${SOURCE_ROOT}/src/cmd/compile/backend/backend_elf64.s"
-MACHINE_BUILDER="${SOURCE_ROOT}/src/cmd/compile/backend/backend/codegen_x86_64.s"
-NATIVE_COMPILER="${SOURCE_ROOT}/src/cmd/compile/backend/backend/native_compiler.s"
+MACHINE_BUILDER="${SOURCE_ROOT}/src/cmd/compile/backend/core/codegen_x86_64.s"
+NATIVE_COMPILER="${SOURCE_ROOT}/src/cmd/compile/backend/core/native_compiler.s"
 
 mkdir -p "$(dirname "$REPORT")"
 trap 'rm -f "$TMP_REPORT"' EXIT HUP INT TERM

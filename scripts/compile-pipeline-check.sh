@@ -123,6 +123,7 @@ run_stage() {
     local reason=""
 
     : > "$stage_output"
+    printf "gate-file=%s\n" "$gate_path"
 
     if [[ ! -f "$gate_path" ]]; then
         if ! make "$gate_script" > "$stage_output" 2>&1; then

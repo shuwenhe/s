@@ -41,10 +41,14 @@ echo ""
 # Seed compiler automatically traces imports and resolves packages
 echo "=== Stage 1: Bootstrap with Seed Compiler ==="
 printf "Compiling self-hosted compiler entry point...\n"
+closure="$output_dir/stage1.sources"
+S_SOURCE_ROOT="$root" "$root/src/cmd/dist/source_closure.sh" \
+    src/cmd/compile/main.s "$closure"
+echo "✓ Resolved source closure: $(wc -l < "$closure" | tr -d ' ') files"
 
 "$root/bin/s_seed" \
     --compile-unit "$output_dir/stage1.ir" \
-    "$root/src/cmd/compile/main.s" \
+    $(sed "s#^#$root/#" "$closure") \
     2>&1 | tee "$output_dir/stage1-compile.log" || {
     printf "Error: Stage 1 compilation failed\n" >&2
     exit 1

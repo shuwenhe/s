@@ -7,9 +7,9 @@ REPORT="${SOURCE_ROOT}/.bootstrap/stage17/canonical-codegen-gate.txt"
 RAW_STAGE17="${REPORT}.stage17.raw.$$"
 TMP_REPORT="${REPORT}.tmp.$$"
 BACKEND="${SOURCE_ROOT}/src/cmd/compile/backend/backend_elf64.s"
-INSTR_SELECT="${SOURCE_ROOT}/src/cmd/compile/backend/backend/instr_select.s"
-INSTRUCTION_SELECTOR="${SOURCE_ROOT}/src/cmd/compile/backend/backend/instruction_selector.s"
-SSA_LOWER="${SOURCE_ROOT}/src/cmd/compile/backend/backend/ssa_lower.s"
+INSTR_SELECT="${SOURCE_ROOT}/src/cmd/compile/backend/core/instr_select.s"
+INSTRUCTION_SELECTOR="${SOURCE_ROOT}/src/cmd/compile/backend/core/instruction_selector.s"
+SSA_LOWER="${SOURCE_ROOT}/src/cmd/compile/backend/core/ssa_lower.s"
 
 mkdir -p "$(dirname "$REPORT")"
 trap 'rm -f "$RAW_STAGE17" "$TMP_REPORT"' EXIT HUP INT TERM

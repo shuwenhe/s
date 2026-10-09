@@ -672,7 +672,7 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
             continue
         }
         ei := 0
-        for ei < rewritten.blocks[bi]std.prelude.len(.terminator.edges) {
+        for ei < std.prelude.len(rewritten.blocks[bi].terminator.edges) {
             next := rewritten.blocks[bi].terminator.edges[ei].target
             if !contains_int32(reachable, next) {
                 work = append(work, next)
@@ -694,7 +694,7 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     for i < std.prelude.len(rewritten.blocks) {
         kept_edges := mir_control_edge[]()
         j := 0
-        for j < rewritten.blocks[i]std.prelude.len(.terminator.edges) {
+        for j < std.prelude.len(rewritten.blocks[i].terminator.edges) {
             edge := rewritten.blocks[i].terminator.edges[j]
             if contains_int32(reachable, edge.target) {
                 kept_edges = append(kept_edges, edge)
@@ -788,7 +788,7 @@ func trim_unit_line_pass(mir_graph graph) graph_pass_count_result {
         if rewritten.blocks[i].terminator.kind == "return" {
             filtered := mir_statement[]()
             j := 0
-            for j < rewritten.blocks[i]std.prelude.len(.statements) {
+            for j < std.prelude.len(rewritten.blocks[i].statements) {
                 keep := true
                 switch rewritten.blocks[i].statements[j] {
                     mir_statement::eval(eval_stmt) : {
@@ -819,7 +819,7 @@ func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
         filtered := mir_statement[]()
         last_line := ""
         j := 0
-        for j < rewritten.blocks[i]std.prelude.len(.statements) {
+        for j < std.prelude.len(rewritten.blocks[i].statements) {
             push_stmt := true
             switch rewritten.blocks[i].statements[j] {
                 mir_statement::eval(eval_stmt) : {
@@ -1537,7 +1537,7 @@ func normalize_go_symbol(string text) string {
 
 func strip_go_asm_comment(string line) string {
     out := line
-    slash := index_of(out, "
+    slash := index_of(out, "//")
     if slash >= 0 {
         out = std.prelude.slice(out, 0, slash)
     }
@@ -3522,9 +3522,13 @@ func find_function_in_source_graph(source_file source, string name, string[] vis
     visited = append(visited, source.pkg)
     i := 0
     for i < std.prelude.len(source.items) {
+        pkg := source.pkg
+        if i < std.prelude.len(source.item_packages) {
+            pkg = source.item_packages[i]
+        }
         switch source.items[i] {
             item.function(value) : {
-                if value.sig.name == name {
+                if value.sig.name == name || pkg + "." + value.sig.name == name {
                     return value
                 }
             }
@@ -3848,58 +3852,74 @@ func eval_binary(binary_expr value, source_file source, binding[] env, write_op[
 }
 
 func eval_call(call_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+    switch value.resolved_callee {
+        option.some(resolved) : {
+            arg_values := value[]()
+            ai := 0
+            for ai < std.prelude.len(value.args) {
+                arg_result := eval_expr(value.args[ai], source, env, writes, runtime)
+                if arg_result.is_err() {
+                    return arg_result.unwrap_err()
+                }
+                arg_values = append(arg_values, arg_result.unwrap())
+                ai = ai + 1
+            }
+            return call_function(source, resolved, arg_values, env, writes, runtime)
+        },
+        option.none : (),
+    }
     switch value.callee.value {
         expr.name(callee_name) : {
             if callee_name.name == "println" || callee_name.name == "eprintln" {
-                return eval_print_call(callee_name.name, value.args, source, env, writes, runtime
+                return eval_print_call(callee_name.name, value.args, source, env, writes, runtime)
             }
             if callee_name.name == "panic" {
-                return eval_panic_call(value.args, source, env, writes, runtime
+                return eval_panic_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "recover" {
-                return eval_recover_call(env, runtime
+                return eval_recover_call(env, runtime)
             }
             if callee_name.name == "box" || callee_name.name == "box_new" {
-                return eval_box_new_call(value.args, source, env, writes, runtime
+                return eval_box_new_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "copy" {
-                return eval_copy_call(value.args, source, env, writes, runtime
+                return eval_copy_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "box_free" {
-                return eval_box_free_call(value.args, source, env, writes, runtime
+                return eval_box_free_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "chan_make" {
-                return eval_chan_make_call(value.args, source, env, writes, runtime
+                return eval_chan_make_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "chan_send" {
-                return eval_chan_send_call(value.args, source, env, writes, runtime
+                return eval_chan_send_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "chan_recv" {
-                return eval_chan_recv_call(value.args, source, env, writes, runtime, false
+                return eval_chan_recv_call(value.args, source, env, writes, runtime, false)
             }
             if callee_name.name == "select_recv" {
-                return eval_chan_recv_call(value.args, source, env, writes, runtime, true
+                return eval_chan_recv_call(value.args, source, env, writes, runtime, true)
             }
             if callee_name.name == "select_recv_weighted" {
-                return eval_select_recv_weighted_call(value.args, source, env, writes, runtime
+                return eval_select_recv_weighted_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "select_recv_default" {
-                return eval_select_recv_default_call(value.args, source, env, writes, runtime
+                return eval_select_recv_default_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "select_recv_timeout" {
-                return eval_select_recv_timeout_call(value.args, source, env, writes, runtime
+                return eval_select_recv_timeout_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "select_send" {
-                return eval_select_send_call(value.args, source, env, writes, runtime
+                return eval_select_send_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "select_send_default" {
-                return eval_select_send_default_call(value.args, source, env, writes, runtime
+                return eval_select_send_default_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "select_send_timeout" {
-                return eval_select_send_timeout_call(value.args, source, env, writes, runtime
+                return eval_select_send_timeout_call(value.args, source, env, writes, runtime)
             }
             if callee_name.name == "chan_close" {
-                return eval_chan_close_call(value.args, source, env, writes, runtime
+                return eval_chan_close_call(value.args, source, env, writes, runtime)
             }
         }
         _ : (),
@@ -4112,7 +4132,7 @@ func eval_chan_send_call(expr[] args, source_file source, binding[] env, write_o
     if runtime.channels[idx].closed {
         return backend_error { message: "backend error: chan_send on closed channel" }
     }
-    if runtime.channels[idx]std.prelude.len(.buffer) >= runtime.channels[idx].capacity {
+    if std.prelude.len(runtime.channels[idx].buffer) >= runtime.channels[idx].capacity {
         return backend_error { message: "backend error: chan_send would block" }
     }
     ch_state := runtime.channels[idx]
@@ -4313,11 +4333,11 @@ func choose_ready_channel(runtime_state runtime, value[] channels) option[int] {
         pick := (start + offset) % std.prelude.len(channels)
         idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
-            return option.some(-1
+            return option.some(-1)
         }
-        if runtime.channels[idx]std.prelude.len(.buffer) > 0 {
+        if std.prelude.len(runtime.channels[idx].buffer) > 0 {
             runtime.select_rr_cursor = (pick + 1) % std.prelude.len(channels)
-            return option.some(idx
+            return option.some(idx)
         }
         offset = offset + 1
     }
@@ -4334,10 +4354,10 @@ func choose_closed_channel(runtime_state runtime, value[] channels) option[int] 
         pick := (start + offset) % std.prelude.len(channels)
         idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
-            return option.some(-1
+            return option.some(-1)
         }
         if runtime.channels[idx].closed {
-            return option.some(pick
+            return option.some(pick)
         }
         offset = offset + 1
     }
@@ -4354,12 +4374,12 @@ func choose_sendable_channel(runtime_state runtime, value[] channels) option[int
         pick := (start + offset) % std.prelude.len(channels)
         idx := find_channel_index(runtime, channels[pick])
         if idx < 0 {
-            return option.some(-1
+            return option.some(-1)
         }
         ch_state := runtime.channels[idx]
         if !ch_state.closed && std.prelude.len(ch_state.buffer) < ch_state.capacity {
             runtime.select_rr_cursor = (pick + 1) % std.prelude.len(channels)
-            return option.some(pick
+            return option.some(pick)
         }
         offset = offset + 1
     }
@@ -4595,7 +4615,7 @@ func collect_const_bindings(source_file source) (binding[], backend_error) {
     visited := string[]()
     collect_result := collect_const_bindings_in_source(source, out, visited)
     if collect_result.is_err() {
-        return collect_result.unwrap_err())
+        return collect_result.unwrap_err()
     }
     out
 }
@@ -4723,7 +4743,7 @@ func lookup_name_or_function(binding[] env, source_file source, string name) (va
     }
     fn_result := find_function(source, name)
     if fn_result.is_ok() {
-        return value.fn_ref(name))
+        return value.fn_ref(name)
     }
     backend_error { message: "backend error: unknown name " + name }
 }
@@ -4768,7 +4788,7 @@ func eval_index_expr(index_expr value, source_file source, binding[] env, write_
             i := 0
             for i < std.prelude.len(entries) {
                 if entries[i].key == key {
-                    return value.fn_ref(entries[i].func_name))
+                    return value.fn_ref(entries[i].func_name)
                 }
                 i = i + 1
             }
@@ -5040,13 +5060,13 @@ func parse_int_literal(string literal) int {
 
 func parse_ssa_margin_override(string text) (int, backend_error) {
     if text == "" {
-        return ok_int(-1
+        return ok_int(-1)
     }
     i := 0
     for i < std.prelude.len(text) {
         ch := std.prelude.char_at(text, i)
         if digit_value(ch) < 0 {
-            return fail_int("invalid --ssa-dominant-margin value: " + text
+            return fail_int("invalid --ssa-dominant-margin value: " + text)
         }
         i = i + 1
     }
@@ -5127,18 +5147,18 @@ func decode_string_literal(string literal) string {
 func emit_asm(write_op[] writes, int exit_code) string {
     arch := buildcfg_goarch()
     if arch == "arm64" {
-        return emit_asm_arm64(writes, exit_code
+        return emit_asm_arm64(writes, exit_code)
     }
     if arch == "riscv64" {
-        return emit_asm_riscv64(writes, exit_code
+        return emit_asm_riscv64(writes, exit_code)
     }
     if arch == "s390x" {
-        return emit_asm_s390x(writes, exit_code
+        return emit_asm_s390x(writes, exit_code)
     }
     if arch == "amd64p32" {
-        return emit_asm_amd64(writes, exit_code
+        return emit_asm_amd64(writes, exit_code)
     }
-    return emit_asm_amd64(writes, exit_code
+    return emit_asm_amd64(writes, exit_code)
 }
 
 func validate_abi_coverage(string arch) ((), backend_error) {
@@ -5254,16 +5274,16 @@ func abi_aggregate_pass_mode(string arch, int size_bytes) string {
 
 func abi_return_mode(string arch, string type_class, int size_bytes) string {
     if type_class == "int" {
-        return "reg:" + abi_int_ret_reg(arch
+        return "reg:" + abi_int_ret_reg(arch)
     }
     if type_class == "float" {
-        return "reg:" + abi_float_ret_reg(arch
+        return "reg:" + abi_float_ret_reg(arch)
     }
     if type_class == "aggregate" {
         if size_bytes <= 16 {
             return "aggregate-reg"
         }
-        return "sret:" + abi_sret_reg(arch
+        return "sret:" + abi_sret_reg(arch)
     }
     ""
 }

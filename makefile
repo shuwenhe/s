@@ -173,6 +173,7 @@ COMPILER_SOURCES := \
 
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
+	@for src in $(COMPILER_SOURCES); do echo "compiler-source=$$src"; done
 	@./bin/s_seed --compile-unit .bootstrap/compiler/compiler.ir $(COMPILER_SOURCES)
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$$(uname -s | tr '[:upper:]' '[:lower:]') \
 	  S_TARGET_ARCH=$$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/') \

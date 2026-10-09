@@ -7,7 +7,7 @@ REPORT="${SOURCE_ROOT}/.bootstrap/stage20/canonical-object-emission-gate.txt"
 TMP_REPORT="${REPORT}.tmp.$$"
 BACKEND="${SOURCE_ROOT}/src/cmd/compile/backend/backend_elf64.s"
 OBJECT_CONTRACT="${SOURCE_ROOT}/src/cmd/compile/backend/tools/link/internal/ld/object_contract.s"
-ELF_GEN="${SOURCE_ROOT}/src/cmd/compile/backend/backend/elf64_gen.s"
+ELF_GEN="${SOURCE_ROOT}/src/cmd/compile/backend/core/elf64_gen.s"
 
 mkdir -p "$(dirname "$REPORT")"
 trap 'rm -f "$TMP_REPORT"' EXIT HUP INT TERM
