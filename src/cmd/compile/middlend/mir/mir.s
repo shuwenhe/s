@@ -155,17 +155,8 @@ struct mir_ownership_facts {
     string[] ref_names
     mir_move_fact[] moves
 
-    
-    
-    
-    
     string[] loan_places
 
-    
-    
-    
-    
-    
     mir_place[] loan_borrowed_places
 }
 
@@ -247,12 +238,8 @@ func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_o
                     facts.input.loan_count = facts.input.loan_count + 1
                     facts.input.loan_points = append(facts.input.loan_points, mir_add_point_value(0, point))
 
-                    
                     facts.loan_places = append(facts.loan_places, mir_place_key(borrow_stmt.place))
 
-                    
-                    
-                    
                     facts.loan_borrowed_places = append(facts.loan_borrowed_places, borrow_stmt.place)
 
                     facts.input.ref_loans[ref_id] = loan_id
@@ -304,17 +291,14 @@ func mir_loan_borrowed_place(facts* mir_ownership_facts, int loan_id) (mir_place
         return mir_place{}, false
     }
 
-    
     if loan_id < 0 || loan_id >= facts.input.loan_count {
         return mir_place{}, false
     }
 
-    
     if loan_id >= len(facts.loan_borrowed_places) {
         return mir_place{}, false
     }
 
-    
     return facts.loan_borrowed_places[loan_id], true
 }
 
@@ -619,7 +603,6 @@ func mir_place_key(mir_place place) string {
     for i < len(place.projections) {
         projection := place.projections[i]
         
-        
         switch projection.kind {
             mir_projection_kind.field : { out = out + "." + projection.value }
             mir_projection_kind.index : { out = out + "[" + projection.value + "]" }
@@ -636,12 +619,10 @@ func mir_place_equal(a mir_place, b mir_place) bool {
         return false
     }
 
-    
     if len(a.projections) != len(b.projections) {
         return false
     }
 
-    
     i := 0
     for i < len(a.projections) {
         
@@ -649,7 +630,6 @@ func mir_place_equal(a mir_place, b mir_place) bool {
             return false
         }
 
-        
         if a.projections[i].value != b.projections[i].value {
             return false
         }
@@ -657,7 +637,6 @@ func mir_place_equal(a mir_place, b mir_place) bool {
         i = i + 1
     }
 
-    
     return true
 }
 
@@ -667,12 +646,10 @@ func mir_place_is_prefix(prefix mir_place, place mir_place) bool {
         return false
     }
 
-    
     if len(prefix.projections) > len(place.projections) {
         return false
     }
 
-    
     i := 0
     for i < len(prefix.projections) {
         
@@ -680,7 +657,6 @@ func mir_place_is_prefix(prefix mir_place, place mir_place) bool {
             return false
         }
 
-        
         if prefix.projections[i].value != place.projections[i].value {
             return false
         }
@@ -688,7 +664,6 @@ func mir_place_is_prefix(prefix mir_place, place mir_place) bool {
         i = i + 1
     }
 
-    
     return true
 }
 

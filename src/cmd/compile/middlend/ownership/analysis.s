@@ -76,9 +76,6 @@ func analysis_loan_live_at(
         return false
     }
     
-    
-    
-    
     mask := 1 << point_id
     return (analysis.loan_live_points[loan_id] & mask) != 0
 }

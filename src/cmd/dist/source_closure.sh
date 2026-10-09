@@ -41,7 +41,7 @@ resolve_module_fallback() {
 
         compile.internal.semantic)
 
-            printf 'src/cmd/compile/frontend/semantic.s\n'
+            printf 'src/cmd/compile/frontend/semantic/semantic.s\n'
 
             return 0
 

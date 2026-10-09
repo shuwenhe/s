@@ -269,7 +269,6 @@ func verify_identity_threading(mono_context ctx) m1_identity_verification {
                 verification.all_refs_have_valid_path = false
             }
             
-            
             found_in_semantic := false
             j := 0
             for j < len(ctx.declarations) {
