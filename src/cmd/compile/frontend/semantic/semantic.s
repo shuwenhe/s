@@ -1464,13 +1464,15 @@ func infer_block_expr(block_expr block, type_binding[] outer_env, borrow_record[
             final_result := infer_expr(final_expr, local_env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             borrow_state_merge_moves(incoming_borrows, borrow_state)
             check_result {
-                type_name: final_result.kindname, errors errors + final_result.errors,
+                type_name: final_result.kindname, errors: errors + final_result.errors,
             }
         }
-        option.none : check_result {
+        option.none : {
             borrow_state_merge_moves(incoming_borrows, borrow_state)
-            type_name: "()", errors errors,
-        },
+            check_result {
+                type_name: "()", errors: errors,
+            }
+        }
     }
 }
 
@@ -1503,7 +1505,6 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
                 expr::name(name_value) : errors = errors + check_move_value(name_value.name, rhs.kindname, borrow_state, source, diagnostics),
                 _ : (),
             }
-            ;
             errors
         }
         stmt.assign(value) : {
