@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func operator_string_module_name() string {
-    "syntax/operator_string.s"
+    "parser/syntax/operator_string.s"
 }
 
 func operator_string_module_apply() int {
