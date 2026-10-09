@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func source_module_name() string {
-    "syntax/source.s"
+    "parser/syntax/source.s"
 }
 
 func source_module_apply() int {

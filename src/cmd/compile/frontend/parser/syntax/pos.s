@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func pos_module_name() string {
-    "syntax/pos.s"
+    "parser/syntax/pos.s"
 }
 
 func pos_module_apply() int {

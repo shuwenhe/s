@@ -1,4 +1,4 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 
 enum ast_node_type {
     ast_program = 1,
