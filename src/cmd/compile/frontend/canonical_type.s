@@ -119,7 +119,7 @@ func construct_canonical_from_string(string type_str, semantic.declaration_ref[]
     }
     
     
-    base_name := type_str[pointer_depth:]
+    base_name := std.prelude.slice(type_str, pointer_depth, std.prelude.len(type_str))
     
     
     base_canonical := canonical_type {
