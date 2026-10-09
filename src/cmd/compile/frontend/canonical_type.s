@@ -15,12 +15,9 @@ enum canonical_type_kind {
 struct canonical_type {
     kind canonical_type_kind
     
-    
     primitive_name string
     
-    
     declared_ref option[semantic.declaration_ref]
-    
     
     child option[canonical_type]
 }
@@ -118,9 +115,7 @@ func construct_canonical_from_string(string type_str, semantic.declaration_ref[]
         i = i + 1
     }
     
-    
     base_name := std.prelude.slice(type_str, pointer_depth, std.prelude.len(type_str))
-    
     
     base_canonical := canonical_type {
         kind: canonical_type_kind.primitive_kind,
@@ -128,7 +123,6 @@ func construct_canonical_from_string(string type_str, semantic.declaration_ref[]
         declared_ref: std.option.none,
         child: std.option.none,
     }
-    
     
     if base_name == "int" || base_name == "bool" || base_name == "string" {
         base_canonical = primitive(base_name)
@@ -142,7 +136,6 @@ func construct_canonical_from_string(string type_str, semantic.declaration_ref[]
             base_canonical = primitive(base_name)
         }
     }
-    
     
     result := base_canonical
     j := 0
