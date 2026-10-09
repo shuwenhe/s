@@ -127,3 +127,7 @@ func compile_darwin_arm64_assembly(string source, string output_path) int {
     }
     if __host_write_text_file(output_path, assembly) != 0 {
         eprintln("compile: cannot write Darwin/arm64 assembly output")
+        return 1
+    }
+    return 0
+}
