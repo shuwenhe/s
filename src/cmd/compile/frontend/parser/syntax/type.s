@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func type_module_name() string {
-    "syntax/type.s"
+    "parser/syntax/type.s"
 }
 
 func type_module_apply() int {

@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func nodes_module_name() string {
-    "syntax/nodes.s"
+    "parser/syntax/nodes.s"
 }
 
 func nodes_module_apply() int {

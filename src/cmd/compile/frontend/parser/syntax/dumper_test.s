@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func dumper_test_case_name() string {
-    "syntax/dumper_test.s"
+    "parser/syntax/dumper_test.s"
 }
 
 func dumper_test_case_pass() int {

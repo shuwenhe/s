@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func printer_module_name() string {
-    "syntax/printer.s"
+    "parser/syntax/printer.s"
 }
 
 func printer_module_apply() int {

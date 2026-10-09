@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func tokens_module_name() string {
-    "syntax/tokens.s"
+    "parser/syntax/tokens.s"
 }
 
 func tokens_module_apply() int {

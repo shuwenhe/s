@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func branches_module_name() string {
-    "syntax/branches.s"
+    "parser/syntax/branches.s"
 }
 
 func branches_module_apply() int {

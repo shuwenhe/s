@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func dumper_module_name() string {
-    "syntax/dumper.s"
+    "parser/syntax/dumper.s"
 }
 
 func dumper_module_apply() int {

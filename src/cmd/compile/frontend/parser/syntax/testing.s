@@ -1,6 +1,6 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 func testing_module_name() string {
-    "syntax/testing.s"
+    "parser/syntax/testing.s"
 }
 
 func testing_module_apply() int {
