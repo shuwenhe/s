@@ -39,6 +39,44 @@ resolve_module_fallback() {
 
     case "$module" in
 
+        compile.internal.semantic)
+
+            printf 'src/cmd/compile/frontend/semantic.s\n'
+
+            return 0
+
+            ;;
+
+        compile.internal.syntax)
+
+            printf 'src/cmd/compile/frontend/syntax/syntax.s\n'
+
+            return 0
+
+            ;;
+
+        compile.internal)
+
+            printf 'src/cmd/compile/internal/stage5_gate.s\n'
+
+            return 0
+
+            ;;
+
+    esac
+
+    exact=$(awk -F '\t' -v pkg="$module" '$1 == pkg { print $2; exit }' "$pkg_index")
+
+    if [ -n "$exact" ]; then
+
+        printf '%s\n' "$exact" | sed "s#^$root/##"
+
+        return 0
+
+    fi
+
+    case "$module" in
+
         compile.internal.*)
 
             rest=${module#compile.internal.}
@@ -119,6 +157,22 @@ resolve_module_fallback() {
 
             while :; do
 
+                if [ -f "$root/src/$dir/${dir##*/}.s" ]; then
+
+                    printf 'src/%s/%s.s\n' "$dir" "${dir##*/}"
+
+                    return 0
+
+                fi
+
+                if [ -f "$root/src/$dir.s" ]; then
+
+                    printf 'src/%s.s\n' "$dir"
+
+                    return 0
+
+                fi
+
                 if [ -f "$root/src/std/$dir.s" ]; then
 
                     printf 'src/std/%s.s\n' "$dir"
@@ -158,32 +212,6 @@ resolve_module_fallback() {
     elif [ -f "$root/src/$path/${path##*/}.s" ]; then
 
         printf 'src/%s/%s.s\n' "$path" "${path##*/}"
-
-    else
-
-        package=$module
-
-        while :; do
-
-            found=$(awk -F '\t' -v pkg="$package" '$1 == pkg { print $2; exit }' "$pkg_index")
-
-            if [ -n "$found" ]; then
-
-                printf '%s\n' "$found" | sed "s#^$root/##"
-
-                return 0
-
-            fi
-
-            case "$package" in
-
-                *.*) package=${package%.*} ;;
-
-                *) break ;;
-
-            esac
-
-        done
 
     fi
 

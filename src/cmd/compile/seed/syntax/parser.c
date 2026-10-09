@@ -341,6 +341,16 @@ static int check(parser *p, token_type t) {
 	}
 	return peek(p)->type == t;
 }
+static int check_pattern_name_token(parser *p) {
+	token_type t = peek(p)->type;
+	return t == TOKEN_IDENTIFIER ||
+		t == TOKEN_IF ||
+		t == TOKEN_FOR ||
+		t == TOKEN_WHILE ||
+		t == TOKEN_RETURN ||
+		t == TOKEN_BREAK ||
+		t == TOKEN_CONTINUE;
+}
 static int match(parser *p, token_type t) {
 	if (!check(p, t)) {
 		return 0;
@@ -2774,115 +2784,136 @@ static ast_node *parse_switch_statement(parser *p) {
 		parse_error(p, peek(p), "expected 'switch'");
 		return NULL;
 	}
-	subject = parse_expression(p);
+	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_LBRACE) {
+		const token *subject_tok = advance_tok(p);
+		subject = ast_new(AST_IDENT_EXPR, subject_tok->pos);
+		if (!subject) return NULL;
+		subject->as.ident_expr.name = dup_cstr(subject_tok->lexeme);
+		if (!subject->as.ident_expr.name) {
+			ast_free(subject);
+			return NULL;
+		}
+	} else {
+		subject = parse_expression(p);
+	}
 	if (!subject || !expect(p, TOKEN_LBRACE, "'{' after switch expression")) {
 		ast_free(subject);
 		return NULL;
 	}
-	while (!check(p, TOKEN_RBRACE) && !is_at_end(p)) {
-		bool is_default = false;
-		bool is_pattern_switch = false;
-		ast_node *case_value = NULL;
-		ast_node *body;
-		ast_node *arm;
-		if (!check(p, TOKEN_IDENTIFIER)) {
-			parse_error(p, peek(p), "expected 'case', 'default', or pattern");
-			ast_free(subject);
-			ast_free(root);
-			return NULL;
-		}
-		
-		// Determine what kind of switch arm this is
-		const char *word = peek(p)->lexeme;
-		
-		if (strcmp(word, "_") == 0) {
-			// Wildcard pattern
-			is_pattern_switch = true;
-			advance_tok(p);
-		} else if (strcmp(word, "case") == 0) {
-			// Traditional case: case <expr> :
-			advance_tok(p);
-			case_value = parse_expression(p);
-			if (!case_value) {
-				ast_free(subject);
-				ast_free(root);
-				return NULL;
-			}
-		} else if (strcmp(word, "default") == 0) {
-			// Traditional default: default :
-			advance_tok(p);
-			is_default = true;
-		} else {
-			// Could be pattern: Type::Variant or error
-			advance_tok(p);  // consume first identifier
-			
-			// Check if followed by :: (two COLON tokens)
-			bool found_double_colon = false;
-			if (check(p, TOKEN_COLON)) {
-				advance_tok(p);  // consume first :
-				if (check(p, TOKEN_COLON)) {
-					found_double_colon = true;
-					advance_tok(p);  // consume second :
-				}
-			}
-			
-			if (found_double_colon) {
-				// This is a pattern: Type::Variant(binding)
-				is_pattern_switch = true;
-				
-				// Expect variant name
-				if (!check(p, TOKEN_IDENTIFIER)) {
-					parse_error(p, peek(p), "expected variant name after ::");
+		while (!check(p, TOKEN_RBRACE) && !is_at_end(p)) {
+			bool is_default = false;
+			bool is_pattern_switch = false;
+			bool has_expression_body = false;
+			ast_node *case_value = NULL;
+			ast_node *body;
+			ast_node *arm;
+			if (check(p, TOKEN_STRING) || check(p, TOKEN_NUMBER) || check(p, TOKEN_TRUE) || check(p, TOKEN_FALSE)) {
+				case_value = parse_expression(p);
+				has_expression_body = true;
+				if (!case_value) {
 					ast_free(subject);
 					ast_free(root);
 					return NULL;
 				}
-				advance_tok(p);  // consume variant name
-				
-				// Optional binding parameter
-				if (check(p, TOKEN_LPAREN)) {
-					advance_tok(p);  // consume (
-					if (check(p, TOKEN_IDENTIFIER)) {
-						advance_tok(p);  // consume binding name
-					}
-					if (!expect(p, TOKEN_RPAREN, "expected ')' after binding")) {
-						ast_free(subject);
-						ast_free(root);
-						return NULL;
-					}
-				}
-			} else if (check(p, TOKEN_DOT)) {
-				// Pattern: namespace.variant(binding), matching canonical AST enum arms.
-				is_pattern_switch = true;
-				do {
-					advance_tok(p);
-					if (!check(p, TOKEN_IDENTIFIER) && peek(p)->type != TOKEN_RETURN) {
-						parse_error(p, peek(p), "expected pattern name after .");
-						ast_free(subject);
-						ast_free(root);
-						return NULL;
-					}
-					advance_tok(p);
-				} while (check(p, TOKEN_DOT));
-				if (check(p, TOKEN_LPAREN)) {
-					advance_tok(p);
-					if (check(p, TOKEN_IDENTIFIER)) {
-						advance_tok(p);
-					}
-					if (!expect(p, TOKEN_RPAREN, "expected ')' after binding")) {
-						ast_free(subject);
-						ast_free(root);
-						return NULL;
-					}
-				}
-			} else {
-				// Not a recognized pattern
-				parse_error(p, peek(p), "expected 'case', 'default', pattern, or '_'");
+			} else if (!check(p, TOKEN_IDENTIFIER)) {
+				parse_error(p, peek(p), "expected 'case', 'default', or pattern");
 				ast_free(subject);
 				ast_free(root);
 				return NULL;
+			} else {
+			
+				// Determine what kind of switch arm this is
+				const char *word = peek(p)->lexeme;
+			
+				if (strcmp(word, "_") == 0) {
+					// Wildcard pattern
+					is_pattern_switch = true;
+					advance_tok(p);
+				} else if (strcmp(word, "case") == 0) {
+					// Traditional case: case <expr> :
+					advance_tok(p);
+					case_value = parse_expression(p);
+					if (!case_value) {
+						ast_free(subject);
+						ast_free(root);
+						return NULL;
+					}
+				} else if (strcmp(word, "default") == 0) {
+					// Traditional default: default :
+					advance_tok(p);
+					is_default = true;
+				} else {
+					// Could be pattern: Type::Variant or error
+					advance_tok(p);  // consume first identifier
+				
+					// Check if followed by :: (two COLON tokens)
+					bool found_double_colon = false;
+					if (check(p, TOKEN_COLON)) {
+						advance_tok(p);  // consume first :
+						if (check(p, TOKEN_COLON)) {
+							found_double_colon = true;
+							advance_tok(p);  // consume second :
+						}
+					}
+				
+					if (found_double_colon) {
+						// This is a pattern: Type::Variant(binding)
+						is_pattern_switch = true;
+					
+						// Expect variant name
+						if (!check(p, TOKEN_IDENTIFIER)) {
+							parse_error(p, peek(p), "expected variant name after ::");
+							ast_free(subject);
+							ast_free(root);
+							return NULL;
+						}
+						advance_tok(p);  // consume variant name
+					
+						// Optional binding parameter
+						if (check(p, TOKEN_LPAREN)) {
+							advance_tok(p);  // consume (
+							if (check(p, TOKEN_IDENTIFIER)) {
+								advance_tok(p);  // consume binding name
+							}
+							if (!expect(p, TOKEN_RPAREN, "expected ')' after binding")) {
+								ast_free(subject);
+								ast_free(root);
+								return NULL;
+							}
+						}
+					} else if (check(p, TOKEN_DOT)) {
+						// Pattern: namespace.variant(binding), matching canonical AST enum arms.
+						is_pattern_switch = true;
+						do {
+							advance_tok(p);
+							if (!check_pattern_name_token(p)) {
+								parse_error(p, peek(p), "expected pattern name after .");
+								ast_free(subject);
+								ast_free(root);
+								return NULL;
+							}
+							advance_tok(p);
+						} while (check(p, TOKEN_DOT));
+						if (check(p, TOKEN_LPAREN)) {
+							advance_tok(p);
+							if (check(p, TOKEN_IDENTIFIER)) {
+								advance_tok(p);
+							}
+							if (!expect(p, TOKEN_RPAREN, "expected ')' after binding")) {
+								ast_free(subject);
+								ast_free(root);
+								return NULL;
+							}
+						}
+					} else {
+						// Not a recognized pattern
+						parse_error(p, peek(p), "expected 'case', 'default', pattern, or '_'");
+						ast_free(subject);
+						ast_free(root);
+						return NULL;
+					}
+				}
 			}
-		}
 		if (!expect(p, TOKEN_COLON, "':' after switch arm")) {
 			ast_free(subject);
 			ast_free(case_value);
@@ -2892,10 +2923,10 @@ static ast_node *parse_switch_statement(parser *p) {
 		
 		// For pattern-switch, body can be expression or block
 		// For case/default, body is always statements in a block
-		if (is_pattern_switch && !check(p, TOKEN_LBRACE)) {
-			ast_node *stmt;
-			if (check(p, TOKEN_RETURN)) {
-				const token *return_tok = advance_tok(p);
+			if ((is_pattern_switch || has_expression_body) && !check(p, TOKEN_LBRACE)) {
+				ast_node *stmt;
+				if (check(p, TOKEN_RETURN)) {
+					const token *return_tok = advance_tok(p);
 				stmt = ast_new(AST_RETURN_STMT, return_tok->pos);
 				if (!stmt) {
 					ast_free(subject);
@@ -2947,11 +2978,11 @@ static ast_node *parse_switch_statement(parser *p) {
 				return NULL;
 			}
 			
-			// For pattern-switch, we need different termination check
-			if (is_pattern_switch) {
-				// Parse block body {..}
-				if (!check(p, TOKEN_LBRACE)) {
-					parse_error(p, peek(p), "expected '{' for block body");
+				// For pattern-switch and expression-arm switches, we need different termination check
+				if (is_pattern_switch || has_expression_body) {
+					// Parse block body {..}
+					if (!check(p, TOKEN_LBRACE)) {
+						parse_error(p, peek(p), "expected '{' for block body");
 					ast_free(body);
 					ast_free(subject);
 					ast_free(root);
@@ -2970,13 +3001,14 @@ static ast_node *parse_switch_statement(parser *p) {
 					}
 				}
 				
-				if (!expect(p, TOKEN_RBRACE, "'}' after block")) {
-					ast_free(body);
-					ast_free(subject);
-					ast_free(root);
-					return NULL;
-				}
-			} else {
+					if (!expect(p, TOKEN_RBRACE, "'}' after block")) {
+						ast_free(body);
+						ast_free(subject);
+						ast_free(root);
+						return NULL;
+					}
+					match(p, TOKEN_COMMA);
+				} else {
 				// case/default: collect statements until next case/default or }
 				while (!check(p, TOKEN_RBRACE) && !is_at_end(p) &&
 					!(check(p, TOKEN_IDENTIFIER) &&
@@ -3028,7 +3060,7 @@ static ast_node *parse_switch_statement(parser *p) {
 		arm->as.if_stmt.then_branch = body;
 		arm->as.if_stmt.else_branch = NULL;
 		
-		if (!is_pattern_switch && !arm->as.if_stmt.condition->as.binary_expr.left) {
+			if (!is_pattern_switch && !is_default && !arm->as.if_stmt.condition->as.binary_expr.left) {
 			ast_free(arm);
 			ast_free(subject);
 			ast_free(root);
@@ -3095,7 +3127,11 @@ static bool parse_enum_decl(parser *p, ast_vec *out_constants) {
 	if (!expect(p, TOKEN_LBRACE, "'{' after enum name")) return false;
 	while (!check(p, TOKEN_RBRACE) && !is_at_end(p)) {
 		ast_node *constant;
-		if (!expect(p, TOKEN_IDENTIFIER, "enum member name")) return false;
+			if (!check_pattern_name_token(p)) {
+				parse_error(p, peek(p), "expected enum member name");
+				return false;
+			}
+			advance_tok(p);
 		constant = ast_new(AST_CONST_DECL, prev(p)->pos);
 		if (!constant) {
 			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");

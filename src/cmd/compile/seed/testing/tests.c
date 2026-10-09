@@ -335,6 +335,22 @@ static bool test_parser_const_decl(void) {
 	parser_parse_result_free(&result);
 	return ok;
 }
+static bool test_parser_enum_keyword_variant_names(void) {
+	const char *src = "enum expr { name(name_expr), if(if_expr), for(for_expr), return(return_expr), }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) return false;
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
 static bool test_parser_dotted_package_decl(void) {
 	const char *src = "package neurx.test_tensor; fn main() int { return 0; }";
 	token_vec tokens;
@@ -746,6 +762,33 @@ static bool test_parser_switch_expression_rhs(void) {
 	parser_parse_result_free(&result);
 	return ok;
 }
+static bool test_parser_switch_string_literal_arm(void) {
+	const char *src =
+		"fn main() int { "
+		"  op := \"+\"; "
+		"  result := switch op { "
+		"    \"+\" : 1, "
+		"    \"-\" : 2, "
+		"    _ : 0, "
+		"  }; "
+		"  return result; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
 static bool test_parser_switch_pattern_return_arm(void) {
 	const char *src =
 		"fn main() int { "
@@ -754,6 +797,59 @@ static bool test_parser_switch_pattern_return_arm(void) {
 		"    option.some(value) : return split_signature_types(trim_spaces(value)), "
 		"    option.none : return string[](), "
 		"  } "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_switch_block_arm_trailing_comma(void) {
+	const char *src =
+		"fn main() int { "
+		"  subject := 0; keep := true; "
+		"  switch subject { "
+		"    option.some(value) : { keep = false }, "
+		"    option.none : (), "
+		"  } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_switch_struct_literal_expression_arm(void) {
+	const char *src =
+		"struct check_result { string type_name int errors } "
+		"fn main() int { "
+		"  subject := 0; "
+		"  result := switch subject { "
+		"    option.some(value) : check_result { type_name: value, errors: 1 }, "
+		"    option.none : check_result { type_name: \"()\", errors: 0 }, "
+		"  }; "
+		"  return result.errors; "
 		"}";
 	token_vec tokens;
 	compile_error err;
@@ -1195,6 +1291,52 @@ static bool test_semantic_metadata_import_signature_success(void) {
 		return false;
 	}
 	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_qualified_module_call_success(void) {
+	const char *src =
+		"package cmd\n"
+		"import (\n"
+		"  \"std.process\"\n"
+		")\n"
+		"fn main() { std.process.exit(0); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_qualified_module_call_unknown_member_fails(void) {
+	const char *src =
+		"package cmd\n"
+		"import (\n"
+		"  \"std.process\"\n"
+		")\n"
+		"fn main() { std.process.nope(); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
 	parser_parse_result_free(&result);
 	return ok;
 }
@@ -1839,6 +1981,7 @@ int main(void) {
 	RUN_TEST(test_parser_return_and_block);
 	RUN_TEST(test_parser_array_literal);
 	RUN_TEST(test_parser_const_decl);
+	RUN_TEST(test_parser_enum_keyword_variant_names);
 	RUN_TEST(test_parser_dotted_package_decl);
 	RUN_TEST(test_parser_dotted_use_decl);
 	RUN_TEST(test_parser_use_selector_list);
@@ -1854,7 +1997,10 @@ int main(void) {
 	RUN_TEST(test_parser_switch_variant_pattern_arm);
 	RUN_TEST(test_parser_switch_dot_qualified_pattern_arm);
 	RUN_TEST(test_parser_switch_expression_rhs);
+	RUN_TEST(test_parser_switch_string_literal_arm);
 	RUN_TEST(test_parser_switch_pattern_return_arm);
+	RUN_TEST(test_parser_switch_block_arm_trailing_comma);
+	RUN_TEST(test_parser_switch_struct_literal_expression_arm);
 	RUN_TEST(test_semantic_ok);
 	RUN_TEST(test_semantic_undeclared_symbol);
 	RUN_TEST(test_semantic_return_outside_function);
@@ -1876,6 +2022,8 @@ int main(void) {
 	RUN_TEST(test_semantic_path_sensitive_narrowing_if_and);
 	RUN_TEST(test_semantic_path_sensitive_narrowing_if_or_else);
 	RUN_TEST(test_semantic_metadata_import_signature_success);
+	RUN_TEST(test_semantic_qualified_module_call_success);
+	RUN_TEST(test_semantic_qualified_module_call_unknown_member_fails);
 	RUN_TEST(test_parser_assignment_expression);
 	RUN_TEST(test_parser_indexed_member_assignment_place);
 	RUN_TEST(test_ir_generation_entry);
