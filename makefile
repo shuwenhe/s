@@ -169,7 +169,7 @@ COMPILER_SOURCES := \
 	src/cmd/compile/frontend/stages.s \
 	src/cmd/compile/middlend/mir/compiler_emit.s \
 	src/cmd/compile/middlend/stages.s \
-	src/cmd/compile/compiler_main.s
+	src/cmd/compile/internal/compiler/compiler_main.s
 
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
@@ -232,7 +232,3 @@ help:
 	@echo "  make install"
 	@echo "  make selfhost"
 	@echo "  make clean"
-	@echo ""
-	@echo "  make native-bootstrap-imports - Bootstrap with import-driven model (experimental)"
-	@echo "  make validate-imports          - Validate import statements"
-	@echo "  make test-bootstrap-both       - Test both bootstrap methods"
