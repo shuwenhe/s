@@ -285,12 +285,7 @@ func count_mir_drops(mir_graph graph) int {
 
 func test_real_mir_source_ownership_facts() int {
     
-    
-    
-    
-    
     fixture_path := "src/cmd/compile/internal/tests/fixtures/real_mir_ref_flow.s"
-    
     
     source_result := syntax.read_source(fixture_path)
     if source_result.is_err() {
@@ -303,28 +298,22 @@ func test_real_mir_source_ownership_facts() int {
         return 1
     }
     
-    
     mir_result := lower.lower_main_to_mir(parsed)
     if mir_result.is_err() {
         return 1
     }
     graph := mir_result.unwrap()
     
-    
     point_map := mir.build_mir_point_map(graph)
     if len(point_map.points) == 0 {
         return 1
     }
     
-    
     facts := mir.build_ownership_facts_from_mir(graph, point_map)
-    
     
     if facts.input.point_count == 0 {
         return 1
     }
-    
-    
     
     has_borrow := false
     has_ref_assign := false
@@ -349,14 +338,10 @@ func test_real_mir_source_ownership_facts() int {
         return 1
     }
     
-    
     facts_dump := mir.dump_ownership_analysis_input_from_mir(graph)
     if facts_dump == "" {
         return 1
     }
-    
-    
-    
     
     if !contains_substring(facts_dump, "PointCount") {
         return 1
@@ -396,11 +381,7 @@ func contains_substring(string haystack, string needle) bool {
 
 func test_real_mir_semantic_order() int {
     
-    
-    
-    
     fixture_path := "src/cmd/compile/internal/tests/fixtures/real_mir_ref_flow.s"
-    
     
     source_result := syntax.read_source(fixture_path)
     if source_result.is_err() {
@@ -419,12 +400,10 @@ func test_real_mir_semantic_order() int {
     }
     graph := mir_result.unwrap()
     
-    
     point_map := mir.build_mir_point_map(graph)
     if len(point_map.points) == 0 {
         return 1
     }
-    
     
     borrow_block := -1
     borrow_stmt := -1
@@ -457,27 +436,21 @@ func test_real_mir_semantic_order() int {
         block_idx = block_idx + 1
     }
     
-    
     if borrow_block == -1 || ref_assign_block == -1 || ref_use_block == -1 {
         return 1
     }
-    
     
     if borrow_block != ref_assign_block || ref_assign_block != ref_use_block {
         return 1
     }
     
-    
-    
     if !(borrow_stmt < ref_assign_stmt && ref_assign_stmt < ref_use_stmt) {
         return 1
     }
     
-    
     borrow_point := mir.mir_point_id(point_map, graph.blocks[borrow_block].id, borrow_stmt)
     ref_assign_point := mir.mir_point_id(point_map, graph.blocks[ref_assign_block].id, ref_assign_stmt)
     ref_use_point := mir.mir_point_id(point_map, graph.blocks[ref_use_block].id, ref_use_stmt)
-    
     
     if !(borrow_point < ref_assign_point && ref_assign_point < ref_use_point) {
         return 1
