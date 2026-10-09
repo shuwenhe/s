@@ -1,6 +1,6 @@
-package src.cmd.compile.frontend.token
+package src.cmd.compile.frontend.lexer.token
 func export_test_unit_name() string {
-    "src/cmd/compile/frontend/token/export_test"
+    "src/cmd/compile/frontend/lexer/token/export_test"
 }
 
 func export_test_unit_ready() int {
