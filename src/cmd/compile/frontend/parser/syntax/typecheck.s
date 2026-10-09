@@ -1,4 +1,4 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 
 enum type_kind {
     type_void = 0,

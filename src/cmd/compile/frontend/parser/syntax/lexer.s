@@ -1,4 +1,4 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 
 enum token_type {
     tok_eof = 0,

@@ -1,4 +1,4 @@
-package compile.internal.syntax
+package compile.internal.parser.syntax
 import (
     "s"
     "std"
