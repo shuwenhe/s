@@ -49,7 +49,7 @@ resolve_module_fallback() {
 
         compile.internal.syntax)
 
-            printf 'src/cmd/compile/frontend/syntax/syntax.s\n'
+            printf 'src/cmd/compile/frontend/parser/syntax/syntax.s\n'
 
             return 0
 
