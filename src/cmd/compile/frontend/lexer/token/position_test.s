@@ -1,6 +1,6 @@
-package src.cmd.compile.frontend.token
+package src.cmd.compile.frontend.lexer.token
 func position_test_unit_name() string {
-    "src/cmd/compile/frontend/token/position_test"
+    "src/cmd/compile/frontend/lexer/token/position_test"
 }
 
 func position_test_unit_ready() int {
