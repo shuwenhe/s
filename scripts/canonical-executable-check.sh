@@ -8,6 +8,7 @@ REPORT="${SOURCE_ROOT}/.bootstrap/stage22/canonical-executable-gate.txt"
 TMP_REPORT="${REPORT}.tmp.$$"
 BACKEND="${SOURCE_ROOT}/src/cmd/compile/backend/backend_elf64.s"
 PIPELINE_MAIN="${SOURCE_ROOT}/src/cmd/compile/main.s"
+PIPELINE_ROUTER="${SOURCE_ROOT}/src/cmd/compile/pipeline/pipeline.s"
 TEST_FILE="${SOURCE_ROOT}/test/simple_test.s"
 WORK_DIR="${SOURCE_ROOT}/.bootstrap/stage22/run.$$"
 
@@ -39,7 +40,7 @@ if [ ! -x "$DRIVER" ]; then
     fail "S22.1" "build driver not found or not executable: $DRIVER"
     exit $?
 fi
-if [ ! -f "$BACKEND" ] || [ ! -f "$PIPELINE_MAIN" ]; then
+if [ ! -f "$BACKEND" ] || [ ! -f "$PIPELINE_MAIN" ] || [ ! -f "$PIPELINE_ROUTER" ]; then
     fail "S22.1" "executable authority files not found"
     exit $?
 fi
@@ -57,8 +58,10 @@ if ! grep -q 'func build(string path, string output, string ssa_margin_override,
 fi
 
 if ! grep -q 'if command == "build"' "$PIPELINE_MAIN" ||
-   ! grep -q 'compile.internal.backend_elf64.build(args\[2\], args\[4\], "", false)' "$PIPELINE_MAIN"; then
-    fail "S22.2" "pipeline build command is not wired to backend executable build"
+   ! grep -q 'pipeline_build(args\[2\], args\[4\], "", false)' "$PIPELINE_MAIN" ||
+   ! grep -q 'func pipeline_build(string input, string output, string ssa_margin_override, bool nostdlib) int' "$PIPELINE_ROUTER" ||
+   ! grep -q 'return backend_build(input, output, ssa_margin_override, nostdlib)' "$PIPELINE_ROUTER"; then
+    fail "S22.2" "pipeline build command is not wired through pipeline_build to backend executable build"
     exit $?
 fi
 
@@ -84,7 +87,8 @@ fi
     echo "S22.1.production-producer=compile.internal.backend_elf64.build"
     echo "S22.1.output-artifact=executable"
     echo "S22.2=PASS"
-    echo "S22.2.command=compile.pipeline.main build"
+    echo "S22.2.command=compile.main build"
+    echo "S22.2.pipeline=compile.pipeline.pipeline_build"
     echo "S22.2.backend=compile.internal.backend_elf64.build"
     echo "S22.3=PASS"
     echo "S22.3.driver=bin/s"

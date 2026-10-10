@@ -1,8 +1,9 @@
 package cmd
 import (
-    "compile.internal.dispatch"
+    "compile.driver"
     "std.env"
 )
+use std.env.args
 func main() {
-    return compile.internal.dispatch.main(std.env.args())
+    return driver_main(args())
 }

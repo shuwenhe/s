@@ -1,10 +1,11 @@
 package cmd
 import (
-    "compile.internal.backend_elf64"
+    "compile.pipeline"
     "compile.internal.semantic"
     "compile.internal.syntax"
     "compile.internal.tests.test_backend_abi"
     "compile.internal.tests.test_golden"
+    "compile.internal.tests.test_driver"
     "compile.internal.tests.test_mir"
     "compile.internal.tests.test_pipeline_regression"
     "compile.internal.tests.test_semantic"
@@ -44,7 +45,7 @@ func main() {
             print_usage()
             std.process.exit(2)
         }
-        std.process.exit(compile.internal.backend_elf64.build(args[2], args[4], "", false))
+        std.process.exit(pipeline_build(args[2], args[4], "", false))
     }
     if command == "check" {
         if len(args) != 3 {
@@ -135,6 +136,10 @@ func run_tests(string fixtures_root) int {
     }
     if compile.internal.tests.test_golden.run_golden_suite(fixtures_root) != 0 {
         std.io.eprintln("golden suite failed")
+        return 1
+    }
+    if run_driver_suite() != 0 {
+        std.io.eprintln("driver suite failed")
         return 1
     }
     if compile.internal.tests.test_backend_abi.run_backend_abi_suite() != 0 {
