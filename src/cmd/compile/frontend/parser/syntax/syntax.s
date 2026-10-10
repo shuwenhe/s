@@ -12,39 +12,47 @@ struct syntax_error {
 }
 
 func read_source(string path) (string, syntax_error) {
-    switch std.fs.read_to_string(path) {
-        text : text,
-        err : syntax_error {
-            message: "failed to read source file: " + path + ": " + err.message, line 0, column 0,
-        },
+    result := std.fs.read_to_string(path)
+    if result.is_err() {
+        err := result.unwrap_err()
+        return syntax_error {
+            message: "failed to read source file: " + path + ": " + err.message, line: 0, column: 0,
+        }
     }
+    result.unwrap()
 }
 
 func tokenize(string source) (token[], syntax_error) {
-    switch s.new_lexer(source).tokenize() {
-        tokens : tokens,
-        err : syntax_error {
-            message: err.message, line err.line, column err.column,
-        },
+    result := s.new_lexer(source).tokenize()
+    if result.is_err() {
+        err := result.unwrap_err()
+        return syntax_error {
+            message: err.message, line: err.line, column: err.column,
+        }
     }
+    result.unwrap()
 }
 
 func parse_source(string source) (source_file, syntax_error) {
-    switch tokenize(source) {
-        tokens : parse_tokens(tokens),
-        err : syntax_error {
-            message: err.message, line err.line, column err.column,
-        },
+    token_result := tokenize(source)
+    if token_result.is_err() {
+        err := token_result.unwrap_err()
+        return syntax_error {
+            message: err.message, line: err.line, column: err.column,
+        }
     }
+    parse_tokens(token_result.unwrap())
 }
 
 func parse_tokens(token[] tokens) (source_file, syntax_error) {
-    switch s.parse_tokens(tokens) {
-        ast : ast,
-        err : syntax_error {
-            message: err.message, line err.line, column err.column,
-        },
+    result := s.parse_tokens(tokens)
+    if result.is_err() {
+        err := result.unwrap_err()
+        return syntax_error {
+            message: err.message, line: err.line, column: err.column,
+        }
     }
+    result.unwrap()
 }
 
 func dump_tokens_text(token[] tokens) string {

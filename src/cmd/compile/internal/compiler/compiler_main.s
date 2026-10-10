@@ -134,7 +134,7 @@ func main() {
         return 0
     }
     if args[1] == "--emit-mir" || args[1] == "--emit-mir-after-drop" {
-        if __host_write_text_file(args[3], compiler_emit_mir(source, args[1] == "--emit-mir-after-drop")) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        if __host_write_text_file(args[3], compiler_emit_canonical_mir(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     result := compiler_compile(source)
