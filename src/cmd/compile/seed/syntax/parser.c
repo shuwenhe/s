@@ -943,10 +943,12 @@ static ast_node *parse_call(parser *p) {
 			}
 			advance_tok(p);
 			advance_tok(p);
-			if (!expect(p, TOKEN_IDENTIFIER, "qualified name member")) {
+			if (!check_pattern_name_token(p) && !check(p, TOKEN_TRUE) && !check(p, TOKEN_FALSE)) {
+				parse_error(p, peek(p), "qualified name member");
 				ast_free(expr);
 				return NULL;
 			}
+			advance_tok(p);
 			qualified_len = strlen(expr->as.ident_expr.name) + strlen(prev(p)->lexeme) + 3;
 			qualified = (char *)malloc(qualified_len);
 			if (!qualified) {
@@ -2815,7 +2817,7 @@ static ast_node *parse_switch_statement(parser *p) {
 					ast_free(root);
 					return NULL;
 				}
-			} else if (!check(p, TOKEN_IDENTIFIER)) {
+			} else if (!check_pattern_name_token(p) && !check(p, TOKEN_TRUE) && !check(p, TOKEN_FALSE)) {
 				parse_error(p, peek(p), "expected 'case', 'default', or pattern");
 				ast_free(subject);
 				ast_free(root);
@@ -2861,7 +2863,7 @@ static ast_node *parse_switch_statement(parser *p) {
 						is_pattern_switch = true;
 					
 						// Expect variant name
-						if (!check(p, TOKEN_IDENTIFIER)) {
+						if (!check_pattern_name_token(p) && !check(p, TOKEN_TRUE) && !check(p, TOKEN_FALSE)) {
 							parse_error(p, peek(p), "expected variant name after ::");
 							ast_free(subject);
 							ast_free(root);
