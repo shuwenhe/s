@@ -84,13 +84,18 @@ func (lexer* self) skip_ignored() ((), lex_error) {
             self.advance()
             continue
         }
-        if self.match_text("
+        if self.match_text("//") {
             for !self.is_eof() && self.peek() != "\n" {
                 self.advance()
             }
             continue
         }
-        if self.match_text("") {
+        if self.match_text("/*") {
+            depth := 1
+            self.advance()
+            self.advance()
+            for !self.is_eof() && depth > 0 {
+                if self.match_text("*/") {
                     depth = depth - 1
                     self.advance()
                     self.advance()
@@ -171,8 +176,9 @@ func (lexer* self) read_symbol() (string, lex_error) {
         ">>",
         "::",
     }
-    for _for_idx_165 := 0; _for_idx_165 < std.prelude.len(multi); _for_idx_165++ {
-        symbol := multi[_for_idx_165]
+    multi_index := 0
+    for multi_index < std.prelude.len(multi) {
+        symbol := multi[multi_index]
         if self.match_text(symbol) {
             string out = ""
             int count = std.prelude.len(symbol)
@@ -183,6 +189,7 @@ func (lexer* self) read_symbol() (string, lex_error) {
             }
             return out
         }
+        multi_index = multi_index + 1
     }
     string ch = self.peek()
     if is_single_symbol(ch) {
