@@ -18,6 +18,16 @@ fi
 compiler="$root/bin/s_compiler"
 modular_compiler=${S_MODULAR_COMPILER:-"$root/bin/s_modular"}
 
+trace_authority() {
+
+    if [ "${S_DRIVER_AUTHORITY_TRACE:-}" = "1" ]; then
+
+        echo "$1" >&2
+
+    fi
+
+}
+
 
 
 usage() {
@@ -136,27 +146,37 @@ emit_binary() {
 
     output=$2
 
+    trace_authority "driver-dispatch=production-build"
+
+    if [ ! -f "$input" ]; then
+
+        echo "s: input file not found: $input" >&2
+
+        return 1
+
+    fi
+
     if [ -x "$modular_compiler" ]; then
 
         exec "$modular_compiler" build "$input" -o "$output"
 
     fi
 
-    if [ "${S_DRIVER_VERBOSE:-}" = "1" ]; then
+    echo "s: production compiler not found: $modular_compiler" >&2
 
-        echo "s: modular compiler not found; falling back to legacy compiler" >&2
+    echo "s: run make modular-bootstrap or set S_MODULAR_COMPILER" >&2
 
-        echo "s: set S_MODULAR_COMPILER or install bin/s_modular to use the modular pipeline" >&2
+    trace_authority "implicit-legacy-fallback=NO"
 
-    fi
-
-    emit_binary_legacy "$input" "$output"
+    return 1
 
 }
 
 
 
 if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
+
+    trace_authority "driver-dispatch=help"
 
     usage
 
@@ -373,6 +393,8 @@ fi
 
 
 if [ "$#" -eq 5 ] && [ "$1" = "build" ] && [ "$2" = "--legacy" ] && [ "$4" = "-o" ]; then
+
+    trace_authority "driver-dispatch=explicit-legacy"
 
     emit_binary_legacy "$3" "$5"
 
