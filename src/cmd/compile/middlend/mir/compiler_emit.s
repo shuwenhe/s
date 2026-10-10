@@ -2015,22 +2015,3 @@ func compiler_emit_mir_partial_drop(string source) string {
     }
     return out
 }
-
-func compiler_emit_canonical_mir(string source) string {
-    parsed, parse_err := syntax.parse_source(source)
-    if parse_err.message != "" {
-        return "mir-error: parse " + parse_err.message + "\n"
-    }
-    
-    semantic_result := semantic.check_source_file(parsed, source)
-    if len(semantic_result.errors) > 0 {
-        return "mir-error: semantic " + semantic_result.errors[0].code + ": " + semantic_result.errors[0].message + "\n"
-    }
-    
-    graph, lowering_err := lower.lower_main_to_mir(parsed)
-    if lowering_err != "" {
-        return "mir-error: lowering " + lowering_err + "\n"
-    }
-    
-    return mir.dump_graph(graph) + "\n"
-}
