@@ -40,7 +40,8 @@ fi
 
 if rg -q 'return pipeline_build\(config.input, config.output, "", false\)' src/cmd/compile/driver/driver.s && \
    rg -q 'std.process.exit\(pipeline_build\(args\[2\], args\[4\], "", false\)\)' src/cmd/compile/main.s && \
-   rg -q 'return backend_build\(input, output, ssa_margin_override, nostdlib\)' src/cmd/compile/pipeline/pipeline.s && \
+   rg -q 'func pipeline_compile\(pipeline_context context\) int' src/cmd/compile/pipeline/pipeline.s && \
+   rg -q 'return backend_build\(context.input, context.output, context.ssa_margin_override, context.nostdlib\)' src/cmd/compile/pipeline/pipeline.s && \
    rg -q 'return compiler_main\(config.forwarded_args\)' src/cmd/compile/driver/driver.s; then
     unverified D5 "build routes through pipeline_build to backend authority; forwarded modes still route to compiler_main"
 else

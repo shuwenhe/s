@@ -60,7 +60,8 @@ fi
 if ! grep -q 'if command == "build"' "$PIPELINE_MAIN" ||
    ! grep -q 'pipeline_build(args\[2\], args\[4\], "", false)' "$PIPELINE_MAIN" ||
    ! grep -q 'func pipeline_build(string input, string output, string ssa_margin_override, bool nostdlib) int' "$PIPELINE_ROUTER" ||
-   ! grep -q 'return backend_build(input, output, ssa_margin_override, nostdlib)' "$PIPELINE_ROUTER"; then
+   ! grep -q 'func pipeline_compile(pipeline_context context) int' "$PIPELINE_ROUTER" ||
+   ! grep -q 'return backend_build(context.input, context.output, context.ssa_margin_override, context.nostdlib)' "$PIPELINE_ROUTER"; then
     fail "S22.2" "pipeline build command is not wired through pipeline_build to backend executable build"
     exit $?
 fi
