@@ -2,6 +2,15 @@ package compile.internal.compiler
 import (
     "std"
 )
+
+func emit_canonical_mir_public(string source) string {
+    return emit_canonical_mir(source)
+}
+
+func process_emit_mir(string source) string {
+    return emit_canonical_mir_public(source)
+}
+
 func main(string[] args) int {
     buildcfg_err := buildcfg_check()
     if buildcfg_err != "" {
