@@ -34,7 +34,7 @@ func parse_arguments(string[] args) driver_config {
         exit_code: 0,
         error: "",
     }
-    if len(args) == 1 {
+    if len(args) <= 1 {
         config.action = "usage"
         config.exit_code = 2
         return config
@@ -65,6 +65,12 @@ func parse_arguments(string[] args) driver_config {
         config.output = args[5]
         return config
     }
+    if len(args) == 4 && args[1] == "-o" {
+        config.action = "build"
+        config.input = args[3]
+        config.output = args[2]
+        return config
+    }
     if len(args) >= 2 && is_option(args[1]) {
         config.action = "usage"
         config.exit_code = 2
@@ -81,12 +87,6 @@ func parse_arguments(string[] args) driver_config {
         config.action = "build"
         config.input = args[1]
         config.output = args[3]
-        return config
-    }
-    if len(args) == 4 && args[1] == "-o" {
-        config.action = "build"
-        config.input = args[3]
-        config.output = args[2]
         return config
     }
     config.action = "usage"
