@@ -1,4 +1,4 @@
-package compile.pipeline
+package compile.internal.pipeline
 
 use std.io.eprintln
 

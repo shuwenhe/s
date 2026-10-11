@@ -8,3 +8,5 @@ Semantic 只做名字/类型/语义
 Lowering 只产 MIR
 Middlend 只消费 MIR
 Backend 只消费后端 IR/MIR
+
+编译管线 internal/sc/main.s
