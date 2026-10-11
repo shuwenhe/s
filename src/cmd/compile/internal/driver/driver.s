@@ -2,7 +2,7 @@ package compile.driver
 
 import (
     "compile.internal.compiler"
-    "compile.pipeline"
+    "compile.internal.pipeline"
     "std.io"
 )
 
