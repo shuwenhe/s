@@ -1,4 +1,4 @@
-package compile.pipeline
+package compile.internal.pipeline
 
 import (
     "compile.internal.backend_elf64"

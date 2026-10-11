@@ -1,11 +1,39 @@
-package compile.pipeline
+package compile.internal.pipeline
 
-struct stage_transition {
-    int stage_id
-    string name
-    string input_artifact
-    string output_artifact
-    string producer_authority
-    string consumer_authority
+enum compilation_stage {
+    STAGE_INIT = 0
+    STAGE_PARSE = 1
+    STAGE_SEMANTIC = 2
+    STAGE_OPTIMIZE = 3
+    STAGE_LOWER = 4
+    STAGE_MIDDLEND = 5
+    STAGE_BACKEND = 6
+    STAGE_OUTPUT = 7
 }
 
+struct stage_info {
+    compilation_stage stage
+    string stage_name
+    string description
+    int64 start_time
+    int64 end_time
+}
+
+func stage_name_str(compilation_stage stage) string {
+    if stage == compilation_stage.STAGE_PARSE {
+        return "Parse"
+    } else if stage == compilation_stage.STAGE_SEMANTIC {
+        return "Semantic"
+    } else if stage == compilation_stage.STAGE_OPTIMIZE {
+        return "Optimize"
+    } else if stage == compilation_stage.STAGE_LOWER {
+        return "Lower"
+    } else if stage == compilation_stage.STAGE_MIDDLEND {
+        return "Middlend"
+    } else if stage == compilation_stage.STAGE_BACKEND {
+        return "Backend"
+    } else if stage == compilation_stage.STAGE_OUTPUT {
+        return "Output"
+    }
+    return "Unknown"
+}

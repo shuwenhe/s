@@ -164,11 +164,11 @@ test-bootstrap-both: clean
 # Compiler (no-GC S compiler in S language)
 # ============================================================================
 COMPILER_SOURCES := \
-	src/cmd/compile/frontend/core.s \
-	src/cmd/compile/frontend/frontend.s \
-	src/cmd/compile/frontend/stages.s \
-	src/cmd/compile/middlend/mir/compiler_emit.s \
-	src/cmd/compile/middlend/stages.s \
+	src/cmd/compile/internal/frontend/core.s \
+	src/cmd/compile/internal/frontend/frontend.s \
+	src/cmd/compile/internal/frontend/stages.s \
+	src/cmd/compile/internal/middlend/mir/compiler_emit.s \
+	src/cmd/compile/internal/middlend/stages.s \
 	src/cmd/compile/internal/compiler/compiler_main.s
 
 compiler: seed-compiler-bin
