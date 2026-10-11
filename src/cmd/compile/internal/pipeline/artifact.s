@@ -1,70 +1,26 @@
-package compile.pipeline
+package compile.internal.pipeline
 
-struct artifact_kind {
+struct compilation_artifact {
     string name
+    string artifact_type
+    string path
+    int size_bytes
+    string checksum
 }
 
-struct source_artifact {
-    string source_path
+struct artifact_collection {
+    compilation_artifact[] artifacts
+    string output_directory
 }
 
-struct token_artifact {
-    string source_path
+func artifact_new(string name, string artifact_type, string path) compilation_artifact {
+    return compilation_artifact{
+        name: name,
+        artifact_type: artifact_type,
+        path: path,
+    }
 }
 
-struct ast_artifact {
-    string source_path
+func collection_add(artifact_collection collection, compilation_artifact artifact) {
+    collection.artifacts.append(artifact)
 }
-
-struct resolved_names_artifact {
-    string source_path
-}
-
-struct declaration_ref_artifact {
-    string source_path
-}
-
-struct type_facts_artifact {
-    string source_path
-}
-
-struct canonical_type_ref_artifact {
-    string source_path
-}
-
-struct semantic_artifact {
-    string source_path
-}
-
-struct mir_artifact {
-    string source_path
-}
-
-struct verified_mir_artifact {
-    string source_path
-}
-
-struct ownership_facts_artifact {
-    string source_path
-}
-
-struct monomorphized_artifact {
-    string source_path
-}
-
-struct layout_artifact {
-    string source_path
-}
-
-struct abi_artifact {
-    string source_path
-}
-
-struct codegen_artifact {
-    string source_path
-}
-
-struct object_artifact {
-    string source_path
-}
-
