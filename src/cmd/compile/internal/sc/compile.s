@@ -11,7 +11,6 @@ import (
     "compile.internal.syntax"
     "compile.internal.driver"
     "compile.internal.frontend"
-    "compile.internal.middlend"
     "compile.internal.backend"
     "std.io"
 )

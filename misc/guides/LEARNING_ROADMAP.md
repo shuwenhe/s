@@ -193,7 +193,7 @@ misc/scripts/stage1-canonical-entry-linkage-check.sh
 misc/scripts/check-b6.7.3e-stage1-build-authority-handoff.sh
 misc/scripts/check-b6.7.3e1-canonical-build-runtime-target-audit.sh
 src/cmd/compile/main.s
-src/cmd/compile/backend/backend_elf64.s
+src/cmd/compile/internal/core/backend_elf64.s
 ```
 
 The current RED does not mean "the seed cannot understand some syntax". It means:
@@ -234,8 +234,8 @@ Relevant evidence and files:
 
 ```text
 src/cmd/compile/internal/semantic.s
-src/cmd/compile/middlend/mono/M1_PROVENANCE_PROOF.md
-src/cmd/compile/backend/backend_elf64.s
+src/cmd/compile/internal/mono/M1_PROVENANCE_PROOF.md
+src/cmd/compile/internal/core/backend_elf64.s
 test/regression/m1_declaration_ref_gate.s
 test/regression/m1_identity_threading_gate.s
 test/regression/m1_verification_diagnostic.md

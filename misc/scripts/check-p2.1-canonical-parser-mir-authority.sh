@@ -4,7 +4,7 @@ set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 compiler="$root/bin/s_compiler"
 main_file="$root/src/cmd/compile/internal/compiler/compiler_main.s"
-emit_file="$root/src/cmd/compile/middlend/mir/compiler_emit.s"
+emit_file="$root/src/cmd/compile/internal/mir/compiler_emit.s"
 
 fail() {
     echo "p2.1 canonical parser mir authority: $*" >&2

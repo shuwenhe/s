@@ -8,11 +8,11 @@ mkdir -p "$(dirname -- "$report")"
 
 stage0="$root/src/cmd/compile/stage0/stage0.c"
 modular_main="$root/src/cmd/compile/main.s"
-backend="$root/src/cmd/compile/backend/backend_elf64.s"
+backend="$root/src/cmd/compile/internal/core/backend_elf64.s"
 syntax="$root/src/cmd/compile/internal/syntax.s"
 semantic="$root/src/cmd/compile/internal/semantic.s"
-mono="$root/src/cmd/compile/middlend/mono/monomorphization.s"
-ir_lower="$root/src/cmd/compile/middlend/ir/lower.s"
+mono="$root/src/cmd/compile/internal/mono/monomorphization.s"
+ir_lower="$root/src/cmd/compile/internal/ir/lower.s"
 
 current_build_handler=UNKNOWN
 if rg -q 'return bootstrap_subset_build\(argv\[2\], argv\[4\]\)' "$stage0"; then
