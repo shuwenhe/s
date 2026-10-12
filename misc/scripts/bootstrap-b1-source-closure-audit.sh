@@ -3,7 +3,7 @@ set -euo pipefail
 
 root="${S_SOURCE_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 entry="src/cmd/compile/main.s"
-proof_only_entry="src/cmd/compile/compiler_main.s"
+proof_only_entry="src/cmd/compile/internal/compiler/compiler_main.s"
 report="$root/.bootstrap/bootstrap-authority/b1.1-source-closure-audit.txt"
 closure="$root/.bootstrap/bootstrap-authority/b1.1-canonical-source-closure.txt"
 tmp="${TMPDIR:-/tmp}/s-b1-source-closure.$$"
