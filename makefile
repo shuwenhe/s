@@ -49,7 +49,7 @@ bin/s_seed: $(SEED_COMPILER_SOURCES)
 # ============================================================================
 NATIVE_BOOTSTRAP_INPUTS := \
   $(SEED_COMPILER_SOURCES) \
-  src/cmd/compile/frontend/selfhost/source_scan.s \
+  src/cmd/compile/internal/selfhost/source_scan.s \
   src/cmd/compile/middlend/selfhost/const_eval.s \
   src/cmd/compile/backend/selfhost/elf_slices.s \
   src/cmd/compile/backend/selfhost/asm_amd64.s \
@@ -83,10 +83,10 @@ native-bootstrap-diagnostic-check:
 NATIVE_BOOTSTRAP_IMPORTS_INPUTS := \
   $(SEED_COMPILER_SOURCES) \
   src/cmd/compile/main.s \
-  src/cmd/compile/frontend/selfhost/frontend.s \
+  src/cmd/compile/internal/selfhost/frontend.s \
   src/cmd/compile/middlend/selfhost/middlend.s \
   src/cmd/compile/backend/selfhost/backend.s \
-  src/cmd/compile/frontend/selfhost/source_scan.s \
+  src/cmd/compile/internal/selfhost/source_scan.s \
   src/cmd/compile/middlend/selfhost/const_eval.s \
   src/cmd/compile/backend/selfhost/elf_slices.s \
   src/cmd/compile/backend/selfhost/asm_amd64.s \
@@ -119,7 +119,7 @@ validate-imports:
 	else \
 	  echo "  ✗ main.s missing backend.selfhost import"; exit 1; \
 	fi
-	@if grep -q "^import" src/cmd/compile/frontend/selfhost/frontend.s; then \
+	@if grep -q "^import" src/cmd/compile/internal/selfhost/frontend.s; then \
 	  echo "  ✓ frontend.s has imports"; \
 	else \
 	  echo "  ✗ frontend.s missing imports"; exit 1; \
@@ -164,9 +164,9 @@ test-bootstrap-both: clean
 # Compiler (no-GC S compiler in S language)
 # ============================================================================
 COMPILER_SOURCES := \
-	src/cmd/compile/internal/frontend/core.s \
-	src/cmd/compile/internal/frontend/frontend.s \
-	src/cmd/compile/internal/frontend/stages.s \
+	src/cmd/compile/internal/frontend_internal/core.s \
+	src/cmd/compile/internal/frontend_internal/frontend.s \
+	src/cmd/compile/internal/frontend_internal/stages.s \
 	src/cmd/compile/internal/middlend/mir/compiler_emit.s \
 	src/cmd/compile/internal/middlend/stages.s \
 	src/cmd/compile/internal/compiler/compiler_main.s

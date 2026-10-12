@@ -34,8 +34,8 @@ test -f "$spec" || fail MISSING_SPECIFICATION
 
 evidence=(
     src/cmd/compile/main.s
-    src/cmd/compile/frontend/syntax.s
-    src/cmd/compile/frontend/semantic.s
+    src/cmd/compile/internal/syntax.s
+    src/cmd/compile/internal/semantic.s
     src/cmd/compile/middlend/mono/monomorphization.s
     src/cmd/compile/middlend/ir/lower.s
     src/cmd/compile/middlend/mir/mir.s
