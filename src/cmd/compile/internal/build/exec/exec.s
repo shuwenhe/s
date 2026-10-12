@@ -1,6 +1,6 @@
 package compile.internal.build.exec
 import (
-    "compile.internal.backend_elf64"
+    "compile.internal.core"
     "compile.internal.build.cache"
     "compile.internal.semantic"
     "compile.internal.syntax"
@@ -27,7 +27,7 @@ func run(string[] options) int {
         return run_mod_command(options
     }
     if is_module_name(options[1]) {
-        resolved := compile.internal.backend_elf64.resolve_module_source_path(options[1])
+        resolved := compile.internal.core.resolve_module_source_path(options[1])
         if resolved.is_none() {
             std.io.eprintln("error: module not found: " + options[1])
             std.io.eprintln("hint: set S_PROJECT_ROOT=<workspace> or S_ROOT=<s-root> so the module can be located")
