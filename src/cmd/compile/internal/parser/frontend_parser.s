@@ -1,4 +1,4 @@
-package compile.internal.frontend
+package compile.internal.parser
 
 struct parser {
     lexer: lexer

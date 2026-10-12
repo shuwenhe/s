@@ -1,7 +1,7 @@
 package compile.internal.ir
 
 import (
-    "cmd.compile.internal"
+    "compile.internal.parser"
 )
 
 struct ir_builder_context {
@@ -44,7 +44,7 @@ func ir_builder_context_new() ir_builder_context {
     }
 }
 
-func ir_builder_build(ast* frontend.ast_node) (ir_module, string[]) {
+func ir_builder_build(ast* parser.ast_node) (ir_module, string[]) {
     ctx := ir_builder_context_new()
 
     ir_builder_visit_node(&ctx, ast)
@@ -52,26 +52,26 @@ func ir_builder_build(ast* frontend.ast_node) (ir_module, string[]) {
     (ctx.module, ctx.errors)
 }
 
-func ir_builder_visit_node(ir_builder_context* ctx, node* frontend.ast_node) {
+func ir_builder_visit_node(ir_builder_context* ctx, node* parser.ast_node) {
     if node == nil {
         return
     }
 
     switch node.node_type {
-        case frontend.ast_program:
+        case parser.ast_program:
             ir_builder_visit_program(ctx, node)
-        case frontend.ast_func:
+        case parser.ast_func:
             ir_builder_visit_func_decl(ctx, node)
-        case frontend.ast_package:
+        case parser.ast_package:
             ir_builder_visit_package(ctx, node)
-        case frontend.ast_struct:
+        case parser.ast_struct:
             ir_builder_visit_struct_decl(ctx, node)
-        case frontend.ast_var:
+        case parser.ast_var:
             ir_builder_visit_var_decl(ctx, node)
     }
 }
 
-func ir_builder_visit_program(ir_builder_context* ctx, node* frontend.ast_node) {
+func ir_builder_visit_program(ir_builder_context* ctx, node* parser.ast_node) {
 
     if node.children != nil {
         for i := 0; i < node.children.len(); i = i + 1 {
@@ -81,11 +81,11 @@ func ir_builder_visit_program(ir_builder_context* ctx, node* frontend.ast_node) 
     }
 }
 
-func ir_builder_visit_package(ir_builder_context* ctx, node* frontend.ast_node) {
+func ir_builder_visit_package(ir_builder_context* ctx, node* parser.ast_node) {
 
 }
 
-func ir_builder_visit_func_decl(ir_builder_context* ctx, node* frontend.ast_node) {
+func ir_builder_visit_func_decl(ir_builder_context* ctx, node* parser.ast_node) {
 
     func_name := node.name
     return_type := "int"
@@ -112,7 +112,7 @@ func ir_builder_visit_func_decl(ir_builder_context* ctx, node* frontend.ast_node
     ctx.module.functions = append(ctx.module.functions, func)
 }
 
-func ir_builder_visit_parameters(ir_builder_context* ctx, params_node* frontend.ast_node) {
+func ir_builder_visit_parameters(ir_builder_context* ctx, params_node* parser.ast_node) {
 
     if params_node.children == nil {
         return
@@ -132,7 +132,7 @@ func ir_builder_visit_parameters(ir_builder_context* ctx, params_node* frontend.
     }
 }
 
-func ir_builder_visit_block(ir_builder_context* ctx, block_node* frontend.ast_node) {
+func ir_builder_visit_block(ir_builder_context* ctx, block_node* parser.ast_node) {
 
     if block_node.children == nil {
         return
@@ -144,28 +144,28 @@ func ir_builder_visit_block(ir_builder_context* ctx, block_node* frontend.ast_no
     }
 }
 
-func ir_builder_visit_statement(ir_builder_context* ctx, stmt_node* frontend.ast_node) {
+func ir_builder_visit_statement(ir_builder_context* ctx, stmt_node* parser.ast_node) {
     if stmt_node == nil {
         return
     }
 
     switch stmt_node.node_type {
-        case frontend.ast_return:
+        case parser.ast_return:
             ir_builder_visit_return_stmt(ctx, stmt_node)
-        case frontend.ast_var:
+        case parser.ast_var:
             ir_builder_visit_var_decl(ctx, stmt_node)
-        case frontend.ast_if:
+        case parser.ast_if:
             ir_builder_visit_if_stmt(ctx, stmt_node)
-        case frontend.ast_for:
+        case parser.ast_for:
             ir_builder_visit_for_stmt(ctx, stmt_node)
-        case frontend.ast_while:
+        case parser.ast_while:
             ir_builder_visit_while_stmt(ctx, stmt_node)
-        case frontend.ast_expr_stmt:
+        case parser.ast_expr_stmt:
             ir_builder_visit_expr_stmt(ctx, stmt_node)
     }
 }
 
-func ir_builder_visit_return_stmt(ir_builder_context* ctx, return_node* frontend.ast_node) {
+func ir_builder_visit_return_stmt(ir_builder_context* ctx, return_node* parser.ast_node) {
 
     value := ir_value_const("0", "int")
 
@@ -178,7 +178,7 @@ func ir_builder_visit_return_stmt(ir_builder_context* ctx, return_node* frontend
     ctx.current_block.set_terminator(ret_instr)
 }
 
-func ir_builder_visit_if_stmt(ir_builder_context* ctx, if_node* frontend.ast_node) {
+func ir_builder_visit_if_stmt(ir_builder_context* ctx, if_node* parser.ast_node) {
 
     cond_value := ir_value_const("1", "bool")
     if if_node.children != nil && if_node.children.len() > 0 {
@@ -199,19 +199,19 @@ func ir_builder_visit_if_stmt(ir_builder_context* ctx, if_node* frontend.ast_nod
     false_block := ir_basicblock_new(false_block_id, "if.else")
 }
 
-func ir_builder_visit_for_stmt(ir_builder_context* ctx, for_node* frontend.ast_node) {
+func ir_builder_visit_for_stmt(ir_builder_context* ctx, for_node* parser.ast_node) {
 
 }
 
-func ir_builder_visit_while_stmt(ir_builder_context* ctx, while_node* frontend.ast_node) {
+func ir_builder_visit_while_stmt(ir_builder_context* ctx, while_node* parser.ast_node) {
 
 }
 
-func ir_builder_visit_expr_stmt(ir_builder_context* ctx, expr_node* frontend.ast_node) {
+func ir_builder_visit_expr_stmt(ir_builder_context* ctx, expr_node* parser.ast_node) {
     ir_builder_visit_expression(ctx, expr_node)
 }
 
-func ir_builder_visit_var_decl(ir_builder_context* ctx, var_node* frontend.ast_node) {
+func ir_builder_visit_var_decl(ir_builder_context* ctx, var_node* parser.ast_node) {
 
     var_name := var_node.name
     var_type := "int"
@@ -223,30 +223,30 @@ func ir_builder_visit_var_decl(ir_builder_context* ctx, var_node* frontend.ast_n
     ctx.current_block.add_instr(alloca)
 }
 
-func ir_builder_visit_expression(ir_builder_context* ctx, expr_node* frontend.ast_node) ir_value {
+func ir_builder_visit_expression(ir_builder_context* ctx, expr_node* parser.ast_node) ir_value {
     if expr_node == nil {
         return ir_value_const("0", "int")
     }
 
     switch expr_node.node_type {
-        case frontend.ast_int_lit:
+        case parser.ast_int_lit:
             return ir_builder_visit_int_lit(ctx, expr_node)
-        case frontend.ast_binary_op:
+        case parser.ast_binary_op:
             return ir_builder_visit_binary_op(ctx, expr_node)
-        case frontend.ast_ident:
+        case parser.ast_ident:
             return ir_builder_visit_ident(ctx, expr_node)
-        case frontend.ast_call:
+        case parser.ast_call:
             return ir_builder_visit_call(ctx, expr_node)
         default:
             return ir_value_const("0", "int")
     }
 }
 
-func ir_builder_visit_int_lit(ir_builder_context* ctx, int_node* frontend.ast_node) ir_value {
+func ir_builder_visit_int_lit(ir_builder_context* ctx, int_node* parser.ast_node) ir_value {
     ir_value_const(int_node.string_data, "int")
 }
 
-func ir_builder_visit_binary_op(ir_builder_context* ctx, binop_node* frontend.ast_node) ir_value {
+func ir_builder_visit_binary_op(ir_builder_context* ctx, binop_node* parser.ast_node) ir_value {
     if binop_node.children == nil || binop_node.children.len() < 2 {
         return ir_value_const("0", "int")
     }
@@ -261,11 +261,11 @@ func ir_builder_visit_binary_op(ir_builder_context* ctx, binop_node* frontend.as
     instr.result
 }
 
-func ir_builder_visit_ident(ir_builder_context* ctx, ident_node* frontend.ast_node) ir_value {
+func ir_builder_visit_ident(ir_builder_context* ctx, ident_node* parser.ast_node) ir_value {
     ir_value_var(ident_node.name, "int")
 }
 
-func ir_builder_visit_call(ir_builder_context* ctx, call_node* frontend.ast_node) ir_value {
+func ir_builder_visit_call(ir_builder_context* ctx, call_node* parser.ast_node) ir_value {
     func_name := call_node.name
     args := ir_value[]()
 

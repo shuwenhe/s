@@ -10,7 +10,7 @@ import (
     "compile.internal.semantic"
     "compile.internal.syntax"
     "compile.internal.driver"
-    "compile.internal.frontend"
+    "compile.internal.parser"
     "compile.internal.backend"
     "std.io"
 )

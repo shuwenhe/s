@@ -1,4 +1,4 @@
-package compile.internal.frontend
+package compile.internal.parser
 
 func test_frontend_simple_function() int {
     source := "func main() int {
