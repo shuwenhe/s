@@ -10,3 +10,10 @@ Middlend 只消费 MIR
 Backend 只消费后端 IR/MIR
 
 编译管线 internal/sc/main.s
+
+架构收敛：cmd/compile/internal/syntax -> noder/typecheck/walk -> ssa -> arch backend，再配 cmd/link、runtime、标准库。
+编译器服务的是 S 语言本身，目标是快编译、强运行时集成、SC、sroutine、channel、栈增长这些语言运行时能力。
+
+一套“编译器积木系统”
+
+关键中间层是 MIR，因为所有权、借用检查、drop、move、生命周期等 S 核心语义主要围绕 MIR 做。
