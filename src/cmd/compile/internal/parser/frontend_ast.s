@@ -1,4 +1,4 @@
-package compile.internal.frontend
+package compile.internal.parser
 
 const ast_program = 1
 const ast_package = 2

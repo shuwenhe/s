@@ -1,4 +1,4 @@
-package compile.internal.frontend
+package compile.internal.lexer
 
 struct test_case {
     name: string
