@@ -1,4 +1,4 @@
-package s
+package compile.internal.ast
 import (
     "std"
     "std.option"
