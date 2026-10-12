@@ -1,4 +1,4 @@
-package src.cmd.compile.internal.format
+package compile.internal.format
 func benchmark_test_unit_name() string {
     "src/cmd/compile/internal/format/benchmark_test"
 }
