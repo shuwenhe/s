@@ -5,7 +5,7 @@ set -euo pipefail
 root="${S_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 ast="$root/src/cmd/compile/internal/ast/ast.s"
 parser="$root/src/cmd/compile/internal/parser/parser.s"
-backend="$root/src/cmd/compile/backend/backend_elf64.s"
+backend="$root/src/cmd/compile/internal/core/backend_elf64.s"
 semantic="$root/src/cmd/compile/internal/semantic.s"
 
 require_fixed() {

@@ -7,7 +7,7 @@
 GATE_NAME="B1.3: Safe Loan→Place Query"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../../.." && pwd)"
-MIR_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/mir/mir.s"
+MIR_FILE="$PROJECT_ROOT/src/cmd/compile/internal/mir/mir.s"
 TEST_FILE="$PROJECT_ROOT/src/cmd/compile/internal/tests/test_b1_3_loan_query.s"
 
 # Colors
@@ -115,9 +115,9 @@ check "Constructs nested projections" "mir_place_projection.*field" "$MIR_FILE"
 
 echo ""
 echo "--- [LAYER 10] Authority Boundary Isolation ---"
-check "No modification to analysis_loan_live_at" "func analysis_loan_live_at" "$PROJECT_ROOT/src/cmd/compile/middlend/ownership/analysis.s"
+check "No modification to analysis_loan_live_at" "func analysis_loan_live_at" "$PROJECT_ROOT/src/cmd/compile/internal/ownership/analysis.s"
 check_not "No modification to Solver" "mir_loan_borrowed_place" "$PROJECT_ROOT/src/cmd/compile/internal/compiler.s" 2>/dev/null || echo -e "${YELLOW}(compiler.s unavailable for check)${NC}"
-check_not "No modification to borrow_info" "mir_loan_borrowed_place" "$PROJECT_ROOT/src/cmd/compile/middlend/ownership/ownership_state.s"
+check_not "No modification to borrow_info" "mir_loan_borrowed_place" "$PROJECT_ROOT/src/cmd/compile/internal/ownership/ownership_state.s"
 
 echo ""
 echo "================================================================"

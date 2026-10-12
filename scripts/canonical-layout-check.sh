@@ -6,7 +6,7 @@ COMPILER="${SOURCE_ROOT}/bin/s_compiler"
 REPORT="${SOURCE_ROOT}/.bootstrap/stage15/canonical-layout-gate.txt"
 RAW_STAGE15="${REPORT}.stage15.raw.$$"
 TMP_REPORT="${REPORT}.tmp.$$"
-ABIUTILS="${SOURCE_ROOT}/src/cmd/compile/internal/backend/internal/abi/abiutils.s"
+ABIUTILS="${SOURCE_ROOT}/src/cmd/compile/internal/abi/abiutils.s"
 
 mkdir -p "$(dirname "$REPORT")"
 trap 'rm -f "$RAW_STAGE15" "$TMP_REPORT"' EXIT HUP INT TERM

@@ -6,8 +6,8 @@ COMPILER="${SOURCE_ROOT}/bin/s_compiler"
 REPORT="${SOURCE_ROOT}/.bootstrap/stage16/canonical-abi-gate.txt"
 RAW_STAGE16="${REPORT}.stage16.raw.$$"
 TMP_REPORT="${REPORT}.tmp.$$"
-BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/backend/backend_elf64.s"
-ABIUTILS="${SOURCE_ROOT}/src/cmd/compile/internal/backend/internal/abi/abiutils.s"
+BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend_elf64.s"
+ABIUTILS="${SOURCE_ROOT}/src/cmd/compile/internal/abi/abiutils.s"
 
 mkdir -p "$(dirname "$REPORT")"
 trap 'rm -f "$RAW_STAGE16" "$TMP_REPORT"' EXIT HUP INT TERM

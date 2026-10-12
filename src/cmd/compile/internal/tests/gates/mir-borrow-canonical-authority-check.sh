@@ -8,8 +8,8 @@ GATE_NAME="B1.4: Borrow Canonical Authority Audit"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../../../.." && pwd)"
 
-MIR_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/mir/mir.s"
-ANALYSIS_FILE="$PROJECT_ROOT/src/cmd/compile/middlend/ownership/analysis.s"
+MIR_FILE="$PROJECT_ROOT/src/cmd/compile/internal/mir/mir.s"
+ANALYSIS_FILE="$PROJECT_ROOT/src/cmd/compile/internal/ownership/analysis.s"
 B1_3_GATE="$PROJECT_ROOT/src/cmd/compile/internal/tests/gates/mir-loan-borrowed-place-query-check.sh"
 
 GREEN='\033[0;32m'

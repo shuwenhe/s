@@ -33,20 +33,20 @@ evidence=(
     src/cmd/compile/internal/parser/parser.s
     src/cmd/compile/main.s
     src/cmd/compile/internal/semantic.s
-    src/cmd/compile/middlend/ir/lower.s
-    src/cmd/compile/middlend/mir/mir.s
-    src/cmd/compile/middlend/ssa_core.s
-    src/cmd/compile/backend/backend_elf64.s
+    src/cmd/compile/internal/ir/lower.s
+    src/cmd/compile/internal/mir/mir.s
+    src/cmd/compile/internal/ssa/ssa_core.s
+    src/cmd/compile/internal/core/backend_elf64.s
     src/cmd/compile/internal/tests/test_pipeline_regression.s
     src/cmd/compile/seed/intermediate/ir.c
     src/cmd/compile/seed/code/generator.c
     src/cmd/compile/seed/code/standalone_amd64_backend.c
     src/cmd/compile/seed/runtime/runtime.c
-    src/cmd/compile/backend/backend/instruction_select.s
-    src/cmd/compile/backend/backend/instruction_selector.s
-    src/cmd/compile/backend/backend/codegen_x86_64.s
-    src/cmd/compile/middlend/ir/ir_builder.s
-    src/cmd/compile/middlend/ssa/expand_calls.s
+    src/cmd/compile/internal/core/instruction_select.s
+    src/cmd/compile/internal/core/instruction_selector.s
+    src/cmd/compile/internal/core/codegen_x86_64.s
+    src/cmd/compile/internal/ir/ir_builder.s
+    src/cmd/compile/internal/ssa/expand_calls.s
 )
 for path in "${evidence[@]}"; do
     test -f "$path" || invalid MISSING_EVIDENCE
