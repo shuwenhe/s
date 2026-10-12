@@ -157,10 +157,10 @@ selfhost_emission_native=PARTIAL
 selfhost_emission_multi_object_linkage=UNKNOWN
 selfhost_emission_callable_entry_abi=PARTIAL
 
-if rg -q -e '--emit-native|emit_native_' "$root/src/cmd/compile/backend/selfhost" "$root/src/cmd/compile" 2>/dev/null; then
+if rg -q -e '--emit-native|emit_native_' "$root/src/cmd/compile/internal/selfhost" "$root/src/cmd/compile" 2>/dev/null; then
     selfhost_emission_native=YES
 fi
-if rg -q -e '--emit-c|emit_selfhost_c|compile_selfhost_c' "$root/src/cmd/compile/backend/selfhost" "$root/src/cmd/compile" 2>/dev/null; then
+if rg -q -e '--emit-c|emit_selfhost_c|compile_selfhost_c' "$root/src/cmd/compile/internal/selfhost" "$root/src/cmd/compile" 2>/dev/null; then
     selfhost_emission_object=PARTIAL
 fi
 

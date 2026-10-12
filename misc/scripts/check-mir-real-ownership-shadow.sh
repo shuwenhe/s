@@ -2,9 +2,9 @@
 set -euo pipefail
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-mir_file="$root/src/cmd/compile/middlend/mir/mir.s"
+mir_file="$root/src/cmd/compile/internal/mir/mir.s"
 test_file="$root/src/cmd/compile/internal/tests/test_mir.s"
-compiler_file="$root/src/cmd/compile/middlend/mir/compiler_emit.s"
+compiler_file="$root/src/cmd/compile/internal/mir/compiler_emit.s"
 driver_file="$root/misc/scripts/s-driver.sh"
 
 require_text() {

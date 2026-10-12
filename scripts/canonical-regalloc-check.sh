@@ -131,7 +131,7 @@ fi
 
 # Verify it's the real linear scan allocator
 ALLOCATOR_PRODUCER=$(grep '^S18.2.allocator-producer=' "$PROOF_OUTPUT" | sed 's/^S18.2.allocator-producer=//')
-if [ "$ALLOCATOR_PRODUCER" != "compile.internal.middlend.ssa_core.linear_scan_regalloc_with_spill" ]; then
+if [ "$ALLOCATOR_PRODUCER" != "compile.internal.ssa_core.linear_scan_regalloc_with_spill" ]; then
     fail "S18.2" "Real allocator not invoked: $ALLOCATOR_PRODUCER"
     exit $?
 fi

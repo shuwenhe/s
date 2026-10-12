@@ -76,8 +76,8 @@ REQUIRED_FILES=(
     "src/cmd/compile/internal/core.s"
     "src/cmd/compile/internal/frontend.s"
     "src/cmd/compile/internal/stages.s"
-    "src/cmd/compile/middlend/mir/compiler_emit.s"
-    "src/cmd/compile/middlend/stages.s"
+    "src/cmd/compile/internal/mir/compiler_emit.s"
+    "src/cmd/compile/internal/compiler/stages.s"
     "src/cmd/compile/pipeline/compiler_main.s"
 )
 

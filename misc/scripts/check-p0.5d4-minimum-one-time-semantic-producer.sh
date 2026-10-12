@@ -36,11 +36,11 @@ evidence=(
     src/cmd/compile/main.s
     src/cmd/compile/internal/syntax.s
     src/cmd/compile/internal/semantic.s
-    src/cmd/compile/middlend/mono/monomorphization.s
-    src/cmd/compile/middlend/ir/lower.s
-    src/cmd/compile/middlend/mir/mir.s
-    src/cmd/compile/backend/backend_elf64.s
-    src/cmd/compile/backend/internal/abi/abiutils.s
+    src/cmd/compile/internal/mono/monomorphization.s
+    src/cmd/compile/internal/ir/lower.s
+    src/cmd/compile/internal/mir/mir.s
+    src/cmd/compile/internal/core/backend_elf64.s
+    src/cmd/compile/internal/abi/abiutils.s
     src/env/env.s
     src/cmd/compile/seed/code/generator.c
     src/cmd/compile/seed/code/backend_registry.c
