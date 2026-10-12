@@ -1,4 +1,5 @@
 package compile.internal.core
+
 import (
     "compile.internal.abi"
     "compile.internal.dispatch.devirtualize"
@@ -18,6 +19,7 @@ import (
     "std.prelude"
     "std.process"
 )
+
 struct backend_error {
     string message
 }
