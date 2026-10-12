@@ -1,4 +1,4 @@
-package src.cmd.compile.internal.parser
+package compile.internal.parser
 func interface_unit_name() string {
     "src/cmd/compile/internal/parser/interface"
 }
