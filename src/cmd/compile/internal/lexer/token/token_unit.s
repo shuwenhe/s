@@ -1,4 +1,4 @@
-package src.cmd.compile.internal.lexer.token
+package compile.internal.lexer.token
 func token_unit_name() string {
     "src/cmd/compile/internal/lexer/token/token"
 }

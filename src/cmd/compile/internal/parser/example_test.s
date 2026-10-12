@@ -1,4 +1,4 @@
-package src.cmd.compile.internal.parser
+package compile.internal.parser
 func example_test_unit_name() string {
     "src/cmd/compile/internal/parser/example_test"
 }
