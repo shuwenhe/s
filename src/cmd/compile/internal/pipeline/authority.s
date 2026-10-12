@@ -38,7 +38,7 @@ func authority_middlend() authority_marker {
 func authority_backend() authority_marker {
     return authority_marker {
         stage: "backend",
-        module: "compile.internal.backend_elf64",
+        module: "compile.internal.core",
         checkpoint: "MIR → Object Code",
         timestamp: 2,
     }

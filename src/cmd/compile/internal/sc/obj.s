@@ -1,4 +1,5 @@
-package compile.internal.gc
+package cmd
+
 func mode_compiler_obj() int {
     1
 }
