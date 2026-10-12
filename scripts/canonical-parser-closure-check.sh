@@ -73,9 +73,9 @@ if [[ ! -f "$COMPILER" ]]; then
 fi
 
 REQUIRED_FILES=(
-    "src/cmd/compile/frontend/core.s"
-    "src/cmd/compile/frontend/frontend.s"
-    "src/cmd/compile/frontend/stages.s"
+    "src/cmd/compile/internal/core.s"
+    "src/cmd/compile/internal/frontend.s"
+    "src/cmd/compile/internal/stages.s"
     "src/cmd/compile/middlend/mir/compiler_emit.s"
     "src/cmd/compile/middlend/stages.s"
     "src/cmd/compile/pipeline/compiler_main.s"
