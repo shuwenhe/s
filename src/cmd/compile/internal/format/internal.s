@@ -1,4 +1,4 @@
-package src.cmd.compile.internal.format
+package compile.internal.format
 func internal_unit_name() string {
     "src/cmd/compile/internal/format/internal"
 }
