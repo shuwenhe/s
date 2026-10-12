@@ -1,4 +1,4 @@
-package src.cmd.compile.internal.ast
+package compile.internal.ast
 func walk_test_unit_name() string {
     "src/cmd/compile/internal/ast/walk_test"
 }
