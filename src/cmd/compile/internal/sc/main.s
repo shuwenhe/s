@@ -37,32 +37,58 @@ struct compile_stats {
     int elapsed_ns
 }
 
+struct compile_init_result {
+    string goarch
+    string error
+}
+
 func main() {
     start_ns := __runtime_nanotime()
     args := std.env.args()
+    status := run_compile_main(args, start_ns)
+    std.process.exit(status)
+}
+
+func run_compile_main(string[] args, int start_ns) int {
     options := default_options()
     if len(args) == 2 && args[1] == "--help" {
         print_usage()
-        std.process.exit(0)
+        return 0
     }
     if len(args) < 2 {
         print_usage()
-        std.process.exit(2)
+        return 2
     }
+
+    init := init_compile_environment()
+    if init.error != "" {
+        std.io.eprintln("compile: " + init.error)
+        return 2
+    }
+
+    return run_command(args, options, init.goarch, start_ns)
+}
+
+func init_compile_environment() compile_init_result {
     buildcfg_err := internal.buildcfg.check()
     if buildcfg_err != "" {
-        std.io.eprintln("compile: " + buildcfg_err)
-        std.process.exit(2)
+        return compile_init_result {
+            goarch: "",
+            error: buildcfg_err,
+        }
     }
     goarch := internal.buildcfg.goarch()
     arch_err := compile.internal.arch.dispatch_init(goarch)
     if arch_err != "" {
-        std.io.eprintln("compile: " + arch_err)
-        std.process.exit(2)
+        return compile_init_result {
+            goarch: goarch,
+            error: arch_err,
+        }
     }
-    command := args[1]
-    status := run_command(args, options, goarch, start_ns)
-    std.process.exit(status)
+    return compile_init_result {
+        goarch: goarch,
+        error: "",
+    }
 }
 
 func run_command(string[] args, compiler_options options, string goarch, int start_ns) int {
