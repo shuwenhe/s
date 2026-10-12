@@ -1,0 +1,8 @@
+package src.cmd.compile.internal.ast
+func import_test_unit_name() string {
+    "src/cmd/compile/internal/ast/import_test"
+}
+
+func import_test_unit_ready() int {
+    1
+}

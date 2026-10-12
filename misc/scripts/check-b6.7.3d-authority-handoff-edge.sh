@@ -9,7 +9,7 @@ seed_main="$root/src/cmd/compile/seed/s_seed.c"
 seed_analyzer="$root/src/cmd/compile/seed/semantic/analyzer.c"
 modular_main="$root/src/cmd/compile/main.s"
 backend="$root/src/cmd/compile/backend/backend_elf64.s"
-semantic="$root/src/cmd/compile/frontend/semantic.s"
+semantic="$root/src/cmd/compile/internal/semantic.s"
 stage1_authority_report="${STAGE1_BUILD_AUTHORITY_REPORT:-"$root/.bootstrap/modular/stage1-build-authority-report.txt"}"
 
 tmp="${TMPDIR:-/tmp}/b6.7.3d-authority-handoff.$$"

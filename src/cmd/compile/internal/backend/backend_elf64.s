@@ -2808,18 +2808,18 @@ func add_std_layout_candidates(string[] candidates, string root, string tail) ()
 
 func add_s_module_candidates(string[] candidates, string root, string symbol) () {
     if symbol == "parse_source" || symbol == "parse_tokens" {
-        candidates = append(candidates, root + "/src/cmd/compile/frontend/parser/parser.s")
+        candidates = append(candidates, root + "/src/cmd/compile/internal/parser/parser.s")
     }
     if symbol == "tokenize" || symbol == "lexer" {
-        candidates = append(candidates, root + "/src/cmd/compile/frontend/lexer/lexer.s")
+        candidates = append(candidates, root + "/src/cmd/compile/internal/lexer/lexer.s")
     }
     if symbol == "token" || symbol == "token_kind" {
-        candidates = append(candidates, root + "/src/cmd/compile/frontend/token/token.s")
+        candidates = append(candidates, root + "/src/cmd/compile/internal/token/token.s")
     }
-    candidates = append(candidates, root + "/src/cmd/compile/frontend/ast/ast.s")
-    candidates = append(candidates, root + "/src/cmd/compile/frontend/parser/parser.s")
-    candidates = append(candidates, root + "/src/cmd/compile/frontend/lexer/lexer.s")
-    candidates = append(candidates, root + "/src/cmd/compile/frontend/token/token.s")
+    candidates = append(candidates, root + "/src/cmd/compile/internal/ast/ast.s")
+    candidates = append(candidates, root + "/src/cmd/compile/internal/parser/parser.s")
+    candidates = append(candidates, root + "/src/cmd/compile/internal/lexer/lexer.s")
+    candidates = append(candidates, root + "/src/cmd/compile/internal/token/token.s")
 }
 
 func module_search_roots() string[] {
