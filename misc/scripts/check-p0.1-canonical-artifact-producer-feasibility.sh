@@ -39,7 +39,7 @@ if [ -f "$closure" ]; then
 fi
 
 canonical_parse_entry=$(status_bool has_text 'func parse_source' src/cmd/compile/internal/syntax src/s)
-canonical_semantic_entry=$(status_bool has_text 'check_source_file' src/cmd/compile/frontend/semantic.s src/cmd/compile/backend/backend_elf64.s)
+canonical_semantic_entry=$(status_bool has_text 'check_source_file' src/cmd/compile/internal/semantic.s src/cmd/compile/backend/backend_elf64.s)
 canonical_mono_entry=$(status_bool has_text 'monomorphize_file' src/cmd/compile/middlend/mono/monomorphization.s src/cmd/compile/backend/backend_elf64.s)
 canonical_mir_entry=$(status_bool has_text 'func lower_.*to_mir|lower_main_to_mir|mir_graph' src/cmd/compile/middlend/ir/lower.s src/cmd/compile/middlend/mir/mir.s)
 canonical_pipeline_edge=$(status_bool has_text 'parse_source.*check_source_file|check_source_file|monomorphize_file|lower_main_to_mir' src/cmd/compile/backend/backend_elf64.s)

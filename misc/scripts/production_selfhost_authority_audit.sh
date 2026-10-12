@@ -47,7 +47,7 @@ parser_status() {
     if [ -n "$parser_report" ] && [ -f "$parser_report" ]; then
         if grep -qx 'production-parser-authority=PROVEN_S_AUTHORITY' "$parser_report"; then
             echo "production-parser-authority=PROVEN_S_AUTHORITY"
-            echo "production-parser-implementation=src/cmd/compile/frontend/syntax.s"
+            echo "production-parser-implementation=src/cmd/compile/internal/syntax.s"
             echo "production-parser-execution-path=authority-fixture-through-s_modular-check"
             echo "production-parser-proof-report=$parser_report"
             return
@@ -59,7 +59,7 @@ parser_status() {
             return
         fi
     fi
-    status_for production-parser "src/cmd/compile/frontend/syntax.s" "parse_source|tokenize|lexer|parser"
+    status_for production-parser "src/cmd/compile/internal/syntax.s" "parse_source|tokenize|lexer|parser"
 }
 
 {
@@ -113,8 +113,8 @@ parser_status() {
     echo "principle=code-exists-does-not-imply-executed-authority"
     echo
     parser_status
-    status_for production-typecheck "src/cmd/compile/frontend/semantic.s" "semantic|typecheck|check_text"
-    status_for production-generics "src/cmd/compile/frontend/types2/types2.s" "generic|monomorph|types2"
+    status_for production-typecheck "src/cmd/compile/internal/semantic.s" "semantic|typecheck|check_text"
+    status_for production-generics "src/cmd/compile/internal/types2/types2.s" "generic|monomorph|types2"
     status_for production-mir "src/cmd/compile/middlend/mir/mir.s" "mir|MIR"
     status_for production-ownership "src/cmd/compile/middlend/ownership.s src/cmd/compile/middlend/ownership/ownership_analysis.s" "ownership|borrow"
     status_for production-nll "src/cmd/compile/middlend/ownership/nll_model.s" "nll|lifetime"
