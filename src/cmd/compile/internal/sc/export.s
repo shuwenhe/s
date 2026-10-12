@@ -1,12 +1,14 @@
-package compile.internal.gc
+package cmd
+
 import (
     "std"
 )
+
 func dump_asm_header(string pkg_name, string[] symbols) string {
-    out := "
+    out := ""
     i := 0
     for i < len(symbols) {
-        out = out + "#define sym_" + symbols[i] + " " + to_string(i) + "\n"
+        out = out + "#define sym_" + symbols[i] + " " + std.conv.to_string(i) + "\n"
         i = i + 1
     }
     out

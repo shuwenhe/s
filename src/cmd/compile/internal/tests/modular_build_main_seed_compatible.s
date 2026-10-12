@@ -1,6 +1,6 @@
 package cmd
 import (
-    "compile.internal.backend_elf64"
+    "compile.internal.core"
 )
 import (
     "compile.internal.semantic"
@@ -69,7 +69,7 @@ func main() int {
             print_usage()
             return 2
         }
-        return compile.internal.backend_elf64.build(args[2], args[4], "", false)
+        return compile.internal.core.build(args[2], args[4], "", false)
     }
     if command == "check" {
         if len(args) != 3 {
