@@ -1,4 +1,4 @@
-package src.cmd.compile.internal.ast
+package compile.internal.ast
 func resolve_unit_name() string {
     "src/cmd/compile/internal/ast/resolve"
 }
