@@ -1,4 +1,4 @@
-package src.cmd.compile.internal.lexer.scanner
+package compile.internal.lexer.scanner
 func example_unit_name() string {
     "src/cmd/compile/internal/lexer/scanner/example_test"
 }
