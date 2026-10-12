@@ -1,6 +1,6 @@
 package compile.internal.tests.test_pipeline_regression
 import (
-    "compile.internal.backend_elf64"
+    "compile.internal.core"
     "compile.internal.build.parse"
     "compile.internal.ir.lower"
     "compile.internal.mir"
@@ -136,7 +136,7 @@ func run_pipeline_regression_suite() int {
     if count_mir_drops(reinit_drop_graph.unwrap()) != 1 {
         return 1
     }
-    midend := compile.internal.backend_elf64.run_midend_pipeline(graph)
+    midend := compile.internal.core.run_midend_pipeline(graph)
     if !contains(midend.report, "inline_sites=") {
         return 1
     }
@@ -178,7 +178,7 @@ func run_pipeline_regression_suite() int {
             "expr call select_send(ch1, 7, ch2, 8)",
         ),
     }
-    metric_midend := compile.internal.backend_elf64.run_midend_pipeline(metric_graph)
+    metric_midend := compile.internal.core.run_midend_pipeline(metric_graph)
     if !contains(metric_midend.report, "sroutine_sites=1") {
         return 1
     }
@@ -213,11 +213,11 @@ func run_pipeline_regression_suite() int {
     if !contains(hot_high_dump, ",margin=1000000,dominant=balanced") {
         return 1
     }
-    abi_plan := compile.internal.backend_elf64.build_abi_emit_plan("riscv64", parsed.unwrap())
+    abi_plan := compile.internal.core.build_abi_emit_plan("riscv64", parsed.unwrap())
     if !contains(abi_plan, "abi-emit version=1 arch=riscv64") {
         return 1
     }
-    wasm_plan := compile.internal.backend_elf64.build_wasm_toolchain_plan("/tmp/in.c", "/tmp/out.o", "/tmp/out.wasm")
+    wasm_plan := compile.internal.core.build_wasm_toolchain_plan("/tmp/in.c", "/tmp/out.o", "/tmp/out.wasm")
     if !contains(wasm_plan, "clang --target=wasm32-wasi -c") {
         return 1
     }

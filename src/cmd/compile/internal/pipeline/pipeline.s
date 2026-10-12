@@ -1,10 +1,10 @@
 package compile.internal.pipeline
 
 import (
-    "compile.internal.backend_elf64"
+    "compile.internal.core"
 )
 
-use compile.internal.backend_elf64.build as backend_build
+use compile.internal.core.build as backend_build
 use std.io.eprintln
 
 struct pipeline_context {
@@ -70,8 +70,8 @@ func pipeline_compile(pipeline_context context) int {
     trace_authority(authority_middlend(), "run_midend_pipeline + build_ssa_pipeline")
     trace_authority(authority_backend(), "validate_abi + codegen + link_object_file")
     
-    eprintln("[PIPELINE] Executing all three stages through compile.internal.backend_elf64.build()")
-    eprintln("[AUTHORITY CHECK] backend_elf64.build() MUST NOT delegate to C seed")
+    eprintln("[PIPELINE] Executing all three stages through compile.internal.core.build()")
+    eprintln("[AUTHORITY CHECK] compile.internal.core.build() MUST NOT delegate to C seed")
     
     status := backend_build(context.input, context.output, context.ssa_margin_override, context.nostdlib)
     return status
