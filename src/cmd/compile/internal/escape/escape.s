@@ -33,7 +33,7 @@ struct location {
     bool captured
     bool addrtaken
     bool reassigned
-    vec[attr_type] attrs
+    attr_type[] attrs
 }
 
 struct closure_info {
@@ -42,8 +42,8 @@ struct closure_info {
 }
 
 struct batch {
-    vec[location] all_locs
-    vec[closure_info] closures
+    location[] all_locs
+    closure_info[] closures
     location heap_loc
     location mutator_loc
     location callee_loc
@@ -56,10 +56,10 @@ struct escape_analyzer {
     int loop_depth
 }
 
-func funcs(vec[ir.func] all_fns) {
+func funcs(ir.func[] all_fns) {
     b := batch {
-        all_locs: vec[location](),
-        closures: vec[closure_info](),
+        all_locs: location[](),
+        closures: closure_info[](),
         heap_loc: location {
             n: nil,
             curfn: nil,
@@ -67,7 +67,7 @@ func funcs(vec[ir.func] all_fns) {
             captured: false,
             addrtaken: false,
             reassigned: false,
-            attrs: vec[attr_type](),
+            attrs: attr_type[](),
         },
         mutator_loc: location {
             n: nil,
@@ -76,7 +76,7 @@ func funcs(vec[ir.func] all_fns) {
             captured: false,
             addrtaken: false,
             reassigned: false,
-            attrs: vec[attr_type](),
+            attrs: attr_type[](),
         },
         callee_loc: location {
             n: nil,
@@ -85,7 +85,7 @@ func funcs(vec[ir.func] all_fns) {
             captured: false,
             addrtaken: false,
             reassigned: false,
-            attrs: vec[attr_type](),
+            attrs: attr_type[](),
         },
         blank_loc: location {
             n: nil,
@@ -94,7 +94,7 @@ func funcs(vec[ir.func] all_fns) {
             captured: false,
             addrtaken: false,
             reassigned: false,
-            attrs: vec[attr_type](),
+            attrs: attr_type[](),
         },
     }
     
@@ -189,7 +189,7 @@ func batch_flow_closure(batch* b, ir.node k, ir.closure_expr clo) {
     }
 }
 
-func batch_finish(batch* b, vec[ir.func] fns) {
+func batch_finish(batch* b, ir.func[] fns) {
     for fn in fns {
         ir.set_esc(fn, esc_func_tagged)
         
@@ -265,7 +265,7 @@ func batch_param_tag(batch* b, ir.func fn, int narg, ir.param f) string {
     "~r0"
 }
 
-func escape_block(escape_analyzer* e, vec[ir.node]* stmts) {
+func escape_block(escape_analyzer* e, ir.node[] stmts) {
     for stmt in stmts {
         escape_stmt(e, stmt)
     }
@@ -410,7 +410,7 @@ func new_location(batch* b, ir.node n, bool stack_only) option[location] {
         captured: false,
         addrtaken: false,
         reassigned: false,
-        attrs: vec[attr_type](),
+        attrs: attr_type[](),
     }
     
     b.all_locs.push(loc)
