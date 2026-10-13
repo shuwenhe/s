@@ -52,7 +52,7 @@ func walk(ir.func func_item) walk_stats {
     }
 }
 
-func funcs(ir.func[] all_fns) walk_stats {
+func walk_funcs(ir.func[] all_fns) walk_stats {
     stats := empty_walk_stats()
     i := 0
     for i < len(all_fns) {
@@ -137,12 +137,12 @@ func merge_walk_stats(walk_stats left, walk_stats right) walk_stats {
 }
 
 func estimate_walk_lowerings_graph(string graph_text) int {
-    count := count_token(graph_text, "term=")
-    count = count + count_token(graph_text, " stmts=")
+    count := walk_count_token(graph_text, "term=")
+    count = count + walk_count_token(graph_text, " stmts=")
     count
 }
 
-func count_token(string text, string token) int {
+func walk_count_token(string text, string token) int {
     if token == "" {
         return 0
     }
