@@ -38,7 +38,7 @@ func funcs(ir.func[] fns) rewrite_stats {
         skipped_heap: 0,
     }
     i := 0
-    while i < len(fns) {
+    for i < len(fns) {
         func_item := fns[i]
         stats.functions_seen = stats.functions_seen + 1
         stats = merge_rewrite_stats(stats, rewrite(func_item))
