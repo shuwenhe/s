@@ -164,15 +164,27 @@ test-bootstrap-both: clean
 # Compiler (no-GC S compiler in S language)
 # ============================================================================
 COMPILER_SOURCES := \
+	src/cmd/compile/main.s \
 	src/cmd/compile/internal/compiler/frontend_core.s \
 	src/cmd/compile/internal/compiler/frontend.s \
 	src/cmd/compile/internal/compiler/frontend_stages.s \
 	src/cmd/compile/internal/mir/compiler_emit.s \
 	src/cmd/compile/internal/compiler/stages.s \
-	src/cmd/compile/internal/compiler/compiler_main.s
+	src/cmd/compile/internal/compiler/compiler_main.s \
+	src/cmd/s/internal/work/action.s \
+	src/cmd/s/internal/work/build.s \
+	src/cmd/s/internal/work/buildid.s \
+	src/cmd/s/internal/work/cover.s \
+	src/cmd/s/internal/work/exec.s \
+	src/cmd/s/internal/work/gc.s \
+	src/cmd/s/internal/work/gccgo.s \
+	src/cmd/s/internal/work/init.s \
+	src/cmd/s/internal/work/security.s \
+	src/cmd/s/internal/work/shell.s
 
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
+	@echo "compiler-entry=$(CURDIR)/src/cmd/compile/main.s"
 	@for src in $(COMPILER_SOURCES); do echo "compiler-source=$$src"; done
 	@./bin/s_seed --compile-unit .bootstrap/compiler/compiler.ir $(COMPILER_SOURCES)
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$$(uname -s | tr '[:upper:]' '[:lower:]') \
