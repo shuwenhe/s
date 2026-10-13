@@ -182,6 +182,29 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/escape/solve.s \
 	src/cmd/compile/internal/escape/escape.s \
 	src/cmd/compile/internal/rewriteresults/rewriteresults.s \
+	src/cmd/compile/internal/slice/slice.s \
+	src/cmd/compile/internal/walk/assign.s \
+	src/cmd/compile/internal/walk/builtin.s \
+	src/cmd/compile/internal/walk/closure.s \
+	src/cmd/compile/internal/walk/compare.s \
+	src/cmd/compile/internal/walk/complit.s \
+	src/cmd/compile/internal/walk/convert.s \
+	src/cmd/compile/internal/walk/expr.s \
+	src/cmd/compile/internal/walk/order.s \
+	src/cmd/compile/internal/walk/range.s \
+	src/cmd/compile/internal/walk/select.s \
+	src/cmd/compile/internal/walk/stmt.s \
+	src/cmd/compile/internal/walk/switch.s \
+	src/cmd/compile/internal/walk/temp.s \
+	src/cmd/compile/internal/walk/walk.s \
+	src/cmd/compile/internal/ssagen/arch.s \
+	src/cmd/compile/internal/ssagen/abi.s \
+	src/cmd/compile/internal/ssagen/intrinsics.s \
+	src/cmd/compile/internal/ssagen/nowb.s \
+	src/cmd/compile/internal/ssagen/pgen.s \
+	src/cmd/compile/internal/ssagen/phi.s \
+	src/cmd/compile/internal/ssagen/simdintrinsics.s \
+	src/cmd/compile/internal/ssagen/ssa.s \
 	src/cmd/s/internal/work/action.s \
 	src/cmd/s/internal/work/build.s \
 	src/cmd/s/internal/work/buildid.s \

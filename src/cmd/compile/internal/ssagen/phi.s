@@ -15,7 +15,7 @@ struct lowered_phi {
 }
 
 func lower_phi(int target, phi_input[] inputs) lowered_phi {
-    incoming := int[]()
+    incoming := []int{}
     i := 0
     for i < len(inputs) {
         incoming = append(incoming, inputs[i].value)
