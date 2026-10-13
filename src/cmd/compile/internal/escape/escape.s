@@ -56,7 +56,7 @@ struct escape_analyzer {
     int loop_depth
 }
 
-func funcs(all_fns: &vec[ir.func]) {
+func funcs(all_fns: vec[ir.func]*) {
     b := batch {
         all_locs: vec[location](),
         closures: vec[closure_info](),
@@ -99,23 +99,23 @@ func funcs(all_fns: &vec[ir.func]) {
     }
     
     for fn in all_fns {
-        batch_init_func(&mut b, fn)
+        batch_init_func(&b, fn)
     }
     
     for fn in all_fns {
         if !ir.is_closure(fn) {
-            batch_walk_func(&mut b, fn)
+            batch_walk_func(&b, fn)
         }
     }
     
     for closure_item in &b.closures {
-        batch_flow_closure(&mut b, closure_item.k, closure_item.clo)
+        batch_flow_closure(&b, closure_item.k, closure_item.clo)
     }
     
-    batch_finish(&mut b, all_fns)
+    batch_finish(&b, all_fns)
 }
 
-func batch_init_func(b: &mut batch, fn: ir.func) {
+func batch_init_func(b: batch*, fn: ir.func) {
     if base.debug_flag() {
         base.warn("escape analysis initializing function")
     }
@@ -140,7 +140,7 @@ func batch_init_func(b: &mut batch, fn: ir.func) {
     }
 }
 
-func batch_walk_func(b: &mut batch, fn: ir.func) {
+func batch_walk_func(b: batch*, fn: ir.func) {
     e := escape_analyzer {
         b: b,
         curfn: fn,
@@ -148,10 +148,10 @@ func batch_walk_func(b: &mut batch, fn: ir.func) {
     }
     
     body := ir.func_body(fn)
-    escape_block(&mut e, &body)
+    escape_block(&e, &body)
 }
 
-func batch_flow_closure(b: &mut batch, k: ir.node, clo: ir.closure_expr) {
+func batch_flow_closure(b: batch*, k: ir.node, clo: ir.closure_expr) {
     func_def := ir.closure_func(clo)
     if func_def == nil {
         return
@@ -189,7 +189,7 @@ func batch_flow_closure(b: &mut batch, k: ir.node, clo: ir.closure_expr) {
     }
 }
 
-func batch_finish(b: &mut batch, fns: &vec[ir.func]) {
+func batch_finish(b: batch*, fns: vec[ir.func]*) {
     for fn in fns {
         ir.set_esc(fn, esc_func_tagged)
         
@@ -246,7 +246,7 @@ func batch_finish(b: &mut batch, fns: &vec[ir.func]) {
     }
 }
 
-func batch_param_tag(b: &mut batch, fn: ir.func, narg: int, f: ir.param) string {
+func batch_param_tag(b: batch*, fn: ir.func, narg: int, f: ir.param) string {
     if ir.func_body_len(fn) == 0 {
         param_type := ir.param_type(f)
         
@@ -265,13 +265,13 @@ func batch_param_tag(b: &mut batch, fn: ir.func, narg: int, f: ir.param) string 
     "~r0"
 }
 
-func escape_block(e: &mut escape_analyzer, stmts: &vec[ir.node]) {
+func escape_block(e: escape_analyzer*, stmts: vec[ir.node]*) {
     for stmt in stmts {
         escape_stmt(e, stmt)
     }
 }
 
-func escape_stmt(e: &mut escape_analyzer, n: ir.node) {
+func escape_stmt(e: escape_analyzer*, n: ir.node) {
     if n == nil {
         return
     }
@@ -349,7 +349,7 @@ func escape_stmt(e: &mut escape_analyzer, n: ir.node) {
     }
 }
 
-func escape_expr(e: &mut escape_analyzer, n: ir.node) {
+func escape_expr(e: escape_analyzer*, n: ir.node) {
     if n == nil {
         return
     }
@@ -402,7 +402,7 @@ func escape_expr(e: &mut escape_analyzer, n: ir.node) {
     }
 }
 
-func new_location(b: &mut batch, n: ir.node, stack_only: bool) option[location] {
+func new_location(b: batch*, n: ir.node, stack_only: bool) option[location] {
     loc := location {
         n: n,
         curfn: nil,
@@ -417,17 +417,17 @@ func new_location(b: &mut batch, n: ir.node, stack_only: bool) option[location] 
     option::some(loc)
 }
 
-func old_location(b: &mut batch, n: ir.node) &mut location {
+func old_location(b: batch*, n: ir.node) location* {
     for i in 0..b.all_locs.len() {
         loc_n := b.all_locs[i].n
         if loc_n != nil && ir.nodes_equal(loc_n, n) {
-            return &mut b.all_locs[i]
+            return &b.all_locs[i]
         }
     }
-    &mut b.blank_loc
+    &b.blank_loc
 }
 
-func location_has_attr(loc: &location, a: attr_type) bool {
+func location_has_attr(loc: location*, a: attr_type) bool {
     for attr_item in &loc.attrs {
         if attr_item == a {
             return true
@@ -436,7 +436,7 @@ func location_has_attr(loc: &location, a: attr_type) bool {
     false
 }
 
-func location_add_attr(loc: &mut location, a: attr_type) {
+func location_add_attr(loc: location*, a: attr_type) {
     if !location_has_attr(loc, a) {
         loc.attrs.push(a)
     }
