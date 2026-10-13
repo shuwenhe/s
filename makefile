@@ -180,7 +180,18 @@ COMPILER_SOURCES := \
 	src/cmd/s/internal/work/gccgo.s \
 	src/cmd/s/internal/work/init.s \
 	src/cmd/s/internal/work/security.s \
-	src/cmd/s/internal/work/shell.s
+	src/cmd/s/internal/work/shell.s \
+	src/cmd/compile/internal/sc/main.s \
+	src/cmd/compile/internal/sc/compile.s \
+	src/cmd/compile/internal/sc/debug.s \
+	src/cmd/compile/internal/sc/diagnostics.s \
+	src/cmd/compile/internal/sc/export.s \
+	src/cmd/compile/internal/sc/main_pipeline.s \
+	src/cmd/compile/internal/sc/obj.s \
+	src/cmd/compile/internal/sc/optimize.s \
+	src/cmd/compile/internal/sc/timing.s \
+	src/cmd/compile/internal/sc/types.s \
+	src/cmd/compile/internal/sc/util.s
 
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
