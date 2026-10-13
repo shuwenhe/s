@@ -149,3 +149,13 @@ func compiler_main(string[] args) int {
     if __host_write_text_file(args[3], result.code) != 0 { eprintln("compiler: cannot write output"); return 1 }
     return 0
 }
+
+func handle_compile_unit(string[] args) int {
+    eprintln("compiler: --compile-unit not yet implemented")
+    return 1
+}
+
+func handle_emit_bin(string[] args) int {
+    eprintln("compiler: --emit-bin not yet implemented")
+    return 1
+}
