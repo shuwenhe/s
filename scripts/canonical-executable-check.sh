@@ -6,8 +6,8 @@ COMPILER="${SOURCE_ROOT}/bin/s_compiler"
 DRIVER="${SOURCE_ROOT}/bin/s"
 REPORT="${SOURCE_ROOT}/.bootstrap/stage22/canonical-executable-gate.txt"
 TMP_REPORT="${REPORT}.tmp.$$"
-BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend_elf64.s"
-PIPELINE_MAIN="${SOURCE_ROOT}/src/cmd/main.s"
+BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend.s"
+PIPELINE_MAIN="${SOURCE_ROOT}/src/cmd/compile/internal/driver/driver.s"
 PIPELINE_ROUTER="${SOURCE_ROOT}/src/cmd/compile/internal/pipeline/pipeline.s"
 TEST_FILE="${SOURCE_ROOT}/test/simple_test.s"
 WORK_DIR="${SOURCE_ROOT}/.bootstrap/stage22/run.$$"
@@ -57,11 +57,11 @@ if ! grep -q 'func build(string path, string output, string ssa_margin_override,
     exit $?
 fi
 
-if ! grep -q 'if command == "build"' "$PIPELINE_MAIN" ||
-   ! grep -q 'pipeline_build(args\[2\], args\[4\], "", false)' "$PIPELINE_MAIN" ||
+if ! grep -q 'if config.action == "build"' "$PIPELINE_MAIN" ||
+   ! grep -q 'return pipeline_build(config.input, config.output, "", false)' "$PIPELINE_MAIN" ||
    ! grep -q 'func pipeline_build(string input, string output, string ssa_margin_override, bool nostdlib) int' "$PIPELINE_ROUTER" ||
    ! grep -q 'func pipeline_compile(pipeline_context context) int' "$PIPELINE_ROUTER" ||
-   ! grep -q 'return backend_build(context.input, context.output, context.ssa_margin_override, context.nostdlib)' "$PIPELINE_ROUTER"; then
+   ! grep -q 'status := backend_build(context.input, context.output, context.ssa_margin_override, context.nostdlib)' "$PIPELINE_ROUTER"; then
     fail "S22.2" "pipeline build command is not wired through pipeline_build to backend executable build"
     exit $?
 fi
