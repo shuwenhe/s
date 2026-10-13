@@ -5,17 +5,19 @@ import (
 struct ssa_func {
     string name
     int entry
-    ssa_block[] blocks
+    ssa_bb[] blocks
     ssa_value[] values
     int next_block_id
     int next_value_id
 }
 
 func make_func(string name) ssa_func {
+    blocks := []ssa_bb{}
+    values := []ssa_value{}
     f := ssa_func {
-        name: name,
-        entry: -1, blocks ssa_block[](), values ssa_value[](), next_block_id 0, next_value_id 0,
-    }
+        name name,
+        entry 0, blocks blocks, values values, next_block_id 0, next_value_id 0
+}
     entry := make_block(f.next_block_id, "entry")
     f.next_block_id = f.next_block_id + 1
     f.entry = entry.id
@@ -51,6 +53,6 @@ func func_find_block_index(ssa_func f, int block_id) int {
 func block_append_value(ssa_func f, int block_id, int value_id) {
     bi := func_find_block_index(f, block_id)
     if bi >= 0 {
-        f.blocks[bi].values = append(.values, value_id)
+        f.blocks[bi].values = append(f.blocks[bi].values, value_id)
     }
 }

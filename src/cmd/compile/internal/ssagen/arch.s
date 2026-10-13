@@ -22,13 +22,16 @@ func lookup_arch(string arch) arch_profile {
 }
 
 func arch_int_arg_regs(string arch) int {
-    lookup_arch(arch).int_arg_regs
+    profile := lookup_arch(arch)
+    profile.int_arg_regs
 }
 
 func arch_stack_align(string arch) int {
-    lookup_arch(arch).stack_align
+    profile := lookup_arch(arch)
+    profile.stack_align
 }
 
 func arch_has_simd(string arch) bool {
-    lookup_arch(arch).has_simd
+    profile := lookup_arch(arch)
+    profile.has_simd
 }
