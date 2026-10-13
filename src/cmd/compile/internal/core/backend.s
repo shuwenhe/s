@@ -8,6 +8,7 @@ import (
     "compile.internal.ir.lower"
     "compile.internal.mir"
     "compile.internal.mono"
+    "compile.internal.rewriteresults"
     "compile.internal.safety"
     "compile.internal.semantic"
     "compile.internal.syntax"
@@ -518,6 +519,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         iter = iter + 1
     }
     rewritten := compile.internal.mir.dump_graph(rewritten_graph)
+    rewrite_results := compile.internal.rewriteresults.estimate_rewrite_results_graph(rewritten)
     if inlined > 0 {
         rewritten = rewritten + " inline=" + std.prelude.to_string(inlined)
     }
@@ -532,6 +534,9 @@ func run_midend_pipeline(mir_graph graph) midend_result {
     }
     if const_prop > 0 {
         rewritten = rewritten + " constprop=" + std.prelude.to_string(const_prop)
+    }
+    if rewrite_results > 0 {
+        rewritten = rewritten + " rewrite_results=" + std.prelude.to_string(rewrite_results)
     }
     if sroutine_sites > 0 {
         rewritten = rewritten + " sroutine=" + std.prelude.to_string(sroutine_sites)
@@ -559,6 +564,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         + " devirtualized=" + std.prelude.to_string(devirt)
         + " cross_pkg_inline=" + std.prelude.to_string(cross_pkg_inline)
         + " const_prop=" + std.prelude.to_string(const_prop)
+        + " rewrite_results=" + std.prelude.to_string(rewrite_results)
         + " sroutine_sites=" + std.prelude.to_string(sroutine_sites)
         + " select_weighted_sites=" + std.prelude.to_string(select_weighted_sites)
         + " select_timeout_sites=" + std.prelude.to_string(select_timeout_sites)
