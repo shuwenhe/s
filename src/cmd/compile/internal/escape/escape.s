@@ -56,7 +56,7 @@ struct escape_analyzer {
     int loop_depth
 }
 
-func funcs(all_fns: vec[ir.func]*) {
+func funcs(all_fns: vec[ir.func]) {
     b := batch {
         all_locs: vec[location](),
         closures: vec[closure_info](),
@@ -189,7 +189,7 @@ func batch_flow_closure(b: batch*, k: ir.node, clo: ir.closure_expr) {
     }
 }
 
-func batch_finish(b: batch*, fns: vec[ir.func]*) {
+func batch_finish(b: batch*, fns: vec[ir.func]) {
     for fn in fns {
         ir.set_esc(fn, esc_func_tagged)
         
