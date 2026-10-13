@@ -5,7 +5,7 @@ SOURCE_ROOT="${1:-${S_SOURCE_ROOT:-.}}"
 COMPILER="${SOURCE_ROOT}/bin/s_compiler"
 REPORT="${SOURCE_ROOT}/.bootstrap/stage21/canonical-linking-gate.txt"
 TMP_REPORT="${REPORT}.tmp.$$"
-BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend_elf64.s"
+BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend.s"
 LINKER="${SOURCE_ROOT}/src/cmd/compile/internal/tools/link/internal/ld/production_linker.s"
 OBJECT_CONTRACT="${SOURCE_ROOT}/src/cmd/compile/internal/tools/link/internal/ld/object_contract.s"
 

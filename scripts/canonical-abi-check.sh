@@ -6,7 +6,7 @@ COMPILER="${SOURCE_ROOT}/bin/s_compiler"
 REPORT="${SOURCE_ROOT}/.bootstrap/stage16/canonical-abi-gate.txt"
 RAW_STAGE16="${REPORT}.stage16.raw.$$"
 TMP_REPORT="${REPORT}.tmp.$$"
-BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend_elf64.s"
+BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend.s"
 ABIUTILS="${SOURCE_ROOT}/src/cmd/compile/internal/abi/abiutils.s"
 
 mkdir -p "$(dirname "$REPORT")"

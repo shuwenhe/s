@@ -6,7 +6,7 @@ COMPILER="${SOURCE_ROOT}/bin/s_compiler"
 REPORT="${SOURCE_ROOT}/.bootstrap/stage17/canonical-codegen-gate.txt"
 RAW_STAGE17="${REPORT}.stage17.raw.$$"
 TMP_REPORT="${REPORT}.tmp.$$"
-BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend_elf64.s"
+BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend.s"
 INSTR_SELECT="${SOURCE_ROOT}/src/cmd/compile/internal/core/instr_select.s"
 INSTRUCTION_SELECTOR="${SOURCE_ROOT}/src/cmd/compile/internal/core/instruction_selector.s"
 SSA_LOWER="${SOURCE_ROOT}/src/cmd/compile/internal/core/ssa_lower.s"
@@ -84,10 +84,10 @@ mv "$RAW_STAGE17_TMP" "$RAW_STAGE17"
 
 if [ "$(proof_value S17.1 "$RAW_STAGE17")" = "PASS" ] &&
    [ "$(proof_value S17.1.production-mode "$RAW_STAGE17")" = "fused-codegen-emission" ] &&
-   [ "$(proof_value S17.1.producer "$RAW_STAGE17")" = "compile.internal.backend_elf64.compile_writes/compile_exit_code" ] &&
+   [ "$(proof_value S17.1.producer "$RAW_STAGE17")" = "compile.internal.core.compile_writes/compile_exit_code" ] &&
    [ "$(proof_value S17.1.input-artifact "$RAW_STAGE17")" = "write_op[]+exit_code" ] &&
-   [ "$(proof_value S17.1.arch-dispatch "$RAW_STAGE17")" = "compile.internal.backend_elf64.emit_asm" ] &&
-   [ "$(proof_value S17.1.amd64-authority "$RAW_STAGE17")" = "compile.internal.backend_elf64.emit_asm_amd64" ] &&
+   [ "$(proof_value S17.1.arch-dispatch "$RAW_STAGE17")" = "compile.internal.core.emit_asm" ] &&
+   [ "$(proof_value S17.1.amd64-authority "$RAW_STAGE17")" = "compile.internal.core.emit_asm_amd64" ] &&
    [ "$(proof_value S17.1.ssa-program-direct-input "$RAW_STAGE17")" = "no" ] &&
    [ "$(proof_value S17.1.machine-ir-artifact "$RAW_STAGE17")" = "none" ] &&
    [ "$(proof_value S17.1.reconstruction "$RAW_STAGE17")" = "no" ] &&
