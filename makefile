@@ -181,6 +181,7 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/escape/alias.s \
 	src/cmd/compile/internal/escape/solve.s \
 	src/cmd/compile/internal/escape/escape.s \
+	src/cmd/compile/internal/rewriteresults/rewriteresults.s \
 	src/cmd/s/internal/work/action.s \
 	src/cmd/s/internal/work/build.s \
 	src/cmd/s/internal/work/buildid.s \
