@@ -26,7 +26,7 @@ struct rewrite_stats {
     int skipped_heap
 }
 
-func funcs(ir.func[] fns) rewrite_stats {
+func rewrite_result_funcs(ir.func[] fns) rewrite_stats {
     stats := rewrite_stats {
         functions_seen: 0,
         functions_rewritten: 0,
