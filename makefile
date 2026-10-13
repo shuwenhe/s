@@ -191,7 +191,9 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/sc/optimize.s \
 	src/cmd/compile/internal/sc/timing.s \
 	src/cmd/compile/internal/sc/types.s \
-	src/cmd/compile/internal/sc/util.s
+	src/cmd/compile/internal/sc/util.s \
+	src/cmd/compile/internal/noder/noder.s \
+	src/cmd/compile/internal/noder/irgen.s
 
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
