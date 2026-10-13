@@ -35,7 +35,7 @@ func slice_unit_ready() int {
     1
 }
 
-func funcs(ir.func[] all_fns) slice_stats {
+func slice_funcs(ir.func[] all_fns) slice_stats {
     stats := slice_stats {
         functions_seen: 0,
         functions_analyzed: 0,
@@ -164,8 +164,8 @@ func merge_slice_stats(slice_stats left, slice_stats right) slice_stats {
 }
 
 func estimate_slice_stack_moves_graph(string graph_text) int {
-    appends := count_token(graph_text, "append(")
-    returns := count_token(graph_text, "return")
+    appends := slice_count_token(graph_text, "append(")
+    returns := slice_count_token(graph_text, "return")
     if appends < 2 {
         return 0
     }
@@ -178,7 +178,7 @@ func estimate_slice_stack_moves_graph(string graph_text) int {
     returns
 }
 
-func count_token(string text, string token) int {
+func slice_count_token(string text, string token) int {
     if token == "" {
         return 0
     }
