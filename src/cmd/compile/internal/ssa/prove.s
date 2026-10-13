@@ -10,8 +10,8 @@ struct prove_fact {
 
 func fact_for(int id, bool z, bool nz) prove_fact {
     prove_fact {
-        value_id: id, known_zero z, known_non_zero nz,
-    }
+        value_id id, known_zero z, known_non_zero nz
+}
 }
 
 func find_fact(prove_fact[] facts, int id) int {
@@ -36,7 +36,7 @@ func fact_non_zero(prove_fact[] facts, int id) bool {
 }
 
 func run_prove(ssa_func f) prove_fact[] {
-    facts := prove_fact[]()
+    facts := []prove_fact{}
     i := 0
     for i < len(f.values) {
         v := f.values[i]

@@ -20,16 +20,16 @@ func dom_index(dom_tree t, int block_id) int {
 }
 
 func run_dom(ssa_func f) dom_tree {
-    ids := int[]()
-    idom := int[]()
-    depth := int[]()
+    ids := []int{}
+    idom := []int{}
+    depth := []int{}
     bi := 0
     for bi < len(f.blocks) {
         ids = append(ids, f.blocks[bi].id)
         if f.blocks[bi].id == f.entry {
             idom = append(idom, -1)
             depth = append(depth, 0)
-        } else if f.blocks[bi]len(.preds) > 0 {
+        } else if len(f.blocks[bi].preds) > 0 {
             idom = append(idom, f.blocks[bi].preds[0])
             depth = append(depth, 1)
         } else if bi > 0 {
@@ -47,7 +47,7 @@ func run_dom(ssa_func f) dom_tree {
         cur := ids[bi]
         guard := 0
         for cur != -1 && cur != f.entry && guard < len(ids) + 1 {
-            ci := dom_index(dom_tree { block_ids: ids, idom idom, depth depth }, cur)
+            ci := dom_index(dom_tree { block_ids ids, idom idom, depth depth }, cur)
             if ci < 0 {
                 break
             }
@@ -59,8 +59,8 @@ func run_dom(ssa_func f) dom_tree {
         bi = bi + 1
     }
     dom_tree {
-        block_ids: ids, idom idom, depth depth,
-    }
+        block_ids ids, idom idom, depth depth
+}
 }
 
 func dominates(dom_tree t, int a, int b) bool {

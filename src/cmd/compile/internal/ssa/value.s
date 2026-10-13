@@ -15,8 +15,8 @@ struct ssa_value {
 
 func make_value(int id, string name, string op, string ty, int[] args, string literal) ssa_value {
     ssa_value {
-        id: id, name name, op op, ty ty, args args, uses 0, removed false, literal literal,
-    }
+        id id, name name, op op, ty ty, args args, uses 0, removed false, literal literal
+}
 }
 
 func value_is_const_zero(ssa_value v) bool {
