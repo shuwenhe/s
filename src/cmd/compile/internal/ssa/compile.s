@@ -59,3 +59,29 @@ func compile_func(ssa_func f, ssa_config cfg) compile_report {
         f f, stats stats, prove_facts facts, dom dominfo, regalloc_assigns len(regs.assigns), regalloc_spills regs.spills, check_code code, dump dump_func(f)
 }
 }
+
+func estimate_ssa_compile_graph(string graph_text) int {
+    blocks := count_ssa_token(graph_text, "bb")
+    values := count_ssa_token(graph_text, "value")
+    terms := count_ssa_token(graph_text, "term=")
+    rewrites := count_ssa_token(graph_text, "rewrite")
+    blocks + values + terms + rewrites
+}
+
+func count_ssa_token(string text, string token) int {
+    if token == "" {
+        return 0
+    }
+    count := 0
+    i := 0
+    limit := len(text) - len(token)
+    for i <= limit {
+        if slice(text, i, i + len(token)) == token {
+            count = count + 1
+            i = i + len(token)
+        } else {
+            i = i + 1
+        }
+    }
+    count
+}
