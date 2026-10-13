@@ -17,3 +17,5 @@ Backend 只消费后端 IR/MIR
 一套“编译器积木系统”
 
 关键中间层是 MIR，因为所有权、借用检查、drop、move、生命周期等 S 核心语义主要围绕 MIR 做。
+
+/home/shuwen/shuwen/s/src/cmd/s/internal/work

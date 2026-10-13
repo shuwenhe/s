@@ -171,6 +171,16 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/mir/compiler_emit.s \
 	src/cmd/compile/internal/compiler/stages.s \
 	src/cmd/compile/internal/compiler/compiler_main.s \
+	src/cmd/compile/internal/escape/graph.s \
+	src/cmd/compile/internal/escape/leaks.s \
+	src/cmd/compile/internal/escape/utils.s \
+	src/cmd/compile/internal/escape/assign.s \
+	src/cmd/compile/internal/escape/expr.s \
+	src/cmd/compile/internal/escape/call.s \
+	src/cmd/compile/internal/escape/stmt.s \
+	src/cmd/compile/internal/escape/alias.s \
+	src/cmd/compile/internal/escape/solve.s \
+	src/cmd/compile/internal/escape/escape.s \
 	src/cmd/s/internal/work/action.s \
 	src/cmd/s/internal/work/build.s \
 	src/cmd/s/internal/work/buildid.s \
