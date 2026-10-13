@@ -2,7 +2,7 @@
 set -eu
 
 SOURCE_ROOT="${1:-${S_SOURCE_ROOT:-.}}"
-BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend_elf64.s"
+BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend.s"
 FIXTURE="${SOURCE_ROOT}/test/compiler/codegen_authority_runtime.s"
 REPORT="${SOURCE_ROOT}/.bootstrap/codegen-authority/handoff-gate.txt"
 TMP_REPORT="${REPORT}.tmp.$$"

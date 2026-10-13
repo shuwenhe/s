@@ -5,7 +5,7 @@ SOURCE_ROOT="${1:-${S_SOURCE_ROOT:-.}}"
 COMPILER="${SOURCE_ROOT}/bin/s_compiler"
 REPORT="${SOURCE_ROOT}/.bootstrap/stage19/canonical-machine-code-gate.txt"
 TMP_REPORT="${REPORT}.tmp.$$"
-BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend_elf64.s"
+BACKEND="${SOURCE_ROOT}/src/cmd/compile/internal/core/backend.s"
 MACHINE_BUILDER="${SOURCE_ROOT}/src/cmd/compile/internal/core/codegen_x86_64.s"
 NATIVE_COMPILER="${SOURCE_ROOT}/src/cmd/compile/internal/core/native_compiler.s"
 
