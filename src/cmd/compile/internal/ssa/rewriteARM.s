@@ -11,21 +11,21 @@ func run_rewrite_arm(ssa_func f) int {
         if v.op == op_add() && len(v.args) == 2 {
             if is_const_with(f, v.args[1], "1") {
                 f.values[i].op = "ARMADD1"
-                f.values[i].args = [v.args[0]]
+                f.values[i].args = int_args1(v.args[0])
                 f.values[i].literal = ""
                 changed = changed + 1
             }
         } else if v.op == op_sub() && len(v.args) == 2 {
             if is_const_with(f, v.args[1], "1") {
                 f.values[i].op = "ARMSUB1"
-                f.values[i].args = [v.args[0]]
+                f.values[i].args = int_args1(v.args[0])
                 f.values[i].literal = ""
                 changed = changed + 1
             }
         } else if v.op == op_mul() && len(v.args) == 2 {
             if is_const_with(f, v.args[1], "2") {
                 f.values[i].op = "ARMLSL1"
-                f.values[i].args = [v.args[0]]
+                f.values[i].args = int_args1(v.args[0])
                 f.values[i].literal = "1"
                 changed = changed + 1
             }

@@ -171,16 +171,6 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/mir/compiler_emit.s \
 	src/cmd/compile/internal/compiler/stages.s \
 	src/cmd/compile/internal/compiler/compiler_main.s \
-	src/cmd/compile/internal/escape/graph.s \
-	src/cmd/compile/internal/escape/leaks.s \
-	src/cmd/compile/internal/escape/utils.s \
-	src/cmd/compile/internal/escape/assign.s \
-	src/cmd/compile/internal/escape/expr.s \
-	src/cmd/compile/internal/escape/call.s \
-	src/cmd/compile/internal/escape/stmt.s \
-	src/cmd/compile/internal/escape/alias.s \
-	src/cmd/compile/internal/escape/solve.s \
-	src/cmd/compile/internal/escape/escape.s \
 	src/cmd/compile/internal/rewriteresults/rewriteresults.s \
 	src/cmd/compile/internal/slice/slice.s \
 	src/cmd/compile/internal/walk/assign.s \
@@ -205,30 +195,29 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/ssagen/phi.s \
 	src/cmd/compile/internal/ssagen/simdintrinsics.s \
 	src/cmd/compile/internal/ssagen/ssa.s \
-	src/cmd/s/internal/work/action.s \
-	src/cmd/s/internal/work/build.s \
-	src/cmd/s/internal/work/buildid.s \
-	src/cmd/s/internal/work/cover.s \
-	src/cmd/s/internal/work/exec.s \
-	src/cmd/s/internal/work/gc.s \
-	src/cmd/s/internal/work/gccgo.s \
-	src/cmd/s/internal/work/init.s \
-	src/cmd/s/internal/work/security.s \
-	src/cmd/s/internal/work/shell.s \
-	src/cmd/compile/internal/sc/main.s \
-	src/cmd/compile/internal/sc/compile.s \
-	src/cmd/compile/internal/sc/debug.s \
-	src/cmd/compile/internal/sc/diagnostics.s \
-	src/cmd/compile/internal/sc/export.s \
-	src/cmd/compile/internal/sc/main_pipeline.s \
-	src/cmd/compile/internal/sc/obj.s \
-	src/cmd/compile/internal/sc/optimize.s \
-	src/cmd/compile/internal/sc/timing.s \
-	src/cmd/compile/internal/sc/types.s \
-	src/cmd/compile/internal/sc/util.s \
-	src/cmd/compile/internal/noder/noder.s \
-	src/cmd/compile/internal/noder/irgen.s \
-	src/cmd/compile/internal/bloop/bloop.s
+	src/cmd/compile/internal/ssa/op.s \
+	src/cmd/compile/internal/ssa/value.s \
+	src/cmd/compile/internal/ssa/block.s \
+	src/cmd/compile/internal/ssa/func.s \
+	src/cmd/compile/internal/ssa/config.s \
+	src/cmd/compile/internal/ssa/cache.s \
+	src/cmd/compile/internal/ssa/uses.s \
+	src/cmd/compile/internal/ssa/rewrite.s \
+	src/cmd/compile/internal/ssa/rewritegeneric.s \
+	src/cmd/compile/internal/ssa/rewriteAMD64.s \
+	src/cmd/compile/internal/ssa/rewriteARM64.s \
+	src/cmd/compile/internal/ssa/rewriteARM.s \
+	src/cmd/compile/internal/ssa/deadcode.s \
+	src/cmd/compile/internal/ssa/cse.s \
+	src/cmd/compile/internal/ssa/copyelim.s \
+	src/cmd/compile/internal/ssa/dom.s \
+	src/cmd/compile/internal/ssa/prove.s \
+	src/cmd/compile/internal/ssa/regalloc.s \
+	src/cmd/compile/internal/ssa/schedule.s \
+	src/cmd/compile/internal/ssa/stackalloc.s \
+	src/cmd/compile/internal/ssa/check.s \
+	src/cmd/compile/internal/ssa/print.s \
+	src/cmd/compile/internal/ssa/compile.s
 
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin

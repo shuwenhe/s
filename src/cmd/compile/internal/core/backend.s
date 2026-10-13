@@ -12,6 +12,7 @@ import (
     "compile.internal.safety"
     "compile.internal.semantic"
     "compile.internal.slice"
+    "compile.internal.ssa"
     "compile.internal.ssagen"
     "compile.internal.syntax"
     "compile.internal.walk"
@@ -525,6 +526,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
     rewrite_results := compile.internal.rewriteresults.estimate_rewrite_results_graph(rewritten)
     slice_stack_moves := compile.internal.slice.estimate_slice_stack_moves_graph(rewritten)
     walk_lowerings := compile.internal.walk.estimate_walk_lowerings_graph(rewritten)
+    ssa_compile := compile.internal.ssa.estimate_ssa_compile_graph(rewritten)
     ssagen_plan := compile.internal.ssagen.estimate_ssagen_plan_graph(rewritten)
     if inlined > 0 {
         rewritten = rewritten + " inline=" + std.prelude.to_string(inlined)
@@ -549,6 +551,9 @@ func run_midend_pipeline(mir_graph graph) midend_result {
     }
     if walk_lowerings > 0 {
         rewritten = rewritten + " walk_lowerings=" + std.prelude.to_string(walk_lowerings)
+    }
+    if ssa_compile > 0 {
+        rewritten = rewritten + " ssa_compile=" + std.prelude.to_string(ssa_compile)
     }
     if ssagen_plan > 0 {
         rewritten = rewritten + " ssagen_plan=" + std.prelude.to_string(ssagen_plan)
@@ -582,6 +587,7 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         + " rewrite_results=" + std.prelude.to_string(rewrite_results)
         + " slice_stack_moves=" + std.prelude.to_string(slice_stack_moves)
         + " walk_lowerings=" + std.prelude.to_string(walk_lowerings)
+        + " ssa_compile=" + std.prelude.to_string(ssa_compile)
         + " ssagen_plan=" + std.prelude.to_string(ssagen_plan)
         + " sroutine_sites=" + std.prelude.to_string(sroutine_sites)
         + " select_weighted_sites=" + std.prelude.to_string(select_weighted_sites)

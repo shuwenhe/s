@@ -18,13 +18,13 @@ func rewrite_value_generic(ssa_func f, int id) bool {
     if v.op == op_add() && len(v.args) == 2 {
         if is_const_with(f, v.args[1], "0") {
             f.values[id].op = op_copy()
-            f.values[id].args = [v.args[0]]
+            f.values[id].args = int_args1(v.args[0])
             f.values[id].literal = ""
             return true
         }
         if is_const_with(f, v.args[0], "0") {
             f.values[id].op = op_copy()
-            f.values[id].args = [v.args[1]]
+            f.values[id].args = int_args1(v.args[1])
             f.values[id].literal = ""
             return true
         }
@@ -32,7 +32,7 @@ func rewrite_value_generic(ssa_func f, int id) bool {
     if v.op == op_sub() && len(v.args) == 2 {
         if is_const_with(f, v.args[1], "0") {
             f.values[id].op = op_copy()
-            f.values[id].args = [v.args[0]]
+            f.values[id].args = int_args1(v.args[0])
             f.values[id].literal = ""
             return true
         }
@@ -40,19 +40,19 @@ func rewrite_value_generic(ssa_func f, int id) bool {
     if v.op == op_mul() && len(v.args) == 2 {
         if is_const_with(f, v.args[0], "1") {
             f.values[id].op = op_copy()
-            f.values[id].args = [v.args[1]]
+            f.values[id].args = int_args1(v.args[1])
             f.values[id].literal = ""
             return true
         }
         if is_const_with(f, v.args[1], "1") {
             f.values[id].op = op_copy()
-            f.values[id].args = [v.args[0]]
+            f.values[id].args = int_args1(v.args[0])
             f.values[id].literal = ""
             return true
         }
         if is_const_with(f, v.args[0], "0") || is_const_with(f, v.args[1], "0") {
             f.values[id].op = op_const()
-            f.values[id].args = []
+            f.values[id].args = int_args0()
             f.values[id].literal = "0"
             return true
         }
@@ -60,7 +60,7 @@ func rewrite_value_generic(ssa_func f, int id) bool {
     if v.op == op_div() && len(v.args) == 2 {
         if is_const_with(f, v.args[1], "1") {
             f.values[id].op = op_copy()
-            f.values[id].args = [v.args[0]]
+            f.values[id].args = int_args1(v.args[0])
             f.values[id].literal = ""
             return true
         }
