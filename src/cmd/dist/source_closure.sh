@@ -65,7 +65,7 @@ resolve_module_fallback() {
 
     esac
 
-    exact=$(awk -F '\t' -v pkg="$module" '$1 == pkg { print $2; exit }' "$pkg_index")
+    exact=$(awk -F '\t' -v pkg="$module" '$1 == pkg { print $2 }' "$pkg_index")
 
     if [ -n "$exact" ]; then
 

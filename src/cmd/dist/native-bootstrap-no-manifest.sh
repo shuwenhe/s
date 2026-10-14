@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Self-hosted compiler bootstrap without manifest file
 # Uses automatic import resolution (Go-style)
 #
@@ -8,7 +8,7 @@
 # This script replaces the old materialize-selfhost-source.sh + manifest approach
 # with a modern import-driven bootstrap model.
 
-set -eu
+set -euo pipefail
 
 root=${S_SOURCE_ROOT:-$(pwd)}
 output_dir=${1:?usage: native-bootstrap-no-manifest.sh OUTPUT_DIR}
@@ -53,6 +53,10 @@ echo "✓ Resolved source closure: $(wc -l < "$closure" | tr -d ' ') files"
     printf "Error: Stage 1 compilation failed\n" >&2
     exit 1
 }
+test -s "$output_dir/stage1.ir" || {
+    printf "Error: Stage 1 IR missing or empty: %s\n" "$output_dir/stage1.ir" >&2
+    exit 1
+}
 
 echo "✓ Generated IR: $output_dir/stage1.ir"
 
@@ -63,6 +67,10 @@ printf "Generating stage 1 binary...\n"
     "$output_dir/stage1" \
     2>&1 | tee "$output_dir/stage1-emit.log" || {
     printf "Error: Stage 1 binary generation failed\n" >&2
+    exit 1
+}
+test -s "$output_dir/stage1" || {
+    printf "Error: Stage 1 binary missing or empty: %s\n" "$output_dir/stage1" >&2
     exit 1
 }
 
@@ -76,9 +84,13 @@ printf "Compiling with generated compiler...\n"
 
 "$output_dir/stage1" \
     --compile-unit "$output_dir/stage2.ir" \
-    "$root/src/cmd/compile/main.s" \
+    $(sed "s#^#$root/#" "$closure") \
     2>&1 | tee "$output_dir/stage2-compile.log" || {
     printf "Error: Stage 2 compilation failed\n" >&2
+    exit 1
+}
+test -s "$output_dir/stage2.ir" || {
+    printf "Error: Stage 2 IR missing or empty: %s\n" "$output_dir/stage2.ir" >&2
     exit 1
 }
 
@@ -93,6 +105,10 @@ printf "Generating stage 2 binary...\n"
     printf "Error: Stage 2 binary generation failed\n" >&2
     exit 1
 }
+test -s "$output_dir/stage2" || {
+    printf "Error: Stage 2 binary missing or empty: %s\n" "$output_dir/stage2" >&2
+    exit 1
+}
 
 chmod +x "$output_dir/stage2"
 echo "✓ Generated Binary: $output_dir/stage2"
@@ -104,9 +120,13 @@ printf "Verifying bootstrap stability...\n"
 
 "$output_dir/stage2" \
     --compile-unit "$output_dir/stage3.ir" \
-    "$root/src/cmd/compile/main.s" \
+    $(sed "s#^#$root/#" "$closure") \
     2>&1 | tee "$output_dir/stage3-compile.log" || {
     printf "Error: Stage 3 compilation failed\n" >&2
+    exit 1
+}
+test -s "$output_dir/stage3.ir" || {
+    printf "Error: Stage 3 IR missing or empty: %s\n" "$output_dir/stage3.ir" >&2
     exit 1
 }
 
@@ -115,6 +135,10 @@ printf "Verifying bootstrap stability...\n"
     "$output_dir/stage3" \
     2>&1 | tee "$output_dir/stage3-emit.log" || {
     printf "Error: Stage 3 binary generation failed\n" >&2
+    exit 1
+}
+test -s "$output_dir/stage3" || {
+    printf "Error: Stage 3 binary missing or empty: %s\n" "$output_dir/stage3" >&2
     exit 1
 }
 

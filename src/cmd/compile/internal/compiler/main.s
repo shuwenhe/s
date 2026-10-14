@@ -151,8 +151,44 @@ func compiler_main(string[] args) int {
 }
 
 func handle_compile_unit(string[] args) int {
-    eprintln("compiler: --compile-unit not yet implemented")
-    return 1
+    if len(args) < 4 {
+        eprintln("usage: --compile-unit <output.ir> <input.s>...")
+        return 2
+    }
+    output := args[2]
+    source := ""
+    i := 3
+    for i < len(args) {
+        if compiler_contains_text(args[i], "frontend_core.s") {
+            part := __host_read_to_string(args[i])
+            if part == "" {
+                eprintln("compiler: empty or unreadable input: " + args[i])
+                return 1
+            }
+            source = source + part + "\n"
+        }
+        i = i + 1
+    }
+    i = 3
+    for i < len(args) {
+        if !compiler_contains_text(args[i], "frontend_core.s") {
+            part := __host_read_to_string(args[i])
+            if part == "" {
+                eprintln("compiler: empty or unreadable input: " + args[i])
+                return 1
+            }
+            source = source + part + "\n"
+        }
+        i = i + 1
+    }
+    if source == "" {
+        eprintln("compiler: empty compile unit")
+        return 1
+    }
+    result := compiler_compile(source)
+    if result.error != "" { eprintln(result.error); return 1 }
+    if __host_write_text_file(output, result.code) != 0 { eprintln("compiler: cannot write output"); return 1 }
+    return 0
 }
 
 func handle_emit_bin(string[] args) int {
