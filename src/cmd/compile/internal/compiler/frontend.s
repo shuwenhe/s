@@ -311,7 +311,7 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
             field_kind = second_kind
             field_struct = second_struct
         } else {
-            return compiler_fail(s, "unknown struct field type: " + first)
+            return compiler_fail(s, "unknown struct field type: " + first + " or " + second)
         }
         duplicate := false
         scan := 0
