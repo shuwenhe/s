@@ -170,7 +170,7 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/compiler/frontend_stages.s \
 	src/cmd/compile/internal/mir/compiler_emit.s \
 	src/cmd/compile/internal/compiler/stages.s \
-	src/cmd/compile/internal/compiler/compiler_main.s \
+	src/cmd/compile/internal/compiler/main.s \
 	src/cmd/compile/internal/rewriteresults/rewriteresults.s \
 	src/cmd/compile/internal/slice/slice.s \
 	src/cmd/compile/internal/walk/assign.s \
