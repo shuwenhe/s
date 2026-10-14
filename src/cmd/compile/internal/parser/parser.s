@@ -165,7 +165,7 @@ func (parser* self) parse_import_block() (use_decl[], parse_error) {
         return result, err
     }
     self.eat_symbol(";")
-    result, parse_error{ message: "", line 0, column 0 }
+    return result, parse_error{ message: "", line 0, column 0 }
 }
 
 func (parser* self) parse_item() (item, parse_error) {
@@ -583,7 +583,7 @@ func (parser* self) parse_params() (param[], parse_error) {
             break
         }
     }
-    params, parse_error { message: "" }
+    return params, parse_error { message: "" }
 }
 
 func (parser* self) parse_generic_params() (string[], parse_error) {
@@ -619,23 +619,23 @@ func (parser* self) parse_generic_params() (string[], parse_error) {
         generics = append(generics, item)
         self.eat_symbol(",")
     }
-    generics, parse_error { message: "" }
+    return generics, parse_error { message: "" }
 }
 
 func (parser* self) parse_where_clause() ((), parse_error) {
     if !self.eat_keyword("where") {
-        return , parse_error { message: "" }
+        return (), parse_error { message: "" }
     }
     for true {
         _, err := self.parse_type_text(string[] { ",", "{", ";" })
         if err.message != "" {
-            return , err
+            return (), err
         }
         if !self.eat_symbol(",") || self.at_symbol("{") || self.at_symbol(";") {
             break
         }
     }
-    (), parse_error { message: "" }
+    return (), parse_error { message: "" }
 }
 
 func (parser* self) parse_named_type(string[] stop_values) (named_type, parse_error) {
@@ -682,7 +682,7 @@ func (parser* self) parse_token_segment(string[] stop_values) (token[], parse_er
         }
         segment = append(segment, tok)
     }
-    segment, parse_error { message: "" }
+    return segment, parse_error { message: "" }
 }
 
 func (parser* self) parse_block_expr() (block_expr, parse_error) {
@@ -1659,7 +1659,7 @@ func (parser* self) parse_path() (string, parse_error) {
         }
         parts = append(parts, last + bg)
     }
-    join_strings(parts, "."), parse_error { message: "" }
+    return join_strings(parts, "."), parse_error { message: "" }
 }
 
 func (parser* self) parse_type_text(string[] stop_values) (string, parse_error) {
@@ -1697,7 +1697,7 @@ func (parser* self) parse_type_text(string[] stop_values) (string, parse_error) 
         }
         parts = append(parts, tok.value)
     }
-    normalize_type_text(join_strings(parts, " ")), parse_error { message: "" }
+    return normalize_type_text(join_strings(parts, " ")), parse_error { message: "" }
 }
 
 func (parser* self) parse_bracket_group() (string, parse_error) {
@@ -1879,7 +1879,7 @@ func (parser* self) advance() (token, parse_error) {
         return empty, err
     }
     self.index = self.index + 1
-    t, parse_error { message: "" }
+    return t, parse_error { message: "" }
 }
 
 func (parser* self) error_here(string message) parse_error {
