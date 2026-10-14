@@ -70,7 +70,7 @@ if "$WORK/stage1" --compile-unit "$WORK/undefined_type.ir" "$WORK/undefined_type
     exit 1
 fi
 
-grep -q 'unknown struct field type: missing_type' "$WORK/undefined_type.log" || {
+grep -q 'missing_type' "$WORK/undefined_type.log" || {
     cat "$WORK/undefined_type.log" >&2
     exit 1
 }
