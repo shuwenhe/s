@@ -1234,73 +1234,94 @@ func (parser* self) parse_if_expr() (expr, parse_error) {
 }
 
 func (parser* self) parse_for_expr() (expr, parse_error) {
-        self.expect_keyword("for")
-        if self.at_symbol("{") {
-            body, err := self.parse_block_expr()
-            if err.message != "" {
-                expr empty
-                return empty, err
-            }
-            return expr::for(for_expr {
-                init: option::none, condition option::none, post option::none, names string[](), iterable option::none, body body, inferred_type option::none,
-            }))
-        }
-        if self.at_symbol("(") {
-            self.expect_symbol("(")
-            init, err := self.parse_for_clause_stmt()
-            if err.message != "" {
-                expr empty
-                return empty, err
-            }
-            self.expect_symbol(";")
-            condition, err := self.parse_expr()
-            if err.message != "" {
-                expr empty
-                return empty, err
-            }
-            post, err := self.parse_for_clause_stmt()
-            if err.message != "" {
-                expr empty
-                return empty, err
-            }
-            _, err := self.expect_symbol(")")
-            if err.message != "" { expr empty; return empty, err }
-            body, err := self.parse_block_expr()
-            if err.message != "" {
-                expr empty
-                return empty, err
-            }
-            return expr::for(for_expr {
-                init: option::some(box(init)), condition option::some(box(condition)), post option::some(box(post)), names string[](), iterable option::none, body body, inferred_type option::none,
-            }))
-        }
-        token, err := self.peek()
+    self.expect_keyword("for")
+    if self.at_symbol("{") {
+        body, err := self.parse_block_expr()
         if err.message != "" {
-            token empty
+            expr empty
             return empty, err
         }
-            name, err := self.expect_ident()
-            if err.message != "" {
-                string empty
-                return empty, err
-            }
-            iterable, err := self.parse_expr()
-            if err.message != "" {
-                expr empty
-                return empty, err
-            }
-            return expr::for(for_expr {
-                init: option::none, condition option::none, post option::none, names string[] { name }, iterable option::some(box(iterable)), body body, inferred_type option::none,
-            }))
+        return expr::for(for_expr {
+            init: option::none, condition option::none, post option::none, names string[](), iterable option::none, body body, inferred_type option::none,
+        })
+    }
+    if self.at_symbol("(") {
+        self.expect_symbol("(")
+        init, err := self.parse_for_clause_stmt()
+        if err.message != "" {
+            expr empty
+            return empty, err
         }
+        self.expect_symbol(";")
         condition, err := self.parse_expr()
         if err.message != "" {
             expr empty
             return empty, err
         }
-        expr::for(for_expr {
-            init: option::none, condition option::some(box(condition)), post option::none, names string[](), iterable option::none, body body, inferred_type option::none,
+        post, err := self.parse_for_clause_stmt()
+        if err.message != "" {
+            expr empty
+            return empty, err
+        }
+        _, err := self.expect_symbol(")")
+        if err.message != "" { expr empty; return empty, err }
+        body, err := self.parse_block_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
+        }
+        return expr::for(for_expr {
+            init: option::some(box(init)), condition option::some(box(condition)), post option::some(box(post)), names string[](), iterable option::none, body body, inferred_type option::none,
         })
+    }
+    token, err := self.peek()
+    if err.message != "" {
+        token empty
+        return empty, err
+    }
+    next, err := self.peek_at(1)
+    if err.message != "" {
+        token empty
+        return empty, err
+    }
+    if token.kind == token_kind::ident && (next.value == ":=" || next.value == "in") {
+        name, err := self.expect_ident()
+        if err.message != "" {
+            string empty
+            return empty, err
+        }
+        if next.value == ":=" {
+            self.expect_symbol(":=")
+        } else {
+            self.expect_ident()
+        }
+        iterable, err := self.parse_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
+        }
+        body, err := self.parse_block_expr()
+        if err.message != "" {
+            expr empty
+            return empty, err
+        }
+        return expr::for(for_expr {
+            init: option::none, condition option::none, post option::none, names string[] { name }, iterable option::some(box(iterable)), body body, inferred_type option::none,
+        })
+    }
+    condition, err := self.parse_expr()
+    if err.message != "" {
+        expr empty
+        return empty, err
+    }
+    body, err := self.parse_block_expr()
+    if err.message != "" {
+        expr empty
+        return empty, err
+    }
+    return expr::for(for_expr {
+        init: option::none, condition option::some(box(condition)), post option::none, names string[](), iterable option::none, body body, inferred_type option::none,
+    })
 }
 
 func (parser* self) parse_pattern() (pattern, parse_error) {
