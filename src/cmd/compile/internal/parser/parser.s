@@ -1188,7 +1188,8 @@ func (parser* self) parse_switch_expr() (expr, parse_error) {
                 expr empty
                 return empty, err
             }
-                pattern: pattern, expr expr,
+            arms = append(arms, switch_arm {
+                pattern: pattern, expr: expr,
             })
             self.eat_symbol(",")
         }
