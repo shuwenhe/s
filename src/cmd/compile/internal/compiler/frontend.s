@@ -186,6 +186,10 @@ func compiler_is_struct_type(string token) bool {
     return compiler_ident(token) && __host_char_at(token, 0) >= "A" && __host_char_at(token, 0) <= "Z"
 }
 
+func compiler_is_declared_struct_type(compiler_state initial, string token) bool {
+    return compiler_ident(token) && compiler_find_struct(initial, token) >= 0
+}
+
 func compiler_type_kind(string token) int {
     if token == "int" { return 1 }
     if token == "bool" { return 1 }
@@ -263,7 +267,7 @@ func compiler_find_struct(compiler_state initial, string name) int {
 func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "struct")
-    if !compiler_is_struct_type(s.token) { return compiler_subset_fail(s, "struct names must be exported") }
+    if !compiler_ident(s.token) { return compiler_fail(s, "expected struct name") }
     struct_name := s.token
     if compiler_find_struct(s, struct_name) >= 0 { return compiler_fail(s, "duplicate struct: " + struct_name) }
     if s.struct_count >= 8 { return compiler_fail(s, "too many structs") }
@@ -278,8 +282,37 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     s = compiler_next(s)
     s = compiler_expect(s, "{")
     for s.token != "}" && s.token != "" {
-        if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields must be named") }
-        field_name := s.token
+        if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields require type and name") }
+        first := s.token
+        s = compiler_next(s)
+        if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields require type and name") }
+        second := s.token
+        first_kind := compiler_type_kind(first)
+        first_struct := -1
+        if first_kind == 0 && compiler_ident(first) {
+            first_struct = compiler_find_struct(s, first)
+            if first_struct >= 0 { first_kind = 5 }
+        }
+        second_kind := compiler_type_kind(second)
+        second_struct := -1
+        if second_kind == 0 && compiler_ident(second) {
+            second_struct = compiler_find_struct(s, second)
+            if second_struct >= 0 { second_kind = 5 }
+        }
+        field_name := ""
+        field_kind := 0
+        field_struct := -1
+        if first_kind != 0 {
+            field_name = second
+            field_kind = first_kind
+            field_struct = first_struct
+        } else if second_kind != 0 {
+            field_name = first
+            field_kind = second_kind
+            field_struct = second_struct
+        } else {
+            return compiler_fail(s, "unknown struct field type: " + first)
+        }
         duplicate := false
         scan := 0
         for scan < field_count {
@@ -287,14 +320,6 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
             scan = scan + 1
         }
         if duplicate { return compiler_subset_fail(s, "struct fields must have distinct names") }
-        s = compiler_next(s)
-        field_kind := compiler_type_kind(s.token)
-        field_struct := -1
-        if field_kind == 0 && compiler_is_struct_type(s.token) {
-            field_kind = 5
-            field_struct = compiler_find_struct(s, s.token)
-            if field_struct < 0 { return compiler_fail(s, "unknown struct field type: " + s.token) }
-        }
         if field_kind == 0 { return compiler_subset_fail(s, "struct field type is not supported") }
         if field_count >= 8 { return compiler_fail(s, "too many struct fields") }
         index := field_start + field_count
@@ -1222,7 +1247,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.value_slot = -1
         return s
     }
-    if compiler_is_struct_type(t) {
+    if compiler_is_declared_struct_type(s, t) {
         constructed_struct := compiler_find_struct(s, t)
         if constructed_struct < 0 { return compiler_fail(s, "unknown struct: " + t) }
         field_count := s.struct_field_counts[constructed_struct]
@@ -2223,7 +2248,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         else if s.token == "slice" { kind = 9 }
         else if s.token == "mutslice" { kind = 16 }
         else if s.token == "string" { kind = 17 }
-        else if compiler_is_struct_type(s.token) {
+        else if compiler_is_declared_struct_type(s, s.token) {
             kind = 5
             param_struct = compiler_find_struct(s, s.token)
             if param_struct < 0 { return compiler_fail(s, "unknown struct: " + s.token) }
@@ -2266,7 +2291,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     else if s.token == "ref" { s.return_kind = 3 }
     else if s.token == "mutref" { s.return_kind = 4 }
     else if s.token == "pair" { s.return_kind = 5 }
-    else if compiler_is_struct_type(s.token) {
+    else if compiler_is_declared_struct_type(s, s.token) {
         s.return_kind = 5
         return_struct = compiler_find_struct(s, s.token)
         if return_struct < 0 { return compiler_fail(s, "unknown struct: " + s.token) }
@@ -2381,6 +2406,90 @@ func compiler_register_generated_function(compiler_state initial, string name, i
     s
 }
 
+func compiler_parse_extern_decl(compiler_state initial) compiler_state {
+    s := initial
+    s = compiler_expect(s, "extern")
+    if !compiler_is_string_literal(s.token) { return compiler_fail(s, "extern declaration requires ABI string") }
+    s = compiler_next(s)
+    s = compiler_expect(s, "func")
+    name := s.token
+    if !compiler_ident(name) { return compiler_fail(s, "expected extern function name") }
+    if compiler_find_func(s, name) >= 0 { return compiler_fail(s, "ambiguous function declaration: " + name) }
+    if s.function_count >= len(s.function_names) { return compiler_fail(s, "too many functions") }
+    s = compiler_expect(compiler_next(s), "(")
+    param_count := 0
+    start := s.function_param_total
+    for s.token != ")" && s.token != "" {
+        if param_count > 0 { s = compiler_expect(s, ",") }
+        kind := 0
+        if s.token == "int" { kind = 1 }
+        else if s.token == "string" { kind = 17 }
+        else if s.token == "box" { kind = 2 }
+        else if s.token == "ref" { kind = 3 }
+        else if s.token == "mutref" { kind = 4 }
+        else if s.token == "pair" { kind = 5 }
+        else if s.token == "slice" { kind = 9 }
+        else if s.token == "mutslice" { kind = 16 }
+        else { return compiler_fail(s, "extern parameters require int, string, box, ref, mutref, pair or slice") }
+        s = compiler_next(s)
+        if kind == 1 && s.token == "[" {
+            s = compiler_expect(s, "[")
+            s = compiler_expect(s, "]")
+            kind = 7
+        }
+        if kind == 17 && s.token == "[" {
+            s = compiler_expect(s, "[")
+            s = compiler_expect(s, "]")
+            kind = 18
+        }
+        if kind == 9 && s.token == "[" {
+            s = compiler_expect(s, "[")
+            s = compiler_expect(s, "]")
+            kind = 15
+        }
+        if kind == 16 && s.token == "[" {
+            s = compiler_expect(s, "[")
+            s = compiler_expect(s, "]")
+        }
+        if !compiler_ident(s.token) { return compiler_fail(s, "expected extern parameter name") }
+        if s.function_param_total + param_count >= len(s.function_param_kinds) { return compiler_fail(s, "too many function parameters") }
+        s.function_param_kinds[start + param_count] = kind
+        s.function_param_structs[start + param_count] = -1
+        param_count = param_count + 1
+        s = compiler_next(s)
+    }
+    s = compiler_expect(s, ")")
+    return_kind := 0
+    if s.token == "int" { return_kind = 1; s = compiler_next(s) }
+    else if s.token == "string" {
+        return_kind = 17
+        s = compiler_next(s)
+        if s.token == "[" {
+            s = compiler_expect(s, "[")
+            s = compiler_expect(s, "]")
+            return_kind = 18
+        }
+    }
+    else if s.token == "box" { return_kind = 2; s = compiler_next(s) }
+    else if s.token == "ref" { return_kind = 3; s = compiler_next(s) }
+    else if s.token == "mutref" { return_kind = 4; s = compiler_next(s) }
+    else if s.token == "pair" { return_kind = 5; s = compiler_next(s) }
+    else if s.token == "slice" { return_kind = 9; s = compiler_next(s) }
+    else if s.token != ";" && s.token != "struct" && s.token != "func" && s.token != "impl" && s.token != "extern" {
+        return compiler_fail(s, "extern return type must be int, string, box, ref, mutref, pair or slice")
+    }
+    s.function_names[s.function_count] = name
+    s.function_declaration_refs[s.function_count] = "canonical-declaration-identity:function:" + compiler_scan_package_identity(s.source) + ":" + name
+    s.function_counts[s.function_count] = param_count
+    s.function_returns[s.function_count] = return_kind
+    s.function_return_structs[s.function_count] = -1
+    s.function_return_params[s.function_count] = -1
+    s.function_starts[s.function_count] = start
+    s.function_param_total = s.function_param_total + param_count
+    s.function_count = s.function_count + 1
+    return compiler_optional_semicolon(s)
+}
+
 func compiler_parse_generic_identity_helper(compiler_state initial, string name) compiler_state {
     s := initial
     s = compiler_expect(s, "[")
@@ -2415,7 +2524,7 @@ func compiler_parse_receiver_method(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "func")
     s = compiler_expect(s, "(")
-    if !compiler_is_struct_type(s.token) { return compiler_fail(s, "receiver type must be an owned struct") }
+    if !compiler_is_declared_struct_type(s, s.token) { return compiler_fail(s, "receiver type must be an owned struct") }
     type_name := s.token
     struct_id := compiler_find_struct(s, type_name)
     if struct_id < 0 { return compiler_fail(s, "receiver type is not declared: " + type_name) }
@@ -2497,7 +2606,7 @@ func compiler_parse_drop_method(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "func")
     s = compiler_expect(s, "(")
-    if !compiler_is_struct_type(s.token) { return compiler_fail(s, "drop receiver type must be an owned struct") }
+    if !compiler_is_declared_struct_type(s, s.token) { return compiler_fail(s, "drop receiver type must be an owned struct") }
     type_name := s.token
     struct_id := compiler_find_struct(s, type_name)
     if struct_id < 0 { return compiler_fail(s, "drop receiver type is not declared: " + type_name) }
@@ -2523,7 +2632,7 @@ func compiler_parse_drop_impl(compiler_state initial) compiler_state {
     if s.token != "Drop" { return compiler_fail(s, "only Drop impl blocks are supported in no-GC compiler subset") }
     s = compiler_next(s)
     s = compiler_expect(s, "for")
-    if !compiler_is_struct_type(s.token) { return compiler_fail(s, "Drop impl type must be an owned struct") }
+    if !compiler_is_declared_struct_type(s, s.token) { return compiler_fail(s, "Drop impl type must be an owned struct") }
     type_name := s.token
     struct_id := compiler_find_struct(s, type_name)
     if struct_id < 0 { return compiler_fail(s, "Drop impl type is not declared: " + type_name) }
@@ -2682,6 +2791,10 @@ func compiler_compile(string source) compiler_state {
     while s.token == "use" || s.token == "import" {
         if s.token == "use" { return compiler_subset_fail(s, "use declarations") }
         s = compiler_skip_import_decl(s)
+        if s.error != "" { return s }
+    }
+    while s.token == "extern" {
+        s = compiler_parse_extern_decl(s)
         if s.error != "" { return s }
     }
     while s.token == "struct" {
