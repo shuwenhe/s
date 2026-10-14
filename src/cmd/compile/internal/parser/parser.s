@@ -1326,19 +1326,20 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
 
 func (parser* self) parse_pattern() (pattern, parse_error) {
         if self.eat_ident_value("_") {
-            return pattern::wildcard(wildcard_pattern {}))
+            return pattern::wildcard(wildcard_pattern {})
         }
         token, err := self.peek()
         if err.message != "" {
             token empty
             return empty, err
         }
+        if token.kind == token_kind::int {
             self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::int(int_expr {
                     value: token.value, inferred_type option::none,
                 }),
-            }))
+            })
         }
         if token.kind == token_kind::string {
             self.advance()
@@ -1346,7 +1347,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
                 value: expr::string(string_expr {
                     value: token.value, inferred_type option::none,
                 }),
-            }))
+            })
         }
         if self.at_keyword("true") {
             self.advance()
@@ -1354,7 +1355,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
                 value: expr::bool(bool_expr {
                     value: true, inferred_type option::none,
                 }),
-            }))
+            })
         }
         if self.at_keyword("false") {
             self.advance()
@@ -1362,13 +1363,14 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
                 value: expr::bool(bool_expr {
                     value: false, inferred_type option::none,
                 }),
-            }))
+            })
         }
         path, err := self.parse_path()
         if err.message != "" {
             string empty
             return empty, err
         }
+        if self.eat_symbol("(") {
             pattern[] args = pattern[]()
             if !self.at_symbol(")") {
                 for true {
@@ -1382,12 +1384,12 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             if err.message != "" { expr empty; return empty, err }
             return pattern::variant(variant_pattern {
                 path: path, args args,
-            }))
+            })
         }
         if path_contains_dot(path) || starts_with_upper(path) {
             return pattern::variant(variant_pattern {
                 path: path, args pattern[](),
-            }))
+            })
         }
         pattern::name(name_pattern { name: path })
 }
