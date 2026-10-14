@@ -3,6 +3,7 @@ import (
     "std"
     "std.prelude"
 )
+
 enum token_kind {
     ident,
     int,
