@@ -2261,6 +2261,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     s.return_kind = 0
     return_struct := -1
     if s.token == "int" { s.return_kind = 1; s = compiler_next(s) }
+    else if s.token == "string" { s.return_kind = 17; s = compiler_next(s) }
     else if s.token == "box" { s.return_kind = 2; s = compiler_next(s) }
     else if s.token == "ref" { s.return_kind = 3 }
     else if s.token == "mutref" { s.return_kind = 4 }
@@ -2271,7 +2272,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         if return_struct < 0 { return compiler_fail(s, "unknown struct: " + s.token) }
     }
     else if s.token == "slice" { s.return_kind = 9 }
-    else if s.token != "{" { return compiler_fail(s, "function return type must be int, box, ref, mutref, pair or struct") }
+    else if s.token != "{" { return compiler_fail(s, "function return type must be int, string, box, ref, mutref, pair or struct") }
     if s.return_kind == 3 || s.return_kind == 4 || s.return_kind == 5 || s.return_kind == 9 { s = compiler_next(s) }
     s.parameter_count = param_count
     s.return_param = -1
