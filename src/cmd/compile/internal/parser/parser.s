@@ -19,12 +19,14 @@ struct parser {
 }
 
 func parse_source(string source) (source_file, parse_error) {
-    switch new_lexer(source).tokenize() {
-        tokens : parse_tokens(tokens),
-        err : parse_error {
+    token_result := new_lexer(source).tokenize()
+    if token_result.is_err() {
+        err := token_result.unwrap_err()
+        return parse_error {
             message: err.message, line err.line, column err.column,
-        },
+        }
     }
+    parse_tokens(token_result.unwrap())
 }
 
 func parse_tokens(token[] tokens) (source_file, parse_error) {
