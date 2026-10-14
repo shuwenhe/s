@@ -1199,23 +1199,38 @@ func (parser* self) parse_switch_expr() (expr, parse_error) {
 }
 
 func (parser* self) parse_if_expr() (expr, parse_error) {
-        self.expect_keyword("if")
-        condition, err := self.parse_expr()
-        if err.message != "" {
-            expr empty
-            return empty, err
-        }
-                if self.at_keyword("if") {
-                    option::some(box(self.parse_if_expr()))
-                } else {
-                    option::some(box(expr::block(self.parse_block_expr())))
-                }
-            } else {
-                option::none
+    self.expect_keyword("if")
+    condition, err := self.parse_expr()
+    if err.message != "" {
+        expr empty
+        return empty, err
+    }
+    then_branch, err := self.parse_block_expr()
+    if err.message != "" {
+        expr empty
+        return empty, err
+    }
+    else_branch := option::none
+    if self.eat_keyword("else") {
+        if self.at_keyword("if") {
+            nested, err := self.parse_if_expr()
+            if err.message != "" {
+                expr empty
+                return empty, err
             }
-        expr::if(if_expr {
-            condition: box(condition), then_branch then_branch, else_branch else_branch, inferred_type option::none,
-        })
+            else_branch = option::some(box(nested))
+        } else {
+            else_block, err := self.parse_block_expr()
+            if err.message != "" {
+                expr empty
+                return empty, err
+            }
+            else_branch = option::some(box(expr::block(else_block)))
+        }
+    }
+    return expr::if(if_expr {
+        condition: box(condition), then_branch then_branch, else_branch else_branch, inferred_type option::none,
+    })
 }
 
 func (parser* self) parse_for_expr() (expr, parse_error) {
