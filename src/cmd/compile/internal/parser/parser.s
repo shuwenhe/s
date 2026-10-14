@@ -154,7 +154,7 @@ func (parser* self) parse_import_block() (use_decl[], parse_error) {
             return result, err
         }
         result = append(result, use_decl {
-            path: path, alias option::none,
+            path: path, alias option::none
         })
         if self.at_symbol(",") {
             self.advance()
@@ -725,7 +725,7 @@ func (parser* self) parse_block_expr() (block_expr, parse_error) {
         return empty, err
     }
     block_expr {
-        statements: statements, final_expr final_expr, inferred_type option::none,
+        statements: statements, final_expr final_expr, inferred_type option::none
     }
 }
 
@@ -1194,7 +1194,7 @@ func (parser* self) parse_switch_expr() (expr, parse_error) {
             self.eat_symbol(",")
         }
         expr::switch(switch_expr {
-            subject: box(subject), arms arms, inferred_type option::none,
+            subject: box(subject), arms arms, inferred_type option::none
         })
 }
 
@@ -1229,7 +1229,7 @@ func (parser* self) parse_if_expr() (expr, parse_error) {
         }
     }
     return expr::if(if_expr {
-        condition: box(condition), then_branch then_branch, else_branch else_branch, inferred_type option::none,
+        condition: box(condition), then_branch then_branch, else_branch else_branch, inferred_type option::none
     })
 }
 
@@ -1242,7 +1242,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
             return empty, err
         }
         return expr::for(for_expr {
-            init: option::none, condition option::none, post option::none, names string[](), iterable option::none, body body, inferred_type option::none,
+            init: option::none, condition option::none, post option::none, names string[](), iterable option::none, body body, inferred_type option::none
         })
     }
     if self.at_symbol("(") {
@@ -1271,7 +1271,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
             return empty, err
         }
         return expr::for(for_expr {
-            init: option::some(box(init)), condition option::some(box(condition)), post option::some(box(post)), names string[](), iterable option::none, body body, inferred_type option::none,
+            init: option::some(box(init)), condition option::some(box(condition)), post option::some(box(post)), names string[](), iterable option::none, body body, inferred_type option::none
         })
     }
     token, err := self.peek()
@@ -1306,7 +1306,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
             return empty, err
         }
         return expr::for(for_expr {
-            init: option::none, condition option::none, post option::none, names string[] { name }, iterable option::some(box(iterable)), body body, inferred_type option::none,
+            init: option::none, condition option::none, post option::none, names string[] { name }, iterable option::some(box(iterable)), body body, inferred_type option::none
         })
     }
     condition, err := self.parse_expr()
@@ -1320,7 +1320,7 @@ func (parser* self) parse_for_expr() (expr, parse_error) {
         return empty, err
     }
     return expr::for(for_expr {
-        init: option::none, condition option::some(box(condition)), post option::none, names string[](), iterable option::none, body body, inferred_type option::none,
+        init: option::none, condition option::some(box(condition)), post option::none, names string[](), iterable option::none, body body, inferred_type option::none
     })
 }
 
@@ -1337,7 +1337,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::int(int_expr {
-                    value: token.value, inferred_type option::none,
+                    value: token.value, inferred_type option::none
                 }),
             })
         }
@@ -1345,7 +1345,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::string(string_expr {
-                    value: token.value, inferred_type option::none,
+                    value: token.value, inferred_type option::none
                 }),
             })
         }
@@ -1353,7 +1353,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::bool(bool_expr {
-                    value: true, inferred_type option::none,
+                    value: true, inferred_type option::none
                 }),
             })
         }
@@ -1361,7 +1361,7 @@ func (parser* self) parse_pattern() (pattern, parse_error) {
             self.advance()
             return pattern::literal(literal_pattern {
                 value: expr::bool(bool_expr {
-                    value: false, inferred_type option::none,
+                    value: false, inferred_type option::none
                 }),
             })
         }
@@ -1406,18 +1406,16 @@ func (parser* self) parse_binary_expr(int min_precedence) (expr, parse_error) {
                 token empty
                 return empty, err
             }
-                break
-            }
             op, err := self.advance()
             if err.message != "" {
                 string empty
                 return empty, err
             }
             expr = expr::binary(binary_expr {
-                left: box(expr), op op, right box(rhs), inferred_type option::none,
+                left: box(expr), op op, right box(rhs), inferred_type option::none
             })
         }
-        expr
+        expr, parse_error{ message: "", line: 0, column: 0 }
 }
 
 func (parser* self) parse_unary_expr() (expr, parse_error) {
@@ -1429,7 +1427,7 @@ func (parser* self) parse_unary_expr() (expr, parse_error) {
             return empty, err
         }
         return expr::borrow(borrow_expr {
-            target: box(target), mutable mutable, inferred_type option::none,
+            target: box(target), mutable mutable, inferred_type option::none
         }), parse_error { message: "" }
     }
     self.parse_call_expr()
@@ -1455,20 +1453,20 @@ func (parser* self) parse_call_expr() (expr, parse_error) {
                 _, err := self.expect_symbol(")")
             if err.message != "" { expr empty; return empty, err }
                 expr = expr::call(call_expr {
-                    callee: box(expr), args args, inferred_type option::none, resolved_callee option::none, type_args string[](),
+                    callee: box(expr), args args, inferred_type option::none, resolved_callee option::none, type_args string[]()
                 })
                 continue
             }
             if self.eat_symbol(".") {
                 expr = expr::member(member_expr {
-                    target: box(expr), member self.expect_ident(), inferred_type option::none,
+                    target: box(expr), member self.expect_ident(), inferred_type option::none
                 })
                 continue
             }
             if self.eat_symbol(":") {
                 self.expect_symbol(":")
                 expr = expr::member(member_expr {
-                    target: box(expr), member self.expect_ident(), inferred_type option::none,
+                    target: box(expr), member self.expect_ident(), inferred_type option::none
                 })
                 continue
             }
@@ -1480,7 +1478,7 @@ func (parser* self) parse_call_expr() (expr, parse_error) {
                 }
                 self.expect_symbol("]")
                 expr = expr::index(index_expr {
-                    target: box(expr), index box(index), inferred_type option::none,
+                    target: box(expr), index box(index), inferred_type option::none
                 })
                 continue
             }
@@ -1497,32 +1495,32 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
         }
             self.advance()
             return expr::int(int_expr {
-                value: token.value, inferred_type option::none,
-            }))
+                value: token.value, inferred_type option::none
+            })
         }
         if token.kind == token_kind::string {
             self.advance()
             return expr::string(string_expr {
-                value: token.value, inferred_type option::none,
-            }))
+                value: token.value, inferred_type option::none
+            })
         }
         if self.at_keyword("true") {
             self.advance()
             return expr::bool(bool_expr {
-                value: true, inferred_type option::none,
-            }))
+                value: true, inferred_type option::none
+            })
         }
         if self.at_keyword("false") {
             self.advance()
             return expr::bool(bool_expr {
-                value: false, inferred_type option::none,
-            }))
+                value: false, inferred_type option::none
+            })
         }
         if self.at_keyword("nil") {
             self.advance()
             return expr::name(name_expr {
-                name: "nil", inferred_type option::none,
-            }))
+                name: "nil", inferred_type option::none
+            })
         }
         if self.at_symbol("{") {
             return expr::block(self.parse_block_expr()))
@@ -1561,7 +1559,7 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
                 }
             }
             self.expect_symbol("}")
-            return expr::array(array_literal { type_text: option::some(type_text.trim()), items items }))
+            return expr::array(array_literal { type_text: option::some(type_text.trim()), items items })
         }
         if token.kind == token_kind::ident && token.value == "map" {
             self.advance()
@@ -1602,10 +1600,10 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
                 }
             }
             self.expect_symbol("}")
-            return expr::map(map_literal { type_text: option::some(type_text.trim()), entries entries }))
+            return expr::map(map_literal { type_text: option::some(type_text.trim()), entries entries })
         }
         expr::name(name_expr {
-            name: self.expect_ident(), inferred_type option::none,
+            name: self.expect_ident(), inferred_type option::none
         })
     }
 
@@ -1961,7 +1959,7 @@ func (parser* self) find_top_level_symbol_offset(string value) int {
 func build_call_expr(string callee_name, expr[] args) expr {
     expr::call(call_expr {
         callee: box(expr::name(name_expr {
-            name: callee_name, inferred_type option::none,
+            name: callee_name, inferred_type option::none
         })), args args, inferred_type option::none, resolved_callee option::none, type_args string[](),
     })
 }
