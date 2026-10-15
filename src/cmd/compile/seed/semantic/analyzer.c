@@ -1,4 +1,5 @@
 #include "scope.h"
+#include "../intermediate/array_type.h"
 #include <ctype.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -1035,6 +1036,26 @@ static int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char 
 			return 0;
 	}
 }
+static int resolve_array_element_type(semantic_ctx *ctx, ast_node *node, char *out, size_t cap) {
+	char name[1024];
+	size_t n;
+	if (!node) return 0;
+	if (node->kind == AST_INDEX_EXPR && !node->as.index_expr.index) {
+		if (!resolve_array_element_type(ctx, node->as.index_expr.object, out, cap)) return 0;
+		n = strlen(out);
+		if (n + 3 > cap) return 0;
+		memcpy(out + n, "[]", 3);
+		return 1;
+	}
+	if (!construct_qualified_name(node, name, sizeof(name))) return 0;
+	if (strcmp(name, TYPE_INT) != 0 && strcmp(name, TYPE_FLOAT) != 0 &&
+		strcmp(name, TYPE_BOOL) != 0 && strcmp(name, TYPE_STRING) != 0 &&
+		!find_struct_literal(ctx, name)) return 0;
+	n = strlen(name);
+	if (n + 1 > cap) return 0;
+	memcpy(out, name, n + 1);
+	return 1;
+}
 static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type) {
 	size_t i;
 	int status;
@@ -1200,9 +1221,16 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				*out_type = TYPE_STRING;
 				return 1;
 			}
-			if (lhs_type && strncmp(lhs_type, "[]", 2) == 0) {
-				*out_type = dup_cstr(lhs_type + 2);
-				return 1;
+			{
+				char element[1024];
+				if (seed_array_element(lhs_type, element, sizeof(element))) {
+					*out_type = dup_cstr(element);
+					if (!*out_type) {
+						error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+						return 0;
+					}
+					return 1;
+				}
 			}
 			*out_type = TYPE_ANY;
 			return 1;
@@ -1363,7 +1391,15 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 						"index assignment expects integer index, got '%s'", index_type ? index_type : TYPE_ANY);
 					return 0;
 				}
-				(void)object_type;
+				{
+					char element[1024];
+					if (seed_array_element(object_type, element, sizeof(element)) &&
+						!is_type_assignable(element, rhs_type)) {
+						error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+							"array element type mismatch: expected '%s', got '%s'", element, rhs_type);
+						return 0;
+					}
+				}
 				*out_type = rhs_type;
 				return 1;
 			}
@@ -1422,6 +1458,33 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"call callee is missing");
 				return 0;
+			}
+			if (node->as.call_expr.callee->kind == AST_INDEX_EXPR &&
+				!node->as.call_expr.callee->as.index_expr.index) {
+				char element[1024];
+				size_t len;
+				if (!resolve_array_element_type(ctx, node->as.call_expr.callee->as.index_expr.object,
+					element, sizeof(element))) {
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"unknown array element type in dynamic array constructor");
+					return 0;
+				}
+				if (node->as.call_expr.args.len != 0) {
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"dynamic array constructor expects 0 arguments");
+					return 0;
+				}
+				len = strlen(element);
+				free(node->as.call_expr.resolved_array_type);
+				node->as.call_expr.resolved_array_type = malloc(len + 3);
+				if (!node->as.call_expr.resolved_array_type) {
+					error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+					return 0;
+				}
+				memcpy(node->as.call_expr.resolved_array_type, element, len);
+				memcpy(node->as.call_expr.resolved_array_type + len, "[]", 3);
+				*out_type = node->as.call_expr.resolved_array_type;
+				return 1;
 			}
 			if (node->as.call_expr.callee->kind == AST_INDEX_EXPR &&
 				node->as.call_expr.callee->as.index_expr.object &&
@@ -1557,7 +1620,9 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 						free(err_type);
 					}
 				}
-				if ((lhs_type && strncmp(lhs_type, "vec[", 4) == 0) ||
+				char array_element[1024];
+				int typed_array = seed_array_element(lhs_type, array_element, sizeof(array_element));
+				if (typed_array || (lhs_type && strncmp(lhs_type, "vec[", 4) == 0) ||
 					(lhs_type && strcmp(lhs_type, TYPE_ARRAY) == 0) ||
 					(lhs_type && strncmp(lhs_type, "[]", 2) == 0)) {
 					const char *method = member->as.member_expr.member;
@@ -1582,6 +1647,13 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					}
 					for (i = 0; i < node->as.call_expr.args.len; i++) {
 						if (!analyze_expr(ctx, node->as.call_expr.args.data[i], &rhs_type)) return 0;
+						if (typed_array && ((strcmp(method, "push") == 0 && i == 0) ||
+							(strcmp(method, "set") == 0 && i == 1)) &&
+							!is_type_assignable(array_element, rhs_type)) {
+							error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+								"array element type mismatch: expected '%s', got '%s'", array_element, rhs_type);
+							return 0;
+						}
 					}
 					free(member->as.member_expr.resolved_method);
 					member->as.member_expr.resolved_method = dup_cstr(builtin);

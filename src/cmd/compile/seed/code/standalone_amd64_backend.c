@@ -11,6 +11,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include "target.h"
+#include "../intermediate/array_type.h"
 #define STANDALONE_MAX_INS 32768
 #define STANDALONE_MAX_FUNCS 256
 #define STANDALONE_MAX_SLOTS 2048
@@ -304,6 +305,14 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 			if (!collect_operand(current, ins->operand1, err)) return false;
 			continue;
 		}
+		if (strcmp(ins->op, "ARRAY_NEW") == 0) {
+			if (!seed_array_new_valid(ins->operand1, ins->operand2)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "invalid ARRAY_NEW type or length");
+				return false;
+			}
+			if (!collect_operand(current, ins->result, err)) return false;
+			continue;
+		}
 		if (strcmp(ins->op, "CALL") == 0) {
 			if (!collect_operand(current, ins->result, err)) return false;
 			continue;
@@ -519,6 +528,10 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			}
 			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
 			pending_count = first_arg;
+		} else if (strcmp(ins->op, "ARRAY_NEW") == 0) {
+			/* Tagged zero length. The runtime uses its existing array layout. */
+			fprintf(out, "    mov $1, %%rdi\n    call s_array_new\n");
+			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "MOV") == 0) {
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
 				!emit_store(out, fn, ins->result, "%rax", err)) return false;
