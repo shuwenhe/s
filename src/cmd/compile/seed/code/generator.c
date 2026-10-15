@@ -107,6 +107,9 @@ void generate_code(IR *ir, FILE *output) {
             case IR_BOR:
                 emit_record(output, "BOR", instr->result, instr->operand1, instr->operand2);
                 break;
+            case IR_BXOR:
+                emit_record(output, "BXOR", instr->result, instr->operand1, instr->operand2);
+                break;
             case IR_CMP_EQ:
                 emit_record(output, "CMP_EQ", instr->result, instr->operand1, instr->operand2);
                 break;

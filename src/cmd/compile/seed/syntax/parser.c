@@ -1053,6 +1053,10 @@ static int is_bitwise_and(token_type t) {
 static int is_bitwise_or(token_type t) {
 	return t == TOKEN_PIPE;
 }
+static int is_bitwise_xor(token_type t) {
+	return t == TOKEN_XOR;
+}
+static ast_node *parse_bitwise_xor(parser *p);
 static int is_logic_and(token_type t) {
 	return t == TOKEN_AND_AND;
 }
@@ -1060,7 +1064,10 @@ static ast_node *parse_bitwise_and(parser *p) {
 	return parse_binary_expr(p, parse_equality, is_bitwise_and, 0);
 }
 static ast_node *parse_bitwise_or(parser *p) {
-	return parse_binary_expr(p, parse_bitwise_and, is_bitwise_or, 0);
+	return parse_binary_expr(p, parse_bitwise_xor, is_bitwise_or, 0);
+}
+static ast_node *parse_bitwise_xor(parser *p) {
+	return parse_binary_expr(p, parse_bitwise_and, is_bitwise_xor, 0);
 }
 static int is_logic_or(token_type t) {
 	return t == TOKEN_OR_OR;
