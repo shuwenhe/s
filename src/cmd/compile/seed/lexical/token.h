@@ -33,6 +33,7 @@ typedef enum token_type {
 	TOKEN_NE,
 	TOKEN_AMP,
 	TOKEN_PIPE,
+	TOKEN_XOR,
 	TOKEN_SHL,
 	TOKEN_SHR,
 	TOKEN_AND_AND,

@@ -85,6 +85,37 @@ static bool test_illegal_char_error(void) {
 	}
 	return err.code == ERR_ILLEGAL_CHAR;
 }
+static bool test_xor_token_and_ir(void) {
+	const char *src = "fn main() int { return 5 ^ 3; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result parsed;
+	IR ir;
+	bool ok = lexer_scan(src, &tokens, &err);
+	if (!ok) return false;
+	ok = false;
+	for (size_t i = 0; i < tokens.len; i++) {
+		if (tokens.data[i].lexeme && strcmp(tokens.data[i].lexeme, "^") == 0) {
+			ok = tokens.data[i].type == TOKEN_XOR;
+			break;
+		}
+	}
+	if (!ok) { token_vec_free(&tokens); return false; }
+	parsed = parser_parse_tokens(&tokens, &err);
+	if (!parsed.root) { token_vec_free(&tokens); return false; }
+	ir_init(&ir);
+	ok = ir_generate_from_ast(parsed.root, &ir, &err);
+	if (ok) {
+		ok = false;
+		for (int i = 0; i < ir.instruction_count; i++) {
+			if (ir.instructions[i].type == IR_BXOR) { ok = true; break; }
+		}
+	}
+	ir_free(&ir);
+	parser_parse_result_free(&parsed);
+	token_vec_free(&tokens);
+	return ok;
+}
 static bool test_unterminated_string_error(void) {
 	const char *src = "s := \"abc";
 	token_vec tokens;
@@ -1971,6 +2002,7 @@ int main(void) {
 	RUN_TEST(test_inferred_mutable_bindings);
 	RUN_TEST(test_function_header);
 	RUN_TEST(test_illegal_char_error);
+	RUN_TEST(test_xor_token_and_ir);
 	RUN_TEST(test_unterminated_string_error);
 	RUN_TEST(test_line_comment_lexing);
 	RUN_TEST(test_mutable_inferred_binding);
