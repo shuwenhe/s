@@ -55,6 +55,7 @@ static runtime_profile_counter g_runtime_profile_host[256];
 static size_t g_runtime_profile_host_len = 0;
 static runtime_profile_counter g_runtime_profile_op[256];
 static size_t g_runtime_profile_op_len = 0;
+static unsigned long g_runtime_alias_serial = 0;
 typedef struct runtime_values runtime_values;
 typedef enum runtime_value_kind {
 	RUNTIME_INT = 0,
@@ -2718,7 +2719,7 @@ static int name_has_dotted_prefix(const char *name, const char *prefix) {
 	return prefix_len > 0 && strncmp(name, prefix, prefix_len) == 0 && name[prefix_len] == '.';
 }
 static int values_have_prefixed(const runtime_values *vals, const char *prefix);
-static int values_copy_array_aliases(const runtime_values *src, const runtime_data_value *value,
+static int values_copy_array_aliases(const runtime_values *src, runtime_data_value *value,
 	runtime_values *dst, int depth);
 static int values_copy_prefixed_depth(const runtime_values *src, const char *old_prefix, runtime_values *dst, const char *new_prefix, int depth) {
 	size_t i;
@@ -2754,6 +2755,10 @@ static int values_copy_prefixed_depth(const runtime_values *src, const char *old
 			value_clear(&field_value);
 			return 0;
 		}
+		if (field_value.kind == RUNTIME_ARRAY && !values_set(dst, mapped_name, &field_value)) {
+			value_clear(&field_value);
+			return 0;
+		}
 		value_clear(&field_value);
 		if (src->data[i].value.record_alias && src->data[i].value.kind == RUNTIME_STRING &&
 		    src->data[i].value.str_value &&
@@ -2768,16 +2773,28 @@ static int values_copy_prefixed_depth(const runtime_values *src, const char *old
 static int values_copy_prefixed(const runtime_values *src, const char *old_prefix, runtime_values *dst, const char *new_prefix) {
 	return values_copy_prefixed_depth(src, old_prefix, dst, new_prefix, 0);
 }
-static int values_copy_array_aliases(const runtime_values *src, const runtime_data_value *value,
+static int values_copy_array_aliases(const runtime_values *src, runtime_data_value *value,
 	runtime_values *dst, int depth) {
 	size_t i;
+	char new_name[256];
+	runtime_data_value remapped;
 	if (!src || !value || !dst || depth > 16) {
 		return 0;
 	}
 	if (value->record_alias && value->kind == RUNTIME_STRING && value->str_value &&
 		value->str_value[0] != '\0' && values_have_prefixed(src, value->str_value) &&
-		!values_copy_prefixed(src, value->str_value, dst, value->str_value)) {
-		return 0;
+		value->str_value[0] != '\0') {
+		if (snprintf(new_name, sizeof(new_name), "%s#%lu", value->str_value, ++g_runtime_alias_serial) >= (int)sizeof(new_name) ||
+			!values_copy_prefixed(src, value->str_value, dst, new_name)) {
+			return 0;
+		}
+		remapped = value_make_record_alias(new_name);
+		if (!remapped.str_value) {
+			return 0;
+		}
+		value_clear(value);
+		*value = remapped;
+		return 1;
 	}
 	if (value->kind != RUNTIME_ARRAY) {
 		return 1;
@@ -3693,11 +3710,17 @@ static int execute_function(
 			values_free(&vals);
 			return 0;
 		}
-		if (caller_vals && args[i].kind == RUNTIME_ARRAY &&
-			!values_copy_array_aliases(caller_vals, &args[i], &vals, 0)) {
-			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
-			values_free(&vals);
-			return 0;
+		if (caller_vals && args[i].kind == RUNTIME_ARRAY) {
+			runtime_data_value remapped_arg;
+			if (!value_copy(&remapped_arg, &args[i]) ||
+				!values_copy_array_aliases(caller_vals, &remapped_arg, &vals, 0) ||
+				!values_set(&vals, fn->params[i], &remapped_arg)) {
+				value_clear(&remapped_arg);
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				values_free(&vals);
+				return 0;
+			}
+			value_clear(&remapped_arg);
 		}
 	}
 	while (pc < fn->end_pc) {
