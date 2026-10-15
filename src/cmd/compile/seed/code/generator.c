@@ -89,6 +89,9 @@ void generate_code(IR *ir, FILE *output) {
             case IR_MOV:
                 emit_record(output, "MOV", instr->result, instr->operand1, "");
                 break;
+            case IR_ARRAY_NEW:
+                emit_record(output, "ARRAY_NEW", instr->result, instr->operand1, instr->operand2);
+                break;
             case IR_ADD:
                 emit_record(output, "ADD", instr->result, instr->operand1, instr->operand2);
                 break;
