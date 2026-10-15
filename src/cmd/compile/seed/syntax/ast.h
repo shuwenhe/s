@@ -173,6 +173,7 @@ struct ast_node {
 		struct {
 			ast_node *callee;
 			ast_vec args;
+			char *resolved_array_type;
 		} call_expr;
 	} as;
 };
