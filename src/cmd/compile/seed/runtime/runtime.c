@@ -4245,6 +4245,18 @@ static int execute_function(
 					pc++;
 					continue;
 				}
+				if (callee_return_fields.len > 0 && callee_ret.kind == RUNTIME_ARRAY &&
+					!values_copy_array_aliases(&callee_return_fields, &callee_ret, &vals, 0)) {
+					for (j = call_base; j < pending_len; j++) {
+						value_clear(&pending_args[j]);
+					}
+					pending_len = call_base;
+					values_free(&callee_return_fields);
+					value_clear(&callee_ret);
+					values_free(&vals);
+					error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+					return 0;
+				}
 				values_free(&callee_return_fields);
 			}
 			for (j = call_base; j < pending_len; j++) {
@@ -4275,6 +4287,12 @@ static int execute_function(
 					values_free(&vals);
 					return 0;
 				}
+			}
+			if (out_return_fields && out_return->kind == RUNTIME_ARRAY &&
+				!values_copy_array_aliases(&vals, out_return, out_return_fields, 0)) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				values_free(&vals);
+				return 0;
 			}
 			values_free(&vals);
 			return 1;
