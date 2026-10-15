@@ -2718,6 +2718,8 @@ static int name_has_dotted_prefix(const char *name, const char *prefix) {
 	return prefix_len > 0 && strncmp(name, prefix, prefix_len) == 0 && name[prefix_len] == '.';
 }
 static int values_have_prefixed(const runtime_values *vals, const char *prefix);
+static int values_copy_array_aliases(const runtime_values *src, const runtime_data_value *value,
+	runtime_values *dst, int depth);
 static int values_copy_prefixed_depth(const runtime_values *src, const char *old_prefix, runtime_values *dst, const char *new_prefix, int depth) {
 	size_t i;
 	size_t source_len;
@@ -2747,6 +2749,11 @@ static int values_copy_prefixed_depth(const runtime_values *src, const char *old
 			value_clear(&field_value);
 			return 0;
 		}
+		if (field_value.kind == RUNTIME_ARRAY &&
+			!values_copy_array_aliases(src, &field_value, dst, depth + 1)) {
+			value_clear(&field_value);
+			return 0;
+		}
 		value_clear(&field_value);
 		if (src->data[i].value.record_alias && src->data[i].value.kind == RUNTIME_STRING &&
 		    src->data[i].value.str_value &&
@@ -2760,6 +2767,27 @@ static int values_copy_prefixed_depth(const runtime_values *src, const char *old
 }
 static int values_copy_prefixed(const runtime_values *src, const char *old_prefix, runtime_values *dst, const char *new_prefix) {
 	return values_copy_prefixed_depth(src, old_prefix, dst, new_prefix, 0);
+}
+static int values_copy_array_aliases(const runtime_values *src, const runtime_data_value *value,
+	runtime_values *dst, int depth) {
+	size_t i;
+	if (!src || !value || !dst || depth > 16) {
+		return 0;
+	}
+	if (value->record_alias && value->kind == RUNTIME_STRING && value->str_value &&
+		value->str_value[0] != '\0' && values_have_prefixed(src, value->str_value) &&
+		!values_copy_prefixed(src, value->str_value, dst, value->str_value)) {
+		return 0;
+	}
+	if (value->kind != RUNTIME_ARRAY) {
+		return 1;
+	}
+	for (i = 0; i < value->array_len; i++) {
+		if (!values_copy_array_aliases(src, &value->array_items[i], dst, depth + 1)) {
+			return 0;
+		}
+	}
+	return 1;
 }
 static int values_have_prefixed(const runtime_values *vals, const char *prefix) {
 	size_t i;
@@ -3661,6 +3689,12 @@ static int execute_function(
 			continue;
 		}
 		if (!values_set(&vals, fn->params[i], &args[i])) {
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+			values_free(&vals);
+			return 0;
+		}
+		if (caller_vals && args[i].kind == RUNTIME_ARRAY &&
+			!values_copy_array_aliases(caller_vals, &args[i], &vals, 0)) {
 			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 			values_free(&vals);
 			return 0;
