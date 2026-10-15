@@ -304,6 +304,7 @@ void ast_free(ast_node *node) {
 			break;
 		case AST_CALL_EXPR:
 			ast_free(node->as.call_expr.callee);
+			free(node->as.call_expr.resolved_array_type);
 			for (i = 0; i < node->as.call_expr.args.len; i++) {
 				ast_free(node->as.call_expr.args.data[i]);
 			}

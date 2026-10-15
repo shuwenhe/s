@@ -36,6 +36,7 @@
 #include "../semantic/scope.h"
 #include "../syntax/ast.h"
 #include "memory.h"
+#include "../intermediate/array_type.h"
 #include "sroutine_abi.h"
 static int g_host_argc = 0;
 static char **g_host_argv = NULL;
@@ -3783,6 +3784,21 @@ static int execute_function(
 				pc++;
 			}
 			value_clear(&a);
+			continue;
+		}
+		if (strcmp(ins->op, "ARRAY_NEW") == 0) {
+			if (!seed_array_new_valid(ins->op1, ins->op2)) {
+				error_set(err, ERR_SEMANTIC, 0, 0, "invalid ARRAY_NEW type or length");
+				values_free(&vals);
+				return 0;
+			}
+			a = value_make_array_owned(NULL, 0);
+			if (!values_set(&vals, ins->result, &a)) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				values_free(&vals);
+				return 0;
+			}
+			pc++;
 			continue;
 		}
 		if (strcmp(ins->op, "MOV") == 0) {
