@@ -9,13 +9,20 @@ output=${2:?usage: source_closure.sh ENTRY OUTPUT}
 
 root=${S_SOURCE_ROOT:-$(pwd)}
 
+mode=${S_CLOSURE_MODE:-production}
+case "$mode" in
+    production|test) ;;
+    *) echo "source_closure: invalid S_CLOSURE_MODE: $mode" >&2; exit 2 ;;
+esac
+
 resolver="$root/misc/tools/s_resolver"
 
 tmp="${output}.tmp.$$"
 
 pkg_index="$tmp.pkg"
+all_pkg_index="$tmp.all.pkg"
 
-trap 'rm -f "$tmp" "$pkg_index" "$tmp.queue" "$tmp.seen"' EXIT HUP INT TERM
+trap 'rm -f "$tmp" "$pkg_index" "$all_pkg_index" "$tmp.queue" "$tmp.seen"' EXIT HUP INT TERM
 
 find "$root/src" -name '*.s' -type f | while IFS= read -r source_file; do
 
@@ -27,7 +34,18 @@ find "$root/src" -name '*.s' -type f | while IFS= read -r source_file; do
 
     fi
 
-done >"$pkg_index"
+done >"$all_pkg_index"
+
+if [ "$mode" = production ]; then
+    awk -F '\t' '$2 !~ /[^/]+_test\.s$/ && $2 !~ /\/testdata\// { print }' "$all_pkg_index" >"$pkg_index"
+else
+    cp "$all_pkg_index" "$pkg_index"
+fi
+
+fail_test_dependency() {
+    echo "source_closure: production closure depends on test-only package: $1" >&2
+    exit 1
+}
 
 
 
@@ -73,6 +91,11 @@ resolve_module_fallback() {
 
         return 0
 
+    fi
+
+    if [ "$mode" = production ] &&
+       awk -F '\t' -v pkg="$module" '$1 == pkg { found=1 } END { exit(found ? 0 : 1) }' "$all_pkg_index"; then
+        fail_test_dependency "$module"
     fi
 
     case "$module" in
@@ -219,7 +242,7 @@ resolve_module_fallback() {
 
 
 
-if [ "${S_USE_RESOLVER:-}" = "1" ] && [ -x "$resolver" ] && "$resolver" "$root" "$entry" | sed "s#^$root/##" | LC_ALL=C sort -u >"$tmp"; then
+if [ "$mode" = test ] && [ "${S_USE_RESOLVER:-}" = "1" ] && [ -x "$resolver" ] && "$resolver" "$root" "$entry" | sed "s#^$root/##" | LC_ALL=C sort -u >"$tmp"; then
 
     mv "$tmp" "$output"
 
