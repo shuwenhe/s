@@ -1,5 +1,5 @@
 P1 verification record, 2026-10-15
-STATUS: IMPLEMENTATION_IN_PROGRESS / NOT_ACCEPTED
+STATUS: P1_ACCEPTED / P2_NOT_STARTED
 
 Changed production files:
   ir/lower.s: restore missing closing parentheses and canonical AST field/type
@@ -16,12 +16,13 @@ P2 has not started. New module is not installed as production build authority.
 Observed tests:
   RED before implementation: check.sh exit 1, missing mir/program.s.
   New module and adapter --dump-ast: exit 0 each (Seed syntax only).
-  check.sh: compile-unit succeeded; emit-bin succeeded; execution failed:
-    error[5] at 0:0: unknown left operand 't213.symbol' in op: CMP_EQ
-  Independent runtime_record_probe.s, WITHOUT any new production source:
-    compile-unit and emit-bin succeeded; execution exit 1:
-    error[5] at 0:0: unknown return value: record.label
-    This reproduces the hosted runtime limitation independently of P1 code.
+  Isolated hosted executor rebuilt with runtime.c:
+    module_test.s execution passed, including all P1 positive and negative
+    assertions and the original add-vs-sub alias collision assertion.
+  Independent runtime_record_probe.s:
+    compile-unit, emit-bin and execution passed.
+  Runtime fix: nested record aliases in returned arrays receive unique runtime
+    identities and their field tables are remapped during value propagation.
   Existing Seed testing/tests.c regression executable built in /tmp from
     unmodified Seed sources: exit 0, seed parser/semantic/ir tests passed.
   Existing misc/scripts/check-mir-cfg.sh: exit 127, bin/s missing.
@@ -37,7 +38,6 @@ Artifacts:
   /tmp/s-program-ir-test.kfSgcI (module runtime failure)
 
 Tests NOT_REACHED / NOT_PROVEN:
-  Successful nonempty multi-function module execution and all negative assertions.
   Actual canonical Parser -> lower_program_to_mir integration.
   SSA -> native calls/calculation and source mutation behavior.
   Complete language/declaration/control-flow lowering and Stage1 production.
@@ -52,5 +52,5 @@ The source interface preserves all function declarations for its implemented
 straight-line subset. This is not a claim that every S source can be lowered.
 Non-function declarations, generic functions, branches/loops, aggregates and
 multi-result AST binding still need explicit later work/verification.
-No Seed patch, mock implementation or interpreter-produced constant is used
-to turn this red gate green. Do not label P1 PASS or proceed to P2 from this record.
+No Seed language, Stage0, P1 IR, mock implementation or interpreter-produced
+constant was used to turn this gate green. P1 is accepted; P2 remains frozen.
