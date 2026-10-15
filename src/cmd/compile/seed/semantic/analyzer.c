@@ -1281,6 +1281,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				case TOKEN_PERCENT:
 				case TOKEN_AMP:
 				case TOKEN_PIPE:
+				case TOKEN_XOR:
 				case TOKEN_SHL:
 				case TOKEN_SHR:
 					if (!is_numeric_type(lhs_type) || !is_numeric_type(rhs_type)) {
