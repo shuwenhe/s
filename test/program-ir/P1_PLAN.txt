@@ -1,0 +1,26 @@
+P1 implementation scope, 2026-10-15
+
+User approved staged core implementation. Seed, Stage0, bootstrap and Stage1
+remain frozen. No previously unreviewed native ABI document is treated as approved.
+
+1. Module interface: all package-qualified functions, explicit parameter value
+   IDs/types, result type lists, ordered instructions, return operands, call edges.
+   Initially support straight-line scalar functions and forward/direct calls.
+   Reject unsupported syntax instead of inserting placeholders or evaluating main.
+2. Tests first: module preservation and error cases; canonical AST integration;
+   add/main source fixtures for later native acceptance.
+3. Implement mir/program.s and AST adapter ir/program_lower.s. Expose
+   lower_program_to_mir(source_file) while preserving legacy graph consumers.
+4. Verify separately: Seed syntax acceptance; module hosted execution; canonical
+   Parser adapter execution; native instruction/execution evidence. None substitutes
+   for another. Do not enter P2 or call P1 accepted while these gates are incomplete.
+
+Current verification commands:
+  bash test/program-ir/check.sh
+  bash test/program-ir/check.sh test/program-ir/runtime_record_probe.s
+  bin/s_seed --dump-ast src/cmd/compile/internal/mir/program.s OUTPUT.ast
+  bin/s_seed --dump-ast src/cmd/compile/internal/ir/program_lower.s OUTPUT.ast
+
+The hosted runner executes real S implementation for unit tests only. It is not
+a native compiler producer. A missing/incorrect executor is a failed/unreached
+gate, never a test success or authorization to modify Seed.
