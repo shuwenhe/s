@@ -1,4 +1,5 @@
 #include "ir.h"
+#include "array_type.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -87,6 +88,7 @@ bool ir_emit(IR *ir, ir_op type, const char *result, const char *operand1, const
 }
 const char *ir_op_name(ir_op op) {
 	switch (op) {
+		case IR_ARRAY_NEW: return "ARRAY_NEW";
 	case IR_NOP: return "NOP";
 		case IR_EXPORT: return "EXPORT";
 		case IR_FUNC_BEGIN: return "FUNC_BEGIN";
@@ -557,6 +559,20 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			size_t argc = expr->as.call_expr.args.len;
 			char callee[IR_OPERAND_CAP] = "call";
 			char argc_text[IR_OPERAND_CAP];
+			if (expr->as.call_expr.resolved_array_type) {
+				if (!seed_array_new_valid(expr->as.call_expr.resolved_array_type, "0")) {
+					error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "invalid resolved array constructor type");
+					return false;
+				}
+				next_temp(b, out);
+				return emit_ins(b, IR_ARRAY_NEW, out, expr->as.call_expr.resolved_array_type, "0", expr->pos);
+			}
+			if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_INDEX_EXPR &&
+				!expr->as.call_expr.callee->as.index_expr.index) {
+				error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column,
+					"array constructor requires semantic type resolution");
+				return false;
+			}
 			if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_INDEX_EXPR &&
 				expr->as.call_expr.callee->as.index_expr.object &&
 				expr->as.call_expr.callee->as.index_expr.object->kind == AST_IDENT_EXPR &&

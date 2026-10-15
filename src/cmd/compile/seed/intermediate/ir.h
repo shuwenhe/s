@@ -35,6 +35,7 @@ typedef enum ir_op {
 	IR_CMP_GE,
 	IR_INDEX_SET,
 	IR_RET,
+	IR_ARRAY_NEW,
 } ir_op;
 #define IR_OPERAND_CAP 1024
 typedef struct IRInstruction {
