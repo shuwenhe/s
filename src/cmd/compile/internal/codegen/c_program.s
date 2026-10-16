@@ -157,7 +157,8 @@ func emit_mir_program_c(mir_program program) c_program_result {
     }
     if program.package_name == "" { return c_program_fail("C codegen: empty package identity") }
     // Revalidate the actual input, including programs changed after lowering.
-    verified := lower_mir_program(program.package_name, program.entry_symbol, program.functions)
+    functions := program.functions
+    verified := lower_mir_program(program.package_name, program.entry_symbol, functions)
     eprintln("TRACE revalidation complete")
     if verified.error != "" { return c_program_fail(verified.error) }
     i := 0
