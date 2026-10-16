@@ -14,7 +14,7 @@ import (
     "compile.internal.slice"
     "compile.internal.ssa"
     "compile.internal.ssagen"
-    "compile.internal.syntax"
+    "compile.internal.parser.syntax"
     "compile.internal.walk"
     "s"
     "std"
@@ -2522,11 +2522,10 @@ func ends_with_local(string text, string suffix) bool {
 }
 
 func load_source_graph(string path, string source) (source_file, backend_error) {
-    parsed_result := compile.internal.syntax.parse_source(source)
-    if parsed_result.is_err() {
-        return backend_error { message: "parse failed: " + parsed_result.unwrap_err().message }
+    combined, parse_err := compile.internal.parser.syntax.parse_source(source)
+    if parse_err.message != "" {
+        return backend_error { message: "parse failed: " + parse_err.message }
     }
-    combined := parsed_result.unwrap()
     visited := string[]()
     visited = append(visited, path)
     deps_result := append_dependency_items(combined, combined.uses, visited)
@@ -2590,11 +2589,11 @@ func append_dependency_items(source_file combined, use_decl[] uses, string[] vis
             if dep_source_result.is_err() {
                 return backend_error { message: "failed to read module " + uses[i].path + " at " + dep_path + ": " + dep_source_result.unwrap_err().message }
             }
-            dep_parsed_result := compile.internal.syntax.parse_source(dep_source_result.unwrap())
-            if dep_parsed_result.is_err() {
-                return backend_error { message: "parse failed in module " + uses[i].path + ": " + dep_parsed_result.unwrap_err().message }
+            dep_combined, dep_parse_err := compile.internal.parser.syntax.parse_source(dep_source_result.unwrap())
+            if dep_parse_err.message != "" {
+                return backend_error { message: "parse failed in module " + uses[i].path + ": " + dep_parse_err.message }
             }
-            dep := dep_parsed_result.unwrap()
+            dep := dep_combined
             nested_result := append_dependency_items(combined, dep.uses, visited)
             if nested_result.is_err() {
                 return nested_result
@@ -4713,11 +4712,11 @@ func load_source_graph_for_use(string module_path) (source_file, backend_error) 
     if dep_source_result.is_err() {
         return backend_error { message: "backend error: failed to read module " + module_path + ": " + dep_source_result.unwrap_err().message }
     }
-    dep_parsed_result := compile.internal.syntax.parse_source(dep_source_result.unwrap())
-    if dep_parsed_result.is_err() {
-        return backend_error { message: "backend error: parse failed in module " + module_path + ": " + dep_parsed_result.unwrap_err().message }
+    dep_combined, dep_parse_err := compile.internal.parser.syntax.parse_source(dep_source_result.unwrap())
+    if dep_parse_err.message != "" {
+        return backend_error { message: "backend error: parse failed in module " + module_path + ": " + dep_parse_err.message }
     }
-    dep_parsed_result.unwrap()
+    dep_combined
 }
 
 func eval_const_value_expr(expr value, binding[] const_env, int iota_value) (value, backend_error) {

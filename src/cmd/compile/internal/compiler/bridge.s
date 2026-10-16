@@ -1,16 +1,14 @@
 package compile.internal.compiler
 
 import (
-    "compile.internal.syntax"
+    "compile.internal.parser.syntax"
     "compile.internal.semantic"
     "compile.internal.ir.lower"
     "compile.internal.mir"
 )
 
 func emit_canonical_mir(string source) string {
-    parse_result := compile.internal.syntax.parse_source(source)
-    parsed := parse_result.0
-    parse_err := parse_result.1
+    parsed, parse_err := compile.internal.parser.syntax.parse_source(source)
     if parse_err.message != "" {
         return "mir-error: parse " + parse_err.message + "\n"
     }
