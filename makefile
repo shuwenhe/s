@@ -253,8 +253,8 @@ selfhost: native-bootstrap
 # ============================================================================
 .PHONY: pipeline
 pipeline: compiler
-	@chmod +x scripts/compile-pipeline-check.sh
-	@S_SOURCE_ROOT=$(CURDIR) scripts/compile-pipeline-check.sh
+	@chmod +x script/compile-pipeline-check.sh
+	@S_SOURCE_ROOT=$(CURDIR) script/compile-pipeline-check.sh
 
 # ============================================================================
 # Cleanup
