@@ -137,29 +137,10 @@ func c_program_prelude() string {
 }
 
 func emit_mir_program_c(mir_program program) c_program_result {
-    eprintln("TRACE emitter entry")
-    first := program.functions[0]
-    first_block := first.blocks[0]
-    first_ins := first_block.instructions[0]
-    eprintln(first_ins.op)
-    trace_i := 0
-    for trace_i < len(program.functions) {
-        trace_fn := program.functions[trace_i]
-        eprintln(trace_fn.symbol)
-        trace_b := trace_fn.blocks[0]
-        trace_n := 0
-        for trace_n < len(trace_b.instructions) {
-            trace_ins := trace_b.instructions[trace_n]
-            eprintln(trace_ins.op)
-            trace_n = trace_n + 1
-        }
-        trace_i = trace_i + 1
-    }
     if program.package_name == "" { return c_program_fail("C codegen: empty package identity") }
     // Revalidate the actual input, including programs changed after lowering.
     functions := program.functions
     verified := lower_mir_program(program.package_name, program.entry_symbol, functions)
-    eprintln("TRACE revalidation complete")
     if verified.error != "" { return c_program_fail(verified.error) }
     i := 0
     for i < len(program.functions) {
@@ -187,7 +168,6 @@ func emit_mir_program_c(mir_program program) c_program_result {
         i = i + 1
     }
     text := c_program_prelude()
-    eprintln("TRACE target validation complete")
     // Forward declarations preserve arbitrary function order and direct calls.
     i = 0
     for i < len(program.functions) {
@@ -205,7 +185,7 @@ func emit_mir_program_c(mir_program program) c_program_result {
     args := int[]()
     i = 0
     for i < len(entry.params) {
-        args = append(args, entry.params[i].value_id)
+        args.push(entry.params[i].value_id)
         i = i + 1
     }
     text = text + c_program_return_type(entry) + " s_mir_entry(" + c_program_parameters(entry) + ") {\n  "
