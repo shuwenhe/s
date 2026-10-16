@@ -8,7 +8,7 @@ import (
 )
 
 func emit_canonical_mir(string source) string {
-    parsed, parse_err := compile.internal.parser.syntax.parse_source(source)
+    parsed, parse_err := syntax.parse_source(source)
     if parse_err.message != "" {
         return "mir-error: parse " + parse_err.message + "\n"
     }

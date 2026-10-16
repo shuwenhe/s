@@ -22,6 +22,7 @@ typedef enum ast_kind {
 	AST_FOR_STMT,
 	AST_FN_STMT,
 	AST_TRAIT_DECL,
+	AST_ENUM_DECL,
 	AST_BINARY_EXPR,
 	AST_ASSIGN_EXPR,
 	AST_UNARY_EXPR,
@@ -41,6 +42,10 @@ typedef struct ast_vec {
 	size_t len;
 	size_t cap;
 } ast_vec;
+typedef struct ast_enum_variant {
+	char *name;
+	char *payload_type;
+} ast_enum_variant;
 struct ast_node {
 	ast_kind kind;
 	source_pos pos;
@@ -50,6 +55,7 @@ struct ast_node {
 		} program;
 		struct {
 			ast_vec statements;
+			bool transparent_scope;
 		} block;
 		struct {
 			char *name;
@@ -124,6 +130,13 @@ struct ast_node {
 			char *name;
 			ast_vec methods;
 		} trait_decl;
+		struct {
+			char *name;
+			char **generic_params;
+			size_t generic_count;
+			ast_enum_variant *variants;
+			size_t variant_count;
+		} enum_decl;
 		struct {
 			token_type op;
 			ast_node *left;
