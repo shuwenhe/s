@@ -10,7 +10,7 @@ ENTRY_FILE="${1:-.}"
 # Determine PROJECT_ROOT
 # Try multiple methods to find the root
 if [ -d "$(dirname "$0")/src" ]; then
-    # Running from project root or scripts/ subdirectory
+    # Running from project root or script/ subdirectory
     PROJECT_ROOT="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)" || \
     PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 elif [ -d "./src" ]; then

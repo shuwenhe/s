@@ -1,7 +1,7 @@
 #!/bin/bash
 # 统一 S 语言项目中的指针声明格式
 # 从 name* type 改为 type* name
-# 用法: bash scripts/unify-pointer-format.sh
+# 用法: bash script/unify-pointer-format.sh
 
 set -e
 

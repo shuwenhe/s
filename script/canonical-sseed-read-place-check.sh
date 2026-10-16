@@ -9,7 +9,7 @@ READ_IR="${REPORT}.read-index.ir.$$"
 READ_BIN="${REPORT}.read-index.bin.$$"
 READ_RUN="${REPORT}.read-index.run.$$"
 
-MIR_GATE="${SOURCE_ROOT}/scripts/canonical-mir-read-check.sh"
+MIR_GATE="${SOURCE_ROOT}/script/canonical-mir-read-check.sh"
 SEED_IR="${SOURCE_ROOT}/src/cmd/compile/seed/intermediate/ir.h"
 SEED_GENERATOR="${SOURCE_ROOT}/src/cmd/compile/seed/code/generator.c"
 SEED_NATIVE="${SOURCE_ROOT}/src/cmd/compile/seed/code/native_backend.c"

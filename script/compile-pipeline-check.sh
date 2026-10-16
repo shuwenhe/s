@@ -13,7 +13,7 @@
 #   4. SKIP, PLACEHOLDER, and FAIL are not proof
 #
 # Usage:
-#   ./scripts/compile-pipeline-check.sh
+#   ./script/compile-pipeline-check.sh
 #   OR via makefile:
 #   make compile-pipeline-check
 #
@@ -116,7 +116,7 @@ run_stage() {
     local gate_script=$3
     local gate_target=$4
     local requirement=$5
-    local gate_path="${SOURCE_ROOT}/scripts/${gate_script}.sh"
+    local gate_path="${SOURCE_ROOT}/script/${gate_script}.sh"
     local stage_output="${TMP_DIR}/stage-${stage_num}.out"
     local execution_status=""
     local proof_status=""
