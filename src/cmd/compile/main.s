@@ -1,7 +1,7 @@
 package compile.internal.main
 
-use compile.compiler
+use compile.driver
 
 func main() int {
-    return compiler_main(host_args())
+    return driver_main(host_args())
 }
