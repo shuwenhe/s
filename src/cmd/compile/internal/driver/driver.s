@@ -6,9 +6,6 @@ import (
     "std.io"
 )
 
-use compile.internal.compiler.main as compiler_main
-use std.io.eprintln
-
 struct driver_config {
     string program_name
     string action
@@ -102,23 +99,23 @@ func dispatch_command(driver_config config) int {
     }
     if config.action == "usage" {
         if config.error != "" {
-            eprintln(config.program_name + ": " + config.error)
+            std.io.eprintln(config.program_name + ": " + config.error)
         }
         driver_print_usage(config.program_name)
         return config.exit_code
     }
     if config.action == "forward" {
-        return compiler_main(config.forwarded_args)
+        return compile.internal.compiler.main(config.forwarded_args)
     }
     if config.action == "build" {
         return pipeline_build(config.input, config.output, "", false)
     }
     if config.action == "legacy-build" {
-        eprintln(config.program_name + ": build --legacy is handled by the bootstrap shell driver")
+        std.io.eprintln(config.program_name + ": build --legacy is handled by the bootstrap shell driver")
         return 2
     }
     if config.action == "seed" {
-        eprintln(config.program_name + ": --seed is handled by the bootstrap shell driver")
+        std.io.eprintln(config.program_name + ": --seed is handled by the bootstrap shell driver")
         return 2
     }
     driver_print_usage(config.program_name)
@@ -189,13 +186,13 @@ func is_option(string arg) bool {
 }
 
 func driver_print_usage(string prog) () {
-    eprintln("usage:")
-    eprintln("  " + prog + " <input.s>")
-    eprintln("  " + prog + " <input.s> -o <output>")
-    eprintln("  " + prog + " -o <output> <input.s>")
-    eprintln("  " + prog + " build <input.s> -o <output>")
-    eprintln("  " + prog + " --emit-c <input.s> <output.c>")
-    eprintln("  " + prog + " --emit-mir <input.s> <output.mir>")
+    std.io.eprintln("usage:")
+    std.io.eprintln("  " + prog + " <input.s>")
+    std.io.eprintln("  " + prog + " <input.s> -o <output>")
+    std.io.eprintln("  " + prog + " -o <output> <input.s>")
+    std.io.eprintln("  " + prog + " build <input.s> -o <output>")
+    std.io.eprintln("  " + prog + " --emit-c <input.s> <output.c>")
+    std.io.eprintln("  " + prog + " --emit-mir <input.s> <output.mir>")
 }
 
 extern "intrinsic" func __string_char_at(string text, int index) string
