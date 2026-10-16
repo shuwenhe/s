@@ -32,10 +32,13 @@ expect changed 7 30
 expect subtract 7 17
 expect copy 7 25
 expect min 0 -9223372036854775808
+expect max 0 9223372036854775807
 expect divide 7 -2
 expect divide -7 2
 expect modulo 7 1
 expect modulo -7 -1
+expect divide_minus_one -9223372036854775808 -9223372036854775808
+expect modulo_minus_one -9223372036854775808 0
 expect wrap 9223372036854775807 -9223372036854775808
 expect wrap -9223372036854775808 -9223372036854775807
 mkdir -p "$work/divide_zero"
