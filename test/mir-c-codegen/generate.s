@@ -27,6 +27,7 @@ func main() int {
     literal := 4
     if mode == "changed" { literal = 9 }
     if mode == "min" { literal = -9223372036854775807 - 1 }
+    if mode == "max" { literal = 9223372036854775807 }
     values.push(cg_ins("const_int", 3, int[]{}, literal, ""))
     op := "add"
     if mode == "subtract" { op = "sub" }
@@ -35,14 +36,15 @@ func main() int {
     if mode == "copy" { values.push(cg_ins("copy", 5, int[]{4}, 0, "")) }
     returned := 4
     if mode == "copy" { returned = 5 }
-    if mode == "divide" || mode == "modulo" || mode == "divide_zero" || mode == "wrap" {
+    if mode == "divide" || mode == "modulo" || mode == "divide_zero" || mode == "wrap" || mode == "divide_minus_one" || mode == "modulo_minus_one" {
         values = []mir_program_instruction{}
         divisor := -3
         if mode == "divide_zero" { divisor = 0 }
         if mode == "wrap" { divisor = 1 }
+        if mode == "divide_minus_one" || mode == "modulo_minus_one" { divisor = -1 }
         values.push(cg_ins("const_int", 1, int[]{}, divisor, ""))
         numeric_op := "div"
-        if mode == "modulo" { numeric_op = "mod" }
+        if mode == "modulo" || mode == "modulo_minus_one" { numeric_op = "mod" }
         if mode == "wrap" { numeric_op = "add" }
         values.push(cg_ins(numeric_op, 4, int[]{0, 1}, 0, ""))
     }
