@@ -46,6 +46,12 @@ typedef struct ast_enum_variant {
 	char *name;
 	char *payload_type;
 } ast_enum_variant;
+typedef enum pattern_kind {
+	PATTERN_NONE = 0,
+	PATTERN_WILDCARD,
+	PATTERN_BINDING,
+	PATTERN_VARIANT
+} pattern_kind;
 struct ast_node {
 	ast_kind kind;
 	source_pos pos;
@@ -90,6 +96,8 @@ struct ast_node {
 		struct {
 			char *abi;
 			char *name;
+			char **generic_params;
+			size_t generic_count;
 			char **params;
 			char **param_types;
 			size_t param_count;
@@ -104,6 +112,10 @@ struct ast_node {
 			ast_node *condition;
 			ast_node *then_branch;
 			ast_node *else_branch;
+			bool is_pattern_arm;
+			pattern_kind pattern_kind;
+			char *binding_name;
+			ast_node *pattern_subject;
 		} if_stmt;
 		struct {
 			ast_node *condition;
