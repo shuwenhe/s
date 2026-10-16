@@ -1,0 +1,11 @@
+[
+  "s",
+  "std",
+  "std.fs",
+  "std.io",
+  "std.io.eprintln",
+  "std.option",
+  "std.prelude",
+  "std.process",
+  "std.result"
+]
