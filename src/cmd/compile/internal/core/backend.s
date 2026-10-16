@@ -5741,7 +5741,7 @@ struct backend_context {
 }
 
 func new_backend_context(string input, string output, bool native) backend_context {
-    ctx: backend_context
+    backend_context ctx
     ctx.compiler = new_native_compiler(input, output)
     ctx.native_enabled = native
     ctx.target_arch = "x86_64"

@@ -19,9 +19,7 @@ func emit_canonical_mir(string source) string {
         return "mir-error: semantic " + error.code + ": " + error.message + "\n"
     }
     
-    lower_result := compile.internal.ir.lower.lower_main_to_mir(parsed)
-    graph := lower_result.0
-    lowering_err := lower_result.1
+    graph, lowering_err := compile.internal.ir.lower.lower_main_to_mir(parsed)
     if lowering_err != "" {
         return "mir-error: lowering " + lowering_err + "\n"
     }
