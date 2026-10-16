@@ -2785,7 +2785,10 @@ static int values_copy_array_aliases(const runtime_values *src, runtime_data_val
 	if (value->record_alias && value->kind == RUNTIME_STRING && value->str_value &&
 		value->str_value[0] != '\0' && values_have_prefixed(src, value->str_value) &&
 		value->str_value[0] != '\0') {
-		if (snprintf(new_name, sizeof(new_name), "%s#%lu", value->str_value, ++g_runtime_alias_serial) >= (int)sizeof(new_name) ||
+		/* Use a fresh, bounded identity. Extending the old alias on every
+		 * transfer eventually truncates field keys in runtime_values. '@'
+		 * cannot collide with a source identifier. */
+		if (snprintf(new_name, sizeof(new_name), "@record#%lu", ++g_runtime_alias_serial) >= (int)sizeof(new_name) ||
 			!values_copy_prefixed(src, value->str_value, dst, new_name)) {
 			return 0;
 		}
