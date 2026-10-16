@@ -32,9 +32,23 @@ func main() int {
     if mode == "subtract" { op = "sub" }
     if mode == "invalid_op" { op = "unimplemented" }
     values.push(cg_ins(op, 4, int[]{2, 3}, 0, ""))
+    if mode == "copy" { values.push(cg_ins("copy", 5, int[]{4}, 0, "")) }
+    returned := 4
+    if mode == "copy" { returned = 5 }
+    if mode == "divide" || mode == "modulo" || mode == "divide_zero" || mode == "wrap" {
+        values = []mir_program_instruction{}
+        divisor := -3
+        if mode == "divide_zero" { divisor = 0 }
+        if mode == "wrap" { divisor = 1 }
+        values.push(cg_ins("const_int", 1, int[]{}, divisor, ""))
+        numeric_op := "div"
+        if mode == "modulo" { numeric_op = "mod" }
+        if mode == "wrap" { numeric_op = "add" }
+        values.push(cg_ins(numeric_op, 4, int[]{0, 1}, 0, ""))
+    }
     if mode == "undefined" { values.push(cg_ins("copy", 5, int[]{999}, 0, "")) }
     functions := []mir_program_function{}
-    functions.push(cg_function("sample.main", params, values, 4))
+    functions.push(cg_function("sample.main", params, values, returned))
     helper_params := []mir_program_parameter{}
     helper_params.push(mir_program_parameter { value_id: 0, name: "a", type_name: "int" })
     helper_params.push(mir_program_parameter { value_id: 1, name: "b", type_name: "int" })
@@ -60,6 +74,9 @@ func main() int {
     lowered := lower_mir_program("sample", "sample.main", functions)
     if lowered.error != "" { eprintln(lowered.error); return 1 }
     program := lowered.program
+    if mode == "mutated_ir" { program.functions[0].blocks[0].instructions[0].op = "corrupted" }
+    if mode == "cfg" { program.functions[0].blocks[0].terminator = "branch" }
+    if mode == "unknown_after_lowering" { program.functions[0].blocks[0].instructions[1].symbol = "absent.function" }
     emitted := emit_mir_program_c(program)
     if emitted.error != "" {
         if emitted.code != "" { eprintln("failed emission leaked partial C"); return 2 }
