@@ -6,8 +6,8 @@ enum result[t, e] {
 
 func (result[t, e]* self) is_ok() bool {
     switch self {
-        _  : true,
-        _ : false,
+        result::ok(_)  : true,
+        result::err(_) : false,
     }
 }
 
@@ -17,15 +17,15 @@ func (result[t, e]* self) is_err() bool {
 
 func (result[t, e]* self) unwrap() t {
     switch self {
-        value : value,
-        _    : __result_panic_unwrap(),
+        result::ok(value) : value,
+        result::err(_)    : __result_panic_unwrap(),
     }
 }
 
 func (result[t, e]* self) unwrap_err() e {
     switch self {
-        _    : __result_panic_unwrap_err(),
-        err : err,
+        result::ok(_)      : __result_panic_unwrap_err(),
+        result::err(value) : value,
     }
 }
 extern "intrinsic" func __result_panic_unwrap[t]() t
