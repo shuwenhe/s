@@ -1045,13 +1045,31 @@ static int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char 
 
 static int pattern_arm_value_type(semantic_ctx *ctx, ast_node *body, const char *return_type) {
 	ast_node *tail;
-	if (!body || body->kind != AST_BLOCK || body->as.block.statements.len == 0) return 0;
+	const char *actual_type = NULL;
+	if (!body || body->kind != AST_BLOCK) return 0;
+	if (body->as.block.statements.len == 0) return 0;
 	tail = body->as.block.statements.data[body->as.block.statements.len - 1];
 	if (tail->kind == AST_EXPR_STMT) {
-		return tail->as.expr_stmt.inferred_type &&
-			is_type_assignable_ctx(ctx, return_type, tail->as.expr_stmt.inferred_type);
+		return tail->as.expr_stmt.inferred_type && is_type_assignable_ctx(ctx, return_type, tail->as.expr_stmt.inferred_type);
 	}
-	return stmt_guarantees_return(ctx, body, return_type);
+	switch (tail->kind) {
+		case AST_BINARY_EXPR:
+		case AST_ASSIGN_EXPR:
+		case AST_UNARY_EXPR:
+		case AST_IDENT_EXPR:
+		case AST_MEMBER_EXPR:
+		case AST_INDEX_EXPR:
+		case AST_CALL_EXPR:
+		case AST_NUMBER_EXPR:
+		case AST_BOOL_EXPR:
+		case AST_STRING_EXPR:
+		case AST_ARRAY_EXPR:
+		case AST_STRUCT_EXPR:
+			if (!analyze_expr(ctx, tail, &actual_type)) return 0;
+			return actual_type && is_type_assignable_ctx(ctx, return_type, actual_type);
+		default:
+			return 0;
+	}
 }
 
 static int pattern_switch_guarantees_return(semantic_ctx *ctx, ast_node *node, const char *return_type) {
@@ -1575,6 +1593,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				ast_node *trait_decl;
 				ast_node *required = NULL;
 				char method_name[256];
+				int had_pointer_receiver = 0;
 				
 				// NEW: Check for qualified import function call (e.g., std.io.eprintln)
 				{
@@ -1619,6 +1638,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				if (lhs_type) {
 					size_t lhs_len = strlen(lhs_type);
 					if (lhs_len > 0 && lhs_type[lhs_len - 1] == '*') {
+						had_pointer_receiver = 1;
 						char *normalized = dup_cstr(lhs_type);
 						if (!normalized) return 0;
 						normalized[lhs_len - 1] = '\0';
@@ -1739,7 +1759,17 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column, "method name is too long");
 					return 0;
 				}
-				if (!required) sym = scope_lookup(ctx->current_scope, method_name);
+				if (!required) {
+					sym = scope_lookup(ctx->current_scope, method_name);
+					if ((!sym || sym->kind != SYMBOL_FN) && had_pointer_receiver) {
+						if (snprintf(method_name, sizeof(method_name), "%s*.%s", lhs_type ? lhs_type : TYPE_ANY,
+							member->as.member_expr.member) >= (int)sizeof(method_name)) {
+							error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column, "method name is too long");
+							return 0;
+						}
+						sym = scope_lookup(ctx->current_scope, method_name);
+					}
+				}
 				if (!required && (!sym || sym->kind != SYMBOL_FN || sym->param_count == 0)) {
 					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 						"type '%s' has no method '%s'", lhs_type ? lhs_type : TYPE_ANY, member->as.member_expr.member);
