@@ -165,6 +165,9 @@ test-bootstrap-both: clean
 # ============================================================================
 COMPILER_SOURCES := \
 	src/cmd/compile/main.s \
+	src/cmd/compile/internal/driver/driver.s \
+	src/cmd/compile/internal/pipeline/authority.s \
+	src/cmd/compile/internal/pipeline/pipeline.s \
 	src/cmd/compile/internal/compiler/frontend_core.s \
 	src/cmd/compile/internal/compiler/frontend.s \
 	src/cmd/compile/internal/compiler/frontend_stages.s \
