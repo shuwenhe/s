@@ -223,6 +223,9 @@ void ast_free(ast_node *node) {
 			ast_free(node->as.if_stmt.else_branch);
 			free(node->as.if_stmt.binding_name);
 			ast_free(node->as.if_stmt.pattern_subject);
+			free(node->as.if_stmt.variant_owner);
+			free(node->as.if_stmt.variant_name);
+			free(node->as.if_stmt.payload_binding_name);
 			break;
 		case AST_WHILE_STMT:
 			ast_free(node->as.while_stmt.condition);
@@ -2829,6 +2832,10 @@ static ast_node *parse_switch_statement(parser *p) {
 			ast_node *body;
 			ast_node *arm;
 			const char *pattern_word = NULL;
+			char *variant_owner = NULL;
+			char *variant_name = NULL;
+			pattern_kind payload_kind = PATTERN_NONE;
+			char *payload_binding_name = NULL;
 			if (check(p, TOKEN_STRING) || check(p, TOKEN_NUMBER) || check(p, TOKEN_TRUE) || check(p, TOKEN_FALSE)) {
 				case_value = parse_expression(p);
 				has_expression_body = true;
@@ -2878,6 +2885,7 @@ static ast_node *parse_switch_statement(parser *p) {
 					}
 				
 					if (found_double_colon) {
+					variant_owner = dup_cstr(word);
 						// This is a pattern: Type::Variant(binding)
 						is_pattern_switch = true;
 					
@@ -2888,13 +2896,19 @@ static ast_node *parse_switch_statement(parser *p) {
 							ast_free(root);
 							return NULL;
 						}
+						variant_name = dup_cstr(peek(p)->lexeme);
 						advance_tok(p);  // consume variant name
 					
 						// Optional binding parameter
 						if (check(p, TOKEN_LPAREN)) {
 							advance_tok(p);  // consume (
-							if (check(p, TOKEN_IDENTIFIER)) {
+							if (check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "_") != 0) {
+								payload_kind = PATTERN_BINDING;
+								payload_binding_name = dup_cstr(peek(p)->lexeme);
 								advance_tok(p);  // consume binding name
+							} else if (check(p, TOKEN_IDENTIFIER)) {
+								payload_kind = PATTERN_WILDCARD;
+								advance_tok(p);
 							}
 							if (!expect(p, TOKEN_RPAREN, "expected ')' after binding")) {
 								ast_free(subject);
@@ -2906,6 +2920,8 @@ static ast_node *parse_switch_statement(parser *p) {
 						// Pattern: namespace.variant(binding), matching canonical AST enum arms.
 						is_pattern_switch = true;
 						do {
+							if (!variant_owner) variant_owner = dup_cstr(word);
+							variant_name = dup_cstr(peek(p)->lexeme);
 							advance_tok(p);
 							if (!check_pattern_name_token(p)) {
 								parse_error(p, peek(p), "expected pattern name after .");
@@ -2917,7 +2933,12 @@ static ast_node *parse_switch_statement(parser *p) {
 						} while (check(p, TOKEN_DOT));
 						if (check(p, TOKEN_LPAREN)) {
 							advance_tok(p);
-							if (check(p, TOKEN_IDENTIFIER)) {
+							if (check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "_") != 0) {
+								payload_kind = PATTERN_BINDING;
+								payload_binding_name = dup_cstr(peek(p)->lexeme);
+								advance_tok(p);
+							} else if (check(p, TOKEN_IDENTIFIER)) {
+								payload_kind = PATTERN_WILDCARD;
 								advance_tok(p);
 							}
 							if (!expect(p, TOKEN_RPAREN, "expected ')' after binding")) {
@@ -3087,6 +3108,13 @@ static ast_node *parse_switch_statement(parser *p) {
 				arm->as.if_stmt.binding_name = dup_cstr(case_value->as.ident_expr.name);
 			}
 			arm->as.if_stmt.pattern_subject = clone_expr(subject);
+			arm->as.if_stmt.variant_owner = variant_owner;
+			arm->as.if_stmt.variant_name = variant_name;
+			arm->as.if_stmt.payload_kind = payload_kind;
+			arm->as.if_stmt.payload_binding_name = payload_binding_name;
+			variant_owner = NULL;
+			variant_name = NULL;
+			payload_binding_name = NULL;
 		} else if (is_default) {
 			// default: no condition
 			arm->as.if_stmt.condition = NULL;
