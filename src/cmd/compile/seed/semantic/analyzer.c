@@ -313,6 +313,29 @@ static int append_import_signature(compile_error *err, const char *name, int min
 	import_signatures[import_signatures_len++] = spec;
 	return 1;
 }
+
+static int bind_import_alias_signatures(compile_error *err, const char *module_path, const char *alias) {
+	size_t i;
+	size_t module_len;
+	if (!module_path || !alias || alias[0] == '\0') return 1;
+	module_len = strlen(module_path);
+	for (i = 0; i < import_signatures_len; i++) {
+		const char *name = import_signatures[i].name;
+		const char *suffix;
+		char alias_name[512];
+		int n;
+		if (!name || strncmp(name, module_path, module_len) != 0 || name[module_len] != '.') continue;
+		suffix = name + module_len + 1;
+		n = snprintf(alias_name, sizeof(alias_name), "%s.%s", alias, suffix);
+		if (n <= 0 || (size_t)n >= sizeof(alias_name)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "import alias signature path too long");
+			return 0;
+		}
+		if (!append_import_signature(err, alias_name, import_signatures[i].min_arity,
+			import_signatures[i].max_arity, import_signatures[i].return_type)) return 0;
+	}
+	return 1;
+}
 static int module_path_to_source_candidate(const char *root, const char *module_path, int style, char *out, size_t out_size) {
 	char rel[512];
 	size_t i;
@@ -324,7 +347,14 @@ static int module_path_to_source_candidate(const char *root, const char *module_
 	}
 	if (module_path[i]) return 0;
 	rel[used] = '\0';
-	if (style == 0 && strncmp(rel, "std/", 4) == 0) {
+	if (style == 0 && strncmp(rel, "compile/internal/", 17) == 0) {
+		const char *internal_rel = rel + 17;
+		n = snprintf(out, out_size, "%s/src/cmd/compile/internal/%s/%s.s", root, internal_rel,
+			strrchr(internal_rel, '/') ? strrchr(internal_rel, '/') + 1 : internal_rel);
+	} else if (style == 1 && strncmp(rel, "compile/internal/", 17) == 0) {
+		const char *internal_rel = rel + 17;
+		n = snprintf(out, out_size, "%s/src/cmd/compile/internal/%s.s", root, internal_rel);
+	} else if (style == 0 && strncmp(rel, "std/", 4) == 0) {
 		const char *std_rel = rel + 4;
 		n = snprintf(out, out_size, "%s/src/%s/%s.s", root, std_rel, strrchr(std_rel, '/') ? strrchr(std_rel, '/') + 1 : std_rel);
 	} else if (style == 1) {
@@ -779,6 +809,12 @@ static int split_result_tuple_type(const char *type_name, char **ok_type, char *
 	(*ok_type)[ok_len] = '\0';
 	memcpy(*err_type, comma + 1, err_len - 1);
 	(*err_type)[err_len - 1] = '\0';
+	{
+		char *trimmed_ok = trim_inplace(*ok_type);
+		char *trimmed_err = trim_inplace(*err_type);
+		if (trimmed_ok != *ok_type) memmove(*ok_type, trimmed_ok, strlen(trimmed_ok) + 1);
+		if (trimmed_err != *err_type) memmove(*err_type, trimmed_err, strlen(trimmed_err) + 1);
+	}
 	return 1;
 }
 
@@ -1856,13 +1892,18 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						return 0;
 					}
 				}
+				if (decl->kind == AST_USE_DECL && decl->as.use_decl.module_path) {
+					if (!load_module_source_signatures(ctx->err, decl->as.use_decl.module_path)) {
+						return 0;
+					}
+					if (!bind_import_alias_signatures(ctx->err, decl->as.use_decl.module_path, decl->as.use_decl.alias)) {
+						return 0;
+					}
+				}
 				if (decl->kind == AST_USE_DECL && decl->as.use_decl.alias && decl->as.use_decl.alias[0] != '\0') {
 					int min_arity;
 					int max_arity;
 					const char *ret_type;
-					if (!load_module_source_signatures(ctx->err, decl->as.use_decl.module_path)) {
-						return 0;
-					}
 					resolve_import_signature(decl->as.use_decl.module_path, &min_arity, &max_arity, &ret_type);
 					status = scope_define(ctx->current_scope,
 						decl->as.use_decl.alias,
@@ -1970,10 +2011,40 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_PACKAGE_DECL:
 		case AST_USE_DECL:
 		case AST_EXTERN_DECL:
+		case AST_ENUM_DECL:
 		case AST_VAR_DECL:
 		case AST_CONST_DECL:
 			return 1;
 		case AST_BLOCK:
+			if (node->as.block.transparent_scope) {
+				if (node->as.block.statements.len == 2 &&
+					node->as.block.statements.data[0]->kind == AST_LET_STMT &&
+					node->as.block.statements.data[1]->kind == AST_LET_STMT) {
+					ast_node *first = node->as.block.statements.data[0];
+					ast_node *second = node->as.block.statements.data[1];
+					char *first_type = NULL;
+					char *second_type = NULL;
+					if (!analyze_expr(ctx, first->as.let_stmt.value, &expr_type)) return 0;
+					if (!split_result_tuple_type(expr_type, &first_type, &second_type)) {
+						error_set(ctx->err, ERR_SEMANTIC, first->pos.line, first->pos.column,
+							"multiple assignment requires a two-value result");
+						return 0;
+					}
+					status = scope_define(ctx->current_scope, first->as.let_stmt.name, SYMBOL_VAR, 1,
+						-1, -1, first_type, NULL, 0);
+					if (status <= 0) { free(first_type); free(second_type); return status < 0 ? 0 : 1; }
+					status = scope_define(ctx->current_scope, second->as.let_stmt.name, SYMBOL_VAR, 1,
+						-1, -1, second_type, NULL, 0);
+					free(first_type);
+					free(second_type);
+					if (status <= 0) return status < 0 ? 0 : 1;
+					return 1;
+				}
+				for (i = 0; i < node->as.block.statements.len; i++) {
+					if (!analyze_node(ctx, node->as.block.statements.data[i])) return 0;
+				}
+				return 1;
+			}
 			return analyze_block_with_new_scope(ctx, node);
 		case AST_LET_STMT:
 			predeclared = NULL;
