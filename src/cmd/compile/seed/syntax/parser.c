@@ -103,6 +103,7 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_FOR_STMT: return "FOR_STMT";
 		case AST_FN_STMT: return "FN_STMT";
 		case AST_TRAIT_DECL: return "TRAIT_DECL";
+		case AST_ENUM_DECL: return "ENUM_DECL";
 		case AST_BINARY_EXPR: return "BINARY_EXPR";
 		case AST_ASSIGN_EXPR: return "ASSIGN_EXPR";
 		case AST_UNARY_EXPR: return "UNARY_EXPR";
@@ -250,6 +251,16 @@ void ast_free(ast_node *node) {
 			}
 			ast_vec_free(&node->as.trait_decl.methods);
 			break;
+		case AST_ENUM_DECL:
+			free(node->as.enum_decl.name);
+			for (i = 0; i < node->as.enum_decl.generic_count; i++) free(node->as.enum_decl.generic_params[i]);
+			free(node->as.enum_decl.generic_params);
+			for (i = 0; i < node->as.enum_decl.variant_count; i++) {
+				free(node->as.enum_decl.variants[i].name);
+				free(node->as.enum_decl.variants[i].payload_type);
+			}
+			free(node->as.enum_decl.variants);
+			break;
 		case AST_BINARY_EXPR:
 			ast_free(node->as.binary_expr.left);
 			ast_free(node->as.binary_expr.right);
@@ -390,7 +401,7 @@ static ast_node *parse_statement(parser *p);
 static ast_node *parse_var_binding_statement(parser *p);
 static ast_node *parse_struct_decl(parser *p);
 static ast_node *parse_trait_decl(parser *p);
-static bool parse_enum_decl(parser *p, ast_vec *out_constants);
+static ast_node *parse_enum_decl(parser *p);
 static ast_node *parse_switch_statement(parser *p);
 static ast_node *clone_expr(const ast_node *node);
 static int skip_brace_initializer(parser *p);
@@ -1333,6 +1344,7 @@ static ast_node *parse_tuple_assign_declare_statement(parser *p) {
 	char *second_name = NULL;
 	ast_node *value;
 	if (!block) return NULL;
+	block->as.block.transparent_scope = true;
 	if (!expect(p, TOKEN_IDENTIFIER, "first identifier")) goto fail;
 	first_name = dup_cstr(prev(p)->lexeme);
 	if (!expect(p, TOKEN_COMMA, "',' in multiple assignment")) goto fail_name1;
@@ -2858,12 +2870,10 @@ static ast_node *parse_switch_statement(parser *p) {
 				
 					// Check if followed by :: (two COLON tokens)
 					bool found_double_colon = false;
-					if (check(p, TOKEN_COLON)) {
+					if (check(p, TOKEN_COLON) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_COLON) {
 						advance_tok(p);  // consume first :
-						if (check(p, TOKEN_COLON)) {
-							found_double_colon = true;
-							advance_tok(p);  // consume second :
-						}
+						found_double_colon = true;
+						advance_tok(p);  // consume second :
 					}
 				
 					if (found_double_colon) {
@@ -2916,11 +2926,24 @@ static ast_node *parse_switch_statement(parser *p) {
 							}
 						}
 					} else {
-						// Not a recognized pattern
-						parse_error(p, peek(p), "expected 'case', 'default', pattern, or '_'");
-						ast_free(subject);
-						ast_free(root);
-						return NULL;
+						// A bare identifier is a binding pattern.  Keep it as an
+						// identifier expression so semantic analysis can introduce
+						// the binding in the arm scope; it is not a qualified enum
+						// variant unless it has already taken one of the branches above.
+						is_pattern_switch = true;
+						case_value = ast_new(AST_IDENT_EXPR, prev(p)->pos);
+						if (!case_value) {
+							ast_free(subject);
+							ast_free(root);
+							return NULL;
+						}
+						case_value->as.ident_expr.name = dup_cstr(word);
+						if (!case_value->as.ident_expr.name) {
+							ast_free(case_value);
+							ast_free(subject);
+							ast_free(root);
+							return NULL;
+						}
 					}
 				}
 			}
@@ -3125,89 +3148,70 @@ static ast_node *parse_top_level(parser *p) {
 	}
 	return parse_statement(p);
 }
-static bool parse_enum_decl(parser *p, ast_vec *out_constants) {
+static ast_node *parse_enum_decl(parser *p) {
 	const token *kw = peek(p);
-	int value = 0;
-	bool need_member = true;
+	ast_node *node;
+	char **generic_params = NULL;
+	size_t generic_count = 0;
+	ast_enum_variant *variants = NULL;
+	size_t variant_count = 0;
 	if (!match(p, TOKEN_IDENTIFIER) || strcmp(prev(p)->lexeme, "enum") != 0) {
 		parse_error(p, peek(p), "expected 'enum'");
-		return false;
+		return NULL;
 	}
-	if (!expect(p, TOKEN_IDENTIFIER, "enum name")) return false;
-	if (!expect(p, TOKEN_LBRACE, "'{' after enum name")) return false;
+	if (!expect(p, TOKEN_IDENTIFIER, "enum name")) return NULL;
+	node = ast_new(AST_ENUM_DECL, kw->pos);
+	if (!node) {
+		error_set(p->err, ERR_OUT_OF_MEMORY, kw->pos.line, kw->pos.column, "out of memory");
+		return NULL;
+	}
+	node->as.enum_decl.name = dup_cstr(prev(p)->lexeme);
+	if (!node->as.enum_decl.name) goto oom;
+	if (match(p, TOKEN_LBRACKET)) {
+		do {
+			if (!expect(p, TOKEN_IDENTIFIER, "generic parameter")) goto fail;
+			char **next = (char **)realloc(generic_params, (generic_count + 1) * sizeof(char *));
+			if (!next) goto oom;
+			generic_params = next;
+			generic_params[generic_count] = dup_cstr(prev(p)->lexeme);
+			if (!generic_params[generic_count++]) goto oom;
+		} while (match(p, TOKEN_COMMA));
+		if (!expect(p, TOKEN_RBRACKET, "']' after generic parameters")) goto fail;
+	}
+	if (!expect(p, TOKEN_LBRACE, "'{' after enum name")) goto fail;
 	while (!check(p, TOKEN_RBRACE) && !is_at_end(p)) {
-		ast_node *constant;
-			if (!check_pattern_name_token(p)) {
-				parse_error(p, peek(p), "expected enum member name");
-				return false;
-			}
-			advance_tok(p);
-		constant = ast_new(AST_CONST_DECL, prev(p)->pos);
-		if (!constant) {
-			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
-			return false;
-		}
-		constant->as.var_decl.name = dup_cstr(prev(p)->lexeme);
-		constant->as.var_decl.type_name = dup_cstr("int");
-		constant->as.var_decl.value = ast_new(AST_NUMBER_EXPR, prev(p)->pos);
-		if (!constant->as.var_decl.name || !constant->as.var_decl.type_name || !constant->as.var_decl.value) {
-			ast_free(constant);
-			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
-			return false;
-		}
-		char value_text[32];
-		snprintf(value_text, sizeof(value_text), "%d", value);
-		constant->as.var_decl.value->as.number_expr.literal = dup_cstr(value_text);
-		if (!constant->as.var_decl.value->as.number_expr.literal) {
-			ast_free(constant);
-			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
-			return false;
-		}
-		if (!ast_vec_push(out_constants, constant)) {
-			ast_free(constant);
-			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
-			return false;
-		}
-		value++;
-		
-		/* Handle tagged enum variants: variant_name(type) */
+		if (!check_pattern_name_token(p)) { parse_error(p, peek(p), "expected enum member name"); goto fail; }
+		advance_tok(p);
+		ast_enum_variant *next = (ast_enum_variant *)realloc(variants, (variant_count + 1) * sizeof(ast_enum_variant));
+		if (!next) goto oom;
+		variants = next;
+		variants[variant_count].name = dup_cstr(prev(p)->lexeme);
+		variants[variant_count].payload_type = NULL;
+		if (!variants[variant_count].name) goto oom;
 		if (match(p, TOKEN_LPAREN)) {
-			int paren_depth = 1;
-			while (paren_depth > 0 && !is_at_end(p)) {
-				if (check(p, TOKEN_LPAREN)) paren_depth++;
-				else if (check(p, TOKEN_RPAREN)) paren_depth--;
-				advance_tok(p);
-			}
+			if (!expect(p, TOKEN_IDENTIFIER, "enum payload type")) goto fail;
+			variants[variant_count].payload_type = dup_cstr(prev(p)->lexeme);
+			if (!variants[variant_count].payload_type) goto oom;
+			if (!expect(p, TOKEN_RPAREN, "')' after enum payload type")) goto fail;
 		}
-		
-		if (match(p, TOKEN_ASSIGN)) {
-			if (!match(p, TOKEN_NUMBER)) {
-				parse_error(p, peek(p), "enum values must be integer literals in seed compiler");
-				return false;
-			}
-			free(constant->as.var_decl.value->as.number_expr.literal);
-			constant->as.var_decl.value->as.number_expr.literal = dup_cstr(prev(p)->lexeme);
-			if (!constant->as.var_decl.value->as.number_expr.literal) {
-				ast_free(constant);
-				error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
-				return false;
-			}
-			value = (int)strtol(prev(p)->lexeme, NULL, 0) + 1;
-		}
-		if (match(p, TOKEN_COMMA)) {
-			need_member = true;
-			continue;
-		}
-		need_member = false;
+		variant_count++;
+		if (!match(p, TOKEN_COMMA) && !check(p, TOKEN_RBRACE)) { parse_error(p, peek(p), "expected ',' or '}' after enum member"); goto fail; }
 	}
-	if (need_member && !check(p, TOKEN_RBRACE)) {
-		parse_error(p, peek(p), "expected enum member");
-		return false;
-	}
-	if (!expect(p, TOKEN_RBRACE, "'}' after enum")) return false;
+	if (!expect(p, TOKEN_RBRACE, "'}' after enum")) goto fail;
 	consume_optional_semicolon(p);
-	(void)kw;
-	return true;
+	node->as.enum_decl.generic_params = generic_params;
+	node->as.enum_decl.generic_count = generic_count;
+	node->as.enum_decl.variants = variants;
+	node->as.enum_decl.variant_count = variant_count;
+	return node;
+
+oom:
+	error_set(p->err, ERR_OUT_OF_MEMORY, peek(p)->pos.line, peek(p)->pos.column, "out of memory");
+fail:
+	free(generic_params);
+	free(variants);
+	ast_free(node);
+	return NULL;
 }
 static ast_node *parse_export_decl(parser *p) {
 	const token *kw = peek(p);
@@ -3600,26 +3604,17 @@ parse_result parser_parse_tokens(const token_vec *tokens, compile_error *err) {
 			continue;
 		}
 		if (check(&p, TOKEN_IDENTIFIER) && strcmp(peek(&p)->lexeme, "enum") == 0) {
-			ast_vec enum_constants;
-			size_t i;
-			ast_vec_init(&enum_constants);
-			if (!parse_enum_decl(&p, &enum_constants)) {
-				for (i = 0; i < enum_constants.len; i++) ast_free(enum_constants.data[i]);
-				ast_vec_free(&enum_constants);
+			ast_node *enum_decl = parse_enum_decl(&p);
+			if (!enum_decl) {
 				ast_free(out.root);
 				return (parse_result){NULL};
 			}
-			for (i = 0; i < enum_constants.len; i++) {
-				if (!ast_vec_push(&out.root->as.program.statements, enum_constants.data[i])) {
-					ast_free(enum_constants.data[i]);
-					for (i = i + 1; i < enum_constants.len; i++) ast_free(enum_constants.data[i]);
-					ast_vec_free(&enum_constants);
-					ast_free(out.root);
-					error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
-					return (parse_result){NULL};
-				}
+			if (!ast_vec_push(&out.root->as.program.statements, enum_decl)) {
+				ast_free(enum_decl);
+				ast_free(out.root);
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				return (parse_result){NULL};
 			}
-			free(enum_constants.data);
 			continue;
 		}
 		ast_node *stmt = parse_top_level(&p);
