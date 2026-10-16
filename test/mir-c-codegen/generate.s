@@ -63,6 +63,23 @@ func main() int {
         functions[1].external = true
         functions[1].blocks = mir_program_block[]()
     }
+    if mode == "void" {
+        functions = []mir_program_function{}
+        void_instructions := []mir_program_instruction{}
+        void_instructions.push(mir_program_instruction {
+            op: "call", result_ids: int[]{}, result_types: string[]{}, operands: int[]{}, integer_value: 0, symbol: "sample.noop",
+        })
+        void_blocks := []mir_program_block{}
+        void_blocks.push(mir_program_block { id: 0, instructions: void_instructions, terminator: "return", return_values: int[]{} })
+        functions.push(mir_program_function {
+            symbol: "sample.main", params: mir_program_parameter[]{}, result_types: string[]{}, blocks: void_blocks, external: false,
+        })
+        empty_blocks := []mir_program_block{}
+        empty_blocks.push(mir_program_block { id: 0, instructions: mir_program_instruction[]{}, terminator: "return", return_values: int[]{} })
+        functions.push(mir_program_function {
+            symbol: "sample.noop", params: mir_program_parameter[]{}, result_types: string[]{}, blocks: empty_blocks, external: false,
+        })
+    }
     if mode == "bad_type" {
         functions[2].result_types = string[]{"string"}
         functions[2].blocks[0].instructions[0].result_types = string[]{"string"}
@@ -77,6 +94,10 @@ func main() int {
     if mode == "mutated_ir" { program.functions[0].blocks[0].instructions[0].op = "corrupted" }
     if mode == "cfg" { program.functions[0].blocks[0].terminator = "branch" }
     if mode == "unknown_after_lowering" { program.functions[0].blocks[0].instructions[1].symbol = "absent.function" }
+    if mode == "multiple_results" {
+        program.functions[0].result_types = string[]{"int", "int"}
+        program.functions[0].blocks[0].return_values = int[]{4, 4}
+    }
     emitted := emit_mir_program_c(program)
     if emitted.error != "" {
         if emitted.code != "" { eprintln("failed emission leaked partial C"); return 2 }
