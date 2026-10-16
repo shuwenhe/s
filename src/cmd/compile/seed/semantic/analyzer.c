@@ -1041,6 +1041,27 @@ static int analyze_block_with_new_scope(semantic_ctx *ctx, ast_node *block) {
 	leave_child_scope(ctx, old_scope);
 	return 1;
 }
+static int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char *return_type);
+
+static int pattern_arm_value_type(semantic_ctx *ctx, ast_node *body, const char *return_type) {
+	ast_node *tail;
+	if (!body || body->kind != AST_BLOCK || body->as.block.statements.len == 0) return 0;
+	tail = body->as.block.statements.data[body->as.block.statements.len - 1];
+	if (tail->kind == AST_EXPR_STMT) {
+		return tail->as.expr_stmt.inferred_type &&
+			is_type_assignable_ctx(ctx, return_type, tail->as.expr_stmt.inferred_type);
+	}
+	return stmt_guarantees_return(ctx, body, return_type);
+}
+
+static int pattern_switch_guarantees_return(semantic_ctx *ctx, ast_node *node, const char *return_type) {
+	if (!node || node->kind != AST_IF_STMT || !node->as.if_stmt.is_pattern_arm) return 0;
+	if (!pattern_arm_value_type(ctx, node->as.if_stmt.then_branch, return_type)) return 0;
+	if (node->as.if_stmt.pattern_kind == PATTERN_WILDCARD || node->as.if_stmt.pattern_kind == PATTERN_BINDING) return 1;
+	return node->as.if_stmt.else_branch &&
+		pattern_switch_guarantees_return(ctx, node->as.if_stmt.else_branch, return_type);
+}
+
 static int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char *return_type) {
 	size_t i;
 	if (!node) {
@@ -1063,6 +1084,9 @@ static int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char 
 			}
 			return 0;
 		case AST_IF_STMT:
+			if (node->as.if_stmt.is_pattern_arm) {
+				return pattern_switch_guarantees_return(ctx, node, return_type);
+			}
 			if (!node->as.if_stmt.else_branch) {
 				return 0;
 			}
