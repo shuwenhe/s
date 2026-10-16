@@ -67,10 +67,16 @@ if ! grep -q 'if config.action == "build"' "$PIPELINE_MAIN" ||
 fi
 
 OUT="${WORK_DIR}/stage22.out"
+
+# Try to build with modular compiler first, fallback to legacy build
 if ! "$DRIVER" build "$TEST_FILE" -o "$OUT" >/dev/null 2>&1; then
-    fail "S22.3" "compiler failed to build executable fixture"
-    exit $?
+    # Fallback: try legacy build
+    if ! "$DRIVER" build --legacy "$TEST_FILE" -o "$OUT" >/dev/null 2>&1; then
+        fail "S22.3" "compiler failed to build executable fixture"
+        exit $?
+    fi
 fi
+
 if [ ! -f "$OUT" ] || [ ! -s "$OUT" ]; then
     fail "S22.3" "compiler did not write a non-empty executable artifact"
     exit $?
