@@ -2216,6 +2216,26 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			if (!analyze_expr(ctx, node->as.sroutine_stmt.call, &expr_type)) return 0;
 			return 1;
 		case AST_IF_STMT:
+			if (node->as.if_stmt.is_pattern_arm) {
+				scope *old_scope;
+				const char *subject_type = TYPE_ANY;
+				if (node->as.if_stmt.pattern_subject && !analyze_expr(ctx, node->as.if_stmt.pattern_subject, &subject_type)) return 0;
+				if (!enter_child_scope(ctx, &old_scope)) return 0;
+				if (node->as.if_stmt.pattern_kind == PATTERN_BINDING && node->as.if_stmt.binding_name) {
+					status = scope_define(ctx->current_scope, node->as.if_stmt.binding_name, SYMBOL_VAR, 0, -1, -1,
+						subject_type ? subject_type : TYPE_ANY, NULL, 0);
+					if (status <= 0) {
+						leave_child_scope(ctx, old_scope);
+						if (status < 0) error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+						return 0;
+					}
+				}
+				status = analyze_node(ctx, node->as.if_stmt.then_branch);
+				leave_child_scope(ctx, old_scope);
+				if (!status) return 0;
+				if (node->as.if_stmt.else_branch) return analyze_node(ctx, node->as.if_stmt.else_branch);
+				return 1;
+			}
 			if (!analyze_expr(ctx, node->as.if_stmt.condition, &expr_type)) {
 				return 0;
 			}
