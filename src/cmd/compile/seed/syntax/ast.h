@@ -116,6 +116,10 @@ struct ast_node {
 			pattern_kind pattern_kind;
 			char *binding_name;
 			ast_node *pattern_subject;
+			char *variant_owner;
+			char *variant_name;
+			pattern_kind payload_kind;
+			char *payload_binding_name;
 		} if_stmt;
 		struct {
 			ast_node *condition;
