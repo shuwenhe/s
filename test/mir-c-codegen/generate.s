@@ -15,7 +15,10 @@ func cg_function(string symbol, mir_program_parameter[] params, mir_program_inst
     return mir_program_function { symbol: symbol, params: params, result_types: string[]{"int"}, blocks: blocks, external: false }
 }
 
-func cg_fixture(string mode) mir_program_result {
+func main() int {
+    args := host_args()
+    mode := "base"
+    if len(args) > 1 { mode = args[1] }
     params := []mir_program_parameter{}
     params.push(mir_program_parameter { value_id: 0, name: "input", type_name: "int" })
     values := []mir_program_instruction{}
@@ -54,16 +57,10 @@ func cg_fixture(string mode) mir_program_result {
         functions[2].params[0].type_name = "string"
         functions[2].blocks[0].instructions[0].operands = int[]{0}
     }
-    return lower_mir_program("sample", "sample.main", functions)
-}
-
-func main() int {
-    args := host_args()
-    mode := "base"
-    if len(args) > 1 { mode = args[1] }
-    lowered := cg_fixture(mode)
+    lowered := lower_mir_program("sample", "sample.main", functions)
     if lowered.error != "" { eprintln(lowered.error); return 1 }
-    emitted := emit_mir_program_c(lowered.program)
+    program := lowered.program
+    emitted := emit_mir_program_c(program)
     if emitted.error != "" {
         if emitted.code != "" { eprintln("failed emission leaked partial C"); return 2 }
         eprintln(emitted.error)
