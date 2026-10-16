@@ -1404,14 +1404,14 @@ static int host_dispatch_call(
 		*out = value_make_int(host_write_text_file(path, contents));
 		return 1;
 	}
-	if (strcmp(name, "__host_char_at") == 0) {
+	if (strcmp(name, "__host_char_at") == 0 || strcmp(name, "__string_char_at") == 0) {
 		const char *text = NULL;
 		char text_buf[64];
 		long index;
 		char ch[2];
 		if (argc != 2 || !value_as_cstr(&args[0], text_buf, sizeof(text_buf), &text) ||
 		    !host_int_arg(&args[1], &index)) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "__host_char_at expects string and int");
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s expects string and int", name);
 			return 0;
 		}
 		if (index < 0 || (size_t)index >= strlen(text)) {
@@ -1451,7 +1451,7 @@ static int host_dispatch_call(
 		*out = value_make_string_copy(text);
 		return out->str_value != NULL;
 	}
-	if (strcmp(name, "__host_slice") == 0) {
+	if (strcmp(name, "__host_slice") == 0 || strcmp(name, "__string_slice") == 0) {
 		const char *text = NULL;
 		char text_buf[64];
 		long start, end;
@@ -1459,12 +1459,12 @@ static int host_dispatch_call(
 		char *slice;
 		if (argc != 3 || !value_as_cstr(&args[0], text_buf, sizeof(text_buf), &text) ||
 		    !host_int_arg(&args[1], &start) || !host_int_arg(&args[2], &end)) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "__host_slice expects string, start, and end");
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s expects string, start, and end", name);
 			return 0;
 		}
 		text_len = strlen(text);
 		if (start < 0 || end < start || (size_t)end > text_len) {
-			error_set(err, ERR_SEMANTIC, 0, 0, "__host_slice range is out of bounds");
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s range is out of bounds", name);
 			return 0;
 		}
 		slice = (char *)malloc((size_t)(end - start) + 1);

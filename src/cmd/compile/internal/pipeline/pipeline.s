@@ -83,7 +83,7 @@ func pipeline_finish(pipeline_context context, int status) pipeline_result {
         eprintln("[AUTHORITY] Final artifact: " + context.output)
         eprintln("[AUTHORITY] All three stages (Frontend→Middlend→Backend) completed with canonical code")
     } else {
-        eprintln("[PIPELINE] ✗ Compilation failed with exit code " + status)
+        eprintln("[PIPELINE] ✗ Compilation failed")
     }
     return pipeline_result {
         exit_status: status,
