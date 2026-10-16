@@ -2143,35 +2143,30 @@ static ast_node *parse_fn_statement(parser *p) {
 		size_t saved_pos = p->current;
 		int try_new_format = 1;
 		type_start = p->current;
-		if (check(p, TOKEN_STAR) || check(p, TOKEN_AMP)) {
-			advance_tok(p);
-		}
-		if (!check(p, TOKEN_IDENTIFIER)) {
-			try_new_format = 0;
-			p->current = saved_pos;
-		} else {
-			/* Try format: (type name) or (type* name) */
-			size_t has_ptr_or_amp = (check(p, TOKEN_STAR) || check(p, TOKEN_AMP)) ? 1 : 0;
-			size_t type_end = p->current + (has_ptr_or_amp ? 2 : 1);
-			advance_tok(p);
-			if (has_ptr_or_amp) advance_tok(p);
-			if (check(p, TOKEN_IDENTIFIER)) {
-				const char *name_ident = peek(p)->lexeme;
-				advance_tok(p);
-				if (check(p, TOKEN_RPAREN)) {
-					receiver_type = join_lexemes_range(p->tokens, type_start, type_end);
-					receiver_name = dup_cstr(name_ident);
-					try_new_format = 1;
-				} else {
-					try_new_format = 0;
-					p->current = saved_pos;
-				}
-			} else if (check(p, TOKEN_COLON)) {
+		/* Try the canonical format by treating the final identifier before ')'
+		 * as the receiver name. This preserves generic type brackets. */
+		{
+			size_t scan = saved_pos;
+			size_t last_ident = (size_t)-1;
+			int saw_colon = 0;
+			while (scan < p->tokens->len && p->tokens->data[scan].type != TOKEN_RPAREN) {
+				if (p->tokens->data[scan].type == TOKEN_COLON) saw_colon = 1;
+				if (p->tokens->data[scan].type == TOKEN_IDENTIFIER) last_ident = scan;
+				scan++;
+			}
+			if (scan >= p->tokens->len || last_ident == saved_pos || last_ident + 1 != scan || saw_colon) {
 				try_new_format = 0;
 				p->current = saved_pos;
 			} else {
-				try_new_format = 0;
-				p->current = saved_pos;
+				receiver_type = join_lexemes_range(p->tokens, saved_pos, last_ident);
+				receiver_name = dup_cstr(p->tokens->data[last_ident].lexeme);
+				p->current = scan;
+				if (!receiver_type || !receiver_name) {
+					free(receiver_type); free(receiver_name);
+					receiver_type = NULL; receiver_name = NULL;
+					try_new_format = 0;
+					p->current = saved_pos;
+				}
 			}
 		}
 		if (!try_new_format) {
