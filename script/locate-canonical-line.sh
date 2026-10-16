@@ -7,7 +7,7 @@
 # accounting for concatenated file line numbers.
 #
 # USAGE:
-#   ./scripts/locate-canonical-line.sh <closure-file> <line-number>
+#   ./script/locate-canonical-line.sh <closure-file> <line-number>
 #
 ###############################################################################
 

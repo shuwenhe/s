@@ -16,7 +16,7 @@
 #   - Regressions
 #
 # USAGE:
-#   ./scripts/canonical-parser-closure-check.sh [source-root]
+#   ./script/canonical-parser-closure-check.sh [source-root]
 #
 # GATE EXIT CODE:
 #   0 = PASS (all files parsed, 0 errors)
