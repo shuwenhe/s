@@ -201,6 +201,8 @@ void ast_free(ast_node *node) {
 		case AST_EXTERN_DECL:
 			free(node->as.extern_decl.abi);
 			free(node->as.extern_decl.name);
+			for (i = 0; i < node->as.extern_decl.generic_count; i++) free(node->as.extern_decl.generic_params[i]);
+			free(node->as.extern_decl.generic_params);
 			for (i = 0; i < node->as.extern_decl.param_count; i++) {
 				free(node->as.extern_decl.params[i]);
 				free(node->as.extern_decl.param_types[i]);
@@ -219,6 +221,8 @@ void ast_free(ast_node *node) {
 			ast_free(node->as.if_stmt.condition);
 			ast_free(node->as.if_stmt.then_branch);
 			ast_free(node->as.if_stmt.else_branch);
+			free(node->as.if_stmt.binding_name);
+			ast_free(node->as.if_stmt.pattern_subject);
 			break;
 		case AST_WHILE_STMT:
 			ast_free(node->as.while_stmt.condition);
@@ -2829,6 +2833,7 @@ static ast_node *parse_switch_statement(parser *p) {
 			ast_node *case_value = NULL;
 			ast_node *body;
 			ast_node *arm;
+			const char *pattern_word = NULL;
 			if (check(p, TOKEN_STRING) || check(p, TOKEN_NUMBER) || check(p, TOKEN_TRUE) || check(p, TOKEN_FALSE)) {
 				case_value = parse_expression(p);
 				has_expression_body = true;
@@ -2846,6 +2851,7 @@ static ast_node *parse_switch_statement(parser *p) {
 			
 				// Determine what kind of switch arm this is
 				const char *word = peek(p)->lexeme;
+				pattern_word = word;
 			
 				if (strcmp(word, "_") == 0) {
 					// Wildcard pattern
@@ -3077,8 +3083,15 @@ static ast_node *parse_switch_statement(parser *p) {
 		}
 		
 		if (is_pattern_switch) {
-			// Pattern-switch: no condition, mark with NULL
+			// Pattern-switch: retain an explicit pattern contract for Semantic.
 			arm->as.if_stmt.condition = NULL;
+			arm->as.if_stmt.is_pattern_arm = true;
+			arm->as.if_stmt.pattern_kind = strcmp(pattern_word ? pattern_word : "", "_") == 0 ? PATTERN_WILDCARD :
+				(case_value ? PATTERN_BINDING : PATTERN_VARIANT);
+			if (arm->as.if_stmt.pattern_kind == PATTERN_BINDING && case_value && case_value->kind == AST_IDENT_EXPR) {
+				arm->as.if_stmt.binding_name = dup_cstr(case_value->as.ident_expr.name);
+			}
+			arm->as.if_stmt.pattern_subject = clone_expr(subject);
 		} else if (is_default) {
 			// default: no condition
 			arm->as.if_stmt.condition = NULL;
@@ -3300,6 +3313,22 @@ static ast_node *parse_extern_decl(parser *p) {
 	}
 	node->as.extern_decl.name = dup_cstr(prev(p)->lexeme);
 	if (!node->as.extern_decl.name) { ast_free(node); return NULL; }
+	if (match(p, TOKEN_LBRACKET)) {
+		do {
+			char **next;
+			if (!expect(p, TOKEN_IDENTIFIER, "generic parameter")) { ast_free(node); return NULL; }
+			next = (char **)realloc(node->as.extern_decl.generic_params,
+				(node->as.extern_decl.generic_count + 1) * sizeof(char *));
+			if (!next) { ast_free(node); return NULL; }
+			node->as.extern_decl.generic_params = next;
+			node->as.extern_decl.generic_params[node->as.extern_decl.generic_count] = dup_cstr(prev(p)->lexeme);
+			if (!node->as.extern_decl.generic_params[node->as.extern_decl.generic_count++]) {
+				ast_free(node);
+				return NULL;
+			}
+		} while (match(p, TOKEN_COMMA));
+		if (!expect(p, TOKEN_RBRACKET, "']' after generic parameters")) { ast_free(node); return NULL; }
+	}
 	if (!expect(p, TOKEN_LPAREN, "'(' after extern function name")) {
 		ast_free(node);
 		return NULL;
