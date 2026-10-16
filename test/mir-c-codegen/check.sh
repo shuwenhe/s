@@ -28,8 +28,23 @@ expect base 7 25
 expect base -2 -2
 expect changed 7 30
 expect subtract 7 17
+expect copy 7 25
 expect min 0 -9223372036854775808
-for mode in invalid_op undefined external bad_type; do
+expect divide 7 -2
+expect divide -7 2
+expect modulo 7 1
+expect modulo -7 -1
+expect wrap 9223372036854775807 -9223372036854775808
+expect wrap -9223372036854775808 -9223372036854775807
+mkdir -p "$work/divide_zero"
+timeout 10s "$work/emitter" divide_zero > "$work/divide_zero/program.c"
+"${CC:-cc}" -std=c11 -Wall -Wextra -Werror -O2 -I"$work/divide_zero" \
+    test/mir-c-codegen/runner.c -o "$work/divide_zero/native"
+divide_status=0
+timeout 10s "$work/divide_zero/native" 1 > "$work/divide_zero/output" || divide_status=$?
+test "$divide_status" -eq 86
+test ! -s "$work/divide_zero/output"
+for mode in invalid_op undefined external bad_type mutated_ir cfg unknown_after_lowering; do
     if timeout 10s "$work/emitter" "$mode" > "$work/$mode.c" 2> "$work/$mode.log"; then
         printf '%s unexpectedly accepted\n' "$mode" >&2
         exit 1
