@@ -105,7 +105,7 @@ func dispatch_command(driver_config config) int {
         return config.exit_code
     }
     if config.action == "forward" {
-        return compile.internal.compiler.main(config.forwarded_args)
+        return compiler_main(config.forwarded_args)
     }
     if config.action == "build" {
         return pipeline_build(config.input, config.output, "", false)
@@ -149,6 +149,12 @@ func default_output(string input) string {
 }
 
 func is_forwarded_mode(string mode) bool {
+    proofs := driver_proof_modes()
+    i := 0
+    while i < len(proofs) {
+        if mode == proofs[i] { return true }
+        i = i + 1
+    }
     if mode == "--emit-c" { return true }
     if mode == "--emit-lowered-view" { return true }
     if mode == "--emit-mir" { return true }
@@ -169,6 +175,14 @@ func is_forwarded_mode(string mode) bool {
     if mode == "--emit-mir-ownership-solver-check" { return true }
     if mode == "--emit-mir-nll-ownership" { return true }
     return false
+}
+
+func driver_proof_modes() string[] {
+    return ["stage5-name-resolution-proof", "declaration-ref-proof", "type-checking-proof",
+        "type-facts-observation-proof", "canonical-type-ref-proof", "canonical-semantic-proof",
+        "canonical-lowering-proof", "canonical-mir-verification-proof", "canonical-ownership-proof",
+        "canonical-monomorphization-proof", "canonical-optimization-proof", "canonical-layout-proof",
+        "canonical-abi-proof", "canonical-codegen-proof", "canonical-regalloc-proof"]
 }
 
 func has_suffix(string text, string suffix) bool {
@@ -193,6 +207,12 @@ func driver_print_usage(string prog) () {
     std.io.eprintln("  " + prog + " build <input.s> -o <output>")
     std.io.eprintln("  " + prog + " --emit-c <input.s> <output.c>")
     std.io.eprintln("  " + prog + " --emit-mir <input.s> <output.mir>")
+    proofs := driver_proof_modes()
+    i := 0
+    while i < len(proofs) {
+        std.io.eprintln("  " + prog + " " + proofs[i] + " <input.s> <output.proof>")
+        i = i + 1
+    }
 }
 
 extern "intrinsic" func __string_char_at(string text, int index) string
