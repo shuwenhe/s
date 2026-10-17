@@ -254,6 +254,11 @@ selfhost: native-bootstrap
 # ============================================================================
 # Pipeline
 # ============================================================================
+.PHONY: compiler-unit-check
+compiler-unit-check: seed-compiler-bin
+	@sh test/driver-dispatch/check.sh
+	@bash test/ssa/check-p2.1.sh
+
 .PHONY: pipeline
 pipeline: compiler
 	@chmod +x script/compile-pipeline-check.sh
@@ -281,6 +286,7 @@ clean:
 
 .PHONY: help
 help:
+	@echo "  make compiler-unit-check"
 	@echo "  make pipeline"
 	@echo "  make install"
 	@echo "  make selfhost"
