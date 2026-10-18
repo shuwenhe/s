@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 #if defined(__linux__)
@@ -638,7 +639,7 @@ static int host_file_exists(const char *path) {
 	fclose(fp);
 	return 1;
 }
-static char *host_read_text_file(const char *path, compile_error *err) {
+static char *host_read_text_file_checked(const char *path, int reject_nul, compile_error *err) {
 	FILE *fp;
 	long len;
 	size_t read_len;
@@ -679,8 +680,16 @@ static char *host_read_text_file(const char *path, compile_error *err) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to read file: %s", path);
 		return NULL;
 	}
+	if (reject_nul && memchr(buf, '\0', read_len)) {
+		free(buf);
+		error_set(err, ERR_SEMANTIC, 0, 0, "source contains embedded NUL: %s", path);
+		return NULL;
+	}
 	buf[len] = '\0';
 	return buf;
+}
+static char *host_read_text_file(const char *path, compile_error *err) {
+	return host_read_text_file_checked(path, 0, err);
 }
 static int host_write_text_file(const char *path, const char *contents) {
 	FILE *fp;
@@ -1326,7 +1335,7 @@ static int host_dispatch_call(
 		*out = value_make_int(0);
 		return 1;
 	}
-	if (strcmp(name, "__host_read_to_string") == 0) {
+	if (strcmp(name, "__host_read_to_string") == 0 || strcmp(name, "__host_read_source") == 0) {
 		const char *path = NULL;
 		char path_buf[256];
 		char *content;
@@ -1334,7 +1343,7 @@ static int host_dispatch_call(
 			error_set(err, ERR_SEMANTIC, 0, 0, "__host_read_to_string expects a path");
 			return 0;
 		}
-		content = host_read_text_file(path, err);
+		content = host_read_text_file_checked(path, strcmp(name, "__host_read_source") == 0, err);
 		if (!content) return 0;
 		g_host_errno = content[0] == '\0' && !host_file_exists(path) ? ENOENT : 0;
 		*out = value_make_string_owned(content);
@@ -1402,6 +1411,73 @@ static int host_dispatch_call(
 			return 0;
 		}
 		*out = value_make_int(host_write_text_file(path, contents));
+		return 1;
+	}
+	/* Compiler host tooling only: pass argv directly, never through a shell.
+	 * Generated native programs do not link this interpreter runtime. */
+	if (strcmp(name, "__host_run_argv") == 0) {
+		char **child_argv;
+		pid_t child, waited;
+		int status;
+		size_t i;
+		if (argc != 1 || args[0].kind != RUNTIME_ARRAY) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_run_argv expects a string array");
+			return 0;
+		}
+		if (args[0].array_len == 0) { *out = value_make_int(-1); return 1; }
+		child_argv = (char **)calloc(args[0].array_len + 1, sizeof(*child_argv));
+		if (!child_argv) { error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+		for (i = 0; i < args[0].array_len; i++) {
+			if (args[0].array_items[i].kind != RUNTIME_STRING || !args[0].array_items[i].str_value) {
+				free(child_argv);
+				error_set(err, ERR_SEMANTIC, 0, 0, "__host_run_argv expects string arguments");
+				return 0;
+			}
+			child_argv[i] = args[0].array_items[i].str_value;
+		}
+		if (child_argv[0][0] == '\0') { free(child_argv); *out = value_make_int(-1); return 1; }
+		child = fork();
+		if (child == 0) { execvp(child_argv[0], child_argv); _exit(errno == ENOENT ? 127 : 126); }
+		free(child_argv);
+		if (child < 0) { *out = value_make_int(-1); return 1; }
+		do { waited = waitpid(child, &status, 0); } while (waited < 0 && errno == EINTR);
+		if (waited < 0) { *out = value_make_int(-1); return 1; }
+		*out = value_make_int(WIFEXITED(status) ? WEXITSTATUS(status) :
+		                      WIFSIGNALED(status) ? 128 + WTERMSIG(status) : -1);
+		return 1;
+	}
+	if (strcmp(name, "__host_same_file") == 0 || strcmp(name, "__host_rename_file") == 0) {
+		const char *left, *right;
+		char left_buf[256], right_buf[256];
+		struct stat left_stat, right_stat;
+		if (argc != 2 || !value_as_cstr(&args[0], left_buf, sizeof(left_buf), &left) ||
+		    !value_as_cstr(&args[1], right_buf, sizeof(right_buf), &right)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "%s expects two paths", name);
+			return 0;
+		}
+		if (strcmp(name, "__host_rename_file") == 0) {
+			*out = value_make_int(rename(left, right));
+		} else {
+			*out = value_make_int(stat(left, &left_stat) == 0 && stat(right, &right_stat) == 0 &&
+			                      left_stat.st_dev == right_stat.st_dev && left_stat.st_ino == right_stat.st_ino);
+		}
+		return 1;
+	}
+	if (strcmp(name, "__host_make_temp_dir_in") == 0) {
+		const char *directory;
+		char directory_buf[256];
+		char *path;
+		size_t size;
+		if (argc != 1 || !value_as_cstr(&args[0], directory_buf, sizeof(directory_buf), &directory)) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "__host_make_temp_dir_in expects a directory");
+			return 0;
+		}
+		size = strlen(directory) + sizeof("/.s-native-XXXXXX");
+		path = (char *)malloc(size);
+		if (!path) { error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+		snprintf(path, size, "%s/.s-native-XXXXXX", directory);
+		if (!mkdtemp(path)) { free(path); *out = value_make_string_copy(""); return out->str_value != NULL; }
+		*out = value_make_string_owned(path);
 		return 1;
 	}
 	if (strcmp(name, "__host_char_at") == 0 || strcmp(name, "__string_char_at") == 0) {

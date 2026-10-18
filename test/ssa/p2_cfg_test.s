@@ -1,6 +1,6 @@
 package compile.internal.ssa
 
-func expect_valid(ssa_program p, string name) int {
+func expect_valid(function_ssa_program p, string name) int {
     error := verify_ssa_program(p)
     if error != "" {
         eprintln("rejected valid " + name + ": " + error)
@@ -9,7 +9,7 @@ func expect_valid(ssa_program p, string name) int {
     return 0
 }
 
-func expect_invalid(ssa_program p, string name, string expected_error) int {
+func expect_invalid(function_ssa_program p, string name, string expected_error) int {
     error := verify_ssa_program(p)
     if error != expected_error {
         eprintln("wrong rejection for " + name + ": expected " + expected_error + ", got " + error)
@@ -18,84 +18,84 @@ func expect_invalid(ssa_program p, string name, string expected_error) int {
     return 0
 }
 
-func diamond_program() ssa_program {
-    blocks := ssa_block[]()
-    entry := ssa_value[]()
-    entry.push(ssa_value { id: 1, op: "const_bool", operands: int[](), block_id: 10, type_name: "bool" })
-    blocks.push(ssa_block {
+func diamond_program() function_ssa_program {
+    blocks := function_ssa_block[]()
+    entry := function_ssa_value[]()
+    entry.push(function_ssa_value { id: 1, op: "const_bool", operands: int[](), block_id: 10, type_name: "bool" })
+    blocks.push(function_ssa_block {
         id: 10, label: "entry", predecessors: int[](), successors: int[]{20, 30},
         values: entry,
         terminator: "branch", terminator_values: int[]{1},
     })
-    left := ssa_value[]()
-    left.push(ssa_value { id: 2, op: "const_int", operands: int[](), block_id: 20, type_name: "int" })
-    blocks.push(ssa_block {
+    left := function_ssa_value[]()
+    left.push(function_ssa_value { id: 2, op: "const_int", operands: int[](), block_id: 20, type_name: "int" })
+    blocks.push(function_ssa_block {
         id: 20, label: "left", predecessors: int[]{10}, successors: int[]{40},
         values: left,
         terminator: "jump", terminator_values: int[](),
     })
-    right := ssa_value[]()
-    right.push(ssa_value { id: 3, op: "const_int", operands: int[](), block_id: 30, type_name: "int" })
-    blocks.push(ssa_block {
+    right := function_ssa_value[]()
+    right.push(function_ssa_value { id: 3, op: "const_int", operands: int[](), block_id: 30, type_name: "int" })
+    blocks.push(function_ssa_block {
         id: 30, label: "right", predecessors: int[]{10}, successors: int[]{40},
         values: right,
         terminator: "jump", terminator_values: int[](),
     })
-    merge := ssa_value[]()
-    merge.push(ssa_value { id: 4, op: "phi", operands: int[]{2, 3}, block_id: 40, type_name: "int" })
-    blocks.push(ssa_block {
+    merge := function_ssa_value[]()
+    merge.push(function_ssa_value { id: 4, op: "phi", operands: int[]{2, 3}, block_id: 40, type_name: "int" })
+    blocks.push(function_ssa_block {
         id: 40, label: "merge", predecessors: int[]{20, 30}, successors: int[](),
         values: merge,
         terminator: "return", terminator_values: int[]{4},
     })
-    functions := ssa_function[]()
-    functions.push(ssa_function {
+    functions := function_ssa_function[]()
+    functions.push(function_ssa_function {
         symbol: "sample.main", parameter_types: string[](), result_types: string[]{"int"},
         blocks: blocks, entry_block: 10, exit_block: 40,
     })
-    return ssa_program { package_name: "sample", entry_symbol: "sample.main", functions: functions, calls: ssa_call[]() }
+    return function_ssa_program { package_name: "sample", entry_symbol: "sample.main", functions: functions, calls: function_ssa_call[]() }
 }
 
-func loop_program() ssa_program {
-    blocks := ssa_block[]()
-    entry := ssa_value[]()
-    entry.push(ssa_value { id: 1, op: "const_int", operands: int[](), block_id: 10, type_name: "int" })
-    blocks.push(ssa_block {
+func loop_program() function_ssa_program {
+    blocks := function_ssa_block[]()
+    entry := function_ssa_value[]()
+    entry.push(function_ssa_value { id: 1, op: "const_int", operands: int[](), block_id: 10, type_name: "int" })
+    blocks.push(function_ssa_block {
         id: 10, label: "entry", predecessors: int[](), successors: int[]{11},
         values: entry,
         terminator: "jump", terminator_values: int[](),
     })
-    header := ssa_value[]()
-    header.push(ssa_value { id: 5, op: "phi", operands: int[]{1, 6}, block_id: 11, type_name: "int" })
-    header.push(ssa_value { id: 2, op: "const_bool", operands: int[](), block_id: 11, type_name: "bool" })
-    blocks.push(ssa_block {
+    header := function_ssa_value[]()
+    header.push(function_ssa_value { id: 5, op: "phi", operands: int[]{1, 6}, block_id: 11, type_name: "int" })
+    header.push(function_ssa_value { id: 2, op: "const_bool", operands: int[](), block_id: 11, type_name: "bool" })
+    blocks.push(function_ssa_block {
         id: 11, label: "header", predecessors: int[]{10, 12}, successors: int[]{12, 13},
         values: header,
         terminator: "branch", terminator_values: int[]{2},
     })
-    body := ssa_value[]()
-    body.push(ssa_value { id: 6, op: "copy", operands: int[]{5}, block_id: 12, type_name: "int" })
-    blocks.push(ssa_block {
+    body := function_ssa_value[]()
+    body.push(function_ssa_value { id: 6, op: "copy", operands: int[]{5}, block_id: 12, type_name: "int" })
+    blocks.push(function_ssa_block {
         id: 12, label: "body", predecessors: int[]{11}, successors: int[]{11},
         values: body,
         terminator: "jump", terminator_values: int[](),
     })
-    blocks.push(ssa_block {
-        id: 13, label: "exit", predecessors: int[]{11}, successors: int[](), values: ssa_value[](),
+    blocks.push(function_ssa_block {
+        id: 13, label: "exit", predecessors: int[]{11}, successors: int[](), values: function_ssa_value[](),
         terminator: "return", terminator_values: int[]{5},
     })
-    functions := ssa_function[]()
-    functions.push(ssa_function {
+    functions := function_ssa_function[]()
+    functions.push(function_ssa_function {
         symbol: "sample.main", parameter_types: string[](), result_types: string[]{"int"},
         blocks: blocks, entry_block: 10, exit_block: 13,
     })
-    return ssa_program { package_name: "sample", entry_symbol: "sample.main", calls: ssa_call[](), functions: functions }
+    return function_ssa_program { package_name: "sample", entry_symbol: "sample.main", calls: function_ssa_call[](), functions: functions }
 }
 
-func typed_call_program(string argument_type, string callee_type, string call_type, bool void_result, bool multiple_results) ssa_program {
-    values := ssa_value[]()
-    values.push(ssa_value { id: 0, op: "const_int", operands: int[](), block_id: 0, type_name: argument_type })
-    values.push(ssa_value { id: 1, op: "call", operands: int[]{0}, block_id: 0, type_name: call_type })
+func typed_call_program(string argument_type, string callee_type, string call_type, bool void_result, bool multiple_results) function_ssa_program {
+    values := function_ssa_value[]()
+    values.push(function_ssa_value { id: 0, op: "const_int", operands: int[](), block_id: 0, type_name: argument_type })
+    values.push(function_ssa_value { id: 1, op: "call", operands: int[]{0}, block_id: 0, type_name: call_type })
     main_returns := int[]{1}
     main_types := string[]{call_type}
     callee_returns := int[]{0}
@@ -110,36 +110,36 @@ func typed_call_program(string argument_type, string callee_type, string call_ty
         callee_returns = int[]{0, 0}
         callee_types = string[]{callee_type, callee_type}
     }
-    blocks := ssa_block[]()
-    blocks.push(ssa_block {
+    blocks := function_ssa_block[]()
+    blocks.push(function_ssa_block {
         id: 0, label: "entry", predecessors: int[](), successors: int[](), values: values,
         terminator: "return", terminator_values: main_returns,
     })
-    functions := ssa_function[]()
-    functions.push(ssa_function {
+    functions := function_ssa_function[]()
+    functions.push(function_ssa_function {
         symbol: "sample.main", parameter_types: string[](), result_types: main_types,
         blocks: blocks, entry_block: 0, exit_block: 0,
     })
-    params := ssa_value[]()
-    params.push(ssa_value { id: 0, op: "param", operands: int[](), block_id: 0, type_name: callee_type })
-    callee_blocks := ssa_block[]()
-    callee_blocks.push(ssa_block {
+    params := function_ssa_value[]()
+    params.push(function_ssa_value { id: 0, op: "param", operands: int[](), block_id: 0, type_name: callee_type })
+    callee_blocks := function_ssa_block[]()
+    callee_blocks.push(function_ssa_block {
         id: 0, label: "entry", predecessors: int[](), successors: int[](), values: params,
         terminator: "return", terminator_values: callee_returns,
     })
-    functions.push(ssa_function {
+    functions.push(function_ssa_function {
         symbol: "sample.identity", parameter_types: string[]{callee_type}, result_types: callee_types,
         blocks: callee_blocks, entry_block: 0, exit_block: 0,
     })
-    calls := ssa_call[]()
-    calls.push(ssa_call { caller: "sample.main", callee: "sample.identity", block_id: 0, value_id: 1 })
-    return ssa_program {
+    calls := function_ssa_call[]()
+    calls.push(function_ssa_call { caller: "sample.main", callee: "sample.identity", block_id: 0, value_id: 1 })
+    return function_ssa_program {
         package_name: "sample", entry_symbol: "sample.main", functions: functions,
         calls: calls,
     }
 }
 
-func call_program() ssa_program {
+func call_program() function_ssa_program {
     return typed_call_program("int", "int", "int", false, false)
 }
 
@@ -316,7 +316,7 @@ func check_terminators() int {
     p = diamond_program()
     f = p.functions[0]
     condition_block := f.blocks[1]
-    condition_block.values.push(ssa_value { id: 90, op: "const_bool", operands: int[](), block_id: 20, type_name: "bool" })
+    condition_block.values.push(function_ssa_value { id: 90, op: "const_bool", operands: int[](), block_id: 20, type_name: "bool" })
     f.blocks[1] = condition_block
     branch_block := f.blocks[0]
     branch_block.terminator_values = int[]{90}
@@ -390,10 +390,10 @@ func check_calls() int {
     p.calls[0] = call
     failures = failures + expect_invalid(p, "call edge attached to constant", "call edge references non-call value")
     p = call_program()
-    p.calls = ssa_call[]()
+    p.calls = function_ssa_call[]()
     failures = failures + expect_invalid(p, "call instruction without edge", "missing call edge: sample.main")
     p = call_program()
-    p.calls.push(ssa_call { caller: "sample.main", callee: "sample.main", block_id: 0, value_id: 1 })
+    p.calls.push(function_ssa_call { caller: "sample.main", callee: "sample.main", block_id: 0, value_id: 1 })
     failures = failures + expect_invalid(p, "duplicate call edge", "duplicate call edge")
     p = call_program()
     f = p.functions[0]

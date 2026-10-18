@@ -1,34 +1,36 @@
 package compile.internal.ssa
 
-struct ssa_value {
+struct function_ssa_value {
     int id
     string op
     // Phi operands correspond to the owning block's predecessor order.
     int[] operands
     int block_id
     string type_name
+    int integer_value
+    int parameter_index
 }
 
-struct ssa_block {
+struct function_ssa_block {
     int id
     string label
-    ssa_value[] values
+    function_ssa_value[] values
     int[] predecessors
     int[] successors
     string terminator
     int[] terminator_values
 }
 
-struct ssa_function {
+struct function_ssa_function {
     string symbol
     string[] parameter_types
     string[] result_types
-    ssa_block[] blocks
+    function_ssa_block[] blocks
     int entry_block
     int exit_block
 }
 
-struct ssa_call {
+struct function_ssa_call {
     string caller
     // The edge records the direct target of its caller's call value.
     string callee
@@ -36,14 +38,14 @@ struct ssa_call {
     int value_id
 }
 
-struct ssa_program {
+struct function_ssa_program {
     string package_name
     string entry_symbol
-    ssa_function[] functions
-    ssa_call[] calls
+    function_ssa_function[] functions
+    function_ssa_call[] calls
 }
 
-func ssa_function_index(ssa_function[] functions, string symbol) int {
+func ssa_function_index(function_ssa_function[] functions, string symbol) int {
     i := 0
     for i < len(functions) {
         if functions[i].symbol == symbol { return i }
@@ -52,7 +54,7 @@ func ssa_function_index(ssa_function[] functions, string symbol) int {
     return -1
 }
 
-func ssa_block_index(ssa_block[] blocks, int id) int {
+func ssa_block_index(function_ssa_block[] blocks, int id) int {
     i := 0
     for i < len(blocks) {
         if blocks[i].id == id { return i }
@@ -61,7 +63,7 @@ func ssa_block_index(ssa_block[] blocks, int id) int {
     return -1
 }
 
-func ssa_value_exists(ssa_block[] blocks, int id) bool {
+func ssa_value_exists(function_ssa_block[] blocks, int id) bool {
     b := 0
     for b < len(blocks) {
         v := 0
@@ -74,7 +76,7 @@ func ssa_value_exists(ssa_block[] blocks, int id) bool {
     return false
 }
 
-func ssa_value_index(ssa_value[] values, int id) int {
+func ssa_value_index(function_ssa_value[] values, int id) int {
     i := 0
     for i < len(values) {
         if values[i].id == id { return i }
@@ -83,7 +85,7 @@ func ssa_value_index(ssa_value[] values, int id) int {
     return -1
 }
 
-func ssa_value_block_index(ssa_block[] blocks, int id) int {
+func ssa_value_block_index(function_ssa_block[] blocks, int id) int {
     b := 0
     for b < len(blocks) {
         if ssa_value_index(blocks[b].values, id) >= 0 { return b }
@@ -92,7 +94,7 @@ func ssa_value_block_index(ssa_block[] blocks, int id) int {
     return -1
 }
 
-func ssa_value_type(ssa_block[] blocks, int id) string {
+func ssa_value_type(function_ssa_block[] blocks, int id) string {
     b := ssa_value_block_index(blocks, id)
     if b < 0 { return "" }
     return blocks[b].values[ssa_value_index(blocks[b].values, id)].type_name
@@ -111,7 +113,7 @@ func ssa_edge_count(int[] edges, int id) int {
 // Indices in these work arrays refer to f.blocks, not to possibly sparse IDs.
 // Excluding a block lets the verifier test dominance without assuming that
 // blocks are stored in traversal order or that the graph has no backedges.
-func ssa_reachable_blocks(ssa_function f, int excluded) int[] {
+func ssa_reachable_blocks(function_ssa_function f, int excluded) int[] {
     reachable := int[]()
     b := 0
     for b < len(f.blocks) {
@@ -140,7 +142,7 @@ func ssa_reachable_blocks(ssa_function f, int excluded) int[] {
     return reachable
 }
 
-func ssa_dominance_matrix(ssa_function f) int[] {
+func ssa_dominance_matrix(function_ssa_function f) int[] {
     reachable := ssa_reachable_blocks(f, -1)
     dominance := int[]()
     defining := 0
@@ -159,7 +161,7 @@ func ssa_dominance_matrix(ssa_function f) int[] {
     return dominance
 }
 
-func ssa_value_use_error(ssa_function f, int[] dominance, int id, int use_block, int use_position) string {
+func ssa_value_use_error(function_ssa_function f, int[] dominance, int id, int use_block, int use_position) string {
     defining := ssa_value_block_index(f.blocks, id)
     if defining < 0 { return "unknown operand: " + f.symbol }
     if defining == use_block && ssa_value_index(f.blocks[defining].values, id) >= use_position {
@@ -169,7 +171,7 @@ func ssa_value_use_error(ssa_function f, int[] dominance, int id, int use_block,
     return ""
 }
 
-func verify_ssa_function(ssa_function f) string {
+func verify_ssa_function(function_ssa_function f) string {
     if f.symbol == "" { return "empty function symbol" }
     if len(f.blocks) == 0 { return "function has no blocks: " + f.symbol }
     if ssa_block_index(f.blocks, f.entry_block) < 0 { return "missing entry block: " + f.symbol }
@@ -277,7 +279,7 @@ func verify_ssa_function(ssa_function f) string {
     return ""
 }
 
-func verify_ssa_program(ssa_program program) string {
+func verify_ssa_program(function_ssa_program program) string {
     if program.package_name == "" || program.entry_symbol == "" { return "invalid program identity" }
     if ssa_function_index(program.functions, program.entry_symbol) < 0 { return "missing entry function" }
     i := 0

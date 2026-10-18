@@ -190,6 +190,13 @@ func mir_program_function_error(mir_program_function function_data, mir_program_
     return ""
 }
 
+func mir_program_append_call(mir_program_call[] calls, string caller, string callee, int block_id, int instruction_index) mir_program_call[] {
+    calls.push(mir_program_call {
+        caller: caller, callee: callee, block_id: block_id, instruction_index: instruction_index,
+    })
+    return calls
+}
+
 func lower_mir_program(string package_name, string entry_symbol, mir_program_function[] functions) mir_program_result {
     empty := mir_program {
         package_name: package_name, entry_symbol: entry_symbol,
@@ -222,10 +229,7 @@ func lower_mir_program(string package_name, string entry_symbol, mir_program_fun
             for n < len(functions[i].blocks[b].instructions) {
                 ins := functions[i].blocks[b].instructions[n]
                 if ins.op == "call" {
-                    calls.push(mir_program_call {
-                        caller: functions[i].symbol, callee: ins.symbol,
-                        block_id: functions[i].blocks[b].id, instruction_index: n,
-                    })
+                    calls = mir_program_append_call(calls, functions[i].symbol, ins.symbol, functions[i].blocks[b].id, n)
                 }
                 n = n + 1
             }
