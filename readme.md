@@ -16,13 +16,13 @@ Traits are satisfied implicitly by method-set compatibility. A type implements a
 
 ## Compiler ownership and lowering
 
-`make compiler` builds an S-written ownership checker and C backend for
-an explicit language subset. It supports owned integer boxes, moves, lexical
+`make compiler` builds the P0 Native compiler and retains an explicit legacy
+ownership checker and C backend for a separate language subset. It supports owned integer boxes, moves, lexical
 shared/mutable borrows, branch checks, and automatic cleanup on scope exit,
 return and loop control. Generated applications do not link the S GC.
 
 ```sh
-./misc/scripts/s-compiler.sh build test/compiler/ownership.s -o /tmp/s-owned
+./misc/scripts/s-compiler.sh build --legacy test/compiler/ownership.s -o /tmp/s-owned
 make compiler-check
 ```
 
@@ -32,10 +32,10 @@ converged self-hosted ownership-aware compilation.
 
 ## Performance status
 
-S is outperform Rust or C. The current no-GC compiler path
-is intentionally small and measurable: supported S programs are lowered to C,
-compiled with the host C compiler, and checked so generated binaries do not
-link the S GC or the seed interpreter runtime.
+P0 prioritizes correct native code generation; no broad performance claim is made.
+The explicit legacy benchmark path lowers supported S programs to C and uses the
+host C compiler. Generated applications are checked to avoid S GC and seed
+interpreter dependencies.
 
 Use `make benchmark` to compare the no-GC S benchmark with C, Rust when
 `rustc` is available, and Go when `go` is available. Treat the result as local
@@ -60,15 +60,8 @@ machine executing the compiler; `S_TARGET_OS` and `S_TARGET_ARCH` describe the
 binary being produced. They need not be equal for compilation, but a bootstrap
 stage can execute only on its target or through `S_BOOTSTRAP_RUNNER`.
 
-The independently executable compiler backend is **Linux/amd64 ELF**. On an
-Apple Silicon Mac, `make darwin-arm64-hosted-compiler` builds a native
-`Mach-O/arm64` compiler whose compiler program is `compiler.s`; its bootstrap
-It is therefore a native Mac
-compiler, converged S self-host chain. Direct Mach-O
-code generation begins with `make darwin-arm64-slice-check`: its ARM64
-instruction selection is implemented in `compiler.s` and produces a runnable
-Mach-O binary for the arithmetic/call bootstrap slice. The Darwin self-host
-runtime and the remaining language constructs remain the next frontier.
+The verified P0 Native target is **Linux/amd64 ELF**. Other architecture and bootstrap
+experiments are separate from P0 acceptance and do not establish full self-hosting.
 
 Inspect the active target with:
 
@@ -104,102 +97,43 @@ Compile an S source file to IR:
 ./bin/s_seed input.s output.ir
 ```
 
-## Compile a program (GCC-style command line)
+## Compile a Native program
 
-### Example: Hello World
-
-Here's a simple S program that demonstrates the feature:
-
-```s
-package main
-
-func main() {
-    println("Hello, world!")
-    int i,j
-    i = 10
-    j = 20
-    println("i + j =", i + j)
-    count := 100
-    int sum = 0
-    for i := 0; i < count; i++ {
-        print("i =", i)
-        sum += i
-    }
-    println("sum =", sum)
-    return
-}
-```
-
-To compile this program:
+The default Linux/amd64 build now consumes structured function MIR and SSA.
+P0 supports straight-line int64/void functions, direct calls, arithmetic, bindings
+and returns. Unsupported syntax is rejected; there is no implicit C or interpreter
+fallback. See [the Native codegen guide](doc/native-codegen.md) for ABI and limits.
 
 ```sh
-s hello.s                 # writes ./hello
-./hello
-s hello.s -o hello        # explicit executable name
-./hello
-s -o hello hello.s        # -o may also precede the input
+make compiler
+./bin/s build test/native-build/program.s -o /tmp/s-native-demo
+/tmp/s-native-demo 7
+# exit status 25
+/tmp/s-native-demo 2
+# same executable, exit status 10
+./bin/s --emit-amd64 test/native-build/program.s /tmp/demo.s
+./bin/s --emit-native-object test/native-build/program.s /tmp/demo.o
+make native-codegen-check
 ```
 
-After `make selfhost`, add the compiler to your current shell's PATH:
+Existing ownership/C compilation remains available explicitly, including programs
+that use printing and other constructs outside P0:
 
 ```sh
-export PATH="$PWD/bin:$PATH"
-cp test/cli/hello.s hello.s
-s hello.s                 # writes ./hello
-./hello
-s hello.s -o hello        # explicit executable name
-./hello
-s -o hello hello.s        # -o may also precede the input
+./bin/s build --legacy test/cli/hello.s -o /tmp/s-hello
+/tmp/s-hello
 ```
 
-The existing `s build hello.s -o hello` command remains supported. Run
-`s --help` for basic usage and `sh test/cli/check.sh` for CLI regression checks.
-This interface compiles one S source file using the existing Linux/amd64 native
-backend and its supported language subset; it does not compile C/C++ sources
-or implement the full GCC option set.
+## Self-hosting status
 
-The default driver uses the ownership compiler path for supported programs:
-S source is lowered to C, then the host C compiler links it with
-`src/runtime/compiler_runtime.h`. That runtime boundary uses ownership and
-explicit drops; generated binaries are checked to avoid S GC and seed runtime
-symbols.
+Full native self-hosting is not yet verified. The current compiler is seed-hosted;
+P0 Native output contains neither the seed compiler nor its interpreter runtime.
+That distinction does not mean the compiler can yet compile its complete source.
 
-## Build the native self-hosted compiler
-
-```sh
-make selfhost
-```
-
-The resulting compiler is installed as `bin/s`. The C seed is used only to
-construct stage1; stage1 generates stage2 and stage2 generates stage3. Host
-`as`/`ld` link the generated native artifacts, but the C seed is not used to
-generate stage2 or stage3.
-
-To verify compiler bootstrapping and lexer compatibility:
-
-```sh
-make selfhost-check
-```
-
-To require that `bin/s` no longer links the C seed compiler, run:
-
-```sh
-make true-selfhost-check
-```
-
-This stricter check remains the release gate for catching any lingering seed
-dependency in the installed compiler.
-
-The executable bootstrap work and its acceptance criteria are documented in
-[`doc/bootstrap.md`](doc/bootstrap.md). The first static pure-S frontend slice
-can be exercised with `make bootstrap-slice1-check`.
-For the seed-hosted compatibility path, use `make seed-hosted-selfhost`.
-`make native-bootstrap` verifies the staged chain and stage2/stage3
-convergence. The C seed is used only for stage1.
-The complete direct S-to-ELF convergence target is `make direct-bootstrap`; it
-is intentionally a failing gate until the complete compiler source is within
-the direct native-code-generation subset. See [`doc/bootstrap.md`](doc/bootstrap.md)
-for the verified state, gaps, and production acceptance plan.
+Bootstrap scripts and `make selfhost` are experimental. Acceptance still requires
+complete-source compilation, removal of launcher/interpreter delegation, and a
+verified stage1 → stage2 → stage3 chain. See
+[the pipeline status](doc/compile-pipeline-status.md) for remaining work.
 
 ## Runtime foundation
 
