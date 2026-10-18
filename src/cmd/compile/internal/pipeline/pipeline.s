@@ -4,7 +4,6 @@ import (
     "compile.internal.core"
 )
 
-use compile.internal.core.build as backend_build
 use std.io.eprintln
 
 struct pipeline_context {
@@ -39,23 +38,22 @@ func pipeline_prepare(string input, string output, string ssa_margin_override, b
 }
 
 func pipeline_compile(pipeline_context context) int {
-    eprintln("[PIPELINE] Starting canonical compilation chain")
-    eprintln("[PIPELINE] Authority sequence: Frontend → Middlend → Backend")
+    eprintln("[PIPELINE] Function MIR → SSA → amd64 instructions → ELF")
     
     checkpoint_emit(compilation_checkpoint {
         stage_name: "FRONTEND",
         input_type: "Source code (S language)",
-        output_type: "Type-checked AST/IR",
+        output_type: "Structured function MIR",
         authority: authority_frontend(),
-        phase: "parse + semantic + typecheck",
+        phase: "parse + signatures + function bodies",
     })
     
     checkpoint_emit(compilation_checkpoint {
         stage_name: "MIDDLEND",
-        input_type: "Type-checked IR",
-        output_type: "Optimized MIR + SSA",
+        input_type: "Structured function MIR",
+        output_type: "Structured function SSA",
         authority: authority_middlend(),
-        phase: "optimize + lower-to-ssa",
+        phase: "verify-mir + lower-to-ssa + verify-ssa",
     })
     
     checkpoint_emit(compilation_checkpoint {
@@ -66,14 +64,10 @@ func pipeline_compile(pipeline_context context) int {
         phase: "codegen + emit-binary",
     })
     
-    trace_authority(authority_frontend(), "parse → semantic → type-check")
-    trace_authority(authority_middlend(), "run_midend_pipeline + build_ssa_pipeline")
-    trace_authority(authority_backend(), "validate_abi + codegen + link_object_file")
-    
-    eprintln("[PIPELINE] Executing all three stages through compile.internal.core.build()")
-    eprintln("[AUTHORITY CHECK] compile.internal.core.build() MUST NOT delegate to C seed")
-    
-    status := backend_build(context.input, context.output, context.ssa_margin_override, context.nostdlib)
+    trace_authority(authority_frontend(), "native_source_to_mir")
+    trace_authority(authority_middlend(), "lower_function_mir_to_ssa")
+    trace_authority(authority_backend(), "emit_function_ssa_amd64 + as + ld")
+    status := native_build(context.input, context.output, context.ssa_margin_override, context.nostdlib)
     return status
 }
 
@@ -81,7 +75,7 @@ func pipeline_finish(pipeline_context context, int status) pipeline_result {
     if status == 0 {
         eprintln("[PIPELINE] ✓ Compilation succeeded")
         eprintln("[AUTHORITY] Final artifact: " + context.output)
-        eprintln("[AUTHORITY] All three stages (Frontend→Middlend→Backend) completed with canonical code")
+        eprintln("[AUTHORITY] Function MIR/SSA native compilation completed")
     } else {
         eprintln("[PIPELINE] ✗ Compilation failed")
     }

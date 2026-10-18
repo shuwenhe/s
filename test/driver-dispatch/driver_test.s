@@ -21,8 +21,16 @@ func proof_modes() string[] {
         "canonical-abi-proof", "canonical-codegen-proof", "canonical-regalloc-proof"]
 }
 
-func check_parse() int {
+func forwarded_modes() string[] {
     modes := proof_modes()
+    modes.push("--emit-amd64")
+    modes.push("--emit-amd64-executable")
+    modes.push("--emit-native-object")
+    return modes
+}
+
+func check_parse() int {
+    modes := forwarded_modes()
     i := 0
     for i < len(modes) {
         mode := modes[i]
@@ -48,7 +56,7 @@ func check_dispatch() int {
         eprintln("emit command did not return compiler_main status")
         return 1
     }
-    modes := proof_modes()
+    modes := forwarded_modes()
     i := 0
     for i < len(modes) {
         mode := modes[i]

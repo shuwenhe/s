@@ -149,6 +149,7 @@ func default_output(string input) string {
 }
 
 func is_forwarded_mode(string mode) bool {
+    if mode == "--emit-amd64" || mode == "--emit-amd64-executable" || mode == "--emit-native-object" { return true }
     proofs := driver_proof_modes()
     i := 0
     while i < len(proofs) {
@@ -207,6 +208,8 @@ func driver_print_usage(string prog) () {
     std.io.eprintln("  " + prog + " build <input.s> -o <output>")
     std.io.eprintln("  " + prog + " --emit-c <input.s> <output.c>")
     std.io.eprintln("  " + prog + " --emit-mir <input.s> <output.mir>")
+    std.io.eprintln("  " + prog + " --emit-amd64 <input.s> <output.s>")
+    std.io.eprintln("  " + prog + " --emit-native-object <input.s> <output.o>")
     proofs := driver_proof_modes()
     i := 0
     while i < len(proofs) {
