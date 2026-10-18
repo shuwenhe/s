@@ -206,7 +206,19 @@ struct abi_behavior_entry {
     string abi_summary
 }
 
+// Canonical AST entry shares the same function MIR/SSA native backend as the
+// seed-hosted P0 entry. The legacy evaluator is kept behind separate names.
 func build_object(string path, string output, string ssa_margin_override) int {
+    source_result := std.fs.read_to_string(path)
+    if source_result.is_err() { return report_failure("failed to read source: " + path) }
+    parsed_result := load_source_graph(path, source_result.unwrap())
+    if parsed_result.is_err() { return report_failure(parsed_result.unwrap_err().message) }
+    module := compile.internal.ir.lower.lower_program_to_mir(parsed_result.unwrap())
+    if module.error != "" { return report_failure(module.error) }
+    return native_build_object_program(module.program, path, output, ssa_margin_override)
+}
+
+func build_object_interpreted_legacy(string path, string output, string ssa_margin_override) int {
     source_result := std.fs.read_to_string(path)
     if source_result.is_err() {
         return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message)
@@ -284,6 +296,16 @@ func build_object(string path, string output, string ssa_margin_override) int {
 }
 
 func build(string path, string output, string ssa_margin_override, bool nostdlib) int {
+    source_result := std.fs.read_to_string(path)
+    if source_result.is_err() { return report_failure("failed to read source: " + path) }
+    parsed_result := load_source_graph(path, source_result.unwrap())
+    if parsed_result.is_err() { return report_failure(parsed_result.unwrap_err().message) }
+    module := compile.internal.ir.lower.lower_program_to_mir(parsed_result.unwrap())
+    if module.error != "" { return report_failure(module.error) }
+    return native_build_program(module.program, path, output, ssa_margin_override, nostdlib)
+}
+
+func build_interpreted_legacy(string path, string output, string ssa_margin_override, bool nostdlib) int {
     source_result := std.fs.read_to_string(path)
     if source_result.is_err() {
         return report_failure("failed to read source file: " + path + ": " + source_result.unwrap_err().message)

@@ -16,7 +16,6 @@ else
 fi
 
 compiler="$root/bin/s_compiler"
-modular_compiler=${S_MODULAR_COMPILER:-"$root/bin/s_modular"}
 
 trace_authority() {
 
@@ -44,6 +43,8 @@ usage() {
     echo '  s build --legacy <input.s> -o <output>' >&2
 
     echo '  s --emit-c <input.s> <output.c>' >&2
+    echo '  s --emit-amd64 <input.s> <output.s>' >&2
+    echo '  s --emit-native-object <input.s> <output.o>' >&2
     echo '  s --emit-lowered-view <input.s> <output.view>' >&2
     echo '  s --emit-mir <input.s> <output.mir>' >&2
     echo '  s --emit-mir-after-drop <input.s> <output.mir>' >&2
@@ -156,19 +157,11 @@ emit_binary() {
 
     fi
 
-    if [ -x "$modular_compiler" ]; then
-
-        exec "$modular_compiler" build "$input" -o "$output"
-
-    fi
-
-    echo "s: production compiler not found: $modular_compiler" >&2
-
-    echo "s: run make modular-bootstrap or set S_MODULAR_COMPILER" >&2
-
+    ensure_compiler
+    trace_authority "production-compiler-entry=bin/s_compiler"
+    trace_authority "native-codegen-authority=function-mir-ssa"
     trace_authority "implicit-legacy-fallback=NO"
-
-    return 1
+    exec "$compiler" build "$input" -o "$output"
 
 }
 
@@ -204,6 +197,11 @@ if [ "$#" -eq 3 ] && [ "$1" = "--emit-c" ]; then
 
     exec "$compiler" "$@"
 
+fi
+
+if [ "$#" -eq 3 ] && { [ "$1" = "--emit-amd64" ] || [ "$1" = "--emit-amd64-executable" ] || [ "$1" = "--emit-native-object" ]; }; then
+    ensure_compiler
+    exec "$compiler" "$@"
 fi
 
 if [ "$#" -eq 3 ] && [ "$1" = "--emit-lowered-view" ]; then

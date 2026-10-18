@@ -170,6 +170,12 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/pipeline/pipeline.s \
 	src/cmd/compile/internal/compiler/frontend_core.s \
 	src/cmd/compile/internal/compiler/frontend.s \
+	src/cmd/compile/internal/compiler/native_frontend.s \
+	src/cmd/compile/internal/mir/program.s \
+	src/cmd/compile/internal/ssa/program.s \
+	src/cmd/compile/internal/ssa/function_lower.s \
+	src/cmd/compile/internal/codegen/amd64_program.s \
+	src/cmd/compile/internal/core/native_build.s \
 	src/cmd/compile/internal/compiler/frontend_stages.s \
 	src/cmd/compile/internal/mir/compiler_emit.s \
 	src/cmd/compile/internal/compiler/stages.s \
@@ -259,6 +265,15 @@ compiler-unit-check: seed-compiler-bin
 	@sh test/driver-dispatch/check.sh
 	@bash test/ssa/check-p2.1.sh
 
+.PHONY: native-codegen-check
+native-codegen-check: compiler
+	@bash test/native-build/check-host-tools.sh
+	@bash test/native-build/check-gate.sh
+	@bash test/native-frontend/check.sh
+	@bash test/function-ssa/check.sh
+	@bash test/native-codegen/check.sh
+	@bash test/native-build/check.sh
+
 .PHONY: pipeline
 pipeline: compiler
 	@chmod +x script/compile-pipeline-check.sh
@@ -286,6 +301,7 @@ clean:
 
 .PHONY: help
 help:
+	@echo "  make native-codegen-check"
 	@echo "  make compiler-unit-check"
 	@echo "  make pipeline"
 	@echo "  make install"
