@@ -1,6 +1,12 @@
 package compile.compiler
 
 func compiler_main(string[] args) int {
+    if len(args) == 4 && args[1] == "--emit-native-object" {
+        return native_build_object(args[2], args[3])
+    }
+    if len(args) == 4 && (args[1] == "--emit-amd64" || args[1] == "--emit-amd64-executable") {
+        return native_emit_asm_file(args[2], args[3], args[1] == "--emit-amd64-executable")
+    }
     if len(args) >= 3 && args[1] == "--compile-unit" {
         return handle_compile_unit(args)
     }
