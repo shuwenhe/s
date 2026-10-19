@@ -12,12 +12,10 @@ struct linker {
 }
 
 func new_linker() linker {
-    lnk: linker
-    lnk.config.gcc_path = "gcc"
-    lnk.config.ld_path = "ld"
-    lnk.config.as_path = "as"
-    lnk.object_files = make(string[])
-    lnk.libraries = make(string[])
+    lnk := linker {
+        config: linker_config { gcc_path: "gcc", ld_path: "ld", as_path: "as" },
+        object_files: string[](), libraries: string[](),
+    }
     lnk
 }
 

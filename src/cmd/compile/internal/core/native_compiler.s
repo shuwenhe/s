@@ -9,13 +9,11 @@ struct native_compiler {
 }
 
 func new_native_compiler(string input, string output) native_compiler {
-    compiler: native_compiler
-    compiler.input_file = input
-    compiler.output_file = output
-    compiler.assembly_file = output + ".s"
-    compiler.object_file = output + ".o"
-    compiler.selector = new_instruction_selector()
-    compiler.builder = new_machine_code_builder()
+    compiler := native_compiler {
+        input_file: input, output_file: output, assembly_file: output + ".s",
+        object_file: output + ".o", selector: new_instruction_selector(),
+        builder: new_machine_code_builder(),
+    }
     compiler
 }
 

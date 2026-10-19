@@ -5,9 +5,7 @@ struct optimizer {
 }
 
 func make_optimizer(prog_list* prog) optimizer {
-    opt: optimizer
-    opt.prog = prog
-    opt.pass_count = 0
+    opt := optimizer { prog: prog, pass_count: 0 }
     opt
 }
 

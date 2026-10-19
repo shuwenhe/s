@@ -4,8 +4,7 @@ struct instr_selector {
 }
 
 func make_instr_selector(ctx* codegen_context) instr_selector {
-    is: instr_selector
-    is.ctx = ctx
+    is := instr_selector { ctx: ctx }
     is
 }
 

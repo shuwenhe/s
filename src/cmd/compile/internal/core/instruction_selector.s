@@ -14,10 +14,10 @@ struct instruction_selector {
 }
 
 func new_instruction_selector() instruction_selector {
-    selector: instruction_selector
-    selector.ir_instructions = make(ir_instruction[])
-    selector.builder = new_machine_code_builder()
-    selector.allocator = new_register_allocator()
+    selector := instruction_selector {
+        ir_instructions: ir_instruction[](), builder: new_machine_code_builder(),
+        allocator: new_register_allocator(),
+    }
     selector
 }
 
