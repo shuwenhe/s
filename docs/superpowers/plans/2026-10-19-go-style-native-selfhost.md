@@ -1,10 +1,10 @@
 # Go-style Native Self-hosting Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 **Goal:** Make S produce and validate `Seed → Stage1 → Stage2 → Stage3 → Fixed-point` using S's own frontend, MIR, SSA, and native backend.
 
-**Architecture:** Keep `src/cmd/dist` as the sole bootstrap coordinator. Make source closure and stage artifacts deterministic and auditable, then clear actual compiler FIRST REDs one at a time. Reuse Go's staged-build principles without copying Go compiler implementation.
+**Architecture:** Keep `src/cmd/dist` as the sole bootstrap coordinator. First prove the production entry and deterministic closure, then clear actual FIRST REDs one at a time. Every gate requires independent review and fresh evidence before the next task starts.
 
 **Tech Stack:** POSIX shell, Make, C Seed compiler, S compiler, ELF/binutils, existing S test scripts.
 
@@ -17,29 +17,30 @@
 - Do not change frozen Pipeline Top-Level Control Phase 1 without direct bootstrap evidence.
 - Do not claim a later gate before the earlier gate has a real artifact and runtime verification.
 - Keep Production Authority (AST → MIR → SSA → Native ELF) as an independent report.
+- A subagent may not advance the gate; only the coordinator accepts the evidence and assigns the next task.
 
 ## Review Focus
 
-- Closure completeness and deterministic ordering: regression test must detect missing, duplicate, test-only, or nondeterministically ordered sources.
-- Stage boundary provenance: regression test must reject missing/empty artifacts and metadata that names the wrong producer.
-- Seed and Stage1 diagnostics: regression test must preserve the first compiler error with file and line.
+- Closure completeness and deterministic ordering: tests must detect missing, duplicate, test-only, or nondeterministically ordered sources under the explicit production rule.
+- Entry correctness: tests must prove `main.s` reaches `compile.driver.driver_main` and that the emitted closure contains the actual production dependency graph.
+- Stage boundary provenance: tests must reject fallback to Seed or stale artifacts using producer SHA-256 and command evidence.
 - Resource pressure: Stage2/Stage3 runs must record peak RSS and fail explicitly on timeout/OOM.
-- Fixed-point semantics: regression test must compare normalized artifacts only under an explicit normalization contract.
+- Fixed-point semantics: tests must preserve original artifacts and reject unknown ELF differences; only the documented field normalization may be used.
 
-### Task 1: Capture the current P0 baseline
+### Task 1: Capture and review the current P0 baseline
 
 **Files:**
 - Create: `test/native-bootstrap-diagnostic/go_style_baseline.sh`
 - Modify: `src/cmd/dist/native-bootstrap-no-manifest.sh` only if required for stable diagnostic output
 
 **Interfaces:**
-- Consumes: `bin/s_seed`, `source_closure.sh`, the production entry `src/cmd/compile/main.s`.
-- Produces: reproducible baseline log containing closure count, exit code, FIRST RED, elapsed time, and RSS.
+- Consumes: `bin/s_seed`, `source_closure.sh`, `src/cmd/compile/main.s`.
+- Produces: baseline log with verified entry call chain, closure count/hash, exit code, current FIRST RED, elapsed time, and RSS.
 
-- [ ] Write a failing baseline test that runs the normative entry and asserts Stage1 is not reported successful when its IR/ELF is absent.
-- [ ] Run it and record the current failure without changing source selection.
-- [ ] Add only diagnostic capture needed to make the failure evidence stable.
-- [ ] Re-run and verify the baseline identifies the actual first compiler error.
+- [ ] Write a failing baseline test that proves the entry call chain and asserts Stage1 is not successful when IR/ELF is absent.
+- [ ] Run it and record the current `bootstrap_demo.s:16:9` FIRST RED without changing source selection.
+- [ ] Add only diagnostic capture needed for stable command, producer, timing, RSS, and failure output.
+- [ ] Independent reviewer checks that no later gate is implied by the baseline.
 
 ### Task 2: Make production source closure deterministic and auditable
 
@@ -50,12 +51,12 @@
 
 **Interfaces:**
 - Consumes: entry source, package declarations, `import`/`use` edges.
-- Produces: sorted unique `stage1.sources` plus closure metadata; production mode rejects test-only dependencies.
+- Produces: sorted unique `stage1.sources`, closure metadata, and explicit failure for a reachable test-only dependency.
 
-- [ ] Add tests for complete closure emission, duplicate removal, stable ordering, and test-only rejection.
-- [ ] Run the tests to establish failures for any current contract violations.
-- [ ] Implement deterministic closure traversal and explicit diagnostics without prefix-based package guessing.
-- [ ] Verify closure count, source hashes, and repeatability across two runs.
+- [ ] Add tests for the explicit production rule: `.s` under `src/`, exclude `_test.s` and `testdata/`, retain non-test production files such as `bootstrap_demo.s`, and reject reachable test-only packages.
+- [ ] Run tests to establish failures for current contract violations.
+- [ ] Implement deterministic traversal, explicit package/path mapping, and diagnostics without prefix-only matching.
+- [ ] Verify two runs have identical ordered lists and hashes; independent reviewer checks the count and sample membership.
 
 ### Task 3: Repair the first real Seed-to-Stage1 compiler boundary
 
@@ -65,13 +66,14 @@
 
 **Interfaces:**
 - Consumes: the full Task 2 production closure.
-- Produces: non-empty Stage1 IR and a native Stage1 ELF produced solely by `bin/s_seed`.
+- Produces: non-empty Stage1 IR and native Stage1 ELF produced solely by `bin/s_seed`.
 
 - [ ] Add the smallest regression fixture for the current FIRST RED.
 - [ ] Verify the fixture fails before the fix.
 - [ ] Implement one root-cause fix only.
-- [ ] Run the fixture and the full Stage1 compile; record exit code, elapsed time, RSS, IR size, ELF size, and runtime smoke result.
-- [ ] Repeat Task 3 for each newly exposed FIRST RED until Stage1 is executable; do not bundle unrelated parser, MIR, SSA, or backend changes.
+- [ ] Run the fixture and full Stage1 compile; record command, producer hash, exit code, elapsed time, peak RSS, IR/ELF size/hash, and runtime smoke result.
+- [ ] Independent reviewer verifies the artifact producer is `bin/s_seed` and that no later stage is claimed.
+- [ ] Repeat only this task for each newly exposed FIRST RED until Stage1 is executable.
 
 ### Task 4: Promote Stage1 to Stage2 with provenance checks
 
@@ -83,23 +85,25 @@
 - Consumes: Stage1 ELF and the exact Stage1 closure.
 - Produces: Stage2 IR/ELF plus metadata proving Stage1 was the producer.
 
-- [ ] Add a boundary test that rejects fallback to Seed or stale artifacts.
-- [ ] Implement explicit producer identity, input hashes, output hashes, timing, and peak RSS.
+- [ ] Add a boundary test that rejects fallback to Seed, wrong producer SHA-256, stale closure hash, or stale output.
+- [ ] Implement producer identity, input/output hashes, actual command, timing, exit code, and peak RSS.
 - [ ] Run Stage1 → Stage2 using the same closure and verify Stage2 executes.
+- [ ] Independent reviewer accepts P1 only from fresh artifacts and logs.
 
-### Task 5: Build Stage3 and define fixed-point comparison
+### Task 5: Build Stage3 and enforce fixed-point comparison
 
 **Files:**
 - Modify: `src/cmd/dist/native-bootstrap-no-manifest.sh`
 - Create/modify: `test/native-bootstrap-diagnostic/fixed_point_check.sh`
 
 **Interfaces:**
-- Consumes: Stage2 ELF and identical closure.
-- Produces: Stage3 IR/ELF and a fixed-point report.
+- Consumes: Stage2 ELF and byte-identical ordered closure.
+- Produces: Stage3 IR/ELF and a fixed-point report retaining original artifacts.
 
-- [ ] Add tests for identical input closure, target identity, normalized ELF comparison, and behavior smoke tests.
-- [ ] Implement timeout/OOM reporting and explicit normalization rules for nondeterministic ELF fields.
-- [ ] Run Stage2 → Stage3 and verify fixed-point status; report failure rather than weakening comparison.
+- [ ] Add tests for identical closure, target identity, raw ELF comparison, documented normalization fields only, and smoke behavior.
+- [ ] Implement timeout/OOM reporting and the explicit normalization contract; unknown ELF differences fail.
+- [ ] Run Stage2 → Stage3 and verify fixed-point status with both raw and normalized hashes.
+- [ ] Independent reviewer accepts P3 only when raw/normalized differences are fully explained.
 
 ### Task 6: Report Production Authority separately
 
@@ -111,7 +115,8 @@
 - Consumes: Stage artifacts and existing MIR/SSA/native backend probes.
 - Produces: separate report of AST → MIR → SSA → Native ELF authority, clearly distinct from bootstrap status.
 
-- [ ] Run the relevant production handoff checks after Stage1 is real.
+- [ ] Run relevant production handoff checks after Stage1 is real.
 - [ ] Record remaining gaps without converting them into bootstrap PASS.
 - [ ] Run the complete verification suite and publish exact results.
+- [ ] Independent reviewer checks the final report against all gate evidence.
 
