@@ -142,3 +142,4 @@ bin/s_seed*
 bin/seed_tests
 bin/s_lexer
 .worktrees/
+docs/
