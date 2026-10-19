@@ -1552,7 +1552,6 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
             token empty
             return empty, err
         }
-        if token.kind == token_kind.number {
             self.advance()
             return expr.int(int_expr {
                 value: token.value, inferred_type option.none
