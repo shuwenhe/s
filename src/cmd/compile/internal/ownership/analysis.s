@@ -20,21 +20,21 @@ struct ownership_analysis {
 }
 
 enum ownership_decision_kind {
-    accept
-    reject
+    accept,
+    reject,
 }
 
 enum ownership_operation_kind {
-    move
-    borrow_shared
-    borrow_mut
-    use
-    assign
+    move,
+    borrow_shared,
+    borrow_mut,
+    use_op,
+    assign,
 }
 
 enum ownership_decision_reason {
-    none
-    live_loan_conflict
+    none,
+    live_loan_conflict,
 }
 
 struct ownership_decision {
