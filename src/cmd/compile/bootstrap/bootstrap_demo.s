@@ -13,13 +13,13 @@ struct bootstrap_compiler {
 }
 
 func bootstrap_compiler_new() bootstrap_compiler* {
-    bc* := alloc(bootstrap_compiler)
-    bc.name = "S Compiler"
-    bc.version = "1.0.0"
-    bc.file_count = 0
-    bc.line_count = 0
-    bc.error_count = 0
-    return bc
+    bc_ptr := alloc(bootstrap_compiler)
+    bc_ptr.name = "S Compiler"
+    bc_ptr.version = "1.0.0"
+    bc_ptr.file_count = 0
+    bc_ptr.line_count = 0
+    bc_ptr.error_count = 0
+    return bc_ptr
 }
 
 func bootstrap_compiler_compile_file(bc* bootstrap_compiler, string* filename) int {
