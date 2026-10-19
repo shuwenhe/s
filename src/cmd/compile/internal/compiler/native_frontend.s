@@ -166,33 +166,23 @@ func native_decimal_digit(string token) int {
 }
 
 func native_hex_digit(string token) int {
-    // Returns 0-15 for valid hex digit, -1 otherwise
-    // Handles 0-9, a-f, A-F
-    switch token {
-        "0" : return 0,
-        "1" : return 1,
-        "2" : return 2,
-        "3" : return 3,
-        "4" : return 4,
-        "5" : return 5,
-        "6" : return 6,
-        "7" : return 7,
-        "8" : return 8,
-        "9" : return 9,
-        "a" : return 10,
-        "A" : return 10,
-        "b" : return 11,
-        "B" : return 11,
-        "c" : return 12,
-        "C" : return 12,
-        "d" : return 13,
-        "D" : return 13,
-        "e" : return 14,
-        "E" : return 14,
-        "f" : return 15,
-        "F" : return 15,
-        _ : return -1,
-    }
+    if token == "0" { return 0 }
+    if token == "1" { return 1 }
+    if token == "2" { return 2 }
+    if token == "3" { return 3 }
+    if token == "4" { return 4 }
+    if token == "5" { return 5 }
+    if token == "6" { return 6 }
+    if token == "7" { return 7 }
+    if token == "8" { return 8 }
+    if token == "9" { return 9 }
+    if token == "a" || token == "A" { return 10 }
+    if token == "b" || token == "B" { return 11 }
+    if token == "c" || token == "C" { return 12 }
+    if token == "d" || token == "D" { return 13 }
+    if token == "e" || token == "E" { return 14 }
+    if token == "f" || token == "F" { return 15 }
+    return -1
 }
 
 func native_parse_integer(native_parser initial, bool negative) native_parser {
