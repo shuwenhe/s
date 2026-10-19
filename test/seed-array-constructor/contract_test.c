@@ -37,6 +37,10 @@ static bool run_case(const char *name, const char *source, const char *diagnosti
         fprintf(stderr, "%s: missing typed zero-length array construction IR\n", name);
         return false;
     }
+    if (strncmp(name, "nested_", 7) == 0 && !strstr(ir, "int[][]|0")) {
+        fprintf(stderr, "%s: nested array element type missing in IR\n", name);
+        return false;
+    }
     if (!runtime_execute_text(ir, "main", &result, &err) || result != want) {
         fprintf(stderr, "%s: runtime: result=%ld, want=%ld: %s\n", name, result, want, err.message);
         return false;
@@ -51,6 +55,10 @@ int main(void) {
         {"typed_return", "func empty() int[] { return int[](); } func read(int[] xs) int { return len(xs); } func main() int { return read(empty()); }", NULL, 0},
         {"struct_return", "struct Record { int value } func empty() Record[] { return Record[](); } func main() int { xs := empty(); xs.push(Record { value: 42 }); return xs[0].value; }", NULL, 42},
         {"nested_empty", "func main() int { xs := int[][](); return len(xs); }", NULL, 0},
+        {"nested_empty_braces", "func main() int { xs := int[][] {}; return len(xs); }", NULL, 0},
+        {"nested_braces_push", "func main() int { xs := int[][] {}; xs.push(int[]()); return len(xs[0]); }", NULL, 0},
+        {"nested_braces_wrong_push", "func main() int { xs := int[][] {}; xs.push(1); return 0; }", "array element type mismatch", 0},
+        {"nested_braces_unknown", "func main() int { xs := Missing[][] {}; return 0; }", "unknown array element type", 0},
         {"unknown_type", "func main() int { xs := Missing[](); return 0; }", "unknown array element type", 0},
         {"value_not_type", "func main() int { value := 1; xs := value[](); return 0; }", "unknown array element type", 0},
         {"constructor_arity", "func main() int { xs := int[](1); return 0; }", "expects 0 arguments", 0},
