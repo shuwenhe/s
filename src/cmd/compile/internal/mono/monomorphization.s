@@ -208,11 +208,11 @@ func find_declaration_ref_for_item(mono_context ctx, string item_kind, string ge
     for i < len(ctx.declarations) {
         decl := ctx.declarations[i]
         
-        expected_kind := match item_kind {
-            case "function": compile.internal.semantic.function_kind
-            case "method": compile.internal.semantic.method_kind
-            case "struct": compile.internal.semantic.struct_kind
-            default: compile.internal.semantic.function_kind
+        expected_kind := compile.internal.semantic.function_kind
+        if item_kind == "method" {
+            expected_kind = compile.internal.semantic.method_kind
+        } else if item_kind == "struct" {
+            expected_kind = compile.internal.semantic.struct_kind
         }
         
         if decl.kind == expected_kind && decl.path == generic_name {
@@ -361,7 +361,7 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
 
 func should_keep_after_monomorphization(item value) bool {
     switch value {
-        item.function(fn) : len(fn.sig.generics) == 0,
+        item.function(function_value) : len(function_value.sig.generics) == 0,
         item.method(method) : len(method.method.sig.generics) == 0,
         _ : true,
     }
@@ -369,8 +369,8 @@ func should_keep_after_monomorphization(item value) bool {
 
 func collect_item_instances_ctx(item value, item[] all_items, mono_context ctx) mono_context {
     switch value {
-        item.function(fn) : {
-            switch fn.body {
+        item.function(function_value) : {
+            switch function_value.body {
                 option.some(body) : collect_block_instances_ctx(body, all_items, ctx),
                 option.none : ctx,
             }
@@ -589,8 +589,8 @@ func collect_for_instances_ctx(for_expr v, item[] all_items, mono_context ctx) m
 
 func collect_item_instances(item value, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
     switch value {
-        item.function(fn) : {
-            switch fn.body {
+        item.function(function_value) : {
+            switch function_value.body {
                 option.some(body) : collect_block_instances(body, all_items, cache, worklist),
                 option.none : cache,
             }
@@ -754,9 +754,9 @@ func find_generic_function(item[] items, string name) function_decl {
     i := 0
     for i < len(items) {
         switch items[i] {
-            item.function(fn) : {
-                if fn.sig.name == name && len(fn.sig.generics) > 0 {
-                    return fn
+            item.function(function_value) : {
+                if function_value.sig.name == name && len(function_value.sig.generics) > 0 {
+                    return function_value
                 }
             }
             _ : (),
@@ -791,9 +791,9 @@ func verify_monomorphized_file(source_file file) int {
     i := 0
     for i < len(file.items) {
         switch file.items[i] {
-            item.function(fn) : {
-                if len(fn.sig.generics) == 0 && contains_text(fn.sig.name, "__mono") {
-                    errors = errors + verify_function_no_generics(fn)
+            item.function(function_value) : {
+                if len(function_value.sig.generics) == 0 && contains_text(function_value.sig.name, "__mono") {
+                    errors = errors + verify_function_no_generics(function_value)
                 }
             }
             item.method(method) : {
@@ -808,13 +808,13 @@ func verify_monomorphized_file(source_file file) int {
     errors
 }
 
-func finalize_monomorphized_function(function_decl fn) function_decl {
+func finalize_monomorphized_function(function_decl function_value) function_decl {
     body := option.none
-    switch fn.body {
+    switch function_value.body {
         option.some(value) : body = option.some(finalize_block(value)),
         option.none : (),
     }
-    function_decl { sig: fn.sig, body body, is_public fn.is_public }
+    function_decl { sig: function_value.sig, body body, is_public function_value.is_public }
 }
 
 func finalize_monomorphized_method(receiver_method_decl method) receiver_method_decl {
@@ -943,16 +943,16 @@ func finalize_for_expr(for_expr v) expr {
     expr.for(for_expr { init: init, condition condition, post post, names v.names, iterable iterable, body finalize_block(v.body), inferred_type v.inferred_type })
 }
 
-func verify_function_no_generics(function_decl fn) int {
+func verify_function_no_generics(function_decl function_value) int {
     errors := 0
     i := 0
-    for i < len(fn.sig.params) {
-        if looks_like_generic_residue(fn.sig.params[i].kindname) {
+    for i < len(function_value.sig.params) {
+        if looks_like_generic_residue(function_value.sig.params[i].kindname) {
             errors = errors + 1
         }
         i = i + 1
     }
-    switch fn.sig.return_type {
+    switch function_value.sig.return_type {
         option.some(ty) : {
             if looks_like_generic_residue(ty) {
                 errors = errors + 1
@@ -960,7 +960,7 @@ func verify_function_no_generics(function_decl fn) int {
         }
         option.none : (),
     }
-    switch fn.body {
+    switch function_value.body {
         option.some(body) : errors = errors + verify_block_no_generics(body),
         option.none : (),
     }
@@ -1415,10 +1415,10 @@ func verify_monomorphized_file_with_details(source_file file) int {
     i := 0
     for i < len(file.items) {
         switch file.items[i] {
-            item.function(fn) : {
-                if contains_text(fn.sig.name, "__mono") {
+            item.function(function_value) : {
+                if contains_text(function_value.sig.name, "__mono") {
 
-                    errors = errors + verify_function_resolved_calls(fn)
+                    errors = errors + verify_function_resolved_calls(function_value)
                 }
             }
             _ : (),
@@ -1429,9 +1429,9 @@ func verify_monomorphized_file_with_details(source_file file) int {
     errors
 }
 
-func verify_function_resolved_calls(function_decl fn) int {
+func verify_function_resolved_calls(function_decl function_value) int {
     errors := 0
-    switch fn.body {
+    switch function_value.body {
         option.some(body) : errors = verify_block_resolved_calls(body),
         option.none : (),
     }
