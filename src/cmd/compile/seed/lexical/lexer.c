@@ -91,6 +91,7 @@ const char *token_type_name(token_type type) {
 		case TOKEN_RBRACE: return "}";
 		case TOKEN_COMMA: return ",";
 		case TOKEN_DOT: return ".";
+		case TOKEN_DOTDOT: return "..";
 		case TOKEN_COLON: return ":";
 		case TOKEN_SEMICOLON: return ";";
 		default: return "UNKNOWN";
@@ -398,6 +399,16 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 		}
 		if (c == ':' && source[i + 1] == '=') {
 			if (!push_simple(out_tokens, TOKEN_ASSIGN_DECLARE, ":=", tok_line, tok_col)) {
+				error_set(err, ERR_OUT_OF_MEMORY, tok_line, tok_col, "out of memory");
+				token_vec_free(out_tokens);
+				return false;
+			}
+			i += 2;
+			col += 2;
+			continue;
+		}
+		if (c == '.' && source[i + 1] == '.') {
+			if (!push_simple(out_tokens, TOKEN_DOTDOT, "..", tok_line, tok_col)) {
 				error_set(err, ERR_OUT_OF_MEMORY, tok_line, tok_col, "out of memory");
 				token_vec_free(out_tokens);
 				return false;

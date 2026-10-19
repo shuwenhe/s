@@ -237,6 +237,8 @@ void ast_free(ast_node *node) {
 			ast_free(node->as.for_stmt.init);
 			ast_free(node->as.for_stmt.condition);
 			ast_free(node->as.for_stmt.post);
+			free(node->as.for_stmt.iter_name);
+			ast_free(node->as.for_stmt.iterable);
 			ast_free(node->as.for_stmt.body);
 			break;
 		case AST_FN_STMT:
@@ -1100,7 +1102,7 @@ static int is_mult_div_mod(token_type t) {
 	return t == TOKEN_STAR || t == TOKEN_SLASH || t == TOKEN_PERCENT;
 }
 static int is_add_sub(token_type t) {
-	return t == TOKEN_PLUS || t == TOKEN_MINUS;
+	return t == TOKEN_PLUS || t == TOKEN_MINUS || t == TOKEN_DOTDOT;
 }
 static int is_shift(token_type t) {
 	return t == TOKEN_SHL || t == TOKEN_SHR;
@@ -1748,6 +1750,24 @@ static ast_node *parse_for_statement(parser *p) {
 				ast_free(node);
 				return NULL;
 			}
+			return node;
+		}
+
+		/* for name in iterable { ... } */
+		if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) &&
+			peek_ahead(p, 1)->type == TOKEN_IDENTIFIER &&
+			peek_ahead(p, 1)->lexeme && strcmp(peek_ahead(p, 1)->lexeme, "in") == 0) {
+			const token *name = advance_tok(p);
+			advance_tok(p); /* in */
+			node->as.for_stmt.iter_name = dup_cstr(name->lexeme);
+			if (!node->as.for_stmt.iter_name) { ast_free(node); return NULL; }
+			node->as.for_stmt.iterable = parse_expression(p);
+			if (!node->as.for_stmt.iterable || !expect(p, TOKEN_LBRACE, "{")) {
+				ast_free(node);
+				return NULL;
+			}
+			node->as.for_stmt.body = parse_block(p);
+			if (!node->as.for_stmt.body) { ast_free(node); return NULL; }
 			return node;
 		}
 		
@@ -2865,6 +2885,9 @@ static ast_node *parse_statement(parser *p) {
 	}
 	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_ASSIGN_DECLARE) {
 		return parse_assign_declare_statement(p);
+	}
+	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_LBRACE && looks_like_struct_literal(p)) {
+		return parse_expr_statement(p);
 	}
 	if (match(p, TOKEN_RETURN)) {
 		return parse_return_statement(p);

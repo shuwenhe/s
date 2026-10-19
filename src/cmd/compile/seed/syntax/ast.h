@@ -136,6 +136,8 @@ struct ast_node {
 			ast_node *init;
 			ast_node *condition;
 			ast_node *post;
+			char *iter_name;
+			ast_node *iterable;
 			ast_node *body;
 		} for_stmt;
 		struct {
