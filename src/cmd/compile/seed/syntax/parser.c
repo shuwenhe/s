@@ -1034,6 +1034,19 @@ static ast_node *parse_call(parser *p) {
 			expr = member;
 			continue;
 		}
+		/* Empty nested array literals use the same typed constructor AST as
+		 * T[][](). Preserve the element type for Semantic and ARRAY_NEW IR. */
+		if (expr->kind == AST_INDEX_EXPR && !expr->as.index_expr.index &&
+			check(p, TOKEN_LBRACE) && peek_ahead(p, 1) &&
+			peek_ahead(p, 1)->type == TOKEN_RBRACE) {
+			ast_node *call = ast_new(AST_CALL_EXPR, expr->pos);
+			if (!call) { ast_free(expr); return NULL; }
+			call->as.call_expr.callee = expr;
+			advance_tok(p);
+			advance_tok(p);
+			expr = call;
+			continue;
+		}
 		if (looks_like_receiver_adjacent_call(p)) {
 			expr = parse_receiver_adjacent_call(p, expr);
 			if (!expr) {

@@ -21,11 +21,9 @@ struct reg_alloc_state {
 }
 
 func make_reg_alloc_state() reg_alloc_state {
-    state: reg_alloc_state
-    state.ranges = nil
-    state.range_count = 0
-    state.free_regs = int[]()
-    state.next_stack_offset = 0
+    state := reg_alloc_state {
+        ranges: nil, range_count: 0, free_regs: int[](), next_stack_offset: 0,
+    }
     i := 0
     for i < 15 {
         state.free_regs = append(state.free_regs, i)
