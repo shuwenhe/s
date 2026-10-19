@@ -2346,6 +2346,22 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			if (!enter_child_scope(ctx, &old_scope)) {
 				return 0;
 			}
+			if (node->as.for_stmt.iterable) {
+				if (!analyze_expr(ctx, node->as.for_stmt.iterable, &expr_type)) {
+					leave_child_scope(ctx, old_scope);
+					return 0;
+				}
+				if (!scope_define(ctx->current_scope, node->as.for_stmt.iter_name,
+					SYMBOL_VAR, 1, -1, -1, TYPE_ANY, NULL, 0)) {
+					error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+						"duplicate for-in binding '%s'", node->as.for_stmt.iter_name);
+					leave_child_scope(ctx, old_scope);
+					return 0;
+				}
+				status = analyze_node(ctx, node->as.for_stmt.body);
+				leave_child_scope(ctx, old_scope);
+				return status;
+			}
 			if (!analyze_node(ctx, node->as.for_stmt.init)) {
 				leave_child_scope(ctx, old_scope);
 				return 0;
