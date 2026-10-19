@@ -1060,6 +1060,7 @@ static int pattern_arm_value_type(semantic_ctx *ctx, ast_node *body, const char 
 		case AST_MEMBER_EXPR:
 		case AST_INDEX_EXPR:
 		case AST_CALL_EXPR:
+		case AST_SLICE_EXPR:
 		case AST_NUMBER_EXPR:
 		case AST_BOOL_EXPR:
 		case AST_STRING_EXPR:
@@ -1312,6 +1313,10 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			}
 			*out_type = TYPE_ANY;
 			return 1;
+		case AST_SLICE_EXPR:
+			error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+				"slice expressions are not supported by the seed semantic analyzer");
+			return 0;
 		case AST_UNARY_EXPR:
 			if (!analyze_expr(ctx, node->as.unary_expr.operand, &rhs_type)) {
 				return 0;
@@ -2416,6 +2421,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_MEMBER_EXPR:
 		case AST_INDEX_EXPR:
 		case AST_CALL_EXPR:
+		case AST_SLICE_EXPR:
 		case AST_NUMBER_EXPR:
 		case AST_BOOL_EXPR:
 		case AST_STRING_EXPR:
