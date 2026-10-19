@@ -188,25 +188,25 @@ func ir_function_new(string name, string return_type) ir_function {
     }
 }
 
-func ir_function_add_param(ir_function* func, ir_value param) {
-    func.parameters = append(func.parameters, param)
+func ir_function_add_param(ir_function* ir_func, ir_value param) {
+    ir_func.parameters = append(ir_func.parameters, param)
 }
 
-func ir_function_add_block(ir_function* func, ir_basicblock block) {
-    func.basic_blocks = append(func.basic_blocks, block)
+func ir_function_add_block(ir_function* ir_func, ir_basicblock block) {
+    ir_func.basic_blocks = append(ir_func.basic_blocks, block)
 }
 
-func ir_function_gen_value_id(ir_function* func) int {
-    func.value_counter = func.value_counter + 1
-    func.value_counter
+func ir_function_gen_value_id(ir_function* ir_func) int {
+    ir_func.value_counter = ir_func.value_counter + 1
+    ir_func.value_counter
 }
 
 func ir_module_new() ir_module {
     ir_module {}
 }
 
-func ir_module_add_function(ir_module* module, ir_function func) {
-    module.functions = append(module.functions, func)
+func ir_module_add_function(ir_module* module, ir_function ir_func) {
+    module.functions = append(module.functions, ir_func)
 }
 
 func ir_module_add_global(ir_module* module, ir_value global) {

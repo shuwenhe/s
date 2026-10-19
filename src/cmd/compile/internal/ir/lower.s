@@ -909,7 +909,6 @@ func resolve_const_name_expr(string name, const_rewrite_entry[] const_entries) i
     }
     ir_ast.expr_ir.name(name)
 }
-}
 
 func substitute_const_text(string text, const_rewrite_entry[] entries) string {
     out := text
