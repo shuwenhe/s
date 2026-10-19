@@ -289,6 +289,7 @@ func (ownership_drop_context* ctx) build_drop_registry() {
             }
             ctx.drop_registry[var_name] = drop_record
             ctx.drop_order = append(ctx.drop_order, var_name)
+        }
     }
     ctx.sort_drop_order_lifo()
 }
