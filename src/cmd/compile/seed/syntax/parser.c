@@ -1089,6 +1089,14 @@ static ast_node *parse_call(parser *p) {
 					ast_free(expr);
 					return NULL;
 				}
+			} else if (expr->kind == AST_STRUCT_EXPR && expr->as.struct_expr.type_name) {
+				/* Preserve a qualified type path that reached this suffix
+				 * through struct-literal lookahead. */
+				left_name = dup_cstr(expr->as.struct_expr.type_name);
+				if (!left_name) {
+					ast_free(expr);
+					return NULL;
+				}
 			} else {
 				parse_error(p, peek(p), "qualified name requires an identifier or member expression");
 				ast_free(expr);
@@ -1099,7 +1107,7 @@ static ast_node *parse_call(parser *p) {
 			advance_tok(p);
 			if (!could_be_identifier_like(p)) {
 				parse_error(p, peek(p), "qualified name member");
-				if (expr->kind == AST_MEMBER_EXPR) free(left_name);
+				if (expr->kind != AST_IDENT_EXPR) free(left_name);
 				ast_free(expr);
 				return NULL;
 			}
@@ -1108,7 +1116,7 @@ static ast_node *parse_call(parser *p) {
 			qualified_len = strlen(left_name) + strlen(prev(p)->lexeme) + 3;
 			qualified = (char *)malloc(qualified_len);
 			if (!qualified) {
-				if (expr->kind == AST_MEMBER_EXPR) free(left_name);
+				if (expr->kind != AST_IDENT_EXPR) free(left_name);
 				ast_free(expr);
 				return NULL;
 			}
