@@ -49,7 +49,7 @@ func ir_builder_build(ast* parser.ast_node) (ir_module, string[]) {
 
     ir_builder_visit_node(&ctx, ast)
 
-    (ctx.module, ctx.errors)
+    return ctx.module, ctx.errors
 }
 
 func ir_builder_visit_node(ir_builder_context* ctx, node* parser.ast_node) {
@@ -90,8 +90,8 @@ func ir_builder_visit_func_decl(ir_builder_context* ctx, node* parser.ast_node) 
     func_name := node.name
     return_type := "int"
 
-    func := ir_function_new(func_name, return_type)
-    ctx.current_function = func
+    ir_func := ir_function_new(func_name, return_type)
+    ctx.current_function = ir_func
 
     entry_block := ir_basicblock_new(ctx.block_counter, "entry")
     ctx.block_counter = ctx.block_counter + 1
@@ -107,9 +107,9 @@ func ir_builder_visit_func_decl(ir_builder_context* ctx, node* parser.ast_node) 
         ir_builder_visit_block(ctx, body_node)
     }
 
-    func.basic_blocks = append(func.basic_blocks, entry_block)
+    ir_func.basic_blocks = append(ir_func.basic_blocks, entry_block)
 
-    ctx.module.functions = append(ctx.module.functions, func)
+    ctx.module.functions = append(ctx.module.functions, ir_func)
 }
 
 func ir_builder_visit_parameters(ir_builder_context* ctx, params_node* parser.ast_node) {
