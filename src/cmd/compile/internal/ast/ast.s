@@ -231,6 +231,8 @@ struct struct_decl {
 struct enum_variant {
     string name
     option[string] payload
+    i64 explicit_value
+    bool has_explicit_value
 }
 
 struct enum_decl {
