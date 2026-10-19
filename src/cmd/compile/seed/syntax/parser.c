@@ -1716,23 +1716,102 @@ static ast_node *parse_while_statement(parser *p) {
 	return node;
 }
 static ast_node *parse_for_statement(parser *p) {
-	(void)p;
 	ast_node *node = ast_new(AST_FOR_STMT, prev(p)->pos);
+	ast_node *prefix;
 	if (!node) {
 		return NULL;
 	}
 	if (!check(p, TOKEN_LPAREN)) {
-		if (!check(p, TOKEN_LBRACE)) {
-			node->as.for_stmt.condition = parse_expression(p);
-			if (!node->as.for_stmt.condition) {
+		// No opening parenthesis - could be:
+		// 1. for { }  (infinite loop)
+		// 2. for condition { }  (condition loop)
+		// 3. for init; cond; post { }  (C-style without parens)
+		
+		if (check(p, TOKEN_LBRACE)) {
+			// Infinite loop: for { }
+			node->as.for_stmt.body = parse_block(p);
+			if (!node->as.for_stmt.body) {
 				ast_free(node);
 				return NULL;
 			}
+			return node;
 		}
+		
+		// Try to parse the first part (could be init or condition)
+		prefix = check(p, TOKEN_SEMICOLON) ? NULL : parse_for_init(p);
+		if (error_is_set(p->err)) {
+			ast_free(node);
+			return NULL;
+		}
+		
+		// A short declaration consumes its terminating semicolon itself;
+		// any such prefix can only be the initializer of a three-part loop.
+		if ((prefix && prefix->kind == AST_LET_STMT) || check(p, TOKEN_SEMICOLON)) {
+			// Three-part loop: for init; cond; post { }
+			node->as.for_stmt.init = prefix;
+			
+			// Consume the first semicolon
+			if (prefix && prefix->kind == AST_LET_STMT) {
+				/* parse_assign_declare_statement already consumed it. */
+			} else if (!expect(p, TOKEN_SEMICOLON, ";")) {
+				ast_free(node);
+				return NULL;
+			}
+			
+			// Parse condition (optional)
+			if (!check(p, TOKEN_SEMICOLON)) {
+				node->as.for_stmt.condition = parse_expression(p);
+				if (!node->as.for_stmt.condition) {
+					ast_free(node);
+					return NULL;
+				}
+			}
+			
+			// Expect second semicolon
+			if (!expect(p, TOKEN_SEMICOLON, ";")) {
+				ast_free(node);
+				return NULL;
+			}
+			
+			// Parse post (optional)
+			if (!check(p, TOKEN_LBRACE)) {
+				node->as.for_stmt.post = parse_expression(p);
+				if (!node->as.for_stmt.post) {
+					ast_free(node);
+					return NULL;
+				}
+			}
+			
+			// Expect opening brace
+			if (!expect(p, TOKEN_LBRACE, "{")) {
+				ast_free(node);
+				return NULL;
+			}
+			
+			// Parse body
+			node->as.for_stmt.body = parse_block(p);
+			if (!node->as.for_stmt.body) {
+				ast_free(node);
+				return NULL;
+			}
+			return node;
+		}
+		
+		// No semicolon - it's a condition loop: for condition { }
+		if (!prefix) {
+			ast_free(node);
+			return NULL;
+		}
+		
+		node->as.for_stmt.condition = prefix->as.expr_stmt.expr;
+		prefix->as.expr_stmt.expr = NULL;
+		ast_free(prefix);
+		
 		if (!expect(p, TOKEN_LBRACE, "{")) {
 			ast_free(node);
 			return NULL;
 		}
+		
 		node->as.for_stmt.body = parse_block(p);
 		if (!node->as.for_stmt.body) {
 			ast_free(node);
@@ -1740,6 +1819,8 @@ static ast_node *parse_for_statement(parser *p) {
 		}
 		return node;
 	}
+	
+	// With opening parenthesis: for (init; cond; post) { }
 	if (!expect(p, TOKEN_LPAREN, "(")) {
 		ast_free(node);
 		return NULL;
