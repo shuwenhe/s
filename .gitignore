@@ -141,3 +141,4 @@ src/cmd/compile/seed/s_seed_*
 bin/s_seed*
 bin/seed_tests
 bin/s_lexer
+.worktrees/
