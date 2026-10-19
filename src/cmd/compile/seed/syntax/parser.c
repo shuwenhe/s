@@ -1904,7 +1904,11 @@ static int try_parse_type_annotation(parser *p, char **out_type) {
 			parsed = next_pointer;
 			advance_tok(p);
 		}
-		if (check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_LBRACKET)) {
+		/* A type suffix belongs to this annotation only when it starts on the
+		 * same source line.  Otherwise the identifier is the next statement's
+		 * binding, e.g. `x := 1 as int64` followed by `y := 2`. */
+		if ((check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_LBRACKET)) &&
+			peek(p)->pos.line == prev(p)->pos.line) {
 			char *tail = NULL;
 			if (try_parse_type_annotation(p, &tail)) {
 				need = strlen(parsed) + strlen(tail) + 1;
