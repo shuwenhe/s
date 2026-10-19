@@ -219,21 +219,21 @@ func int_to_string(int value) string {
 }
 
 func compile_s_source(string* source) int8[] {
-    lexer* := lexer_new(source)
-    lexer_tokenize(lexer)
-    tokens* := lexer_get_tokens(lexer)
-    token_count := lexer_get_token_count(lexer)
+    lexer_ptr := lexer_new(source)
+    lexer_tokenize(lexer_ptr)
+    tokens_ptr := lexer_get_tokens(lexer_ptr)
+    token_count := lexer_get_token_count(lexer_ptr)
     if token_count == 0 {
         return nil
     }
-    parser* := parser_new(tokens, token_count)
-    program* := parser_parse_program(parser)
-    if program == nil {
+    parser_ptr := parser_new(tokens_ptr, token_count)
+    program_ptr := parser_parse_program(parser_ptr)
+    if program_ptr == nil {
         return nil
     }
-    ctx* := typecheck_new()
-    result := typecheck_program(ctx, program)
-    if result == 0 || typecheck_get_error_count(ctx) > 0 {
+    ctx_ptr := typecheck_new()
+    result := typecheck_program(ctx_ptr, program_ptr)
+    if result == 0 || typecheck_get_error_count(ctx_ptr) > 0 {
         return nil
     }
     compiler := make_s_compiler_full()
@@ -243,20 +243,20 @@ func compile_s_source(string* source) int8[] {
 }
 
 func compile_s_to_executable(string* source) int8[] {
-    lexer* := lexer_new(source)
-    lexer_tokenize(lexer)
-    tokens* := lexer_get_tokens(lexer)
-    token_count := lexer_get_token_count(lexer)
+    lexer_ptr := lexer_new(source)
+    lexer_tokenize(lexer_ptr)
+    tokens_ptr := lexer_get_tokens(lexer_ptr)
+    token_count := lexer_get_token_count(lexer_ptr)
     if token_count == 0 {
         return nil
     }
-    parser* := parser_new(tokens, token_count)
-    program* := parser_parse_program(parser)
-    if program == nil {
+    parser_ptr := parser_new(tokens_ptr, token_count)
+    program_ptr := parser_parse_program(parser_ptr)
+    if program_ptr == nil {
         return nil
     }
-    ctx* := typecheck_new()
-    result := typecheck_program(ctx, program)
+    ctx_ptr := typecheck_new()
+    result := typecheck_program(ctx_ptr, program_ptr)
     if result == 0 {
         return nil
     }
@@ -267,10 +267,10 @@ func compile_s_to_executable(string* source) int8[] {
 }
 
 func compile_and_get_info(string* source) string {
-    lexer* := lexer_new(source)
-    lexer_tokenize(lexer)
-    tokens* := lexer_get_tokens(lexer)
-    token_count := lexer_get_token_count(lexer)
+    lexer_ptr := lexer_new(source)
+    lexer_tokenize(lexer_ptr)
+    tokens_ptr := lexer_get_tokens(lexer_ptr)
+    token_count := lexer_get_token_count(lexer_ptr)
     if token_count == 0 {
         return "错误：无法进行词法分析"
     }
@@ -279,18 +279,18 @@ func compile_and_get_info(string* source) string {
     info = info + "  Token 数量: "
     info = info + int_to_string(token_count)
     info = info + "\n"
-    parser* := parser_new(tokens, token_count)
-    program* := parser_parse_program(parser)
-    if program == nil {
+    parser_ptr := parser_new(tokens_ptr, token_count)
+    program_ptr := parser_parse_program(parser_ptr)
+    if program_ptr == nil {
         info = info + "\n第 2 步: 语法分析\n"
         info = info + "  错误：无法构建 AST\n"
         return info
     }
     info = info + "\n第 2 步: 语法分析\n"
     info = info + "  AST 构建成功\n"
-    ctx* := typecheck_new()
-    result := typecheck_program(ctx, program)
-    error_count := typecheck_get_error_count(ctx)
+    ctx_ptr := typecheck_new()
+    result := typecheck_program(ctx_ptr, program_ptr)
+    error_count := typecheck_get_error_count(ctx_ptr)
     info = info + "\n第 3 步: 类型检查\n"
     info = info + "  错误数: "
     info = info + int_to_string(error_count)
