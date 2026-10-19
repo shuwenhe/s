@@ -10,9 +10,9 @@ import (
 )
 
 enum mir_projection_kind {
-    field   
-    deref   
-    index   
+    field,
+    deref,
+    index,
 }
 
 struct mir_operand {
