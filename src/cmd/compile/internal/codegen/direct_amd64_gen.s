@@ -270,13 +270,13 @@ func (gen* amd64_code_gen) gen_epilogue() {
     gen.mcg.stream.emit_raw_bytes(code)
 }
 
-func (gen* amd64_code_gen) gen_func_from_ast(ast_func_decl* func) {
-    gen.current_func_name = func.name
+func (gen* amd64_code_gen) gen_func_from_ast(ast_func_decl* func_decl) {
+    gen.current_func_name = func_decl.name
     gen.function_start_offset = gen.mcg.get_current_offset()
     stack_size := (64 as int64)
     gen.gen_prologue(stack_size)
-    if func.body != nil {
-        gen.gen_block_from_ast(func.body)
+    if func_decl.body != nil {
+        gen.gen_block_from_ast(func_decl.body)
     }
     gen.gen_epilogue()
 }
