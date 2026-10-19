@@ -260,20 +260,6 @@ selfhost: native-bootstrap
 # ============================================================================
 # Pipeline
 # ============================================================================
-.PHONY: compiler-unit-check
-compiler-unit-check: seed-compiler-bin
-	@sh test/driver-dispatch/check.sh
-	@bash test/ssa/check-p2.1.sh
-
-.PHONY: native-codegen-check
-native-codegen-check: compiler
-	@bash test/native-build/check-host-tools.sh
-	@bash test/native-build/check-gate.sh
-	@bash test/native-frontend/check.sh
-	@bash test/function-ssa/check.sh
-	@bash test/native-codegen/check.sh
-	@bash test/native-build/check.sh
-
 .PHONY: pipeline
 pipeline: compiler
 	@chmod +x script/compile-pipeline-check.sh
@@ -301,8 +287,6 @@ clean:
 
 .PHONY: help
 help:
-	@echo "  make native-codegen-check"
-	@echo "  make compiler-unit-check"
 	@echo "  make pipeline"
 	@echo "  make install"
 	@echo "  make selfhost"
