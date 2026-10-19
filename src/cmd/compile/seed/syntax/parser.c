@@ -115,6 +115,7 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_STRUCT_EXPR: return "STRUCT_EXPR";
 		case AST_MEMBER_EXPR: return "MEMBER_EXPR";
 		case AST_INDEX_EXPR: return "INDEX_EXPR";
+		case AST_SLICE_EXPR: return "SLICE_EXPR";
 		case AST_CALL_EXPR: return "CALL_EXPR";
 		default: return "UNKNOWN_AST";
 	}
@@ -319,6 +320,11 @@ void ast_free(ast_node *node) {
 		case AST_INDEX_EXPR:
 			ast_free(node->as.index_expr.object);
 			ast_free(node->as.index_expr.index);
+			break;
+		case AST_SLICE_EXPR:
+			ast_free(node->as.slice_expr.object);
+			ast_free(node->as.slice_expr.start);
+			ast_free(node->as.slice_expr.end);
 			break;
 		case AST_CALL_EXPR:
 			ast_free(node->as.call_expr.callee);
@@ -928,26 +934,54 @@ static ast_node *parse_call(parser *p) {
 		if (match(p, TOKEN_LBRACKET)) {
 			ast_node *indexed;
 			ast_node *index_expr = NULL;
-			if (!check(p, TOKEN_RBRACKET)) {
+			ast_node *slice_end = NULL;
+			if (!check(p, TOKEN_COLON) && !check(p, TOKEN_RBRACKET)) {
 				index_expr = parse_expression(p);
 				if (!index_expr) {
 					ast_free(expr);
 					return NULL;
 				}
 			}
-			if (!expect(p, TOKEN_RBRACKET, "]")) {
-				ast_free(index_expr);
-				ast_free(expr);
-				return NULL;
+			if (match(p, TOKEN_COLON)) {
+				if (!check(p, TOKEN_RBRACKET)) {
+					slice_end = parse_expression(p);
+					if (!slice_end) {
+						ast_free(index_expr);
+						ast_free(expr);
+						return NULL;
+					}
+				}
+				if (!expect(p, TOKEN_RBRACKET, "]")) {
+					ast_free(index_expr);
+					ast_free(slice_end);
+					ast_free(expr);
+					return NULL;
+				}
+				indexed = ast_new(AST_SLICE_EXPR, prev(p)->pos);
+				if (!indexed) {
+					ast_free(index_expr);
+					ast_free(slice_end);
+					ast_free(expr);
+					return NULL;
+				}
+				indexed->as.slice_expr.object = expr;
+				indexed->as.slice_expr.start = index_expr;
+				indexed->as.slice_expr.end = slice_end;
+			} else {
+				if (!expect(p, TOKEN_RBRACKET, "]")) {
+					ast_free(index_expr);
+					ast_free(expr);
+					return NULL;
+				}
+				indexed = ast_new(AST_INDEX_EXPR, prev(p)->pos);
+				if (!indexed) {
+					ast_free(index_expr);
+					ast_free(expr);
+					return NULL;
+				}
+				indexed->as.index_expr.object = expr;
+				indexed->as.index_expr.index = index_expr;
 			}
-			indexed = ast_new(AST_INDEX_EXPR, prev(p)->pos);
-			if (!indexed) {
-				ast_free(index_expr);
-				ast_free(expr);
-				return NULL;
-			}
-			indexed->as.index_expr.object = expr;
-			indexed->as.index_expr.index = index_expr;
 			expr = indexed;
 			continue;
 		}
@@ -2788,6 +2822,11 @@ static ast_node *clone_expr(const ast_node *node) {
 		case AST_INDEX_EXPR:
 			copy->as.index_expr.object = clone_expr(node->as.index_expr.object);
 			copy->as.index_expr.index = clone_expr(node->as.index_expr.index);
+			break;
+		case AST_SLICE_EXPR:
+			copy->as.slice_expr.object = clone_expr(node->as.slice_expr.object);
+			copy->as.slice_expr.start = clone_expr(node->as.slice_expr.start);
+			copy->as.slice_expr.end = clone_expr(node->as.slice_expr.end);
 			break;
 		case AST_BINARY_EXPR:
 			copy->as.binary_expr.op = node->as.binary_expr.op;
