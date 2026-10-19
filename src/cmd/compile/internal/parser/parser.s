@@ -155,7 +155,7 @@ func (parser* self) parse_import_block() (use_decl[], parse_error) {
         }
         result = append(result, use_decl {
             path: path, alias option.none
-        })
+        }
         if self.at_symbol(",") {
             self.advance()
         }
@@ -1706,7 +1706,7 @@ func (parser* self) parse_use_path() (string, parse_error) {
                     members = append(members, text)
                     self.eat_symbol(",")
                 }
-                return join_strings(parts, ".") + ".{" + join_strings(members, ", ") + "}")
+                return join_strings(parts, ".") + ".{" + join_strings(members, ", ") + "}"
             }
             parts = append(parts, self.expect_ident())
         }
@@ -2060,7 +2060,7 @@ struct named_type {
 func decode_receiver_type(token[] tokens) (named_type, parse_error) {
     colon := find_token_value(tokens, ":")
     if colon >= 0 {
-        return decode_named_type(tokens
+        return decode_named_type(tokens)
     }
     if std.prelude.len(tokens) >= 2 && tokens[0].kind == token_kind.ident {
         return named_type {
