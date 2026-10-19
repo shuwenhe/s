@@ -366,8 +366,8 @@ func borrow_state_is_moved(borrow_record[] state, string name) bool {
 
 func borrow_place_name(expr value) string {
     switch value {
-        expr::name(name_value) : name_value.name,
-        expr::member(member_value) : {
+        expr.name(name_value) : name_value.name,
+        expr.member(member_value) : {
             base := borrow_place_name(member_value.target.value)
             if base == "" { "" } else { base + "." + member_value.member }
         }
@@ -979,7 +979,7 @@ func check_item(item item, function_binding[] functions, trait_binding[] traits,
 func collect_consts(source_file file, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) const_binding[] {
     out := const_binding[]()
     type_env := type_binding[]()
-    last_const_expr := option::none
+    last_const_expr := option.none
     i := 0
     for i < std.prelude.len(file.items) {
         pkg := item_package_at(file.item_packages, i, file.pkg)
@@ -994,11 +994,11 @@ func collect_consts(source_file file, function_binding[] functions, trait_bindin
                     type_name: "int",
                 })
                 ;
-                expr_to_check := option::none
+                expr_to_check := option.none
                 switch const_decl.value {
                     option.some(value) : {
-                        expr_to_check = option::some(value)
-                        last_const_expr = option::some(value)
+                        expr_to_check = option.some(value)
+                        last_const_expr = option.some(value)
                     }
                     option.none : expr_to_check = last_const_expr,
                 }
@@ -1041,11 +1041,11 @@ func collect_consts(source_file file, function_binding[] functions, trait_bindin
 
 func eval_const_int_expr(expr value, const_binding[] known_consts, int iota_value) const_eval_int_result {
     switch value {
-        expr::int(int_expr) : const_eval_int_result {
+        expr.int(int_expr) : const_eval_int_result {
             ok: true, value parse_const_int_literal(int_expr.value),
             error: "",
         },
-        expr::name(name_expr) : {
+        expr.name(name_expr) : {
             if name_expr.name == "iota" {
                 return const_eval_int_result {
                     ok: true, value iota_value,
@@ -1073,7 +1073,7 @@ func eval_const_int_expr(expr value, const_binding[] known_consts, int iota_valu
                 error: "unknown constant name " + name_expr.name,
             }
         }
-        expr::binary(binary_expr) : {
+        expr.binary(binary_expr) : {
             left := eval_const_int_expr(binary_expr.left.value, known_consts, iota_value)
             if !left.ok {
                 return left
@@ -1502,7 +1502,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
                 name: value.name, type_name binding_type,
             })
             switch value.value {
-                expr::name(name_value) : errors = errors + check_move_value(name_value.name, rhs.kindname, borrow_state, source, diagnostics),
+                expr.name(name_value) : errors = errors + check_move_value(name_value.name, rhs.kindname, borrow_state, source, diagnostics),
                 _ : (),
             }
             errors
@@ -1521,7 +1521,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
                 return errors + add_error(source, diagnostics, "e3003", "assignment type mismatch", value.name)
             }
             switch value.value {
-                expr::name(name_value) : errors = errors + check_move_value(name_value.name, rhs.kindname, borrow_state, source, diagnostics),
+                expr.name(name_value) : errors = errors + check_move_value(name_value.name, rhs.kindname, borrow_state, source, diagnostics),
                 _ : (),
             }
             errors
@@ -1563,7 +1563,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
                         return expr_result.errors + add_error(source, diagnostics, "e3008", "return type mismatch", "return")
                     }
                     switch expr {
-                        expr::name(name_value) : expr_result.errors = expr_result.errors + check_move_value(name_value.name, expr_result.kindname, borrow_state, source, diagnostics),
+                        expr.name(name_value) : expr_result.errors = expr_result.errors + check_move_value(name_value.name, expr_result.kindname, borrow_state, source, diagnostics),
                         _ : (),
                     }
                     expr_result.errors
@@ -1590,10 +1590,10 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
 
 func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) check_result {
     switch expr {
-        expr::int(_) : ok_type("int"),
-        expr::string(_) : ok_type("string"),
-        expr::bool(_) : ok_type("bool"),
-        expr::name(value) : {
+        expr.int(_) : ok_type("int"),
+        expr.string(_) : ok_type("string"),
+        expr.bool(_) : ok_type("bool"),
+        expr.name(value) : {
             if value.name == "nil" {
                 return ok_type("nil")
             }
@@ -1614,7 +1614,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
             ok_type(ty)
         }
-        expr::borrow(value) : {
+        expr.borrow(value) : {
             target_name := borrow_place_name(value.target.value)
             if target_name == "" {
                 return check_result {
@@ -1652,7 +1652,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 type_name: prefix + base.kindname, errors base.errors,
             }
         }
-        expr::binary(value) : {
+        expr.binary(value) : {
             left := infer_expr(value.left.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             right := infer_expr(value.right.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             result := infer_binary(value.op, left, right, source, diagnostics)
@@ -1661,7 +1661,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
             result
         }
-        expr::member(value) : {
+        expr.member(value) : {
             target := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             field_type := compile.internal.prelude.lookup_builtin_field_type(target.kindname, value.member)
             if field_type == "" {
@@ -1673,7 +1673,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 type_name: compile.internal.typesys.parse_type(field_type), errors target.errors,
             }
         }
-        expr::index(value) : {
+        expr.index(value) : {
             target := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             index := infer_expr(value.index.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors := target.errors + index.errors
@@ -1710,7 +1710,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 type_name: "unknown", errors errors + add_error(source, diagnostics, "e3013", "index target is not indexable", "["),
             }
         }
-        expr::call(value) : {
+        expr.call(value) : {
             errors := 0
             arg_types := string[]()
             i := 0
@@ -1719,17 +1719,17 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 errors = errors + arg_result.errors
                 arg_types = append(arg_types, arg_result.kindname);
                 switch value.args[i] {
-                    expr::name(name_value) : errors = errors + check_move_value(name_value.name, arg_result.kindname, borrow_state, source, diagnostics),
+                    expr.name(name_value) : errors = errors + check_move_value(name_value.name, arg_result.kindname, borrow_state, source, diagnostics),
                     _ : (),
                 }
                 i = i + 1
             }
             switch value.callee.value {
-                expr::member(member) : {
+                expr.member(member) : {
                     qualified_path := qualified_expr_path(value.callee.value)
                     qualified := resolve_qualified_call_callee(qualified_path, arg_types, functions, traits, declarations, source, diagnostics)
                     if qualified.ok {
-                        value.resolved_callee = option::some(qualified.match.instance_name)
+                        value.resolved_callee = option.some(qualified.match.instance_name)
                         value.kindargs = qualified.match.kindargs
                         return check_result {
                             type_name: qualified.match.return_type, errors errors,
@@ -1778,7 +1778,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                                 type_name: "unknown", errors errors + add_error(source, diagnostics, "e1003", "ambiguous overload", member.member),
                             }
                         }
-                        value.resolved_callee = option::some(best.instance_name)
+                        value.resolved_callee = option.some(best.instance_name)
                         value.kindargs = best.kindargs
                         return check_result {
                             type_name: best.return_type, errors errors,
@@ -1827,7 +1827,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                         type_name: resolve_method_return(target.kindname, method_type), errors errors,
                     }
                 }
-                expr::name(callee_name) : {
+                expr.name(callee_name) : {
                     if callee_name.name == "copy" {
                         if std.prelude.len(value.args) != 1 {
                             return check_result {
@@ -1852,7 +1852,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                         }
                         inner := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
                         switch value.args[0] {
-                            expr::name(name_value) : errors = errors + check_move_value(name_value.name, inner.kindname, borrow_state, source, diagnostics),
+                            expr.name(name_value) : errors = errors + check_move_value(name_value.name, inner.kindname, borrow_state, source, diagnostics),
                             _ : (),
                         }
                         return check_result {
@@ -1872,7 +1872,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                             }
                         }
                             switch value.args[0] {
-                            expr::name(name_value) : errors = errors + check_move_value(name_value.name, owned.kindname, borrow_state, source, diagnostics),
+                            expr.name(name_value) : errors = errors + check_move_value(name_value.name, owned.kindname, borrow_state, source, diagnostics),
                             _ : (),
                         }
                         return check_result {
@@ -1885,7 +1885,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                             type_name: "unknown", errors errors + resolved.errors,
                         }
                     }
-                    value.resolved_callee = option::some(resolved.match.instance_name)
+                    value.resolved_callee = option.some(resolved.match.instance_name)
                     value.kindargs = resolved.match.kindargs
                     check_result {
                         type_name: resolved.match.return_type, errors errors,
@@ -1899,7 +1899,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 }
             }
         }
-        expr::switch(value) : {
+        expr.switch(value) : {
             subject := infer_expr(value.subject.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
             errors := subject.errors
             arm_type := "unknown"
@@ -1938,7 +1938,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 type_name: arm_type, errors errors,
             }
         }
-        expr::if(value) : {
+        expr.if(value) : {
             cond := infer_expr(value.condition.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
             then_borrows := borrow_state_clone(borrow_state)
             then_result := infer_block_expr(value.then_branch, env, then_borrows, expected_return, functions, traits, source, diagnostics)
@@ -1948,7 +1948,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 errors = errors + add_error(source, diagnostics, "e3014", "if condition must be bool", "if")
             }
             switch value.else_branch {
-                option::some(else_expr) : {
+                option.some(else_expr) : {
                     else_result := infer_expr(else_expr.value, env, else_borrows, expected_return, functions, traits, source, diagnostics)
                     errors = errors + else_result.errors
                     borrow_state_merge_moves(borrow_state, then_borrows)
@@ -1960,13 +1960,13 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                         type_name: then_result.kindname, errors errors,
                     }
                 }
-                option::none : check_result {
+                option.none : check_result {
                     borrow_state_merge_moves(borrow_state, then_borrows)
                     type_name: "()", errors errors,
                 },
             }
         }
-        expr::while(value) : {
+        expr.while(value) : {
             cond := infer_expr(value.condition.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
             body_borrows := borrow_state_clone(borrow_state)
             body_result := infer_block_expr(value.body, env, body_borrows, expected_return, functions, traits, source, diagnostics)
@@ -1979,7 +1979,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 type_name: "()", errors errors,
             }
         }
-        expr::for(value) : {
+        expr.for(value) : {
             iter := infer_expr(value.iterable.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
             body_borrows := borrow_state_clone(borrow_state)
             body_result := infer_block_expr(value.body, env, body_borrows, expected_return, functions, traits, source, diagnostics)
@@ -1988,10 +1988,10 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 type_name: "()", errors iter.errors + body_result.errors,
             }
         }
-        expr::block(value) : {
+        expr.block(value) : {
             infer_block_expr(value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
         }
-        expr::array(value) : {
+        expr.array(value) : {
             if std.prelude.len(value.items) == 0 {
                 return ok_type("unknown[]")
             }
@@ -2010,7 +2010,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 type_name: "[]" + first.kindname, errors errors,
             }
         }
-        expr::map(value) : {
+        expr.map(value) : {
             errors := 0
             i := 0
             for i < std.prelude.len(value.entries) {
@@ -2027,7 +2027,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
 
 func is_borrow_expr(expr value) bool {
     switch value {
-        expr::borrow(_) : true,
+        expr.borrow(_) : true,
         _ : false,
     }
 }
@@ -2045,18 +2045,18 @@ func bind_pattern(pattern pattern, string expected_type, type_binding[] bindings
         return add_error(source, diagnostics, "e2007", "pattern expected type is unknown", pattern_anchor(pattern))
     }
     switch pattern {
-        pattern::name(value) : {
+        pattern.name(value) : {
             add_binding(bindings, value.name, expected_type, source, diagnostics)
         }
-        pattern::wildcard(_) : 0,
-        pattern::literal(value) : {
+        pattern.wildcard(_) : 0,
+        pattern.literal(value) : {
             literal_type := literal_pattern_type(value)
             if !types_compatible(expected_type, literal_type) {
                 return add_error(source, diagnostics, "e2006", "literal pattern type mismatch", literal_pattern_text(value))
             }
             0
         }
-        pattern::variant(value) : {
+        pattern.variant(value) : {
             variant := last_path_segment(value.path)
             base := compile.internal.typesys.base_type_name(expected_type)
             if base == "option" {
@@ -2157,15 +2157,15 @@ func pattern_subsumes(pattern left, pattern right, string expected_type) bool {
         return false
     }
     switch left {
-        pattern::literal(lv) : {
+        pattern.literal(lv) : {
             switch right {
-                pattern::literal(rv) : literal_pattern_equals(lv, rv),
+                pattern.literal(rv) : literal_pattern_equals(lv, rv),
                 _ : false,
             }
         }
-        pattern::variant(lv) : {
+        pattern.variant(lv) : {
             switch right {
-                pattern::variant(rv) : {
+                pattern.variant(rv) : {
                     lctor := last_path_segment(lv.path)
                     rctor := last_path_segment(rv.path)
                     if lctor != rctor {
@@ -2214,7 +2214,7 @@ func option_patterns_cover(pattern[] patterns, string expected_type) bool {
     i := 0
     for i < std.prelude.len(patterns) {
         switch patterns[i] {
-            pattern::variant(value) : {
+            pattern.variant(value) : {
                 ctor := last_path_segment(value.path)
                 if ctor == "none" {
                     seen_none = true
@@ -2238,7 +2238,7 @@ func result_patterns_cover(pattern[] patterns, string expected_type) bool {
     i := 0
     for i < std.prelude.len(patterns) {
         switch patterns[i] {
-            pattern::variant(value) : {
+            pattern.variant(value) : {
                 ctor := last_path_segment(value.path)
                 if ctor == "ok" && std.prelude.len(value.args) == 1 {
                     ok_patterns = append(ok_patterns, value.args[0]);
@@ -2258,35 +2258,35 @@ func result_patterns_cover(pattern[] patterns, string expected_type) bool {
 
 func pattern_is_wild(pattern pattern) bool {
     switch pattern {
-        pattern::wildcard(_) : true,
-        pattern::name(_) : true,
+        pattern.wildcard(_) : true,
+        pattern.name(_) : true,
         _ : false,
     }
 }
 
 func pattern_anchor(pattern pattern) string {
     switch pattern {
-        pattern::name(value) : value.name,
-        pattern::wildcard(_) : "_",
-        pattern::literal(value) : literal_pattern_text(value),
-        pattern::variant(value) : value.path,
+        pattern.name(value) : value.name,
+        pattern.wildcard(_) : "_",
+        pattern.literal(value) : literal_pattern_text(value),
+        pattern.variant(value) : value.path,
     }
 }
 
 func literal_pattern_type(literal_pattern value) string {
     switch value.value {
-        expr::int(_) : "int",
-        expr::string(_) : "string",
-        expr::bool(_) : "bool",
+        expr.int(_) : "int",
+        expr.string(_) : "string",
+        expr.bool(_) : "bool",
         _ : "unknown",
     }
 }
 
 func literal_pattern_text(literal_pattern value) string {
     switch value.value {
-        expr::int(v) : v.value,
-        expr::string(v) : v.value,
-        expr::bool(v) : if v.value { "true" } else { "false" },
+        expr.int(v) : v.value,
+        expr.string(v) : v.value,
+        expr.bool(v) : if v.value { "true" } else { "false" },
         _ : "<literal>",
     }
 }
@@ -2499,8 +2499,8 @@ func lookup_qualified_functions(function_binding[] functions, string package_pat
 
 func qualified_expr_path(expr value) string {
     switch value {
-        expr::name(name_value) : name_value.name,
-        expr::member(member_value) : {
+        expr.name(name_value) : name_value.name,
+        expr.member(member_value) : {
             prefix := qualified_expr_path(member_value.target.value)
             if prefix == "" {
                 return ""
@@ -2586,9 +2586,9 @@ func receiver_allows_method(string receiver_type, expr receiver_expr, string rec
 
 func is_addressable_expr(expr value) bool {
     switch value {
-        expr::name(_) : true,
-        expr::member(_) : true,
-        expr::index(_) : true,
+        expr.name(_) : true,
+        expr.member(_) : true,
+        expr.index(_) : true,
         _ : false,
     }
 }
@@ -3027,7 +3027,7 @@ func has_duplicate_binding(type_binding[] env, string name) bool {
 
 func is_zero_int_expr(expr value) bool {
     switch value {
-        expr::int(number) : number.value == "0",
+        expr.int(number) : number.value == "0",
         _ : false,
     }
 }

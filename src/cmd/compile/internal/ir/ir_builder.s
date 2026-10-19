@@ -35,14 +35,14 @@ func (b* ir_builder) add_local(int id, string name, string type_name) {
     local := mir.mir_local_slot {
         id: id,
         name: name,
-        type_name: option::some(type_name)
+        type_name: option.some(type_name)
     }
     b.current_function.locals.push(local)
 }
 
 func (b* ir_builder) emit_assign(int target, string op, int[] args) {
     if b.current_block_id < b.current_function.blocks.len() {
-        stmt := mir.mir_statement::assign(mir.mir_assign_stmt {
+        stmt := mir.mir_statement.assign(mir.mir_assign_stmt {
             target: target,
             op: op,
             args: args
@@ -54,7 +54,7 @@ func (b* ir_builder) emit_assign(int target, string op, int[] args) {
 
 func (b* ir_builder) emit_eval(string op, int[] args) {
     if b.current_block_id < b.current_function.blocks.len() {
-        stmt := mir.mir_statement::eval(mir.mir_eval_stmt {
+        stmt := mir.mir_statement.eval(mir.mir_eval_stmt {
             op: op,
             args: args
         })
@@ -108,19 +108,19 @@ func (b* ir_builder) analyze_optimizations() {
     for i := 0; i < f; i++.locals.len() {
         local := f.locals[i]
         is_pointer := false
-        if local.kindname != option::none {
+        if local.kindname != option.none {
             is_pointer = compile.internal.typesys.is_heap_reference_type(local.kindname.unwrap())
         }
         escape_level := f.escape_analysis.analyze_variable(local.id, is_pointer, false, false, false)
 
         switch escape_level {
-            escape.escape_level::escape_none: {
+            escape.escape_level.escape_none: {
             }
-            escape.escape_level::escape_func: {
+            escape.escape_level.escape_func: {
             }
-            escape.escape_level::escape_global: {
+            escape.escape_level.escape_global: {
             }
-            escape.escape_level::escape_heap: {
+            escape.escape_level.escape_heap: {
             }
         }
     }
@@ -177,7 +177,7 @@ func (b* ir_builder) print_analysis_stats() {
     for _idx_179 := 0; _idx_179 < len(f.escape_analysis.infos); _idx_179++ {
         info := f.escape_analysis.infos[_idx_179]
         switch info.level {
-            escape.escape_level::escape_global: { escape_locals = escape_locals + 1 }
+            escape.escape_level.escape_global: { escape_locals = escape_locals + 1 }
         }
     }
     _ = escape_locals

@@ -16,9 +16,9 @@ func parse_imports(source_unit unit) import_record[] {
         parts := split_words(line)
         if len(parts) >= 2 {
             path := normalize_import_path(parts[1])
-            alias := option::none
+            alias := option.none
             if len(parts) >= 4 && parts[2] == "as" {
-                alias = option::some(parts[3])
+                alias = option.some(parts[3])
             }
             out.push(import_record {
                 path: path, alias alias,
@@ -34,8 +34,8 @@ func import_map(import_record[] imports) string[] {
     i := 0
     for i < len(imports) {
         switch imports[i].alias {
-            option::some(alias) : out = append(out, alias + "=" + imports[i].path),
-            option::none : out = append(out, imports[i].path),
+            option.some(alias) : out = append(out, alias + "=" + imports[i].path),
+            option.none : out = append(out, imports[i].path),
         }
         i = i + 1
     }

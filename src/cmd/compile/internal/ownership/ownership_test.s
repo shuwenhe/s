@@ -133,7 +133,7 @@ func test_partial_move() bool {
 func test_complete_ownership_pipeline() bool {
     oa := new_ownership_analysis()
     test_stmts := interface{}[]{
-        assignment_stmt*{lhs: "x", rhs: "box::new()", is_move: false},
+        assignment_stmt*{lhs: "x", rhs: "box.new()", is_move: false},
         borrow_stmt*{source: "x", is_mutable: false, lifetime_name: "a"},
         use_stmt*{variable: "y", through_borrow: true},
         borrow_end_stmt*{source: "x"},

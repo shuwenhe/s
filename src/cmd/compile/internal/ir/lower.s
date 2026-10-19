@@ -24,25 +24,25 @@ func from_syntax(source_file src) ir_ast.package_ir {
         switch it {
             item.function(function_decl) : {
                 fd := convert_function(function_decl, const_entries)
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir::func(fd))
+                pkg.decls = append(pkg.decls, ir_ast.decl_ir.func(fd))
             }
             item.const(const_decl) : {
                 value_text := lookup_const_expr_text(const_entries, const_decl.name)
-                pkg.decls.push(ir_ast.decl_ir::const(ir_ast.const_decl {
+                pkg.decls.push(ir_ast.decl_ir.const(ir_ast.const_decl {
                     name: const_decl.name, value value_text,
                 }))
             }
             item.struct(struct_decl) : {
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir::type_decl(ir_ast.type_decl { name: struct_decl.name, type_expr: "struct" }))
+                pkg.decls = append(pkg.decls, ir_ast.decl_ir.type_decl(ir_ast.type_decl { name: struct_decl.name, type_expr: "struct" }))
             }
             item.enum(enum_decl) : {
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir::type_decl(ir_ast.type_decl { name: enum_decl.name, type_expr: "enum" }))
+                pkg.decls = append(pkg.decls, ir_ast.decl_ir.type_decl(ir_ast.type_decl { name: enum_decl.name, type_expr: "enum" }))
             }
             item.trait(trait_decl) : {
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir::type_decl(ir_ast.type_decl { name: trait_decl.name, type_expr: "trait" }))
+                pkg.decls = append(pkg.decls, ir_ast.decl_ir.type_decl(ir_ast.type_decl { name: trait_decl.name, type_expr: "trait" }))
             }
             item.method(method_decl) : {
-                pkg.decls.push(ir_ast.decl_ir::method(ir_ast.method_decl {
+                pkg.decls.push(ir_ast.decl_ir.method(ir_ast.method_decl {
                     receiver_name: method_decl.receiver_name, receiver_type method_decl.receiver_type, method convert_function(method_decl.method, const_entries),
                 }))
             }
@@ -65,7 +65,7 @@ func validate_lowering_contract(ir_ast.package_ir pkg) ((), string) {
     i := 0
     for i < len(pkg.decls) {
         switch pkg.decls[i] {
-            ir_ast.decl_ir::func(fd) : {
+            ir_ast.decl_ir.func(fd) : {
                 if fd.body.is_some() {
                     checked := validate_block_contract(fd.body.unwrap())
                     if checked.is_err() {
@@ -84,25 +84,25 @@ func validate_block_contract(ir_ast.block_ir block) ((), string) {
     i := 0
     for i < len(block.statements) {
         switch block.statements[i] {
-            ir_ast.stmt_ir::let(var_stmt) : {
+            ir_ast.stmt_ir.let(var_stmt) : {
                 checked := validate_expr_contract(var_stmt.value)
                 if checked.is_err() {
                     return checked
                 }
             }
-            ir_ast.stmt_ir::assign(assign_stmt) : {
+            ir_ast.stmt_ir.assign(assign_stmt) : {
                 checked := validate_expr_contract(assign_stmt.value)
                 if checked.is_err() {
                     return checked
                 }
             }
-            ir_ast.stmt_ir::expr(expr_stmt) : {
+            ir_ast.stmt_ir.expr(expr_stmt) : {
                 checked := validate_expr_contract(expr_stmt.expr)
                 if checked.is_err() {
                     return checked
                 }
             }
-            ir_ast.stmt_ir::return_stmt(return_stmt) : {
+            ir_ast.stmt_ir.return_stmt(return_stmt) : {
                 if return_stmt.value.is_some() {
                     checked := validate_expr_contract(return_stmt.value.unwrap())
                     if checked.is_err() {
@@ -110,7 +110,7 @@ func validate_block_contract(ir_ast.block_ir block) ((), string) {
                     }
                 }
             }
-            ir_ast.stmt_ir::cfor(c_for_stmt) : {
+            ir_ast.stmt_ir.cfor(c_for_stmt) : {
                 cond_checked := validate_expr_contract(c_for_stmt.condition)
                 if cond_checked.is_err() {
                     return cond_checked
@@ -132,12 +132,12 @@ func validate_block_contract(ir_ast.block_ir block) ((), string) {
 
 func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
     switch expression {
-        ir_ast.expr_ir::name(name) : {
+        ir_ast.expr_ir.name(name) : {
             if contains_text(name, "_unlowered") {
                 return "lowering contract violation: placeholder expression remains"
             }
         }
-        ir_ast.expr_ir::call(call_expr) : {
+        ir_ast.expr_ir.call(call_expr) : {
             i := 0
             for i < len(call_expr.args) {
                 checked := validate_expr_contract(call_expr.args[i])
@@ -147,27 +147,27 @@ func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
                 i = i + 1
             }
         }
-        ir_ast.expr_ir::binary(binary_expr) : {
+        ir_ast.expr_ir.binary(binary_expr) : {
             l := validate_expr_contract(binary_expr.left)
             if l.is_err() {
                 return l
             }
             return validate_expr_contract(binary_expr.right)
         }
-        ir_ast.expr_ir::borrow(borrow_expr) : {
+        ir_ast.expr_ir.borrow(borrow_expr) : {
             return validate_expr_contract(borrow_expr.target)
         }
-        ir_ast.expr_ir::member(member_expr) : {
+        ir_ast.expr_ir.member(member_expr) : {
             return validate_expr_contract(member_expr.target)
         }
-        ir_ast.expr_ir::index(index_expr) : {
+        ir_ast.expr_ir.index(index_expr) : {
             t := validate_expr_contract(index_expr.target)
             if t.is_err() {
                 return t
             }
             return validate_expr_contract(index_expr.index)
         }
-        ir_ast.expr_ir::array(array_expr) : {
+        ir_ast.expr_ir.array(array_expr) : {
             i := 0
             for i < len(array_expr.items) {
                 checked := validate_expr_contract(array_expr.items[i])
@@ -177,7 +177,7 @@ func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
                 i = i + 1
             }
         }
-        ir_ast.expr_ir::map(map_expr) : {
+        ir_ast.expr_ir.map(map_expr) : {
             i := 0
             for i < len(map_expr.entries) {
                 key_checked := validate_expr_contract(map_expr.entries[i].key)
@@ -191,7 +191,7 @@ func validate_expr_contract(ir_ast.expr_ir expression) ((), string) {
                 i = i + 1
             }
         }
-        ir_ast.expr_ir::block(block_expr) : {
+        ir_ast.expr_ir.block(block_expr) : {
             return validate_block_contract(block_expr)
         }
         _ : (),
@@ -253,34 +253,34 @@ func convert_block(block_expr b, const_rewrite_entry[] const_entries) ir_ast.blo
 func convert_stmt(stmt s, const_rewrite_entry[] const_entries) ir_ast.stmt_ir {
     switch s {
         stmt.let(var_stmt) : {
-            ir_ast.stmt_ir::let(ir_ast.var_stmt { name: var_stmt.name, type_name var_stmt.type_name, value convert_expr(var_stmt.value, const_entries) })
+            ir_ast.stmt_ir.let(ir_ast.var_stmt { name: var_stmt.name, type_name var_stmt.type_name, value convert_expr(var_stmt.value, const_entries) })
         }
         stmt.assign(assign_stmt) : {
-            ir_ast.stmt_ir::assign(ir_ast.assign_stmt { name: assign_stmt.name, value convert_expr(assign_stmt.value, const_entries) })
+            ir_ast.stmt_ir.assign(ir_ast.assign_stmt { name: assign_stmt.name, value convert_expr(assign_stmt.value, const_entries) })
         }
         stmt.increment(increment_stmt) : {
-            ir_ast.stmt_ir::increment(ir_ast.increment_stmt { name: increment_stmt.name })
+            ir_ast.stmt_ir.increment(ir_ast.increment_stmt { name: increment_stmt.name })
         }
         stmt.c_for(c_for_stmt) : {
-            ir_ast.stmt_ir::cfor(ir_ast.c_for_stmt {
+            ir_ast.stmt_ir.cfor(ir_ast.c_for_stmt {
                 init: convert_stmt(c_for_stmt.init.value, const_entries), condition convert_expr(c_for_stmt.condition, const_entries), step convert_stmt(c_for_stmt.step.value, const_entries), body convert_block(c_for_stmt.body, const_entries),
             })
         }
         stmt.return(return_stmt) : {
             if return_stmt.value.is_some() {
-                ir_ast.stmt_ir::return_stmt(ir_ast.return_stmt { value: option[ir_ast.expr_ir].some(convert_expr(return_stmt.value.unwrap(), const_entries)) })
+                ir_ast.stmt_ir.return_stmt(ir_ast.return_stmt { value: option[ir_ast.expr_ir].some(convert_expr(return_stmt.value.unwrap(), const_entries)) })
             } else {
-                ir_ast.stmt_ir::return_stmt(ir_ast.return_stmt { value: option[ir_ast.expr_ir].none })
+                ir_ast.stmt_ir.return_stmt(ir_ast.return_stmt { value: option[ir_ast.expr_ir].none })
             }
         }
         stmt.expr(expr_stmt) : {
-            ir_ast.stmt_ir::expr(ir_ast.expr_stmt { expr: convert_expr(expr_stmt.expr, const_entries) })
+            ir_ast.stmt_ir.expr(ir_ast.expr_stmt { expr: convert_expr(expr_stmt.expr, const_entries) })
         }
         stmt.defer(defer_stmt) : {
-            ir_ast.stmt_ir::expr(ir_ast.expr_stmt { expr: convert_expr(defer_stmt.expr, const_entries) })
+            ir_ast.stmt_ir.expr(ir_ast.expr_stmt { expr: convert_expr(defer_stmt.expr, const_entries) })
         }
         stmt.sroutine(sroutine_stmt) : {
-            ir_ast.stmt_ir::expr(ir_ast.expr_stmt { expr: convert_expr(sroutine_stmt.expr, const_entries) })
+            ir_ast.stmt_ir.expr(ir_ast.expr_stmt { expr: convert_expr(sroutine_stmt.expr, const_entries) })
         }
     }
 }
@@ -289,13 +289,13 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
     switch e {
         expr.int(int_expr) : {
             n := parse_int_literal(int_expr.value)
-            ir_ast.expr_ir::int(n)
+            ir_ast.expr_ir.int(n)
         }
-        expr.string(string_expr) : ir_ast.expr_ir::string(string_expr.value),
-        expr.bool(bool_expr) : ir_ast.expr_ir::bool(bool_expr.value),
+        expr.string(string_expr) : ir_ast.expr_ir.string(string_expr.value),
+        expr.bool(bool_expr) : ir_ast.expr_ir.bool(bool_expr.value),
         expr.name(name_expr) : resolve_const_name_expr(name_expr.name, const_entries),
-        expr.borrow(borrow_expr) : ir_ast.expr_ir::borrow(ir_ast.borrow_expr { target: convert_expr(borrow_expr.target.unwrap(), const_entries), mutable borrow_expr.mutable }),
-        expr.binary(binary_expr) : ir_ast.expr_ir::binary(ir_ast.binary_expr { op: binary_expr.op, left convert_expr(binary_expr.left.unwrap(), const_entries), right convert_expr(binary_expr.right.unwrap(), const_entries) }),
+        expr.borrow(borrow_expr) : ir_ast.expr_ir.borrow(ir_ast.borrow_expr { target: convert_expr(borrow_expr.target.unwrap(), const_entries), mutable borrow_expr.mutable }),
+        expr.binary(binary_expr) : ir_ast.expr_ir.binary(ir_ast.binary_expr { op: binary_expr.op, left convert_expr(binary_expr.left.unwrap(), const_entries), right convert_expr(binary_expr.right.unwrap(), const_entries) }),
         expr.call(call_expr) : {
             callee_name := "<call>"
             switch call_expr.resolved_callee {
@@ -314,17 +314,17 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
                 args = append(args, convert_expr(call_expr.args[ai], const_entries))
                 ai = ai + 1
             }
-            ir_ast.expr_ir::call(ir_ast.call_expr { callee: callee_name, args args })
+            ir_ast.expr_ir.call(ir_ast.call_expr { callee: callee_name, args args })
         }
-        expr.if(if_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "if_expr", args ir_ast.expr_ir[]() }),
-        expr.block(block_expr) : ir_ast.expr_ir::block(convert_block(block_expr, const_entries)),
-        expr.switch(switch_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "switch_expr", args ir_ast.expr_ir[]() }),
-        expr.while(while_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "while_expr", args ir_ast.expr_ir[]() }),
-        expr.for(for_expr) : ir_ast.expr_ir::call(ir_ast.call_expr { callee: "for_expr", args ir_ast.expr_ir[]() }),
-        expr.member(member_expr) : ir_ast.expr_ir::member(ir_ast.member_expr {
+        expr.if(if_expr) : ir_ast.expr_ir.call(ir_ast.call_expr { callee: "if_expr", args ir_ast.expr_ir[]() }),
+        expr.block(block_expr) : ir_ast.expr_ir.block(convert_block(block_expr, const_entries)),
+        expr.switch(switch_expr) : ir_ast.expr_ir.call(ir_ast.call_expr { callee: "switch_expr", args ir_ast.expr_ir[]() }),
+        expr.while(while_expr) : ir_ast.expr_ir.call(ir_ast.call_expr { callee: "while_expr", args ir_ast.expr_ir[]() }),
+        expr.for(for_expr) : ir_ast.expr_ir.call(ir_ast.call_expr { callee: "for_expr", args ir_ast.expr_ir[]() }),
+        expr.member(member_expr) : ir_ast.expr_ir.member(ir_ast.member_expr {
             target: convert_expr(member_expr.target.value, const_entries), member member_expr.member,
         }),
-        expr.index(index_expr) : ir_ast.expr_ir::index(ir_ast.index_expr {
+        expr.index(index_expr) : ir_ast.expr_ir.index(ir_ast.index_expr {
             target: convert_expr(index_expr.target.value, const_entries), index convert_expr(index_expr.index.value, const_entries),
         }),
         expr.array(array_literal) : array_to_expr(array_literal, const_entries),
@@ -511,35 +511,35 @@ func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
 
 func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
     switch s {
-        stmt.let(var_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
-            callee: "stmt.let", args ir_ast.expr_ir[] { ir_ast.expr_ir::string(var_stmt.name), convert_expr(var_stmt.value, const_entries) },
+        stmt.let(var_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
+            callee: "stmt.let", args ir_ast.expr_ir[] { ir_ast.expr_ir.string(var_stmt.name), convert_expr(var_stmt.value, const_entries) },
         }),
-        stmt.assign(assign_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
-            callee: "stmt.assign", args ir_ast.expr_ir[] { ir_ast.expr_ir::string(assign_stmt.name), convert_expr(assign_stmt.value, const_entries) },
+        stmt.assign(assign_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
+            callee: "stmt.assign", args ir_ast.expr_ir[] { ir_ast.expr_ir.string(assign_stmt.name), convert_expr(assign_stmt.value, const_entries) },
         }),
-        stmt.increment(increment_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
-            callee: "stmt.increment", args ir_ast.expr_ir[] { ir_ast.expr_ir::string(increment_stmt.name) },
+        stmt.increment(increment_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
+            callee: "stmt.increment", args ir_ast.expr_ir[] { ir_ast.expr_ir.string(increment_stmt.name) },
         }),
         stmt.return(return_stmt) : {
             if return_stmt.value.is_some() {
-                return ir_ast.expr_ir::call(ir_ast.call_expr {
+                return ir_ast.expr_ir.call(ir_ast.call_expr {
                     callee: "stmt.return", args ir_ast.expr_ir[] { convert_expr(return_stmt.value.unwrap(), const_entries) },
                 })
             }
-            ir_ast.expr_ir::call(ir_ast.call_expr {
+            ir_ast.expr_ir.call(ir_ast.call_expr {
                 callee: "stmt.return", args ir_ast.expr_ir[](),
             })
         }
-        stmt.expr(expr_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
+        stmt.expr(expr_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
             callee: "stmt.expr", args ir_ast.expr_ir[] { convert_expr(expr_stmt.expr, const_entries) },
         }),
-        stmt.defer(defer_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
+        stmt.defer(defer_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
             callee: "stmt.defer", args ir_ast.expr_ir[] { convert_expr(defer_stmt.expr, const_entries) },
         }),
-        stmt.sroutine(sroutine_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
+        stmt.sroutine(sroutine_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
             callee: "stmt.sroutine", args ir_ast.expr_ir[] { convert_expr(sroutine_stmt.expr, const_entries) },
         }),
-        stmt.c_for(c_for_stmt) : ir_ast.expr_ir::call(ir_ast.call_expr {
+        stmt.c_for(c_for_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
             callee: "stmt.c_for", args ir_ast.expr_ir[] {
                 stmt_to_expr(c_for_stmt.init.value, const_entries),
                 convert_expr(c_for_stmt.condition, const_entries),
@@ -551,7 +551,7 @@ func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
 }
 
 func block_to_expr(block_expr block, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
-    ir_ast.expr_ir::block(convert_block(block, const_entries))
+    ir_ast.expr_ir.block(convert_block(block, const_entries))
 }
 
 func array_to_expr(array_literal lit, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
@@ -561,7 +561,7 @@ func array_to_expr(array_literal lit, const_rewrite_entry[] const_entries) ir_as
         items = append(items, convert_expr(lit.items[i], const_entries))
         i = i + 1
     }
-    ir_ast.expr_ir::array(ir_ast.array_expr {
+    ir_ast.expr_ir.array(ir_ast.array_expr {
         type_name: lit.type_text, items items,
     })
 }
@@ -576,7 +576,7 @@ func map_to_expr(map_literal lit, const_rewrite_entry[] const_entries) ir_ast.ex
         })
         i = i + 1
     }
-    ir_ast.expr_ir::map(ir_ast.map_expr {
+    ir_ast.expr_ir.map(ir_ast.map_expr {
         type_name: lit.type_text, entries entries,
     })
 }
@@ -878,7 +878,7 @@ func lookup_const_entry(const_rewrite_entry[] entries, string name) option[const
     for i > 0 {
         i = i - 1
         if entries[i].name == name {
-            return option::some(entries[i])
+            return option.some(entries[i])
         }
     }
     option.none
@@ -895,19 +895,19 @@ func lookup_const_expr_text(const_rewrite_entry[] entries, string name) string {
 func resolve_const_name_expr(string name, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
     entry := lookup_const_entry(const_entries, name)
     if entry.is_none() {
-        return ir_ast.expr_ir::name(name)
+        return ir_ast.expr_ir.name(name)
     }
     value := entry.unwrap()
     if value.value_kind == "int" {
-        return ir_ast.expr_ir::int(value.int_value)
+        return ir_ast.expr_ir.int(value.int_value)
     }
     if value.value_kind == "bool" {
-        return ir_ast.expr_ir::bool(value.bool_value)
+        return ir_ast.expr_ir.bool(value.bool_value)
     }
     if value.value_kind == "string" {
-        return ir_ast.expr_ir::string(value.string_value)
+        return ir_ast.expr_ir.string(value.string_value)
     }
-    ir_ast.expr_ir::name(name)
+    ir_ast.expr_ir.name(name)
 }
 }
 
@@ -993,7 +993,7 @@ func make_block_with_condition(int id, string label, string[] lines, string term
     for i < len(lines) {
         args := string[]()
         args = append(args, lines[i])
-        statements.push(mir_statement::eval(mir_eval_stmt {
+        statements.push(mir_statement.eval(mir_eval_stmt {
             op: "line", args args,
         }))
         i = i + 1
@@ -1015,7 +1015,7 @@ func make_entry_block_with_condition(int id, string label, string[] lines, stmt[
     for i < len(lines) {
         args := string[]()
         args = append(args, lines[i])
-        statements.push(mir_statement::eval(mir_eval_stmt {
+        statements.push(mir_statement.eval(mir_eval_stmt {
             op: "line", args args,
         }))
         if i < len(source_statements) {

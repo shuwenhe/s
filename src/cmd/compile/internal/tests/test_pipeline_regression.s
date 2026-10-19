@@ -234,7 +234,7 @@ func count_mir_drops(mir_graph graph) int {
         j := 0
         while j < len(graph.blocks[i].statements) {
             switch graph.blocks[i].statements[j] {
-                mir_statement::drop(_) : count = count + 1
+                mir_statement.drop(_) : count = count + 1
                 _ : { }
             }
             j = j + 1
@@ -249,7 +249,7 @@ func count_const_decls(ir_ast.package_ir pkg) int {
     i := 0
     for i < len(pkg.decls) {
         switch pkg.decls[i] {
-            ir_ast.decl_ir::const(_) : count = count + 1,
+            ir_ast.decl_ir.const(_) : count = count + 1,
             _ : (),
         }
         i = i + 1
@@ -261,7 +261,7 @@ func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
     i := 0
     for i < len(pkg.decls) {
         switch pkg.decls[i] {
-            ir_ast.decl_ir::const(cd) : {
+            ir_ast.decl_ir.const(cd) : {
                 if cd.name == name && cd.value == value {
                     return true
                 }
@@ -277,12 +277,12 @@ func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
     i := 0
     for i < len(pkg.decls) {
         switch pkg.decls[i] {
-            ir_ast.decl_ir::func(fd) : {
+            ir_ast.decl_ir.func(fd) : {
                 if fd.name == "main" && fd.body.is_some() {
                     body := fd.body.unwrap()
                     if body.final_expr.is_some() {
                         switch body.final_expr.unwrap() {
-                            ir_ast.expr_ir::int(value) : {
+                            ir_ast.expr_ir.int(value) : {
                                 return value == expected
                             }
                             _ : return false,
@@ -303,22 +303,22 @@ func collect_ir_package_features(ir_ast.package_ir pkg) int {
     i := 0
     for i < len(pkg.decls) {
         switch pkg.decls[i] {
-            ir_ast.decl_ir::func(fd) : {
+            ir_ast.decl_ir.func(fd) : {
                 if fd.name == "main" && fd.body.is_some() {
                     body := fd.body.unwrap()
                     j := 0
                     for j < len(body.statements) {
                         switch body.statements[j] {
-                            ir_ast.stmt_ir::expr(expr_stmt) : {
+                            ir_ast.stmt_ir.expr(expr_stmt) : {
                                 features = features | collect_ir_expr_features(expr_stmt.expr)
                             }
-                            ir_ast.stmt_ir::let(var_stmt) : {
+                            ir_ast.stmt_ir.let(var_stmt) : {
                                 features = features | collect_ir_expr_features(var_stmt.value)
                             }
-                            ir_ast.stmt_ir::assign(assign_stmt) : {
+                            ir_ast.stmt_ir.assign(assign_stmt) : {
                                 features = features | collect_ir_expr_features(assign_stmt.value)
                             }
-                            ir_ast.stmt_ir::cfor(cfor_stmt) : {
+                            ir_ast.stmt_ir.cfor(cfor_stmt) : {
                                 features = features | 1
                                 features = features | collect_ir_expr_features(cfor_stmt.condition)
                                 features = features | collect_ir_block_features(cfor_stmt.body)
@@ -344,16 +344,16 @@ func collect_ir_block_features(ir_ast.block_ir block) int {
     i := 0
     for i < len(block.statements) {
         switch block.statements[i] {
-            ir_ast.stmt_ir::expr(expr_stmt) : {
+            ir_ast.stmt_ir.expr(expr_stmt) : {
                 features = features | collect_ir_expr_features(expr_stmt.expr)
             }
-            ir_ast.stmt_ir::let(var_stmt) : {
+            ir_ast.stmt_ir.let(var_stmt) : {
                 features = features | collect_ir_expr_features(var_stmt.value)
             }
-            ir_ast.stmt_ir::assign(assign_stmt) : {
+            ir_ast.stmt_ir.assign(assign_stmt) : {
                 features = features | collect_ir_expr_features(assign_stmt.value)
             }
-            ir_ast.stmt_ir::cfor(cfor_stmt) : {
+            ir_ast.stmt_ir.cfor(cfor_stmt) : {
                 features = features | 1
                 features = features | collect_ir_expr_features(cfor_stmt.condition)
                 features = features | collect_ir_block_features(cfor_stmt.body)
@@ -371,21 +371,21 @@ func collect_ir_block_features(ir_ast.block_ir block) int {
 func collect_ir_expr_features(ir_ast.expr_ir expression) int {
     features := 0
     switch expression {
-        ir_ast.expr_ir::name(name) : {
+        ir_ast.expr_ir.name(name) : {
             if contains(name, "_unlowered") {
                 return 0
             }
         }
-        ir_ast.expr_ir::member(member_expr) : {
+        ir_ast.expr_ir.member(member_expr) : {
             features = features | 32
             features = features | collect_ir_expr_features(member_expr.target)
         }
-        ir_ast.expr_ir::index(index_expr) : {
+        ir_ast.expr_ir.index(index_expr) : {
             features = features | 4
             features = features | collect_ir_expr_features(index_expr.target)
             features = features | collect_ir_expr_features(index_expr.index)
         }
-        ir_ast.expr_ir::array(array_expr) : {
+        ir_ast.expr_ir.array(array_expr) : {
             features = features | 8
             ai := 0
             for ai < len(array_expr.items) {
@@ -393,7 +393,7 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
                 ai = ai + 1
             }
         }
-        ir_ast.expr_ir::map(map_expr) : {
+        ir_ast.expr_ir.map(map_expr) : {
             features = features | 16
             mi := 0
             for mi < len(map_expr.entries) {
@@ -402,21 +402,21 @@ func collect_ir_expr_features(ir_ast.expr_ir expression) int {
                 mi = mi + 1
             }
         }
-        ir_ast.expr_ir::block(block_expr) : {
+        ir_ast.expr_ir.block(block_expr) : {
             features = features | collect_ir_block_features(block_expr)
         }
-        ir_ast.expr_ir::call(call_expr) : {
+        ir_ast.expr_ir.call(call_expr) : {
             i := 0
             for i < len(call_expr.args) {
                 features = features | collect_ir_expr_features(call_expr.args[i])
                 i = i + 1
             }
         }
-        ir_ast.expr_ir::binary(binary_expr) : {
+        ir_ast.expr_ir.binary(binary_expr) : {
             features = features | collect_ir_expr_features(binary_expr.left)
             features = features | collect_ir_expr_features(binary_expr.right)
         }
-        ir_ast.expr_ir::borrow(borrow_expr) : {
+        ir_ast.expr_ir.borrow(borrow_expr) : {
             features = features | collect_ir_expr_features(borrow_expr.target)
         }
         _ : (),
