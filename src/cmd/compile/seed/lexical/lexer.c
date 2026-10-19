@@ -213,13 +213,34 @@ static bool lexer_scan_seed(const char *source, token_vec *out_tokens, struct co
 		}
 		if (isdigit((unsigned char)c)) {
 			size_t start = i;
-			if (c == '0' && (source[i + 1] == 'x' || source[i + 1] == 'X') &&
-				isxdigit((unsigned char)source[i + 2])) {
+			if (c == '0' && (source[i + 1] == 'x' || source[i + 1] == 'X')) {
+				size_t digits = 0;
 				i += 2;
 				col += 2;
-				while (isxdigit((unsigned char)source[i])) {
+				if (source[i] == '_') {
 					i++;
 					col++;
+				}
+				while (isxdigit((unsigned char)source[i])) {
+					digits++;
+					i++;
+					col++;
+					if (source[i] == '_') {
+						if (!isxdigit((unsigned char)source[i + 1])) {
+							error_set(err, ERR_ILLEGAL_CHAR, tok_line, tok_col,
+								"invalid hexadecimal literal");
+							token_vec_free(out_tokens);
+							return false;
+						}
+						i++;
+						col++;
+					}
+				}
+				if (digits == 0 || isalpha((unsigned char)source[i])) {
+					error_set(err, ERR_ILLEGAL_CHAR, tok_line, tok_col,
+						"invalid hexadecimal literal");
+					token_vec_free(out_tokens);
+					return false;
 				}
 				goto emit_number;
 			}

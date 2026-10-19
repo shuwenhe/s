@@ -130,6 +130,34 @@ func (lexer* self) read_identifier() (string, lex_error) {
 
 func (lexer* self) read_number() (string, lex_error) {
     string out = ""
+    string first_ch = self.peek()
+    
+    // Check for hex prefix: 0x or 0X
+    if first_ch == "0" {
+        out = out + self.advance()
+        if !self.is_eof() {
+            string next_ch = self.peek()
+            if next_ch == "x" || next_ch == "X" {
+                out = out + self.advance()
+                // Read hex digits and underscores
+                for !self.is_eof() {
+                    string ch = self.peek()
+                    if is_hex_digit(ch) || ch == "_" {
+                        out = out + self.advance()
+                    } else {
+                        break
+                    }
+                }
+                return out
+            }
+        }
+        // If not hex, continue reading as decimal (which started with 0)
+    } else {
+        // Start reading decimal number
+        out = out + self.advance()
+    }
+    
+    // Read remaining decimal digits and underscores
     for !self.is_eof() {
         string ch = self.peek()
         if !is_number_continue(ch) {
@@ -261,6 +289,11 @@ func is_digit(string ch) bool {
         "9" : true,
         _ : false,
     }
+}
+
+func is_hex_digit(string ch) bool {
+    is_digit(ch) || ch == "a" || ch == "b" || ch == "c" || ch == "d" || ch == "e" || ch == "f" ||
+                    ch == "A" || ch == "B" || ch == "C" || ch == "D" || ch == "E" || ch == "F"
 }
 
 func is_number_continue(string ch) bool {
