@@ -43,21 +43,18 @@ struct elf64_writer {
 }
 
 func make_elf64_writer() elf64_writer {
-    writer: elf64_writer
-    writer.header = nil
-    writer.sections = nil
-    writer.section_count = 0
-    writer.file_offset = 64
+    writer := elf64_writer {
+        header: nil, sections: nil, section_count: 0, file_offset: 64,
+    }
     writer
 }
 
 func (elf64_writer* w) add_section(string name, int sh_type, int[] data) {
-    section: elf64_section
-    section.name = name
-    section.sh_type = sh_type
-    section.sh_offset = w.file_offset
-    section.sh_size = len(data)
-    section.data = data
+    section := elf64_section {
+        sh_name: 0, sh_type: sh_type, sh_flags: 0, sh_addr: 0,
+        sh_offset: w.file_offset, sh_size: len(data), sh_link: 0, sh_info: 0,
+        sh_addralign: 0, sh_entsize: 0, name: name, data: data,
+    }
     w.sections = &section
     w.section_count = w.section_count + 1
     w.file_offset = w.file_offset + section.sh_size

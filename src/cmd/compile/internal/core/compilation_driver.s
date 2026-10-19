@@ -7,11 +7,10 @@ struct native_compilation_driver {
 }
 
 func new_native_compilation_driver(string source, string output) native_compilation_driver {
-    driver: native_compilation_driver
-    driver.input_source = source
-    driver.output_executable = output
-    driver.backend_ctx = new_backend_context(source, output, true)
-    driver.assembly_output = ""
+    driver := native_compilation_driver {
+        input_source: source, output_executable: output,
+        backend_ctx: new_backend_context(source, output, true), assembly_output: "",
+    }
     driver
 }
 

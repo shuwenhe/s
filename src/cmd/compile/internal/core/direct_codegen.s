@@ -7,10 +7,10 @@ struct direct_code_generator {
 }
 
 func make_direct_code_generator() direct_code_generator {
-    gen: direct_code_generator
-    gen.main_code = &make_prog_list()
-    gen.data_section = &make_prog_list()
-    gen.alloc = &make_reg_alloc_state()
+    gen := direct_code_generator {
+        main_code: &make_prog_list(), data_section: &make_prog_list(),
+        selector: nil, alloc: &make_reg_alloc_state(),
+    }
     gen
 }
 

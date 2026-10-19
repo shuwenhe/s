@@ -8,12 +8,10 @@ struct end_to_end_compiler {
 }
 
 func new_end_to_end_compiler(string source, string output) end_to_end_compiler {
-    compiler: end_to_end_compiler
-    compiler.source_file = source
-    compiler.output_file = output
-    compiler.ir_file = output + ".ir"
-    compiler.asm_file = output + ".s"
-    compiler.obj_file = output + ".o"
+    compiler := end_to_end_compiler {
+        source_file: source, output_file: output, ir_file: output + ".ir",
+        asm_file: output + ".s", obj_file: output + ".o",
+    }
     compiler
 }
 
