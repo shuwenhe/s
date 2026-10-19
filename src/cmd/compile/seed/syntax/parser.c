@@ -3921,6 +3921,12 @@ static int looks_like_struct_literal(parser *p) {
 				expect_field_name = 1;
 				continue;
 			}
+			/* When expect_field_name is 0 and we see '*', it's likely part of a
+			   pointer dereference or field accessor chain (e.g. "ptr* ptr").
+			   Skip it and continue scanning for comma or closing brace. */
+			if (!expect_field_name && match(p, TOKEN_STAR)) {
+				continue;
+			}
 		}
 		advance_tok(p);
 	}
