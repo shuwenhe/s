@@ -321,8 +321,8 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
             }
             method_instance := specialize_method(method_source, work.kindargs)
             ctx.generated = append(ctx.generated, method_instance.method)
-            ctx = collect_item_instances_ctx(item::method(method_instance), file.items, ctx)
-            extra_items = append(extra_items, item::method(finalize_monomorphized_method(method_instance)))
+            ctx = collect_item_instances_ctx(item.method(method_instance), file.items, ctx)
+            extra_items = append(extra_items, item.method(finalize_monomorphized_method(method_instance)))
         } else {
             source := find_generic_function(file.items, work.generic_name)
             if source.sig.name == "" {
@@ -332,9 +332,9 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
             instance := specialize_function(source, work.kindargs)
             ctx.generated = append(ctx.generated, instance)
 
-            ctx = collect_item_instances_ctx(item::function(instance), file.items, ctx)
+            ctx = collect_item_instances_ctx(item.function(instance), file.items, ctx)
 
-            extra_items = append(extra_items, item::function(finalize_monomorphized_function(instance)))
+            extra_items = append(extra_items, item.function(finalize_monomorphized_function(instance)))
         }
     }
 
@@ -842,34 +842,34 @@ func finalize_block(block_expr block) block_expr {
 
 func finalize_stmt(stmt value) stmt {
     switch value {
-        stmt.let(v) : stmt::let(var_stmt { name: v.name, type_name v.kindname, value finalize_expr(v.value) }),
-        stmt.assign(v) : stmt::assign(assign_stmt { name: v.name, value finalize_expr(v.value) }),
-        stmt.increment(v) : stmt::increment(v),
-        stmt.c_for(v) : stmt::c_for(c_for_stmt { init: std.prelude.box(finalize_stmt(v.init.value)), condition finalize_expr(v.condition), step std.prelude.box(finalize_stmt(v.step.value)), body finalize_block(v.body) }),
+        stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name v.kindname, value finalize_expr(v.value) }),
+        stmt.assign(v) : stmt.assign(assign_stmt { name: v.name, value finalize_expr(v.value) }),
+        stmt.increment(v) : stmt.increment(v),
+        stmt.c_for(v) : stmt.c_for(c_for_stmt { init: std.prelude.box(finalize_stmt(v.init.value)), condition finalize_expr(v.condition), step std.prelude.box(finalize_stmt(v.step.value)), body finalize_block(v.body) }),
         stmt.return(v) : {
             ret := option.none
             switch v.value {
                 option.some(e) : ret = option.some(finalize_expr(e)),
                 option.none : (),
             }
-            stmt::return(return_stmt { value: ret })
+            stmt.return(return_stmt { value: ret })
         }
-        stmt.expr(v) : stmt::s.expr(expr_stmt { expr: finalize_expr(v.expr) }),
-        stmt.defer(v) : stmt::defer(defer_stmt { expr: finalize_expr(v.expr) }),
-        stmt.sroutine(v) : stmt::sroutine(sroutine_stmt { expr: finalize_expr(v.expr) }),
+        stmt.expr(v) : stmt.s.expr(expr_stmt { expr: finalize_expr(v.expr) }),
+        stmt.defer(v) : stmt.defer(defer_stmt { expr: finalize_expr(v.expr) }),
+        stmt.sroutine(v) : stmt.sroutine(sroutine_stmt { expr: finalize_expr(v.expr) }),
     }
 }
 
 func finalize_expr(expr value) expr {
     switch value {
-        expr.int(v) : expr::int(v),
-        expr.string(v) : expr::string(v),
-        expr.bool(v) : expr::bool(v),
-        expr.name(v) : expr::name(v),
-        expr.borrow(v) : expr::borrow(borrow_expr { target: std.prelude.box(finalize_expr(v.target.value)), mutable v.mutable, inferred_type v.inferred_type }),
-        expr.binary(v) : expr::binary(binary_expr { left: std.prelude.box(finalize_expr(v.left.value)), op v.op, right std.prelude.box(finalize_expr(v.right.value)), inferred_type v.inferred_type }),
-        expr.member(v) : expr::member(member_expr { target: std.prelude.box(finalize_expr(v.target.value)), member v.member, inferred_type v.inferred_type }),
-        expr.index(v) : expr::index(index_expr { target: std.prelude.box(finalize_expr(v.target.value)), index std.prelude.box(finalize_expr(v.index.value)), inferred_type v.inferred_type }),
+        expr.int(v) : expr.int(v),
+        expr.string(v) : expr.string(v),
+        expr.bool(v) : expr.bool(v),
+        expr.name(v) : expr.name(v),
+        expr.borrow(v) : expr.borrow(borrow_expr { target: std.prelude.box(finalize_expr(v.target.value)), mutable v.mutable, inferred_type v.inferred_type }),
+        expr.binary(v) : expr.binary(binary_expr { left: std.prelude.box(finalize_expr(v.left.value)), op v.op, right std.prelude.box(finalize_expr(v.right.value)), inferred_type v.inferred_type }),
+        expr.member(v) : expr.member(member_expr { target: std.prelude.box(finalize_expr(v.target.value)), member v.member, inferred_type v.inferred_type }),
+        expr.index(v) : expr.index(index_expr { target: std.prelude.box(finalize_expr(v.target.value)), index std.prelude.box(finalize_expr(v.index.value)), inferred_type v.inferred_type }),
         expr.call(v) : {
             args := expr[]()
             i := 0
@@ -877,7 +877,7 @@ func finalize_expr(expr value) expr {
                 args = append(args, finalize_expr(v.args[i]))
                 i = i + 1
             }
-            expr::call(call_expr { callee: std.prelude.box(finalize_expr(v.callee.value)), args args, inferred_type v.inferred_type, resolved_callee v.resolved_callee, type_args string[]() })
+            expr.call(call_expr { callee: std.prelude.box(finalize_expr(v.callee.value)), args args, inferred_type v.inferred_type, resolved_callee v.resolved_callee, type_args string[]() })
         }
         expr.if(v) : {
             else_branch := option.none
@@ -885,10 +885,10 @@ func finalize_expr(expr value) expr {
                 option.some(e) : else_branch = option.some(std.prelude.box(finalize_expr(e.value))),
                 option.none : (),
             }
-            expr::if(if_expr { condition: std.prelude.box(finalize_expr(v.condition.value)), then_branch finalize_block(v.then_branch), else_branch else_branch, inferred_type v.inferred_type })
+            expr.if(if_expr { condition: std.prelude.box(finalize_expr(v.condition.value)), then_branch finalize_block(v.then_branch), else_branch else_branch, inferred_type v.inferred_type })
         }
         expr.for(v) : finalize_for_expr(v),
-        expr.block(v) : expr::block(finalize_block(v)),
+        expr.block(v) : expr.block(finalize_block(v)),
         expr.switch(v) : {
             arms := switch_arm[]()
             i := 0
@@ -896,7 +896,7 @@ func finalize_expr(expr value) expr {
                 arms = append(arms, switch_arm { pattern: v.arms[i].pattern, expr finalize_expr(v.arms[i].expr) })
                 i = i + 1
             }
-            expr::switch(switch_expr { subject: std.prelude.box(finalize_expr(v.subject.value)), arms arms, inferred_type v.inferred_type })
+            expr.switch(switch_expr { subject: std.prelude.box(finalize_expr(v.subject.value)), arms arms, inferred_type v.inferred_type })
         }
         expr.array(v) : {
             items := expr[]()
@@ -905,7 +905,7 @@ func finalize_expr(expr value) expr {
                 items = append(items, finalize_expr(v.items[i]))
                 i = i + 1
             }
-            expr::array(array_literal { type_text: v.kindtext, items items })
+            expr.array(array_literal { type_text: v.kindtext, items items })
         }
         expr.map(v) : {
             entries := map_entry[]()
@@ -914,7 +914,7 @@ func finalize_expr(expr value) expr {
                 entries = append(entries, map_entry { key: finalize_expr(v.entries[i].key), value finalize_expr(v.entries[i].value) })
                 i = i + 1
             }
-            expr::map(map_literal { type_text: v.kindtext, entries entries })
+            expr.map(map_literal { type_text: v.kindtext, entries entries })
         }
     }
 }
@@ -940,7 +940,7 @@ func finalize_for_expr(for_expr v) expr {
         option.some(e) : iterable = option.some(std.prelude.box(finalize_expr(e.value))),
         option.none : (),
     }
-    expr::for(for_expr { init: init, condition condition, post post, names v.names, iterable iterable, body finalize_block(v.body), inferred_type v.inferred_type })
+    expr.for(for_expr { init: init, condition condition, post post, names v.names, iterable iterable, body finalize_block(v.body), inferred_type v.inferred_type })
 }
 
 func verify_function_no_generics(function_decl fn) int {
@@ -1259,34 +1259,34 @@ func substitute_block(block_expr block, string[] generic_names, string[] type_ar
 
 func substitute_stmt(stmt value, string[] generic_names, string[] type_args) stmt {
     switch value {
-        stmt.let(v) : stmt::let(var_stmt { name: v.name, type_name substitute_optional_type(v.kindname, generic_names, type_args), value substitute_expr(v.value, generic_names, type_args) }),
-        stmt.assign(v) : stmt::assign(assign_stmt { name: v.name, value substitute_expr(v.value, generic_names, type_args) }),
-        stmt.increment(v) : stmt::increment(increment_stmt { name: v.name }),
-        stmt.c_for(v) : stmt::c_for(c_for_stmt { init: std.prelude.box(substitute_stmt(v.init.value, generic_names, type_args)), condition substitute_expr(v.condition, generic_names, type_args), step std.prelude.box(substitute_stmt(v.step.value, generic_names, type_args)), body substitute_block(v.body, generic_names, type_args) }),
+        stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name substitute_optional_type(v.kindname, generic_names, type_args), value substitute_expr(v.value, generic_names, type_args) }),
+        stmt.assign(v) : stmt.assign(assign_stmt { name: v.name, value substitute_expr(v.value, generic_names, type_args) }),
+        stmt.increment(v) : stmt.increment(increment_stmt { name: v.name }),
+        stmt.c_for(v) : stmt.c_for(c_for_stmt { init: std.prelude.box(substitute_stmt(v.init.value, generic_names, type_args)), condition substitute_expr(v.condition, generic_names, type_args), step std.prelude.box(substitute_stmt(v.step.value, generic_names, type_args)), body substitute_block(v.body, generic_names, type_args) }),
         stmt.return(v) : {
             ret := option.none
             switch v.value {
                 option.some(e) : ret = option.some(substitute_expr(e, generic_names, type_args)),
                 option.none : (),
             }
-            stmt::return(return_stmt { value: ret })
+            stmt.return(return_stmt { value: ret })
         }
-        stmt.expr(v) : stmt::s.expr(expr_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
-        stmt.defer(v) : stmt::defer(defer_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
-        stmt.sroutine(v) : stmt::sroutine(sroutine_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
+        stmt.expr(v) : stmt.s.expr(expr_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
+        stmt.defer(v) : stmt.defer(defer_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
+        stmt.sroutine(v) : stmt.sroutine(sroutine_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
     }
 }
 
 func substitute_expr(expr value, string[] generic_names, string[] type_args) expr {
     switch value {
-        expr.int(v) : expr::int(v),
-        expr.string(v) : expr::string(v),
-        expr.bool(v) : expr::bool(v),
-        expr.name(v) : expr::name(v),
-        expr.borrow(v) : expr::borrow(borrow_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), mutable v.mutable, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
-        expr.binary(v) : expr::binary(binary_expr { left: std.prelude.box(substitute_expr(v.left.value, generic_names, type_args)), op v.op, right std.prelude.box(substitute_expr(v.right.value, generic_names, type_args)), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
-        expr.member(v) : expr::member(member_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), member v.member, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
-        expr.index(v) : expr::index(index_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), index std.prelude.box(substitute_expr(v.index.value, generic_names, type_args)), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
+        expr.int(v) : expr.int(v),
+        expr.string(v) : expr.string(v),
+        expr.bool(v) : expr.bool(v),
+        expr.name(v) : expr.name(v),
+        expr.borrow(v) : expr.borrow(borrow_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), mutable v.mutable, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
+        expr.binary(v) : expr.binary(binary_expr { left: std.prelude.box(substitute_expr(v.left.value, generic_names, type_args)), op v.op, right std.prelude.box(substitute_expr(v.right.value, generic_names, type_args)), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
+        expr.member(v) : expr.member(member_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), member v.member, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
+        expr.index(v) : expr.index(index_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), index std.prelude.box(substitute_expr(v.index.value, generic_names, type_args)), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
         expr.call(v) : {
             args := expr[]()
             i := 0
@@ -1314,7 +1314,7 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
                 }
                 _ : (),
             }
-            expr::call(call_expr { callee: std.prelude.box(substitute_expr(v.callee.value, generic_names, type_args)), args args, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args), resolved_callee resolved, type_args call_type_args })
+            expr.call(call_expr { callee: std.prelude.box(substitute_expr(v.callee.value, generic_names, type_args)), args args, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args), resolved_callee resolved, type_args call_type_args })
         }
         expr.if(v) : {
             else_branch := option.none
@@ -1322,11 +1322,11 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
                 option.some(e) : else_branch = option.some(std.prelude.box(substitute_expr(e.value, generic_names, type_args))),
                 option.none : (),
             }
-            expr::if(if_expr { condition: std.prelude.box(substitute_expr(v.condition.value, generic_names, type_args)), then_branch substitute_block(v.then_branch, generic_names, type_args), else_branch else_branch, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) })
+            expr.if(if_expr { condition: std.prelude.box(substitute_expr(v.condition.value, generic_names, type_args)), then_branch substitute_block(v.then_branch, generic_names, type_args), else_branch else_branch, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) })
         }
         expr.for(v) : substitute_for_expr(v, generic_names, type_args),
-        expr.block(v) : expr::block(substitute_block(v, generic_names, type_args)),
-        expr.switch(v) : expr::switch(substitute_switch(v, generic_names, type_args)),
+        expr.block(v) : expr.block(substitute_block(v, generic_names, type_args)),
+        expr.switch(v) : expr.switch(substitute_switch(v, generic_names, type_args)),
         expr.array(v) : substitute_array_expr(v, generic_names, type_args),
         expr.map(v) : substitute_map_expr(v, generic_names, type_args),
     }
@@ -1353,7 +1353,7 @@ func substitute_for_expr(for_expr v, string[] generic_names, string[] type_args)
         option.some(e) : iterable = option.some(std.prelude.box(substitute_expr(e.value, generic_names, type_args))),
         option.none : (),
     }
-    expr::for(for_expr { init: init, condition condition, post post, names v.names, iterable iterable, body substitute_block(v.body, generic_names, type_args), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) })
+    expr.for(for_expr { init: init, condition condition, post post, names v.names, iterable iterable, body substitute_block(v.body, generic_names, type_args), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) })
 }
 
 func substitute_switch(switch_expr v, string[] generic_names, string[] type_args) switch_expr {
@@ -1373,7 +1373,7 @@ func substitute_array_expr(array_literal v, string[] generic_names, string[] typ
         items = append(items, substitute_expr(v.items[i], generic_names, type_args))
         i = i + 1
     }
-    expr::array(array_literal { type_text: substitute_optional_type(v.kindtext, generic_names, type_args), items items })
+    expr.array(array_literal { type_text: substitute_optional_type(v.kindtext, generic_names, type_args), items items })
 }
 
 func substitute_map_expr(map_literal v, string[] generic_names, string[] type_args) expr {
@@ -1383,7 +1383,7 @@ func substitute_map_expr(map_literal v, string[] generic_names, string[] type_ar
         entries = append(entries, map_entry { key: substitute_expr(v.entries[i].key, generic_names, type_args), value substitute_expr(v.entries[i].value, generic_names, type_args) })
         i = i + 1
     }
-    expr::map(map_literal { type_text: substitute_optional_type(v.kindtext, generic_names, type_args), entries entries })
+    expr.map(map_literal { type_text: substitute_optional_type(v.kindtext, generic_names, type_args), entries entries })
 }
 
 func summarize_type(string type_name) mono_ownership_summary {

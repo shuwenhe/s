@@ -56,12 +56,12 @@ func run_monomorphization_test() int {
     if compile.internal.mono.substitute_type("box[T[]]", string[] { "T" }, string[] { "int" }) != "box[int[]]" {
         return 1
     }
-    call_args := expr[] { expr::int(int_expr { value: "1", inferred_type option::some("int") }) }
-    mono_call := expr::call(call_expr {
-        callee: std.prelude.box(expr::name(name_expr { name: "identity", inferred_type option::none })),
+    call_args := expr[] { expr.int(int_expr { value: "1", inferred_type option.some("int") }) }
+    mono_call := expr.call(call_expr {
+        callee: std.prelude.box(expr.name(name_expr { name: "identity", inferred_type option.none })),
         args: call_args,
-        inferred_type: option::some("int"),
-        resolved_callee: option::some("identity__mono_int"),
+        inferred_type: option.some("int"),
+        resolved_callee: option.some("identity__mono_int"),
         type_args: string[] { "int" },
     })
     caller := function_decl {
@@ -69,16 +69,16 @@ func run_monomorphization_test() int {
             name: "caller",
             generics: string[] {},
             params: param[] {},
-            return_type: option::some("int"),
+            return_type: option.some("int"),
         },
-        body: option::some(block_expr { statements: stmt[] {}, final_expr option::some(mono_call), inferred_type option::some("int") }),
+        body: option.some(block_expr { statements: stmt[] {}, final_expr option.some(mono_call), inferred_type option.some("int") }),
         is_public: false,
     }
-    bar_call := expr::call(call_expr {
-        callee: std.prelude.box(expr::name(name_expr { name: "bar", inferred_type option::none })),
-        args: expr[] { expr::name(name_expr { name: "value", inferred_type option::some("T") }) },
-        inferred_type: option::some("T"),
-        resolved_callee: option::some("bar__mono_T"),
+    bar_call := expr.call(call_expr {
+        callee: std.prelude.box(expr.name(name_expr { name: "bar", inferred_type option.none })),
+        args: expr[] { expr.name(name_expr { name: "value", inferred_type option.some("T") }) },
+        inferred_type: option.some("T"),
+        resolved_callee: option.some("bar__mono_T"),
         type_args: string[] { "T" },
     })
     foo := function_decl {
@@ -86,16 +86,16 @@ func run_monomorphization_test() int {
             name: "foo",
             generics: string[] { "T" },
             params: param[] { param { name: "value", type_name: "T" } },
-            return_type: option::some("T"),
+            return_type: option.some("T"),
         },
-        body: option::some(block_expr { statements: stmt[] {}, final_expr option::some(bar_call), inferred_type option::some("T") }),
+        body: option.some(block_expr { statements: stmt[] {}, final_expr option.some(bar_call), inferred_type option.some("T") }),
         is_public: false,
     }
-    baz_call := expr::call(call_expr {
-        callee: std.prelude.box(expr::name(name_expr { name: "baz", inferred_type option::none })),
-        args: expr[] { expr::name(name_expr { name: "value", inferred_type option::some("T") }) },
-        inferred_type: option::some("T"),
-        resolved_callee: option::some("baz__mono_T"),
+    baz_call := expr.call(call_expr {
+        callee: std.prelude.box(expr.name(name_expr { name: "baz", inferred_type option.none })),
+        args: expr[] { expr.name(name_expr { name: "value", inferred_type option.some("T") }) },
+        inferred_type: option.some("T"),
+        resolved_callee: option.some("baz__mono_T"),
         type_args: string[] { "T" },
     })
     bar := function_decl {
@@ -103,9 +103,9 @@ func run_monomorphization_test() int {
             name: "bar",
             generics: string[] { "T" },
             params: param[] { param { name: "value", type_name: "T" } },
-            return_type: option::some("T"),
+            return_type: option.some("T"),
         },
-        body: option::some(block_expr { statements: stmt[] {}, final_expr option::some(baz_call), inferred_type option::some("T") }),
+        body: option.some(block_expr { statements: stmt[] {}, final_expr option.some(baz_call), inferred_type option.some("T") }),
         is_public: false,
     }
     baz := function_decl {
@@ -113,16 +113,16 @@ func run_monomorphization_test() int {
             name: "baz",
             generics: string[] { "T" },
             params: param[] { param { name: "value", type_name: "T" } },
-            return_type: option::some("T"),
+            return_type: option.some("T"),
         },
-        body: option::some(block_expr { statements: stmt[] {}, final_expr option::some(expr::name(name_expr { name: "value", inferred_type option::some("T") })), inferred_type option::some("T") }),
+        body: option.some(block_expr { statements: stmt[] {}, final_expr option.some(expr.name(name_expr { name: "value", inferred_type option.some("T") })), inferred_type option.some("T") }),
         is_public: false,
     }
-    foo_seed := expr::call(call_expr {
-        callee: std.prelude.box(expr::name(name_expr { name: "foo", inferred_type option::none })),
+    foo_seed := expr.call(call_expr {
+        callee: std.prelude.box(expr.name(name_expr { name: "foo", inferred_type option.none })),
         args: call_args,
-        inferred_type: option::some("int"),
-        resolved_callee: option::some("foo__mono_int"),
+        inferred_type: option.some("int"),
+        resolved_callee: option.some("foo__mono_int"),
         type_args: string[] { "int" },
     })
     chain_caller := function_decl {
@@ -130,12 +130,12 @@ func run_monomorphization_test() int {
             name: "chain_caller",
             generics: string[] {},
             params: param[] {},
-            return_type: option::some("int"),
+            return_type: option.some("int"),
         },
-        body: option::some(block_expr { statements: stmt[] {}, final_expr option::some(foo_seed), inferred_type option::some("int") }),
+        body: option.some(block_expr { statements: stmt[] {}, final_expr option.some(foo_seed), inferred_type option.some("int") }),
         is_public: false,
     }
-    file := source_file { pkg: "mono.test", uses: use_decl[](), items item[] { item::function(generic), item::function(caller), item::function(foo), item::function(bar), item::function(baz), item::function(chain_caller) } }
+    file := source_file { pkg: "mono.test", uses: use_decl[](), items item[] { item.function(generic), item.function(caller), item.function(foo), item.function(bar), item.function(baz), item.function(chain_caller) } }
     mono_file := compile.internal.mono.monomorphize_file(file)
     if compile.internal.mono.mono_cache_count(mono_file.cache) != 4 || len(mono_file.file.items) != 6 || mono_file.invariant_errors != 0 {
         return 1
@@ -153,27 +153,27 @@ func run_monomorphization_test() int {
 
 func run_e2e_transitive_monomorphization_test() int {
 
-    baz_return := expr::name(name_expr { name: "x", inferred_type option::some("T") })
+    baz_return := expr.name(name_expr { name: "x", inferred_type option.some("T") })
     baz := function_decl {
         sig: function_sig {
             name: "baz",
             generics: string[] { "T" },
             params: param[] { param { name: "x", type_name: "T" } },
-            return_type: option::some("T"),
+            return_type: option.some("T"),
         },
-        body: option::some(block_expr {
+        body: option.some(block_expr {
             statements: stmt[] {},
-            final_expr: option::some(baz_return),
-            inferred_type: option::some("T"),
+            final_expr: option.some(baz_return),
+            inferred_type: option.some("T"),
         }),
         is_public: false,
     }
 
-    baz_call := expr::call(call_expr {
-        callee: std.prelude.box(expr::name(name_expr { name: "baz", inferred_type: option::none })),
-        args: expr[] { expr::name(name_expr { name: "x", inferred_type: option::some("T") }) },
-        inferred_type: option::some("T"),
-        resolved_callee: option::some("baz__mono_T"),
+    baz_call := expr.call(call_expr {
+        callee: std.prelude.box(expr.name(name_expr { name: "baz", inferred_type: option.none })),
+        args: expr[] { expr.name(name_expr { name: "x", inferred_type: option.some("T") }) },
+        inferred_type: option.some("T"),
+        resolved_callee: option.some("baz__mono_T"),
         type_args: string[] { "T" },
     })
     bar := function_decl {
@@ -181,21 +181,21 @@ func run_e2e_transitive_monomorphization_test() int {
             name: "bar",
             generics: string[] { "T" },
             params: param[] { param { name: "x", type_name: "T" } },
-            return_type: option::some("T"),
+            return_type: option.some("T"),
         },
-        body: option::some(block_expr {
+        body: option.some(block_expr {
             statements: stmt[] {},
-            final_expr: option::some(baz_call),
-            inferred_type: option::some("T"),
+            final_expr: option.some(baz_call),
+            inferred_type: option.some("T"),
         }),
         is_public: false,
     }
 
-    bar_call := expr::call(call_expr {
-        callee: std.prelude.box(expr::name(name_expr { name: "bar", inferred_type: option::none })),
-        args: expr[] { expr::name(name_expr { name: "x", inferred_type: option::some("T") }) },
-        inferred_type: option::some("T"),
-        resolved_callee: option::some("bar__mono_T"),
+    bar_call := expr.call(call_expr {
+        callee: std.prelude.box(expr.name(name_expr { name: "bar", inferred_type: option.none })),
+        args: expr[] { expr.name(name_expr { name: "x", inferred_type: option.some("T") }) },
+        inferred_type: option.some("T"),
+        resolved_callee: option.some("bar__mono_T"),
         type_args: string[] { "T" },
     })
     foo := function_decl {
@@ -203,21 +203,21 @@ func run_e2e_transitive_monomorphization_test() int {
             name: "foo",
             generics: string[] { "T" },
             params: param[] { param { name: "x", type_name: "T" } },
-            return_type: option::some("T"),
+            return_type: option.some("T"),
         },
-        body: option::some(block_expr {
+        body: option.some(block_expr {
             statements: stmt[] {},
-            final_expr: option::some(bar_call),
-            inferred_type: option::some("T"),
+            final_expr: option.some(bar_call),
+            inferred_type: option.some("T"),
         }),
         is_public: false,
     }
 
-    foo_call := expr::call(call_expr {
-        callee: std.prelude.box(expr::name(name_expr { name: "foo", inferred_type: option::none })),
-        args: expr[] { expr::int(int_expr { value: "42", inferred_type: option::some("int") }) },
-        inferred_type: option::some("int"),
-        resolved_callee: option::some("foo__mono_int"),
+    foo_call := expr.call(call_expr {
+        callee: std.prelude.box(expr.name(name_expr { name: "foo", inferred_type: option.none })),
+        args: expr[] { expr.int(int_expr { value: "42", inferred_type: option.some("int") }) },
+        inferred_type: option.some("int"),
+        resolved_callee: option.some("foo__mono_int"),
         type_args: string[] { "int" },
     })
     main := function_decl {
@@ -225,12 +225,12 @@ func run_e2e_transitive_monomorphization_test() int {
             name: "main",
             generics: string[] {},
             params: param[] {},
-            return_type: option::some("int"),
+            return_type: option.some("int"),
         },
-        body: option::some(block_expr {
+        body: option.some(block_expr {
             statements: stmt[] {},
-            final_expr: option::some(foo_call),
-            inferred_type: option::some("int"),
+            final_expr: option.some(foo_call),
+            inferred_type: option.some("int"),
         }),
         is_public: true,
     }
@@ -239,10 +239,10 @@ func run_e2e_transitive_monomorphization_test() int {
         pkg: "e2e.mono.test",
         uses: use_decl[] {},
         items: item[] {
-            item::function(foo),
-            item::function(bar),
-            item::function(baz),
-            item::function(main),
+            item.function(foo),
+            item.function(bar),
+            item.function(baz),
+            item.function(main),
         },
     }
 
@@ -275,37 +275,37 @@ func run_e2e_transitive_monomorphization_test() int {
 }
 
 func run_generic_receiver_method_monomorphization_test() int {
-    get_call_int := expr::call(call_expr {
-        callee: std.prelude.box(expr::member(member_expr {
-            target: std.prelude.box(expr::name(name_expr { name: "int_box", inferred_type: option::some("Box[int]") })),
+    get_call_int := expr.call(call_expr {
+        callee: std.prelude.box(expr.member(member_expr {
+            target: std.prelude.box(expr.name(name_expr { name: "int_box", inferred_type: option.some("Box[int]") })),
             member: "get",
-            inferred_type: option::none,
+            inferred_type: option.none,
         })),
         args: expr[] {},
-        inferred_type: option::some("int"),
-        resolved_callee: option::some("get__mono_int"),
+        inferred_type: option.some("int"),
+        resolved_callee: option.some("get__mono_int"),
         type_args: string[] { "int" },
     })
-    get_call_int_again := expr::call(call_expr {
-        callee: std.prelude.box(expr::member(member_expr {
-            target: std.prelude.box(expr::name(name_expr { name: "other_int_box", inferred_type: option::some("Box[int]") })),
+    get_call_int_again := expr.call(call_expr {
+        callee: std.prelude.box(expr.member(member_expr {
+            target: std.prelude.box(expr.name(name_expr { name: "other_int_box", inferred_type: option.some("Box[int]") })),
             member: "get",
-            inferred_type: option::none,
+            inferred_type: option.none,
         })),
         args: expr[] {},
-        inferred_type: option::some("int"),
-        resolved_callee: option::some("get__mono_int"),
+        inferred_type: option.some("int"),
+        resolved_callee: option.some("get__mono_int"),
         type_args: string[] { "int" },
     })
-    get_call_string := expr::call(call_expr {
-        callee: std.prelude.box(expr::member(member_expr {
-            target: std.prelude.box(expr::name(name_expr { name: "string_box", inferred_type: option::some("Box[string]") })),
+    get_call_string := expr.call(call_expr {
+        callee: std.prelude.box(expr.member(member_expr {
+            target: std.prelude.box(expr.name(name_expr { name: "string_box", inferred_type: option.some("Box[string]") })),
             member: "get",
-            inferred_type: option::none,
+            inferred_type: option.none,
         })),
         args: expr[] {},
-        inferred_type: option::some("string"),
-        resolved_callee: option::some("get__mono_string"),
+        inferred_type: option.some("string"),
+        resolved_callee: option.some("get__mono_string"),
         type_args: string[] { "string" },
     })
     get_method := receiver_method_decl {
@@ -316,13 +316,13 @@ func run_generic_receiver_method_monomorphization_test() int {
                 name: "get",
                 generics: string[] { "T" },
                 params: param[] {},
-                return_type: option::some("T"),
+                return_type: option.some("T"),
             },
-            body: option::some(block_expr { statements: stmt[] {}, final_expr: option::some(expr::member(member_expr {
-                target: std.prelude.box(expr::name(name_expr { name: "b", inferred_type: option::some("Box[T]") })),
+            body: option.some(block_expr { statements: stmt[] {}, final_expr: option.some(expr.member(member_expr {
+                target: std.prelude.box(expr.name(name_expr { name: "b", inferred_type: option.some("Box[T]") })),
                 member: "value",
-                inferred_type: option::some("T"),
-            })), inferred_type: option::some("T") }),
+                inferred_type: option.some("T"),
+            })), inferred_type: option.some("T") }),
             is_public: false,
         },
     }
@@ -334,21 +334,21 @@ func run_generic_receiver_method_monomorphization_test() int {
                 name: "set",
                 generics: string[] { "T" },
                 params: param[] { param { name: "v", type_name: "T" } },
-                return_type: option::some("Box[T]"),
+                return_type: option.some("Box[T]"),
             },
-            body: option::some(block_expr { statements: stmt[] {}, final_expr: option::some(expr::name(name_expr { name: "b", inferred_type: option::some("Box[T]") })), inferred_type: option::some("Box[T]") }),
+            body: option.some(block_expr { statements: stmt[] {}, final_expr: option.some(expr.name(name_expr { name: "b", inferred_type: option.some("Box[T]") })), inferred_type: option.some("Box[T]") }),
             is_public: false,
         },
     }
-    set_call := expr::call(call_expr {
-        callee: std.prelude.box(expr::member(member_expr {
-            target: std.prelude.box(expr::name(name_expr { name: "int_box", inferred_type: option::some("Box[int]") })),
+    set_call := expr.call(call_expr {
+        callee: std.prelude.box(expr.member(member_expr {
+            target: std.prelude.box(expr.name(name_expr { name: "int_box", inferred_type: option.some("Box[int]") })),
             member: "set",
-            inferred_type: option::none,
+            inferred_type: option.none,
         })),
-        args: expr[] { expr::int(int_expr { value: "42", inferred_type: option::some("int") }) },
-        inferred_type: option::some("Box[int]"),
-        resolved_callee: option::some("set__mono_int"),
+        args: expr[] { expr.int(int_expr { value: "42", inferred_type: option.some("int") }) },
+        inferred_type: option.some("Box[int]"),
+        resolved_callee: option.some("set__mono_int"),
         type_args: string[] { "int" },
     })
     use_methods := function_decl {
@@ -360,17 +360,17 @@ func run_generic_receiver_method_monomorphization_test() int {
                 param { name: "other_int_box", type_name: "Box[int]" },
                 param { name: "string_box", type_name: "Box[string]" },
             },
-            return_type: option::some("int"),
+            return_type: option.some("int"),
         },
-        body: option::some(block_expr {
+        body: option.some(block_expr {
             statements: stmt[] {
-                stmt::s.expr(expr_stmt { expr: get_call_int }),
-                stmt::s.expr(expr_stmt { expr: get_call_int_again }),
-                stmt::s.expr(expr_stmt { expr: get_call_string }),
-                stmt::s.expr(expr_stmt { expr: set_call }),
+                stmt.s.expr(expr_stmt { expr: get_call_int }),
+                stmt.s.expr(expr_stmt { expr: get_call_int_again }),
+                stmt.s.expr(expr_stmt { expr: get_call_string }),
+                stmt.s.expr(expr_stmt { expr: set_call }),
             },
-            final_expr: option::some(expr::int(int_expr { value: "0", inferred_type: option::some("int") })),
-            inferred_type: option::some("int"),
+            final_expr: option.some(expr.int(int_expr { value: "0", inferred_type: option.some("int") })),
+            inferred_type: option.some("int"),
         }),
         is_public: false,
     }
@@ -378,9 +378,9 @@ func run_generic_receiver_method_monomorphization_test() int {
         pkg: "mono.method.test",
         uses: use_decl[] {},
         items: item[] {
-            item::method(get_method),
-            item::method(set_method),
-            item::function(use_methods),
+            item.method(get_method),
+            item.method(set_method),
+            item.function(use_methods),
         },
     }
     mono_file := compile.internal.mono.monomorphize_file(file)
@@ -417,20 +417,20 @@ func run_recursive_generic_method_monomorphization_test() int {
             name: "wrap",
             generics: string[] { "T" },
             params: param[] { param { name: "x", type_name: "T" } },
-            return_type: option::some("T"),
+            return_type: option.some("T"),
         },
-        body: option::some(block_expr { statements: stmt[] {}, final_expr: option::some(expr::name(name_expr { name: "x", inferred_type: option::some("T") })), inferred_type: option::some("T") }),
+        body: option.some(block_expr { statements: stmt[] {}, final_expr: option.some(expr.name(name_expr { name: "x", inferred_type: option.some("T") })), inferred_type: option.some("T") }),
         is_public: false,
     }
-    wrap_call := expr::call(call_expr {
-        callee: std.prelude.box(expr::name(name_expr { name: "wrap", inferred_type: option::none })),
-        args: expr[] { expr::member(member_expr {
-            target: std.prelude.box(expr::name(name_expr { name: "b", inferred_type: option::some("Box[T]") })),
+    wrap_call := expr.call(call_expr {
+        callee: std.prelude.box(expr.name(name_expr { name: "wrap", inferred_type: option.none })),
+        args: expr[] { expr.member(member_expr {
+            target: std.prelude.box(expr.name(name_expr { name: "b", inferred_type: option.some("Box[T]") })),
             member: "value",
-            inferred_type: option::some("T"),
+            inferred_type: option.some("T"),
         }) },
-        inferred_type: option::some("T"),
-        resolved_callee: option::some("wrap__mono_T"),
+        inferred_type: option.some("T"),
+        resolved_callee: option.some("wrap__mono_T"),
         type_args: string[] { "T" },
     })
     get_wrapped := receiver_method_decl {
@@ -441,21 +441,21 @@ func run_recursive_generic_method_monomorphization_test() int {
                 name: "get_wrapped",
                 generics: string[] { "T" },
                 params: param[] {},
-                return_type: option::some("T"),
+                return_type: option.some("T"),
             },
-            body: option::some(block_expr { statements: stmt[] {}, final_expr: option::some(wrap_call), inferred_type: option::some("T") }),
+            body: option.some(block_expr { statements: stmt[] {}, final_expr: option.some(wrap_call), inferred_type: option.some("T") }),
             is_public: false,
         },
     }
-    call := expr::call(call_expr {
-        callee: std.prelude.box(expr::member(member_expr {
-            target: std.prelude.box(expr::name(name_expr { name: "box", inferred_type: option::some("Box[int]") })),
+    call := expr.call(call_expr {
+        callee: std.prelude.box(expr.member(member_expr {
+            target: std.prelude.box(expr.name(name_expr { name: "box", inferred_type: option.some("Box[int]") })),
             member: "get_wrapped",
-            inferred_type: option::none,
+            inferred_type: option.none,
         })),
         args: expr[] {},
-        inferred_type: option::some("int"),
-        resolved_callee: option::some("get_wrapped__mono_int"),
+        inferred_type: option.some("int"),
+        resolved_callee: option.some("get_wrapped__mono_int"),
         type_args: string[] { "int" },
     })
     caller := function_decl {
@@ -463,18 +463,18 @@ func run_recursive_generic_method_monomorphization_test() int {
             name: "call_wrapped",
             generics: string[] {},
             params: param[] { param { name: "box", type_name: "Box[int]" } },
-            return_type: option::some("int"),
+            return_type: option.some("int"),
         },
-        body: option::some(block_expr { statements: stmt[] {}, final_expr: option::some(call), inferred_type: option::some("int") }),
+        body: option.some(block_expr { statements: stmt[] {}, final_expr: option.some(call), inferred_type: option.some("int") }),
         is_public: false,
     }
     file := source_file {
         pkg: "mono.method.recursive.test",
         uses: use_decl[] {},
         items: item[] {
-            item::function(wrap),
-            item::method(get_wrapped),
-            item::function(caller),
+            item.function(wrap),
+            item.method(get_wrapped),
+            item.function(caller),
         },
     }
     mono_file := compile.internal.mono.monomorphize_file(file)
