@@ -98,13 +98,13 @@ func funcs(ir.func[] all_fns) {
         },
     }
     
-    for fn in all_fns {
-        batch_init_func(&b, fn)
+    for function_decl in all_fns {
+        batch_init_func(&b, function_decl)
     }
     
-    for fn in all_fns {
-        if !ir.is_closure(fn) {
-            batch_walk_func(&b, fn)
+    for function_decl in all_fns {
+        if !ir.is_closure(function_decl) {
+            batch_walk_func(&b, function_decl)
         }
     }
     
@@ -115,22 +115,22 @@ func funcs(ir.func[] all_fns) {
     batch_finish(&b, all_fns)
 }
 
-func batch_init_func(batch* b, ir.func fn) {
+func batch_init_func(batch* b, ir.func function_decl) {
     if base.debug_flag() {
         base.warn("escape analysis initializing function")
     }
     
-    dcl_list := ir.func_decls(fn)
+    dcl_list := ir.func_decls(function_decl)
     for dcl in dcl_list {
         _ = new_location(b, dcl, true)
     }
     
-    closure_vars := ir.func_closure_vars(fn)
+    closure_vars := ir.func_closure_vars(function_decl)
     for cv in closure_vars {
         _ = new_location(b, cv, true)
     }
     
-    results := ir.func_results(fn)
+    results := ir.func_results(function_decl)
     for i in 0..results.len() {
         res := results[i]
         loc := old_location(b, res)
@@ -140,14 +140,14 @@ func batch_init_func(batch* b, ir.func fn) {
     }
 }
 
-func batch_walk_func(batch* b, ir.func fn) {
+func batch_walk_func(batch* b, ir.func function_decl) {
     e := escape_analyzer {
         b: b,
-        curfn: fn,
+        curfn: function_decl,
         loop_depth: 1,
     }
     
-    body := ir.func_body(fn)
+    body := ir.func_body(function_decl)
     escape_block(&e, &body)
 }
 
@@ -190,13 +190,13 @@ func batch_flow_closure(batch* b, ir.node k, ir.closure_expr clo) {
 }
 
 func batch_finish(batch* b, ir.func[] fns) {
-    for fn in fns {
-        ir.set_esc(fn, esc_func_tagged)
+    for function_decl in fns {
+        ir.set_esc(function_decl, esc_func_tagged)
         
-        params := ir.func_params(fn)
+        params := ir.func_params(function_decl)
         for i in 0..params.len() {
             param := params[i]
-            tag := batch_param_tag(b, fn, 1 + i, param)
+            tag := batch_param_tag(b, function_decl, 1 + i, param)
             ir.set_param_note(param, tag)
         }
     }
@@ -246,8 +246,8 @@ func batch_finish(batch* b, ir.func[] fns) {
     }
 }
 
-func batch_param_tag(batch* b, ir.func fn, int narg, ir.param f) string {
-    if ir.func_body_len(fn) == 0 {
+func batch_param_tag(batch* b, ir.func function_decl, int narg, ir.param f) string {
+    if ir.func_body_len(function_decl) == 0 {
         param_type := ir.param_type(f)
         
         if types.type_is_uintptr(param_type) {
