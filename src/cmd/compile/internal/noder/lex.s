@@ -23,7 +23,7 @@ func lex_source(source_unit unit) (token_item[], noder_error) {
     for li < len(lines) {
         line := lines[li]
         trimmed := trim_spaces(line)
-        if starts_with(trimmed, "
+        if starts_with(trimmed, "//") {
             li = li + 1
             continue
         }

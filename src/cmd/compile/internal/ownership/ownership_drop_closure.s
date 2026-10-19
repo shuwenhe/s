@@ -367,7 +367,7 @@ func (ownership_drop_context* ctx) verify_closed_loop() bool {
 
 struct analysis_result {
     bool success
-    elaborated_stmts interface{}{}
+    elaborated_stmts interface{}[]
     string[] errors
     string[] warnings
     string[] drop_order

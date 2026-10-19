@@ -555,19 +555,6 @@ func append_keep_alive(acc: vec[ir.node], new: vec[ir.node]) vec[ir.node] {
     }
     acc
 }
-                        return false
-                    }
-                    switch member_value.target.value {
-                        expr.name(name_value) : return name_value.name == "b",
-                        _ : return false,
-                    }
-                }
-                _ : return false,
-            }
-        }
-        _ : false,
-    }
-}
 
 func edit_expr(expr value, bool in_bloop) expr {
     switch value {
