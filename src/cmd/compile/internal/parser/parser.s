@@ -1552,7 +1552,6 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
             token empty
             return empty, err
         }
-        if token.kind == token_kind.number {
             self.advance()
             return expr.int(int_expr {
                 value: token.value, inferred_type option.none
@@ -1662,10 +1661,9 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
             self.expect_symbol("}")
             return expr.map(map_literal { type_text: option.some(type_text.trim()), entries entries })
         }
-        result := expr.name(name_expr {
+        expr.name(name_expr {
             name: self.expect_ident(), inferred_type option.none
         })
-        return result
     }
 
 func (parser* self) binary_precedence(string op) int {
@@ -1707,7 +1705,7 @@ func (parser* self) parse_use_path() (string, parse_error) {
                     members = append(members, text)
                     self.eat_symbol(",")
                 }
-                return join_strings(parts, ".") + ".{" + join_strings(members, ", ") + "}"
+                return join_strings(parts, ".") + ".{" + join_strings(members, ", ") + "}")
             }
             parts = append(parts, self.expect_ident())
         }
@@ -2061,12 +2059,12 @@ struct named_type {
 func decode_receiver_type(token[] tokens) (named_type, parse_error) {
     colon := find_token_value(tokens, ":")
     if colon >= 0 {
-        return decode_named_type(tokens)
+        return decode_named_type(tokens
     }
     if std.prelude.len(tokens) >= 2 && tokens[0].kind == token_kind.ident {
         return named_type {
             name: tokens[0].value, type_name normalize_type_text(join_token_values(slice_tokens(tokens, 1, std.prelude.len(tokens)))),
-        }
+        })
     }
     parse_error {
         message: "expected receiver in '(name Type)' or '( name Type)' form", line 0, column 0,
@@ -2105,11 +2103,9 @@ func slice_tokens(token[] tokens, int start, int end) token[] {
 
 func join_token_values(token[] tokens) string {
     string[] parts = string[]()
-    _for_idx_1928 := 0
-    for _for_idx_1928 < std.prelude.len(tokens) {
+    for _for_idx_1928 := 0; _for_idx_1928 < std.prelude.len(tokens); _for_idx_1928++ {
         token := tokens[_for_idx_1928]
         parts = append(parts, token.value)
-        _for_idx_1928 = _for_idx_1928 + 1
     }
     join_strings(parts, " ")
 }
@@ -2160,25 +2156,23 @@ func find_decl_name_index(token[] tokens) int {
 }
 
 func normalize_type_text(string text) string {
-    text = text.replace(" . ", ".")
-    text = text.replace("[ ", "[")
-    text = text.replace(" ]", "]")
-    text = text.replace("( ", "(")
-    text = text.replace(" )", ")")
-    text = text.replace(" ,", ",")
-    text = text.replace("[] ", "[]")
-    text = text.replace(" [", "[")
     text
+        .replace(" . ", ".")
+        .replace("[ ", "[")
+        .replace(" ]", "]")
+        .replace("( ", "(")
+        .replace(" )", ")")
+        .replace(" ,", ",")
+        .replace("[] ", "[]")
+        .replace(" [", "[")
 }
 
 func contains_string(string[] values, string target) bool {
-    _for_idx_1992 := 0
-    for _for_idx_1992 < std.prelude.len(values) {
+    for _for_idx_1992 := 0; _for_idx_1992 < std.prelude.len(values); _for_idx_1992++ {
         value := values[_for_idx_1992]
         if value == target {
             return true
         }
-        _for_idx_1992 = _for_idx_1992 + 1
     }
     false
 }
@@ -2186,15 +2180,13 @@ func contains_string(string[] values, string target) bool {
 func join_strings(string[] values, string sep) string {
     string out = ""
     bool first = true
-    _for_idx_2003 := 0
-    for _for_idx_2003 < std.prelude.len(values) {
+    for _for_idx_2003 := 0; _for_idx_2003 < std.prelude.len(values); _for_idx_2003++ {
         value := values[_for_idx_2003]
         if !first {
             out = out + sep
         }
         out = out + value
         first = false
-        _for_idx_2003 = _for_idx_2003 + 1
     }
     out
 }
