@@ -418,8 +418,8 @@ func (gen* amd64_code_gen) gen_from_ast_program(ast_program* prog) string {
         1
     )
     for i := 0; i < len(prog.functions); i = i + 1 {
-        func := prog.functions[i]
-        gen.gen_func_from_ast(func)
+        func_decl := prog.functions[i]
+        gen.gen_func_from_ast(func_decl)
     }
     ""
 }
