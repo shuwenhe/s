@@ -3892,6 +3892,14 @@ static int looks_like_struct_literal(parser *p) {
 					expect_field_name = 0;
 					continue;
 				}
+				if (match(p, TOKEN_STAR)) {
+					if (!match(p, TOKEN_IDENTIFIER)) {
+						p->current = saved;
+						return 0;
+					}
+					expect_field_name = 0;
+					continue;
+				}
 				if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) &&
 					peek_ahead(p, 1)->type == TOKEN_LBRACE) {
 					advance_tok(p);
