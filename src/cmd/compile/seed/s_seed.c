@@ -249,6 +249,12 @@ static void dump_ast_node(const ast_node *node, FILE *out, int indent) {
 		dump_ast_node(node->as.call_expr.callee, out, indent + 1);
 		for (i = 0; i < node->as.call_expr.args.len; i++) dump_ast_node(node->as.call_expr.args.data[i], out, indent + 1);
 		return;
+	case AST_SLICE_EXPR:
+		fputs("\n", out);
+		dump_ast_node(node->as.slice_expr.object, out, indent + 1);
+		if (node->as.slice_expr.start) dump_ast_node(node->as.slice_expr.start, out, indent + 1);
+		if (node->as.slice_expr.end) dump_ast_node(node->as.slice_expr.end, out, indent + 1);
+		return;
 	default:
 		fputc('\n', out);
 		return;
