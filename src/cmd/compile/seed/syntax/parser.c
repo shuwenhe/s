@@ -388,6 +388,18 @@ static int could_be_identifier_like(parser *p) {
 	       t == TOKEN_TRUE || t == TOKEN_FALSE || t == TOKEN_IMPORT || t == TOKEN_AS ||
 	       t == TOKEN_PACKAGE || t == TOKEN_USE || t == TOKEN_ELSE;
 }
+static int token_is_identifier_like(const token *tok) {
+	if (!tok) return 0;
+	switch (tok->type) {
+	case TOKEN_IDENTIFIER: case TOKEN_FN: case TOKEN_IF: case TOKEN_FOR:
+	case TOKEN_WHILE: case TOKEN_RETURN: case TOKEN_BREAK: case TOKEN_CONTINUE:
+	case TOKEN_TRUE: case TOKEN_FALSE: case TOKEN_IMPORT: case TOKEN_AS:
+	case TOKEN_PACKAGE: case TOKEN_USE: case TOKEN_ELSE:
+		return 1;
+	default:
+		return 0;
+	}
+}
 
 static int match(parser *p, token_type t) {
 	if (!check(p, t)) {
@@ -868,7 +880,7 @@ static ast_node *parse_call(parser *p) {
 	 * this prefix pass separate makes pkg.Type::Variant unambiguous even when
 	 * the general postfix loop has other call/index cases to consider. */
 	while (expr && check(p, TOKEN_DOT) && peek_ahead(p, 1) &&
-		peek_ahead(p, 1)->type == TOKEN_IDENTIFIER) {
+		token_is_identifier_like(peek_ahead(p, 1))) {
 		ast_node *member;
 		advance_tok(p);
 		member = ast_new(AST_MEMBER_EXPR, prev(p)->pos);
@@ -1142,11 +1154,13 @@ static ast_node *parse_call(parser *p) {
 				ast_free(expr);
 				return NULL;
 			}
-			if (!expect(p, TOKEN_IDENTIFIER, "member name")) {
+			if (!token_is_identifier_like(peek(p))) {
+				parse_error(p, peek(p), "expected member name");
 				ast_free(member);
 				ast_free(expr);
 				return NULL;
 			}
+			advance_tok(p);
 			member->as.member_expr.object = expr;
 			member->as.member_expr.member = dup_cstr(prev(p)->lexeme);
 			if (!member->as.member_expr.member) {
@@ -2109,7 +2123,7 @@ static int try_parse_type_annotation(parser *p, char **out_type) {
 			const token *part;
 			char *qualified;
 			size_t need;
-			if (!check(p, TOKEN_IDENTIFIER)) {
+			if (!token_is_identifier_like(peek(p))) {
 				free(parsed);
 				p->current = saved;
 				return 0;
@@ -3248,7 +3262,7 @@ static ast_node *parse_switch_statement(parser *p) {
 						do {
 							if (!check(p, TOKEN_DOT)) break;
 							advance_tok(p);  // consume the dot
-							if (!check_pattern_name_token(p)) {
+							if (!token_is_identifier_like(peek(p))) {
 								parse_error(p, peek(p), "expected pattern name after .");
 								ast_free(subject);
 								ast_free(root);
@@ -4249,6 +4263,16 @@ static int looks_like_struct_literal(parser *p) {
 				return 0;
 			}
 			if (expect_field_name) {
+				/* A control-flow body can begin with an identifier-shaped
+				 * keyword.  In particular, `switch x { case y: ... }`
+				 * must never be classified as a struct literal: `case` is
+				 * followed by a selector and a colon, not a field value. */
+				if (check(p, TOKEN_IDENTIFIER) &&
+					(strcmp(peek(p)->lexeme, "case") == 0 ||
+					 strcmp(peek(p)->lexeme, "default") == 0)) {
+					p->current = saved;
+					return 0;
+				}
 				if (!match(p, TOKEN_IDENTIFIER)) {
 					p->current = saved;
 					return 0;
