@@ -6,10 +6,11 @@ struct assembly_generator {
 }
 
 func new_assembly_generator() assembly_generator {
-    gen: assembly_generator
-    gen.buffer = ""
-    gen.current_section = ""
-    gen.symbols = make(string[])
+    gen := assembly_generator {
+        buffer: "",
+        current_section: "",
+        symbols: string[](),
+    }
     gen
 }
 
