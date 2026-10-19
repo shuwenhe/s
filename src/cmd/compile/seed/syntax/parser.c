@@ -1,5 +1,6 @@
 #include "ast.h"
 #include <ctype.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1129,7 +1130,7 @@ static ast_node *parse_unary(parser *p) {
 	const token *tok = peek(p);
 	ast_node *node;
 	ast_node *rhs;
-	if (match(p, TOKEN_MINUS) || match(p, TOKEN_BANG) || match(p, TOKEN_AMP) || match(p, TOKEN_STAR)) {
+	if (match(p, TOKEN_PLUS) || match(p, TOKEN_MINUS) || match(p, TOKEN_BANG) || match(p, TOKEN_AMP) || match(p, TOKEN_STAR)) {
 		token_type unary_op = prev(p)->type;
 		rhs = parse_unary(p);
 		if (!rhs) {
@@ -3345,16 +3346,34 @@ static ast_node *parse_enum_decl(parser *p) {
 		ast_enum_variant *next = (ast_enum_variant *)realloc(variants, (variant_count + 1) * sizeof(ast_enum_variant));
 		if (!next) goto oom;
 		variants = next;
+		memset(&variants[variant_count], 0, sizeof(variants[variant_count]));
 		variants[variant_count].name = dup_cstr(prev(p)->lexeme);
 		variants[variant_count].payload_type = NULL;
-		if (!variants[variant_count].name) goto oom;
+		variant_count++;
+		ast_enum_variant *variant = &variants[variant_count - 1];
+		if (!variant->name) goto oom;
 		if (match(p, TOKEN_LPAREN)) {
 			if (!expect(p, TOKEN_IDENTIFIER, "enum payload type")) goto fail;
-			variants[variant_count].payload_type = dup_cstr(prev(p)->lexeme);
-			if (!variants[variant_count].payload_type) goto oom;
+			variant->payload_type = dup_cstr(prev(p)->lexeme);
+			if (!variant->payload_type) goto oom;
 			if (!expect(p, TOKEN_RPAREN, "')' after enum payload type")) goto fail;
 		}
-		variant_count++;
+		if (match(p, TOKEN_ASSIGN)) {
+			if (!check(p, TOKEN_NUMBER)) {
+				parse_error(p, peek(p), "expected decimal number after '=' in enum member");
+				goto fail;
+			}
+			const char *num_str = peek(p)->lexeme;
+			char *endptr;
+			long value = strtol(num_str, &endptr, 10);
+			if (*endptr != '\0' || value > INT64_MAX || value < INT64_MIN) {
+				parse_error(p, peek(p), "invalid enum explicit value");
+				goto fail;
+			}
+			advance_tok(p);
+			variant->has_explicit_value = true;
+			variant->explicit_value = (int64_t)value;
+		}
 		if (!match(p, TOKEN_COMMA) && !check(p, TOKEN_RBRACE)) { parse_error(p, peek(p), "expected ',' or '}' after enum member"); goto fail; }
 	}
 	if (!expect(p, TOKEN_RBRACE, "'}' after enum")) goto fail;
@@ -3368,6 +3387,11 @@ static ast_node *parse_enum_decl(parser *p) {
 oom:
 	error_set(p->err, ERR_OUT_OF_MEMORY, peek(p)->pos.line, peek(p)->pos.column, "out of memory");
 fail:
+	for (size_t i = 0; i < generic_count; i++) free(generic_params[i]);
+	for (size_t i = 0; i < variant_count; i++) {
+		free(variants[i].name);
+		free(variants[i].payload_type);
+	}
 	free(generic_params);
 	free(variants);
 	ast_free(node);
