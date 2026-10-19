@@ -15,11 +15,11 @@ func test_b1_2_borrow_place_preservation() bool {
         root: "owner",
         projections: mir_place_projection[]{
             mir_place_projection {
-                kind: mir_projection_kind::field,
+                kind: mir_projection_kind.field,
                 value: "inner",
             },
             mir_place_projection {
-                kind: mir_projection_kind::field,
+                kind: mir_projection_kind.field,
                 value: "value",
             },
         },
@@ -36,7 +36,7 @@ func test_b1_2_borrow_place_preservation() bool {
         id: 0,
         label: "entry",
         statements: mir_statement[]{
-            mir_statement::mir_borrow(borrow_stmt),
+            mir_statement.mir_borrow(borrow_stmt),
         },
         terminator: mir_terminator_plain(),
     }
@@ -82,7 +82,7 @@ func test_b1_2_borrow_place_preservation() bool {
     }
 
     
-    if actual_place.projections[0].kind != mir_projection_kind::field {
+    if actual_place.projections[0].kind != mir_projection_kind.field {
         s.println("FAIL: Projection 0 kind is not field")
         return false
     }
@@ -92,7 +92,7 @@ func test_b1_2_borrow_place_preservation() bool {
     }
 
     
-    if actual_place.projections[1].kind != mir_projection_kind::field {
+    if actual_place.projections[1].kind != mir_projection_kind.field {
         s.println("FAIL: Projection 1 kind is not field")
         return false
     }
@@ -138,7 +138,7 @@ func test_b1_2_borrow_place_preservation() bool {
 }
 
 func mir_terminator_plain() mir_terminator {
-    mir_terminator::return(mir_return_stmt{})
+    mir_terminator.return(mir_return_stmt{})
 }
 
 func run_b1_2_tests() int {

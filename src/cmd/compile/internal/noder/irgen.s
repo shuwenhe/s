@@ -43,7 +43,7 @@ func check_files(vec[file_parse_result] parsed_files) result[ir_gen_result, stri
     base.timer_start("fe", "typecheck")
     
     if count_syntax_errors() > 0 {
-        return result::err("syntax errors found")
+        return result.err("syntax errors found")
     }
     
     conf := type_check_config {
@@ -69,8 +69,8 @@ func check_files(vec[file_parse_result] parsed_files) result[ir_gen_result, stri
         result := check_file(parsed.file, conf, &info, pkg)
         
         switch result {
-            result::ok() : {}
-            result::err(msg) : {
+            result.ok() : {}
+            result.err(msg) : {
                 info.errors.push(msg)
             }
         }
@@ -78,12 +78,12 @@ func check_files(vec[file_parse_result] parsed_files) result[ir_gen_result, stri
     
     if info.errors.len() > 0 {
         error_msg := format_type_errors(info.errors)
-        return result::err(error_msg)
+        return result.err(error_msg)
     }
     
     base.timer_add_event(info.definitions.len() + info.uses.len(), "type-info-items")
     
-    result::ok(ir_gen_result {
+    result.ok(ir_gen_result {
         pkg: pkg,
         info: info,
     })
@@ -96,14 +96,14 @@ func check_file(syntax.file f, type_check_config conf, &type_check_info info, ir
         result := check_decl(decl, conf, info, pkg)
         
         switch result {
-            result::ok() : {}
-            result::err(msg) : {
-                return result::err(msg)
+            result.ok() : {}
+            result.err(msg) : {
+                return result.err(msg)
             }
         }
     }
     
-    result::ok()
+    result.ok()
 }
 
 func check_decl(syntax.decl d, type_check_config conf, type_check_info info, ir.package pkg) result[void, string] {
@@ -170,11 +170,11 @@ func check_decl(syntax.decl d, type_check_config conf, type_check_info info, ir.
         }
         
         default : {
-            return result::err("unknown declaration type: " + decl_type)
+            return result.err("unknown declaration type: " + decl_type)
         }
     }
     
-    result::ok()
+    result.ok()
 }
 
 func resolve_type(syntax.type_expr t, type_check_config conf, type_check_info info) result[types.type_obj, string] {
@@ -183,13 +183,13 @@ func resolve_type(syntax.type_expr t, type_check_config conf, type_check_info in
     switch type_kind {
         "basic" : {
             basic_name := syntax.basic_type_name(t)
-            return result::ok(types.new_basic_type(basic_name))
+            return result.ok(types.new_basic_type(basic_name))
         }
         
         "pointer" : {
             elem_type := syntax.ptr_elem_type(t)
             resolved := resolve_type(elem_type, conf, info)?
-            return result::ok(types.new_pointer_type(resolved))
+            return result.ok(types.new_pointer_type(resolved))
         }
         
         "array" : {
@@ -199,13 +199,13 @@ func resolve_type(syntax.type_expr t, type_check_config conf, type_check_info in
             len_val := eval_const_expr(len_expr)?
             resolved_elem := resolve_type(elem_type, conf, info)?
             
-            return result::ok(types.new_array_type(len_val, resolved_elem))
+            return result.ok(types.new_array_type(len_val, resolved_elem))
         }
         
         "slice" : {
             elem_type := syntax.slice_elem_type(t)
             resolved_elem := resolve_type(elem_type, conf, info)?
-            return result::ok(types.new_slice_type(resolved_elem))
+            return result.ok(types.new_slice_type(resolved_elem))
         }
         
         "map" : {
@@ -215,12 +215,12 @@ func resolve_type(syntax.type_expr t, type_check_config conf, type_check_info in
             resolved_key := resolve_type(key_type, conf, info)?
             resolved_val := resolve_type(val_type, conf, info)?
             
-            return result::ok(types.new_map_type(resolved_key, resolved_val))
+            return result.ok(types.new_map_type(resolved_key, resolved_val))
         }
         
         "named" : {
             named_type_name := syntax.named_type_name(t)
-            return result::ok(types.lookup_type(named_type_name))
+            return result.ok(types.lookup_type(named_type_name))
         }
         
         "struct" : {
@@ -239,7 +239,7 @@ func resolve_type(syntax.type_expr t, type_check_config conf, type_check_info in
                 })
             }
             
-            return result::ok(types.new_struct_type(fields))
+            return result.ok(types.new_struct_type(fields))
         }
         
         "interface" : {
@@ -258,11 +258,11 @@ func resolve_type(syntax.type_expr t, type_check_config conf, type_check_info in
                 })
             }
             
-            return result::ok(types.new_interface_type(methods))
+            return result.ok(types.new_interface_type(methods))
         }
         
         default : {
-            return result::err("unknown type kind: " + type_kind)
+            return result.err("unknown type kind: " + type_kind)
         }
     }
 }
@@ -273,17 +273,17 @@ func eval_const_expr(syntax.expr e) result[int, string] {
     switch expr_type {
         "int_lit" : {
             val := syntax.int_value(e)
-            return result::ok(val)
+            return result.ok(val)
         }
         
         "ident" : {
             name := syntax.ident_name(e)
             val := types.lookup_const_value(name)?
-            return result::ok(val)
+            return result.ok(val)
         }
         
         default : {
-            return result::err("cannot evaluate non-constant expression")
+            return result.err("cannot evaluate non-constant expression")
         }
     }
 }
@@ -296,12 +296,12 @@ func check_interface_cycles(type_check_info info) result[void, string] {
     for interface_type in info.definitions {
         if is_interface_type(interface_type) {
             if find_cycle_in_interface(&finder, interface_type) {
-                return result::err("invalid recursive type: interface cycle detected")
+                return result.err("invalid recursive type: interface cycle detected")
             }
         }
     }
     
-    result::ok()
+    result.ok()
 }
 
 func find_cycle_in_interface(finder: &cycle_finder, typ: string) bool {
@@ -354,7 +354,7 @@ func dump_syntax_debug(ir.package pkg, type_check_info info, string phase) resul
         }
     }
     
-    result::ok()
+    result.ok()
 }
 
 func lower_to_ir(syntax.file ast) result[vec[ir.node], string] {
@@ -405,5 +405,5 @@ func lower_to_ir(syntax.file ast) result[vec[ir.node], string] {
         }
     }
     
-    result::ok(out)
+    result.ok(out)
 }

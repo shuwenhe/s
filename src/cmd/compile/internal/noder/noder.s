@@ -51,11 +51,11 @@ func load_package(vec[string] filenames) result[noder_output, string] {
         result := parse_file(filename)
         
         switch result {
-            result::ok(parsed) : {
+            result.ok(parsed) : {
                 noder_inst.files.push(parsed)
                 total_lines = total_lines + count_lines(parsed.file)
             }
-            result::err(err_msg) : {
+            result.err(err_msg) : {
                 errors_found.push(parse_error {
                     line: 0,
                     column: 0,
@@ -67,7 +67,7 @@ func load_package(vec[string] filenames) result[noder_output, string] {
     }
     
     if errors_found.len() > 0 {
-        return result::err(format_errors(errors_found))
+        return result.err(format_errors(errors_found))
     }
     
     base.timer_add_event(total_lines, "lines")
@@ -75,11 +75,11 @@ func load_package(vec[string] filenames) result[noder_output, string] {
     unified_result := run_unified(noder_inst)
     
     switch unified_result {
-        result::ok(output) : {
-            return result::ok(output)
+        result.ok(output) : {
+            return result.ok(output)
         }
-        result::err(err) : {
-            return result::err(err)
+        result.err(err) : {
+            return result.err(err)
         }
     }
 }
@@ -90,7 +90,7 @@ func parse_file(string filename) result[file_parse_result, string] {
     fbase := syntax.new_file_base(filename)
     parse_result := syntax.parse(fbase, file_content)?
     
-    result::ok(file_parse_result {
+    result.ok(file_parse_result {
         file: parse_result,
         errors: vec[string](),
     })
@@ -120,7 +120,7 @@ func run_unified(noder inst) result[noder_output, string] {
     
     exports := collect_exports(pkg)
     
-    result::ok(noder_output {
+    result.ok(noder_output {
         pkg: pkg,
         exports: exports,
     })
@@ -131,7 +131,7 @@ func process_file(ir.package pkg, syntax.file f) result[void, string] {
         convert_decl(pkg, decl)?
     }
     
-    result::ok()
+    result.ok()
 }
 
 func convert_decl(ir.package pkg, syntax.decl decl) result[void, string] {
@@ -171,12 +171,12 @@ func convert_decl(ir.package pkg, syntax.decl decl) result[void, string] {
             pkg.add_const(ir_const)
         }
         default : {
-            result::err("unknown declaration type")
+            result.err("unknown declaration type")
             return
         }
     }
     
-    result::ok()
+    result.ok()
 }
 
 func collect_exports(ir.package pkg) vec[string] {
@@ -249,7 +249,7 @@ func compile_unit(string source_path, string export_out, string ir_out, string l
     links := build_link_symbols(output.pkg, output.exports)
     write_link_file(link_out, links)?
     
-    result::ok(output)
+    result.ok(output)
 }
 
 func compile_unit_default_paths(string source_path) result[noder_output, string] {
@@ -270,13 +270,13 @@ func write_export_file(string path, vec[string] exports) result[void, string] {
     }
     
     os.write_file(path, content.to_string())?
-    result::ok()
+    result.ok()
 }
 
 func write_ir_file(string path, ir.package pkg) result[void, string] {
     content := ir.emit_ir(pkg)
     os.write_file(path, content)?
-    result::ok()
+    result.ok()
 }
 
 func build_link_symbols(ir.package pkg, vec[string] exports) vec[string] {
@@ -301,5 +301,5 @@ func write_link_file(string path, vec[string] links) result[void, string] {
     }
     
     os.write_file(path, content.to_string())?
-    result::ok()
+    result.ok()
 }

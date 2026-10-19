@@ -846,7 +846,7 @@ func trim_unit_line_pass(mir_graph graph) graph_pass_count_result {
             for j < std.prelude.len(rewritten.blocks[i].statements) {
                 keep := true
                 switch rewritten.blocks[i].statements[j] {
-                    mir_statement::eval(eval_stmt) : {
+                    mir_statement.eval(eval_stmt) : {
                         if eval_stmt.op == "line" && std.prelude.len(eval_stmt.args) > 0 && eval_stmt.args[0] == "yield unit" {
                             keep = false
                             changed = changed + 1
@@ -877,7 +877,7 @@ func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
         for j < std.prelude.len(rewritten.blocks[i].statements) {
             push_stmt := true
             switch rewritten.blocks[i].statements[j] {
-                mir_statement::eval(eval_stmt) : {
+                mir_statement.eval(eval_stmt) : {
                     if eval_stmt.op == "line" && std.prelude.len(eval_stmt.args) > 0 {
                         current := eval_stmt.args[0]
                         if current == last_line {
@@ -1007,12 +1007,12 @@ func estimate_const_prop_sites_graph(mir_graph graph) int {
         j := 0
         for j < std.prelude.len(block.statements) {
             switch block.statements[j] {
-                mir_statement::assign(assign_stmt) : {
+                mir_statement.assign(assign_stmt) : {
                     if assign_stmt.op == "const" || assign_stmt.op == "literal" {
                         constants = constants + 1
                     }
                 }
-                mir_statement::eval(eval_stmt) : {
+                mir_statement.eval(eval_stmt) : {
                     if std.prelude.len(eval_stmt.args) > 0 {
                         constants = constants + count_occurrences(eval_stmt.args[0], "const")
                         constants = constants + count_occurrences(eval_stmt.args[0], "literal")
@@ -2670,11 +2670,11 @@ func resolve_module_source_path(string module) option[string] {
     for i < std.prelude.len(candidates) {
         probe := std.fs.read_to_string(candidates[i])
         if probe.is_ok() {
-            return option::some(candidates[i])
+            return option.some(candidates[i])
         }
         i = i + 1
     }
-    option::none
+    option.none
 }
 
 func lookup_package_index(string module) option[string] {
@@ -2688,13 +2688,13 @@ func lookup_package_index(string module) option[string] {
                 path := found.unwrap()
                 probe := std.fs.read_to_string(path)
                 if probe.is_ok() {
-                    return option::some(path)
+                    return option.some(path)
                 }
             }
         }
         pi = pi + 1
     }
-    option::none
+    option.none
 }
 
 func package_index_candidate_paths() string[] {
@@ -2731,12 +2731,12 @@ func lookup_module_in_package_index_text(string text, string module) option[stri
             name := trim_spaces(std.prelude.slice(line, 0, tab))
             path := trim_spaces(std.prelude.slice(line, tab + 1, std.prelude.len(line)))
             if name == module && path != "" {
-                return option::some(normalize_package_index_path(project, path))
+                return option.some(normalize_package_index_path(project, path))
             }
         }
         i = i + 1
     }
-    option::none
+    option.none
 }
 
 func normalize_package_index_path(string project, string path) string {
@@ -4679,7 +4679,7 @@ func collect_const_bindings_in_source(source_file source, binding[] out, string[
         return
     }
     visited = append(visited, source.pkg)
-    last_expr := option::none
+    last_expr := option.none
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
@@ -4687,11 +4687,11 @@ func collect_const_bindings_in_source(source_file source, binding[] out, string[
                 if find_binding_index(out, const_decl.name) >= 0 {
                     return backend_error { message: "backend error: duplicate const declaration " + const_decl.name }
                 }
-                expr_to_eval := option::none
+                expr_to_eval := option.none
                 switch const_decl.value {
                     option.some(value) : {
-                        expr_to_eval = option::some(value)
-                        last_expr = option::some(value)
+                        expr_to_eval = option.some(value)
+                        last_expr = option.some(value)
                     }
                     option.none : expr_to_eval = last_expr,
                 }
