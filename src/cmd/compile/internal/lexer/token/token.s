@@ -22,12 +22,12 @@ struct token {
 
 func token_kind_name(token_kind kind) string {
     switch kind {
-        token_kind::ident : "ident",
-        token_kind::int : "int",
-        token_kind::string : "string",
-        token_kind::keyword : "keyword",
-        token_kind::symbol : "symbol",
-        token_kind::eof : "eof",
+        token_kind.ident : "ident",
+        token_kind.int : "int",
+        token_kind.string : "string",
+        token_kind.keyword : "keyword",
+        token_kind.symbol : "symbol",
+        token_kind.eof : "eof",
     }
 }
 

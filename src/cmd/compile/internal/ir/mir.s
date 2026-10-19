@@ -151,7 +151,7 @@ func (f* ir_function) build_ssa() {
         for stmt_idx := 0; stmt_idx < len(f.blocks[i].statements); stmt_idx++ {
             stmt := f.blocks[i].statements[stmt_idx]
             switch stmt {
-                mir_statement::assign(a): {
+                mir_statement.assign(a): {
                     args_int := int[]()
                     for arg_idx := 0; arg_idx < len(a.args); arg_idx++ {
                         arg := a.args[arg_idx]
@@ -159,7 +159,7 @@ func (f* ir_function) build_ssa() {
                     }
                     _ = f.ssa.create_value(a.op, args_int, f.blocks[i].id, "")
                 }
-                mir_statement::eval(e): {
+                mir_statement.eval(e): {
                     args_int := int[]()
                     for arg_idx := 0; arg_idx < len(e.args); arg_idx++ {
                         arg := e.args[arg_idx]
@@ -196,7 +196,7 @@ func (f* ir_function) analyze_escapes() {
     for i := 0; i < n; i++ {
         local := f.locals[i]
         is_pointer := false
-        if local.kindname != option::none {
+        if local.kindname != option.none {
             is_pointer = compile.internal.typesys.is_heap_reference_type(local.kindname.unwrap())
         }
 
@@ -218,14 +218,14 @@ func (f* ir_function) analyze_liveness() {
         block := f.blocks[block_idx]
         for i := 0; i < block; i++.statements.len() {
             switch block.statements[i] {
-                mir_statement::assign(a): {
+                mir_statement.assign(a): {
                     f.liveness_analysis.record_def(a.target, block_idx, i)
                     for arg_idx := 0; arg_idx < len(a.args); arg_idx++ {
                         arg := a.args[arg_idx]
                         f.liveness_analysis.record_use(arg, block_idx, i)
                     }
                 }
-                mir_statement::eval(e): {
+                mir_statement.eval(e): {
                     for arg_idx := 0; arg_idx < len(e.args); arg_idx++ {
                         arg := e.args[arg_idx]
                         f.liveness_analysis.record_use(arg, block_idx, i)
@@ -247,10 +247,10 @@ func (f* ir_function) analyze_write_barriers() {
         block := f.blocks[block_idx]
         for i := 0; i < block; i++.statements.len() {
             switch block.statements[i] {
-                mir_statement::assign(a): {
+                mir_statement.assign(a): {
                     if a.op == "store" && a.args.len() > 0 {
                         target_type := "value"
-                        if a.target >= 0 && a.target < len(f.locals) && f.locals[a.target].kindname != option::none {
+                        if a.target >= 0 && a.target < len(f.locals) && f.locals[a.target].kindname != option.none {
                             if compile.internal.typesys.is_explicit_owned_type(f.locals[a.target].kindname.unwrap()) {
                                 target_type = "pointer"
                             }

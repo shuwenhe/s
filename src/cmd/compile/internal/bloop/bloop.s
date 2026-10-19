@@ -29,7 +29,7 @@ func get_name_from_node(node: ir.node) option[ir.name] {
         
         switch node_op {
             "name" : {
-                return option::some(ir.as_name(current))
+                return option.some(ir.as_name(current))
             }
             
             "slice" | "slice3" : {
@@ -62,7 +62,7 @@ func get_name_from_node(node: ir.node) option[ir.name] {
         }
     }
     
-    option::none
+    option.none
 }
 
 func is_ignored_name(name: ir.name) bool {
@@ -114,18 +114,18 @@ func get_addressable_name_from_node(node: ir.node) (option[ir.name], bool) {
     name_opt := get_name_from_node(node)
     
     switch name_opt {
-        option::some(n) : {
+        option.some(n) : {
             ignored := is_ignored_name(n)
             
             if !ir.is_addressable(n) {
-                return (option::none, ignored)
+                return (option.none, ignored)
             }
             
-            return (option::some(n), ignored)
+            return (option.some(n), ignored)
         }
         
-        option::none : {
-            return (option::none, false)
+        option.none : {
+            return (option.none, false)
         }
     }
 }
@@ -140,13 +140,13 @@ func get_keep_alive_nodes(pos: ir.src_pos, node: ir.node) vec[ir.node] {
     }
     
     switch name_opt {
-        option::some(name) : {
+        option.some(name) : {
             debug_name(name, pos)
             keep_alive_nodes.push(ir.as_node(name))
             return keep_alive_nodes
         }
         
-        option::none : {
+        option.none : {
             deref := ir.as_deref_if(node)
             if deref != nil {
                 if base.debug_flag_lower_m() > 1 {
@@ -189,7 +189,7 @@ func keep_alive_at(curfunc: ir.func, nodes: vec[ir.node], cur_node: ir.node) ir.
         }
         
         arg := ir.new_convert_expr(pos, ir.OCONV, types.unsafe_ptr_type(), typecheck.node_addr(curfunc, node))
-        call_expr := typecheck.call(curfunc, pos, typecheck.lookup_runtime("KeepAlive"), vec::from_array([arg]), false)
+        call_expr := typecheck.call(curfunc, pos, typecheck.lookup_runtime("KeepAlive"), vec.from_array([arg]), false)
         
         ir.mark_compiler_var_live(call_expr)
         ir.mark_no_inline(call_expr)
@@ -234,7 +234,7 @@ func preserve_call_results(curfn: ir.func, call: ir.call_expr) ir.node {
         base.warn_at(ir.node_pos(call), "function result" + plural + " will be kept alive")
     }
     
-    assign := typecheck.assign_expr(curfn, ir.new_assign_list_stmt(ir.node_pos(call), ir.OAS2, results, vec::from_array([call])))
+    assign := typecheck.assign_expr(curfn, ir.new_assign_list_stmt(ir.node_pos(call), ir.OAS2, results, vec.from_array([call])))
     ir.mark_def(assign)
     
     for tmp in results {
@@ -262,12 +262,12 @@ func preserve_call_args(curfn: ir.func, call: ir.call_expr) ir.node {
         }
         
         switch name_opt {
-            option::some(name) : {
+            option.some(name) : {
                 debug_name(name, ir.node_pos(call))
                 keep_alive_nodes.push(ir.as_node(name))
             }
             
-            option::none : {
+            option.none : {
                 if ir.node_op(arg) == "slice_lit" {
                     elements := ir.comp_lit_list(arg)
                     for j in 0..elements.len() {
@@ -279,12 +279,12 @@ func preserve_call_args(curfn: ir.func, call: ir.call_expr) ir.node {
                         }
                         
                         switch elem_name_opt {
-                            option::some(elem_name) : {
+                            option.some(elem_name) : {
                                 debug_name(elem_name, ir.node_pos(call))
                                 keep_alive_nodes.push(ir.as_node(elem_name))
                             }
                             
-                            option::none : {
+                            option.none : {
                                 pos := ir.node_pos(elem)
                                 tmp := typecheck.temp_at(pos, curfn, ir.node_type(elem))
                                 assign := ir.new_assign_stmt(pos, tmp, elem)
@@ -571,13 +571,13 @@ func append_keep_alive(acc: vec[ir.node], new: vec[ir.node]) vec[ir.node] {
 
 func edit_expr(expr value, bool in_bloop) expr {
     switch value {
-        expr.borrow(borrow_value) : expr::borrow(borrow_expr {
+        expr.borrow(borrow_value) : expr.borrow(borrow_expr {
             target: std.prelude.box(edit_expr(borrow_value.target.value, in_bloop)), mutable borrow_value.mutable, inferred_type borrow_value.inferred_type,
         }),
-        expr.member(member_value) : expr::member(member_expr {
+        expr.member(member_value) : expr.member(member_expr {
             target: std.prelude.box(edit_expr(member_value.target.value, in_bloop)), member member_value.member, inferred_type member_value.inferred_type,
         }),
-        expr.index(index_value) : expr::index(index_expr {
+        expr.index(index_value) : expr.index(index_expr {
             target: std.prelude.box(edit_expr(index_value.target.value, in_bloop)), index std.prelude.box(edit_expr(index_value.index.value, in_bloop)), inferred_type index_value.inferred_type,
         }),
         expr.call(call_value) : {
@@ -587,33 +587,33 @@ func edit_expr(expr value, bool in_bloop) expr {
                 out_args = append(out_args, edit_expr(call_value.args[i], in_bloop))
                 i = i + 1
             }
-            expr::call(call_expr {
+            expr.call(call_expr {
                 callee: std.prelude.box(edit_expr(call_value.callee.value, in_bloop)), args out_args, inferred_type call_value.inferred_type, resolved_callee call_value.resolved_callee, type_args call_value.kindargs,
             })
         }
         expr.if(if_value) : {
             then_block := edit_block(if_value.then_branch, in_bloop)
-            else_expr := option::none
+            else_expr := option.none
             switch if_value.else_branch {
-                option::some(else_value) : {
-                    else_expr = option::some(std.prelude.box(edit_expr(else_value.value, in_bloop)))
+                option.some(else_value) : {
+                    else_expr = option.some(std.prelude.box(edit_expr(else_value.value, in_bloop)))
                 }
-                option::none : (),
+                option.none : (),
             }
-            expr::if(if_expr {
+            expr.if(if_expr {
                 condition: std.prelude.box(edit_expr(if_value.condition.value, in_bloop)), then_branch then_block, else_branch else_expr, inferred_type if_value.inferred_type,
             })
         }
         expr.while(while_value) : {
             loop_flag := in_bloop || is_testing_bloop_expr(while_value.condition.value)
-            expr::while(while_expr {
+            expr.while(while_expr {
                 condition: std.prelude.box(edit_expr(while_value.condition.value, in_bloop)), body edit_block(while_value.body, loop_flag), inferred_type while_value.inferred_type,
             })
         }
-        expr.for(for_value) : expr::for(for_expr {
+        expr.for(for_value) : expr.for(for_expr {
             names: for_value.names, declare for_value.declare, iterable std.prelude.box(edit_expr(for_value.iterable.value, in_bloop)), body edit_block(for_value.body, in_bloop), inferred_type for_value.inferred_type,
         }),
-        expr.block(block_value) : expr::block(edit_block(block_value, in_bloop)),
+        expr.block(block_value) : expr.block(edit_block(block_value, in_bloop)),
         expr.switch(switch_value) : {
             arms := switch_arm[]()
             i := 0
@@ -623,7 +623,7 @@ func edit_expr(expr value, bool in_bloop) expr {
                 })
                 i = i + 1
             }
-            expr::switch(switch_expr {
+            expr.switch(switch_expr {
                 subject: std.prelude.box(edit_expr(switch_value.subject.value, in_bloop)), arms arms, inferred_type switch_value.inferred_type,
             })
         }
@@ -635,14 +635,14 @@ func edit_stmt(stmt value, bool in_bloop) stmt {
     switch value {
         stmt.c_for(loop_value) : {
             loop_flag := in_bloop || is_testing_bloop_expr(loop_value.condition)
-            stmt::c_for(c_for_stmt {
+            stmt.c_for(c_for_stmt {
                 init: std.prelude.box(edit_stmt(loop_value.init.value, in_bloop)), condition edit_expr(loop_value.condition, in_bloop), step std.prelude.box(edit_stmt(loop_value.step.value, in_bloop)), body edit_block(loop_value.body, loop_flag),
             })
         }
-        stmt.let(var_value) : stmt::let(var_stmt {
+        stmt.let(var_value) : stmt.let(var_stmt {
             name: var_value.name, type_name var_value.kindname, value edit_expr(var_value.value, in_bloop),
         }),
-        stmt.expr(expr_value) : stmt::s.expr(expr_stmt {
+        stmt.expr(expr_value) : stmt.s.expr(expr_stmt {
             expr: edit_expr(expr_value.expr, in_bloop),
         }),
         _ : value,
@@ -665,10 +665,10 @@ func edit_block(block_expr block_value, bool in_bloop) block_expr {
         }
         i = i + 1
     }
-    final_expr := option::none
+    final_expr := option.none
     switch block_value.final_expr {
-        option::some(final_value) : final_expr = option::some(edit_expr(final_value, in_bloop)),
-        option::none : (),
+        option.some(final_value) : final_expr = option.some(edit_expr(final_value, in_bloop)),
+        option.none : (),
     }
     block_expr {
         statements: out_stmts, final_expr final_expr, inferred_type block_value.inferred_type,
@@ -697,12 +697,12 @@ func walk(source_file pkg) source_file {
             item.function(fn_value) : {
                 out_fn := fn_value
                 switch out_fn.body {
-                    option::some(body_value) : {
-                        out_fn.body = option::some(edit_block(body_value, false))
+                    option.some(body_value) : {
+                        out_fn.body = option.some(edit_block(body_value, false))
                     }
-                    option::none : (),
+                    option.none : (),
                 }
-                out_items = append(out_items, item::function(out_fn))
+                out_items = append(out_items, item.function(out_fn))
             }
             _ : out_items = append(out_items, pkg.items[i]),
         }
