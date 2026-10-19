@@ -429,8 +429,8 @@ func (parser* self) parse_enum_decl() (enum_decl, parse_error) {
             }
             payload = option.some(ty)
         }
-        explicit_value: i64 = 0
-        has_explicit_value: bool = false
+        i64 explicit_value = 0
+        bool has_explicit_value = false
         if self.eat_symbol("=") {
             tok := self.current_token()
             if tok.type != TokenType.NUMBER {
@@ -1582,7 +1582,7 @@ func (parser* self) parse_primary_expr() (expr, parse_error) {
             })
         }
         if self.at_symbol("{") {
-            return expr.block(self.parse_block_expr()))
+            return expr.block(self.parse_block_expr())
         }
         if self.eat_symbol("(") {
             expr, err := self.parse_expr()
