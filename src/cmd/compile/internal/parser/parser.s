@@ -429,8 +429,34 @@ func (parser* self) parse_enum_decl() (enum_decl, parse_error) {
             }
             payload = option.some(ty)
         }
+        explicit_value: i64 = 0
+        has_explicit_value: bool = false
+        if self.eat_symbol("=") {
+            tok := self.current_token()
+            if tok.type != TokenType.NUMBER {
+                enum_decl empty
+                return empty, parse_error {
+                    message: "expected decimal number after '=' in enum member",
+                    line: tok.line,
+                    column: tok.column,
+                }
+            }
+            num_val, ok := parse_i64(tok.lexeme, 10)
+            if !ok {
+                enum_decl empty
+                return empty, parse_error {
+                    message: "invalid enum explicit value",
+                    line: tok.line,
+                    column: tok.column,
+                }
+            }
+            explicit_value = num_val
+            has_explicit_value = true
+            self.advance()
+        }
         variants.push(enum_variant {
             name: variant_name, payload payload,
+            explicit_value explicit_value, has_explicit_value has_explicit_value,
         })
         self.eat_symbol(",")
     }
