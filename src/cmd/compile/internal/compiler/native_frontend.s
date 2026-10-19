@@ -165,14 +165,75 @@ func native_decimal_digit(string token) int {
     return -1
 }
 
+func native_hex_digit(string token) int {
+    // Returns 0-15 for valid hex digit, -1 otherwise
+    // Handles 0-9, a-f, A-F
+    switch token {
+        "0" : return 0,
+        "1" : return 1,
+        "2" : return 2,
+        "3" : return 3,
+        "4" : return 4,
+        "5" : return 5,
+        "6" : return 6,
+        "7" : return 7,
+        "8" : return 8,
+        "9" : return 9,
+        "a" : return 10,
+        "A" : return 10,
+        "b" : return 11,
+        "B" : return 11,
+        "c" : return 12,
+        "C" : return 12,
+        "d" : return 13,
+        "D" : return 13,
+        "e" : return 14,
+        "E" : return 14,
+        "f" : return 15,
+        "F" : return 15,
+        _ : return -1,
+    }
+}
+
 func native_parse_integer(native_parser initial, bool negative) native_parser {
     state := initial
     token := state.lex.token
+    
+    // Check for hexadecimal prefix
+    if len(token) >= 3 && __host_char_at(token, 0) == "0" && 
+       (__host_char_at(token, 1) == "x" || __host_char_at(token, 1) == "X") {
+        // Hexadecimal literal
+        value := 0
+        i := 2
+        for i < len(token) {
+            ch := __host_char_at(token, i)
+            if ch == "_" {
+                i = i + 1
+                continue
+            }
+            digit := native_hex_digit(ch)
+            if digit < 0 { return native_fail(state, "unsupported integer literal: " + token) }
+            // Check overflow: value * 16
+            if value < -922337203685477580 / 16 { return native_fail(state, "integer literal exceeds int64") }
+            value = value * 16 - digit
+            i = i + 1
+        }
+        if !negative { value = 0 - value }
+        state = native_emit_integer(state, value)
+        return native_advance(state)
+    }
+    
+    // Decimal literal
     // Accumulate negatively so the magnitude of INT64_MIN never overflows.
     value := 0
     i := 0
     for i < len(token) {
-        digit := native_decimal_digit(__host_char_at(token, i))
+        ch := __host_char_at(token, i)
+        if ch == "_" {
+            i = i + 1
+            continue
+        }
+        digit := native_decimal_digit(ch)
         if digit < 0 { return native_fail(state, "unsupported integer literal: " + token) }
         if value < -922337203685477580 { return native_fail(state, "integer literal exceeds int64") }
         if value == -922337203685477580 {
