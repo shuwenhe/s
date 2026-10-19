@@ -30,6 +30,13 @@ timeout 10s "$work/hosted"
 S_SOURCE_ROOT="$root" "$work/s_seed" --emit-standalone-amd64 "$work/empty.ir" "$work/standalone"
 timeout 10s "$work/standalone"
 printf 'Hosted and Standalone empty array return: PASS\n'
+"$work/s_seed" --compile-unit "$work/nested.ir" test/seed-array-constructor/nested_empty_native.s
+grep -Fq 'int[][]|0' "$work/nested.ir"
+S_SOURCE_ROOT="$root" "$work/s_seed" --emit-bin "$work/nested.ir" "$work/nested-hosted"
+timeout 10s "$work/nested-hosted"
+S_SOURCE_ROOT="$root" "$work/s_seed" --emit-standalone-amd64 "$work/nested.ir" "$work/nested-standalone"
+timeout 10s "$work/nested-standalone"
+printf 'Hosted and Standalone nested brace array return: PASS\n'
 "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -DSEED_COMPILE_ONLY \
     src/cmd/compile/seed/testing/tests.c "${sources[@]}" -o "$work/seed-tests"
 timeout 60s "$work/seed-tests"

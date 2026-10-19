@@ -14,12 +14,10 @@ struct machine_code_builder {
 }
 
 func new_machine_code_builder() machine_code_builder {
-    builder: machine_code_builder
-    builder.instructions = make(string[])
-    builder.machine_code = make(int[])
-    builder.labels = make(string[])
-    builder.functions = make(string[])
-    builder.next_reg = 0
+    builder := machine_code_builder {
+        instructions: string[](), machine_code: int[](), labels: string[](),
+        functions: string[](), next_reg: 0,
+    }
     builder
 }
 

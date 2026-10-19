@@ -5,9 +5,9 @@ struct compiler_pipeline {
 }
 
 func make_compiler_pipeline() compiler_pipeline {
-    pipeline: compiler_pipeline
-    pipeline.codegen = &make_direct_code_generator()
-    pipeline.all_code = &make_prog_list()
+    pipeline := compiler_pipeline {
+        codegen: &make_direct_code_generator(), all_code: &make_prog_list(),
+    }
     pipeline
 }
 
