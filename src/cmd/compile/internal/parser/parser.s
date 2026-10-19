@@ -734,6 +734,7 @@ func (parser* self) starts_stmt() bool {
             || self.at_keyword("defer")
             || self.at_keyword("sroutine")
             || self.at_cfor_start()
+            || self.looks_like_short_var_stmt()
             || self.looks_like_typed_var_stmt()
             || self.looks_like_increment_stmt()
             || self.looks_like_assignment_stmt()
@@ -772,6 +773,14 @@ func (parser* self) parse_stmt() (stmt, parse_error) {
         }
         return stmt.c_for(s), parse_error { message: "" }
     }
+    if self.looks_like_short_var_stmt() {
+        s, err := self.parse_short_var_stmt(true)
+        if err.message != "" {
+            stmt empty
+            return empty, err
+        }
+        return stmt.let(s), parse_error { message: "" }
+    }
     if self.looks_like_typed_var_stmt() {
         s, err := self.parse_typed_var_stmt(true)
         if err.message != "" {
@@ -804,7 +813,25 @@ func (parser* self) parse_var_stmt(bool consume_semicolon) (var_stmt, parse_erro
 }
 
 func (parser* self) parse_short_var_stmt(bool consume_semicolon) (var_stmt, parse_error) {
-        self.error_here("short declaration := is not supported; use explicit typed declaration")
+    name, err := self.expect_ident()
+    if err.message != "" {
+        var_stmt empty
+        return empty, err
+    }
+    _, err = self.expect_symbol(":=")
+    if err.message != "" {
+        var_stmt empty
+        return empty, err
+    }
+    value, err := self.parse_expr()
+    if err.message != "" {
+        var_stmt empty
+        return empty, err
+    }
+    if consume_semicolon {
+        self.eat_symbol(";")
+    }
+    var_stmt { name: name, type_name option.none, value: value }
 }
 
 func (parser* self) parse_defer_stmt() (defer_stmt, parse_error) {
@@ -915,11 +942,7 @@ func (parser* self) parse_cfor_stmt() (c_for_stmt, parse_error) {
         c_for_stmt empty
         return empty, err
     }
-    _, err = self.expect_symbol("(")
-    if err.message != "" {
-        c_for_stmt empty
-        return empty, err
-    }
+    parenthesized := self.eat_symbol("(")
     init, err := self.parse_for_clause_stmt()
     if err.message != "" {
         c_for_stmt empty
@@ -945,10 +968,12 @@ func (parser* self) parse_cfor_stmt() (c_for_stmt, parse_error) {
         c_for_stmt empty
         return empty, err
     }
-    _, err = self.expect_symbol(")")
-    if err.message != "" {
-        c_for_stmt empty
-        return empty, err
+    if parenthesized {
+        _, err = self.expect_symbol(")")
+        if err.message != "" {
+            c_for_stmt empty
+            return empty, err
+        }
     }
     body, err := self.parse_block_expr()
     if err.message != "" {
@@ -961,6 +986,14 @@ func (parser* self) parse_cfor_stmt() (c_for_stmt, parse_error) {
 }
 
 func (parser* self) parse_for_clause_stmt() (stmt, parse_error) {
+    if self.looks_like_short_var_stmt() {
+        s, err := self.parse_short_var_stmt(false)
+        if err.message != "" {
+            stmt empty
+            return empty, err
+        }
+        return stmt.let(s), parse_error { message: "" }
+    }
     if self.looks_like_typed_var_stmt() {
         s, err := self.parse_typed_var_stmt(false)
         if err.message != "" {
@@ -1786,7 +1819,27 @@ func (parser* self) at_symbol_after_keyword(string value) bool {
 }
 
 func (parser* self) at_cfor_start() bool {
-    return self.at_keyword("for") && self.peek_at(1).unwrap().kind == token_kind.symbol && self.peek_at(1).unwrap().value == "("
+    if !self.at_keyword("for") {
+        false
+    } else if self.peek_at(1).unwrap().kind == token_kind.symbol && self.peek_at(1).unwrap().value == "(" {
+        true
+    } else {
+        offset := 1
+        found_semicolon := false
+        tok := self.peek_at(offset).unwrap()
+        for tok.kind != token_kind.eof {
+            if tok.kind == token_kind.symbol && tok.value == "{" {
+                break
+            }
+            if tok.kind == token_kind.symbol && tok.value == ";" {
+                found_semicolon = true
+                break
+            }
+            offset = offset + 1
+            tok = self.peek_at(offset).unwrap()
+        }
+        found_semicolon
+    }
 }
 
 func (parser* self) looks_like_assignment_stmt() bool {
@@ -1796,7 +1849,9 @@ func (parser* self) looks_like_assignment_stmt() bool {
 }
 
 func (parser* self) looks_like_short_var_stmt() bool {
-    return false
+    token first = self.peek().unwrap()
+    token second = self.peek_at(1).unwrap()
+    return first.kind == token_kind.ident && second.kind == token_kind.symbol && second.value == ":="
 }
 
 func (parser* self) looks_like_increment_stmt() bool {
