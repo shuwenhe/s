@@ -18,7 +18,13 @@ static void print_compile_error(const compile_error *err) {
 	if (!err || !error_is_set(err)) {
 		return;
 	}
-	fprintf(stderr, "error[%d] at %zu:%zu: %s\n", (int)err->code, err->line, err->column, err->message);
+	if (err->source_path[0]) {
+		fprintf(stderr, "%s%s:%zu:%zu: error[%d]: %s\n",
+			err->code == ERR_SYNTAX ? "PARSE_FAIL at " : "", err->source_path,
+			err->line, err->column, (int)err->code, err->message);
+	} else {
+		fprintf(stderr, "error[%d] at %zu:%zu: %s\n", (int)err->code, err->line, err->column, err->message);
+	}
 }
 #endif
 static bool read_file_text(const char *path, char **out_text, compile_error *err) {
@@ -124,61 +130,162 @@ bool seed_compile_file(const char *input_path, const char *output_path, compile_
 	}
 	return ok;
 }
+typedef struct seed_source_file {
+	ast_node *root;
+	const char *path;
+	const char *package_name;
+	size_t first_line;
+	size_t line_count;
+} seed_source_file;
+
+static void set_error_source(compile_error *err, const char *path) {
+	size_t length = strlen(path);
+	if (length >= sizeof(err->source_path)) {
+		error_set(err, ERR_SEMANTIC, 0, 0,
+			"source path exceeds the %zu-byte diagnostic capacity",
+			sizeof(err->source_path) - 1);
+		return;
+	}
+	memcpy(err->source_path, path, length + 1);
+}
+
+/* Positions use disjoint line ranges inside a unit. Tokens are still parsed
+ * one file at a time, each with its own EOF; this map restores local positions
+ * for parser, semantic and IR errors without borrowing tokens across files. */
+static void remap_unit_error(seed_source_file *files, int count, compile_error *err) {
+	int i;
+	if (!error_is_set(err) || err->source_path[0] || !err->line) return;
+	for (i = 0; i < count; i++) {
+		if (err->line >= files[i].first_line &&
+			err->line - files[i].first_line < files[i].line_count) {
+			err->line -= files[i].first_line - 1;
+			set_error_source(err, files[i].path);
+			return;
+		}
+	}
+}
+
 bool seed_compile_files(int input_count, char **input_paths, const char *output_path, compile_error *err) {
-	char *unit_source = NULL;
-	size_t unit_len = 0;
+	seed_source_file *files = NULL;
+	ast_node *unit = NULL;
+	IR ir;
 	FILE *out = NULL;
+	size_t next_line = 1;
 	int i;
 	bool ok = false;
+	error_clear(err);
+	ir_init(&ir);
 	if (input_count < 1 || !input_paths || !output_path) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "compile-unit requires at least one source input");
 		return false;
 	}
-	unit_source = (char *)calloc(1, 1);
-	if (!unit_source) {
+	files = (seed_source_file *)calloc((size_t)input_count, sizeof(*files));
+	if (!files) {
 		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 		return false;
 	}
 	for (i = 0; i < input_count; i++) {
 		char *source = NULL;
-		size_t source_len;
-		char *next;
-		if (!read_file_text(input_paths[i], &source, err)) goto done;
-		source_len = strlen(source);
-		if (source_len > SIZE_MAX - unit_len - 2) {
+		token_vec tokens;
+		parse_result parsed;
+		size_t j;
+		files[i].path = input_paths[i];
+		files[i].first_line = next_line;
+		if (!read_file_text(input_paths[i], &source, err)) {
+			set_error_source(err, input_paths[i]);
+			goto done;
+		}
+		if (!lexer_scan(source, &tokens, err)) {
 			free(source);
+			set_error_source(err, input_paths[i]);
+			goto done;
+		}
+		free(source);
+		files[i].line_count = tokens.data[tokens.len - 1].pos.line;
+		if (files[i].line_count > SIZE_MAX - next_line) {
+			token_vec_free(&tokens);
 			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "compile-unit source is too large");
 			goto done;
 		}
-		next = (char *)realloc(unit_source, unit_len + source_len + 2);
-		if (!next) {
-			free(source);
-			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+		for (j = 0; j < tokens.len; j++) tokens.data[j].pos.line += next_line - 1;
+		next_line += files[i].line_count;
+		parsed = parser_parse_tokens(&tokens, err);
+		token_vec_free(&tokens);
+		if (!parsed.root) goto done;
+		files[i].root = parsed.root;
+		files[i].package_name = ""; /* Preserve legacy package-less inputs. */
+		for (j = 0; j < parsed.root->as.program.statements.len; j++) {
+			ast_node *decl = parsed.root->as.program.statements.data[j];
+			if (decl->kind != AST_PACKAGE_DECL) continue;
+			if (j != 0) {
+				error_set(err, ERR_SYNTAX, decl->pos.line, decl->pos.column,
+					"package declaration must occur once at the start of a source file");
+				goto done;
+			}
+			files[i].package_name = decl->as.package_decl.name;
+		}
+	}
+	/* The current Seed semantic/IR layers have a single namespace. Until they
+	 * implement package resolution and file-local import scopes, reject those
+	 * units explicitly instead of silently combining unrelated declarations. */
+	for (i = 0; i < input_count; i++) {
+		size_t j;
+		if (strcmp(files[0].package_name, files[i].package_name) != 0) {
+			error_set(err, ERR_SEMANTIC, files[i].first_line, 1,
+				"multi-package name resolution is not supported: '%s' and '%s'",
+				files[0].package_name, files[i].package_name);
 			goto done;
 		}
-		unit_source = next;
-		memcpy(unit_source + unit_len, source, source_len);
-		unit_len += source_len;
-		unit_source[unit_len++] = '\n';
-		unit_source[unit_len] = '\0';
-		free(source);
+		if (input_count == 1) continue;
+		for (j = 0; j < files[i].root->as.program.statements.len; j++) {
+			ast_node *decl = files[i].root->as.program.statements.data[j];
+			if (decl->kind == AST_USE_DECL) {
+				error_set(err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
+					"file-scoped imports are not supported in multi-file compile-units");
+				goto done;
+			}
+		}
 	}
+	unit = ast_new(AST_PROGRAM, (source_pos){1, 1});
+	if (!unit) {
+		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+		goto done;
+	}
+	for (i = 0; i < input_count; i++) {
+		size_t j;
+		ast_vec *statements = &files[i].root->as.program.statements;
+		for (j = 0; j < statements->len; j++) {
+			if (!ast_vec_push(&unit->as.program.statements, statements->data[j])) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				goto done;
+			}
+			statements->data[j] = NULL; /* Transfer ownership exactly once. */
+		}
+	}
+	if (!semantic_analyze(unit, err) || !ir_generate_from_ast(unit, &ir, err)) goto done;
 	out = fopen(output_path, "wb");
 	if (!out) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open output: %s", output_path);
 		goto done;
 	}
-	ok = seed_compile_source_text(unit_source, out, err);
+	generate_code(&ir, out);
+	if (ferror(out)) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed writing compiler output");
+	} else {
+		ok = true;
+	}
 	if (fclose(out) != 0) {
-		out = NULL;
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to close output: %s", output_path);
 		ok = false;
-	} else {
-		out = NULL;
 	}
+	out = NULL;
 done:
+	remap_unit_error(files, input_count, err);
 	if (out) fclose(out);
-	free(unit_source);
+	ir_free(&ir);
+	ast_free(unit);
+	for (i = 0; i < input_count; i++) ast_free(files[i].root);
+	free(files);
 	return ok;
 }
 #ifndef SEED_COMPILE_ONLY

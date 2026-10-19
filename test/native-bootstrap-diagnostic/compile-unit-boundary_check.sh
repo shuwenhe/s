@@ -32,7 +32,15 @@ if ! "$seed" --dump-ast "$work/loop.s" "$work/loop.ast" >"$work/loop.log" 2>&1; 
     cat "$work/loop.log" >&2
     exit 1
 fi
-"$seed" --compile-unit "$work/loop.ir" "$work/loop.s" "$work/answer.s" >"$work/loop-unit.log" 2>&1
+cat >"$work/loop-main.s" <<'SOURCE'
+package boundary
+func main() int { return loop() + answer() }
+SOURCE
+"$seed" --compile-unit "$work/loop.ir" "$work/loop.s" "$work/loop-main.s" "$work/answer.s" >"$work/loop-unit.log" 2>&1
+"$seed" --emit-bin "$work/loop.ir" "$work/loop" >>"$work/loop-unit.log" 2>&1
+status=0
+"$work/loop" || status=$?
+test "$status" -eq 49
 printf 'PASS: infinite-loop body does not consume the next file\n'
 
 expect_failure() {
@@ -45,6 +53,11 @@ expect_failure() {
     if ! grep -Fq "$source:$location" "$work/$name.log"; then
         cat "$work/$name.log" >&2
         printf 'FAIL: %s lost its source location\n' "$name" >&2
+        exit 1
+    fi
+    if grep -Eq '^PARSE_FAIL at [0-9]+:' "$work/$name.log"; then
+        cat "$work/$name.log" >&2
+        printf 'FAIL: %s also emitted a virtual line diagnostic\n' "$name" >&2
         exit 1
     fi
     test ! -s "$work/$name.ir"
@@ -90,5 +103,22 @@ SOURCE
 expect_failure imports "$work/import.s" '2:1' "$work/leak.s" "$work/import.s"
 grep -Fq 'file-scoped imports are not supported' "$work/imports.log"
 printf 'PASS: unsupported file-scoped imports fail explicitly\n'
+
+long_dir=$work
+for ((i = 0; i < 30; i++)); do
+    long_dir="$long_dir/component-0123456789abcdef0123456789abcdef"
+done
+mkdir -p "$long_dir"
+printf 'package boundary\nfunc answer() int { return ) }\n' >"$long_dir/syntax.s"
+expect_failure long-path "$long_dir/syntax.s" '2:28' "$work/main.s" "$long_dir/syntax.s"
+printf 'PASS: diagnostics preserve source paths longer than 1024 bytes\n'
+
+printf -v overlong '%5000s' ''
+if "$seed" --compile-unit "$work/overlong.ir" "$overlong" >"$work/overlong.log" 2>&1; then
+    printf 'FAIL: overlength path was accepted\n' >&2
+    exit 1
+fi
+grep -Fq 'source path exceeds the 4095-byte diagnostic capacity' "$work/overlong.log"
+printf 'PASS: overlength diagnostic paths are explicitly rejected\n'
 
 printf 'compile-unit boundary regression: PASS\n'
