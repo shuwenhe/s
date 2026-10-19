@@ -148,7 +148,7 @@ func lexer_advance(lexer* l) {
 }
 
 func lexer_skip_whitespace(lexer* l) {
-    for {
+    for true {
         ch := lexer_current_char(l)
         if ch != 32 && ch != 9 {
             break
@@ -158,7 +158,7 @@ func lexer_skip_whitespace(lexer* l) {
 }
 
 func lexer_skip_line_comment(l* lexer) {
-    for {
+    for true {
         ch := lexer_current_char(l)
         if ch == 10 || ch == 0 {
             break
@@ -170,7 +170,7 @@ func lexer_skip_line_comment(l* lexer) {
 func lexer_skip_block_comment(l* lexer) {
     lexer_advance(l)
     lexer_advance(l)
-    for {
+    for true {
         ch := lexer_current_char(l)
         if ch == 0 {
             break
@@ -201,7 +201,7 @@ func is_alphanum(int ch) int {
 func lexer_read_ident(l* lexer) token {
     start := l.pos
     start_col := l.col
-    for {
+    for true {
         if !is_alphanum(lexer_current_char(l)) {
             break
         }
@@ -224,83 +224,74 @@ func lexer_keyword_type(string* s) int {
     if s == nil {
         return 0
     }
-    switch len(s) {
-    case 2:
-        if s == "if" {
-            return 11
-        }
-        if s == "go" {
-            return 23
-        }
-    case 3:
-        if s == "for" {
-            return 13
-        }
-        if s == "var" {
-            return 8
-        }
-        if s == "map" {
-            return 27
-        }
-    case 4:
-        if s == "func" {
-            return 5
-        }
-        if s == "else" {
-            return 12
-        }
-        if s == "case" {
-            return 17
-        }
-        if s == "type" {
-            return 21
-        }
-        if s == "true" {
-            return 37
-        }
-    case 5:
-        if s == "const" {
-            return 9
-        }
-        if s == "defer" {
-            return 22
-        }
-        if s == "false" {
-            return 38
-        }
-        if s == "iota" {
-            return 40
-        }
-    case 6:
-        if s == "return" {
-            return 10
-        }
-        if s == "switch" {
-            return 16
-        }
-        if s == "struct" {
-            return 6
-        }
-        if s == "import" {
-            return 19
-        }
-        if s == "select" {
-            return 25
-        }
-        if s == "delete" {
-            return 34
-        }
-    case 7:
-        if s == "package" {
-            return 20
-        }
-        if s == "default" {
-            return 18
-        }
-    case 9:
-        if s == "interface" {
-            return 7
-        }
+    if s == "if" {
+        return 11
+    }
+    if s == "go" {
+        return 23
+    }
+    if s == "for" {
+        return 13
+    }
+    if s == "var" {
+        return 8
+    }
+    if s == "map" {
+        return 27
+    }
+    if s == "func" {
+        return 5
+    }
+    if s == "else" {
+        return 12
+    }
+    if s == "case" {
+        return 17
+    }
+    if s == "type" {
+        return 21
+    }
+    if s == "true" {
+        return 37
+    }
+    if s == "const" {
+        return 9
+    }
+    if s == "defer" {
+        return 22
+    }
+    if s == "false" {
+        return 38
+    }
+    if s == "iota" {
+        return 40
+    }
+    if s == "return" {
+        return 10
+    }
+    if s == "switch" {
+        return 16
+    }
+    if s == "struct" {
+        return 6
+    }
+    if s == "import" {
+        return 19
+    }
+    if s == "select" {
+        return 25
+    }
+    if s == "delete" {
+        return 34
+    }
+    if s == "package" {
+        return 20
+    }
+    if s == "default" {
+        return 18
+    }
+    if s == "interface" {
+        return 7
     }
     return 0
 }
@@ -311,30 +302,35 @@ func lexer_read_number(l* lexer) token {
     if lexer_current_char(l) == 48 && lexer_peek_char(l, 1) == 120 {
         lexer_advance(l)
         lexer_advance(l)
-        for {
+        for true {
             ch := lexer_current_char(l)
-            if !is_digit(ch) &&
-               !(ch >= 97 && ch <= 102) &&
-               !(ch >= 65 && ch <= 70) {
+            if !is_hex_digit(ch) {
                 break
             }
             lexer_advance(l)
         }
-    } else {
-        for {
+        length := l.pos - start
+        value := substring(l.source, start, length)
+        tok := alloc(token)
+        tok.line = l.line
+        tok.col = start_col
+        tok.kind = 2
+        tok.value = value
+        return *tok
+    }
+    for true {
+        if !is_digit(lexer_current_char(l)) {
+            break
+        }
+        lexer_advance(l)
+    }
+    if lexer_current_char(l) == 46 && is_digit(lexer_peek_char(l, 1)) {
+        lexer_advance(l)
+        for true {
             if !is_digit(lexer_current_char(l)) {
                 break
             }
             lexer_advance(l)
-        }
-        if lexer_current_char(l) == 46 && is_digit(lexer_peek_char(l, 1)) {
-            lexer_advance(l)
-            for {
-                if !is_digit(lexer_current_char(l)) {
-                    break
-                }
-                lexer_advance(l)
-            }
         }
     }
     length := l.pos - start
@@ -347,12 +343,25 @@ func lexer_read_number(l* lexer) token {
     return *tok
 }
 
+func is_hex_digit(int ch) int {
+    if is_digit(ch) {
+        return 1
+    }
+    if ch >= 97 && ch <= 102 {
+        return 1
+    }
+    if ch >= 65 && ch <= 70 {
+        return 1
+    }
+    return 0
+}
+
 func lexer_read_string(l* lexer) token {
     start_col := l.col
     quote := lexer_current_char(l)
     lexer_advance(l)
     start := l.pos
-    for {
+    for true {
         ch := lexer_current_char(l)
         if ch == 0 || ch == 10 {
             break
@@ -393,7 +402,7 @@ func lexer_add_token(l* lexer, tok* token) {
 }
 
 func lexer_tokenize(l* lexer) {
-    for {
+    for true {
         lexer_skip_whitespace(l)
         ch := lexer_current_char(l)
         if ch == 0 {
