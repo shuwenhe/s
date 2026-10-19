@@ -105,10 +105,10 @@ func example_escape_analysis(mir.ir_function f) {
         info := escape_info.infos[_idx_106]
         escapes := false
         switch info.level {
-            escape.escape_level::escape_none: {}
-            escape.escape_level::escape_func: { escapes = true }
-            escape.escape_level::escape_global: { escapes = true }
-            escape.escape_level::escape_heap: { escapes = true }
+            escape.escape_level.escape_none: {}
+            escape.escape_level.escape_func: { escapes = true }
+            escape.escape_level.escape_global: { escapes = true }
+            escape.escape_level.escape_heap: { escapes = true }
         }
         _ = escapes
     }
@@ -143,12 +143,12 @@ func example_write_barrier_analysis(mir.ir_function f) {
         _ = needs_barrier
 
         switch barrier.kind {
-            writebarrier.barrier_type::barrier_none: {}
-            writebarrier.barrier_type::barrier_store: {}
-            writebarrier.barrier_type::barrier_store_load: {}
-            writebarrier.barrier_type::barrier_store_store: {}
-            writebarrier.barrier_type::barrier_arr_write: {}
-            writebarrier.barrier_type::barrier_slice_write: {}
+            writebarrier.barrier_type.barrier_none: {}
+            writebarrier.barrier_type.barrier_store: {}
+            writebarrier.barrier_type.barrier_store_load: {}
+            writebarrier.barrier_type.barrier_store_store: {}
+            writebarrier.barrier_type.barrier_arr_write: {}
+            writebarrier.barrier_type.barrier_slice_write: {}
         }
     }
 }
@@ -195,7 +195,7 @@ func example_combined_optimization(mir.ir_function f) {
         for _idx_192 := 0; _idx_192 < len(barriers.barriers); _idx_192++ {
             barrier := barriers.barriers[_idx_192]
             if barrier.target_var == local_var {
-                if info.level != escape.escape_level::escape_heap {
+                if info.level != escape.escape_level.escape_heap {
                 }
             }
         }

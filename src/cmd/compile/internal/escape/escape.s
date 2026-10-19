@@ -414,7 +414,7 @@ func new_location(batch* b, ir.node n, bool stack_only) option[location] {
     }
     
     b.all_locs.push(loc)
-    option::some(loc)
+    option.some(loc)
 }
 
 func old_location(batch* b, ir.node n) location* {

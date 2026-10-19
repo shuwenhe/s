@@ -39,9 +39,9 @@ func (lexer* self) tokenize() (token[], lex_error) {
         if is_ident_start(ch) {
             string value = self.read_identifier()
             token_kind kind = if is_keyword(value) {
-                token_kind::keyword
+                token_kind.keyword
             } else {
-                token_kind::ident
+                token_kind.ident
             }
             tokens.push(token {
                 kind: kind, value: value, line: start_line, column: start_column,
@@ -50,28 +50,28 @@ func (lexer* self) tokenize() (token[], lex_error) {
         }
         if is_digit(ch) {
             tokens.push(token {
-                kind: token_kind::int, value: self.read_number(), line: start_line, column: start_column,
+                kind: token_kind.int, value: self.read_number(), line: start_line, column: start_column,
             })
             continue
         }
         if ch == "\"" {
             tokens.push(token {
-                kind: token_kind::string, value: self.read_string(), line: start_line, column: start_column,
+                kind: token_kind.string, value: self.read_string(), line: start_line, column: start_column,
             })
             continue
         }
         if ch == '(' || ch == ')' {
             tokens.push(token {
-                kind: token_kind::symbol, value: self.read_symbol(), line: start_line, column: start_column,
+                kind: token_kind.symbol, value: self.read_symbol(), line: start_line, column: start_column,
             })
             continue
         }
         tokens.push(token {
-            kind: token_kind::symbol, value: self.read_symbol(), line: start_line, column: start_column,
+            kind: token_kind.symbol, value: self.read_symbol(), line: start_line, column: start_column,
         })
     }
     tokens.push(token {
-        kind: token_kind::eof,
+        kind: token_kind.eof,
         value: "<eof>", line: self.line, column: self.column,
     })
     return tokens
@@ -202,7 +202,7 @@ func (lexer* self) read_symbol() (string, lex_error) {
         "..",
         "<<",
         ">>",
-        "::",
+        ".",
     }
     multi_index := 0
     for multi_index < std.prelude.len(multi) {
