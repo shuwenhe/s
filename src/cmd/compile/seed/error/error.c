@@ -10,6 +10,7 @@ void error_clear(compile_error *err) {
 	err->line = 0;
 	err->column = 0;
 	err->message[0] = '\0';
+	err->source_path[0] = '\0';
 }
 void error_set(compile_error *err, error_code code, size_t line, size_t column, const char *fmt, ...) {
 	va_list args;
@@ -19,6 +20,7 @@ void error_set(compile_error *err, error_code code, size_t line, size_t column, 
 	err->code = code;
 	err->line = line;
 	err->column = column;
+	err->source_path[0] = '\0';
 	if (!fmt) {
 		err->message[0] = '\0';
 		return;

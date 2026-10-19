@@ -1879,6 +1879,7 @@ static ast_node *parse_for_statement(parser *p) {
 		
 		if (check(p, TOKEN_LBRACE)) {
 			// Infinite loop: for { }
+			advance_tok(p);
 			node->as.for_stmt.body = parse_block(p);
 			if (!node->as.for_stmt.body) {
 				ast_free(node);
@@ -4055,7 +4056,6 @@ parse_result parser_parse_tokens(const token_vec *tokens, compile_error *err) {
 		ast_node *stmt = parse_top_level(&p);
 		if (!stmt) {
 			const token *tok = peek(&p);
-			fprintf(stderr, "PARSE_FAIL at %d:%d near '%s' (tok=%s)\n", (int)tok->pos.line, (int)tok->pos.column, tok->lexeme ? tok->lexeme : "<eof>", token_type_name(tok->type));
 			if (!error_is_set(err)) {
 				error_set(err, ERR_SYNTAX, tok->pos.line, tok->pos.column,
 						  "failed to parse top-level near '%s'", tok->lexeme ? tok->lexeme : "<eof>");

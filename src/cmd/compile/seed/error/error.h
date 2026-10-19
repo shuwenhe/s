@@ -15,6 +15,7 @@ typedef struct compile_error {
 	size_t line;
 	size_t column;
 	char message[256];
+	char source_path[4096];
 } compile_error;
 void error_clear(compile_error *err);
 void error_set(compile_error *err, error_code code, size_t line, size_t column, const char *fmt, ...);
