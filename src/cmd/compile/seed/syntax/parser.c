@@ -2925,6 +2925,27 @@ static ast_node *clone_expr(const ast_node *node) {
 	}
 	return copy;
 }
+/* A top-level comma terminates an expression arm. Commas inside calls,
+ * arrays and struct literals belong to the expression, not to the switch. */
+static int switch_arm_has_expression_separator(parser *p) {
+	int parens = 0, brackets = 0, braces = 0;
+	for (size_t i = p->current; i < p->tokens->len; i++) {
+		const token *t = &p->tokens->data[i];
+		if (!parens && !brackets && !braces) {
+			if (t->type == TOKEN_COMMA) return 1;
+			if (t->type == TOKEN_SEMICOLON || t->type == TOKEN_RBRACE || t->type == TOKEN_EOF) return 0;
+			if (t->type == TOKEN_IDENTIFIER &&
+				(!strcmp(t->lexeme, "case") || !strcmp(t->lexeme, "default"))) return 0;
+		}
+		if (t->type == TOKEN_LPAREN) parens++;
+		else if (t->type == TOKEN_RPAREN) parens--;
+		else if (t->type == TOKEN_LBRACKET) brackets++;
+		else if (t->type == TOKEN_RBRACKET) brackets--;
+		else if (t->type == TOKEN_LBRACE) braces++;
+		else if (t->type == TOKEN_RBRACE) braces--;
+	}
+	return 0;
+}
 static ast_node *parse_switch_statement(parser *p) {
 	ast_node *subject;
 	ast_node *root = NULL;
@@ -3101,6 +3122,9 @@ static ast_node *parse_switch_statement(parser *p) {
 			return NULL;
 		}
 		
+		if (!is_pattern_switch && !has_expression_body && !check(p, TOKEN_LBRACE)) {
+			has_expression_body = switch_arm_has_expression_separator(p);
+		}
 		// For pattern-switch, body can be expression or block
 		// For case/default, body is always statements in a block
 			if ((is_pattern_switch || has_expression_body) && !check(p, TOKEN_LBRACE)) {
