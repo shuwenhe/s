@@ -2070,10 +2070,28 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_PACKAGE_DECL:
 		case AST_USE_DECL:
 		case AST_EXTERN_DECL:
-		case AST_ENUM_DECL:
 		case AST_VAR_DECL:
 		case AST_CONST_DECL:
 			return 1;
+		case AST_ENUM_DECL: {
+			size_t i;
+			int64_t previous = 0;
+			for (i = 0; i < node->as.enum_decl.variant_count; i++) {
+				ast_enum_variant *v = &node->as.enum_decl.variants[i];
+				if (v->has_explicit_value) {
+					v->resolved_value = v->explicit_value;
+				} else {
+					if (i && previous == INT64_MAX) {
+						error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column, "enum implicit increment overflow");
+						return 0;
+					}
+					v->resolved_value = i ? previous + 1 : 0;
+				}
+				v->has_resolved_value = true;
+				previous = v->resolved_value;
+			}
+			return 1;
+		}
 		case AST_BLOCK:
 			if (node->as.block.transparent_scope) {
 				if (node->as.block.statements.len == 2 &&
