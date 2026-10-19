@@ -1634,6 +1634,11 @@ static ast_node *parse_typed_binding_statement(parser *p, int is_mutable) {
 	if (!try_parse_typed_name(p, TOKEN_ASSIGN, &binding_type, &binding_name)) {
 		return NULL;
 	}
+	if (!expect(p, TOKEN_ASSIGN, "=")) {
+		free(binding_type);
+		free(binding_name);
+		return NULL;
+	}
 	node = ast_new(AST_LET_STMT, prev(p)->pos);
 	if (!node) {
 		free(binding_type);
@@ -1649,16 +1654,12 @@ static ast_node *parse_typed_binding_statement(parser *p, int is_mutable) {
 		ast_free(node);
 		return NULL;
 	}
-	node->as.let_stmt.value = NULL;
-	/* Support bare type declaration without initialization: "string empty" */
-	if (match(p, TOKEN_ASSIGN)) {
-		node->as.let_stmt.value = parse_expression(p);
-		if (!node->as.let_stmt.value) {
-			free(binding_type);
-			free(binding_name);
-			ast_free(node);
-			return NULL;
-		}
+	node->as.let_stmt.value = parse_expression(p);
+	if (!node->as.let_stmt.value) {
+		free(binding_type);
+		free(binding_name);
+		ast_free(node);
+		return NULL;
 	}
 	if (!consume_optional_semicolon(p)) {
 		free(binding_type);
@@ -1689,12 +1690,11 @@ static int looks_like_typed_binding(parser *p) {
 				return 0;
 			}
 		}
-		if (try_parse_typed_name(p, TOKEN_ASSIGN, &parsed_type, &parsed_name)) {
-			/* Support bare type declaration without assignment, or with assignment */
+		if (try_parse_typed_name(p, TOKEN_ASSIGN, &parsed_type, &parsed_name) && check(p, TOKEN_ASSIGN)) {
 			ok = 1;
 		}
 	} else if (cur_t == TOKEN_LBRACKET) {
-		if (try_parse_typed_name(p, TOKEN_ASSIGN, &parsed_type, &parsed_name)) {
+		if (try_parse_typed_name(p, TOKEN_ASSIGN, &parsed_type, &parsed_name) && check(p, TOKEN_ASSIGN)) {
 			ok = 1;
 		}
 	}
