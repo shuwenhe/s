@@ -19,7 +19,7 @@ func estimate_devirtualized_sites_graph(mir_graph graph) int {
         j := 0
         for j < std.prelude.len(block.statements) {
             switch block.statements[j] {
-                mir_statement::eval(eval_stmt) : {
+                mir_statement.eval(eval_stmt) : {
                     if eval_stmt.op == "dynamic_call" || eval_stmt.op == "iface_call" || eval_stmt.op == "member_call" {
                         candidates = candidates + 1
                     }

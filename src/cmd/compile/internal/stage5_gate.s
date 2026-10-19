@@ -102,18 +102,18 @@ func collect_identifiers_from_item(item it) identifier_info[] {
     identifiers := identifier_info[]()
     
     switch it {
-        item::function(function_decl) : {
+        item.function(function_decl) : {
             identifiers = append_from_function_body(identifiers, function_decl.body)
         }
-        item::method(method_decl) : {
+        item.method(method_decl) : {
             identifiers = append_from_function_body(identifiers, method_decl.method.body)
         }
-        item::const(const_decl) : {
+        item.const(const_decl) : {
             switch const_decl.value {
-                s.option::some(expr_val) : {
+                s.option.some(expr_val) : {
                     identifiers = append_from_expr(identifiers, expr_val)
                 }
-                s.option::none : {}
+                s.option.none : {}
             }
         }
         _ : {}
@@ -124,10 +124,10 @@ func collect_identifiers_from_item(item it) identifier_info[] {
 
 func append_from_function_body(identifier_info[] acc, s.option[s.block] body) identifier_info[] {
     switch body {
-        s.option::some(block_val) : {
+        s.option.some(block_val) : {
             return append_from_block(acc, block_val)
         }
-        s.option::none : {}
+        s.option.none : {}
     }
     acc
 }
@@ -140,10 +140,10 @@ func append_from_block(identifier_info[] acc, s.block blk) identifier_info[] {
     }
     
     switch blk.final_expr {
-        s.option::some(expr_val) : {
+        s.option.some(expr_val) : {
             acc = append_from_expr(acc, expr_val)
         }
-        s.option::none : {}
+        s.option.none : {}
     }
     
     acc
@@ -151,45 +151,45 @@ func append_from_block(identifier_info[] acc, s.block blk) identifier_info[] {
 
 func append_from_stmt(identifier_info[] acc, s.stmt st) identifier_info[] {
     switch st {
-        s.stmt::let(let_val) : {
+        s.stmt.let(let_val) : {
             switch let_val.value {
-                s.option::some(expr_val) : {
+                s.option.some(expr_val) : {
                     acc = append_from_expr(acc, expr_val)
                 }
-                s.option::none : {}
+                s.option.none : {}
             }
         }
-        s.stmt::assign(assign_val) : {
+        s.stmt.assign(assign_val) : {
             acc = append_from_expr(acc, assign_val.target)
             acc = append_from_expr(acc, assign_val.value)
         }
-        s.stmt::if_stmt(if_val) : {
+        s.stmt.if_stmt(if_val) : {
             acc = append_from_expr(acc, if_val.condition)
             acc = append_from_block(acc, if_val.then_block)
             switch if_val.else_block {
-                s.option::some(else_blk) : {
+                s.option.some(else_blk) : {
                     acc = append_from_block(acc, else_blk)
                 }
-                s.option::none : {}
+                s.option.none : {}
             }
         }
-        s.stmt::while_stmt(while_val) : {
+        s.stmt.while_stmt(while_val) : {
             acc = append_from_expr(acc, while_val.condition)
             acc = append_from_block(acc, while_val.body)
         }
-        s.stmt::for_stmt(for_val) : {
+        s.stmt.for_stmt(for_val) : {
             acc = append_from_expr(acc, for_val.iterable)
             acc = append_from_block(acc, for_val.body)
         }
-        s.stmt::return_stmt(return_val) : {
+        s.stmt.return_stmt(return_val) : {
             switch return_val.value {
-                s.option::some(expr_val) : {
+                s.option.some(expr_val) : {
                     acc = append_from_expr(acc, expr_val)
                 }
-                s.option::none : {}
+                s.option.none : {}
             }
         }
-        s.stmt::switch_stmt(switch_val) : {
+        s.stmt.switch_stmt(switch_val) : {
             acc = append_from_expr(acc, switch_val.target)
             i := 0
             for i < std.prelude.len(switch_val.arms) {
@@ -206,14 +206,14 @@ func append_from_stmt(identifier_info[] acc, s.stmt st) identifier_info[] {
 
 func append_from_expr(identifier_info[] acc, s.expr e) identifier_info[] {
     switch e {
-        s.expr::name(name_val) : {
+        s.expr.name(name_val) : {
             
             acc = append(acc, identifier_info {
                 identifier_text: name_val.name,
                 is_qualified: false,
             })
         }
-        s.expr::member(member_val) : {
+        s.expr.member(member_val) : {
             
             path := qualified_expr_path_gate(member_val)
             if path != "" {
@@ -224,7 +224,7 @@ func append_from_expr(identifier_info[] acc, s.expr e) identifier_info[] {
             }
             acc = append_from_expr(acc, member_val.target.value)
         }
-        s.expr::call(call_val) : {
+        s.expr.call(call_val) : {
             acc = append_from_expr(acc, call_val.callee.value)
             i := 0
             for i < std.prelude.len(call_val.args) {
@@ -232,34 +232,34 @@ func append_from_expr(identifier_info[] acc, s.expr e) identifier_info[] {
                 i = i + 1
             }
         }
-        s.expr::binary(binary_val) : {
+        s.expr.binary(binary_val) : {
             acc = append_from_expr(acc, binary_val.left.value)
             acc = append_from_expr(acc, binary_val.right.value)
         }
-        s.expr::unary(unary_val) : {
+        s.expr.unary(unary_val) : {
             acc = append_from_expr(acc, unary_val.operand.value)
         }
-        s.expr::index(index_val) : {
+        s.expr.index(index_val) : {
             acc = append_from_expr(acc, index_val.target.value)
             acc = append_from_expr(acc, index_val.index.value)
         }
-        s.expr::borrow(borrow_val) : {
+        s.expr.borrow(borrow_val) : {
             acc = append_from_expr(acc, borrow_val.target.value)
         }
-        s.expr::dereference(deref_val) : {
+        s.expr.dereference(deref_val) : {
             acc = append_from_expr(acc, deref_val.target.value)
         }
-        s.expr::cast(cast_val) : {
+        s.expr.cast(cast_val) : {
             acc = append_from_expr(acc, cast_val.target.value)
         }
-        s.expr::struct_literal(struct_val) : {
+        s.expr.struct_literal(struct_val) : {
             i := 0
             for i < std.prelude.len(struct_val.fields) {
                 acc = append_from_expr(acc, struct_val.fields[i].value)
                 i = i + 1
             }
         }
-        s.expr::array_literal(array_val) : {
+        s.expr.array_literal(array_val) : {
             i := 0
             for i < std.prelude.len(array_val.elements) {
                 acc = append_from_expr(acc, array_val.elements[i])
@@ -405,10 +405,10 @@ func print_name_resolution_gate_result(name_resolution_gate_result result) {
 
 func qualified_expr_path_gate(s.expr_member member_val) string {
     switch member_val.target.value {
-        s.expr::name(name_val) : {
+        s.expr.name(name_val) : {
             return name_val.name + "." + member_val.member
         }
-        s.expr::member(nested_member) : {
+        s.expr.member(nested_member) : {
             prefix := qualified_expr_path_gate(nested_member)
             if prefix != "" {
                 return prefix + "." + member_val.member

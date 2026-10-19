@@ -105,23 +105,23 @@ func (la* liveness_analysis) compute_live_intervals() {
 }
 
 func (la* liveness_analysis) variables_interfere(int var1, int var2) bool {
-    info1 := option::none
-    info2 := option::none
+    info1 := option.none
+    info2 := option.none
 
     for _idx_108 := 0; _idx_108 < len(la.vars); _idx_108++ {
         info := la.vars[_idx_108]
         if info.var_id == var1 {
-            info1 = option::some(info)
+            info1 = option.some(info)
         }
         if info.var_id == var2 {
-            info2 = option::some(info)
+            info2 = option.some(info)
         }
     }
 
     switch info1 {
-        option::some(v1): {
+        option.some(v1): {
             switch info2 {
-                option::some(v2): {
+                option.some(v2): {
                     return !(v1.last_use < v2.first_use || v2.last_use < v1.first_use)
                 }
             }

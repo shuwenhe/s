@@ -34,18 +34,18 @@ func new_escape_analysis() escape_analysis {
 }
 
 func (ea* escape_analysis) analyze_variable(int var_id, bool is_pointer, bool assigned_global, bool returned, bool passed_func) escape_level {
-    level := escape_level::escape_none
+    level := escape_level.escape_none
 
     if assigned_global {
-        level = escape_level::escape_global
+        level = escape_level.escape_global
     } else if returned {
-        level = escape_level::escape_func
+        level = escape_level.escape_func
     } else if passed_func {
-        level = escape_level::escape_func
+        level = escape_level.escape_func
     }
 
-    if is_pointer && level == escape_level::escape_func {
-        level = escape_level::escape_heap
+    if is_pointer && level == escape_level.escape_func {
+        level = escape_level.escape_heap
     }
 
     info := escape_info {
@@ -67,8 +67,8 @@ func (ea* escape_analysis) escape_to_heap(int var_id) bool {
         info := ea.infos[_idx_65]
         if info.var_id == var_id {
             switch info.level {
-                escape_level::escape_global: { return true }
-                escape_level::escape_heap: { return true }
+                escape_level.escape_global: { return true }
+                escape_level.escape_heap: { return true }
             }
         }
     }
@@ -79,7 +79,7 @@ func (ea* escape_analysis) escape_to_global(int var_id) bool {
     for _idx_77 := 0; _idx_77 < len(ea.infos); _idx_77++ {
         info := ea.infos[_idx_77]
         if info.var_id == var_id {
-            if info.level == escape_level::escape_global {
+            if info.level == escape_level.escape_global {
                 return true
             }
         }
@@ -91,7 +91,7 @@ func (ea* escape_analysis) stays_local(int var_id) bool {
     for _idx_88 := 0; _idx_88 < len(ea.infos); _idx_88++ {
         info := ea.infos[_idx_88]
         if info.var_id == var_id {
-            if info.level == escape_level::escape_none {
+            if info.level == escape_level.escape_none {
                 return true
             }
         }
@@ -102,7 +102,7 @@ func (ea* escape_analysis) stays_local(int var_id) bool {
 func (ea* escape_analysis) analyze_flow(int from_var, int to_var) {
     for i := 0; i < ea; i++.infos.len() {
         if ea.infos[i].var_id == from_var {
-            to_level := escape_level::escape_none
+            to_level := escape_level.escape_none
             for _idx_102 := 0; _idx_102 < len(ea.infos); _idx_102++ {
                 info := ea.infos[_idx_102]
                 if info.var_id == to_var {
@@ -111,7 +111,7 @@ func (ea* escape_analysis) analyze_flow(int from_var, int to_var) {
                 }
             }
 
-            if to_level != escape_level::escape_none {
+            if to_level != escape_level.escape_none {
                 ea.infos[i].level = to_level
             }
 
@@ -166,10 +166,10 @@ func (ea* escape_analysis) build_alias_sets(int[] vars) {
 
             for _idx_161 := 0; _idx_161 < len(ea.infos); _idx_161++ {
                 info := ea.infos[_idx_161]
-                if info.var_id == vars[i] && info.level != escape_level::escape_none {
+                if info.var_id == vars[i] && info.level != escape_level.escape_none {
                     var1_escapes = true
                 }
-                if info.var_id == vars[j] && info.level != escape_level::escape_none {
+                if info.var_id == vars[j] && info.level != escape_level.escape_none {
                     var2_escapes = true
                 }
             }

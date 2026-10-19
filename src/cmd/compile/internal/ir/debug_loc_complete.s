@@ -48,7 +48,7 @@ func (debug_loc_propagator* dlp) get_current_scope() string {
     scope := ""
     for i := i32(0); i < dlp.current_depth; i += 1 {
         if i > 0 {
-            scope += "::"
+            scope += "."
         }
         scope += dlp.scope_stack[i]
     }

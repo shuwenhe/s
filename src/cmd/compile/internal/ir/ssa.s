@@ -58,7 +58,7 @@ func (static_single_assignment* ssa) create_value(string op, int[] args, int blo
         args: args,
         block_id: block_id,
         version: 0,
-        type_name: option::some(type_name)
+        type_name: option.some(type_name)
     }
     ssa.value_counter = ssa.value_counter + 1
     ssa.all_values.push(val)

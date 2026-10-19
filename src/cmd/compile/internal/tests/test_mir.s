@@ -42,12 +42,12 @@ func run_mir_suite() int {
         return 1
     }
     gate_statements := mir_statement[]()
-    gate_statements.push(mir_statement::move(mir_move_stmt {
+    gate_statements.push(mir_statement.move(mir_move_stmt {
         target: 1, source mir_operand {
             kind: "local", value: "_1", type_name: "box[int]",
         },
     }))
-    gate_statements.push(mir_statement::drop(mir_drop_stmt { slot: 1 }))
+    gate_statements.push(mir_statement.drop(mir_drop_stmt { slot: 1 }))
     gate_blocks := mir_basic_block[]()
     gate_blocks.push(mir_basic_block {
         id: 0,
@@ -86,11 +86,11 @@ func run_mir_suite() int {
     read_place := mir_place {
         root: "args",
         projections: mir_place_projection[] {
-            mir_place_projection { kind: mir_projection_kind::index, value: "1" },
+            mir_place_projection { kind: mir_projection_kind.index, value: "1" },
         },
     }
     read_statements := mir_statement[]()
-    read_statements.push(mir_statement::read(mir_read_stmt {
+    read_statements.push(mir_statement.read(mir_read_stmt {
         place: read_place, result mir_operand { kind: "local", value: "command", type_name: "unknown" },
     }))
     read_blocks := mir_basic_block[]()
@@ -108,10 +108,10 @@ func run_mir_suite() int {
         return 1
     }
     switch read_graph.blocks[0].statements[0] {
-        mir_statement::read(read_stmt) : {
+        mir_statement.read(read_stmt) : {
             if read_stmt.place.root != "args" { return 1 }
             if len(read_stmt.place.projections) != 1 { return 1 }
-            if read_stmt.place.projections[0].kind != mir_projection_kind::index { return 1 }
+            if read_stmt.place.projections[0].kind != mir_projection_kind.index { return 1 }
             if read_stmt.place.projections[0].value != "1" { return 1 }
             if read_stmt.result.value != "command" { return 1 }
         }
@@ -126,12 +126,12 @@ func run_mir_suite() int {
     else_args := string[]()
     else_args = append(else_args, "else")
     entry_statements := mir_statement[]()
-    entry_statements.push(mir_statement::eval(mir_eval_stmt { op: "line", args stmt0_args }))
-    entry_statements.push(mir_statement::eval(mir_eval_stmt { op: "line", args stmt1_args }))
+    entry_statements.push(mir_statement.eval(mir_eval_stmt { op: "line", args stmt0_args }))
+    entry_statements.push(mir_statement.eval(mir_eval_stmt { op: "line", args stmt1_args }))
     then_statements := mir_statement[]()
-    then_statements.push(mir_statement::eval(mir_eval_stmt { op: "line", args then_args }))
+    then_statements.push(mir_statement.eval(mir_eval_stmt { op: "line", args then_args }))
     else_statements := mir_statement[]()
-    else_statements.push(mir_statement::eval(mir_eval_stmt { op: "line", args else_args }))
+    else_statements.push(mir_statement.eval(mir_eval_stmt { op: "line", args else_args }))
     branch_condition := option.some(mir_operand {
         kind: "local", value: "cond", type_name: "bool",
     })
@@ -192,13 +192,13 @@ func run_mir_suite() int {
     if mir.mir_point_id(point_map, 1, 1) != 4 { return 1 }
     if mir.mir_point_id(point_map, 3, 0) != 7 { return 1 }
     fact_statements := mir_statement[]()
-    fact_statements.push(mir_statement::mir_borrow(mir_borrow_stmt {
+    fact_statements.push(mir_statement.mir_borrow(mir_borrow_stmt {
         ref_name: "_2", place mir_place { root: "_1", projections: mir_place_projection[]() }, mutable false,
     }))
-    fact_statements.push(mir_statement::ref_assign(mir_ref_assign_stmt {
+    fact_statements.push(mir_statement.ref_assign(mir_ref_assign_stmt {
         target_ref: "_3", source_ref "_2",
     }))
-    fact_statements.push(mir_statement::ref_use(mir_ref_use_stmt {
+    fact_statements.push(mir_statement.ref_use(mir_ref_use_stmt {
         ref_name: "_3",
     }))
     fact_blocks := mir_basic_block[]()
@@ -239,7 +239,7 @@ func count_mir_reads(mir_graph graph) int {
         j := 0
         while j < len(graph.blocks[i].statements) {
             switch graph.blocks[i].statements[j] {
-                mir_statement::read(_) : count = count + 1
+                mir_statement.read(_) : count = count + 1
                 _ : { }
             }
             j = j + 1
@@ -256,7 +256,7 @@ func count_mir_moves(mir_graph graph) int {
         j := 0
         while j < len(graph.blocks[i].statements) {
             switch graph.blocks[i].statements[j] {
-                mir_statement::move(_) : count = count + 1
+                mir_statement.move(_) : count = count + 1
                 _ : { }
             }
             j = j + 1
@@ -273,7 +273,7 @@ func count_mir_drops(mir_graph graph) int {
         j := 0
         while j < len(graph.blocks[i].statements) {
             switch graph.blocks[i].statements[j] {
-                mir_statement::drop(_) : count = count + 1
+                mir_statement.drop(_) : count = count + 1
                 _ : { }
             }
             j = j + 1
@@ -324,9 +324,9 @@ func test_real_mir_source_ownership_facts() int {
         j := 0
         while j < len(graph.blocks[i].statements) {
             switch graph.blocks[i].statements[j] {
-                mir_statement::mir_borrow(_) : has_borrow = true
-                mir_statement::ref_assign(_) : has_ref_assign = true
-                mir_statement::ref_use(_) : has_ref_use = true
+                mir_statement.mir_borrow(_) : has_borrow = true
+                mir_statement.ref_assign(_) : has_ref_assign = true
+                mir_statement.ref_use(_) : has_ref_use = true
                 _ : { }
             }
             j = j + 1
@@ -417,15 +417,15 @@ func test_real_mir_semantic_order() int {
         stmt_idx := 0
         while stmt_idx < len(graph.blocks[block_idx].statements) {
             switch graph.blocks[block_idx].statements[stmt_idx] {
-                mir_statement::mir_borrow(_) : {
+                mir_statement.mir_borrow(_) : {
                     borrow_block = block_idx
                     borrow_stmt = stmt_idx
                 }
-                mir_statement::ref_assign(_) : {
+                mir_statement.ref_assign(_) : {
                     ref_assign_block = block_idx
                     ref_assign_stmt = stmt_idx
                 }
-                mir_statement::ref_use(_) : {
+                mir_statement.ref_use(_) : {
                     ref_use_block = block_idx
                     ref_use_stmt = stmt_idx
                 }
@@ -480,9 +480,9 @@ func test_real_mir_read_index() int {
         stmt_idx := 0
         while stmt_idx < len(graph.blocks[block_idx].statements) {
             switch graph.blocks[block_idx].statements[stmt_idx] {
-                mir_statement::read(read_stmt) : {
+                mir_statement.read(read_stmt) : {
                     if read_stmt.place.root == "args" && len(read_stmt.place.projections) == 1 &&
-                       read_stmt.place.projections[0].kind == mir_projection_kind::index &&
+                       read_stmt.place.projections[0].kind == mir_projection_kind.index &&
                        read_stmt.place.projections[0].value == "1" &&
                        read_stmt.result.value == "command" {
                         found = true

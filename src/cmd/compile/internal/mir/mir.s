@@ -232,7 +232,7 @@ func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_o
         for stmt_index < len(graph.blocks[block_index].statements) {
             point := mir_point_id(points, graph.blocks[block_index].id, stmt_index)
             switch graph.blocks[block_index].statements[stmt_index] {
-                mir_statement::mir_borrow(borrow_stmt) : {
+                mir_statement.mir_borrow(borrow_stmt) : {
                     ref_id := mir_ownership_ref_id(&facts, borrow_stmt.ref_name)
                     loan_id := facts.input.loan_count
                     facts.input.loan_count = facts.input.loan_count + 1
@@ -245,11 +245,11 @@ func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_o
                     facts.input.ref_loans[ref_id] = loan_id
                     facts.input.region_points[ref_id] = mir_add_point_value(facts.input.region_points[ref_id], point)
                 }
-                mir_statement::ref_use(use_stmt) : {
+                mir_statement.ref_use(use_stmt) : {
                     ref_id := mir_ownership_ref_id(&facts, use_stmt.ref_name)
                     facts.input.region_points[ref_id] = mir_add_point_value(facts.input.region_points[ref_id], point)
                 }
-                mir_statement::ref_assign(assign_stmt) : {
+                mir_statement.ref_assign(assign_stmt) : {
                     target_ref := mir_ownership_ref_id(&facts, assign_stmt.target_ref)
                     source_ref := mir_ownership_ref_id(&facts, assign_stmt.source_ref)
                     facts.input.ref_loans[target_ref] = facts.input.ref_loans[source_ref]
@@ -257,7 +257,7 @@ func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_o
                     facts.input.outlives_to = append(facts.input.outlives_to, target_ref)
                     facts.input.outlives_count = facts.input.outlives_count + 1
                 }
-                mir_statement::move(move_stmt) : {
+                mir_statement.move(move_stmt) : {
                     facts.moves = append(facts.moves, mir_move_fact { point: point, target: move_stmt.target, source: move_stmt.source })
                 }
                 _ : { }
@@ -307,7 +307,7 @@ func mir_place_from_fields(string root, string[] fields) mir_place {
     i := 0
     for i < len(fields) {
         projections = append(projections, mir_place_projection{
-            kind: mir_projection_kind::field,
+            kind: mir_projection_kind.field,
             value: fields[i],
         })
         i = i + 1
@@ -458,7 +458,7 @@ func lower_block_graph(string function_name, param[] params, block_expr block) m
         stmt_text := join_text(s.dump_stmt(block.statements[index], indent(1)), " | ")
         args := string[]()
         args = append(args, stmt_text)
-        statements.push(mir_statement::eval(mir_eval_stmt {
+        statements.push(mir_statement.eval(mir_eval_stmt {
             op: "stmt", args args,
         }))
         mir_append_ownership_semantics_from_stmt(statements, block.statements[index])
@@ -515,7 +515,7 @@ func mir_append_scope_drops(mir_local_slot[] locals, mir_statement[] statements,
     i := len(locals) - 1
     for i >= 0 {
         if compile.internal.typesys.requires_drop(locals[i].kindname) && locals[i].kindname != "unknown" && !mir_local_moved_at_exit(locals[i].name, events) {
-            statements.push(mir_statement::drop(mir_drop_stmt { slot: locals[i].id }))
+            statements.push(mir_statement.drop(mir_drop_stmt { slot: locals[i].id }))
         }
         i = i - 1
     }
@@ -813,7 +813,7 @@ func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr v
             target := borrow_expr.target.unwrap()
             place := mir_place_from_expr(target)
             if result_name != "" && place.root != "" {
-                statements.push(mir_statement::mir_borrow(mir_borrow_stmt {
+                statements.push(mir_statement.mir_borrow(mir_borrow_stmt {
                     ref_name: result_name, place place, mutable borrow_expr.mutable,
                 }))
             }
@@ -821,11 +821,11 @@ func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr v
         }
         expr.name(name_expr) : {
             if result_name != "" {
-                statements.push(mir_statement::ref_assign(mir_ref_assign_stmt {
+                statements.push(mir_statement.ref_assign(mir_ref_assign_stmt {
                     target_ref: result_name, source_ref name_expr.name,
                 }))
             } else {
-                statements.push(mir_statement::ref_use(mir_ref_use_stmt {
+                statements.push(mir_statement.ref_use(mir_ref_use_stmt {
                     ref_name: name_expr.name,
                 }))
             }
@@ -845,7 +845,7 @@ func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr v
         expr.member(member_expr) : {
             place := mir_place_from_expr(value)
             if result_name != "" && place.root != "" {
-                statements.push(mir_statement::read(mir_read_stmt {
+                statements.push(mir_statement.read(mir_read_stmt {
                     place: place, result mir_operand { kind: "local", value: result_name, type_name: "unknown" },
                 }))
             }
@@ -854,7 +854,7 @@ func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr v
         expr.index(index_expr) : {
             place := mir_place_from_expr(value)
             if result_name != "" && place.root != "" {
-                statements.push(mir_statement::read(mir_read_stmt {
+                statements.push(mir_statement.read(mir_read_stmt {
                     place: place, result mir_operand { kind: "local", value: result_name, type_name: "unknown" },
                 }))
             }
