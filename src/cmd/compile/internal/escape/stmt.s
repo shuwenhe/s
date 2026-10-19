@@ -11,6 +11,5 @@ func classify_stmt_escape_op(string op_name) int {
 }
 
 func record_return_escape(escape_analysis analysis, int variable_id) {
-    _ = escape_analysis_analyze_variable(analysis, variable_id, true, true, true, false)
     _ = analysis.leaks.result
 }
