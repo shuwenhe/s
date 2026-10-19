@@ -3353,9 +3353,10 @@ static ast_node *parse_enum_decl(parser *p) {
 		ast_enum_variant *variant = &variants[variant_count - 1];
 		if (!variant->name) goto oom;
 		if (match(p, TOKEN_LPAREN)) {
-			if (!expect(p, TOKEN_IDENTIFIER, "enum payload type")) goto fail;
-			variant->payload_type = dup_cstr(prev(p)->lexeme);
-			if (!variant->payload_type) goto oom;
+			if (!try_parse_type_annotation(p, &variant->payload_type)) {
+				if (!error_is_set(p->err)) parse_error(p, peek(p), "expected enum payload type");
+				goto fail;
+			}
 			if (!expect(p, TOKEN_RPAREN, "')' after enum payload type")) goto fail;
 		}
 		if (match(p, TOKEN_ASSIGN)) {

@@ -10,13 +10,14 @@ struct codegen_context {
 
 func make_codegen_context() codegen_context {
     pl := make_prog_list()
-    ctx: codegen_context
-    ctx.progs = &pl
-    ctx.alloc_state = &make_reg_alloc_state()
-    ctx.current_func = ""
-    ctx.current_pos = 0
-    ctx.next_label_id = 0
-    ctx.labels = string[]()
+    ctx := codegen_context {
+        progs: &pl,
+        alloc_state: &make_reg_alloc_state(),
+        current_func: "",
+        current_pos: 0,
+        next_label_id: 0,
+        labels: string[](),
+    }
     ctx
 }
 
