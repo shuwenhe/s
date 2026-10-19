@@ -26,6 +26,7 @@ static int looks_like_typed_binding(parser *p);
 static int try_parse_typed_name(parser *p, token_type terminator, char **out_type, char **out_name);
 static int try_parse_type_annotation(parser *p, char **out_type);
 static char *join_lexemes_range(const token_vec *tokens, size_t start, size_t end);
+static char *member_expr_to_name(ast_node *expr);
 static ast_node *parse_map_literal_expr(parser *p, const token *type_tok, const char *type_name);
 static char *dup_cstr(const char *s) {
 	size_t n = strlen(s);
@@ -379,6 +380,15 @@ static int check_pattern_name_token(parser *p) {
 		t == TOKEN_BREAK ||
 		t == TOKEN_CONTINUE;
 }
+static int could_be_identifier_like(parser *p) {
+	token_type t = peek(p)->type;
+	/* Allow identifiers and keywords that could be used as names */
+	return t == TOKEN_IDENTIFIER || t == TOKEN_FN || t == TOKEN_IF || t == TOKEN_FOR ||
+	       t == TOKEN_WHILE || t == TOKEN_RETURN || t == TOKEN_BREAK || t == TOKEN_CONTINUE ||
+	       t == TOKEN_TRUE || t == TOKEN_FALSE || t == TOKEN_IMPORT || t == TOKEN_AS ||
+	       t == TOKEN_PACKAGE || t == TOKEN_USE || t == TOKEN_ELSE;
+}
+
 static int match(parser *p, token_type t) {
 	if (!check(p, t)) {
 		return 0;
@@ -854,6 +864,38 @@ static ast_node *parse_receiver_adjacent_call(parser *p, ast_node *receiver) {
 static ast_node *parse_call(parser *p) {
 	(void)p;
 	ast_node *expr = parse_primary(p);
+	/* Consume a qualified member path before handling :: variants.  Keeping
+	 * this prefix pass separate makes pkg.Type::Variant unambiguous even when
+	 * the general postfix loop has other call/index cases to consider. */
+	while (expr && check(p, TOKEN_DOT) && peek_ahead(p, 1) &&
+		peek_ahead(p, 1)->type == TOKEN_IDENTIFIER) {
+		ast_node *member;
+		advance_tok(p);
+		member = ast_new(AST_MEMBER_EXPR, prev(p)->pos);
+		if (!member) { ast_free(expr); return NULL; }
+		advance_tok(p);
+		member->as.member_expr.object = expr;
+		member->as.member_expr.member = dup_cstr(prev(p)->lexeme);
+		if (!member->as.member_expr.member) {
+			ast_free(member);
+			return NULL;
+		}
+		expr = member;
+	}
+	if (expr && (expr->kind == AST_IDENT_EXPR || expr->kind == AST_MEMBER_EXPR) &&
+		check(p, TOKEN_LBRACE) && looks_like_struct_literal(p)) {
+		char *type_name = member_expr_to_name(expr);
+		token synthetic_type;
+		ast_node *struct_expr;
+		if (!type_name) { ast_free(expr); return NULL; }
+		synthetic_type.type = TOKEN_IDENTIFIER;
+		synthetic_type.lexeme = type_name;
+		synthetic_type.pos = expr->pos;
+		struct_expr = parse_struct_literal_expr(p, &synthetic_type);
+		free(type_name);
+		ast_free(expr);
+		return struct_expr;
+	}
 	if (!expr) {
 		return NULL;
 	}
@@ -984,6 +1026,50 @@ static ast_node *parse_call(parser *p) {
 				}
 				indexed->as.index_expr.object = expr;
 				indexed->as.index_expr.index = index_expr;
+				
+				/* Check if this is a typed array literal constructor like Type[] { ... } */
+				if (index_expr == NULL && check(p, TOKEN_LBRACE)) {
+					ast_node *array_expr = ast_new(AST_ARRAY_EXPR, prev(p)->pos);
+					if (!array_expr) {
+						ast_free(indexed);
+						return NULL;
+					}
+					if (!match(p, TOKEN_LBRACE)) {
+						ast_free(array_expr);
+						ast_free(indexed);
+						return NULL;
+					}
+					if (!check(p, TOKEN_RBRACE)) {
+						for (;;) {
+							ast_node *item = parse_assignment(p);
+							if (!item) {
+								ast_free(array_expr);
+								ast_free(indexed);
+								return NULL;
+							}
+							if (!ast_vec_push(&array_expr->as.array_expr.items, item)) {
+								ast_free(item);
+								ast_free(array_expr);
+								ast_free(indexed);
+								return NULL;
+							}
+							if (!match(p, TOKEN_COMMA)) {
+								break;
+							}
+							if (check(p, TOKEN_RBRACE)) {
+								break;
+							}
+						}
+					}
+					if (!expect(p, TOKEN_RBRACE, "}")) {
+						ast_free(array_expr);
+						ast_free(indexed);
+						return NULL;
+					}
+					ast_free(indexed);
+					expr = array_expr;
+					continue;
+				}
 			}
 			expr = indexed;
 			continue;
@@ -992,27 +1078,53 @@ static ast_node *parse_call(parser *p) {
 			p->tokens->data[p->current + 1].type == TOKEN_COLON) {
 			char *qualified;
 			size_t qualified_len;
-			if (expr->kind != AST_IDENT_EXPR) {
-				parse_error(p, peek(p), "qualified name requires an identifier namespace");
+			char *left_name = NULL;
+			
+			if (expr->kind == AST_IDENT_EXPR) {
+				left_name = expr->as.ident_expr.name;
+			} else if (expr->kind == AST_MEMBER_EXPR) {
+				// Convert member expression to dotted name
+				left_name = member_expr_to_name(expr);
+				if (!left_name) {
+					ast_free(expr);
+					return NULL;
+				}
+			} else {
+				parse_error(p, peek(p), "qualified name requires an identifier or member expression");
 				ast_free(expr);
 				return NULL;
 			}
+			
 			advance_tok(p);
 			advance_tok(p);
-			if (!check_pattern_name_token(p) && !check(p, TOKEN_TRUE) && !check(p, TOKEN_FALSE)) {
+			if (!could_be_identifier_like(p)) {
 				parse_error(p, peek(p), "qualified name member");
+				if (expr->kind == AST_MEMBER_EXPR) free(left_name);
 				ast_free(expr);
 				return NULL;
 			}
 			advance_tok(p);
-			qualified_len = strlen(expr->as.ident_expr.name) + strlen(prev(p)->lexeme) + 3;
+			
+			qualified_len = strlen(left_name) + strlen(prev(p)->lexeme) + 3;
 			qualified = (char *)malloc(qualified_len);
 			if (!qualified) {
+				if (expr->kind == AST_MEMBER_EXPR) free(left_name);
 				ast_free(expr);
 				return NULL;
 			}
-			snprintf(qualified, qualified_len, "%s::%s", expr->as.ident_expr.name, prev(p)->lexeme);
-			free(expr->as.ident_expr.name);
+			snprintf(qualified, qualified_len, "%s::%s", left_name, prev(p)->lexeme);
+			
+			if (expr->kind == AST_MEMBER_EXPR) {
+				free(left_name);
+				ast_free(expr);
+				expr = ast_new(AST_IDENT_EXPR, prev(p)->pos);
+				if (!expr) {
+					free(qualified);
+					return NULL;
+				}
+			} else {
+				free(expr->as.ident_expr.name);
+			}
 			expr->as.ident_expr.name = qualified;
 			continue;
 		}
@@ -1983,6 +2095,29 @@ static int try_parse_type_annotation(parser *p, char **out_type) {
 		if (!parsed) {
 			error_set(p->err, ERR_OUT_OF_MEMORY, prev(p)->pos.line, prev(p)->pos.column, "out of memory");
 			return 0;
+		}
+		/* Handle qualified type names like ir_ast.package_ir */
+		while (match(p, TOKEN_DOT)) {
+			const token *part;
+			char *qualified;
+			size_t need;
+			if (!check(p, TOKEN_IDENTIFIER)) {
+				free(parsed);
+				p->current = saved;
+				return 0;
+			}
+			part = advance_tok(p);
+			need = strlen(parsed) + strlen(part->lexeme) + 2;
+			qualified = (char *)malloc(need);
+			if (!qualified) {
+				error_set(p->err, ERR_OUT_OF_MEMORY, part->pos.line, part->pos.column, "out of memory");
+				free(parsed);
+				p->current = saved;
+				return 0;
+			}
+			snprintf(qualified, need, "%s.%s", parsed, part->lexeme);
+			free(parsed);
+			parsed = qualified;
 		}
 		while (check(p, TOKEN_LBRACKET)) {
 			size_t inner_start;
@@ -3072,7 +3207,7 @@ static ast_node *parse_switch_statement(parser *p) {
 						is_pattern_switch = true;
 					
 						// Expect variant name
-						if (!check_pattern_name_token(p) && !check(p, TOKEN_TRUE) && !check(p, TOKEN_FALSE)) {
+						if (!could_be_identifier_like(p)) {
 							parse_error(p, peek(p), "expected variant name after ::");
 							ast_free(subject);
 							ast_free(root);
@@ -3100,18 +3235,35 @@ static ast_node *parse_switch_statement(parser *p) {
 						}
 					} else if (check(p, TOKEN_DOT)) {
 						// Pattern: namespace.variant(binding), matching canonical AST enum arms.
+						// Also handle qualified namespaces like ir_ast.decl_ir::func
 						is_pattern_switch = true;
 						do {
-							if (!variant_owner) variant_owner = dup_cstr(word);
-							variant_name = dup_cstr(peek(p)->lexeme);
-							advance_tok(p);
+							if (!check(p, TOKEN_DOT)) break;
+							advance_tok(p);  // consume the dot
 							if (!check_pattern_name_token(p)) {
 								parse_error(p, peek(p), "expected pattern name after .");
 								ast_free(subject);
 								ast_free(root);
 								return NULL;
 							}
-							advance_tok(p);
+							if (!variant_owner) variant_owner = dup_cstr(word);
+							variant_name = dup_cstr(peek(p)->lexeme);
+							advance_tok(p);  // consume the identifier
+							
+							// Check if followed by ::
+							if (check(p, TOKEN_COLON) && peek_ahead(p, 1) && peek_ahead(p, 1)->type == TOKEN_COLON) {
+								advance_tok(p);  // consume first :
+								advance_tok(p);  // consume second :
+								if (!could_be_identifier_like(p)) {
+									parse_error(p, peek(p), "expected variant name after ::");
+									ast_free(subject);
+									ast_free(root);
+									return NULL;
+								}
+								variant_name = dup_cstr(peek(p)->lexeme);
+								advance_tok(p);  // consume variant name
+								break;
+							}
 						} while (check(p, TOKEN_DOT));
 						if (check(p, TOKEN_LPAREN)) {
 							advance_tok(p);
