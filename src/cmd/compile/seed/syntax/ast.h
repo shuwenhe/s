@@ -1,6 +1,8 @@
 #ifndef S_SEED_AST_H
 #define S_SEED_AST_H
 #include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include "../lexical/token.h"
 typedef enum ast_kind {
 	AST_PROGRAM = 0,
@@ -46,6 +48,10 @@ typedef struct ast_vec {
 typedef struct ast_enum_variant {
 	char *name;
 	char *payload_type;
+	int64_t explicit_value;
+	bool has_explicit_value;
+	bool has_resolved_value;
+	int64_t resolved_value;
 } ast_enum_variant;
 typedef enum pattern_kind {
 	PATTERN_NONE = 0,
