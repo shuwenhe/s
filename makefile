@@ -20,6 +20,14 @@ SEED_COMPILER_SOURCES := $(wildcard src/cmd/compile/seed/*.c src/cmd/compile/see
 
 seed-compiler-bin: bin/s_seed
 
+# S-written stage controller. This target builds the controller only; the
+# complete compiler bootstrap is a separate execution with a fresh output dir.
+.PHONY: s-dist-bootstrap-bin
+s-dist-bootstrap-bin: seed-compiler-bin
+	@mkdir -p .bootstrap/s-dist
+	./bin/s_seed src/cmd/dist/bootstrap.s .bootstrap/s-dist/bootstrap.ir
+	./bin/s_seed --emit-bin .bootstrap/s-dist/bootstrap.ir .bootstrap/s-dist/s-dist-bootstrap
+
 bin/s_seed: $(SEED_COMPILER_SOURCES)
 	@mkdir -p ./bin
 	@echo "Building seed compiler..."
