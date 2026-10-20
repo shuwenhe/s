@@ -5,22 +5,22 @@ import (
 func map_file_read(string path, int offset, int length) (string, string) {
     full := std.fs.read_to_string(path)
     if full.is_err() {
-        return "read file failed"
+        return "", "read file failed"
     }
     text := full.unwrap()
     if offset < 0 || length < 0 {
-        return "invalid map range"
+        return "", "invalid map range"
     }
     if offset > len(text) {
-        return "offset out of range"
+        return "", "offset out of range"
     }
     end := offset + length
     if end > len(text) {
         end = len(text)
     }
-    slice(text, offset, end)
+    return slice(text, offset, end), ""
 }
 
 func map_file(string path, int offset, int length) (string, string) {
-    map_file_read(path, offset, length)
+    return map_file_read(path, offset, length)
 }
