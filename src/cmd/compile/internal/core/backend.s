@@ -342,8 +342,8 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
         return report_failure(exit_result_error(exit_code_result).message)
     }
     runtime_metrics_result := compile_runtime_metrics(parsed, graph)
-    if runtime_metrics_result.is_err() {
-        return report_failure(runtime_metrics_result.unwrap_err().message)
+    if runtime_metrics_is_err(runtime_metrics_result) {
+        return report_failure(runtime_metrics_error(runtime_metrics_result).message)
     }
     temp_dir_result := std.fs.make_temp_dir("s-build-")
     if temp_dir_result.is_err() {
@@ -3273,19 +3273,33 @@ func exit_result_value(result[int, backend_error] value) int {
     }
 }
 
-func compile_runtime_metrics(source_file source, mir_graph graph) (runtime_metrics, backend_error) {
+func compile_runtime_metrics(source_file source, mir_graph graph) result[runtime_metrics, backend_error] {
     if std.prelude.len(graph.blocks) == 0 {
-        return backend_error { message: "backend error: mir graph has no blocks" }
+        return result.err(backend_error { message: "backend error: mir graph has no blocks" })
     }
     source_exec := execute_source_main(source)
     if source_exec.is_ok() {
-        return source_exec.unwrap().runtime
+        return result.ok(source_exec.unwrap().runtime)
     }
     exec_result := execute_mir_graph(graph)
     if exec_result.is_err() {
-        return source_exec.unwrap_err()
+        return result.err(source_exec.unwrap_err())
     }
-    exec_result.unwrap().runtime
+    result.ok(exec_result.unwrap().runtime)
+}
+
+func runtime_metrics_is_err(result[runtime_metrics, backend_error] value) bool {
+    switch value {
+        result::ok(_) : false,
+        result::err(_) : true,
+    }
+}
+
+func runtime_metrics_error(result[runtime_metrics, backend_error] value) backend_error {
+    switch value {
+        result::ok(_) : backend_error { message: "" },
+        result::err(err) : err,
+    }
 }
 
 func execute_source_main(source_file source) (mir_execution_result, backend_error) {
