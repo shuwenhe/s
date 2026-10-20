@@ -706,19 +706,38 @@ func mir_expr_type_name(expr value) string {
         expr.string(_) : return "string"
         expr.bool(_) : return "bool"
         expr.call(call_value) : {
-            switch call_value.callee.unwrap() {
-                expr.name(name_value) : {
-                    if name_value.name == "box" || name_value.name == "box_new" {
-                        return "box[unknown]"
-                    }
+            if call_value.callee.is_some() {
+                callee_name := mir_callee_name(call_value.callee.unwrap())
+                if callee_name == "box" || callee_name == "box_new" {
+                    return "box[unknown]"
                 }
-                _ : { }
             }
             if call_value.inferred_type.is_some() { return call_value.inferred_type.unwrap() }
         }
-        _ : { }
+        _ : (),
     }
     "unknown"
+}
+
+func mir_callee_name(expr value) string {
+    switch value {
+        expr.name(name_value) : name_value.name,
+        expr.int(_) : "",
+        expr.string(_) : "",
+        expr.bool(_) : "",
+        expr.call(_) : "",
+        expr.binary(_) : "",
+        expr.block(_) : "",
+        expr.if(_) : "",
+        expr.for(_) : "",
+        expr.while(_) : "",
+        expr.array(_) : "",
+        expr.map(_) : "",
+        expr.borrow(_) : "",
+        expr.deref(_) : "",
+        expr.member(_) : "",
+        expr.index(_) : "",
+    }
 }
 
 func mir_expr_events(expr value, mir_local_slot[] locals, bool consume) string[] {
