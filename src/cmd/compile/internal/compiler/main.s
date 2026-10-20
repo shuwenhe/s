@@ -1,6 +1,9 @@
 package compile.internal
 
 func compiler_main(string[] args) int {
+    if len(args) == 4 && args[1] == "build" {
+        return handle_build_command(args[2], args[3])
+    }
     if len(args) == 4 && args[1] == "--emit-native-object" {
         return native_build_object(args[2], args[3])
     }
@@ -200,4 +203,8 @@ func handle_compile_unit(string[] args) int {
 func handle_emit_bin(string[] args) int {
     eprintln("compiler: --emit-bin not yet implemented")
     return 1
+}
+
+func handle_build_command(string input, string output) int {
+    return native_build(input, output, "", false)
 }
