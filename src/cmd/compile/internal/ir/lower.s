@@ -546,14 +546,7 @@ func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
         stmt.expr(expr_stmt) : stmt_expr_to_expr(expr_stmt, const_entries),
         stmt.defer(defer_stmt) : stmt_defer_to_expr(defer_stmt, const_entries),
         stmt.sroutine(sroutine_stmt) : stmt_sroutine_to_expr(sroutine_stmt, const_entries),
-        stmt.c_for(c_for_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
-            callee: "stmt.c_for", args ir_ast.expr_ir[] {
-                stmt_to_expr(c_for_stmt.init.value, const_entries),
-                convert_expr(c_for_stmt.condition, const_entries),
-                stmt_to_expr(c_for_stmt.step.value, const_entries),
-                block_to_expr(c_for_stmt.body, const_entries),
-            },
-        }),
+        stmt.c_for(c_for_stmt) : stmt_c_for_to_expr(c_for_stmt, const_entries),
     }
 }
 
@@ -593,6 +586,15 @@ func stmt_sroutine_to_expr(sroutine_stmt value, const_rewrite_entry[] entries) i
     args := ir_ast.expr_ir[]()
     args.push(convert_expr(value.expr, entries))
     ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.sroutine", args args })
+}
+
+func stmt_c_for_to_expr(value c_for_stmt, const_rewrite_entry[] entries) ir_ast.expr_ir {
+    args := ir_ast.expr_ir[]()
+    args.push(stmt_to_expr(value.init.value, entries))
+    args.push(convert_expr(value.condition, entries))
+    args.push(stmt_to_expr(value.step.value, entries))
+    args.push(block_to_expr(value.body, entries))
+    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.c_for", args args })
 }
 
 func block_to_expr(block_expr block, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
