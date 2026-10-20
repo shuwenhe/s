@@ -848,7 +848,7 @@ func verify_instruction_ssa(
     e_value_count := verify_flag_value_count()
     e_dom_count := verify_flag_dom_count()
     e_mem_count := verify_flag_mem_count()
-    if !starts_with(mir_text, "mir ") {
+    if !ssa_starts_with(mir_text, "mir ") {
         errors = errors + 1
         code = set_error_flag(code, e_format)
     }
@@ -2573,7 +2573,7 @@ func run_cfg_simplify_pass(int value_count, int branch_blocks) int {
 }
 
 func parse_function_name(string mir_text) string {
-    if !starts_with(mir_text, "mir ") {
+    if !ssa_starts_with(mir_text, "mir ") {
         return "main"
     }
     begin := 4
@@ -2835,7 +2835,7 @@ func find_token(string text, string token) int {
     std.prelude.len(text) + 1
 }
 
-func starts_with(string text, string prefix) bool {
+func ssa_starts_with(string text, string prefix) bool {
     if std.prelude.len(text) < std.prelude.len(prefix) {
         return false
     }
