@@ -3119,42 +3119,42 @@ func resolve_recovery_anchor(string source, string anchor) string {
 }
 
 func diagnostic_hint(string code, string anchor) string {
-    if starts_with_text(code, "e100") {
+    if semantic_starts_with_text(code, "e100") {
         return "check overload candidates and argument types near " + anchor
     }
-    if starts_with_text(code, "e200") {
+    if semantic_starts_with_text(code, "e200") {
         return "check switch exhaustiveness and pattern binding near " + anchor
     }
-    if starts_with_text(code, "e300") {
+    if semantic_starts_with_text(code, "e300") {
         return "check declared vs inferred type around " + anchor
     }
-    if starts_with_text(code, "e000") {
+    if semantic_starts_with_text(code, "e000") {
         return "fix parse/type-rule preconditions first"
     }
     "review surrounding declaration near " + anchor
 }
 
 func diagnostic_severity(string code) string {
-    if starts_with_text(code, "e000") {
+    if semantic_starts_with_text(code, "e000") {
         return "fatal"
     }
-    if starts_with_text(code, "e1") {
+    if semantic_starts_with_text(code, "e1") {
         return "warning"
     }
     "error"
 }
 
 func diagnostic_tier(string code) int {
-    if starts_with_text(code, "e000") {
+    if semantic_starts_with_text(code, "e000") {
         return 0
     }
-    if starts_with_text(code, "e1") {
+    if semantic_starts_with_text(code, "e1") {
         return 2
     }
     1
 }
 
-func starts_with_text(string text, string prefix) bool {
+func semantic_starts_with_text(string text, string prefix) bool {
     if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
