@@ -4077,28 +4077,28 @@ func eval_member_expr(member member_expr, source_file source, binding[] env, wri
     if target_result.is_err() {
         return target_result.unwrap_err()
     }
-    switch target_result.unwrap() {
-        value.owned_box(handle) : {
-            if member.member != "unwrap" {
-                return fail_value("backend error: unknown box member " + member.member)
-            }
-            if !handle.live {
+    handle_result := owned_box_from_value(target_result.unwrap())
+    if handle_result.is_none() {
+        return fail_value("backend error: member access is not supported for this value")
+    }
+    handle := handle_result.unwrap()
+    if member.member != "unwrap" {
+        return fail_value("backend error: unknown box member " + member.member)
+    }
+    if !handle.live {
+        return fail_value("backend error: use of released box")
+    }
+    i := 0
+    for i < std.prelude.len(runtime.owned_boxes) {
+        if runtime.owned_boxes[i].id == handle.id {
+            if !runtime.owned_boxes[i].live {
                 return fail_value("backend error: use of released box")
             }
-            i := 0
-            for i < std.prelude.len(runtime.owned_boxes) {
-                if runtime.owned_boxes[i].id == handle.id {
-                    if !runtime.owned_boxes[i].live {
-                        return fail_value("backend error: use of released box")
-                    }
-                    return ok_value(runtime.owned_boxes[i].payload)
-                }
-                i = i + 1
-            }
-            return fail_value("backend error: unknown owned box")
+            return ok_value(runtime.owned_boxes[i].payload)
         }
-        _ : fail_value("backend error: member access is not supported for this value"),
+        i = i + 1
     }
+    fail_value("backend error: unknown owned box")
 }
 
 func eval_panic_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
