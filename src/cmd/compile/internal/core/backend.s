@@ -195,7 +195,7 @@ func build_object(string path, string output, string ssa_margin_override) int {
     if source_result.is_err() { return report_failure("failed to read source: " + path) }
     parsed_result := load_source_graph(path, source_result.unwrap())
     if source_graph_is_err(parsed_result) { return report_failure(source_graph_error(parsed_result).message) }
-    module := compile.internal.ir.lower.lower_program_to_mir(source_graph_value(parsed_result))
+    module := lower_program_to_mir(source_graph_value(parsed_result))
     if module.error != "" { return report_failure(module.error) }
     return native_build_object_program(module.program, path, output, ssa_margin_override)
 }
@@ -217,7 +217,7 @@ func build_object_interpreted_legacy(string path, string output, string ssa_marg
             return report_failure("safety proof failed: " + safety.summary)
         }
     }
-    mir_result := compile.internal.ir.lower.lower_main_to_mir(parsed)
+    mir_result := lower_main_to_mir(parsed)
     if mir_result.is_err() {
         return report_failure("mir lowering failed: " + mir_result.unwrap_err())
     }
@@ -282,7 +282,7 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     if source_result.is_err() { return report_failure("failed to read source: " + path) }
     parsed_result := load_source_graph(path, source_result.unwrap())
     if source_graph_is_err(parsed_result) { return report_failure(source_graph_error(parsed_result).message) }
-    module := compile.internal.ir.lower.lower_program_to_mir(source_graph_value(parsed_result))
+    module := lower_program_to_mir(source_graph_value(parsed_result))
     if module.error != "" { return report_failure(module.error) }
     return native_build_program(module.program, path, output, ssa_margin_override, nostdlib)
 }
@@ -307,7 +307,7 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
             return report_failure("safety proof failed: " + safety.summary)
         }
     }
-    mir_result := compile.internal.ir.lower.lower_main_to_mir(parsed)
+    mir_result := lower_main_to_mir(parsed)
     if mir_result.is_err() {
         return report_failure("mir lowering failed: " + mir_result.unwrap_err())
     }
@@ -2538,11 +2538,11 @@ func load_source_graph(string path, string source) result[source_file, backend_e
         return result.err(deps_result.unwrap_err())
     }
     if !should_skip_semantic_check(path) {
-        semantic_result := compile.internal.semantic.check_source_file(combined, source)
+        semantic_result := check_source_file(combined, source)
         if std.prelude.len(semantic_result.errors) > 0 {
             return result.err(backend_error { message: "semantic check failed before monomorphization" })
         }
-        mono_result := compile.internal.mono.monomorphize_file(combined, semantic_result)
+        mono_result := monomorphize_file(combined, semantic_result)
         if mono_result.invariant_errors != 0 {
             return result.err(backend_error { message: "monomorphization failed: unresolved generic residue" })
         }
