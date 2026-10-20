@@ -565,7 +565,7 @@ func is_reference_type(string ty) bool {
     return starts_with(trim_text(ty), "&")
 }
 
-func is_slice_type(string ty) bool {
+func typesys_is_slice_type(string ty) bool {
     return starts_with(trim_text(ty), "[]")
 }
 
