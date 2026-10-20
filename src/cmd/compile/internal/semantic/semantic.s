@@ -316,10 +316,10 @@ func borrow_state_has_conflict(borrow_record[] state, string name, bool mutable)
 func borrow_places_overlap(string left, string right) bool {
     if left == right { return true }
     if left == "" || right == "" { return false }
-    if starts_with(left, right) {
+    if semantic_starts_with(left, right) {
         return std.prelude.len(left) > std.prelude.len(right) && string(left[std.prelude.len(right)]) == "."
     }
-    if starts_with(right, left) {
+    if semantic_starts_with(right, left) {
         return std.prelude.len(right) > std.prelude.len(left) && string(right[std.prelude.len(left)]) == "."
     }
     false
@@ -1263,10 +1263,10 @@ func method_binding_matches_trait(function_binding method, method_binding requir
 }
 
 func receiver_mode_from_type(string receiver_type) string {
-    if starts_with(receiver_type, "&") || starts_with(receiver_type, "*") {
+    if semantic_starts_with(receiver_type, "&") || semantic_starts_with(receiver_type, "*") {
         return "ref"
     }
-    if starts_with(receiver_type, "&") || starts_with(receiver_type, "*") {
+    if semantic_starts_with(receiver_type, "&") || semantic_starts_with(receiver_type, "*") {
         return "ref"
     }
     "value"
@@ -1287,10 +1287,10 @@ func receiver_mode_from_params(param[] params) string {
     if params[0].name != "self" {
         return "value"
     }
-    if starts_with(params[0].type_name, "&") {
+    if semantic_starts_with(params[0].type_name, "&") {
         return "mut_ref"
     }
-    if starts_with(params[0].type_name, "*") {
+    if semantic_starts_with(params[0].type_name, "*") {
         return "ref"
     }
     "value"
@@ -1392,7 +1392,7 @@ func validate_function_signature(function_decl function_decl, string source, sem
     errors := 0
     switch function_decl.sig.return_type {
         option.some(type_name) : {
-            if starts_with(compile.internal.typesys.parse_type(type_name), "&") {
+            if semantic_starts_with(compile.internal.typesys.parse_type(type_name), "&") {
                 errors = errors + add_error(source, diagnostics, "e3069", "reference return requires an explicit lifetime proof", function_decl.sig.name)
             }
         }
@@ -1672,7 +1672,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             target := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             index := infer_expr(value.index.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors := target.errors + index.errors
-            if starts_with(target.kindname, "[]") {
+            if semantic_starts_with(target.kindname, "[]") {
                 if !types_compatible("int", index.kindname) {
                     errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
                 }
@@ -1680,7 +1680,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     type_name: compile.internal.typesys.parse_type(std.prelude.slice(target.kindname, 2, std.prelude.len(target.kindname))), errors errors,
                 }
             }
-            if starts_with(target.kindname, "[") {
+            if semantic_starts_with(target.kindname, "[") {
                 if !types_compatible("int", index.kindname) {
                     errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
                 }
@@ -1688,7 +1688,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     type_name: strip_array_prefix(target.kindname), errors errors,
                 }
             }
-            if starts_with(target.kindname, "string") {
+            if semantic_starts_with(target.kindname, "string") {
                 if !types_compatible("int", index.kindname) {
                     errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
                 }
@@ -2558,10 +2558,10 @@ func lookup_methods(function_binding[] functions, string receiver_type, string n
 }
 
 func method_owner_type(string receiver_type) string {
-    if starts_with(receiver_type, "&") {
+    if semantic_starts_with(receiver_type, "&") {
         return std.prelude.slice(receiver_type, 5, std.prelude.len(receiver_type))
     }
-    if starts_with(receiver_type, "&") {
+    if semantic_starts_with(receiver_type, "&") {
         return std.prelude.slice(receiver_type, 1, std.prelude.len(receiver_type))
     }
     receiver_type
@@ -2572,13 +2572,13 @@ func receiver_allows_method(string receiver_type, expr receiver_expr, string rec
         return true
     }
     if receiver_mode == "mut_ref" {
-        if starts_with(receiver_type, "&") {
+        if semantic_starts_with(receiver_type, "&") {
             return true
         }
         return is_addressable_expr(receiver_expr)
     }
     if receiver_mode == "ref" {
-        if starts_with(receiver_type, "&") {
+        if semantic_starts_with(receiver_type, "&") {
             return true
         }
         return is_addressable_expr(receiver_expr)
@@ -2633,7 +2633,7 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
         actual_type_str := arg_types[i]
         
         matched := false
-        if starts_with(expected_type_str, "*") && starts_with(actual_type_str, "*") {
+        if semantic_starts_with(expected_type_str, "*") && semantic_starts_with(actual_type_str, "*") {
             
             expected_canonical := compile.internal.canonical_type.construct_canonical_from_string(expected_type_str, declarations)
             actual_canonical := compile.internal.canonical_type.construct_canonical_from_string(actual_type_str, declarations)
@@ -2660,7 +2660,7 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
             }
         }
         
-        if !starts_with(binding.param_types[i], "*") {
+        if !semantic_starts_with(binding.param_types[i], "*") {
             expected_ref := compile.internal.typesys.parse_type_ref(binding.param_types[i])
             actual_ref := compile.internal.typesys.parse_type_ref(arg_types[i])
             score = score + match_specificity(expected_ref, actual_ref, binding.generic_names)
@@ -2819,16 +2819,16 @@ func instantiate_type(string ty, string[] generic_names, type_binding[] generic_
             return bound
         }
     }
-    if starts_with(clean, "&") {
+    if semantic_starts_with(clean, "&") {
         return "&" + instantiate_type(std.prelude.slice(clean, 5, std.prelude.len(clean)), generic_names, generic_bindings)
     }
-    if starts_with(clean, "&") {
+    if semantic_starts_with(clean, "&") {
         return "&" + instantiate_type(std.prelude.slice(clean, 1, std.prelude.len(clean)), generic_names, generic_bindings)
     }
-    if starts_with(clean, "[]") {
+    if semantic_starts_with(clean, "[]") {
         return "[]" + instantiate_type(std.prelude.slice(clean, 2, std.prelude.len(clean)), generic_names, generic_bindings)
     }
-    if starts_with(clean, "[") {
+    if semantic_starts_with(clean, "[") {
         return array_prefix_text(clean) + instantiate_type(strip_array_prefix(clean), generic_names, generic_bindings)
     }
     args := compile.internal.typesys.extract_type_args(clean)
@@ -2853,16 +2853,16 @@ func type_contains_generic(string ty, string[] generic_names) bool {
     if is_generic_name(generic_names, clean) {
         return true
     }
-    if starts_with(clean, "&") {
+    if semantic_starts_with(clean, "&") {
         return type_contains_generic(std.prelude.slice(clean, 5, std.prelude.len(clean)), generic_names)
     }
-    if starts_with(clean, "&") {
+    if semantic_starts_with(clean, "&") {
         return type_contains_generic(std.prelude.slice(clean, 1, std.prelude.len(clean)), generic_names)
     }
-    if starts_with(clean, "[]") {
+    if semantic_starts_with(clean, "[]") {
         return type_contains_generic(std.prelude.slice(clean, 2, std.prelude.len(clean)), generic_names)
     }
-    if starts_with(clean, "[") {
+    if semantic_starts_with(clean, "[") {
         return type_contains_generic(strip_array_prefix(clean), generic_names)
     }
     args := compile.internal.typesys.extract_type_args(clean)
@@ -2889,7 +2889,7 @@ func is_generic_name(string[] generic_names, string name) bool {
 
 func strip_array_prefix(string ty) string {
     clean := compile.internal.typesys.parse_type(ty)
-    if !starts_with(clean, "[") || starts_with(clean, "[]") {
+    if !semantic_starts_with(clean, "[") || semantic_starts_with(clean, "[]") {
         return clean
     }
     depth := 0
@@ -2991,7 +2991,7 @@ func is_nilable_type(string type_name) bool {
     if clean == "fn" || clean == "map" {
         return true
     }
-    if starts_with(clean, "[]") || starts_with(clean, "&") {
+    if semantic_starts_with(clean, "[]") || semantic_starts_with(clean, "&") {
         return true
     }
     base := compile.internal.typesys.base_type_name(clean)
@@ -3211,7 +3211,7 @@ func index_to_pos(string source, int index) source_pos {
     }
 }
 
-func starts_with(string text, string prefix) bool {
+func semantic_starts_with(string text, string prefix) bool {
     if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
