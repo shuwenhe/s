@@ -60,22 +60,22 @@ func syntax_parser_new(token* tokens, int token_count) parser* {
     return p
 }
 
-func parser_current_token(parser* p) token* {
+func syntax_parser_current_token(parser* p) token* {
     if p.pos >= p.token_count {
         return &p.tokens[p.token_count - 1]
     }
     return &p.tokens[p.pos]
 }
 
-func parser_advance(parser* p) {
+func syntax_parser_advance(parser* p) {
     if p.pos < p.token_count - 1 {
         p.pos = p.pos + 1
     }
 }
 
-func parser_match(parser* p, int token_type) int {
-    if parser_current_token(p).kind == token_type {
-        parser_advance(p)
+func syntax_parser_match(parser* p, int token_type) int {
+    if syntax_parser_current_token(p).kind == token_type {
+        syntax_parser_advance(p)
         return 1
     }
     return 0
@@ -83,10 +83,10 @@ func parser_match(parser* p, int token_type) int {
 
 func syntax_parser_skip_newlines(parser* p) {
     for {
-        if parser_current_token(p).kind != 86 {
+        if syntax_parser_current_token(p).kind != 86 {
             break
         }
-        parser_advance(p)
+        syntax_parser_advance(p)
     }
 }
 
@@ -94,84 +94,84 @@ func syntax_parser_parse_program(parser* p) ast_node* {
     syntax_parser_skip_newlines(p)
     prog := alloc(ast_node)
     prog.kind = ast_program
-    prog.line = parser_current_token(p).line
-    prog.col = parser_current_token(p).col
+    prog.line = syntax_parser_current_token(p).line
+    prog.col = syntax_parser_current_token(p).col
     tail := prog
     for {
-        if parser_current_token(p).kind == 0 {
+        if syntax_parser_current_token(p).kind == 0 {
             break
         }
         syntax_parser_skip_newlines(p)
-        current := parser_current_token(p)
+        current := syntax_parser_current_token(p)
         if current.kind == 10 {
-            func_decl := parser_parse_func_decl(p)
+            func_decl := syntax_parser_parse_func_decl(p)
             if func_decl != nil { tail.next = func_decl; tail = func_decl }
         } else if current.kind == 20 {
-            struct_decl := parser_parse_struct_decl(p)
+            struct_decl := syntax_parser_parse_struct_decl(p)
             if struct_decl != nil { tail.next = struct_decl; tail = struct_decl }
         } else if current.kind == 21 {
-            var_decl := parser_parse_var_decl(p)
+            var_decl := syntax_parser_parse_var_decl(p)
             if var_decl != nil { tail.next = var_decl; tail = var_decl }
         } else if current.kind == 22 {
-            const_decl := parser_parse_const_decl(p)
+            const_decl := syntax_parser_parse_const_decl(p)
             if const_decl != nil { tail.next = const_decl; tail = const_decl }
         } else {
-            parser_advance(p)
+            syntax_parser_advance(p)
         }
     }
     return prog
 }
 
-func parser_parse_func_decl(parser* p) ast_node* {
+func syntax_parser_parse_func_decl(parser* p) ast_node* {
     func_decl := alloc(ast_node)
     func_decl.kind = ast_func_decl
-    func_decl.line = parser_current_token(p).line
-    func_decl.col = parser_current_token(p).col
-    if !parser_match(p, 10) {
+    func_decl.line = syntax_parser_current_token(p).line
+    func_decl.col = syntax_parser_current_token(p).col
+    if !syntax_parser_match(p, 10) {
         return nil
     }
-    if parser_current_token(p).kind == 24 {
-        parser_parse_receiver(p)
+    if syntax_parser_current_token(p).kind == 24 {
+        syntax_parser_parse_receiver(p)
     }
-    if parser_current_token(p).kind != 85 {
+    if syntax_parser_current_token(p).kind != 85 {
         return nil
     }
-    func_decl.value = parser_current_token(p).value
-    parser_advance(p)
-    if parser_current_token(p).kind == 24 {
-        parser_parse_params(p)
+    func_decl.value = syntax_parser_current_token(p).value
+    syntax_parser_advance(p)
+    if syntax_parser_current_token(p).kind == 24 {
+        syntax_parser_parse_params(p)
     }
-    if parser_current_token(p).kind != 28 {
-        func_decl.child = parser_parse_type(p)
+    if syntax_parser_current_token(p).kind != 28 {
+        func_decl.child = syntax_parser_parse_type(p)
     }
-    if parser_current_token(p).kind == 28 {
-        func_decl.next = parser_parse_block_stmt(p)
+    if syntax_parser_current_token(p).kind == 28 {
+        func_decl.next = syntax_parser_parse_block_stmt(p)
     }
     return func_decl
 }
 
-func parser_parse_struct_decl(parser* p) ast_node* {
+func syntax_parser_parse_struct_decl(parser* p) ast_node* {
     struct_decl := alloc(ast_node)
     struct_decl.kind = ast_struct_decl
-    if !parser_match(p, 20) {
+    if !syntax_parser_match(p, 20) {
         return nil
     }
-    if parser_current_token(p).kind != 85 {
+    if syntax_parser_current_token(p).kind != 85 {
         return nil
     }
-    struct_decl.value = parser_current_token(p).value
-    parser_advance(p)
-    if parser_current_token(p).kind == 28 {
-        parser_advance(p)
+    struct_decl.value = syntax_parser_current_token(p).value
+    syntax_parser_advance(p)
+    if syntax_parser_current_token(p).kind == 28 {
+        syntax_parser_advance(p)
         for {
             syntax_parser_skip_newlines(p)
-            if parser_current_token(p).kind == 29 {
-                parser_advance(p)
+            if syntax_parser_current_token(p).kind == 29 {
+                syntax_parser_advance(p)
                 break
             }
-            if parser_current_token(p).kind == 85 {
-                parser_advance(p)
-                parser_parse_type(p)
+            if syntax_parser_current_token(p).kind == 85 {
+                syntax_parser_advance(p)
+                syntax_parser_parse_type(p)
             }
             syntax_parser_skip_newlines(p)
         }
@@ -179,216 +179,216 @@ func parser_parse_struct_decl(parser* p) ast_node* {
     return struct_decl
 }
 
-func parser_parse_var_decl(parser* p) ast_node* {
+func syntax_parser_parse_var_decl(parser* p) ast_node* {
     var_decl := alloc(ast_node)
     var_decl.kind = ast_var_decl
-    if !parser_match(p, 21) {
+    if !syntax_parser_match(p, 21) {
         return nil
     }
-    if parser_current_token(p).kind != 85 {
+    if syntax_parser_current_token(p).kind != 85 {
         return nil
     }
-    var_decl.value = parser_current_token(p).value
-    parser_advance(p)
-    var_decl.child = parser_parse_type(p)
-    if parser_current_token(p).kind == 60 {
-        parser_advance(p)
-        ret.child = parser_parse_expression(p)
+    var_decl.value = syntax_parser_current_token(p).value
+    syntax_parser_advance(p)
+    var_decl.child = syntax_parser_parse_type(p)
+    if syntax_parser_current_token(p).kind == 60 {
+        syntax_parser_advance(p)
+        ret.child = syntax_parser_parse_expression(p)
     }
     return var_decl
 }
 
-func parser_parse_const_decl(parser* p) ast_node* {
+func syntax_parser_parse_const_decl(parser* p) ast_node* {
     const_decl := alloc(ast_node)
     const_decl.kind = ast_const_decl
-    if !parser_match(p, 22) {
+    if !syntax_parser_match(p, 22) {
         return nil
     }
-    if parser_current_token(p).kind != 85 {
+    if syntax_parser_current_token(p).kind != 85 {
         return nil
     }
-    parser_advance(p)
-    if parser_current_token(p).kind != 60 {
-        parser_parse_type(p)
+    syntax_parser_advance(p)
+    if syntax_parser_current_token(p).kind != 60 {
+        syntax_parser_parse_type(p)
     }
-    if parser_current_token(p).kind == 60 {
-        parser_advance(p)
-        parser_parse_expression(p)
+    if syntax_parser_current_token(p).kind == 60 {
+        syntax_parser_advance(p)
+        syntax_parser_parse_expression(p)
     }
     return const_decl
 }
 
-func parser_parse_receiver(parser* p) {
-    if parser_current_token(p).kind == 24 {
-        parser_advance(p)
-        if parser_current_token(p).kind == 85 {
-            parser_advance(p)
+func syntax_parser_parse_receiver(parser* p) {
+    if syntax_parser_current_token(p).kind == 24 {
+        syntax_parser_advance(p)
+        if syntax_parser_current_token(p).kind == 85 {
+            syntax_parser_advance(p)
         }
-        parser_parse_type(p)
-        if parser_current_token(p).kind == 25 {
-            parser_advance(p)
+        syntax_parser_parse_type(p)
+        if syntax_parser_current_token(p).kind == 25 {
+            syntax_parser_advance(p)
         }
     }
 }
 
-func parser_parse_params(parser* p) {
-    if parser_current_token(p).kind == 24 {
-        parser_advance(p)
-        for parser_current_token(p).kind != 25 {
-            if parser_current_token(p).kind == 85 {
-                parser_advance(p)
+func syntax_parser_parse_params(parser* p) {
+    if syntax_parser_current_token(p).kind == 24 {
+        syntax_parser_advance(p)
+        for syntax_parser_current_token(p).kind != 25 {
+            if syntax_parser_current_token(p).kind == 85 {
+                syntax_parser_advance(p)
             }
-            parser_parse_type(p)
-            if parser_current_token(p).kind == 58 {
-                parser_advance(p)
+            syntax_parser_parse_type(p)
+            if syntax_parser_current_token(p).kind == 58 {
+                syntax_parser_advance(p)
             } else {
                 break
             }
         }
-        if parser_current_token(p).kind == 25 {
-            parser_advance(p)
+        if syntax_parser_current_token(p).kind == 25 {
+            syntax_parser_advance(p)
         }
     }
 }
 
-func parser_parse_type(parser* p) ast_node* {
+func syntax_parser_parse_type(parser* p) ast_node* {
     type_node := alloc(ast_node)
-    current := parser_current_token(p)
+    current := syntax_parser_current_token(p)
     if current.kind == 52 {
-        parser_advance(p)
+        syntax_parser_advance(p)
         type_node.kind = ast_pointer_type
-        type_node.child = parser_parse_type(p)
+        type_node.child = syntax_parser_parse_type(p)
         return type_node
     }
     if current.kind == 26 {
-        parser_advance(p)
+        syntax_parser_advance(p)
         type_node.kind = ast_array_type
-        if parser_current_token(p).kind != 27 {
-            parser_parse_expression(p)
+        if syntax_parser_current_token(p).kind != 27 {
+            syntax_parser_parse_expression(p)
         }
-        if parser_current_token(p).kind == 27 {
-            parser_advance(p)
+        if syntax_parser_current_token(p).kind == 27 {
+            syntax_parser_advance(p)
         }
-        type_node.child = parser_parse_type(p)
+        type_node.child = syntax_parser_parse_type(p)
         return type_node
     }
     if current.kind == 85 {
         type_node.value = current.value
-        parser_advance(p)
+        syntax_parser_advance(p)
     }
     return type_node
 }
 
-func parser_parse_block_stmt(parser* p) ast_node* {
+func syntax_parser_parse_block_stmt(parser* p) ast_node* {
     block := alloc(ast_node)
     block.kind = ast_block_stmt
-    if parser_current_token(p).kind == 28 {
-        parser_advance(p)
+    if syntax_parser_current_token(p).kind == 28 {
+        syntax_parser_advance(p)
         for {
             syntax_parser_skip_newlines(p)
-            if parser_current_token(p).kind == 29 {
-                parser_advance(p)
+            if syntax_parser_current_token(p).kind == 29 {
+                syntax_parser_advance(p)
                 break
             }
-            parser_parse_statement(p)
+            syntax_parser_parse_statement(p)
             syntax_parser_skip_newlines(p)
         }
     }
     return block
 }
 
-func parser_parse_statement(parser* p) ast_node* {
-    current := parser_current_token(p)
+func syntax_parser_parse_statement(parser* p) ast_node* {
+    current := syntax_parser_current_token(p)
     if current.kind == 11 {
-        return parser_parse_return_stmt(p)
+        return syntax_parser_parse_return_stmt(p)
     } else if current.kind == 12 {
-        return parser_parse_if_stmt(p)
+        return syntax_parser_parse_if_stmt(p)
     } else if current.kind == 13 {
-        return parser_parse_for_stmt(p)
+        return syntax_parser_parse_for_stmt(p)
     } else if current.kind == 14 {
-        parser_advance(p)
+        syntax_parser_advance(p)
         stmt := alloc(ast_node)
         stmt.kind = ast_break_stmt
         return stmt
     } else if current.kind == 15 {
-        parser_advance(p)
+        syntax_parser_advance(p)
         stmt := alloc(ast_node)
         stmt.kind = ast_continue_stmt
         return stmt
     } else if current.kind == 28 {
-        return parser_parse_block_stmt(p)
+        return syntax_parser_parse_block_stmt(p)
     } else {
-        return parser_parse_expr_stmt(p)
+        return syntax_parser_parse_expr_stmt(p)
     }
 }
 
-func parser_parse_return_stmt(parser* p) ast_node* {
+func syntax_parser_parse_return_stmt(parser* p) ast_node* {
     ret := alloc(ast_node)
     ret.kind = ast_return_stmt
-    if parser_current_token(p).kind == 11 {
-        parser_advance(p)
+    if syntax_parser_current_token(p).kind == 11 {
+        syntax_parser_advance(p)
     }
-    if parser_current_token(p).kind != 29 &&
-       parser_current_token(p).kind != 86 {
-        parser_parse_expression(p)
+    if syntax_parser_current_token(p).kind != 29 &&
+       syntax_parser_current_token(p).kind != 86 {
+        syntax_parser_parse_expression(p)
     }
     return ret
 }
 
-func parser_parse_if_stmt(parser* p) ast_node* {
+func syntax_parser_parse_if_stmt(parser* p) ast_node* {
     if_stmt := alloc(ast_node)
     if_stmt.kind = ast_if_stmt
-    if parser_current_token(p).kind == 12 {
-        parser_advance(p)
+    if syntax_parser_current_token(p).kind == 12 {
+        syntax_parser_advance(p)
     }
-    parser_parse_expression(p)
-    parser_parse_block_stmt(p)
-    if parser_current_token(p).kind == 16 {
-        parser_advance(p)
-        parser_parse_statement(p)
+    syntax_parser_parse_expression(p)
+    syntax_parser_parse_block_stmt(p)
+    if syntax_parser_current_token(p).kind == 16 {
+        syntax_parser_advance(p)
+        syntax_parser_parse_statement(p)
     }
     return if_stmt
 }
 
-func parser_parse_for_stmt(parser* p) ast_node* {
+func syntax_parser_parse_for_stmt(parser* p) ast_node* {
     for_stmt := alloc(ast_node)
     for_stmt.kind = ast_for_stmt
-    if parser_current_token(p).kind == 13 {
-        parser_advance(p)
+    if syntax_parser_current_token(p).kind == 13 {
+        syntax_parser_advance(p)
     }
-    if parser_current_token(p).kind != 28 {
-        parser_parse_expression(p)
+    if syntax_parser_current_token(p).kind != 28 {
+        syntax_parser_parse_expression(p)
     }
-    parser_parse_block_stmt(p)
+    syntax_parser_parse_block_stmt(p)
     return for_stmt
 }
 
-func parser_parse_expr_stmt(parser* p) ast_node* {
+func syntax_parser_parse_expr_stmt(parser* p) ast_node* {
     expr_stmt := alloc(ast_node)
     expr_stmt.kind = ast_expr_stmt
-    parser_parse_expression(p)
+    syntax_parser_parse_expression(p)
     return expr_stmt
 }
 
-func parser_parse_expression(parser* p) ast_node* {
-    return parser_parse_assignment(p)
+func syntax_parser_parse_expression(parser* p) ast_node* {
+    return syntax_parser_parse_assignment(p)
 }
 
-func parser_parse_assignment(parser* p) ast_node* {
-    expr := parser_parse_logical_or(p)
-    if parser_current_token(p).kind == 60 {
-        parser_advance(p)
-        rhs := parser_parse_assignment(p)
+func syntax_parser_parse_assignment(parser* p) ast_node* {
+    expr := syntax_parser_parse_logical_or(p)
+    if syntax_parser_current_token(p).kind == 60 {
+        syntax_parser_advance(p)
+        rhs := syntax_parser_parse_assignment(p)
     }
     return expr
 }
 
-func parser_parse_logical_or(parser* p) ast_node* {
-    left := parser_parse_logical_and(p)
+func syntax_parser_parse_logical_or(parser* p) ast_node* {
+    left := syntax_parser_parse_logical_and(p)
     for {
-        if parser_current_token(p).kind == 74 {
-            parser_advance(p)
-            right := parser_parse_logical_and(p)
+        if syntax_parser_current_token(p).kind == 74 {
+            syntax_parser_advance(p)
+            right := syntax_parser_parse_logical_and(p)
             expr := alloc(ast_node)
             expr.kind = ast_binary_expr
             expr.left = left
@@ -401,12 +401,12 @@ func parser_parse_logical_or(parser* p) ast_node* {
     return left
 }
 
-func parser_parse_logical_and(parser* p) ast_node* {
-    left := parser_parse_equality(p)
+func syntax_parser_parse_logical_and(parser* p) ast_node* {
+    left := syntax_parser_parse_equality(p)
     for {
-        if parser_current_token(p).kind == 73 {
-            parser_advance(p)
-            right := parser_parse_equality(p)
+        if syntax_parser_current_token(p).kind == 73 {
+            syntax_parser_advance(p)
+            right := syntax_parser_parse_equality(p)
             expr := alloc(ast_node)
             expr.kind = ast_binary_expr
             expr.left = left
@@ -419,13 +419,13 @@ func parser_parse_logical_and(parser* p) ast_node* {
     return left
 }
 
-func parser_parse_equality(parser* p) ast_node* {
-    left := parser_parse_comparison(p)
+func syntax_parser_parse_equality(parser* p) ast_node* {
+    left := syntax_parser_parse_comparison(p)
     for {
-        current_type := parser_current_token(p).kind
+        current_type := syntax_parser_current_token(p).kind
         if current_type == 62 || current_type == 63 {
-            parser_advance(p)
-            right := parser_parse_comparison(p)
+            syntax_parser_advance(p)
+            right := syntax_parser_parse_comparison(p)
             expr := alloc(ast_node)
             expr.kind = ast_binary_expr
             expr.left = left
@@ -438,14 +438,14 @@ func parser_parse_equality(parser* p) ast_node* {
     return left
 }
 
-func parser_parse_comparison(parser* p) ast_node* {
-    left := parser_parse_additive(p)
+func syntax_parser_parse_comparison(parser* p) ast_node* {
+    left := syntax_parser_parse_additive(p)
     for {
-        current_type := parser_current_token(p).kind
+        current_type := syntax_parser_current_token(p).kind
         if current_type == 64 || current_type == 65 ||
            current_type == 66 || current_type == 67 {
-            parser_advance(p)
-            right := parser_parse_additive(p)
+            syntax_parser_advance(p)
+            right := syntax_parser_parse_additive(p)
             expr := alloc(ast_node)
             expr.kind = ast_binary_expr
             expr.left = left
@@ -458,12 +458,12 @@ func parser_parse_comparison(parser* p) ast_node* {
     return left
 }
 
-func parser_parse_additive(parser* p) ast_node* {
-    left := parser_parse_multiplicative(p)
+func syntax_parser_parse_additive(parser* p) ast_node* {
+    left := syntax_parser_parse_multiplicative(p)
     for {
-        if parser_current_token(p).kind == 53 || parser_current_token(p).kind == 54 {
-            parser_advance(p)
-            right := parser_parse_multiplicative(p)
+        if syntax_parser_current_token(p).kind == 53 || syntax_parser_current_token(p).kind == 54 {
+            syntax_parser_advance(p)
+            right := syntax_parser_parse_multiplicative(p)
             expr := alloc(ast_node)
             expr.kind = ast_binary_expr
             expr.left = left
@@ -476,13 +476,13 @@ func parser_parse_additive(parser* p) ast_node* {
     return left
 }
 
-func parser_parse_multiplicative(parser* p) ast_node* {
-    left := parser_parse_unary(p)
+func syntax_parser_parse_multiplicative(parser* p) ast_node* {
+    left := syntax_parser_parse_unary(p)
     for {
-        current_type := parser_current_token(p).kind
+        current_type := syntax_parser_current_token(p).kind
         if current_type == 55 || current_type == 56 || current_type == 57 {
-            parser_advance(p)
-            right := parser_parse_unary(p)
+            syntax_parser_advance(p)
+            right := syntax_parser_parse_unary(p)
             expr := alloc(ast_node)
             expr.kind = ast_binary_expr
             expr.left = left
@@ -495,52 +495,52 @@ func parser_parse_multiplicative(parser* p) ast_node* {
     return left
 }
 
-func parser_parse_unary(parser* p) ast_node* {
-    current_type := parser_current_token(p).kind
+func syntax_parser_parse_unary(parser* p) ast_node* {
+    current_type := syntax_parser_current_token(p).kind
     if current_type == 54 || current_type == 52 || current_type == 75 {
-        parser_advance(p)
+        syntax_parser_advance(p)
         unary := alloc(ast_node)
         unary.kind = ast_unary_expr
-        unary.child = parser_parse_unary(p)
+        unary.child = syntax_parser_parse_unary(p)
         return unary
     }
-    return parser_parse_postfix(p)
+    return syntax_parser_parse_postfix(p)
 }
 
-func parser_parse_postfix(parser* p) ast_node* {
-    left := parser_parse_primary(p)
+func syntax_parser_parse_postfix(parser* p) ast_node* {
+    left := syntax_parser_parse_primary(p)
     for {
-        if parser_current_token(p).kind == 24 {
-            parser_advance(p)
+        if syntax_parser_current_token(p).kind == 24 {
+            syntax_parser_advance(p)
             call := alloc(ast_node)
             call.kind = ast_call_expr
-            for parser_current_token(p).kind != 25 {
-                parser_parse_expression(p)
-                if parser_current_token(p).kind == 58 {
-                    parser_advance(p)
+            for syntax_parser_current_token(p).kind != 25 {
+                syntax_parser_parse_expression(p)
+                if syntax_parser_current_token(p).kind == 58 {
+                    syntax_parser_advance(p)
                 } else {
                     break
                 }
             }
-            if parser_current_token(p).kind == 25 {
-                parser_advance(p)
+            if syntax_parser_current_token(p).kind == 25 {
+                syntax_parser_advance(p)
             }
             left = call
-        } else if parser_current_token(p).kind == 26 {
-            parser_advance(p)
+        } else if syntax_parser_current_token(p).kind == 26 {
+            syntax_parser_advance(p)
             index := alloc(ast_node)
             index.kind = ast_index_expr
-            parser_parse_expression(p)
-            if parser_current_token(p).kind == 27 {
-                parser_advance(p)
+            syntax_parser_parse_expression(p)
+            if syntax_parser_current_token(p).kind == 27 {
+                syntax_parser_advance(p)
             }
             left = index
-        } else if parser_current_token(p).kind == 59 {
-            parser_advance(p)
+        } else if syntax_parser_current_token(p).kind == 59 {
+            syntax_parser_advance(p)
             member := alloc(ast_node)
             member.kind = ast_member_expr
-            if parser_current_token(p).kind == 85 {
-                parser_advance(p)
+            if syntax_parser_current_token(p).kind == 85 {
+                syntax_parser_advance(p)
             }
             left = member
         } else {
@@ -550,24 +550,24 @@ func parser_parse_postfix(parser* p) ast_node* {
     return left
 }
 
-func parser_parse_primary(parser* p) ast_node* {
-    current := parser_current_token(p)
+func syntax_parser_parse_primary(parser* p) ast_node* {
+    current := syntax_parser_current_token(p)
     primary := alloc(ast_node)
     if current.kind == 85 {
         primary.kind = ast_ident_expr
         primary.value = current.value
-        parser_advance(p)
+        syntax_parser_advance(p)
     } else if current.kind == 80 || current.kind == 81 || current.kind == 82 ||
               current.kind == 83 || current.kind == 84 {
         primary.kind = ast_literal_expr
         primary.value = current.value
-        parser_advance(p)
+        syntax_parser_advance(p)
     } else if current.kind == 24 {
-        parser_advance(p)
+        syntax_parser_advance(p)
         primary.kind = ast_paren_expr
-        primary.child = parser_parse_expression(p)
-        if parser_current_token(p).kind == 25 {
-            parser_advance(p)
+        primary.child = syntax_parser_parse_expression(p)
+        if syntax_parser_current_token(p).kind == 25 {
+            syntax_parser_advance(p)
         }
     }
     return primary
