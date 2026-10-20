@@ -217,7 +217,7 @@ func build_object_interpreted_legacy(string path, string output, string ssa_marg
             return report_failure("safety proof failed: " + safety.summary)
         }
     }
-    graph, lowering_error := lower_main_to_mir(parsed)
+    graph, lowering_error := compile.internal.ir.lower.lower_main_to_mir(parsed)
     if lowering_error != "" {
         return report_failure("mir lowering failed: " + lowering_error)
     }
@@ -306,7 +306,7 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
             return report_failure("safety proof failed: " + safety.summary)
         }
     }
-    graph, lowering_error := lower_main_to_mir(parsed)
+    graph, lowering_error := compile.internal.ir.lower.lower_main_to_mir(parsed)
     if lowering_error != "" {
         return report_failure("mir lowering failed: " + lowering_error)
     }
