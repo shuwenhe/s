@@ -5772,7 +5772,8 @@ func report_failure(string message) int {
 }
 
 struct backend_context {
-    backend_compiler: native_compiler
+    input_source: string
+    output_executable: string
     native_enabled: bool
     target_arch: string
     target_os: string
@@ -5780,7 +5781,8 @@ struct backend_context {
 
 func new_backend_context(string input, string output, bool native) backend_context {
     backend_context ctx
-    ctx.backend_compiler = new_native_compiler(input, output)
+    ctx.input_source = input
+    ctx.output_executable = output
     ctx.native_enabled = native
     ctx.target_arch = "x86_64"
     ctx.target_os = "linux"
@@ -5791,15 +5793,16 @@ func (backend_context* bc) compile_native() int {
     if !bc.native_enabled {
         return -1
     }
-    result := bc.backend_compiler.compile_to_assembly()
+    compiler := new_native_compiler(bc.input_source, bc.output_executable)
+    result := compiler.compile_to_assembly()
     if result != 0 {
         return result
     }
-    result = bc.backend_compiler.assemble_to_object()
+    result = compiler.assemble_to_object()
     if result != 0 {
         return result
     }
-    result = bc.backend_compiler.link_to_executable()
+    result = compiler.link_to_executable()
     if result != 0 {
         return result
     }
@@ -5807,5 +5810,6 @@ func (backend_context* bc) compile_native() int {
 }
 
 func (backend_context* bc) get_assembly_output() string {
-    bc.backend_compiler.get_assembly()
+    compiler := new_native_compiler(bc.input_source, bc.output_executable)
+    compiler.get_assembly()
 }
