@@ -443,12 +443,19 @@ static bool emit_load(FILE *out, standalone_module *module, standalone_function 
 		fprintf(out, "    lea .Ls_literal_%d(%%rip), %s\n", literal, reg);
 		return true;
 	}
-	/* Enum values are represented as pointers to a tagged record in the
-	 * standalone runtime.  The IR keeps projections as names such as
-	 * `result.__variant` and `result.value`; do not allocate those names as
-	 * independent temporaries. */
+	/* Struct and enum projections are lowered by the Seed IR as ordinary
+	 * named slots (for example `result.__variant` and `result.value`).  The
+	 * standalone backend must use those slots when they were collected.  A
+	 * projection is not a pointer dereference: struct literals currently use
+	 * the same flattened slot representation. */
 	dot = strrchr(value, '.');
 	if (dot != NULL && dot[1] != '\0') {
+		slot = slot_index(fn, value, false);
+		if (slot >= 0) {
+			if (fn->slots[slot].reg[0] != '\0') fprintf(out, "    mov %s, %s\n", fn->slots[slot].reg, reg);
+			else fprintf(out, "    mov %d(%%rbp), %s\n", fn->slots[slot].offset, reg);
+			return true;
+		}
 		char base[STANDALONE_TEXT_CAP];
 		size_t base_len = (size_t)(dot - value);
 		if (base_len < sizeof(base)) {
