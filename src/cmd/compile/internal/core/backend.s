@@ -3966,17 +3966,14 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
         arg_values = append(arg_values, arg_result.unwrap())
         ai = ai + 1
     }
-    switch callee_result.unwrap() {
-        value.fn_ref(name) : {
-            target_name := name
-            switch value.resolved_callee {
-                option.some(resolved) : target_name = resolved,
-                option.none : (),
-            }
-            call_function(source, target_name, arg_values, env, writes, runtime)
-        },
-        _ : backend_error { message: "backend error: unsupported call target" },
+    target_name := function_name_from_value(callee_result.unwrap())
+    if target_name == "" {
+        return backend_error { message: "backend error: unsupported call target" }
     }
+    if value.resolved_callee.is_some() {
+        target_name = value.resolved_callee.unwrap()
+    }
+    call_function(source, target_name, arg_values, env, writes, runtime)
 }
 
 func eval_box_new_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
