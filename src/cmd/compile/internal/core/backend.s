@@ -4020,7 +4020,7 @@ func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op
                 i = i + 1
             }
             return fail_value("backend error: unknown owned box")
-        }
+        },
     }
     fail_value("backend error: box_free requires a box value")
 }
