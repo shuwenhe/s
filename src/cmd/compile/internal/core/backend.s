@@ -245,12 +245,12 @@ func build_object_interpreted_legacy(string path, string output, string ssa_marg
         return report_failure(abi_error.message)
     }
     writes_result := compile_writes(parsed, graph)
-    if writes_result.is_err() {
-        return report_failure(writes_result.unwrap_err().message)
+    if write_result_is_err(writes_result) {
+        return report_failure(write_result_error(writes_result).message)
     }
     exit_code_result := compile_exit_code(parsed, graph)
-    if exit_code_result.is_err() {
-        return report_failure(exit_code_result.unwrap_err().message)
+    if exit_result_is_err(exit_code_result) {
+        return report_failure(exit_result_error(exit_code_result).message)
     }
     temp_dir_result := std.fs.make_temp_dir("s-object-")
     if temp_dir_result.is_err() {
@@ -258,7 +258,7 @@ func build_object_interpreted_legacy(string path, string output, string ssa_marg
     }
     temp_dir := temp_dir_result.unwrap()
     asm_path := temp_dir + "/out.s"
-    asm_text := emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
+    asm_text := emit_asm(write_result_value(writes_result), exit_result_value(exit_code_result))
     write_result := std.fs.write_text_file(asm_path, asm_text)
     if write_result.is_err() {
         return report_failure("failed to write assembly: " + write_result.unwrap_err().message)
@@ -333,12 +333,12 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
         return report_failure(abi_check.unwrap_err().message)
     }
     writes_result := compile_writes(parsed, graph)
-    if writes_result.is_err() {
-        return report_failure(writes_result.unwrap_err().message)
+    if write_result_is_err(writes_result) {
+        return report_failure(write_result_error(writes_result).message)
     }
     exit_code_result := compile_exit_code(parsed, graph)
-    if exit_code_result.is_err() {
-        return report_failure(exit_code_result.unwrap_err().message)
+    if exit_result_is_err(exit_code_result) {
+        return report_failure(exit_result_error(exit_code_result).message)
     }
     runtime_metrics_result := compile_runtime_metrics(parsed, graph)
     if runtime_metrics_result.is_err() {
@@ -359,7 +359,7 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
             return report_failure(wasm_binary_check.unwrap_err().message)
         }
     } else {
-        asm_text := emit_asm(writes_result.unwrap(), exit_code_result.unwrap())
+    asm_text := emit_asm(write_result_value(writes_result), exit_result_value(exit_code_result))
         asm_path := temp_dir + "/out.s"
         obj_path := temp_dir + "/out.o"
         write_result := std.fs.write_text_file(asm_path, asm_text)
@@ -3228,6 +3228,48 @@ func compile_exit_code(source_file source, mir_graph graph) result[int, backend_
         return result.err(source_exec.unwrap_err())
     }
     result.ok(exec_result.unwrap().exit_code)
+}
+
+func write_result_is_err(result[write_op[], backend_error] value) bool {
+    switch value {
+        result::ok(_) : false,
+        result::err(_) : true,
+    }
+}
+
+func write_result_error(result[write_op[], backend_error] value) backend_error {
+    switch value {
+        result::ok(_) : backend_error { message: "" },
+        result::err(err) : err,
+    }
+}
+
+func write_result_value(result[write_op[], backend_error] value) write_op[] {
+    switch value {
+        result::ok(writes) : writes,
+        result::err(_) : write_op[](),
+    }
+}
+
+func exit_result_is_err(result[int, backend_error] value) bool {
+    switch value {
+        result::ok(_) : false,
+        result::err(_) : true,
+    }
+}
+
+func exit_result_error(result[int, backend_error] value) backend_error {
+    switch value {
+        result::ok(_) : backend_error { message: "" },
+        result::err(err) : err,
+    }
+}
+
+func exit_result_value(result[int, backend_error] value) int {
+    switch value {
+        result::ok(code) : code,
+        result::err(_) : 1,
+    }
 }
 
 func compile_runtime_metrics(source_file source, mir_graph graph) (runtime_metrics, backend_error) {
