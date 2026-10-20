@@ -415,6 +415,7 @@ static bool emit_array_literal(FILE *out, standalone_module *module, standalone_
 static bool emit_load(FILE *out, standalone_module *module, standalone_function *fn,
 	const char *value, const char *reg, compile_error *err) {
 	int slot;
+	const char *dot;
 	if (!value || !*value || strcmp(value, "_") == 0) {
 		fprintf(out, "    mov $1, %s\n", reg);
 		return true;
@@ -441,6 +442,25 @@ static bool emit_load(FILE *out, standalone_module *module, standalone_function 
 		}
 		fprintf(out, "    lea .Ls_literal_%d(%%rip), %s\n", literal, reg);
 		return true;
+	}
+	/* Enum values are represented as pointers to a tagged record in the
+	 * standalone runtime.  The IR keeps projections as names such as
+	 * `result.__variant` and `result.value`; do not allocate those names as
+	 * independent temporaries. */
+	dot = strrchr(value, '.');
+	if (dot != NULL && dot[1] != '\0') {
+		char base[STANDALONE_TEXT_CAP];
+		size_t base_len = (size_t)(dot - value);
+		if (base_len < sizeof(base)) {
+			memcpy(base, value, base_len);
+			base[base_len] = '\0';
+			if (slot_index(fn, base, false) >= 0) {
+				long offset = (strcmp(dot + 1, "__variant") == 0) ? 0 : 8;
+				if (!emit_load(out, module, fn, base, "%r11", err)) return false;
+				fprintf(out, "    mov %ld(%%r11), %s\n", offset, reg);
+				return true;
+			}
+		}
 	}
 	slot = slot_index(fn, value, false);
 	if (slot < 0) {
