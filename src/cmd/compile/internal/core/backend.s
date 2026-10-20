@@ -2072,9 +2072,9 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
     lines = append(lines, "section .debug_frame")
     lines = append(lines, "  cfa=sp+16 ra=lr")
     lines = append(lines, "section .debug_loc")
-    append_debug_loc_section(lines, debug_map)
+    lines = append_debug_loc_section(lines, debug_map)
     lines = append(lines, "section .debug_ranges")
-    append_debug_ranges_section(lines, source, ssa_text)
+    lines = append_debug_ranges_section(lines, source, ssa_text)
     lines = append(lines, "section .debug_inlining")
     i := 0
     for i < std.prelude.len(source.items) {
@@ -2139,7 +2139,8 @@ func build_dwarf_regression_gate(string ssa_text, string debug_map) string {
         + " locs=" + std.prelude.to_string(locs)
 }
 
-func append_debug_loc_section(string[] lines, string debug_map) () {
+func append_debug_loc_section(string[] lines, string debug_map) string[] {
+    updated_lines := lines
     marker := "let v"
     cursor := 0
     loc_id := 0
@@ -2155,16 +2156,18 @@ func append_debug_loc_section(string[] lines, string debug_map) () {
         entry := trim_spaces(std.prelude.prelude_slice(debug_map, at, end))
         lo := 100 + loc_id * 8
         hi := lo + 8
-        lines = append(lines, "  loc#" + std.prelude.to_string(loc_id) + " pc=[" + std.prelude.to_string(lo) + "," + std.prelude.to_string(hi) + ") " + entry)
+        updated_lines = append(updated_lines, "  loc#" + std.prelude.to_string(loc_id) + " pc=[" + std.prelude.to_string(lo) + "," + std.prelude.to_string(hi) + ") " + entry)
         loc_id = loc_id + 1
         cursor = end + 3
     }
     if loc_id == 0 {
-        lines = append(lines, "  loc#0 pc=[0,0) let none")
+        updated_lines = append(updated_lines, "  loc#0 pc=[0,0) let none")
     }
+    updated_lines
 }
 
-func append_debug_ranges_section(string[] lines, source_file source, string ssa_text) () {
+func append_debug_ranges_section(string[] lines, source_file source, string ssa_text) string[] {
+    updated_lines := lines
     dbg_lines := backend_parse_number_after(ssa_text, "dbg_lines=")
     if dbg_lines < 1 {
         dbg_lines = 1
@@ -2184,14 +2187,14 @@ func append_debug_ranges_section(string[] lines, source_file source, string ssa_
             item.function(fn_decl) : {
                 lo := 0x1000 + fn_idx * range_span
                 hi := lo + range_span
-                lines = append(lines, "  fn=" + fn_decl.sig.name + " range=[" + std.prelude.to_string(lo) + "," + std.prelude.to_string(hi) + ")")
+                updated_lines = append(updated_lines, "  fn=" + fn_decl.sig.name + " range=[" + std.prelude.to_string(lo) + "," + std.prelude.to_string(hi) + ")")
                 if loops > 0 {
                     inline_lo := lo + 4
                     inline_hi := inline_lo + loops * 4
                     if inline_hi > hi {
                         inline_hi = hi
                     }
-                    lines = append(lines, "  fn=" + fn_decl.sig.name + " inline_range=[" + std.prelude.to_string(inline_lo) + "," + std.prelude.to_string(inline_hi) + ")")
+                    updated_lines = append(updated_lines, "  fn=" + fn_decl.sig.name + " inline_range=[" + std.prelude.to_string(inline_lo) + "," + std.prelude.to_string(inline_hi) + ")")
                 }
                 fn_idx = fn_idx + 1
             }
@@ -2200,8 +2203,9 @@ func append_debug_ranges_section(string[] lines, source_file source, string ssa_
         i = i + 1
     }
     if fn_idx == 0 {
-        lines = append(lines, "  fn=none range=[0,0)")
+        updated_lines = append(updated_lines, "  fn=none range=[0,0)")
     }
+    updated_lines
 }
 
 func dwarf_inline_depth_hint(string fn_name, string ssa_text) int {
