@@ -631,7 +631,7 @@ func map_to_expr(map_literal lit, const_rewrite_entry[] const_entries) ir_ast.ex
 func lower_function_to_mir(function_decl fd, const_rewrite_entry[] const_entries) mir_graph {
     if fd.body.is_none() {
         empty_blocks := mir_basic_block[]()
-        empty_blocks = append(empty_blocks, make_block(0, "entry", string[](), "return", mir_control_edge[]()))
+        empty_blocks = append(empty_blocks, ir_make_block(0, "entry", string[](), "return", mir_control_edge[]()))
         return mir_graph {
             function_name: fd.sig.name, blocks empty_blocks, locals mir_local_slot[](), string trace[](), entry 0, exit 0,
             borrow_ok: true, borrow_errors: 0, borrow_message: "",
@@ -665,13 +665,13 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 blocks = append(blocks, make_entry_block_with_condition(0, "entry", stmt_texts, block.statements, "branch", branch_condition, entry_edges))
                 then_lines := string[]()
                 then_lines = append(then_lines, "if.then")
-                blocks = append(blocks, make_block(1, "if.then", then_lines, "jump", vec1_edge("merge", 3)))
+                blocks = append(blocks, ir_make_block(1, "if.then", then_lines, "jump", vec1_edge("merge", 3)))
                 else_lines := string[]()
                 else_lines = append(else_lines, "if.else")
-                blocks = append(blocks, make_block(2, "if.else", else_lines, "jump", vec1_edge("merge", 3)))
+                blocks = append(blocks, ir_make_block(2, "if.else", else_lines, "jump", vec1_edge("merge", 3)))
                 merge_lines := string[]()
                 merge_lines = append(merge_lines, "yield " + s.dump_expr(tail))
-                blocks = append(blocks, make_block(3, "if.merge", merge_lines, "return", mir_control_edge[]()))
+                blocks = append(blocks, ir_make_block(3, "if.merge", merge_lines, "return", mir_control_edge[]()))
                 trace = append(trace, "control if -> blocks(entry, if.then, if.else, if.merge)")
                 return make_graph(function_name, blocks, trace, 0, 3)
             }
@@ -689,10 +689,10 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 blocks = append(blocks, make_block_with_condition(1, "while.cond", cond_lines, "branch", while_condition, cond_edges))
                 body_lines := string[]()
                 body_lines = append(body_lines, "while.body")
-                blocks = append(blocks, make_block(2, "while.body", body_lines, "jump", vec1_edge("cond", 1)))
+                blocks = append(blocks, ir_make_block(2, "while.body", body_lines, "jump", vec1_edge("cond", 1)))
                 exit_lines := string[]()
                 exit_lines = append(exit_lines, "yield unit")
-                blocks = append(blocks, make_block(3, "while.exit", exit_lines, "return", mir_control_edge[]()))
+                blocks = append(blocks, ir_make_block(3, "while.exit", exit_lines, "return", mir_control_edge[]()))
                 trace = append(trace, "control while -> blocks(entry, while.cond, while.body, while.exit)")
                 return make_graph(function_name, blocks, trace, 0, 3)
             }
@@ -702,10 +702,10 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 dispatch_edges = append(dispatch_edges, make_edge("case1", 2))
                 dispatch_edges = append(dispatch_edges, make_edge("default", 3))
                 blocks = append(blocks, make_entry_block(0, "entry", stmt_texts, block.statements, "branch", dispatch_edges))
-                blocks = append(blocks, make_block(1, "switch.case0", vec1("switch.case0"), "jump", vec1_edge("merge", 4)))
-                blocks = append(blocks, make_block(2, "switch.case1", vec1("switch.case1"), "jump", vec1_edge("merge", 4)))
-                blocks = append(blocks, make_block(3, "switch.default", vec1("switch.default"), "jump", vec1_edge("merge", 4)))
-                blocks = append(blocks, make_block(4, "switch.merge", vec1("yield " + substitute_const_text(s.dump_expr(tail), const_entries)), "return", mir_control_edge[]()))
+                blocks = append(blocks, ir_make_block(1, "switch.case0", vec1("switch.case0"), "jump", vec1_edge("merge", 4)))
+                blocks = append(blocks, ir_make_block(2, "switch.case1", vec1("switch.case1"), "jump", vec1_edge("merge", 4)))
+                blocks = append(blocks, ir_make_block(3, "switch.default", vec1("switch.default"), "jump", vec1_edge("merge", 4)))
+                blocks = append(blocks, ir_make_block(4, "switch.merge", vec1("yield " + substitute_const_text(s.dump_expr(tail), const_entries)), "return", mir_control_edge[]()))
                 trace = append(trace, "control switch -> blocks(entry, switch.case0, switch.case1, switch.default, switch.merge)")
                 return make_graph(function_name, blocks, trace, 0, 4)
             }
@@ -714,9 +714,9 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 cond_edges := mir_control_edge[]()
                 cond_edges = append(cond_edges, make_edge("next", 2))
                 cond_edges = append(cond_edges, make_edge("exit", 3))
-                blocks = append(blocks, make_block(1, "for.cond", vec1("for.cond"), "branch", cond_edges))
-                blocks = append(blocks, make_block(2, "for.body", vec1("for.body"), "jump", vec1_edge("for.cond", 1)))
-                blocks = append(blocks, make_block(3, "for.exit", vec1("yield unit"), "return", mir_control_edge[]()))
+                blocks = append(blocks, ir_make_block(1, "for.cond", vec1("for.cond"), "branch", cond_edges))
+                blocks = append(blocks, ir_make_block(2, "for.body", vec1("for.body"), "jump", vec1_edge("for.cond", 1)))
+                blocks = append(blocks, ir_make_block(3, "for.exit", vec1("yield unit"), "return", mir_control_edge[]()))
                 trace = append(trace, "control for -> blocks(entry, for.cond, for.body, for.exit)")
                 return make_graph(function_name, blocks, trace, 0, 3)
             }
@@ -1029,7 +1029,7 @@ func vec1_edge(string label, int target) mir_control_edge[] {
     edges
 }
 
-func make_block(int id, string label, string[] lines, string term_kind, mir_control_edge[] edges) mir_basic_block {
+func ir_make_block(int id, string label, string[] lines, string term_kind, mir_control_edge[] edges) mir_basic_block {
     make_block_with_condition(id, label, lines, term_kind, option.none, edges)
 }
 
