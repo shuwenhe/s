@@ -403,7 +403,7 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
         block_count optimized_block_count,
         value_count value_count,
         cfg_edge_count estimate_cfg_edges(optimized_mir),
-        branch_block_count count_token(optimized_mir,
+        branch_block_count ssa_count_token(optimized_mir,
         " term=branch"),
         optimized_value_count optimized_value_count,
         folded_constant_count pass_stats.folded_constant_count,
@@ -474,7 +474,7 @@ func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_op
 func analyze_instruction_ssa(string mir_text, ssa_dataflow_model model, ssa_pass_stats pass_stats, regalloc_result allocation, string pass_delta_summary) instruction_ssa_summary {
     instruction_blocks := parse_int_after(mir_text, "blocks=")
     if instruction_blocks <= 0 {
-        instruction_blocks = count_token(mir_text, " | bb")
+        instruction_blocks = ssa_count_token(mir_text, " | bb")
     }
     instruction_values := parse_total_stmt_count(mir_text)
     if instruction_values <= 0 {
@@ -791,7 +791,7 @@ func build_instruction_regalloc_plan(int spill_pairs, int parallel_copies, int s
 }
 
 func estimate_loop_backedges(string mir_text, ssa_dataflow_model model) int {
-    explicit := count_token(mir_text, " backedge")
+    explicit := ssa_count_token(mir_text, " backedge")
     if explicit > 0 {
         return explicit
     }
@@ -892,7 +892,7 @@ func verify_instruction_ssa(
             code = set_error_flag(code, e_regalloc_sample)
         }
     }
-    block_rel := count_token(block_graph, "->")
+    block_rel := ssa_count_token(block_graph, "->")
     block_cap := blocks - 1
     if block_cap < 0 {
         block_cap = 0
@@ -901,17 +901,17 @@ func verify_instruction_ssa(
         errors = errors + 1
         code = set_error_flag(code, e_block_count)
     }
-    value_rel := count_token(value_graph, "->")
+    value_rel := ssa_count_token(value_graph, "->")
     if value_rel > model.def_use_edges {
         errors = errors + 1
         code = set_error_flag(code, e_value_count)
     }
-    dom_rel := count_token(dominator_tree, ">")
+    dom_rel := ssa_count_token(dominator_tree, ">")
     if dom_rel > block_cap {
         errors = errors + 1
         code = set_error_flag(code, e_dom_count)
     }
-    mem_rel := count_token(memory_dep_graph, "->")
+    mem_rel := ssa_count_token(memory_dep_graph, "->")
     if mem_rel > (model.load_count + model.store_count + model.memphi_count) {
         errors = errors + 1
         code = set_error_flag(code, e_mem_count)
@@ -1153,8 +1153,8 @@ struct schedule_quality_result {
 
 func linear_scan_regalloc_with_spill(string mir_text, int value_count, string goarch) regalloc_result {
     regs := register_bank(goarch)
-    call_sites := count_token(mir_text, " call=")
-    remat_sites := count_token(mir_text, " const") + count_token(mir_text, " imm") + count_token(mir_text, " literal=")
+    call_sites := ssa_count_token(mir_text, " call=")
+    remat_sites := ssa_count_token(mir_text, " const") + ssa_count_token(mir_text, " imm") + ssa_count_token(mir_text, " literal=")
     blocks := parse_number_after(mir_text, "blocks=")
     if blocks < 1 {
         blocks = 1
@@ -1466,19 +1466,19 @@ func count_delta_category_changes(string details, bool structural) int {
     }
     count := 0
     if structural {
-        count = count + count_token(details, "blocks(")
-        count = count + count_token(details, "stmts(")
-        count = count + count_token(details, "br(")
-        count = count + count_token(details, "jmp(")
+        count = count + ssa_count_token(details, "blocks(")
+        count = count + ssa_count_token(details, "stmts(")
+        count = count + ssa_count_token(details, "br(")
+        count = count + ssa_count_token(details, "jmp(")
     } else {
-        count = count + count_token(details, "const(")
-        count = count + count_token(details, "imm(")
-        count = count + count_token(details, "lit(")
-        count = count + count_token(details, "phi(")
-        count = count + count_token(details, "memphi(")
-        count = count + count_token(details, "copy(")
-        count = count + count_token(details, "load(")
-        count = count + count_token(details, "store(")
+        count = count + ssa_count_token(details, "const(")
+        count = count + ssa_count_token(details, "imm(")
+        count = count + ssa_count_token(details, "lit(")
+        count = count + ssa_count_token(details, "phi(")
+        count = count + ssa_count_token(details, "memphi(")
+        count = count + ssa_count_token(details, "copy(")
+        count = count + ssa_count_token(details, "load(")
+        count = count + ssa_count_token(details, "store(")
     }
     count
 }
@@ -1682,7 +1682,7 @@ func append_changed_metric(string details, string label, int before, int after) 
 
 func collect_mir_metrics(string mir_text) mir_metrics {
     mir_metrics{
-        blocks parse_int_after(mir_text, "blocks="), stmts parse_total_stmt_count(mir_text), branches count_token(mir_text, " term=branch"), jumps count_token(mir_text, " term=jump"), consts count_numeric_marker_total(mir_text, " const="), imms count_numeric_marker_total(mir_text, " imm="), literals count_numeric_marker_total(mir_text, " literal="), phi count_numeric_marker_total(mir_text, " phi="), memphi count_numeric_marker_total(mir_text, " memphi="), copy count_numeric_marker_total(mir_text, " copy="), load count_numeric_marker_total(mir_text, " load="), store count_numeric_marker_total(mir_text, " store=")
+        blocks parse_int_after(mir_text, "blocks="), stmts parse_total_stmt_count(mir_text), branches ssa_count_token(mir_text, " term=branch"), jumps ssa_count_token(mir_text, " term=jump"), consts count_numeric_marker_total(mir_text, " const="), imms count_numeric_marker_total(mir_text, " imm="), literals count_numeric_marker_total(mir_text, " literal="), phi count_numeric_marker_total(mir_text, " phi="), memphi count_numeric_marker_total(mir_text, " memphi="), copy count_numeric_marker_total(mir_text, " copy="), load count_numeric_marker_total(mir_text, " load="), store count_numeric_marker_total(mir_text, " store=")
     }
 }
 
@@ -1722,7 +1722,7 @@ func apply_licm_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
 }
 
 func apply_bce_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
-    if count_token(mir_text, " index_const=") > 0 && count_token(mir_text, " len=") > 0 {
+    if ssa_count_token(mir_text, " index_const=") > 0 && ssa_count_token(mir_text, " len=") > 0 {
         index := parse_int_after(mir_text, " index_const=")
         length := parse_int_after(mir_text, " len=")
         proof := compile.internal.bounds.bounds_prove_constant_index(index, length)
@@ -1866,16 +1866,16 @@ func find_token_from(string text, string needle, int start) int {
 }
 
 func build_dataflow_model(string mir_text, int block_count, int value_count) ssa_dataflow_model {
-    jumps := count_token(mir_text, " term=jump")
-    branches := count_token(mir_text, " term=branch")
-    calls := count_token(mir_text, " call=")
+    jumps := ssa_count_token(mir_text, " term=jump")
+    branches := ssa_count_token(mir_text, " term=branch")
+    calls := ssa_count_token(mir_text, " call=")
     loads := count_numeric_marker_total(mir_text, " load=")
     if loads == 0 {
-        loads = count_token(mir_text, "load")
+        loads = ssa_count_token(mir_text, "load")
     }
     stores := count_numeric_marker_total(mir_text, " store=")
     if stores == 0 {
-        stores = count_token(mir_text, "store")
+        stores = ssa_count_token(mir_text, "store")
     }
     memphi := count_numeric_marker_total(mir_text, " memphi=")
     edges := estimate_cfg_edges(mir_text)
@@ -2060,21 +2060,21 @@ func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipe
         rollback_node = "verify"
     }
     if options.enable_dce {
-        dce_removed = run_dce_pass(current, count_token(mir_text, " stmts=0"))
+        dce_removed = run_dce_pass(current, ssa_count_token(mir_text, " stmts=0"))
         current = current - dce_removed
         if current < 1 {
             current = 1
         }
     }
     if options.enable_coalesce {
-        coalesced = run_coalesce_pass(current, count_token(mir_text, " term=jump"))
+        coalesced = run_coalesce_pass(current, ssa_count_token(mir_text, " term=jump"))
         current = current - coalesced
         if current < 1 {
             current = 1
         }
     }
     if options.enable_simplify_cfg {
-        simplified = run_cfg_simplify_pass(current, count_token(mir_text, " term=branch"))
+        simplified = run_cfg_simplify_pass(current, ssa_count_token(mir_text, " term=branch"))
         current = current - simplified
         if current < 1 {
             current = 1
@@ -2108,7 +2108,7 @@ func normalize_score(int score, int minv, int maxv) int {
 
 func replay_determinism_score(string replay_log, int conflicts) int {
     base := 100 - conflicts * 10
-    iters := count_token(replay_log, "iter")
+    iters := ssa_count_token(replay_log, "iter")
     if iters > 0 {
         base = base + 5
     }
@@ -2291,7 +2291,7 @@ func execute_pass_node(string name, bool ready, int raw_rewrites) pass_node_resu
 }
 
 func replay_step_count_from_iter(string iter_replay) int {
-    count_token(iter_replay, ",") + 1
+    ssa_count_token(iter_replay, ",") + 1
 }
 
 func compute_debug_budget(ssa_pass_stats pass_stats, regalloc_result allocation) int {
@@ -2461,8 +2461,8 @@ func estimate_phi_nodes(string mir_text) int {
     if explicit > 0 {
         return explicit
     }
-    branches := count_token(mir_text, " term=branch")
-    joins := count_token(mir_text, " term=jump")
+    branches := ssa_count_token(mir_text, " term=branch")
+    joins := ssa_count_token(mir_text, " term=jump")
     branches + joins / 2
 }
 
@@ -2487,7 +2487,7 @@ func count_numeric_marker_total(string text, string marker) int {
 }
 
 func estimate_memory_versions(string mir_text) int {
-    count_token(mir_text, "store") + count_token(mir_text, "load")
+    ssa_count_token(mir_text, "store") + ssa_count_token(mir_text, "load")
 }
 
 func estimate_live_in_facts(string mir_text) int {
@@ -2500,7 +2500,7 @@ func estimate_live_in_facts(string mir_text) int {
 }
 
 func estimate_alias_sets(string mir_text, int calls, int loads, int stores) int {
-    refs := count_token(mir_text, "borrow") + count_token(mir_text, "&")
+    refs := ssa_count_token(mir_text, "borrow") + ssa_count_token(mir_text, "&")
     sets := refs + calls + (loads + stores) / 2
     if sets < 1 {
         return 1
@@ -2536,7 +2536,7 @@ func estimate_loop_headers(int branches, int jumps) int {
 }
 
 func run_constant_fold_pass(string mir_text) int {
-    fold_sites := count_token(mir_text, " term=return") + count_token(mir_text, " term=jump")
+    fold_sites := ssa_count_token(mir_text, " term=return") + ssa_count_token(mir_text, " term=jump")
     if fold_sites <= 0 {
         return 0
     }
@@ -2600,7 +2600,7 @@ func parse_int_after(string text, string marker) int {
     value
 }
 
-func count_token(string text, string token) int {
+func ssa_count_token(string text, string token) int {
     total := 0
     i := 0
     for i <= std.prelude.len(text) - std.prelude.len(token) {
@@ -2636,9 +2636,9 @@ func parse_total_stmt_count(string mir_text) int {
 }
 
 func estimate_cfg_edges(string mir_text) int {
-    jumps := count_token(mir_text, " term=jump")
-    branches := count_token(mir_text, " term=branch")
-    returns := count_token(mir_text, " term=return")
+    jumps := ssa_count_token(mir_text, " term=jump")
+    branches := ssa_count_token(mir_text, " term=branch")
+    returns := ssa_count_token(mir_text, " term=return")
     jumps + branches * 2 + returns
 }
 
