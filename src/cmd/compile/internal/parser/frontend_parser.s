@@ -93,9 +93,9 @@ const fp_ast_float_lit = 49
 const fp_ast_string_lit = 50
 const fp_ast_bool_lit = 51
 const fp_ast_cast_expr = 53
-const ast_type_ident = 60
-const ast_type_array = 61
-const ast_type_ptr = 66
+const fp_ast_type_ident = 60
+const fp_ast_type_array = 61
+const fp_ast_type_ptr = 66
 
 const prec_lowest = 0
 const prec_or = 1
@@ -377,13 +377,13 @@ func parser_parse_return_types(parser* p) ast_node* {
 }
 
 func parser_parse_type(parser* p) ast_node* {
-    type_node := ast_new(ast_type_ident, p.current_token.line, p.current_token.column)
+    type_node := ast_new(fp_ast_type_ident, p.current_token.line, p.current_token.column)
 
     if parser_current_token_is(p, token_ident) {
         ast_set_name(type_node, p.current_token.value)
         parser_next_token(p)
     } else if parser_current_token_is(p, token_lbracket) {
-        type_node.node_type = ast_type_array
+        type_node.node_type = fp_ast_type_array
         parser_next_token(p)
         if !parser_current_token_is(p, token_rbracket) {
             parser_add_error(p, "Expected ']'")
@@ -392,7 +392,7 @@ func parser_parse_type(parser* p) ast_node* {
         elem_type := parser_parse_type(p)
         ast_add_child(type_node, elem_type)
     } else if parser_current_token_is(p, token_bit_and) {
-        type_node.node_type = ast_type_ptr
+        type_node.node_type = fp_ast_type_ptr
         parser_next_token(p)
         ref_type := parser_parse_type(p)
         ast_add_child(type_node, ref_type)
