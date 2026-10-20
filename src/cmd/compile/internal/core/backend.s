@@ -4352,9 +4352,9 @@ func eval_select_send_timeout_call(expr[] args, source_file source, binding[] en
     if timeout.is_err() {
         return timeout
     }
-    switch timeout.unwrap() {
-        value.int(_) : (),
-        _ : return backend_error { message: "backend error: select_send_timeout timeout must be int" },
+    timeout_value := int_value_or_default(timeout.unwrap(), -1)
+    if timeout_value < 0 {
+        return backend_error { message: "backend error: select_send_timeout timeout must be int" }
     }
     send_args := expr[]()
     i := 0
