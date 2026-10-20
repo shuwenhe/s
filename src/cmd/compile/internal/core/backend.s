@@ -501,9 +501,9 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
 func run_midend_pipeline(mir_graph graph) midend_result {
     pass := apply_midend_pass_pipeline(graph)
     rewritten_graph := pass.graph
-    inlined := compile.internal.inline.estimate_inline_sites_graph(rewritten_graph)
-    escaped := compile.internal.escape.estimate_escape_sites_graph(rewritten_graph)
-    devirt := compile.internal.dispatch.devirtualize.estimate_devirtualized_sites_graph(rewritten_graph)
+    inlined := estimate_inline_sites_graph(rewritten_graph)
+    escaped := estimate_escape_sites_graph(rewritten_graph)
+    devirt := estimate_devirtualized_sites_graph(rewritten_graph)
     cross_pkg_inline := estimate_cross_pkg_inline_sites_graph(rewritten_graph, inlined)
     const_prop := estimate_const_prop_sites_graph(rewritten_graph)
     sroutine_sites := estimate_sroutine_sites_graph(rewritten_graph)
