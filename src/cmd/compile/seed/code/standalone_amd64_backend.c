@@ -473,6 +473,8 @@ static const char *runtime_callee(const char *name) {
 	if (strcmp(name, "__host_slice") == 0) return "s_string_slice";
 	if (strcmp(name, "__host_byte_string") == 0) return "s_byte_string_value";
 	if (strcmp(name, "__index_get") == 0) return "s_index_get";
+	if (strcmp(name, "append") == 0 || strcmp(name, "__vec_push") == 0) return "s_array_append";
+	if (strcmp(name, "__vec_set") == 0) return "s_index_set";
 	if (strcmp(name, "__host_read_to_string") == 0) return "s_read_file_value";
 	if (strcmp(name, "__host_write_text_file") == 0) return "s_write_file_value";
 	if (strcmp(name, "__host_make_executable") == 0) return "s_make_executable_value";
@@ -503,6 +505,13 @@ static const char *defined_function_name(const standalone_module *module, const 
 			if (candidate) return candidate;
 		}
 	}
+	if (strcmp(name, "__result_is_ok") == 0) return "result[t,e]*.is_ok";
+	if (strcmp(name, "__result_is_err") == 0) return "result[t,e]*.is_err";
+	if (strstr(name, "_is_none") || strstr(name, ".is_none")) return "option[t]*.is_none";
+	if (strstr(name, "_is_some") || strstr(name, ".is_some")) return "option[t]*.is_some";
+	if (strstr(name, "_unwrap_err") || strstr(name, ".unwrap_err")) return "result[t,e]*.unwrap_err";
+	if (strstr(name, "_unwrap") || strstr(name, ".unwrap"))
+		return strstr(name, "result") ? "result[t,e]*.unwrap" : "option[t]*.unwrap";
 	return NULL;
 }
 static bool emit_function(FILE *out, standalone_module *module, standalone_function *fn, compile_error *err) {

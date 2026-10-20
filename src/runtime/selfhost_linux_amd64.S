@@ -265,6 +265,46 @@ s_array_new:
     pop %r12
     ret
 .size s_array_new, .-s_array_new
+.global s_array_append
+.type s_array_append, @function
+s_array_append:
+    test %rdi, %rdi
+    jz .Larray_append_empty
+    mov 8(%rdi), %rcx
+    lea 1(%rcx), %rdx
+    lea 16(,%rdx,8), %r8
+    push %rdi
+    push %rsi
+    mov %r8, %rdi
+    call s_alloc
+    pop %rsi
+    pop %rdi
+    test %rax, %rax
+    jz .Larray_append_fail
+    movq $4, (%rax)
+    mov %rdx, 8(%rax)
+    xor %r8, %r8
+.Larray_append_copy:
+    cmp %rcx, %r8
+    jae .Larray_append_store
+    mov 16(%rdi,%r8,8), %r9
+    mov %r9, 16(%rax,%r8,8)
+    inc %r8
+    jmp .Larray_append_copy
+.Larray_append_store:
+    mov %rsi, 16(%rax,%rcx,8)
+    ret
+.Larray_append_empty:
+    mov $3, %rdi
+    call s_array_new
+    test %rax, %rax
+    jz .Larray_append_fail
+    mov %rsi, 16(%rax)
+    ret
+.Larray_append_fail:
+    xor %rax, %rax
+    ret
+.size s_array_append, .-s_array_append
 .global s_value_add
 .type s_value_add, @function
 s_value_add:

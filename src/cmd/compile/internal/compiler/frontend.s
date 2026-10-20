@@ -1378,7 +1378,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         for s.error == "" && s.token != ")" && s.token != "" {
             if arg > 0 { s = compiler_expect(s, ",") }
             s = compiler_expression(s, 1)
-            if s.value_kind < 1 || (s.value_kind > 9 && s.value_kind != 17) { return compiler_fail(s, "function arguments require integers, strings, owners, arrays, slices, pairs or references") }
+            if s.value_kind < 1 || (s.value_kind > 9 && s.value_kind != 17 && s.value_kind != 18) { return compiler_fail(s, "function arguments require integers, strings, owners, arrays, slices, pairs or references") }
             if arg >= expected_param_count { return compiler_fail(s, "too many function arguments") }
             expected := compiler_stage7_declaration_param_kind_fact(s, package_identity, declaration_type_fact_key, arg)
             expected_struct := compiler_stage7_declaration_param_struct_fact(s, package_identity, declaration_type_fact_key, arg)
@@ -1386,6 +1386,8 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 if s.value_kind != 6 && s.value_kind != 7 && s.value_kind != 8 { return compiler_fail(s, "function argument requires an integer array") }
             } else if expected == 15 || expected == 16 {
                 if s.value_kind != 9 && s.value_kind != 15 && s.value_kind != 16 { return compiler_fail(s, "function argument requires a slice") }
+            } else if expected == 18 {
+                if s.value_kind != 18 { return compiler_fail(s, "function argument requires a string array") }
             } else if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
             if expected == 5 && s.value_struct_id != expected_struct { return compiler_fail(s, "function argument struct type mismatch") }
             argument := s.value
@@ -1945,7 +1947,7 @@ func compiler_statement(compiler_state initial) compiler_state {
                 expected_key = "canonical-declaration-ref"
             }
         }
-        if s.value_kind != expected_return_kind {
+        if s.value_kind != expected_return_kind && !(expected_return_kind == 18 && s.value_kind == 18) {
             s.stage7_rejection_source = "real-type-checker"
             s.stage7_rejection_kind = "return-type-mismatch"
             s.stage7_rejection_diagnostic = "return type mismatch"
@@ -2359,7 +2361,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
 
     signature := "static int64_t " + name + "("
     if s.return_kind == 0 { signature = "static void " + name + "(" }
-    if s.return_kind == 2 || s.return_kind == 4 { signature = "static int64_t *" + name + "(" }
+    if s.return_kind == 2 || s.return_kind == 4 || s.return_kind == 18 { signature = "static int64_t *" + name + "(" }
     else if s.return_kind == 5 { signature = "static " + compiler_c_type_for_kind(s, s.return_kind, return_struct) + name + "(" }
     else if s.return_kind == 9 { signature = "static compiler_slice *" + name + "(" }
     else if s.return_kind == 3 { signature = "static const int64_t *" + name + "(" }
