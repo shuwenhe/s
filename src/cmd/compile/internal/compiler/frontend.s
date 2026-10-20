@@ -1422,7 +1422,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 }
                 s.count = s.count + 1
             }
-            if expected == 7 || expected == 8 || expected == 15 || expected == 16 {
+            if expected == 7 || expected == 8 || expected == 15 || expected == 16 || expected == 18 {
                 if s.value_slot < 0 { return compiler_fail(s, "array argument requires a named array") }
                 exclusive := expected == 8 || expected == 16
                 if compiler_conflict(s, s.value_slot, exclusive) { return compiler_fail(s, "conflicting array argument borrow") }
@@ -1461,7 +1461,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             evaluations = evaluations + "(" + temporary + " = " + argument + "),"
             if arg > 0 { args = args + "," }
             args = args + temporary
-            if expected == 7 || expected == 8 || expected == 15 || expected == 16 { args = args + "," + argument_length }
+            if expected == 7 || expected == 8 || expected == 15 || expected == 16 || expected == 18 { args = args + "," + argument_length }
             arg = arg + 1
         }
         if arg != expected_param_count { return compiler_fail(s, "wrong number of function arguments") }
@@ -2370,7 +2370,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         if pi > 0 { signature = signature + ", " }
         signature = signature + compiler_c_type_for_kind(s, s.kinds[pi], s.function_param_structs[start + pi])
         signature = signature + "p" + compiler_number(pi)
-        if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 { signature = signature + ", int64_t p" + compiler_number(pi) + "_len" }
+        if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 || s.kinds[pi] == 18 { signature = signature + ", int64_t p" + compiler_number(pi) + "_len" }
         pi = pi + 1
     }
     signature = signature + ")\n"
@@ -2387,7 +2387,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     for pi < param_count {
         ctype := compiler_c_type_for_kind(s, s.kinds[pi], s.function_param_structs[start + pi])
         s.code = s.code + ctype + compiler_var(pi) + " = p" + compiler_number(pi) + ";\n"
-        if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 { s.code = s.code + "int64_t " + compiler_var(pi) + "_len = p" + compiler_number(pi) + "_len;\n" }
+        if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 || s.kinds[pi] == 18 { s.code = s.code + "int64_t " + compiler_var(pi) + "_len = p" + compiler_number(pi) + "_len;\n" }
         s.code = s.code + "(void)" + compiler_var(pi) + ";\n"
         s.live[pi] = 1
         s.struct_ids[pi] = s.function_param_structs[start + pi]
@@ -2397,7 +2397,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         s.loan_fields[pi] = -1
         s.loan_parent_fields[pi] = -1
         s.array_lengths[pi] = 0
-        if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 { s.array_lengths[pi] = -1 }
+        if s.kinds[pi] == 7 || s.kinds[pi] == 8 || s.kinds[pi] == 15 || s.kinds[pi] == 16 || s.kinds[pi] == 18 { s.array_lengths[pi] = -1 }
         if s.kinds[pi] == 5 {
             struct_id := s.function_param_structs[start + pi]
             field_count := 2
