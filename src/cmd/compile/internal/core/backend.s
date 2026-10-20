@@ -4021,9 +4021,13 @@ func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op
             }
             return fail_value("backend error: unknown owned box")
         }
-        _ : {
-            return fail_value("backend error: box_free requires a box value")
-        }
+        value.int(_) : fail_value("backend error: box_free requires a box value"),
+        value.string(_) : fail_value("backend error: box_free requires a box value"),
+        value.bool(_) : fail_value("backend error: box_free requires a box value"),
+        value.unit(_) : fail_value("backend error: box_free requires a box value"),
+        value.channel(_) : fail_value("backend error: box_free requires a box value"),
+        value.fn_ref(_) : fail_value("backend error: box_free requires a box value"),
+        value.fn_map(_) : fail_value("backend error: box_free requires a box value")
     }
 }
 
