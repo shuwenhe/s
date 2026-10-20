@@ -304,7 +304,7 @@ func lexer_read_number(l* lexer) token {
         lexer_advance(l)
         for true {
             ch := lexer_current_char(l)
-            if !is_hex_digit(ch) {
+            if !syntax_is_hex_digit(ch) {
                 break
             }
             lexer_advance(l)
@@ -343,7 +343,7 @@ func lexer_read_number(l* lexer) token {
     return *tok
 }
 
-func is_hex_digit(int ch) int {
+func syntax_is_hex_digit(int ch) int {
     if syntax_is_digit(ch) {
         return 1
     }
