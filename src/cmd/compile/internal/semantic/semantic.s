@@ -3225,7 +3225,7 @@ func contains_token(string text, string token) bool {
     index_of(text, token) >= 0
 }
 
-func find_char(string text, string needle) int {
+func semantic_find_char(string text, string needle) int {
     i := 0
     for i < std.prelude.len(text) {
         if std.prelude.char_at(text, i) == needle {
