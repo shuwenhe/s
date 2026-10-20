@@ -83,5 +83,5 @@ func starts_with_text(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
     }
-    return slice(text, 0, len(prefix)) == prefix
+    return prelude_slice(text, 0, len(prefix)) == prefix
 }

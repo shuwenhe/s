@@ -109,7 +109,7 @@ func construct_canonical_from_string(string type_str, semantic.declaration_ref[]
         i = i + 1
     }
     
-    base_name := std.prelude.slice(type_str, pointer_depth, std.prelude.len(type_str))
+    base_name := std.prelude.prelude_slice(type_str, pointer_depth, std.prelude.len(type_str))
     
     base_canonical := canonical_type {
         kind: "primitive",

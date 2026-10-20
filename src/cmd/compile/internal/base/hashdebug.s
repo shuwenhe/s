@@ -50,7 +50,7 @@ func new_hash_debug(string name, string raw) hash_debug {
         if p != "" {
             if starts_with(p, "-") {
                 out.matches.push(hash_mask {
-                    name: "exclude" + to_string(i), suffix slice(p, 1, len(p)), exclude true,
+                    name: "exclude" + to_string(i), suffix prelude_slice(p, 1, len(p)), exclude true,
                 })
             } else {
                 out.matches.push(hash_mask {
@@ -108,15 +108,15 @@ func split(string text, string sep) string[] {
     start := 0
     i := 0
     for i <= len(text) - len(sep) {
-        if slice(text, i, i + len(sep)) == sep {
-            out = append(out, slice(text, start, i))
+        if prelude_slice(text, i, i + len(sep)) == sep {
+            out = append(out, prelude_slice(text, start, i))
             i = i + len(sep)
             start = i
             continue
         }
         i = i + 1
     }
-    out = append(out, slice(text, start, len(text)))
+    out = append(out, prelude_slice(text, start, len(text)))
     out
 }
 
@@ -124,12 +124,12 @@ func starts_with(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
     }
-    return slice(text, 0, len(prefix)) == prefix
+    return prelude_slice(text, 0, len(prefix)) == prefix
 }
 
 func ends_with(string text, string suffix) bool {
     if len(text) < len(suffix) {
         return false
     }
-    return slice(text, len(text) - len(suffix), len(text)) == suffix
+    return prelude_slice(text, len(text) - len(suffix), len(text)) == suffix
 }

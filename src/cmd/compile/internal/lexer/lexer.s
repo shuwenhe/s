@@ -230,7 +230,7 @@ func (lexer* self) match_text(string text) bool {
     if self.index + len(text) > len(self.source) {
         return false
     }
-    return std.prelude.slice(self.source, self.index, self.index + len(text)) == text
+    return std.prelude.prelude_slice(self.source, self.index, self.index + len(text)) == text
 }
 
 func (lexer* self) peek() string {
@@ -551,7 +551,7 @@ func selfhost_dump_tokens(string source) string {
                 i = i + 1
                 column = column + 1
             }
-            string lexeme = std.prelude.slice(source, start, i)
+            string lexeme = std.prelude.prelude_slice(source, start, i)
             output = selfhost_dump_append_token(output, selfhost_dump_keyword_kind(lexeme), lexeme, token_line, token_column)
             continue
         }
@@ -588,7 +588,7 @@ func selfhost_dump_tokens(string source) string {
 					column = exponent_column
 				}
 			}
-            string lexeme = std.prelude.slice(source, start, i)
+            string lexeme = std.prelude.prelude_slice(source, start, i)
             output = selfhost_dump_append_token(output, "NUMBER", lexeme, token_line, token_column)
             continue
         }
@@ -608,7 +608,7 @@ func selfhost_dump_tokens(string source) string {
 			if i >= source_len || std.prelude.char_at(source, i) != "\"" {
 				return selfhost_dump_lexer_error("UNTERMINATED_STRING", token_line, token_column, "unterminated string literal")
 			}
-            string lexeme = std.prelude.slice(source, start, i)
+            string lexeme = std.prelude.prelude_slice(source, start, i)
             output = selfhost_dump_append_token(output, "STRING", lexeme, token_line, token_column)
             if i < source_len && std.prelude.char_at(source, i) == "\"" {
                 i = i + 1
@@ -618,7 +618,7 @@ func selfhost_dump_tokens(string source) string {
         }
         string symbol = ch
         if i + 1 < source_len {
-            string pair = std.prelude.slice(source, i, i + 2)
+            string pair = std.prelude.prelude_slice(source, i, i + 2)
             if pair == ":=" || pair == "==" || pair == "!=" || pair == "<=" || pair == ">=" || pair == "&&" || pair == "||" {
                 symbol = pair
             }

@@ -637,7 +637,7 @@ func count_token_text(string text, string token) int {
     count := 0
     i := 0
     for i <= std.prelude.len(text) - std.prelude.len(token) {
-        if std.prelude.slice(text, i, i + std.prelude.len(token)) == token {
+        if std.prelude.prelude_slice(text, i, i + std.prelude.len(token)) == token {
             count = count + 1
             i = i + std.prelude.len(token)
         } else {
@@ -863,7 +863,7 @@ func extract_module_root(string import_path) string {
     i := 0
     for i < std.prelude.len(import_path) {
         if string(import_path[i]) == "." {
-            return std.prelude.slice(import_path, 0, i)
+            return std.prelude.prelude_slice(import_path, 0, i)
         }
         i = i + 1
     }
@@ -1620,7 +1620,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             dot := 0
             for dot < std.prelude.len(root_name) {
                 if string(root_name[dot]) == "." {
-                    root_name = std.prelude.slice(root_name, 0, dot)
+                    root_name = std.prelude.prelude_slice(root_name, 0, dot)
                     break
                 }
                 dot = dot + 1
@@ -1677,7 +1677,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
                 }
                 return check_result {
-                    type_name: compile.internal.typesys.parse_type(std.prelude.slice(target.kindname, 2, std.prelude.len(target.kindname))), errors errors,
+                    type_name: compile.internal.typesys.parse_type(std.prelude.prelude_slice(target.kindname, 2, std.prelude.len(target.kindname))), errors errors,
                 }
             }
             if semantic_starts_with(target.kindname, "[") {
@@ -2518,7 +2518,7 @@ func qualified_package_part(string path) string {
     if dot <= 0 {
         return ""
     }
-    std.prelude.slice(path, 0, dot)
+    std.prelude.prelude_slice(path, 0, dot)
 }
 
 func qualified_decl_part(string path) string {
@@ -2526,7 +2526,7 @@ func qualified_decl_part(string path) string {
     if dot <= 0 || dot + 1 >= std.prelude.len(path) {
         return ""
     }
-    std.prelude.slice(path, dot + 1, std.prelude.len(path))
+    std.prelude.prelude_slice(path, dot + 1, std.prelude.len(path))
 }
 
 func lookup_named_methods(function_binding[] functions, string receiver_type, string name) function_binding[] {
@@ -2559,10 +2559,10 @@ func lookup_methods(function_binding[] functions, string receiver_type, string n
 
 func method_owner_type(string receiver_type) string {
     if semantic_starts_with(receiver_type, "&") {
-        return std.prelude.slice(receiver_type, 5, std.prelude.len(receiver_type))
+        return std.prelude.prelude_slice(receiver_type, 5, std.prelude.len(receiver_type))
     }
     if semantic_starts_with(receiver_type, "&") {
-        return std.prelude.slice(receiver_type, 1, std.prelude.len(receiver_type))
+        return std.prelude.prelude_slice(receiver_type, 1, std.prelude.len(receiver_type))
     }
     receiver_type
 }
@@ -2820,13 +2820,13 @@ func instantiate_type(string ty, string[] generic_names, type_binding[] generic_
         }
     }
     if semantic_starts_with(clean, "&") {
-        return "&" + instantiate_type(std.prelude.slice(clean, 5, std.prelude.len(clean)), generic_names, generic_bindings)
+        return "&" + instantiate_type(std.prelude.prelude_slice(clean, 5, std.prelude.len(clean)), generic_names, generic_bindings)
     }
     if semantic_starts_with(clean, "&") {
-        return "&" + instantiate_type(std.prelude.slice(clean, 1, std.prelude.len(clean)), generic_names, generic_bindings)
+        return "&" + instantiate_type(std.prelude.prelude_slice(clean, 1, std.prelude.len(clean)), generic_names, generic_bindings)
     }
     if semantic_starts_with(clean, "[]") {
-        return "[]" + instantiate_type(std.prelude.slice(clean, 2, std.prelude.len(clean)), generic_names, generic_bindings)
+        return "[]" + instantiate_type(std.prelude.prelude_slice(clean, 2, std.prelude.len(clean)), generic_names, generic_bindings)
     }
     if semantic_starts_with(clean, "[") {
         return array_prefix_text(clean) + instantiate_type(strip_array_prefix(clean), generic_names, generic_bindings)
@@ -2854,13 +2854,13 @@ func type_contains_generic(string ty, string[] generic_names) bool {
         return true
     }
     if semantic_starts_with(clean, "&") {
-        return type_contains_generic(std.prelude.slice(clean, 5, std.prelude.len(clean)), generic_names)
+        return type_contains_generic(std.prelude.prelude_slice(clean, 5, std.prelude.len(clean)), generic_names)
     }
     if semantic_starts_with(clean, "&") {
-        return type_contains_generic(std.prelude.slice(clean, 1, std.prelude.len(clean)), generic_names)
+        return type_contains_generic(std.prelude.prelude_slice(clean, 1, std.prelude.len(clean)), generic_names)
     }
     if semantic_starts_with(clean, "[]") {
-        return type_contains_generic(std.prelude.slice(clean, 2, std.prelude.len(clean)), generic_names)
+        return type_contains_generic(std.prelude.prelude_slice(clean, 2, std.prelude.len(clean)), generic_names)
     }
     if semantic_starts_with(clean, "[") {
         return type_contains_generic(strip_array_prefix(clean), generic_names)
@@ -2901,7 +2901,7 @@ func strip_array_prefix(string ty) string {
         } else if ch == "]" {
             depth = depth - 1
             if depth == 0 {
-                return compile.internal.typesys.parse_type(std.prelude.slice(clean, i + 1, std.prelude.len(clean)))
+                return compile.internal.typesys.parse_type(std.prelude.prelude_slice(clean, i + 1, std.prelude.len(clean)))
             }
         }
         i = i + 1
@@ -2915,14 +2915,14 @@ func array_prefix_text(string ty) string {
     if tail == clean {
         return ""
     }
-    std.prelude.slice(clean, 0, std.prelude.len(clean) - std.prelude.len(tail))
+    std.prelude.prelude_slice(clean, 0, std.prelude.len(clean) - std.prelude.len(tail))
 }
 
 func generic_name(string raw) string {
     i := 0
     for i < std.prelude.len(raw) {
         if std.prelude.char_at(raw, i) == ":" {
-            return trim_text(std.prelude.slice(raw, 0, i))
+            return trim_text(std.prelude.prelude_slice(raw, 0, i))
         }
         i = i + 1
     }
@@ -3088,7 +3088,7 @@ func sanitize_chain_anchor(string anchor) string {
     out := ""
     i := 0
     for i < std.prelude.len(anchor) {
-        ch := std.prelude.slice(anchor, i, i + 1)
+        ch := std.prelude.prelude_slice(anchor, i, i + 1)
         if ch == " " || ch == "\t" || ch == "\n" || ch == "\r" {
             out = out + "_"
         } else {
@@ -3158,7 +3158,7 @@ func semantic_starts_with_text(string text, string prefix) bool {
     if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
-    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
+    std.prelude.prelude_slice(text, 0, std.prelude.len(prefix)) == prefix
 }
 
 func locate_anchor(string source, string anchor) source_pos {
@@ -3185,7 +3185,7 @@ func find_substring(string haystack, string needle) int {
     }
     i := 0
     for i + std.prelude.len(needle) <= std.prelude.len(haystack) {
-        if std.prelude.slice(haystack, i, i + std.prelude.len(needle)) == needle {
+        if std.prelude.prelude_slice(haystack, i, i + std.prelude.len(needle)) == needle {
             return i
         }
         i = i + 1
@@ -3215,7 +3215,7 @@ func semantic_starts_with(string text, string prefix) bool {
     if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
-    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
+    std.prelude.prelude_slice(text, 0, std.prelude.len(prefix)) == prefix
 }
 
 func contains_token(string text, string token) bool {
@@ -3252,7 +3252,7 @@ func last_path_segment(string path) string {
     for i > 0 {
         i = i - 1
         if std.prelude.char_at(path, i) == "." {
-            return std.prelude.slice(path, i + 1, std.prelude.len(path))
+            return std.prelude.prelude_slice(path, i + 1, std.prelude.len(path))
         }
     }
     path
@@ -3267,7 +3267,7 @@ func trim_text(string text) string {
     for end > start && semantic_is_space(std.prelude.char_at(text, end - 1)) {
         end = end - 1
     }
-    std.prelude.slice(text, start, end)
+    std.prelude.prelude_slice(text, start, end)
 }
 
 func semantic_is_space(string ch) bool {

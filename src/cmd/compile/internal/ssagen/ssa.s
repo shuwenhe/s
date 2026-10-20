@@ -88,7 +88,7 @@ func count_ssagen_token(string text, string token) int {
     i := 0
     limit := len(text) - len(token)
     for i <= limit {
-        if slice(text, i, i + len(token)) == token {
+        if prelude_slice(text, i, i + len(token)) == token {
             count = count + 1
             i = i + len(token)
         } else {

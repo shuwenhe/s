@@ -558,21 +558,21 @@ func mir_add_unique(string[] values, string value) string[] {
 
 func mir_apply_flow_event(mir_flow_state state, string event) mir_flow_state {
     if starts_with(event, "move:") {
-        name := slice(event, 5, len(event))
+        name := prelude_slice(event, 5, len(event))
         state.moved = mir_add_unique(state.moved, name)
         state.dropped = mir_remove(state.dropped, name)
     } else if starts_with(event, "write:") {
-        name := slice(event, 6, len(event))
+        name := prelude_slice(event, 6, len(event))
         state.moved = mir_remove(state.moved, name)
         state.dropped = mir_remove(state.dropped, name)
     } else if starts_with(event, "drop:") {
-        name := slice(event, 5, len(event))
+        name := prelude_slice(event, 5, len(event))
         state.dropped = mir_add_unique(state.dropped, name)
         state.moved = mir_remove(state.moved, name)
     } else if starts_with(event, "shared:") {
-        state.shared_borrows = mir_add_unique(state.shared_borrows, slice(event, 7, len(event)))
+        state.shared_borrows = mir_add_unique(state.shared_borrows, prelude_slice(event, 7, len(event)))
     } else if starts_with(event, "mutable:") {
-        state.mutable_borrows = mir_add_unique(state.mutable_borrows, slice(event, 8, len(event)))
+        state.mutable_borrows = mir_add_unique(state.mutable_borrows, prelude_slice(event, 8, len(event)))
     }
     state
 }
