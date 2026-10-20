@@ -1,8 +1,8 @@
 package compile.internal.typecheck
-func bexport_module_name() string {
+func typecheck_bexport_module_name() string {
     "typecheck/bexport.s"
 }
 
-func bexport_module_apply() int {
+func typecheck_bexport_module_apply() int {
     0
 }

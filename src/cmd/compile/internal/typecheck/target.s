@@ -1,8 +1,8 @@
 package compile.internal.typecheck
-func target_module_name() string {
+func typecheck_target_module_name() string {
     "typecheck/target.s"
 }
 
-func target_module_apply() int {
+func typecheck_target_module_apply() int {
     0
 }
