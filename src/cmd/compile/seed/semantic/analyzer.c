@@ -1,5 +1,6 @@
 #include "scope.h"
 #include "../intermediate/array_type.h"
+#include "../syntax/enum_type.h"
 #include <ctype.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -668,6 +669,15 @@ static int is_type_assignable(const char *expected, const char *actual) {
 		return 1;
 	}
 	if (normalized_type_equal(expected, actual)) return 1;
+	/* A nullary generic variant carries no payload from which to infer T.
+	 * Its empty arguments are fixed by the receiving contextual type. */
+	{
+		const char *hole = strchr(actual, '[');
+		const char *args = strchr(expected, '[');
+		if (hole && args && (strcmp(hole, "[]") == 0 || strcmp(args, "[]") == 0) &&
+			(size_t)(args - expected) == (size_t)(hole - actual) &&
+			strncmp(expected, actual, (size_t)(hole - actual)) == 0) return 1;
+	}
 	if (equivalent_array_type(expected, actual)) return 1;
 	if (((strncmp(expected, "[]", 2) == 0 ||
 		(strlen(expected) >= 2 && strcmp(expected + strlen(expected) - 2, "[]") == 0)) &&
@@ -833,23 +843,88 @@ static int split_result_tuple_type(const char *type_name, char **ok_type, char *
 
 static int analyze_node(semantic_ctx *ctx, ast_node *node);
 static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type);
+
+static int analyze_enum_member(semantic_ctx *ctx, ast_node *member, ast_vec *args, const char **out_type) {
+	char owner[512], concrete[1024];
+	ast_node *decl;
+	ast_enum_variant *variant;
+	const char *actual = NULL;
+	if (!seed_enum_owner_name(member->as.member_expr.object, owner, sizeof(owner))) return -1;
+	{
+		char root_name[512];
+		symbol *binding;
+		size_t n = strcspn(owner, ".");
+		memcpy(root_name, owner, n);
+		root_name[n] = '\0';
+		binding = scope_lookup(ctx->current_scope, root_name);
+		if (binding && (binding->kind == SYMBOL_VAR || binding->kind == SYMBOL_PARAM)) return -1;
+	}
+	decl = seed_find_enum(ctx->root, owner);
+	if (!decl) return -1;
+	variant = seed_find_variant(decl, member->as.member_expr.member);
+	if (!variant) {
+		error_set(ctx->err, ERR_SEMANTIC, member->pos.line, member->pos.column, "unknown enum variant '%s'", member->as.member_expr.member);
+		return 0;
+	}
+	if ((args ? args->len : 0) != (variant->payload_type ? 1u : 0u)) {
+		error_set(ctx->err, ERR_SEMANTIC, member->pos.line, member->pos.column, "enum variant payload arity mismatch");
+		return 0;
+	}
+	if (variant->payload_type && !analyze_expr(ctx, args->data[0], &actual)) return 0;
+	if (variant->payload_type && decl->as.enum_decl.generic_count == 0 &&
+		!is_type_assignable_ctx(ctx, variant->payload_type, actual)) {
+		error_set(ctx->err, ERR_SEMANTIC, member->pos.line, member->pos.column, "enum payload type mismatch");
+		return 0;
+	}
+	if (decl->as.enum_decl.generic_count == 1) {
+		if (actual && strcmp(variant->payload_type, decl->as.enum_decl.generic_params[0]) == 0)
+			snprintf(concrete, sizeof(concrete), "%s[%s]", decl->as.enum_decl.name, actual);
+		else snprintf(concrete, sizeof(concrete), "%s[]", decl->as.enum_decl.name);
+	} else snprintf(concrete, sizeof(concrete), "%s", decl->as.enum_decl.name);
+	free(member->as.member_expr.resolved_enum_type);
+	member->as.member_expr.resolved_enum_type = dup_cstr(concrete);
+	if (!member->as.member_expr.resolved_enum_type) return 0;
+	*out_type = member->as.member_expr.resolved_enum_type;
+	return 1;
+}
 static int enter_child_scope(semantic_ctx *ctx, scope **old_scope);
 static void leave_child_scope(semantic_ctx *ctx, scope *old_scope);
 
-static const char *pattern_payload_type(const char *subject_type) {
+static const char *pattern_payload_type(semantic_ctx *ctx, ast_node *arm, const char *subject_type) {
 	const char *open;
 	const char *close;
-	static char payload[256];
+	ast_node *decl = seed_find_enum(ctx->root, arm->as.if_stmt.variant_owner);
+	ast_enum_variant *variant = seed_find_variant(decl, arm->as.if_stmt.variant_name);
+	static char payload[512];
 	size_t n;
-	if (!subject_type) return TYPE_ANY;
+	if (!variant || !variant->payload_type) return TYPE_ANY;
+	if (!decl->as.enum_decl.generic_count) return variant->payload_type;
+	if (!subject_type) return variant->payload_type;
 	open = strchr(subject_type, '[');
 	close = strrchr(subject_type, ']');
 	if (!open || !close || close <= open + 1) return TYPE_ANY;
-	n = (size_t)(close - open - 1);
-	if (n >= sizeof(payload)) return TYPE_ANY;
-	memcpy(payload, open + 1, n);
-	payload[n] = '\0';
-	return payload;
+	for (size_t i = 0; i < decl->as.enum_decl.generic_count; i++) {
+		if (strcmp(variant->payload_type, decl->as.enum_decl.generic_params[i]) == 0) {
+			const char *start = open + 1, *p = start;
+			size_t index = 0;
+			int depth = 0;
+			for (; p <= close; p++) {
+				if (p == close || (*p == ',' && depth == 0)) {
+					if (index == i) {
+						while (start < p && isspace((unsigned char)*start)) start++;
+						n = (size_t)(p - start);
+						while (n && isspace((unsigned char)start[n - 1])) n--;
+						if (n >= sizeof(payload)) return TYPE_ANY;
+						memcpy(payload, start, n); payload[n] = '\0';
+						return payload;
+					}
+					index++; start = p + 1;
+				} else if (*p == '[') depth++;
+				else if (*p == ']') depth--;
+			}
+		}
+	}
+	return variant->payload_type;
 }
 
 static int analyze_switch_expr(semantic_ctx *ctx, ast_node *node, const char **out_type) {
@@ -857,16 +932,18 @@ static int analyze_switch_expr(semantic_ctx *ctx, ast_node *node, const char **o
 	const char *arm_type = TYPE_ANY;
 	const char *result_type = NULL;
 	ast_node *arm = node;
-	while (arm && arm->kind == AST_IF_STMT && arm->as.if_stmt.is_pattern_arm) {
+	while (arm && arm->kind == AST_IF_STMT && arm->as.if_stmt.is_switch_arm) {
 		scope *old_scope;
 		if (arm->as.if_stmt.pattern_subject &&
 			!analyze_expr(ctx, arm->as.if_stmt.pattern_subject, &subject_type)) return 0;
+		if (arm->as.if_stmt.condition &&
+			!analyze_expr(ctx, arm->as.if_stmt.condition, &arm_type)) return 0;
 		if (!enter_child_scope(ctx, &old_scope)) return 0;
 		if (arm->as.if_stmt.binding_name || arm->as.if_stmt.payload_binding_name) {
 			const char *binding = arm->as.if_stmt.payload_binding_name
 				? arm->as.if_stmt.payload_binding_name : arm->as.if_stmt.binding_name;
 			const char *payload_type = (arm->as.if_stmt.pattern_kind == PATTERN_VARIANT)
-				? pattern_payload_type(subject_type) : subject_type;
+				? pattern_payload_type(ctx, arm, subject_type) : subject_type;
 			int status = scope_define(ctx->current_scope, binding,
 				SYMBOL_VAR, 0, -1, -1, payload_type, NULL, 0);
 			if (status <= 0) {
@@ -877,7 +954,7 @@ static int analyze_switch_expr(semantic_ctx *ctx, ast_node *node, const char **o
 			if (arm->as.if_stmt.binding_name && arm->as.if_stmt.payload_binding_name &&
 				strcmp(arm->as.if_stmt.binding_name, arm->as.if_stmt.payload_binding_name) != 0) {
 				status = scope_define(ctx->current_scope, arm->as.if_stmt.binding_name,
-					SYMBOL_VAR, 0, -1, -1, pattern_payload_type(subject_type), NULL, 0);
+					SYMBOL_VAR, 0, -1, -1, pattern_payload_type(ctx, arm, subject_type), NULL, 0);
 				if (status <= 0) {
 					leave_child_scope(ctx, old_scope);
 					if (status < 0) error_set(ctx->err, ERR_OUT_OF_MEMORY, arm->pos.line, arm->pos.column, "out of memory");
@@ -1154,6 +1231,28 @@ static int analyze_block_with_new_scope(semantic_ctx *ctx, ast_node *block) {
 }
 static int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char *return_type);
 
+static int switch_is_exhaustive(semantic_ctx *ctx, ast_node *node) {
+	ast_node *arm, *decl = NULL;
+	size_t i;
+	for (arm = node; arm && arm->kind == AST_IF_STMT; arm = arm->as.if_stmt.else_branch) {
+		if (arm->as.if_stmt.is_pattern_arm &&
+			(arm->as.if_stmt.pattern_kind == PATTERN_WILDCARD || arm->as.if_stmt.pattern_kind == PATTERN_BINDING)) return 1;
+		if (!arm->as.if_stmt.is_pattern_arm && !arm->as.if_stmt.condition) return 1;
+		if (arm->as.if_stmt.pattern_kind == PATTERN_VARIANT)
+			decl = seed_find_enum(ctx->root, arm->as.if_stmt.variant_owner);
+	}
+	if (!decl) return 0;
+	for (i = 0; i < decl->as.enum_decl.variant_count; i++) {
+		int seen = 0;
+		for (arm = node; arm && arm->kind == AST_IF_STMT; arm = arm->as.if_stmt.else_branch)
+			if (arm->as.if_stmt.variant_name &&
+				seed_find_enum(ctx->root, arm->as.if_stmt.variant_owner) == decl &&
+				strcmp(arm->as.if_stmt.variant_name, decl->as.enum_decl.variants[i].name) == 0) seen = 1;
+		if (!seen) return 0;
+	}
+	return 1;
+}
+
 static int pattern_arm_value_type(semantic_ctx *ctx, ast_node *body, const char *return_type) {
 	ast_node *tail;
 	const char *actual_type = NULL;
@@ -1167,6 +1266,8 @@ static int pattern_arm_value_type(semantic_ctx *ctx, ast_node *body, const char 
 		return is_type_assignable_ctx(ctx, return_type, tail->as.expr_stmt.inferred_type);
 	}
 	switch (tail->kind) {
+		case AST_IF_STMT:
+			return stmt_guarantees_return(ctx, tail, return_type);
 		case AST_BINARY_EXPR:
 		case AST_ASSIGN_EXPR:
 		case AST_UNARY_EXPR:
@@ -1189,18 +1290,13 @@ static int pattern_arm_value_type(semantic_ctx *ctx, ast_node *body, const char 
 }
 
 static int pattern_switch_guarantees_return(semantic_ctx *ctx, ast_node *node, const char *return_type) {
-	if (!node || node->kind != AST_IF_STMT || !node->as.if_stmt.is_pattern_arm) return 0;
-	/* The arm bodies have already been analyzed in their pattern scopes.  Keep
-	 * the return-path check structural here; array aliases such as string[] are
-	 * represented as TYPE_ARRAY by the Seed type checker. */
-	if (!pattern_arm_value_type(ctx, node->as.if_stmt.then_branch, return_type) &&
-		(!node->as.if_stmt.then_branch || node->as.if_stmt.then_branch->kind != AST_BLOCK ||
-		 node->as.if_stmt.then_branch->as.block.statements.len == 0)) return 0;
-	if (node->as.if_stmt.pattern_kind == PATTERN_WILDCARD || node->as.if_stmt.pattern_kind == PATTERN_BINDING) return 1;
-	if (node->as.if_stmt.variant_name && strcmp(node->as.if_stmt.variant_name, "none") == 0) return 1;
-	return node->as.if_stmt.else_branch &&
-		(node->as.if_stmt.else_branch->kind != AST_IF_STMT ||
-		 pattern_switch_guarantees_return(ctx, node->as.if_stmt.else_branch, return_type));
+	if (!node || node->kind != AST_IF_STMT || !node->as.if_stmt.is_switch_arm) return 0;
+	if (!switch_is_exhaustive(ctx, node)) return 0;
+	for (ast_node *arm = node; arm && arm->kind == AST_IF_STMT; arm = arm->as.if_stmt.else_branch) {
+		if (!pattern_arm_value_type(ctx, arm->as.if_stmt.then_branch, return_type) &&
+			!stmt_guarantees_return(ctx, arm->as.if_stmt.then_branch, return_type)) return 0;
+	}
+	return 1;
 }
 
 static int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char *return_type) {
@@ -1225,7 +1321,7 @@ static int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char 
 			}
 			return 0;
 		case AST_IF_STMT:
-			if (node->as.if_stmt.is_pattern_arm) {
+			if (node->as.if_stmt.is_switch_arm) {
 				return pattern_switch_guarantees_return(ctx, node, return_type);
 			}
 			if (!node->as.if_stmt.else_branch) {
@@ -1341,6 +1437,8 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				*out_type = TYPE_ANY;
 				return 1;
 			}
+			status = analyze_enum_member(ctx, node, NULL, out_type);
+			if (status >= 0) return status;
 			if (!analyze_expr(ctx, node->as.member_expr.object, &lhs_type)) {
 				return 0;
 			}
@@ -1685,6 +1783,10 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"call callee is missing");
 				return 0;
+			}
+			if (node->as.call_expr.callee->kind == AST_MEMBER_EXPR) {
+				status = analyze_enum_member(ctx, node->as.call_expr.callee, &node->as.call_expr.args, out_type);
+				if (status >= 0) return status;
 			}
 			if (node->as.call_expr.callee->kind == AST_INDEX_EXPR &&
 				!node->as.call_expr.callee->as.index_expr.index) {
@@ -2051,7 +2153,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			*out_type = sym->type_name;
 			return 1;
 		case AST_IF_STMT:
-			if (node->as.if_stmt.is_pattern_arm) {
+			if (node->as.if_stmt.is_switch_arm) {
 				return analyze_switch_expr(ctx, node, out_type);
 			}
 			if (!analyze_expr(ctx, node->as.if_stmt.condition, &lhs_type)) return 0;
@@ -2541,7 +2643,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					const char *binding = node->as.if_stmt.pattern_kind == PATTERN_VARIANT
 						? node->as.if_stmt.payload_binding_name : node->as.if_stmt.binding_name;
 					const char *payload_type = node->as.if_stmt.pattern_kind == PATTERN_VARIANT
-						? pattern_payload_type(subject_type) : subject_type;
+						? pattern_payload_type(ctx, node, subject_type) : subject_type;
 					status = scope_define(ctx->current_scope, binding, SYMBOL_VAR, 0, -1, -1,
 						payload_type ? payload_type : TYPE_ANY, NULL, 0);
 					if (status <= 0) {

@@ -1671,6 +1671,54 @@ static bool test_runtime_array_len_and_index(void) {
 	bool ok = execute_source_main(src, &ret, &err);
 	return ok && ret == 10;
 }
+static bool test_runtime_enum_payload_match(void) {
+	const char *src =
+		"enum option[t] { some(t), none, } "
+		"func describe(option[string] value) string { "
+		" switch value { option.some(alias) : \"as \" + alias, option.none : \"none\", } } "
+		"func main() int { "
+		" if describe(option.some(\"x\")) != \"as x\" { return 1; } "
+		" if describe(option.some(\"\")) != \"as \" { return 2; } "
+		" if describe(option.none) != \"none\" { return 3; } "
+		" return 0; }";
+	compile_error err;
+	long ret = -1;
+	bool ok = execute_source_main(src, &ret, &err);
+	if (!ok) fprintf(stderr, "enum payload: %s\n", err.message);
+	return ok && ret == 0;
+}
+
+static bool test_runtime_switch_expression_value(void) {
+	const char *src =
+		"func classify(int n) string { "
+		" switch n { 1 : \"one\", 2 : \"two\", _ : \"other\", } } "
+		"func main() int { "
+		" if classify(2) != \"two\" { return 1; } "
+		" if classify(8) != \"other\" { return 2; } "
+		" result := switch 1 { 1 : \"one\", _ : \"other\", }; "
+		" if result != \"one\" { return 3; } return 0; }";
+	compile_error err;
+	long ret = -1;
+	bool ok = execute_source_main(src, &ret, &err);
+	if (!ok) fprintf(stderr, "switch expression: %s\n", err.message);
+	return ok && ret == 0;
+}
+
+static bool test_runtime_prelude_len_intrinsic(void) {
+	const char *src =
+		"extern \"intrinsic\" func __runtime_len(t value) int; "
+		"func len(t value) int { return __runtime_len(value); } "
+		"func main() int { "
+		" a := [1, 2, 3, 4]; "
+		" if len(a) != 4 { return 11; } "
+		" if len(\"package main\") != 12 { return 12; } "
+		" if len(\"\") != 0 { return 13; } "
+		" return 0; }";
+	compile_error err;
+	long ret = -1;
+	return execute_source_main(src, &ret, &err) && ret == 0;
+}
+
 static bool test_runtime_nested_member_alias_compare(void) {
 	const char *src =
 		"fn main() int { "
@@ -2064,6 +2112,9 @@ int main(void) {
 	RUN_TEST(test_runtime_short_circuit_or);
 	RUN_TEST(test_runtime_short_circuit_and_side_effect_order);
 	RUN_TEST(test_runtime_array_len_and_index);
+	RUN_TEST(test_runtime_prelude_len_intrinsic);
+	RUN_TEST(test_runtime_switch_expression_value);
+	RUN_TEST(test_runtime_enum_payload_match);
 	RUN_TEST(test_runtime_nested_member_alias_compare);
 	RUN_TEST(test_runtime_nested_member_return_alias);
 	RUN_TEST(test_runtime_computed_member_place_assignment);

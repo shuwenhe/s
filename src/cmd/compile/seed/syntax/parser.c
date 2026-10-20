@@ -320,6 +320,7 @@ void ast_free(ast_node *node) {
 			ast_free(node->as.member_expr.object);
 			free(node->as.member_expr.member);
 			free(node->as.member_expr.resolved_method);
+			free(node->as.member_expr.resolved_enum_type);
 			break;
 		case AST_INDEX_EXPR:
 			ast_free(node->as.index_expr.object);
@@ -3406,6 +3407,19 @@ static ast_node *parse_switch_statement(parser *p) {
 				ast_free(root);
 				return NULL;
 			}
+			/* Keep expression arms as expression statements so their inferred
+			 * type survives after the arm-local binding scope is released. */
+			if (stmt->kind != AST_RETURN_STMT) {
+				ast_node *expression_stmt = ast_new(AST_EXPR_STMT, stmt->pos);
+				if (!expression_stmt) {
+					ast_free(stmt);
+					ast_free(subject);
+					ast_free(root);
+					return NULL;
+				}
+				expression_stmt->as.expr_stmt.expr = stmt;
+				stmt = expression_stmt;
+			}
 			// Wrap in block
 			body = ast_new(AST_BLOCK, stmt->pos);
 			if (!body) {
@@ -3498,6 +3512,16 @@ static ast_node *parse_switch_statement(parser *p) {
 			return NULL;
 		}
 		
+		arm->as.if_stmt.is_switch_arm = true;
+		arm->as.if_stmt.pattern_subject = clone_expr(subject);
+		if (!arm->as.if_stmt.pattern_subject) {
+			ast_free(arm);
+			ast_free(case_value);
+			ast_free(body);
+			ast_free(subject);
+			ast_free(root);
+			return NULL;
+		}
 		if (is_pattern_switch) {
 			// Pattern-switch: retain an explicit pattern contract for Semantic.
 			arm->as.if_stmt.condition = NULL;
@@ -3507,7 +3531,6 @@ static ast_node *parse_switch_statement(parser *p) {
 			if (arm->as.if_stmt.pattern_kind == PATTERN_BINDING && case_value && case_value->kind == AST_IDENT_EXPR) {
 				arm->as.if_stmt.binding_name = dup_cstr(case_value->as.ident_expr.name);
 			}
-			arm->as.if_stmt.pattern_subject = clone_expr(subject);
 			arm->as.if_stmt.variant_owner = variant_owner;
 			arm->as.if_stmt.variant_name = variant_name;
 			arm->as.if_stmt.payload_kind = payload_kind;
