@@ -252,58 +252,56 @@ struct offset_result {
 }
 
 func append_param_offsets(int[] offsets, int at, string type_name) offset_result {
-    updated_offsets := offsets
     size := type_size(type_name)
     if size == 0 {
-        return offset_result { offsets: updated_offsets, next at }
+        return offset_result { offsets: offsets, next at }
     }
     if is_complex_type(type_name) || size > reg_size() {
         half := size / 2
-        updated_offsets = append(updated_offsets, at)
-        updated_offsets = append(updated_offsets, at + half)
-        return offset_result { offsets: updated_offsets, next at + size }
+        offsets = append(offsets, at)
+        offsets = append(offsets, at + half)
+        return offset_result { offsets: offsets, next at + size }
     }
-    updated_offsets = append(updated_offsets, at)
-    offset_result { offsets: updated_offsets, next at + size }
+    offsets = append(offsets, at)
+    offset_result { offsets: offsets, next at + size }
 }
 
 func append_param_types(string[] rts, string type_name) string[] {
-    updated_types := rts
     if type_size(type_name) == 0 {
-        return updated_types
+        return rts
     }
     if is_complex_type(type_name) {
-        updated_types = append(updated_types, "float")
-        updated_types = append(updated_types, "float")
-        return updated_types
+        rts = append(rts, "float")
+        rts = append(rts, "float")
+        return rts
     }
     if is_float_type(type_name) {
-        updated_types = append(updated_types, "float")
-        return updated_types
+        rts = append(rts, "float")
+        return rts
     }
     if is_string_type(type_name) {
-        updated_types = append(updated_types, "ptr")
-        updated_types = append(updated_types, "int")
-        return updated_types
+        rts = append(rts, "ptr")
+        rts = append(rts, "int")
+        return rts
     }
     if is_slice_type(type_name) {
-        updated_types = append(updated_types, "ptr")
-        updated_types = append(updated_types, "int")
-        updated_types = append(updated_types, "int")
-        return updated_types
+        rts = append(rts, "ptr")
+        rts = append(rts, "int")
+        rts = append(rts, "int")
+        return rts
     }
     if is_interface_type(type_name) {
-        updated_types = append(updated_types, "ptr")
-        updated_types = append(updated_types, "ptr")
-        return updated_types
+        rts = append(rts, "ptr")
+        rts = append(rts, "ptr")
+        return rts
     }
     if type_size(type_name) > reg_size() {
-        updated_types = append(updated_types, "uint32")
-        updated_types = append(updated_types, "uint32")
-        return updated_types
+        rts = append(rts, "uint32")
+        rts = append(rts, "uint32")
+        return rts
     }
-    updated_types = append(updated_types, type_name)
-    updated_types
+    rts = append(rts, type_name)
+    rts
 }
 
 func assign_param(assign_state state, string type_name, string name, bool is_result) abi_param_assignment {
