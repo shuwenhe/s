@@ -1325,7 +1325,7 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
     if !saw_text_directive {
         return backend_error { message: "go asm translation error: no TEXT directive found" }
     }
-    join_lines(output_lines)
+    return join_lines(output_lines), backend_error { message: "" }
 }
 
 func text_backend_pair_is_err(string value, backend_error err) bool {
