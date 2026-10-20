@@ -4006,28 +4006,35 @@ func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op
     if owned_result.is_err() {
         return owned_result.unwrap_err()
     }
-    switch owned_result.unwrap() {
-        value.owned_box(handle) : {
-            i := 0
-            for i < std.prelude.len(runtime.owned_boxes) {
-                if runtime.owned_boxes[i].id == handle.id {
-                    if !runtime.owned_boxes[i].live {
-                        return fail_value("backend error: box_free on released box")
-                    }
-                    runtime.owned_boxes[i].live = false
-                    return value.unit(unit_value {})
-                }
-                i = i + 1
+    handle_result := owned_box_from_value(owned_result.unwrap())
+    if handle_result.is_none() {
+        return fail_value("backend error: box_free requires a box value")
+    }
+    handle := handle_result.unwrap()
+    i := 0
+    for i < std.prelude.len(runtime.owned_boxes) {
+        if runtime.owned_boxes[i].id == handle.id {
+            if !runtime.owned_boxes[i].live {
+                return fail_value("backend error: box_free on released box")
             }
-            return fail_value("backend error: unknown owned box")
+            runtime.owned_boxes[i].live = false
+            return value.unit(unit_value {})
         }
-        value.int(_) : fail_value("backend error: box_free requires a box value"),
-        value.string(_) : fail_value("backend error: box_free requires a box value"),
-        value.bool(_) : fail_value("backend error: box_free requires a box value"),
-        value.unit(_) : fail_value("backend error: box_free requires a box value"),
-        value.channel(_) : fail_value("backend error: box_free requires a box value"),
-        value.fn_ref(_) : fail_value("backend error: box_free requires a box value"),
-        value.fn_map(_) : fail_value("backend error: box_free requires a box value")
+        i = i + 1
+    }
+    fail_value("backend error: unknown owned box")
+}
+
+func owned_box_from_value(value target) option[owned_box_value] {
+    switch target {
+        value.owned_box(handle) : option.some(handle),
+        value.int(_) : option.none,
+        value.string(_) : option.none,
+        value.bool(_) : option.none,
+        value.unit(_) : option.none,
+        value.channel(_) : option.none,
+        value.fn_ref(_) : option.none,
+        value.fn_map(_) : option.none,
     }
 }
 
