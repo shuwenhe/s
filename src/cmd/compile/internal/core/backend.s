@@ -222,10 +222,10 @@ func build_object_interpreted_legacy(string path, string output, string ssa_marg
         return report_failure("mir lowering failed: " + lowering_error)
     }
     arch := buildcfg_goarch()
-    dominant_margin, margin_error := parse_ssa_margin_override(ssa_margin_override)
-    if margin_error.message != "" {
-        return report_failure(margin_error.message)
+    if !ssa_margin_override_valid(ssa_margin_override) {
+        return report_failure("invalid --ssa-dominant-margin value: " + ssa_margin_override)
     }
+    dominant_margin := ssa_margin_override_value(ssa_margin_override)
     midend := run_midend_pipeline(graph)
     ssa_program := build_ssa_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
     ssa_text := dump_ssa_pipeline(ssa_program)
@@ -310,10 +310,10 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
         return report_failure("mir lowering failed: " + lowering_error)
     }
     arch := buildcfg_goarch()
-    dominant_margin, margin_error := parse_ssa_margin_override(ssa_margin_override)
-    if margin_error.message != "" {
-        return report_failure(margin_error.message)
+    if !ssa_margin_override_valid(ssa_margin_override) {
+        return report_failure("invalid --ssa-dominant-margin value: " + ssa_margin_override)
     }
+    dominant_margin := ssa_margin_override_value(ssa_margin_override)
     midend := run_midend_pipeline(graph)
     ssa_program := build_ssa_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
     ssa_text := dump_ssa_pipeline(ssa_program)
@@ -5165,6 +5165,21 @@ func parse_ssa_margin_override(string text) (int, backend_error) {
         i = i + 1
     }
     return ok_int(parse_int_literal(text))
+}
+
+func ssa_margin_override_valid(string text) bool {
+    if text == "" { return true }
+    i := 0
+    for i < std.prelude.len(text) {
+        if digit_value(std.prelude.char_at(text, i)) < 0 { return false }
+        i = i + 1
+    }
+    true
+}
+
+func ssa_margin_override_value(string text) int {
+    if text == "" { return -1 }
+    parse_int_literal(text)
 }
 
 func digit_value(string ch) int {
