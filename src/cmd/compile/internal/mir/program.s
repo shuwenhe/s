@@ -91,7 +91,9 @@ func mir_program_instruction_error(mir_program_function function_data, mir_progr
         if mir_program_value_type(function_data, ins.result_ids[r], index) != "" { return "duplicate value in: " + function_data.symbol }
         previous := 0
         for previous < r {
-            if ins.result_ids[previous] == ins.result_ids[r] { return "duplicate value in: " + function_data.symbol }
+            previous_id := ins.result_ids[previous]
+            current_id := ins.result_ids[r]
+            if previous_id == current_id { return "duplicate value in: " + function_data.symbol }
             previous = previous + 1
         }
         r = r + 1
@@ -116,7 +118,9 @@ func mir_program_instruction_error(mir_program_function function_data, mir_progr
         }
         r = 0
         for r < len(ins.result_types) {
-            if ins.result_types[r] != callee.result_types[r] { return "call result type: " + ins.symbol }
+            result_type := ins.result_types[r]
+            callee_result_type := callee.result_types[r]
+            if result_type != callee_result_type { return "call result type: " + ins.symbol }
             r = r + 1
         }
         return ""
@@ -180,7 +184,8 @@ func mir_program_function_error(mir_program_function function_data, mir_program_
     for i < len(block.return_values) {
         actual := mir_program_value_type(function_data, block.return_values[i], len(block.instructions))
         if actual == "" { return "undefined return value: " + function_data.symbol }
-        if actual != function_data.result_types[i] { return "return type: " + function_data.symbol }
+        expected_return_type := function_data.result_types[i]
+        if actual != expected_return_type { return "return type: " + function_data.symbol }
         i = i + 1
     }
     return ""

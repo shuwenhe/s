@@ -225,27 +225,11 @@ bool seed_compile_files(int input_count, char **input_paths, const char *output_
 			files[i].package_name = decl->as.package_decl.name;
 		}
 	}
-	/* The current Seed semantic/IR layers have a single namespace. Until they
-	 * implement package resolution and file-local import scopes, reject those
-	 * units explicitly instead of silently combining unrelated declarations. */
-	for (i = 0; i < input_count; i++) {
-		size_t j;
-		if (strcmp(files[0].package_name, files[i].package_name) != 0) {
-			error_set(err, ERR_SEMANTIC, files[i].first_line, 1,
-				"multi-package name resolution is not supported: '%s' and '%s'",
-				files[0].package_name, files[i].package_name);
-			goto done;
-		}
-		if (input_count == 1) continue;
-		for (j = 0; j < files[i].root->as.program.statements.len; j++) {
-			ast_node *decl = files[i].root->as.program.statements.data[j];
-			if (decl->kind == AST_USE_DECL) {
-				error_set(err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
-					"file-scoped imports are not supported in multi-file compile-units");
-				goto done;
-			}
-		}
-	}
+	/* Package and import declarations remain in the unit.  The original
+	 * bootstrap path rejected them before semantic analysis, which made an
+	 * import-driven closure impossible to compile.  Let the semantic layer
+	 * resolve the declarations so the same source organization is exercised by
+	 * Stage 0 and by the generated compiler. */
 	unit = ast_new(AST_PROGRAM, (source_pos){1, 1});
 	if (!unit) {
 		error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");

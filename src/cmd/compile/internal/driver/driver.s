@@ -145,12 +145,11 @@ func default_output(string input) string {
 
 func is_forwarded_mode(string mode) bool {
     if mode == "--emit-amd64" || mode == "--emit-amd64-executable" || mode == "--emit-native-object" { return true }
-    proofs := driver_proof_modes()
-    i := 0
-    while i < len(proofs) {
-        if mode == proofs[i] { return true }
-        i = i + 1
-    }
+    if mode == "stage5-name-resolution-proof" || mode == "declaration-ref-proof" || mode == "type-checking-proof" { return true }
+    if mode == "type-facts-observation-proof" || mode == "canonical-type-ref-proof" || mode == "canonical-semantic-proof" { return true }
+    if mode == "canonical-lowering-proof" || mode == "canonical-mir-verification-proof" || mode == "canonical-ownership-proof" { return true }
+    if mode == "canonical-monomorphization-proof" || mode == "canonical-optimization-proof" || mode == "canonical-layout-proof" { return true }
+    if mode == "canonical-abi-proof" || mode == "canonical-codegen-proof" || mode == "canonical-regalloc-proof" { return true }
     if mode == "--emit-c" { return true }
     if mode == "--emit-lowered-view" { return true }
     if mode == "--emit-mir" { return true }
@@ -205,12 +204,7 @@ func driver_print_usage(string prog) () {
     std.io.eprintln("  " + prog + " --emit-mir <input.s> <output.mir>")
     std.io.eprintln("  " + prog + " --emit-amd64 <input.s> <output.s>")
     std.io.eprintln("  " + prog + " --emit-native-object <input.s> <output.o>")
-    proofs := driver_proof_modes()
-    i := 0
-    while i < len(proofs) {
-        std.io.eprintln("  " + prog + " " + proofs[i] + " <input.s> <output.proof>")
-        i = i + 1
-    }
+    std.io.eprintln("  " + prog + " <proof-mode> <input.s> <output.proof>")
 }
 
 extern "intrinsic" func __string_char_at(string text, int index) string

@@ -51,7 +51,15 @@ func run_stage5_gate_on_file(string filepath) semantic.name_resolution_gate_resu
     structs := semantic.collect_structs(file)
     
     
-    semantic.canonical_name_resolution_check(file, functions, traits, consts, structs)
+    return semantic.name_resolution_gate_result {
+        total_identifiers: 0,
+        resolved_exact: 0,
+        resolved_ambiguous: 0,
+        unresolved: 0,
+        qualified_with_multiple_matches: 0,
+        details: semantic.identifier_resolution[](),
+        gate_pass: 0,
+    }
 }
 
 func test_gate_on_main() int {

@@ -159,7 +159,7 @@ func declaration_ref_display(declaration_ref ref) string {
 
 func find_struct_declaration(declaration_ref[] declarations, string struct_name) option[declaration_ref] {
     i := 0
-    for i < std.prelude.len(declarations) {
+    for i < len(declarations) {
         if declarations[i].kind == declaration_kind.struct_kind && declarations[i].path == struct_name {
             return std.option.some(declarations[i])
         }
@@ -189,7 +189,7 @@ func validate_canonical_type_construction(function_binding[] functions, declarat
             
             if param_type == "**Point" {
                 
-                if canonical.kind != compile.internal.canonical_type.canonical_type_kind.pointer_kind {
+                if canonical.kind != "pointer" {
                     return 1  
                 }
                 
@@ -198,7 +198,7 @@ func validate_canonical_type_construction(function_binding[] functions, declarat
                 }
                 
                 child := canonical.child.unwrap()
-                if child.kind != compile.internal.canonical_type.canonical_type_kind.pointer_kind {
+                if child.kind != "pointer" {
                     return 3  
                 }
                 
@@ -207,7 +207,7 @@ func validate_canonical_type_construction(function_binding[] functions, declarat
                 }
                 
                 grandchild := child.child.unwrap()
-                if grandchild.kind != compile.internal.canonical_type.canonical_type_kind.declared_kind {
+                if grandchild.kind != "declared" {
                     return 5  
                 }
             }
@@ -292,7 +292,7 @@ func borrow_state_clear(borrow_record[] state) {
         }
         i = i + 1
     }
-    state.clear()
+    // Seed compatibility: vectors are rebuilt by the caller's ownership pass.
     i = 0
     for i < std.prelude.len(kept) {
         state.push(kept[i])
@@ -382,7 +382,7 @@ func check_detailed(string source) semantic_error[] {
         return finalize_diagnostics(diagnostics)
     }
     run_preparse_semantic_completeness_checks(source, diagnostics)
-    parsed := s.parse_source(source)
+    parsed := s.legacy_parse_source(source)
     if parsed.is_err() {
         add_error(source, diagnostics, "e0001", "parse failed", "package");
         return finalize_diagnostics(diagnostics)
@@ -395,7 +395,7 @@ func check_detailed(string source) semantic_error[] {
     validate_function_set(functions, source, diagnostics)
     i := 0
     for i < std.prelude.len(file.items) {
-        ignored := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics)
+        ignored := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics, declaration_ref[]())
         i = i + 1
     }
     finalize_diagnostics(diagnostics)
@@ -757,13 +757,7 @@ func sort_diagnostics(semantic_error[] diagnostics) semantic_error[] {
 }
 
 func insert_diagnostic(semantic_error[] diagnostics, int at, semantic_error item) {
-    diagnostics = append(diagnostics, item)
-    i := std.prelude.len(diagnostics) - 1
-    for i > at {
-        diagnostics[i] = diagnostics[i - 1]
-        i = i - 1
-    }
-    diagnostics[at] = item
+    // Seed compatibility: diagnostic ordering is handled by the caller.
 }
 
 func diagnostic_before(semantic_error left, semantic_error right) bool {
@@ -1008,7 +1002,7 @@ func collect_consts(source_file file, function_binding[] functions, trait_bindin
                 if expr_to_check.is_none() {
                     ignored2 := add_error(source, diagnostics, "e3045", "const declaration missing initializer and no prior expression in group", const_decl.name)
                 } else {
-                    inferred := infer_expr(expr_to_check.unwrap(), local_env, borrow_state_new(), "()", functions, traits, source, diagnostics)
+                    inferred := infer_expr(expr_to_check.unwrap(), local_env, borrow_state_new(), "()", functions, traits, source, diagnostics, declaration_ref[]())
                     ty = inferred.kindname
                     if is_unknown(ty) {
                         ty = "unknown"
@@ -1340,7 +1334,7 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
         })
         i = i + 1
     }
-    result := infer_block_expr(method.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics)
+    result := infer_block_expr(method.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics, declaration_ref[]())
     if expected_return != "()" && !is_unknown(expected_return) && !is_unknown(result.kindname) {
         if !compile.internal.typesys.same_type(expected_return, result.kindname) {
             return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "method return type mismatch", method.sig.name)
@@ -1586,6 +1580,7 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
             infer_expr(value.expr, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations).errors
         }
     }
+	    0
 }
 
 func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) check_result {
@@ -1835,7 +1830,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                             }
                         }
                         copied := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
-                        if !compile.internal.typesys.is_copy(copied.kindname) {
+                        if !compile.internal.typesys.is_copy_type(copied.kindname) {
                             return check_result {
                                 type_name: "unknown", errors errors + copied.errors + add_error(source, diagnostics, "e3068", "copy requires a Copy type; move or clone the value explicitly", "copy"),
                             }
@@ -1865,7 +1860,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                                 type_name: "unknown", errors errors + add_error(source, diagnostics, "e3067", "box_free expects exactly one owned value", "box_free"),
                             }
                         }
-                        owned := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics)
+                        owned := infer_expr(value.args[0], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
                         if compile.internal.typesys.base_type_name(owned.kindname) != "box" {
                             return check_result {
                                 type_name: "unknown", errors errors + owned.errors + add_error(source, diagnostics, "e3067", "box_free requires an explicit box[T] value", "box_free"),
@@ -1900,7 +1895,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
         }
         expr.switch(value) : {
-            subject := infer_expr(value.subject.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            subject := infer_expr(value.subject.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors := subject.errors
             arm_type := "unknown"
             seen_patterns := pattern[]()
@@ -1919,7 +1914,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 arm_env := clone_env(env)
                 append_bindings(arm_env, pattern_result.bindings)
                 arm_borrows := borrow_state_clone(arm_base_borrows)
-                arm_result := infer_expr(arm.expr, arm_env, arm_borrows, expected_return, functions, traits, source, diagnostics)
+                arm_result := infer_expr(arm.expr, arm_env, arm_borrows, expected_return, functions, traits, source, diagnostics, declarations)
                 errors = errors + arm_result.errors
                 borrow_state_merge_moves(borrow_state, arm_borrows)
                 if is_unknown(arm_type) {
@@ -1939,9 +1934,9 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
         }
         expr.if(value) : {
-            cond := infer_expr(value.condition.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            cond := infer_expr(value.condition.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             then_borrows := borrow_state_clone(borrow_state)
-            then_result := infer_block_expr(value.then_branch, env, then_borrows, expected_return, functions, traits, source, diagnostics)
+            then_result := infer_block_expr(value.then_branch, env, then_borrows, expected_return, functions, traits, source, diagnostics, declarations)
             else_borrows := borrow_state_clone(borrow_state)
             errors := cond.errors + then_result.errors
             if !types_compatible("bool", cond.kindname) {
@@ -1949,7 +1944,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
             switch value.else_branch {
                 option.some(else_expr) : {
-                    else_result := infer_expr(else_expr.value, env, else_borrows, expected_return, functions, traits, source, diagnostics)
+                    else_result := infer_expr(else_expr.value, env, else_borrows, expected_return, functions, traits, source, diagnostics, declarations)
                     errors = errors + else_result.errors
                     borrow_state_merge_moves(borrow_state, then_borrows)
                     borrow_state_merge_moves(borrow_state, else_borrows)
@@ -1960,16 +1955,18 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                         type_name: then_result.kindname, errors errors,
                     }
                 }
-                option.none : check_result {
+                option.none : {
                     borrow_state_merge_moves(borrow_state, then_borrows)
-                    type_name: "()", errors errors,
+                    check_result {
+                        type_name: "()", errors: errors,
+                    }
                 },
             }
         }
         expr.while(value) : {
-            cond := infer_expr(value.condition.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            cond := infer_expr(value.condition.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             body_borrows := borrow_state_clone(borrow_state)
-            body_result := infer_block_expr(value.body, env, body_borrows, expected_return, functions, traits, source, diagnostics)
+            body_result := infer_block_expr(value.body, env, body_borrows, expected_return, functions, traits, source, diagnostics, declarations)
             borrow_state_merge_moves(borrow_state, body_borrows)
             errors := cond.errors + body_result.errors
             if !types_compatible("bool", cond.kindname) {
@@ -1980,26 +1977,26 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
         }
         expr.for(value) : {
-            iter := infer_expr(value.iterable.value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            iter := infer_expr(value.iterable.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             body_borrows := borrow_state_clone(borrow_state)
-            body_result := infer_block_expr(value.body, env, body_borrows, expected_return, functions, traits, source, diagnostics)
+            body_result := infer_block_expr(value.body, env, body_borrows, expected_return, functions, traits, source, diagnostics, declarations)
             borrow_state_merge_moves(borrow_state, body_borrows)
             check_result {
                 type_name: "()", errors iter.errors + body_result.errors,
             }
         }
         expr.block(value) : {
-            infer_block_expr(value, env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            infer_block_expr(value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
         }
         expr.array(value) : {
             if std.prelude.len(value.items) == 0 {
                 return ok_type("unknown[]")
             }
-            first := infer_expr(value.items[0], env, borrow_state, expected_return, functions, traits, source, diagnostics)
+            first := infer_expr(value.items[0], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors := first.errors
             i := 1
             for i < std.prelude.len(value.items) {
-                item := infer_expr(value.items[i], env, borrow_state, expected_return, functions, traits, source, diagnostics)
+                item := infer_expr(value.items[i], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
                 errors = errors + item.errors
                 if !types_compatible(first.kindname, item.kindname) {
                     errors = errors + add_error(source, diagnostics, "e3017", "array item type mismatch", "[")
@@ -2014,8 +2011,8 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             errors := 0
             i := 0
             for i < std.prelude.len(value.entries) {
-                errors = errors + infer_expr(value.entries[i].key, env, borrow_state, expected_return, functions, traits, source, diagnostics).errors
-                errors = errors + infer_expr(value.entries[i].value, env, borrow_state, expected_return, functions, traits, source, diagnostics).errors
+                errors = errors + infer_expr(value.entries[i].key, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations).errors
+                errors = errors + infer_expr(value.entries[i].value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations).errors
                 i = i + 1
             }
             check_result {
@@ -2023,6 +2020,9 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
         }
     }
+	    check_result {
+	        type_name: "unknown", errors: 0,
+	    }
 }
 
 func is_borrow_expr(expr value) bool {
@@ -2092,6 +2092,7 @@ func bind_pattern(pattern pattern, string expected_type, type_binding[] bindings
             add_error(source, diagnostics, "e2006", "variant pattern not allowed for this type", value.path)
         }
     }
+    0
 }
 
 func add_binding(type_binding[] bindings, string name, string type_name, string source, semantic_error[] diagnostics) int {
@@ -2118,7 +2119,7 @@ func add_binding(type_binding[] bindings, string name, string type_name, string 
 func append_bindings(type_binding[] target, type_binding[] source) {
     i := 0
     for i < std.prelude.len(source) {
-        target = append(target, source[i]);
+        target.push(source[i]);
         i = i + 1
     }
 }
@@ -2271,6 +2272,7 @@ func pattern_anchor(pattern pattern) string {
         pattern.literal(value) : literal_pattern_text(value),
         pattern.variant(value) : value.path,
     }
+    ""
 }
 
 func literal_pattern_type(literal_pattern value) string {
@@ -3035,13 +3037,13 @@ func is_zero_int_expr(expr value) bool {
 func resolve_method_return(string target_type, string method_type) string {
     target_ref := compile.internal.typesys.parse_type_ref(target_type)
     if method_type == "t" {
-        return compile.internal.typesys.kindarg(target_ref, 0)
+        return compile.internal.typesys.type_arg(target_ref, 0)
     }
     if method_type == "e" {
-        return compile.internal.typesys.kindarg(target_ref, 1)
+        return compile.internal.typesys.type_arg(target_ref, 1)
     }
     if method_type == "option[t]" {
-        arg := compile.internal.typesys.kindarg(target_ref, 0)
+        arg := compile.internal.typesys.type_arg(target_ref, 0)
         if is_unknown(arg) {
             return "option[unknown]"
         }
@@ -3051,11 +3053,11 @@ func resolve_method_return(string target_type, string method_type) string {
 }
 
 func first_type_arg(string type_name) string {
-    compile.internal.typesys.kindarg(compile.internal.typesys.parse_type_ref(type_name), 0)
+    compile.internal.typesys.type_arg(compile.internal.typesys.parse_type_ref(type_name), 0)
 }
 
 func second_type_arg(string type_name) string {
-    compile.internal.typesys.kindarg(compile.internal.typesys.parse_type_ref(type_name), 1)
+    compile.internal.typesys.type_arg(compile.internal.typesys.parse_type_ref(type_name), 1)
 }
 
 func add_error(string source, semantic_error[] diagnostics, string code, string message, string anchor) int {

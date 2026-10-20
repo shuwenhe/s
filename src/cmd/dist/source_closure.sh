@@ -275,6 +275,23 @@ seen="$tmp.seen"
 
 printf '%s\n' "$entry" >>"$queue"
 
+# A package is a compilation unit, not a single file.  Import traversal
+# discovers external packages, but it must also retain every production source
+# file belonging to the entry package so same-package declarations (for
+# example main.s and driver.s) remain visible to the compiler.
+entry_rel=$entry
+case "$entry_rel" in
+    /*) entry_rel=$(printf '%s\n' "$entry_rel" | sed "s#^$root/##") ;;
+esac
+entry_pkg=$(awk '/^[[:space:]]*package[[:space:]]+/ { sub(/^[[:space:]]*package[[:space:]]+/, ""); sub(/[[:space:]].*$/, ""); print; exit }' "$root/$entry_rel")
+if [ -n "$entry_pkg" ]; then
+    { awk -F '\t' -v pkg="$entry_pkg" '$1 == pkg && $2 ~ /\/token\// { print $2 }' "$pkg_index"; \
+      awk -F '\t' -v pkg="$entry_pkg" '$1 == pkg && $2 !~ /\/token\// { print $2 }' "$pkg_index"; } |
+    while IFS= read -r package_file; do
+        [ -n "$package_file" ] && printf '%s\n' "$root/$package_file" >>"$queue"
+    done
+fi
+
 while IFS= read -r source_path; do
 
     case "$source_path" in
@@ -341,7 +358,8 @@ while IFS= read -r source_path; do
 
 done <"$queue"
 
-LC_ALL=C sort -u "$seen" >"$tmp"
+LC_ALL=C sort -u "$seen" |
+    awk 'BEGIN { token_count = 0 } /\/lexer\/token\/token\.s$/ { token[token_count++] = $0; next } { rest[rest_count++] = $0 } END { for (i = 0; i < token_count; i++) print token[i]; for (i = 0; i < rest_count; i++) print rest[i] }' >"$tmp"
 
 mv "$tmp" "$output"
 

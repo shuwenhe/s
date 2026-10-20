@@ -4,11 +4,11 @@ struct box[t] {
 }
 
 func box[t](t value) box[t] {
-    box[t] { value: value }
+    return box[t] { value: value }
 }
 
 func len[t](t value) int {
-    __runtime_len[t](value)
+    __runtime_len(value)
 }
 
 func to_string(int value) string {

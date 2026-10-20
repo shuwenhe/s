@@ -17,7 +17,7 @@ struct type_ref {
 }
 
 func parse_type(string text) string {
-    clean := normalize_type_text(trim_text(text))
+    clean := typesys_normalize_type_text(trim_text(text))
     if clean == "" {
         return "unknown"
     }
@@ -152,7 +152,7 @@ func rules_consistent() bool {
 }
 
 func dump_type(string ty) string {
-    return parse_type(ty
+    return parse_type(ty)
 }
 
 func base_type_name(string ty) string {
@@ -224,7 +224,7 @@ func extract_type_args(string type_name) string[] {
 }
 
 func same_type(string left, string right) bool {
-    return parse_type(left) == parse_type(right
+    return parse_type(left) == parse_type(right)
 }
 
 func compatible_type(string left, string right) bool {
@@ -237,7 +237,7 @@ func compatible_type(string left, string right) bool {
         return false
     }
     if is_tuple_type(l) || is_tuple_type(r) {
-        return compatible_tuple_type(l, r
+        return compatible_tuple_type(l, r)
     }
     lt := parse_type_ref(l)
     rt := parse_type_ref(r)
@@ -316,7 +316,7 @@ func assignable_type(string target, string source) bool {
         return true
     }
     if s == "nil" {
-        return is_nilable_type(t
+        return typesys_is_nilable_type(t)
     }
     if t == "nil" {
         return s == "nil"
@@ -328,15 +328,15 @@ func assignable_type(string target, string source) bool {
         return true
     }
     if is_numeric_primitive(t) && is_numeric_primitive(s) {
-        return numeric_rank(t) >= numeric_rank(s
+        return numeric_rank(t) >= numeric_rank(s)
     }
     if is_tuple_type(t) || is_tuple_type(s) {
-        return assignable_tuple_type(t, s
+        return assignable_tuple_type(t, s)
     }
     false
 }
 
-func is_nilable_type(string ty) bool {
+func typesys_is_nilable_type(string ty) bool {
     clean := parse_type(ty)
     if clean == "map" || clean == "fn" {
         return true
@@ -395,7 +395,7 @@ func is_tuple_type(string ty) bool {
     if std.prelude.len(clean) < 2 {
         return false
     }
-    return starts_with(clean, "(") && ends_with(clean, ")"
+    return starts_with(clean, "(") && ends_with(clean, ")")
 }
 
 func extract_tuple_args(string type_name) string[] {
@@ -562,11 +562,11 @@ func is_heap_reference_type(string ty) bool {
 }
 
 func is_reference_type(string ty) bool {
-    return starts_with(trim_text(ty), "&"
+    return starts_with(trim_text(ty), "&")
 }
 
 func is_slice_type(string ty) bool {
-    return starts_with(trim_text(ty), "[]"
+    return starts_with(trim_text(ty), "[]")
 }
 
 func is_generic_type(string ty) bool {
@@ -574,11 +574,11 @@ func is_generic_type(string ty) bool {
     return find_char(clean, "[") >= 0 || find_char(clean, "<") >= 0
 }
 
-func normalize_type_text(string text) string {
-    return trim_text(text
+func typesys_normalize_type_text(string text) string {
+    return trim_text(text)
 }
 
-func trim_text(string text) string {
+func typesys_trim_text(string text) string {
     start := 0
     end := std.prelude.len(text)
     for start < end && is_space(std.prelude.char_at(text, start)) {
@@ -587,10 +587,10 @@ func trim_text(string text) string {
     for end > start && is_space(std.prelude.char_at(text, end - 1)) {
         end = end - 1
     }
-    return std.prelude.slice(text, start, end
+    return std.prelude.slice(text, start, end)
 }
 
-func starts_with(string text, string prefix) bool {
+func typesys_starts_with(string text, string prefix) bool {
     prefix_len := std.prelude.len(prefix)
     if prefix_len > std.prelude.len(text) {
         return false
@@ -598,7 +598,7 @@ func starts_with(string text, string prefix) bool {
     return std.prelude.slice(text, 0, prefix_len) == prefix
 }
 
-func ends_with(string text, string suffix) bool {
+func typesys_ends_with(string text, string suffix) bool {
     suffix_len := std.prelude.len(suffix)
     text_len := std.prelude.len(text)
     if suffix_len > text_len {
@@ -607,11 +607,11 @@ func ends_with(string text, string suffix) bool {
     return std.prelude.slice(text, text_len - suffix_len, text_len) == suffix
 }
 
-func is_space(string ch) bool {
+func typesys_is_space(string ch) bool {
     return ch == " " || ch == "\n" || ch == "\t" || ch == "\r"
 }
 
-func find_char(string text, string needle) int {
+func typesys_find_char(string text, string needle) int {
     i := 0
     for i < std.prelude.len(text) {
         if std.prelude.slice(text, i, i + 1) == needle {
@@ -622,7 +622,7 @@ func find_char(string text, string needle) int {
     return 0 - 1
 }
 
-func find_last_char(string text, string needle) int {
+func typesys_find_last_char(string text, string needle) int {
     i := std.prelude.len(text)
     for i > 0 {
         i = i - 1
@@ -647,7 +647,7 @@ func extract_section(string text, string open, string close) string {
         } else if ch == close {
             depth = depth - 1
             if depth == 0 {
-                return std.prelude.slice(text, start + 1, i
+                return std.prelude.slice(text, start + 1, i)
             }
         }
         i = i + 1
