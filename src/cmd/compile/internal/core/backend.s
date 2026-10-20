@@ -222,11 +222,10 @@ func build_object_interpreted_legacy(string path, string output, string ssa_marg
         return report_failure("mir lowering failed: " + lowering_error)
     }
     arch := buildcfg_goarch()
-    margin_result := parse_ssa_margin_override(ssa_margin_override)
-    if margin_result.is_err() {
-        return report_failure(margin_result.unwrap_err().message)
+    dominant_margin, margin_error := parse_ssa_margin_override(ssa_margin_override)
+    if margin_error.message != "" {
+        return report_failure(margin_error.message)
     }
-    dominant_margin := margin_result.unwrap()
     midend := run_midend_pipeline(graph)
     ssa_program := build_ssa_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
     ssa_text := dump_ssa_pipeline(ssa_program)
@@ -311,11 +310,10 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
         return report_failure("mir lowering failed: " + lowering_error)
     }
     arch := buildcfg_goarch()
-    margin_result := parse_ssa_margin_override(ssa_margin_override)
-    if margin_result.is_err() {
-        return report_failure(margin_result.unwrap_err().message)
+    dominant_margin, margin_error := parse_ssa_margin_override(ssa_margin_override)
+    if margin_error.message != "" {
+        return report_failure(margin_error.message)
     }
-    dominant_margin := margin_result.unwrap()
     midend := run_midend_pipeline(graph)
     ssa_program := build_ssa_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
     ssa_text := dump_ssa_pipeline(ssa_program)
