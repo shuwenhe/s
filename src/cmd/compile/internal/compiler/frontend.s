@@ -270,7 +270,7 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     if !compiler_ident(s.token) { return compiler_fail(s, "expected struct name") }
     struct_name := s.token
     if compiler_find_struct(s, struct_name) >= 0 { return compiler_fail(s, "duplicate struct: " + struct_name) }
-    if s.struct_count >= 8 { return compiler_fail(s, "too many structs") }
+    if s.struct_count >= 32 { return compiler_fail(s, "too many structs") }
     struct_id := s.struct_count
     field_start := s.function_param_total
     field_count := 0
@@ -285,9 +285,16 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
         if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields require type and name") }
         first := s.token
         s = compiler_next(s)
+        // Handle array type syntax: if next token is [], consume it as part of type
+        is_array := s.token == "["
+        if is_array {
+            s = compiler_next(s)  // skip '['
+            if s.token == "]" { s = compiler_next(s) }  // skip ']'
+        }
         if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields require type and name") }
         second := s.token
         first_kind := compiler_type_kind(first)
+        if is_array && first_kind != 0 { first_kind = 7 }  // Mark as array type
         first_struct := -1
         if first_kind == 0 && compiler_ident(first) {
             first_struct = compiler_find_struct(s, first)
@@ -321,12 +328,14 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
         }
         if duplicate { return compiler_subset_fail(s, "struct fields must have distinct names") }
         if field_kind == 0 { return compiler_subset_fail(s, "struct field type is not supported") }
-        if field_count >= 8 { return compiler_fail(s, "too many struct fields") }
+        if field_count >= 128 { return compiler_fail(s, "too many struct fields") }
         index := field_start + field_count
         s.struct_field_names[index] = field_name
         s.struct_field_kinds[index] = field_kind
         s.struct_field_structs[index] = field_struct
         ctype := compiler_c_type_for_kind(s, field_kind, field_struct)
+        // For array types, use pointer representation
+        if field_kind == 7 { ctype = "void*" }
         typedef_code = typedef_code + "    " + ctype + field_name + ";\n"
         if field_count > 0 { make_params = make_params + ", "; make_args = make_args + "," }
         make_params = make_params + ctype + "p" + compiler_number(field_count)
@@ -2806,6 +2815,30 @@ func compiler_compile(string source) compiler_state {
     while s.token == "struct" {
         s = compiler_parse_struct_decl(s)
         if s.error != "" { return s }
+    }
+    // Skip any subsequent package declarations (from multi-file compilation)
+    while s.token == "package" {
+        s = compiler_next(s)  // skip "package"
+        while s.token != "" && s.token != ";" && s.token != "import" && s.token != "use" && s.token != "extern" && s.token != "struct" && s.token != "func" && s.token != "impl" && s.token != "package" {
+            s = compiler_next(s)  // skip package path
+        }
+        if s.token == ";" { s = compiler_next(s) }
+        // Also skip imports/use after package
+        while s.token == "use" || s.token == "import" {
+            if s.token == "use" { return compiler_subset_fail(s, "use declarations") }
+            s = compiler_skip_import_decl(s)
+            if s.error != "" { return s }
+        }
+        // Skip any extern declarations after this package
+        while s.token == "extern" {
+            s = compiler_parse_extern_decl(s)
+            if s.error != "" { return s }
+        }
+        // Skip any struct declarations after this package
+        while s.token == "struct" {
+            s = compiler_parse_struct_decl(s)
+            if s.error != "" { return s }
+        }
     }
     if s.token != "func" && s.token != "impl" {
         unsupported := compiler_unsupported_token_message(s.token)
