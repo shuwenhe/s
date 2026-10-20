@@ -29,9 +29,9 @@ func run_optimization_pipeline(ir_module* module) {
         cfg_compute_dominance_frontier(&cfg)
 
         apply_opt_constant_folding(&cfg)
-        opt_dead_code_elimination(&cfg)
-        opt_constant_propagation(&cfg)
-        opt_global_value_numbering(&cfg)
+        apply_opt_dead_code_elimination(&cfg)
+        apply_opt_constant_propagation(&cfg)
+        apply_opt_global_value_numbering(&cfg)
 
     }
 }
@@ -95,7 +95,7 @@ func opt_fold_constant(int op, string left, string right) string {
     }
 }
 
-func opt_dead_code_elimination(cfg* control_flow_graph) {
+func apply_opt_dead_code_elimination(cfg* control_flow_graph) {
 
     dfa := dfa_analyze(cfg)
 
@@ -143,7 +143,7 @@ func opt_dead_code_elimination(cfg* control_flow_graph) {
     }
 }
 
-func opt_constant_propagation(cfg* control_flow_graph) {
+func apply_opt_constant_propagation(cfg* control_flow_graph) {
     constants := make_string_value_map()
 
     for b_idx := 0; b_idx < cfg.blocks.len(); b_idx = b_idx + 1 {
@@ -171,7 +171,7 @@ func opt_constant_propagation(cfg* control_flow_graph) {
     }
 }
 
-func opt_global_value_numbering(cfg* control_flow_graph) {
+func apply_opt_global_value_numbering(cfg* control_flow_graph) {
     value_map := make_string_instruction_map()
 
     for b_idx := 0; b_idx < cfg.blocks.len(); b_idx = b_idx + 1 {
@@ -223,7 +223,7 @@ func make_string_instruction_map() ir_instruction[] {
     ir_instruction[]()
 }
 
-func opt_licm(cfg* control_flow_graph, loop_info[] loops) {
+func apply_opt_licm(cfg* control_flow_graph, loop_info[] loops) {
     for loop_idx := 0; loop_idx < loops.len(); loop_idx = loop_idx + 1 {
         loop := loops[loop_idx]
 
