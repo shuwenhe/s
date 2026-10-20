@@ -1599,7 +1599,7 @@ func parse_delta_count(string text, int start, int end) int {
     i := start
     for i < end && i < std.prelude.len(text) {
         ch := std.prelude.char_at(text, i)
-        if is_digit(ch) {
+        if ssa_is_digit(ch) {
             value = value * 10 + parse_digit(ch)
         }
         i = i + 1
@@ -1819,7 +1819,7 @@ func reduce_numeric_marker_budget(string text, string marker, int budget) string
         digits_start := pos + std.prelude.len(marker)
         digits_end := digits_start
         value := 0
-        for digits_end < std.prelude.len(text) && is_digit(std.prelude.char_at(text, digits_end)) {
+        for digits_end < std.prelude.len(text) && ssa_is_digit(std.prelude.char_at(text, digits_end)) {
             value = value * 10 + parse_digit(std.prelude.char_at(text, digits_end))
             digits_end = digits_end + 1
         }
@@ -2476,7 +2476,7 @@ func count_numeric_marker_total(string text, string marker) int {
         }
         digits := pos + std.prelude.len(marker)
         value := 0
-        for digits < std.prelude.len(text) && is_digit(std.prelude.char_at(text, digits)) {
+        for digits < std.prelude.len(text) && ssa_is_digit(std.prelude.char_at(text, digits)) {
             value = value * 10 + parse_digit(std.prelude.char_at(text, digits))
             digits = digits + 1
         }
@@ -2592,7 +2592,7 @@ func parse_int_after(string text, string marker) int {
     start = start + std.prelude.len(marker)
     value := 0
     i := start
-    for i < std.prelude.len(text) && is_digit(std.prelude.char_at(text, i)) {
+    for i < std.prelude.len(text) && ssa_is_digit(std.prelude.char_at(text, i)) {
         ch := std.prelude.char_at(text, i)
         value = value * 10 + parse_digit(ch)
         i = i + 1
@@ -2622,7 +2622,7 @@ func parse_total_stmt_count(string mir_text) int {
         if std.prelude.slice(mir_text, i, i + std.prelude.len(marker)) == marker {
             cursor := i + std.prelude.len(marker)
             value := 0
-            for cursor < std.prelude.len(mir_text) && is_digit(std.prelude.char_at(mir_text, cursor)) {
+            for cursor < std.prelude.len(mir_text) && ssa_is_digit(std.prelude.char_at(mir_text, cursor)) {
                 value = value * 10 + parse_digit(std.prelude.char_at(mir_text, cursor))
                 cursor = cursor + 1
             }
@@ -2814,7 +2814,7 @@ func parse_digit(string ch) int {
     0
 }
 
-func is_digit(string ch) bool {
+func ssa_is_digit(string ch) bool {
     ch >= "0" && ch <= "9"
 }
 
