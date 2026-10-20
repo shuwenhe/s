@@ -2141,7 +2141,6 @@ func compiler_statement(compiler_state initial) compiler_state {
     s = compiler_next(s)
     if s.token == "(" && compiler_find_func(s, name) >= 0 {
         function_index := compiler_find_func(s, name)
-        if s.function_returns[function_index] != 0 { return compiler_fail(s, "non-void function result must be used") }
         s = compiler_expect(s, "(")
         args := ""
         evaluations := ""
@@ -2463,6 +2462,7 @@ func compiler_parse_extern_decl(compiler_state initial) compiler_state {
         if param_count > 0 { s = compiler_expect(s, ",") }
         kind := 0
         if s.token == "int" { kind = 1 }
+        else if s.token == "bool" { kind = 1 }
         else if s.token == "string" { kind = 17 }
         else if s.token == "box" { kind = 2 }
         else if s.token == "ref" { kind = 3 }
@@ -2501,6 +2501,7 @@ func compiler_parse_extern_decl(compiler_state initial) compiler_state {
     s = compiler_expect(s, ")")
     return_kind := 0
     if s.token == "int" { return_kind = 1; s = compiler_next(s) }
+    else if s.token == "bool" { return_kind = 1; s = compiler_next(s) }
     else if s.token == "string" {
         return_kind = 17
         s = compiler_next(s)
