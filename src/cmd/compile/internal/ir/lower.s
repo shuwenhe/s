@@ -530,34 +530,22 @@ func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
 
 func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
     switch s {
-        stmt.let(var_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
-            callee: "stmt.let", args ir_ast.expr_ir[] { ir_ast.expr_ir.string(var_stmt.name), convert_expr(var_stmt.value, const_entries) },
-        }),
-        stmt.assign(assign_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
-            callee: "stmt.assign", args ir_ast.expr_ir[] { ir_ast.expr_ir.string(assign_stmt.name), convert_expr(assign_stmt.value, const_entries) },
-        }),
-        stmt.increment(increment_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
-            callee: "stmt.increment", args ir_ast.expr_ir[] { ir_ast.expr_ir.string(increment_stmt.name) },
-        }),
+        stmt.let(var_stmt) : stmt_let_to_expr(var_stmt, const_entries),
+        stmt.assign(assign_stmt) : stmt_assign_to_expr(assign_stmt, const_entries),
+        stmt.increment(increment_stmt) : stmt_increment_to_expr(increment_stmt),
         stmt.return(return_stmt) : {
             if return_stmt.value.is_some() {
-                return ir_ast.expr_ir.call(ir_ast.call_expr {
-                    callee: "stmt.return", args ir_ast.expr_ir[] { convert_expr(return_stmt.value.unwrap(), const_entries) },
-                })
+                args := ir_ast.expr_ir[]()
+                args.push(convert_expr(return_stmt.value.unwrap(), const_entries))
+                return ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.return", args args })
             }
             ir_ast.expr_ir.call(ir_ast.call_expr {
                 callee: "stmt.return", args ir_ast.expr_ir[](),
             })
         }
-        stmt.expr(expr_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
-            callee: "stmt.expr", args ir_ast.expr_ir[] { convert_expr(expr_stmt.expr, const_entries) },
-        }),
-        stmt.defer(defer_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
-            callee: "stmt.defer", args ir_ast.expr_ir[] { convert_expr(defer_stmt.expr, const_entries) },
-        }),
-        stmt.sroutine(sroutine_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
-            callee: "stmt.sroutine", args ir_ast.expr_ir[] { convert_expr(sroutine_stmt.expr, const_entries) },
-        }),
+        stmt.expr(expr_stmt) : stmt_expr_to_expr(expr_stmt, const_entries),
+        stmt.defer(defer_stmt) : stmt_defer_to_expr(defer_stmt, const_entries),
+        stmt.sroutine(sroutine_stmt) : stmt_sroutine_to_expr(sroutine_stmt, const_entries),
         stmt.c_for(c_for_stmt) : ir_ast.expr_ir.call(ir_ast.call_expr {
             callee: "stmt.c_for", args ir_ast.expr_ir[] {
                 stmt_to_expr(c_for_stmt.init.value, const_entries),
@@ -567,6 +555,44 @@ func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
             },
         }),
     }
+}
+
+func stmt_let_to_expr(var_stmt var_stmt, const_rewrite_entry[] entries) ir_ast.expr_ir {
+    args := ir_ast.expr_ir[]()
+    args.push(ir_ast.expr_ir.string(var_stmt.name))
+    args.push(convert_expr(var_stmt.value, entries))
+    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.let", args args })
+}
+
+func stmt_assign_to_expr(assign_stmt value, const_rewrite_entry[] entries) ir_ast.expr_ir {
+    args := ir_ast.expr_ir[]()
+    args.push(ir_ast.expr_ir.string(value.name))
+    args.push(convert_expr(value.value, entries))
+    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.assign", args args })
+}
+
+func stmt_increment_to_expr(increment_stmt value) ir_ast.expr_ir {
+    args := ir_ast.expr_ir[]()
+    args.push(ir_ast.expr_ir.string(value.name))
+    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.increment", args args })
+}
+
+func stmt_expr_to_expr(expr_stmt value, const_rewrite_entry[] entries) ir_ast.expr_ir {
+    args := ir_ast.expr_ir[]()
+    args.push(convert_expr(value.expr, entries))
+    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.expr", args args })
+}
+
+func stmt_defer_to_expr(defer_stmt value, const_rewrite_entry[] entries) ir_ast.expr_ir {
+    args := ir_ast.expr_ir[]()
+    args.push(convert_expr(value.expr, entries))
+    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.defer", args args })
+}
+
+func stmt_sroutine_to_expr(sroutine_stmt value, const_rewrite_entry[] entries) ir_ast.expr_ir {
+    args := ir_ast.expr_ir[]()
+    args.push(convert_expr(value.expr, entries))
+    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.sroutine", args args })
 }
 
 func block_to_expr(block_expr block, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
