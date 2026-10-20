@@ -81,7 +81,7 @@ func xpos_map_set(xpos_map m, int file_index, int line, int value) xpos_map {
 func xpos_map_get(xpos_map m, int file_index, int line) int_pair {
     slot := xpos_map_slot(m, file_index)
     if slot.right == 0 {
-        return make_int_pair(0, 0
+        return make_int_pair(0, 0)
     }
     start := m.maps[slot.left].lines.first
     sparse_map_get(m.maps[slot.left].data, line - start)
