@@ -95,6 +95,7 @@ struct compiler_state {
     string stage7_rejection_diagnostic
     string stage7_rejection_expected_key
     string stage7_rejection_name_reresolution
+    int pass
 }
 
 struct compiler_stage8_canonical_type_ref_output {
