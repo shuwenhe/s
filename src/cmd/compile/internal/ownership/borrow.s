@@ -49,7 +49,7 @@ func make_plan_trace(string[] type_env) string[] {
         ty := type_env[i]
         if ty == "" {
             plan = append(plan, "borrow:<empty>")
-        } else if starts_with(ty, "&") {
+        } else if ownership_starts_with(ty, "&") {
             plan = append(plan, "copy:" + ty)
         } else {
             plan = append(plan, "drop:" + ty)
@@ -59,7 +59,7 @@ func make_plan_trace(string[] type_env) string[] {
     return plan
 }
 
-func starts_with(string text, string prefix) bool {
+func ownership_starts_with(string text, string prefix) bool {
     prefix_len := len(prefix)
     if prefix_len > len(text) {
         return false
