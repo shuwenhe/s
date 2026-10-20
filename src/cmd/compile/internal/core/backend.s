@@ -1,6 +1,7 @@
 package compile.internal
 import (
     "std.result"
+    "std.process"
     "compile.internal.ir.lower"
     "compile.internal.semantic"
     "compile.internal.mono"
