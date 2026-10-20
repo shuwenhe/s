@@ -4244,14 +4244,12 @@ func eval_select_recv_weighted_call(expr[] args, source_file source, binding[] e
         if weight.is_err() {
             return weight
         }
-        copies := 1
-        switch weight.unwrap() {
-            value.int(n) : {
-                if n > 1 {
-                    copies = n
-                }
-            }
-            _ : return backend_error { message: "backend error: select_recv_weighted weights must be int" },
+        copies := int_value_or_default(weight.unwrap(), -1)
+        if copies < 0 {
+            return backend_error { message: "select_recv_weighted weights must be int" }
+        }
+        if copies == 0 {
+            copies = 1
         }
         wi := 0
         for wi < copies {
