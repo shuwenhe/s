@@ -2160,7 +2160,7 @@ func hash_text(string text) int {
 
 func parse_digit_safe(string ch) int {
     if ch >= "0" && ch <= "9" {
-        return parse_digit(ch
+        return parse_digit(ch)
     }
     if ch >= "a" && ch <= "z" {
         return 10
