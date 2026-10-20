@@ -9,11 +9,11 @@ struct assign_plan {
     bool is_return
 }
 
-func assign_module_name() string {
+func walk_assign_module_name() string {
     "walk/assign.s"
 }
 
-func assign_module_apply() int {
+func walk_assign_module_apply() int {
     0
 }
 

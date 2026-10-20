@@ -7,11 +7,11 @@ struct closure_plan {
     string wrapper_name
 }
 
-func closure_module_name() string {
+func walk_closure_module_name() string {
     "walk/closure.s"
 }
 
-func closure_module_apply() int {
+func walk_closure_module_apply() int {
     0
 }
 

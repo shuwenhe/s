@@ -7,11 +7,11 @@ struct range_plan {
     bool can_clear
 }
 
-func range_module_name() string {
+func walk_range_module_name() string {
     "walk/range.s"
 }
 
-func range_module_apply() int {
+func walk_range_module_apply() int {
     0
 }
 

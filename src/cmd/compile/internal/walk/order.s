@@ -7,11 +7,11 @@ struct order_plan {
     bool needs_ordering
 }
 
-func order_module_name() string {
+func walk_order_module_name() string {
     "walk/order.s"
 }
 
-func order_module_apply() int {
+func walk_order_module_apply() int {
     0
 }
 

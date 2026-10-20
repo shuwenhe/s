@@ -7,11 +7,11 @@ struct temp_plan {
     bool stack_ok
 }
 
-func temp_module_name() string {
+func walk_temp_module_name() string {
     "walk/temp.s"
 }
 
-func temp_module_apply() int {
+func walk_temp_module_apply() int {
     0
 }
 

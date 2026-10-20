@@ -7,11 +7,11 @@ struct stmt_plan {
     bool terminates
 }
 
-func stmt_module_name() string {
+func walk_stmt_module_name() string {
     "walk/stmt.s"
 }
 
-func stmt_module_apply() int {
+func walk_stmt_module_apply() int {
     0
 }
 
