@@ -32,7 +32,7 @@ func walk_walk_module_apply() int {
     0
 }
 
-func walk(ir.func func_item) walk_stats {
+func walk_ir_func(ir.func func_item) walk_stats {
     state := new_walk_state(func_item)
     state = analyze_pre_walk(state)
     state = order_func(state)
@@ -53,7 +53,7 @@ func walk_funcs(ir.func[] all_fns) walk_stats {
     stats := empty_walk_stats()
     i := 0
     for i < len(all_fns) {
-        stats = merge_walk_stats(stats, walk(all_fns[i]))
+        stats = merge_walk_stats(stats, walk_ir_func(all_fns[i]))
         i = i + 1
     }
     stats
