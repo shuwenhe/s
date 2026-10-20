@@ -5772,11 +5772,11 @@ func report_failure(string message) int {
 }
 
 struct backend_context {
-    input_source: string
-    output_executable: string
-    native_enabled: bool
-    target_arch: string
-    target_os: string
+    input_source: string,
+    output_executable: string,
+    native_enabled: bool,
+    target_arch: string,
+    target_os: string,
 }
 
 func new_backend_context(string input, string output, bool native) backend_context {
