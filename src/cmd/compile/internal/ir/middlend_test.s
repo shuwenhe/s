@@ -7,7 +7,7 @@ func test_ir_basic_types() {
         panic("IR constant value creation failed")
     }
 
-    var_val := ir_value_var("x", "int")
+    var_val := ir_make_var_value("x", "int")
     if var_val.value_type != ir_value_var || var_val.var_name != "x" {
         panic("IR variable value creation failed")
     }
@@ -61,7 +61,7 @@ func test_ir_function() {
         panic("IR function creation failed")
     }
 
-    param := ir_value_param(0, "int")
+    param := ir_make_param_value(0, "int")
     func.add_param(param)
 
     if func.parameters.len() != 1 {
