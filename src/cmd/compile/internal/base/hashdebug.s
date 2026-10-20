@@ -48,7 +48,7 @@ func new_hash_debug(string name, string raw) hash_debug {
     for i < len(parts) {
         p := trim_spaces(parts[i])
         if p != "" {
-            if starts_with(p, "-") {
+            if base_starts_with(p, "-") {
                 out.matches.push(hash_mask {
                     name: "exclude" + to_string(i), suffix prelude_slice(p, 1, len(p)), exclude true,
                 })
@@ -120,7 +120,7 @@ func split(string text, string sep) string[] {
     out
 }
 
-func starts_with(string text, string prefix) bool {
+func base_starts_with(string text, string prefix) bool {
     if len(text) < len(prefix) {
         return false
     }
