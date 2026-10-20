@@ -174,7 +174,7 @@ func ir_builder_visit_return_stmt(ir_builder_context* ctx, return_node* parser.a
         value = ir_builder_visit_expression(ctx, expr_node)
     }
 
-    ret_instr := ir_instr_return(value)
+    ret_instr := ir_make_instr_return(value)
     ctx.current_block.set_terminator(ret_instr)
 }
 
@@ -191,7 +191,7 @@ func ir_builder_visit_if_stmt(ir_builder_context* ctx, if_node* parser.ast_node)
     false_block_id := ctx.block_counter
     ctx.block_counter = ctx.block_counter + 1
 
-    condbr := ir_instr_condbr(cond_value, true_block_id, false_block_id)
+    condbr := ir_make_instr_condbr(cond_value, true_block_id, false_block_id)
     ctx.current_block.set_terminator(condbr)
 
     true_block := ir_basicblock_new(true_block_id, "if.then")
@@ -216,7 +216,7 @@ func ir_builder_visit_var_decl(ir_builder_context* ctx, var_node* parser.ast_nod
     var_name := var_node.name
     var_type := "int"
 
-    alloca := ir_instr_alloca()
+    alloca := ir_make_instr_alloca()
     alloca.result.var_name = var_name
     alloca.result.kindinfo = var_type
 
@@ -255,7 +255,7 @@ func ir_builder_visit_binary_op(ir_builder_context* ctx, binop_node* parser.ast_
     right := ir_builder_visit_expression(ctx, binop_node.children[1])
 
     op := binop_node.int_data
-    instr := ir_instr_binop(op, left, right, "int")
+    instr := ir_make_instr_binop(op, left, right, "int")
 
     ctx.current_block.add_instr(instr)
     instr.result
@@ -276,12 +276,12 @@ func ir_builder_visit_call(ir_builder_context* ctx, call_node* parser.ast_node) 
         }
     }
 
-    instr := ir_instr_call(func_name, args, "int")
+    instr := ir_make_instr_call(func_name, args, "int")
     ctx.current_block.add_instr(instr)
     instr.result
 }
 
-func ir_instr_alloca() ir_instruction {
+func ir_make_instr_alloca() ir_instruction {
     ir_instruction {
         instr_type: ir_instr_alloca
     }
