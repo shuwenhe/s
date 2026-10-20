@@ -485,8 +485,8 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
     opt_path := output + ".opt"
     opt_payload := build_midend_opt_artifact(midend.report)
     opt_check := validate_midend_opt_artifact(opt_payload)
-    if opt_check.is_err() {
-        return report_failure(opt_check.unwrap_err().message)
+    if opt_check.message != "" {
+        return report_failure(opt_check.message)
     }
     opt_write := std.fs.write_text_file(opt_path, opt_payload)
     if opt_write.is_err() {
@@ -2370,7 +2370,7 @@ func build_midend_opt_artifact(string midend_report) string {
     join_lines(lines)
 }
 
-func validate_midend_opt_artifact(string payload) ((), backend_error) {
+func validate_midend_opt_artifact(string payload) backend_error {
     if !has_substring(payload, "midend-opt version=1") {
         return backend_error { message: "backend error: midend opt artifact header missing" }
     }
@@ -2395,7 +2395,7 @@ func validate_midend_opt_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "passes rm_unreachable=") {
         return backend_error { message: "backend error: midend opt artifact pass section missing" }
     }
-    ()
+    backend_error { message: "" }
 }
 
 func function_item_count(source_file source) int {
