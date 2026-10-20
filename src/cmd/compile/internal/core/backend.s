@@ -429,8 +429,8 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
     dwarf_path := output + ".dwarf"
     dwarf_payload := build_dwarf_like_artifact(parsed, ssa_text, debug_map)
     dwarf_check := validate_dwarf_consumability(dwarf_payload, ssa_text)
-    if dwarf_check.is_err() {
-        return report_failure(dwarf_check.unwrap_err().message)
+    if dwarf_check.message != "" {
+        return report_failure(dwarf_check.message)
     }
     dwarf_write := std.fs.write_text_file(dwarf_path, dwarf_payload)
     if dwarf_write.is_err() {
@@ -2229,7 +2229,7 @@ func build_drop_metadata_artifact(string arch, source_file source, string ssa_te
     join_lines(lines)
 }
 
-func validate_dwarf_consumability(string dwarf_payload, string ssa_text) ((), backend_error) {
+func validate_dwarf_consumability(string dwarf_payload, string ssa_text) backend_error {
     if !has_substring(dwarf_payload, "section .debug_info") {
         return backend_error { message: "backend error: dwarf consumability gate missing .debug_info" }
     }
@@ -2258,7 +2258,7 @@ func validate_dwarf_consumability(string dwarf_payload, string ssa_text) ((), ba
     if count_occurrences(dwarf_payload, "loc#") <= 0 {
         return backend_error { message: "backend error: dwarf consumability has no variable locations" }
     }
-    ()
+    backend_error { message: "" }
 }
 
 func validate_drop_contract_chain(string drop_payload, source_file source, string ssa_text) ((), backend_error) {
