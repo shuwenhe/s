@@ -1,4 +1,4 @@
-package compile.internal.ssa
+package compile.internal
 func op_invalid() string { "Invalid" }
 
 func op_const() string { "Const" }

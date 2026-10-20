@@ -1,8 +1,5 @@
-package compile.internal.rewriteresults
+package compile.internal
 
-import (
-    "compile.internal.ir"
-)
 
 struct rewrite_candidate {
     string local_name

@@ -1,7 +1,4 @@
-package compile.internal.ssa
-import (
-    "std"
-)
+package compile.internal
 struct reg_assign {
     int value_id
     string reg

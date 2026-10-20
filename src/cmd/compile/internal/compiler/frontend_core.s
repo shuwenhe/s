@@ -1,4 +1,4 @@
-package compile.compiler
+package compile.internal
 extern "intrinsic" func host_args() string[];
 extern "intrinsic" func __host_read_to_string(string path) string;
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;

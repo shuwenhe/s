@@ -1,7 +1,4 @@
-package compile.internal.ssa
-import (
-    "std"
-)
+package compile.internal
 struct ssa_func {
     string name
     int entry

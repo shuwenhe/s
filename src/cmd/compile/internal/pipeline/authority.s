@@ -1,6 +1,5 @@
-package compile.internal.pipeline
+package compile.internal
 
-use std.io.eprintln
 
 struct authority_marker {
     string stage

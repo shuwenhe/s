@@ -1,4 +1,4 @@
-package compile.internal.ssa
+package compile.internal
 struct ssa_config {
     bool debug
     string target_arch

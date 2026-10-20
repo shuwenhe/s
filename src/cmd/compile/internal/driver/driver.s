@@ -1,10 +1,5 @@
-package compile.driver
+package compile.internal
 
-import (
-    "compile.internal.compiler"
-    "compile.internal.pipeline"
-    "std.io"
-)
 
 struct driver_config {
     string program_name

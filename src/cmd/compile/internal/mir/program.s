@@ -1,9 +1,5 @@
-package compile.internal.mir
+package compile.internal
 
-import (
-    "std"
-    "std.prelude"
-)
 
 // Executable module boundary. IDs are local to a function, symbols to a package.
 // Physical value layout and native calling convention belong to later lowering.

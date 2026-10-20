@@ -1,4 +1,4 @@
-package compile.internal.walk
+package compile.internal
 
 struct range_plan {
     string source_kind

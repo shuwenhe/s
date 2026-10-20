@@ -1,7 +1,4 @@
-package compile.internal.ssa
-import (
-    "std"
-)
+package compile.internal
 struct pass_stat {
     string name
     int changed

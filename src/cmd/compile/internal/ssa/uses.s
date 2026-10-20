@@ -1,7 +1,4 @@
-package compile.internal.ssa
-import (
-    "std"
-)
+package compile.internal
 func recompute_uses(ssa_func f) {
     i := 0
     for i < len(f.values) {

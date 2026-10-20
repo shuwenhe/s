@@ -1,4 +1,4 @@
-package compile.internal.walk
+package compile.internal
 
 const literal_init_static = 0
 const literal_init_stack = 1

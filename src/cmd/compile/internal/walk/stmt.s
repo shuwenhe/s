@@ -1,4 +1,4 @@
-package compile.internal.walk
+package compile.internal
 
 struct stmt_plan {
     string op

@@ -1,7 +1,4 @@
-package compile.internal.ssagen
-import (
-    "std"
-)
+package compile.internal
 struct pgen_plan {
     string[] lines
     int stack_size

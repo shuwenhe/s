@@ -1,4 +1,4 @@
-package compile.compiler
+package compile.internal
 
 func compiler_stage5_first_import_package(string source) string {
     s := compiler_compile(source)

@@ -1,4 +1,4 @@
-package compile.internal.walk
+package compile.internal
 
 struct switch_plan {
     string kind

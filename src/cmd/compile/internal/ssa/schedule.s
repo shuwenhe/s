@@ -1,7 +1,4 @@
-package compile.internal.ssa
-import (
-    "std"
-)
+package compile.internal
 func run_schedule(ssa_func f) int {
     changed := 0
     bi := 0

@@ -1,7 +1,4 @@
-package compile.internal.ssagen
-import (
-    "std"
-)
+package compile.internal
 struct phi_input {
     int pred
     int value

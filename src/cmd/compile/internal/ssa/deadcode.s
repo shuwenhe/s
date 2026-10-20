@@ -1,7 +1,4 @@
-package compile.internal.ssa
-import (
-    "std"
-)
+package compile.internal
 func run_deadcode(ssa_func f) int {
     recompute_uses(f)
     changed := 0

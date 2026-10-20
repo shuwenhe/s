@@ -1,4 +1,4 @@
-package compile.internal.ssa
+package compile.internal
 func run_rewrite_arm64(ssa_func f) int {
     changed := 0
     i := 0

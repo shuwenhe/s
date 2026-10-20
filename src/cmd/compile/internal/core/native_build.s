@@ -1,11 +1,5 @@
-package compile.internal.core
+package compile.internal
 
-import (
-    "compile.internal.compiler"
-    "compile.internal.mir"
-    "compile.internal.ssa"
-    "compile.internal.codegen"
-)
 
 // Host tool boundary only. These primitives never execute the input S program.
 // Native applications contain the selected instructions and Linux startup only.

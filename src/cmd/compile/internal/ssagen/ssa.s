@@ -1,7 +1,4 @@
-package compile.internal.ssagen
-import (
-    "std"
-)
+package compile.internal
 struct abi_param_desc {
     int frame_offset
     int size

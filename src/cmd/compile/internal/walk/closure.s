@@ -1,4 +1,4 @@
-package compile.internal.walk
+package compile.internal
 
 struct closure_plan {
     int captured_count
