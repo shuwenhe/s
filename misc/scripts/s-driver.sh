@@ -161,7 +161,7 @@ emit_binary() {
     trace_authority "production-compiler-entry=bin/s_compiler"
     trace_authority "native-codegen-authority=function-mir-ssa"
     trace_authority "implicit-legacy-fallback=NO"
-    exec "$compiler" build "$input" -o "$output"
+    exec "$compiler" build "$input" "$output"
 
 }
 
