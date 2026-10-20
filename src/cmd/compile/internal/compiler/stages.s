@@ -1142,7 +1142,7 @@ func compiler_linear_scan_regalloc_with_spill(string mir_text, int value_count, 
     return regalloc_result { allocated_reg_count: allocated, spill_count: spills, spill_reload_count: spill_reloads, call_pressure_events: call_sites, live_range_splits: splits, rematerialized_values: remat, reuse_count: reuse, max_live: max_live }
 }
 
-func compute_regalloc_quality(regalloc_result allocation, int block_count) regalloc_quality_result {
+func compiler_compute_regalloc_quality(regalloc_result allocation, int block_count) regalloc_quality_result {
     spill_cost := allocation.spill_count * 4 + allocation.spill_reload_count * 2
     if spill_cost < 0 {
         spill_cost = 0
@@ -1239,7 +1239,7 @@ func compiler_stage18_observe_regalloc_authority(string source, string goarch) c
     allocation := compiler_linear_scan_regalloc_with_spill(mir_text, value_count, goarch)
     
     
-    regalloc_quality := compute_regalloc_quality(allocation, parse_number_after(mir_text, "blocks="))
+    regalloc_quality := compiler_compute_regalloc_quality(allocation, parse_number_after(mir_text, "blocks="))
     
     
     evidence_text := "Canonical register allocation executed via linear_scan_regalloc_with_spill. "
