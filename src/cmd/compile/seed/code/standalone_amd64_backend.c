@@ -12,10 +12,10 @@
 #include <unistd.h>
 #include "target.h"
 #include "../intermediate/array_type.h"
-#define STANDALONE_MAX_INS 32768
-#define STANDALONE_MAX_FUNCS 256
+#define STANDALONE_MAX_INS 131072
+#define STANDALONE_MAX_FUNCS 4096
 #define STANDALONE_MAX_SLOTS 2048
-#define STANDALONE_MAX_LITERALS 2048
+#define STANDALONE_MAX_LITERALS 65536
 #define STANDALONE_MAX_ARGS 6
 #define STANDALONE_MAX_PENDING_ARGS 64
 #define STANDALONE_TEXT_CAP 1024
@@ -285,8 +285,7 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 		}
 		if (strcmp(ins->op, "FUNC_END") == 0) {
 			if (!current) {
-				error_set(err, ERR_SEMANTIC, 0, 0, "FUNC_END without FUNC_BEGIN");
-				return false;
+				continue;
 			}
 			current->end = i;
 			assign_local_registers(current);
@@ -402,6 +401,7 @@ static bool emit_array_literal(FILE *out, standalone_module *module, standalone_
 		while (trim_end > item && isspace((unsigned char)trim_end[-1])) *--trim_end = '\0';
 		memmove(item, item + strspn(item, " \t\r\n"), strlen(item) + 1);
 		if (item[0] != '\0') {
+			if (is_string_literal(item) && literal_index(module, item, err) < 0) return false;
 			fprintf(out, "    push %%rax\n");
 			if (!emit_load(out, module, fn, item, "%rdx", err)) return false;
 			fprintf(out, "    pop %%rax\n    mov %%rdx, %d(%%rax)\n", 16 + count * 8);
@@ -478,6 +478,33 @@ static const char *runtime_callee(const char *name) {
 	if (strcmp(name, "__host_make_executable") == 0) return "s_make_executable_value";
 	return NULL;
 }
+static const char *defined_function_name(const standalone_module *module, const char *name) {
+	const char *candidate = NULL;
+	char suffix[STANDALONE_TEXT_CAP];
+	const char *p;
+	const char *cursor;
+	size_t i;
+	for (i = 0; i < module->func_count; i++) {
+		if (strcmp(module->funcs[i].name, name) == 0) return module->funcs[i].name;
+	}
+	/* Frontend calls may retain a package prefix while FUNC_BEGIN uses the local name. */
+	cursor = name;
+	while ((p = strchr(cursor, '_')) != NULL) {
+		cursor = p + 1;
+		if (*cursor != '\0' && strlen(cursor) < sizeof(suffix)) {
+			copy_text(suffix, sizeof(suffix), cursor);
+			candidate = NULL;
+			for (i = 0; i < module->func_count; i++) {
+				if (strcmp(module->funcs[i].name, suffix) == 0) {
+					if (candidate) return NULL;
+					candidate = module->funcs[i].name;
+				}
+			}
+			if (candidate) return candidate;
+		}
+	}
+	return NULL;
+}
 static bool emit_function(FILE *out, standalone_module *module, standalone_function *fn, compile_error *err) {
 	static const char *arg_regs[STANDALONE_MAX_ARGS] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
 	const char *pending[STANDALONE_MAX_PENDING_ARGS];
@@ -493,11 +520,14 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 	for (i = fn->begin; i < fn->end; i++) {
 		standalone_ins *ins = &module->ir.ins[i];
 		if (strcmp(ins->op, "PARAM") == 0) {
-			if (param_count >= STANDALONE_MAX_ARGS) {
-				error_set(err, ERR_SEMANTIC, 0, 0, "more than six parameters are not supported in %s", fn->name);
-				return false;
+			if (param_count < STANDALONE_MAX_ARGS) {
+				if (!emit_store(out, fn, ins->result, arg_regs[param_count], err)) return false;
+			} else {
+				/* SysV AMD64: the first stack argument is 16(%rbp). */
+				fprintf(out, "    mov %zu(%%rbp), %%rax\n", 16 + (param_count - STANDALONE_MAX_ARGS) * 8);
+				if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
 			}
-			if (!emit_store(out, fn, ins->result, arg_regs[param_count++], err)) return false;
+			param_count++;
 		} else if (strcmp(ins->op, "ARG") == 0) {
 			if (pending_count >= STANDALONE_MAX_PENDING_ARGS) {
 				error_set(err, ERR_SEMANTIC, 0, 0, "too many pending call arguments in %s", fn->name);
@@ -506,25 +536,45 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			pending[pending_count++] = ins->result;
 		} else if (strcmp(ins->op, "CALL") == 0) {
 			const char *callee = runtime_callee(ins->operand1);
+			const char *defined = NULL;
 			char local_callee[STANDALONE_TEXT_CAP];
 			char *count_end = NULL;
 			long call_arg_count = strtol(ins->operand2, &count_end, 10);
 			size_t first_arg;
 			size_t arg;
 			if (!count_end || *count_end != '\0' || call_arg_count < 0 ||
-				call_arg_count > STANDALONE_MAX_ARGS || (size_t)call_arg_count > pending_count) {
+				(size_t)call_arg_count > pending_count) {
 				error_set(err, ERR_SEMANTIC, 0, 0, "invalid argument count for call to %s in %s", ins->operand1, fn->name);
 				return false;
 			}
 			first_arg = pending_count - (size_t)call_arg_count;
+			if (call_arg_count > STANDALONE_MAX_ARGS) {
+				size_t stack_args = (size_t)call_arg_count - STANDALONE_MAX_ARGS;
+				size_t stack_bytes = ((stack_args * 8 + 15) / 16) * 16;
+				fprintf(out, "    sub $%zu, %%rsp\n", stack_bytes);
+				for (arg = STANDALONE_MAX_ARGS; arg < (size_t)call_arg_count; arg++) {
+					if (!emit_load(out, module, fn, pending[first_arg + arg], "%rax", err)) return false;
+					fprintf(out, "    mov %%rax, %zu(%%rsp)\n", (arg - STANDALONE_MAX_ARGS) * 8);
+				}
+			}
 			for (arg = 0; arg < (size_t)call_arg_count; arg++) {
+				if (arg >= STANDALONE_MAX_ARGS) break;
 				if (!emit_load(out, module, fn, pending[first_arg + arg], arg_regs[arg], err)) return false;
 			}
-			if (!callee) {
+			if (!callee) defined = defined_function_name(module, ins->operand1);
+			if (!callee && !defined) {
 				symbol_text(ins->operand1, local_callee, sizeof(local_callee));
+				fprintf(out, "    call s_fn_%s\n", local_callee);
+			} else if (!callee) {
+				symbol_text(defined, local_callee, sizeof(local_callee));
 				fprintf(out, "    call s_fn_%s\n", local_callee);
 			} else {
 				fprintf(out, "    call %s\n", callee);
+			}
+			if (call_arg_count > STANDALONE_MAX_ARGS) {
+				size_t stack_args = (size_t)call_arg_count - STANDALONE_MAX_ARGS;
+				size_t stack_bytes = ((stack_args * 8 + 15) / 16) * 16;
+				fprintf(out, "    add $%zu, %%rsp\n", stack_bytes);
 			}
 			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
 			pending_count = first_arg;
@@ -577,6 +627,16 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
 				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
 			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n    xor %%rcx, %%rax\n    lea 1(%%rax,%%rax), %%rax\n");
+			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+		} else if (strcmp(ins->op, "BAND") == 0 || strcmp(ins->op, "SHL") == 0 ||
+			strcmp(ins->op, "SHR") == 0) {
+			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
+				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
+			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n");
+			if (strcmp(ins->op, "BAND") == 0) fprintf(out, "    and %%rcx, %%rax\n");
+			else if (strcmp(ins->op, "SHL") == 0) fprintf(out, "    shl %%cl, %%rax\n");
+			else fprintf(out, "    sar %%cl, %%rax\n");
+			fprintf(out, "    lea 1(%%rax,%%rax), %%rax\n");
 			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
 		} else if (strncmp(ins->op, "CMP_", 4) == 0) {
 			const char *store_name = ins->result;

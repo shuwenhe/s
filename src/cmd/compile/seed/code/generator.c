@@ -89,9 +89,6 @@ void generate_code(IR *ir, FILE *output) {
             case IR_MOV:
                 emit_record(output, "MOV", instr->result, instr->operand1, "");
                 break;
-            case IR_ARRAY_NEW:
-                emit_record(output, "ARRAY_NEW", instr->result, instr->operand1, instr->operand2);
-                break;
             case IR_ADD:
                 emit_record(output, "ADD", instr->result, instr->operand1, instr->operand2);
                 break;
@@ -107,11 +104,20 @@ void generate_code(IR *ir, FILE *output) {
             case IR_MOD:
                 emit_record(output, "MOD", instr->result, instr->operand1, instr->operand2);
                 break;
+            case IR_BAND:
+                emit_record(output, "BAND", instr->result, instr->operand1, instr->operand2);
+                break;
             case IR_BOR:
                 emit_record(output, "BOR", instr->result, instr->operand1, instr->operand2);
                 break;
             case IR_BXOR:
                 emit_record(output, "BXOR", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_SHL:
+                emit_record(output, "SHL", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_SHR:
+                emit_record(output, "SHR", instr->result, instr->operand1, instr->operand2);
                 break;
             case IR_CMP_EQ:
                 emit_record(output, "CMP_EQ", instr->result, instr->operand1, instr->operand2);
@@ -133,6 +139,9 @@ void generate_code(IR *ir, FILE *output) {
                 break;
             case IR_INDEX_SET:
                 emit_record(output, "INDEX_SET", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_ARRAY_NEW:
+                emit_record(output, "ARRAY_NEW", instr->result, instr->operand1, instr->operand2);
                 break;
             case IR_RET:
                 emit_record(output, "RET", instr->result, "", "");

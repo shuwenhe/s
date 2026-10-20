@@ -1198,11 +1198,12 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         slot := compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
-        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 && s.kinds[slot] != 15 && s.kinds[slot] != 16 { return compiler_fail(s, "len requires an integer array or slice") }
+        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 && s.kinds[slot] != 15 && s.kinds[slot] != 16 && s.kinds[slot] != 18 { return compiler_fail(s, "len requires an integer array or slice") }
         s = compiler_expect(compiler_next(s), ")")
         s.value = "INT64_C(" + compiler_array_length(s, slot) + ")"
         if s.kinds[slot] == 9 { s.value = compiler_var(slot) + "->len" }
-        if s.kinds[slot] == 15 || s.kinds[slot] == 16 { s.value = compiler_var(slot) + "_len" }
+        else if s.kinds[slot] == 15 || s.kinds[slot] == 16 { s.value = compiler_var(slot) + "_len" }
+        else if s.kinds[slot] == 18 { s.value = compiler_var(slot) + "_len" }
         else if s.array_lengths[slot] < 0 { s.value = compiler_var(slot) + "_len" }
         s.value_kind = 1
         s.value_slot = -1
@@ -1313,37 +1314,48 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     if compiler_ident(t) {
         generic_call := compiler_next(s)
         if generic_call.token == "[" {
-            generic_call = compiler_next(generic_call)
-            type_kind := compiler_explicit_type_arg_kind(generic_call.token)
-            if type_kind == 0 { return compiler_fail(s, "generic function type argument must be int or box in this subset") }
-            instance_name := compiler_generic_instance_name(t, type_kind)
-            function_index := compiler_find_func(generic_call, instance_name)
-            if function_index < 0 { return compiler_fail(s, "unknown generic function instance: " + instance_name) }
-            generic_call = compiler_expect(compiler_next(generic_call), "]")
-            generic_call = compiler_expect(generic_call, "(")
-            generic_call = compiler_expression(generic_call, 1)
-            expected := generic_call.function_param_kinds[generic_call.function_starts[function_index]]
-            if generic_call.value_kind != expected { return compiler_fail(generic_call, "generic function argument type mismatch") }
-            argument := generic_call.value
-            if expected == 2 {
-                if generic_call.value_field >= 0 {
-                    generic_call = compiler_move_value_field_expr(generic_call)
-                    if generic_call.error != "" { return generic_call }
-                    argument = generic_call.value
-                } else if generic_call.value_slot >= 0 {
-                    origin := generic_call.value_slot
-                    generic_call = compiler_consume(generic_call, origin)
-                    if generic_call.error != "" { return generic_call }
-                    argument = "compiler_move(&" + compiler_var(origin) + ")"
+            type_check := compiler_next(generic_call)
+            type_kind := compiler_explicit_type_arg_kind(type_check.token)
+            // 只有当 [] 内是有效的类型参数，且后面跟 ] 和 (，才认为是泛型调用
+            if type_kind != 0 {
+                lookahead := compiler_next(type_check)
+                if lookahead.token == "]" {
+                    lookahead_next := compiler_next(lookahead)
+                    if lookahead_next.token == "(" {
+                        // 确认是泛型调用
+                        generic_call = type_check
+                        instance_name := compiler_generic_instance_name(t, type_kind)
+                        function_index := compiler_find_func(generic_call, instance_name)
+                        if function_index < 0 { return compiler_fail(s, "unknown generic function instance: " + instance_name) }
+                        generic_call = lookahead
+                        generic_call = compiler_expect(compiler_next(generic_call), "(")
+                        generic_call = compiler_expression(generic_call, 1)
+                        expected := generic_call.function_param_kinds[generic_call.function_starts[function_index]]
+                        if generic_call.value_kind != expected { return compiler_fail(generic_call, "generic function argument type mismatch") }
+                        argument := generic_call.value
+                        if expected == 2 {
+                            if generic_call.value_field >= 0 {
+                                generic_call = compiler_move_value_field_expr(generic_call)
+                                if generic_call.error != "" { return generic_call }
+                                argument = generic_call.value
+                            } else if generic_call.value_slot >= 0 {
+                                origin := generic_call.value_slot
+                                generic_call = compiler_consume(generic_call, origin)
+                                if generic_call.error != "" { return generic_call }
+                                argument = "compiler_move(&" + compiler_var(origin) + ")"
+                            }
+                        }
+                        generic_call = compiler_expect(generic_call, ")")
+                        generic_call.value = instance_name + "(" + argument + ")"
+                        generic_call.value_kind = generic_call.function_returns[function_index]
+                        generic_call.value_slot = -1
+                        generic_call.value_struct_id = -1
+                        generic_call.new_borrow = false
+                        return generic_call
+                    }
                 }
             }
-            generic_call = compiler_expect(generic_call, ")")
-            generic_call.value = instance_name + "(" + argument + ")"
-            generic_call.value_kind = generic_call.function_returns[function_index]
-            generic_call.value_slot = -1
-            generic_call.value_struct_id = -1
-            generic_call.new_borrow = false
-            return generic_call
+            // 不是泛型调用，回退继续处理作为普通标识符
         }
     }
     if compiler_ident(t) {
@@ -1507,7 +1519,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     if s.error != "" { return s }
     s = compiler_next(s)
     if s.token == "[" {
-        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 && s.kinds[slot] != 15 && s.kinds[slot] != 16 { return compiler_fail(s, "indexing requires an integer array or slice") }
+        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 && s.kinds[slot] != 15 && s.kinds[slot] != 16 && s.kinds[slot] != 18 { return compiler_fail(s, "indexing requires an integer array or slice") }
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }
         index := s.value
@@ -1516,6 +1528,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         length := compiler_array_length(s, slot)
         if s.kinds[slot] == 9 { data = compiler_var(slot) + "->data"; length = compiler_var(slot) + "->len" }
         if s.kinds[slot] == 15 || s.kinds[slot] == 16 { data = compiler_var(slot); length = compiler_var(slot) + "_len" }
+        if s.kinds[slot] == 18 { data = compiler_var(slot); length = compiler_var(slot) + "_len" }
         s.value = data + "[compiler_index(" + length + "," + index + ")]"
         s.value_kind = 1
         s.value_slot = -1
@@ -2287,6 +2300,11 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         if kind == 16 && s.token == "[" {
             s = compiler_expect(s, "[")
             s = compiler_expect(s, "]")
+        }
+        if kind == 17 && s.token == "[" {
+            s = compiler_expect(s, "[")
+            s = compiler_expect(s, "]")
+            kind = 18
         }
         param := s.token
         if !compiler_ident(param) { return compiler_fail(s, "expected parameter name") }
