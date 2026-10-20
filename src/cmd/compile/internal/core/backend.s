@@ -644,7 +644,7 @@ func estimate_const_fold_hits_graph(mir_graph graph) int {
     for i < std.prelude.len(graph.trace) {
         line := trim_spaces(graph.trace[i])
         if starts_with_local(line, prefix) {
-            return parse_non_negative_int(std.prelude.slice(line, std.prelude.len(prefix), std.prelude.len(line)))
+            return parse_non_negative_int(std.prelude.prelude_slice(line, std.prelude.len(prefix), std.prelude.len(line)))
         }
         i = i + 1
     }
@@ -1297,7 +1297,7 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
             continue
         }
         if ends_with_local(cleaned, ":") {
-            label := trim_spaces(std.prelude.slice(cleaned, 0, std.prelude.len(cleaned) - 1))
+            label := trim_spaces(std.prelude.prelude_slice(cleaned, 0, std.prelude.len(cleaned) - 1))
             if label == "" {
                 return backend_error { message: "go asm translation error: empty label" }
             }
@@ -1327,16 +1327,16 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
 }
 
 func parse_go_text_symbol(string line) (string, backend_error) {
-    after := trim_spaces(std.prelude.slice(line, std.prelude.len("TEXT "), std.prelude.len(line)))
+    after := trim_spaces(std.prelude.prelude_slice(line, std.prelude.len("TEXT "), std.prelude.len(line)))
     comma := index_of(after, ",")
     if comma < 0 {
         return backend_error { message: "go asm translation error: malformed TEXT directive" }
     }
-    symbol_ref := trim_spaces(std.prelude.slice(after, 0, comma))
+    symbol_ref := trim_spaces(std.prelude.prelude_slice(after, 0, comma))
     if !ends_with_local(symbol_ref, "(SB)") {
         return backend_error { message: "go asm translation error: TEXT symbol must use (SB)" }
     }
-    symbol := normalize_go_symbol(std.prelude.slice(symbol_ref, 0, std.prelude.len(symbol_ref) - std.prelude.len("(SB)")))
+    symbol := normalize_go_symbol(std.prelude.prelude_slice(symbol_ref, 0, std.prelude.len(symbol_ref) - std.prelude.len("(SB)")))
     if symbol == "" {
         return backend_error { message: "go asm translation error: empty TEXT symbol" }
     }
@@ -1348,8 +1348,8 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
     op := line
     args_text := ""
     if first_space >= 0 {
-        op = trim_spaces(std.prelude.slice(line, 0, first_space))
-        args_text = trim_spaces(std.prelude.slice(line, first_space + 1, std.prelude.len(line)))
+        op = trim_spaces(std.prelude.prelude_slice(line, 0, first_space))
+        args_text = trim_spaces(std.prelude.prelude_slice(line, first_space + 1, std.prelude.len(line)))
     }
     gas_op := map_go_opcode(op)
     if gas_op == "" {
@@ -1366,8 +1366,8 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
         }
         return "    " + gas_op + " " + one.unwrap()
     }
-    left_raw := trim_spaces(std.prelude.slice(args_text, 0, comma))
-    right_raw := trim_spaces(std.prelude.slice(args_text, comma + 1, std.prelude.len(args_text)))
+    left_raw := trim_spaces(std.prelude.prelude_slice(args_text, 0, comma))
+    right_raw := trim_spaces(std.prelude.prelude_slice(args_text, comma + 1, std.prelude.len(args_text)))
     left := convert_go_operand_to_gas(left_raw, arch)
     if left.is_err() {
         return left.unwrap_err()
@@ -1458,14 +1458,14 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
         return backend_error { message: "go asm translation error: empty operand" }
     }
     if starts_with_local(operand, "$") {
-        imm := std.prelude.slice(operand, 1, std.prelude.len(operand))
+        imm := std.prelude.prelude_slice(operand, 1, std.prelude.len(operand))
         if ends_with_local(imm, "(SB)") {
-            return "$" + normalize_go_symbol(std.prelude.slice(imm, 0, std.prelude.len(imm) - std.prelude.len("(SB)")))
+            return "$" + normalize_go_symbol(std.prelude.prelude_slice(imm, 0, std.prelude.len(imm) - std.prelude.len("(SB)")))
         }
         return "$" + normalize_go_symbol(imm)
     }
     if ends_with_local(operand, "(SB)") {
-        sym := normalize_go_symbol(std.prelude.slice(operand, 0, std.prelude.len(operand) - std.prelude.len("(SB)")))
+        sym := normalize_go_symbol(std.prelude.prelude_slice(operand, 0, std.prelude.len(operand) - std.prelude.len("(SB)")))
         if sym == "" {
             return backend_error { message: "go asm translation error: empty symbol operand" }
         }
@@ -1473,15 +1473,15 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
     }
     paren := index_of(operand, "(")
     if paren >= 0 && ends_with_local(operand, ")") {
-        base := std.prelude.slice(operand, paren + 1, std.prelude.len(operand) - 1)
+        base := std.prelude.prelude_slice(operand, paren + 1, std.prelude.len(operand) - 1)
         if base == "SB" {
-            return normalize_go_symbol(std.prelude.slice(operand, 0, paren))
+            return normalize_go_symbol(std.prelude.prelude_slice(operand, 0, paren))
         }
         mapped_base := map_go_register(base, arch)
         if mapped_base == "" {
             return backend_error { message: "go asm translation error: unsupported base register " + base }
         }
-        disp := parse_go_disp(std.prelude.slice(operand, 0, paren))
+        disp := parse_go_disp(std.prelude.prelude_slice(operand, 0, paren))
         return disp + "(" + mapped_base + ")"
     }
     mapped_reg := map_go_register(operand, arch)
@@ -1559,7 +1559,7 @@ func parse_go_disp(string text) string {
     }
     plus := index_of(disp, "+")
     if plus >= 0 {
-        tail := trim_spaces(std.prelude.slice(disp, plus + 1, std.prelude.len(disp)))
+        tail := trim_spaces(std.prelude.prelude_slice(disp, plus + 1, std.prelude.len(disp)))
         if tail == "" {
             return "0"
         }
@@ -1571,7 +1571,7 @@ func parse_go_disp(string text) string {
 func normalize_go_symbol(string text) string {
     out := trim_spaces(text)
     if starts_with_local(out, "*") {
-        out = trim_spaces(std.prelude.slice(out, 1, std.prelude.len(out)))
+        out = trim_spaces(std.prelude.prelude_slice(out, 1, std.prelude.len(out)))
     }
     out
 }
@@ -1580,11 +1580,11 @@ func strip_go_asm_comment(string line) string {
     out := line
     slash := index_of(out, "//")
     if slash >= 0 {
-        out = std.prelude.slice(out, 0, slash)
+        out = std.prelude.prelude_slice(out, 0, slash)
     }
     hash := index_of(out, "#")
     if hash >= 0 {
-        out = std.prelude.slice(out, 0, hash)
+        out = std.prelude.prelude_slice(out, 0, hash)
     }
     out
 }
@@ -1595,13 +1595,13 @@ func split_lines_local(string text) string[] {
     i := 0
     for i < std.prelude.len(text) {
         if std.prelude.char_at(text, i) == "\n" {
-            lines = append(lines, std.prelude.slice(text, start, i))
+            lines = append(lines, std.prelude.prelude_slice(text, start, i))
             start = i + 1
         }
         i = i + 1
     }
     if start <= std.prelude.len(text) {
-        lines = append(lines, std.prelude.slice(text, start, std.prelude.len(text)))
+        lines = append(lines, std.prelude.prelude_slice(text, start, std.prelude.len(text)))
     }
     lines
 }
@@ -1987,7 +1987,7 @@ func split_signature_types(string type_text) string[] {
         return string[]()
     }
     if abi_text_starts_with(t, "(") && abi_text_ends_with(t, ")") {
-        t = trim_spaces(std.prelude.slice(t, 1, std.prelude.len(t) - 1))
+        t = trim_spaces(std.prelude.prelude_slice(t, 1, std.prelude.len(t) - 1))
     }
     if t == "" {
         return string[]()
@@ -2012,12 +2012,12 @@ func split_signature_types(string type_text) string[] {
                 bracket = bracket - 1
             }
         } else if ch == "," && paren == 0 && bracket == 0 {
-            out = append(out, trim_spaces(std.prelude.slice(t, start, i)))
+            out = append(out, trim_spaces(std.prelude.prelude_slice(t, start, i)))
             start = i + 1
         }
         i = i + 1
     }
-    out = append(out, trim_spaces(std.prelude.slice(t, start, std.prelude.len(t))))
+    out = append(out, trim_spaces(std.prelude.prelude_slice(t, start, std.prelude.len(t))))
     out
 }
 
@@ -2025,14 +2025,14 @@ func abi_text_starts_with(string text, string prefix) bool {
     if std.prelude.len(text) < std.prelude.len(prefix) {
         return false
     }
-    return std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
+    return std.prelude.prelude_slice(text, 0, std.prelude.len(prefix)) == prefix
 }
 
 func abi_text_ends_with(string text, string suffix) bool {
     if std.prelude.len(text) < std.prelude.len(suffix) {
         return false
     }
-    return std.prelude.slice(text, std.prelude.len(text) - std.prelude.len(suffix), std.prelude.len(text)) == suffix
+    return std.prelude.prelude_slice(text, std.prelude.len(text) - std.prelude.len(suffix), std.prelude.len(text)) == suffix
 }
 
 func abi_float_param_reg_limit(string arch) int {
@@ -2145,7 +2145,7 @@ func append_debug_loc_section(string[] lines, string debug_map) () {
         if end < 0 {
             end = std.prelude.len(debug_map)
         }
-        entry := trim_spaces(std.prelude.slice(debug_map, at, end))
+        entry := trim_spaces(std.prelude.prelude_slice(debug_map, at, end))
         lo := 100 + loc_id * 8
         hi := lo + 8
         lines = append(lines, "  loc#" + std.prelude.to_string(loc_id) + " pc=[" + std.prelude.to_string(lo) + "," + std.prelude.to_string(hi) + ") " + entry)
@@ -2520,14 +2520,14 @@ func starts_with_local(string text, string prefix) bool {
     if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
-    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
+    std.prelude.prelude_slice(text, 0, std.prelude.len(prefix)) == prefix
 }
 
 func ends_with_local(string text, string suffix) bool {
     if std.prelude.len(suffix) > std.prelude.len(text) {
         return false
     }
-    std.prelude.slice(text, std.prelude.len(text) - std.prelude.len(suffix), std.prelude.len(text)) == suffix
+    std.prelude.prelude_slice(text, std.prelude.len(text) - std.prelude.len(suffix), std.prelude.len(text)) == suffix
 }
 
 func load_source_graph(string path, string source) result[source_file, backend_error] {
@@ -2734,8 +2734,8 @@ func lookup_module_in_package_index_text(string text, string module) option[stri
         }
         tab := find_tab_index(line)
         if tab > 0 {
-            name := trim_spaces(std.prelude.slice(line, 0, tab))
-            path := trim_spaces(std.prelude.slice(line, tab + 1, std.prelude.len(line)))
+            name := trim_spaces(std.prelude.prelude_slice(line, 0, tab))
+            path := trim_spaces(std.prelude.prelude_slice(line, tab + 1, std.prelude.len(line)))
             if name == module && path != "" {
                 return option.some(normalize_package_index_path(project, path))
             }
@@ -2783,23 +2783,23 @@ func add_module_candidates_in_root(string[] candidates, string root, string modu
         return
     }
     if starts_with_local(module, "compile.") {
-        add_compile_module_candidates(candidates, root, std.prelude.slice(module, std.prelude.len("compile."), std.prelude.len(module)))
+        add_compile_module_candidates(candidates, root, std.prelude.prelude_slice(module, std.prelude.len("compile."), std.prelude.len(module)))
         return
     }
     if starts_with_local(module, "internal.") {
-        add_std_layout_candidates(candidates, root + "/src/internal", std.prelude.slice(module, std.prelude.len("internal."), std.prelude.len(module)))
+        add_std_layout_candidates(candidates, root + "/src/internal", std.prelude.prelude_slice(module, std.prelude.len("internal."), std.prelude.len(module)))
         return
     }
     if starts_with_local(module, "std.") {
-        add_std_module_candidates(candidates, root, std.prelude.slice(module, std.prelude.len("std."), std.prelude.len(module)))
+        add_std_module_candidates(candidates, root, std.prelude.prelude_slice(module, std.prelude.len("std."), std.prelude.len(module)))
         return
     }
     if starts_with_local(module, "s.") {
-        add_s_module_candidates(candidates, root, std.prelude.slice(module, std.prelude.len("s."), std.prelude.len(module)))
+        add_s_module_candidates(candidates, root, std.prelude.prelude_slice(module, std.prelude.len("s."), std.prelude.len(module)))
         return
     }
     if starts_with_local(module, "neurx.") {
-        add_neurx_module_candidates(candidates, root, std.prelude.slice(module, std.prelude.len("neurx."), std.prelude.len(module)))
+        add_neurx_module_candidates(candidates, root, std.prelude.prelude_slice(module, std.prelude.len("neurx."), std.prelude.len(module)))
         return
     }
     candidates = append(candidates, root + "/" + dot_to_slash(module) + ".s")
@@ -2913,7 +2913,7 @@ func append_workspace_roots(string[] roots, string text) () {
             start := std.prelude.len("use = \"")
             end := find_quote_from(line, start)
             if end > start {
-                push_module_search_root(roots, std.prelude.slice(line, start, end))
+                push_module_search_root(roots, std.prelude.prelude_slice(line, start, end))
             }
         }
         i = i + 1
@@ -2983,7 +2983,7 @@ func drop_last_segment(string text) string {
     if last < 0 {
         return ""
     }
-    std.prelude.slice(text, 0, last)
+    std.prelude.prelude_slice(text, 0, last)
 }
 
 func last_segment(string text) string {
@@ -2991,7 +2991,7 @@ func last_segment(string text) string {
     if last < 0 {
         return text
     }
-    std.prelude.slice(text, last + 1, std.prelude.len(text))
+    std.prelude.prelude_slice(text, last + 1, std.prelude.len(text))
 }
 
 func last_dot_index(string text) int {
@@ -3135,9 +3135,9 @@ func parse_name_after(string text, string marker) string {
     start := at + std.prelude.len(marker)
     end := index_of_from(text, " ", start)
     if end < 0 {
-        return std.prelude.slice(text, start, std.prelude.len(text))
+        return std.prelude.prelude_slice(text, start, std.prelude.len(text))
     }
-    std.prelude.slice(text, start, end)
+    std.prelude.prelude_slice(text, start, end)
 }
 
 func bool_string(bool value) string {
@@ -3452,7 +3452,7 @@ func extract_call_arg(string line, string callee) option[string] {
     if end < 0 || end < start {
         return option.none
     }
-    option.some(std.prelude.slice(line, start, end))
+    option.some(std.prelude.prelude_slice(line, start, end))
 }
 
 func is_quoted_literal(string text) bool {
@@ -3471,7 +3471,7 @@ func trim_spaces(string text) string {
     for end > start && is_space(std.prelude.char_at(text, end - 1)) {
         end = end - 1
     }
-    std.prelude.slice(text, start, end)
+    std.prelude.prelude_slice(text, start, end)
 }
 
 func is_space(string ch) bool {
@@ -3496,7 +3496,7 @@ func index_of_from(string text, string needle, int start) int {
     i := start
     limit := std.prelude.len(text) - std.prelude.len(needle)
     for i <= limit {
-        if std.prelude.slice(text, i, i + std.prelude.len(needle)) == needle {
+        if std.prelude.prelude_slice(text, i, i + std.prelude.len(needle)) == needle {
             return i
         }
         i = i + 1
@@ -4664,7 +4664,7 @@ func panic_payload(backend_error err) string {
     if !is_panic_error(err) {
         return ""
     }
-    std.prelude.slice(err.message, 6, std.prelude.len(err.message))
+    std.prelude.prelude_slice(err.message, 6, std.prelude.len(err.message))
 }
 
 func copy_control_bindings(binding[] from_env, binding[] to_env) () {

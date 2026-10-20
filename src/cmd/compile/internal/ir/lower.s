@@ -208,7 +208,7 @@ func contains_text(string text, string needle) bool {
     }
     i := 0
     for i <= len(text) - len(needle) {
-        if slice(text, i, i + len(needle)) == needle {
+        if prelude_slice(text, i, i + len(needle)) == needle {
             return true
         }
         i = i + 1
@@ -979,16 +979,16 @@ func replace_ident_token(string text, string ident, string replacement) string {
     out := ""
     i := 0
     for i < len(text) {
-        if i + len(ident) <= len(text) && slice(text, i, i + len(ident)) == ident {
-            left_ok := i == 0 || !is_ident_char(slice(text, i - 1, i))
-            right_ok := i + len(ident) == len(text) || !is_ident_char(slice(text, i + len(ident), i + len(ident) + 1))
+        if i + len(ident) <= len(text) && prelude_slice(text, i, i + len(ident)) == ident {
+            left_ok := i == 0 || !is_ident_char(prelude_slice(text, i - 1, i))
+            right_ok := i + len(ident) == len(text) || !is_ident_char(prelude_slice(text, i + len(ident), i + len(ident) + 1))
             if left_ok && right_ok {
                 out = out + replacement
                 i = i + len(ident)
                 continue
             }
         }
-        out = out + slice(text, i, i + 1)
+        out = out + prelude_slice(text, i, i + 1)
         i = i + 1
     }
     out

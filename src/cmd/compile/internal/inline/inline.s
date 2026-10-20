@@ -26,7 +26,7 @@ func inline_count_token(string text, string token) int {
     total := 0
     i := 0
     for i <= len(text) - len(token) {
-        if std.prelude.slice(text, i, i + len(token)) == token {
+        if std.prelude.prelude_slice(text, i, i + len(token)) == token {
             total = total + 1
             i = i + len(token)
         } else {

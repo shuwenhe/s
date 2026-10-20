@@ -18,7 +18,7 @@ func map_file_read(string path, int offset, int length) (string, string) {
     if end > len(text) {
         end = len(text)
     }
-    return slice(text, offset, end), ""
+    return prelude_slice(text, offset, end), ""
 }
 
 func map_file(string path, int offset, int length) (string, string) {

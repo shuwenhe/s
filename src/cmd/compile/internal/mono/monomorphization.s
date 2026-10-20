@@ -1108,9 +1108,9 @@ func looks_like_generic_residue(string type_name) bool {
 func contains_generic_atom(string text, string atom) bool {
     i := 0
     for i < len(text) {
-        if slice(text, i, i + 1) == atom {
-            left_ok := i == 0 || !mono_is_ident_char(slice(text, i - 1, i))
-            right_ok := i + 1 >= len(text) || !mono_is_ident_char(slice(text, i + 1, i + 2))
+        if prelude_slice(text, i, i + 1) == atom {
+            left_ok := i == 0 || !mono_is_ident_char(prelude_slice(text, i - 1, i))
+            right_ok := i + 1 >= len(text) || !mono_is_ident_char(prelude_slice(text, i + 1, i + 2))
             if left_ok && right_ok {
                 return true
             }
@@ -1135,16 +1135,16 @@ func substitute_type(string type_name, string[] generic_names, string[] type_arg
         i = i + 1
     }
     if starts_with(clean, "&mut") {
-        return "&mut " + substitute_type(slice(clean, 4, len(clean)), generic_names, type_args)
+        return "&mut " + substitute_type(prelude_slice(clean, 4, len(clean)), generic_names, type_args)
     }
     if starts_with(clean, "&") {
-        return "&" + substitute_type(slice(clean, 1, len(clean)), generic_names, type_args)
+        return "&" + substitute_type(prelude_slice(clean, 1, len(clean)), generic_names, type_args)
     }
     if ends_with(clean, "[]") {
-        return substitute_type(slice(clean, 0, len(clean) - 2), generic_names, type_args) + "[]"
+        return substitute_type(prelude_slice(clean, 0, len(clean) - 2), generic_names, type_args) + "[]"
     }
     if starts_with(clean, "[]") {
-        return "[]" + substitute_type(slice(clean, 2, len(clean)), generic_names, type_args)
+        return "[]" + substitute_type(prelude_slice(clean, 2, len(clean)), generic_names, type_args)
     }
     args := compile.internal.typesys.extract_type_args(clean)
     if len(args) == 0 {
@@ -1185,7 +1185,7 @@ func generic_names_from_sig(string[] generics) string[] {
     for i < len(generics) {
         raw := generics[i]
         colon := find_char(raw, ":")
-        if colon >= 0 { raw = slice(raw, 0, colon) }
+        if colon >= 0 { raw = prelude_slice(raw, 0, colon) }
         generic_names = append(generic_names, raw)
         i = i + 1
     }

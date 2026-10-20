@@ -48,7 +48,7 @@ func count_token(string text, string token) int {
     total := 0
     i := 0
     for i <= std.prelude.len(text) - std.prelude.len(token) {
-        if std.prelude.slice(text, i, i + std.prelude.len(token)) == token {
+        if std.prelude.prelude_slice(text, i, i + std.prelude.len(token)) == token {
             total = total + 1
             i = i + std.prelude.len(token)
         } else {

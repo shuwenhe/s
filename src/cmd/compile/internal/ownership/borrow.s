@@ -64,7 +64,7 @@ func ownership_starts_with(string text, string prefix) bool {
     if prefix_len > len(text) {
         return false
     }
-    return slice(text, 0, prefix_len) == prefix
+    return prelude_slice(text, 0, prefix_len) == prefix
 }
 
 struct borrow_slot {
@@ -103,7 +103,7 @@ func ownership_find_slot(ownership_slot[] slots, string name) int {
 }
 
 func ownership_event_payload(string event, int first) string {
-    slice(event, first + 1, len(event))
+    prelude_slice(event, first + 1, len(event))
 }
 
 func ownership_next_colon(string text, int start) int {
@@ -129,7 +129,7 @@ func ownership_check_events(string[] events) ownership_check_result {
             i = i + 1
             continue
         }
-        kind := slice(event, 0, first)
+        kind := prelude_slice(event, 0, first)
         payload := ownership_event_payload(event, first)
 
         if kind == "declare" {
@@ -140,8 +140,8 @@ func ownership_check_events(string[] events) ownership_check_result {
                 i = i + 1
                 continue
             }
-            name := slice(payload, 0, second)
-            mode := slice(payload, second + 1, len(payload))
+            name := prelude_slice(payload, 0, second)
+            mode := prelude_slice(payload, second + 1, len(payload))
             if ownership_find_slot(slots, name) >= 0 {
                 errors = errors + 1
                 message = message + "duplicate-declaration:" + name + ";"
@@ -224,8 +224,8 @@ func borrow_check_events(string[] events) borrow_check_result {
             i = i + 1
             continue
         }
-        kind := slice(event, 0, colon)
-        name := slice(event, colon + 1, len(event))
+        kind := prelude_slice(event, 0, colon)
+        name := prelude_slice(event, colon + 1, len(event))
         slot_id := borrow_find_slot(slots, name)
         if kind == "declare" {
             if slot_id >= 0 {
@@ -371,8 +371,8 @@ func lifetime_check_events(string[] events) lifetime_check_result {
             i = i + 1
             continue
         }
-        kind := slice(event, 0, first)
-        payload := slice(event, first + 1, len(event))
+        kind := prelude_slice(event, 0, first)
+        payload := prelude_slice(event, first + 1, len(event))
         if kind == "scope" {
             if lifetime_contains(active_scopes, payload) || lifetime_contains(ended_scopes, payload) {
                 errors = errors + 1
@@ -393,15 +393,15 @@ func lifetime_check_events(string[] events) lifetime_check_result {
                 errors = errors + 1
                 message = message + "invalid-borrow-lifetime;"
             } else {
-                ref_name := slice(payload, 0, second)
-                rest := slice(payload, second + 1, len(payload))
+                ref_name := prelude_slice(payload, 0, second)
+                rest := prelude_slice(payload, second + 1, len(payload))
                 third := lifetime_second_colon(rest, 0)
                 if third <= 0 {
                     errors = errors + 1
                     message = message + "invalid-borrow-lifetime;"
                 } else {
-                    owner := slice(rest, 0, third)
-                    scope := slice(rest, third + 1, len(rest))
+                    owner := prelude_slice(rest, 0, third)
+                    scope := prelude_slice(rest, third + 1, len(rest))
                     owner_index := lifetime_index(active_scopes, owner)
                     scope_index := lifetime_index(active_scopes, scope)
                     if lifetime_find_reference(refs, ref_name) >= 0

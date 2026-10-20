@@ -686,12 +686,12 @@ func stage_delta_count(string summary, string stage) int {
         if sep > std.prelude.len(summary) {
             sep = std.prelude.len(summary)
         }
-        entry := std.prelude.slice(summary, cursor, sep)
+        entry := std.prelude.prelude_slice(summary, cursor, sep)
         eq := find_token(entry, "=")
         if eq <= std.prelude.len(entry) {
-            entry_stage := std.prelude.slice(entry, 0, eq)
+            entry_stage := std.prelude.prelude_slice(entry, 0, eq)
             if entry_stage == stage {
-                count_text := std.prelude.slice(entry, eq + 1, std.prelude.len(entry))
+                count_text := std.prelude.prelude_slice(entry, eq + 1, std.prelude.len(entry))
                 return parse_delta_count(count_text, 0, std.prelude.len(count_text))
             }
         }
@@ -1124,7 +1124,7 @@ func replace_first_token(string text, string needle, string replacement) replace
         }
     }
     replace_result {
-        text std.prelude.slice(text, 0, pos) + replacement + std.prelude.slice(text, pos + std.prelude.len(needle), std.prelude.len(text)), changed true
+        text std.prelude.prelude_slice(text, 0, pos) + replacement + std.prelude.prelude_slice(text, pos + std.prelude.len(needle), std.prelude.len(text)), changed true
     }
 }
 
@@ -1406,11 +1406,11 @@ func build_pass_delta_summary(string delta_trace) string {
         if sep > std.prelude.len(delta_trace) {
             sep = std.prelude.len(delta_trace)
         }
-        entry := std.prelude.slice(delta_trace, cursor, sep)
+        entry := std.prelude.prelude_slice(delta_trace, cursor, sep)
         lb := find_token(entry, "[")
         rb := find_token(entry, "]:")
         if lb <= std.prelude.len(entry) && rb <= std.prelude.len(entry) && rb > lb {
-            stage := std.prelude.slice(entry, 0, lb)
+            stage := std.prelude.prelude_slice(entry, 0, lb)
             count := parse_delta_count(entry, lb + 1, rb)
             if out != "" {
                 out = out + ","
@@ -1436,15 +1436,15 @@ func build_pass_delta_category_summary(string delta_trace, bool structural) stri
         if sep > std.prelude.len(delta_trace) {
             sep = std.prelude.len(delta_trace)
         }
-        entry := std.prelude.slice(delta_trace, cursor, sep)
+        entry := std.prelude.prelude_slice(delta_trace, cursor, sep)
         lb := find_token(entry, "[")
         rb := find_token(entry, "]:")
         if lb <= std.prelude.len(entry) && rb <= std.prelude.len(entry) && rb > lb {
-            stage := std.prelude.slice(entry, 0, lb)
+            stage := std.prelude.prelude_slice(entry, 0, lb)
             detail_start := rb + 2
             details := ""
             if detail_start <= std.prelude.len(entry) {
-                details = std.prelude.slice(entry, detail_start, std.prelude.len(entry))
+                details = std.prelude.prelude_slice(entry, detail_start, std.prelude.len(entry))
             }
             changed := count_delta_category_changes(details, structural)
             if out != "" {
@@ -1553,10 +1553,10 @@ func count_delta_summary_active_entries(string summary) int {
         if sep > std.prelude.len(summary) {
             sep = std.prelude.len(summary)
         }
-        entry := std.prelude.slice(summary, cursor, sep)
+        entry := std.prelude.prelude_slice(summary, cursor, sep)
         eq := find_token(entry, "=")
         if eq <= std.prelude.len(entry) {
-            count_text := std.prelude.slice(entry, eq + 1, std.prelude.len(entry))
+            count_text := std.prelude.prelude_slice(entry, eq + 1, std.prelude.len(entry))
             if parse_delta_count(count_text, 0, std.prelude.len(count_text)) > 0 {
                 count = count + 1
             }
@@ -1580,10 +1580,10 @@ func sum_delta_summary_counts(string summary) int {
         if sep > std.prelude.len(summary) {
             sep = std.prelude.len(summary)
         }
-        entry := std.prelude.slice(summary, cursor, sep)
+        entry := std.prelude.prelude_slice(summary, cursor, sep)
         eq := find_token(entry, "=")
         if eq <= std.prelude.len(entry) {
-            count_text := std.prelude.slice(entry, eq + 1, std.prelude.len(entry))
+            count_text := std.prelude.prelude_slice(entry, eq + 1, std.prelude.len(entry))
             total = total + parse_delta_count(count_text, 0, std.prelude.len(count_text))
         }
         if sep >= std.prelude.len(summary) {
@@ -1769,15 +1769,15 @@ func remove_empty_jump_blocks(string mir_text, int budget) string {
     for cursor < std.prelude.len(mir_text) {
         block_pos := find_token_from(mir_text, " | bb", cursor)
         if block_pos > std.prelude.len(mir_text) - 5 {
-            out = out + std.prelude.slice(mir_text, cursor, std.prelude.len(mir_text))
+            out = out + std.prelude.prelude_slice(mir_text, cursor, std.prelude.len(mir_text))
             break
         }
-        out = out + std.prelude.slice(mir_text, cursor, block_pos)
+        out = out + std.prelude.prelude_slice(mir_text, cursor, block_pos)
         next_block := find_token_from(mir_text, " | bb", block_pos + 1)
         if next_block > std.prelude.len(mir_text) {
             next_block = std.prelude.len(mir_text)
         }
-        block_text := std.prelude.slice(mir_text, block_pos, next_block)
+        block_text := std.prelude.prelude_slice(mir_text, block_pos, next_block)
         if removed < budget && contains_token_text(block_text, " stmts=0 term=jump") {
             removed = removed + 1
         } else {
@@ -1813,9 +1813,9 @@ func reduce_numeric_marker_budget(string text, string marker, int budget) string
     for cursor < std.prelude.len(text) {
         pos := find_token_from(text, marker, cursor)
         if pos > std.prelude.len(text) - std.prelude.len(marker) {
-            return out + std.prelude.slice(text, cursor, std.prelude.len(text))
+            return out + std.prelude.prelude_slice(text, cursor, std.prelude.len(text))
         }
-        out = out + std.prelude.slice(text, cursor, pos) + marker
+        out = out + std.prelude.prelude_slice(text, cursor, pos) + marker
         digits_start := pos + std.prelude.len(marker)
         digits_end := digits_start
         value := 0
@@ -1857,7 +1857,7 @@ func replace_first_n_tokens(string text, string needle, string replacement, int 
 func find_token_from(string text, string needle, int start) int {
     i := start
     for i <= std.prelude.len(text) - std.prelude.len(needle) {
-        if std.prelude.slice(text, i, i + std.prelude.len(needle)) == needle {
+        if std.prelude.prelude_slice(text, i, i + std.prelude.len(needle)) == needle {
             return i
         }
         i = i + 1
@@ -2581,7 +2581,7 @@ func parse_function_name(string mir_text) string {
     if end <= begin {
         return "main"
     }
-    std.prelude.slice(mir_text, begin, end)
+    std.prelude.prelude_slice(mir_text, begin, end)
 }
 
 func parse_int_after(string text, string marker) int {
@@ -2604,7 +2604,7 @@ func ssa_count_token(string text, string token) int {
     total := 0
     i := 0
     for i <= std.prelude.len(text) - std.prelude.len(token) {
-        if std.prelude.slice(text, i, i + std.prelude.len(token)) == token {
+        if std.prelude.prelude_slice(text, i, i + std.prelude.len(token)) == token {
             total = total + 1
             i = i + std.prelude.len(token)
         } else {
@@ -2619,7 +2619,7 @@ func parse_total_stmt_count(string mir_text) int {
     marker := " stmts="
     i := 0
     for i <= std.prelude.len(mir_text) - std.prelude.len(marker) {
-        if std.prelude.slice(mir_text, i, i + std.prelude.len(marker)) == marker {
+        if std.prelude.prelude_slice(mir_text, i, i + std.prelude.len(marker)) == marker {
             cursor := i + std.prelude.len(marker)
             value := 0
             for cursor < std.prelude.len(mir_text) && ssa_is_digit(std.prelude.char_at(mir_text, cursor)) {
@@ -2827,7 +2827,7 @@ func find_token(string text, string token) int {
     }
     i := 0
     for i <= std.prelude.len(text) - std.prelude.len(token) {
-        if std.prelude.slice(text, i, i + std.prelude.len(token)) == token {
+        if std.prelude.prelude_slice(text, i, i + std.prelude.len(token)) == token {
             return i
         }
         i = i + 1
@@ -2839,5 +2839,5 @@ func ssa_starts_with(string text, string prefix) bool {
     if std.prelude.len(text) < std.prelude.len(prefix) {
         return false
     }
-    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
+    std.prelude.prelude_slice(text, 0, std.prelude.len(prefix)) == prefix
 }

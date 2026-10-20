@@ -19,7 +19,7 @@ func char_at(string text, int index) string {
     __string_char_at(text, index)
 }
 
-func slice(string text, int start, int end) string {
+func prelude_slice(string text, int start, int end) string {
     __string_slice(text, start, end)
 }
 extern "intrinsic" func __runtime_len[t](t value) int

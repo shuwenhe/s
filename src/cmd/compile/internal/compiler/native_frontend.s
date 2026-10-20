@@ -471,8 +471,37 @@ func native_source_to_mir(string source) mir_program_result {
     }
     state = native_parse_package(native_advance(state))
     for state.error == "" && state.lex.token != "" {
-        if state.lex.token != "func" { state = native_fail(state, "unsupported top-level declaration: " + state.lex.token) }
-        else { state = native_parse_signature(state) }
+        if state.lex.token == "extern" {
+            // Skip extern declarations - they are handled by the full frontend
+            state = native_advance(state)  // skip 'extern'
+            if state.lex.token == "\"" || state.lex.token == "\"\"" {
+                // Skip ABI string
+                while state.error == "" && state.lex.token != "" && state.lex.token != "\"" {
+                    state = native_advance(state)
+                }
+                if state.lex.token == "\"" { state = native_advance(state) }
+            }
+            // Skip func keyword and rest of signature until we find ;
+            while state.error == "" && state.lex.token != "" && state.lex.token != ";" {
+                state = native_advance(state)
+            }
+            if state.lex.token == ";" { state = native_advance(state) }
+        } else if state.lex.token == "struct" {
+            // Skip struct declarations - they are handled by the full frontend
+            state = native_advance(state)  // skip 'struct'
+            // Skip identifier
+            if state.lex.token != "" && state.lex.token != "{" { state = native_advance(state) }
+            // Skip to closing brace
+            if state.lex.token == "{" { state = native_advance(state) }
+            while state.error == "" && state.lex.token != "" && state.lex.token != "}" {
+                state = native_advance(state)
+            }
+            if state.lex.token == "}" { state = native_advance(state) }
+        } else if state.lex.token == "func" {
+            state = native_parse_signature(state)
+        } else {
+            state = native_fail(state, "unsupported top-level declaration: " + state.lex.token)
+        }
     }
     i := 0
     for state.error == "" && i < len(state.functions) {
