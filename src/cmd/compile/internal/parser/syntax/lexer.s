@@ -190,12 +190,12 @@ func is_letter(int ch) int {
            ch == 95
 }
 
-func is_digit(int ch) int {
+func syntax_is_digit(int ch) int {
     return ch >= 48 && ch <= 57
 }
 
 func is_alphanum(int ch) int {
-    return is_letter(ch) || is_digit(ch) || ch == 95
+    return is_letter(ch) || syntax_is_digit(ch) || ch == 95
 }
 
 func lexer_read_ident(l* lexer) token {
@@ -319,15 +319,15 @@ func lexer_read_number(l* lexer) token {
         return *tok
     }
     for true {
-        if !is_digit(lexer_current_char(l)) {
+        if !syntax_is_digit(lexer_current_char(l)) {
             break
         }
         lexer_advance(l)
     }
-    if lexer_current_char(l) == 46 && is_digit(lexer_peek_char(l, 1)) {
+    if lexer_current_char(l) == 46 && syntax_is_digit(lexer_peek_char(l, 1)) {
         lexer_advance(l)
         for true {
-            if !is_digit(lexer_current_char(l)) {
+            if !syntax_is_digit(lexer_current_char(l)) {
                 break
             }
             lexer_advance(l)
@@ -344,7 +344,7 @@ func lexer_read_number(l* lexer) token {
 }
 
 func is_hex_digit(int ch) int {
-    if is_digit(ch) {
+    if syntax_is_digit(ch) {
         return 1
     }
     if ch >= 97 && ch <= 102 {
@@ -423,7 +423,7 @@ func lexer_tokenize(l* lexer) {
             lexer_add_token(l, &tok)
             continue
         }
-        if is_digit(ch) {
+        if syntax_is_digit(ch) {
             tok := lexer_read_number(l)
             lexer_add_token(l, &tok)
             continue
