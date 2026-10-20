@@ -252,18 +252,19 @@ struct offset_result {
 }
 
 func append_param_offsets(int[] offsets, int at, string type_name) offset_result {
+    updated_offsets := offsets
     size := type_size(type_name)
     if size == 0 {
-        return offset_result { offsets: offsets, next at }
+        return offset_result { offsets: updated_offsets, next at }
     }
     if is_complex_type(type_name) || size > reg_size() {
         half := size / 2
-        offsets = append(offsets, at)
-        offsets = append(offsets, at + half)
-        return offset_result { offsets: offsets, next at + size }
+        updated_offsets = append(updated_offsets, at)
+        updated_offsets = append(updated_offsets, at + half)
+        return offset_result { offsets: updated_offsets, next at + size }
     }
-    offsets = append(offsets, at)
-    offset_result { offsets: offsets, next at + size }
+    updated_offsets = append(updated_offsets, at)
+    offset_result { offsets: updated_offsets, next at + size }
 }
 
 func append_param_types(string[] rts, string type_name) string[] {
