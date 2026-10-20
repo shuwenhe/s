@@ -1367,22 +1367,22 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
     comma := index_of(args_text, ",")
     if comma < 0 {
         one := convert_go_operand_to_gas(args_text, arch)
-        if one.is_err() {
-            return one.unwrap_err()
+        if text_backend_pair_is_err(one.left, one.right) {
+            return one.right
         }
-        return "    " + gas_op + " " + one.unwrap(), backend_error { message: "" }
+        return "    " + gas_op + " " + one.left, backend_error { message: "" }
     }
     left_raw := trim_spaces(std.prelude.prelude_slice(args_text, 0, comma))
     right_raw := trim_spaces(std.prelude.prelude_slice(args_text, comma + 1, std.prelude.len(args_text)))
     left := convert_go_operand_to_gas(left_raw, arch)
-    if left.is_err() {
-        return left.unwrap_err()
+    if text_backend_pair_is_err(left.left, left.right) {
+        return left.right
     }
     right := convert_go_operand_to_gas(right_raw, arch)
-    if right.is_err() {
-        return right.unwrap_err()
+    if text_backend_pair_is_err(right.left, right.right) {
+        return right.right
     }
-    return "    " + gas_op + " " + left.unwrap() + ", " + right.unwrap(), backend_error { message: "" }
+    return "    " + gas_op + " " + left.left + ", " + right.left, backend_error { message: "" }
 }
 
 func map_go_opcode(string op) string {
