@@ -251,7 +251,8 @@ struct offset_result {
     int next
 }
 
-func append_param_offsets(int[] offsets, int at, string type_name) offset_result {
+func append_param_offsets(int[] initial_offsets, int at, string type_name) offset_result {
+    var offsets = initial_offsets
     size := type_size(type_name)
     if size == 0 {
         return offset_result { offsets: offsets, next at }
@@ -266,7 +267,8 @@ func append_param_offsets(int[] offsets, int at, string type_name) offset_result
     offset_result { offsets: offsets, next at + size }
 }
 
-func append_param_types(string[] rts, string type_name) string[] {
+func append_param_types(string[] initial_rts, string type_name) string[] {
+    var rts = initial_rts
     if type_size(type_name) == 0 {
         return rts
     }
