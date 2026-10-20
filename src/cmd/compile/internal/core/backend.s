@@ -701,9 +701,10 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     reachable := int[]()
     work := int[]()
     work = append(work, rewritten.entry)
-    for std.prelude.len(work) > 0 {
-        id := work[std.prelude.len(work) - 1]
-        work.pop()
+    work_count := std.prelude.len(work)
+    for work_count > 0 {
+        work_count = work_count - 1
+        id := work[work_count]
         if contains_int32(reachable, id) {
             continue
         }
@@ -717,6 +718,7 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
             next := rewritten.blocks[bi].terminator.edges[ei].target
             if !contains_int32(reachable, next) {
                 work = append(work, next)
+                work_count = work_count + 1
             }
             ei = ei + 1
         }
