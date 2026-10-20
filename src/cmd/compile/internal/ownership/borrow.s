@@ -15,7 +15,7 @@ func analyze_trace(string scope, string[] type_env, string block_text) string {
     if len(plan) == 0 {
         return text + " | plan <empty>"
     }
-    return text + " | plan " + join_text(plan, ", ")
+    return text + " | plan " + ownership_join_text(plan, ", ")
 }
 
 func analyze_function(string name, string[] type_env, string body_text) string {
@@ -29,7 +29,7 @@ func analyze_expr(string scope, string expr_text) string {
     return "expr " + scope + " | " + expr_text
 }
 
-func join_text(string[] values, string sep) string {
+func ownership_join_text(string[] values, string sep) string {
     out := ""
     i := 0
     for i < len(values) {
