@@ -3200,34 +3200,34 @@ func restore_captured_bindings(captured_binding[] captured) binding[] {
     out
 }
 
-func compile_writes(source_file source, mir_graph graph) (write_op[], backend_error) {
+func compile_writes(source_file source, mir_graph graph) result[write_op[], backend_error] {
     if std.prelude.len(graph.blocks) == 0 {
-        return fail_write_ops("backend error: mir graph has no blocks")
+        return result.err(backend_error { message: "backend error: mir graph has no blocks" })
     }
     source_exec := execute_source_main(source)
     if source_exec.is_ok() {
-        return source_exec.unwrap().writes
+        return result.ok(source_exec.unwrap().writes)
     }
     exec_result := execute_mir_graph(graph)
     if exec_result.is_err() {
-        return fail_write_ops(source_exec.unwrap_err().message)
+        return result.err(source_exec.unwrap_err())
     }
-    exec_result.unwrap().writes
+    result.ok(exec_result.unwrap().writes)
 }
 
-func compile_exit_code(source_file source, mir_graph graph) (int, backend_error) {
+func compile_exit_code(source_file source, mir_graph graph) result[int, backend_error] {
     if std.prelude.len(graph.blocks) == 0 {
-        return fail_int("backend error: mir graph has no blocks")
+        return result.err(backend_error { message: "backend error: mir graph has no blocks" })
     }
     source_exec := execute_source_main(source)
     if source_exec.is_ok() {
-        return source_exec.unwrap().exit_code
+        return result.ok(source_exec.unwrap().exit_code)
     }
     exec_result := execute_mir_graph(graph)
     if exec_result.is_err() {
-        return fail_int(source_exec.unwrap_err().message)
+        return result.err(source_exec.unwrap_err())
     }
-    exec_result.unwrap().exit_code
+    result.ok(exec_result.unwrap().exit_code)
 }
 
 func compile_runtime_metrics(source_file source, mir_graph graph) (runtime_metrics, backend_error) {
