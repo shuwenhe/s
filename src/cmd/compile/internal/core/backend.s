@@ -5,6 +5,7 @@ import (
     "compile.internal.semantic"
     "compile.internal.mono"
     "compile.internal.parser.syntax"
+    "compile.internal.safety"
 )
 
 struct backend_error {
