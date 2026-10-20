@@ -189,8 +189,8 @@ func build_object(string path, string output, string ssa_margin_override) int {
     source_result := std.fs.read_to_string(path)
     if source_result.is_err() { return report_failure("failed to read source: " + path) }
     parsed_result := load_source_graph(path, source_result.unwrap())
-    if parsed_result.is_err() { return report_failure(parsed_result.unwrap_err().message) }
-    module := compile.internal.ir.lower.lower_program_to_mir(parsed_result.unwrap())
+    if source_graph_is_err(parsed_result) { return report_failure(source_graph_error(parsed_result).message) }
+    module := compile.internal.ir.lower.lower_program_to_mir(source_graph_value(parsed_result))
     if module.error != "" { return report_failure(module.error) }
     return native_build_object_program(module.program, path, output, ssa_margin_override)
 }
@@ -202,10 +202,10 @@ func build_object_interpreted_legacy(string path, string output, string ssa_marg
     }
     source := source_result.unwrap()
     parsed_result := load_source_graph(path, source)
-    if parsed_result.is_err() {
-        return report_failure(parsed_result.unwrap_err().message)
+    if source_graph_is_err(parsed_result) {
+        return report_failure(source_graph_error(parsed_result).message)
     }
-    parsed := parsed_result.unwrap()
+    parsed := source_graph_value(parsed_result)
     if !should_skip_semantic_check(path) {
         safety := compile.internal.safety.prove_safety(source)
         if !safety.proven {
@@ -276,8 +276,8 @@ func build(string path, string output, string ssa_margin_override, bool nostdlib
     source_result := std.fs.read_to_string(path)
     if source_result.is_err() { return report_failure("failed to read source: " + path) }
     parsed_result := load_source_graph(path, source_result.unwrap())
-    if parsed_result.is_err() { return report_failure(parsed_result.unwrap_err().message) }
-    module := compile.internal.ir.lower.lower_program_to_mir(parsed_result.unwrap())
+    if source_graph_is_err(parsed_result) { return report_failure(source_graph_error(parsed_result).message) }
+    module := compile.internal.ir.lower.lower_program_to_mir(source_graph_value(parsed_result))
     if module.error != "" { return report_failure(module.error) }
     return native_build_program(module.program, path, output, ssa_margin_override, nostdlib)
 }
@@ -292,10 +292,10 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
         return build_compiler_runtime_launcher(output)
     }
     parsed_result := load_source_graph(path, source)
-    if parsed_result.is_err() {
-        return report_failure(parsed_result.unwrap_err().message)
+    if source_graph_is_err(parsed_result) {
+        return report_failure(source_graph_error(parsed_result).message)
     }
-    parsed := parsed_result.unwrap()
+    parsed := source_graph_value(parsed_result)
     if !should_skip_semantic_check(path) {
         safety := compile.internal.safety.prove_safety(source)
         if !safety.proven {
@@ -2573,6 +2573,27 @@ func load_source_graph(string path, string source) result[source_file, backend_e
         return result.ok(mono_result.file)
     }
     result.ok(combined)
+}
+
+func source_graph_is_err(result[source_file, backend_error] value) bool {
+    switch value {
+        result::ok(_) : false,
+        result::err(_) : true,
+    }
+}
+
+func source_graph_value(result[source_file, backend_error] value) source_file {
+    switch value {
+        result::ok(parsed) : parsed,
+        result::err(_) : source_file { pkg: "", uses: use_decl[](), items: item[](), item_packages: string[]() },
+    }
+}
+
+func source_graph_error(result[source_file, backend_error] value) backend_error {
+    switch value {
+        result::ok(_) : backend_error { message: "" },
+        result::err(err) : err,
+    }
 }
 
 func append_dependency_items(source_file combined, use_decl[] uses, string[] visited) ((), backend_error) {
