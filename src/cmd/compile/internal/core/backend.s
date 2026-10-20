@@ -4915,13 +4915,12 @@ func eval_while_expr(while_expr value, source_file source, binding[] env, write_
         if cond_result.is_err() {
             cond_result.unwrap_err()
         }
-        switch cond_result.unwrap() {
-            value.bool(flag) : {
-                if !flag {
-                    break
-                }
-            }
-            _ : backend_error { message: "backend error: while condition must be bool" },
+        flag_result := bool_from_value(cond_result.unwrap())
+        if flag_result.is_none() {
+            return backend_error { message: "backend error: while condition must be bool" }
+        }
+        if !flag_result.unwrap() {
+            break
         }
         body_result := execute_block_in_place(value.body, source, env, writes, runtime)
         if body_result.is_err() {
