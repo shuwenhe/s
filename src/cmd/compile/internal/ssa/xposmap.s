@@ -43,14 +43,14 @@ func new_xpos_map(int_pair[] file_ranges) xpos_map {
 
 func xpos_map_slot(xpos_map m, int file_index) int_pair {
     if file_index == m.last_index && m.last_slot >= 0 {
-        return make_int_pair(m.last_slot, 1
+        return make_int_pair(m.last_slot, 1)
     }
     i := 0
     for i < len(m.maps) {
         if m.maps[i].file_index == file_index {
             m.last_index = file_index
             m.last_slot = i
-            return make_int_pair(i, 1
+            return make_int_pair(i, 1)
         }
         i = i + 1
     }
