@@ -236,13 +236,13 @@ func build_object_interpreted_legacy(string path, string output, string ssa_marg
     if debug_map == "" {
         return report_failure("ssa debug map failed: empty map")
     }
-    abi_runtime_check := validate_ssa_abi_contracts(arch, ssa_text)
-    if abi_runtime_check.is_err() {
-        return report_failure(abi_runtime_check.unwrap_err().message)
+    abi_runtime_error := validate_ssa_abi_contracts(arch, ssa_text)
+    if abi_runtime_error.message != "" {
+        return report_failure(abi_runtime_error.message)
     }
-    abi_check := validate_abi_coverage(arch)
-    if abi_check.is_err() {
-        return report_failure(abi_check.unwrap_err().message)
+    abi_error := validate_abi_coverage(arch)
+    if abi_error.message != "" {
+        return report_failure(abi_error.message)
     }
     writes_result := compile_writes(parsed, graph)
     if writes_result.is_err() {
@@ -893,7 +893,7 @@ func find_block_index_by_id(mir_graph graph, int id) int {
     0 - 1
 }
 
-func validate_ssa_abi_contracts(string arch, string ssa_text) ((), backend_error) {
+func validate_ssa_abi_contracts(string arch, string ssa_text) backend_error {
     spills := backend_parse_number_after(ssa_text, "spills=")
     reloads := backend_parse_number_after(ssa_text, "reloads=")
     pressure := backend_parse_number_after(ssa_text, "call_pressure=")
@@ -914,14 +914,14 @@ func validate_ssa_abi_contracts(string arch, string ssa_text) ((), backend_error
             return backend_error { message: "backend error: tailcall with spill slots is not legal" }
         }
     }
-    preserve := validate_callsite_preservation(ssa_text)
-    if preserve.is_err() {
-        return preserve
+    preserve_error := validate_callsite_preservation(ssa_text)
+    if preserve_error.message != "" {
+        return preserve_error
     }
-    ()
+    backend_error { message: "" }
 }
 
-func validate_callsite_preservation(string ssa_text) ((), backend_error) {
+func validate_callsite_preservation(string ssa_text) backend_error {
     clobber := backend_parse_number_after(ssa_text, "callee_saved_clobber=")
     if clobber > 0 {
         return backend_error { message: "backend error: callee-saved registers clobbered at callsite" }
@@ -933,7 +933,7 @@ func validate_callsite_preservation(string ssa_text) ((), backend_error) {
     if has_substring(ssa_text, "call_preserve=fail") {
         return backend_error { message: "backend error: callsite preserve contract failed" }
     }
-    ()
+    backend_error { message: "" }
 }
 
 func build_cfi_artifact(string arch, string ssa_text, string debug_map) string {
@@ -5270,7 +5270,7 @@ func emit_asm(write_op[] writes, int exit_code) string {
     return emit_asm_amd64(writes, exit_code)
 }
 
-func validate_abi_coverage(string arch) ((), backend_error) {
+func validate_abi_coverage(string arch) backend_error {
     i := 0
     for i < 8 {
         if abi_int_arg_reg(arch, i) == "" {
@@ -5314,7 +5314,7 @@ func validate_abi_coverage(string arch) ((), backend_error) {
     if abi_return_mode(arch, "aggregate", 64) == "" {
         return backend_error { message: "backend error: missing aggregate return mode on " + arch }
     }
-    ()
+    backend_error { message: "" }
 }
 
 func abi_sret_reg(string arch) string {
