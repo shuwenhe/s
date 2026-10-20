@@ -212,7 +212,7 @@ func build_object_interpreted_legacy(string path, string output, string ssa_marg
     }
     parsed := source_graph_value(parsed_result)
     if !should_skip_semantic_check(path) {
-        safety := compile.internal.safety.prove_safety(source)
+        safety := prove_safety(source)
         if !safety.proven {
             return report_failure("safety proof failed: " + safety.summary)
         }
@@ -302,7 +302,7 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
     }
     parsed := source_graph_value(parsed_result)
     if !should_skip_semantic_check(path) {
-        safety := compile.internal.safety.prove_safety(source)
+        safety := prove_safety(source)
         if !safety.proven {
             return report_failure("safety proof failed: " + safety.summary)
         }
