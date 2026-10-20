@@ -302,11 +302,8 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
                 option.some(name) : callee_name = name,
                 option.none : (),
             }
-            switch call_expr.callee.unwrap() {
-                expr.name(name_expr) : {
-                    if callee_name == "<call>" { callee_name = name_expr.name }
-                }
-                _ : callee_name = "<expr-callee>",
+            if callee_name == "<call>" {
+                callee_name = call_callee_name(call_expr.callee.unwrap())
             }
             args := ir_ast.expr_ir[]()
             ai := 0
@@ -329,6 +326,28 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
         }),
         expr.array(array_literal) : array_to_expr(array_literal, const_entries),
         expr.map(map_literal) : map_to_expr(map_literal, const_entries),
+    }
+}
+
+func call_callee_name(expr_value expr) string {
+    switch expr_value {
+        expr.name(name_expr) : name_expr.name,
+        expr.int(_) : "<expr-callee>",
+        expr.string(_) : "<expr-callee>",
+        expr.bool(_) : "<expr-callee>",
+        expr.unit(_) : "<expr-callee>",
+        expr.binary(_) : "<expr-callee>",
+        expr.call(_) : "<expr-callee>",
+        expr.if(_) : "<expr-callee>",
+        expr.block(_) : "<expr-callee>",
+        expr.array(_) : "<expr-callee>",
+        expr.map(_) : "<expr-callee>",
+        expr.borrow(_) : "<expr-callee>",
+        expr.deref(_) : "<expr-callee>",
+        expr.member(_) : "<expr-callee>",
+        expr.index(_) : "<expr-callee>",
+        expr.for(_) : "<expr-callee>",
+        expr.while(_) : "<expr-callee>",
     }
 }
 
