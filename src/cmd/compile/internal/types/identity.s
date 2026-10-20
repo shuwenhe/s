@@ -1,8 +1,8 @@
 package compile.internal.types
-func identity_module_name() string {
+func types_identity_module_name() string {
     "types/identity.s"
 }
 
-func identity_module_apply() int {
+func types_identity_module_apply() int {
     0
 }

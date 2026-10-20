@@ -1,8 +1,8 @@
 package compile.internal.types
-func universe_module_name() string {
+func types_universe_module_name() string {
     "types/universe.s"
 }
 
-func universe_module_apply() int {
+func types_universe_module_apply() int {
     0
 }
