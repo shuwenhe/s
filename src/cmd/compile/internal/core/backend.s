@@ -3,6 +3,7 @@ import (
     "std.result"
     "std.process"
     "compile.internal.ir.lower"
+    "compile.internal.abi"
     "compile.internal.semantic"
     "compile.internal.mono"
     "compile.internal.parser.syntax"
