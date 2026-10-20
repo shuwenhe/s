@@ -14,7 +14,6 @@ import (
     "compile.internal.slice"
     "compile.internal.walk"
     "compile.internal.ssa"
-    "compile.internal.ssagen"
 )
 
 struct backend_error {
