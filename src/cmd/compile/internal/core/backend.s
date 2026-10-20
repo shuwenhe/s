@@ -418,8 +418,8 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
     }
     abi_matrix_payload := build_abi_machine_matrix_artifact(arch, parsed, ssa_text)
     abi_matrix_check := validate_abi_machine_matrix(abi_matrix_payload)
-    if abi_matrix_check.is_err() {
-        return report_failure(abi_matrix_check.unwrap_err().message)
+    if abi_matrix_check.message != "" {
+        return report_failure(abi_matrix_check.message)
     }
     abi_matrix_path := output + ".abi.matrix"
     abi_matrix_write := std.fs.write_text_file(abi_matrix_path, abi_matrix_payload)
@@ -1169,7 +1169,7 @@ func abi_cross_arch_consistency_status(string arch, int spills, int functions) s
     "fragile"
 }
 
-func validate_abi_machine_matrix(string payload) ((), backend_error) {
+func validate_abi_machine_matrix(string payload) backend_error {
     if !has_substring(payload, "abi-matrix version=1") {
         return backend_error { message: "backend error: ABI matrix header missing" }
     }
@@ -1185,7 +1185,7 @@ func validate_abi_machine_matrix(string payload) ((), backend_error) {
     if !has_substring(payload, "cross_arch_consistency=") {
         return backend_error { message: "backend error: ABI matrix cross-arch consistency missing" }
     }
-    ()
+    backend_error { message: "" }
 }
 
 func build_toolchain_compat_artifact(source_file source, string arch) string {
