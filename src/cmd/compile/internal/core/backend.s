@@ -217,11 +217,10 @@ func build_object_interpreted_legacy(string path, string output, string ssa_marg
             return report_failure("safety proof failed: " + safety.summary)
         }
     }
-    mir_result := lower_main_to_mir(parsed)
-    if mir_result.is_err() {
-        return report_failure("mir lowering failed: " + mir_result.unwrap_err())
+    graph, lowering_error := lower_main_to_mir(parsed)
+    if lowering_error != "" {
+        return report_failure("mir lowering failed: " + lowering_error)
     }
-    graph := mir_result.unwrap()
     arch := buildcfg_goarch()
     margin_result := parse_ssa_margin_override(ssa_margin_override)
     if margin_result.is_err() {
@@ -307,11 +306,10 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
             return report_failure("safety proof failed: " + safety.summary)
         }
     }
-    mir_result := lower_main_to_mir(parsed)
-    if mir_result.is_err() {
-        return report_failure("mir lowering failed: " + mir_result.unwrap_err())
+    graph, lowering_error := lower_main_to_mir(parsed)
+    if lowering_error != "" {
+        return report_failure("mir lowering failed: " + lowering_error)
     }
-    graph := mir_result.unwrap()
     arch := buildcfg_goarch()
     margin_result := parse_ssa_margin_override(ssa_margin_override)
     if margin_result.is_err() {
