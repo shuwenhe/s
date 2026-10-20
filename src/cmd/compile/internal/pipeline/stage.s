@@ -1,14 +1,14 @@
 package compile.internal.pipeline
 
 enum compilation_stage {
-    STAGE_INIT = 0
-    STAGE_PARSE = 1
-    STAGE_SEMANTIC = 2
-    STAGE_OPTIMIZE = 3
-    STAGE_LOWER = 4
-    STAGE_MIDDLEND = 5
-    STAGE_BACKEND = 6
-    STAGE_OUTPUT = 7
+    STAGE_INIT = 0,
+    STAGE_PARSE = 1,
+    STAGE_SEMANTIC = 2,
+    STAGE_OPTIMIZE = 3,
+    STAGE_LOWER = 4,
+    STAGE_MIDDLEND = 5,
+    STAGE_BACKEND = 6,
+    STAGE_OUTPUT = 7,
 }
 
 struct stage_info {
