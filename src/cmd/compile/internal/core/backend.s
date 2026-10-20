@@ -325,13 +325,13 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
     if debug_map == "" {
         return report_failure("ssa debug map failed: empty map")
     }
-    abi_runtime_check := validate_ssa_abi_contracts(arch, ssa_text)
-    if abi_runtime_check.is_err() {
-        return report_failure(abi_runtime_check.unwrap_err().message)
+    abi_runtime_error := validate_ssa_abi_contracts(arch, ssa_text)
+    if abi_runtime_error.message != "" {
+        return report_failure(abi_runtime_error.message)
     }
-    abi_check := validate_abi_coverage(arch)
-    if abi_check.is_err() {
-        return report_failure(abi_check.unwrap_err().message)
+    abi_error := validate_abi_coverage(arch)
+    if abi_error.message != "" {
+        return report_failure(abi_error.message)
     }
     writes_result := compile_writes(parsed, graph)
     if write_result_is_err(writes_result) {
