@@ -351,13 +351,13 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
     }
     temp_dir := temp_dir_result.unwrap()
     if arch == "wasm" {
-        wasm_result := build_wasm_object_chain(temp_dir, output, writes_result.unwrap(), exit_code_result.unwrap())
-        if wasm_result.is_err() {
-            return report_failure(wasm_result.unwrap_err().message)
+        wasm_error := build_wasm_object_chain(temp_dir, output, write_result_value(writes_result), exit_result_value(exit_code_result))
+        if wasm_error.message != "" {
+            return report_failure(wasm_error.message)
         }
-        wasm_binary_check := validate_wasi_binary_artifact(output)
-        if wasm_binary_check.is_err() {
-            return report_failure(wasm_binary_check.unwrap_err().message)
+        wasm_binary_error := validate_wasi_binary_artifact(output)
+        if wasm_binary_error.message != "" {
+            return report_failure(wasm_binary_error.message)
         }
     } else {
     asm_text := emit_asm(write_result_value(writes_result), exit_result_value(exit_code_result))
@@ -1023,7 +1023,7 @@ func build_wasm_binary_probe_plan(string output) string {
         + " && wasm-objdump -x " + output + " | grep -q _start"
 }
 
-func validate_wasi_binary_artifact(string output) ((), backend_error) {
+func validate_wasi_binary_artifact(string output) backend_error {
     probe := string[]()
     probe = append(probe, "sh")
     probe = append(probe, "-c")
@@ -1034,15 +1034,15 @@ func validate_wasi_binary_artifact(string output) ((), backend_error) {
             message: "backend error: wasi binary probe failed (requires wasm-objdump and expected imports/exports): " + run.unwrap_err().message,
         }
     }
-    ()
+    backend_error { message: "" }
 }
 
-func build_wasm_object_chain(string temp_dir, string output, write_op[] writes, int exit_code) ((), backend_error) {
+func build_wasm_object_chain(string temp_dir, string output, write_op[] writes, int exit_code) backend_error {
     c_path := temp_dir + "/out_wasm.c"
     obj_path := temp_dir + "/out_wasm.o"
     c_source := emit_wasm_c_source(writes, exit_code)
     wasi_check := validate_wasi_contract_source(c_source)
-    if wasi_check.is_err() {
+    if wasi_check.message != "" {
         return wasi_check
     }
     write_result := std.fs.write_text_file(c_path, c_source)
@@ -1076,10 +1076,10 @@ func build_wasm_object_chain(string temp_dir, string output, write_op[] writes, 
             message: "wasm link failed: " + ld_result.unwrap_err().message + " | plan: " + build_wasm_toolchain_plan(c_path, obj_path, output),
         }
     }
-    ()
+    backend_error { message: "" }
 }
 
-func validate_wasi_contract_source(string source) ((), backend_error) {
+func validate_wasi_contract_source(string source) backend_error {
     if !has_substring(source, "__import_module__(\"wasi_snapshot_preview1\")") {
         return backend_error { message: "backend error: wasi import module annotation missing" }
     }
@@ -1095,7 +1095,7 @@ func validate_wasi_contract_source(string source) ((), backend_error) {
     if !has_substring(source, "proc_exit(s_main())") {
         return backend_error { message: "backend error: wasi startup contract missing proc_exit(s_main())" }
     }
-    ()
+    backend_error { message: "" }
 }
 
 func emit_wasm_c_source(write_op[] writes, int exit_code) string {
