@@ -439,8 +439,8 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
     cfi_path := output + ".cfi"
     cfi_payload := build_cfi_artifact(arch, ssa_text, debug_map)
     cfi_check := validate_cfi_artifact(cfi_payload)
-    if cfi_check.is_err() {
-        return report_failure(cfi_check.unwrap_err().message)
+    if cfi_check.message != "" {
+        return report_failure(cfi_check.message)
     }
     cfi_write := std.fs.write_text_file(cfi_path, cfi_payload)
     if cfi_write.is_err() {
@@ -949,7 +949,7 @@ func build_cfi_artifact(string arch, string ssa_text, string debug_map) string {
     join_lines(lines)
 }
 
-func validate_cfi_artifact(string payload) ((), backend_error) {
+func validate_cfi_artifact(string payload) backend_error {
     if !has_substring(payload, "cfi version=1") {
         return backend_error { message: "backend error: cfi header missing" }
     }
@@ -959,7 +959,7 @@ func validate_cfi_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, ".cfi_def_cfa") {
         return backend_error { message: "backend error: cfi cfa rule missing" }
     }
-    ()
+    backend_error { message: "" }
 }
 
 func estimate_cross_pkg_inline_sites_graph(mir_graph graph, int inlined) int {
