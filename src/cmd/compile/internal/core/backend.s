@@ -465,8 +465,8 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
     toolchain_path := output + ".toolchain"
     toolchain_payload := build_toolchain_compat_artifact(parsed, arch)
     toolchain_check := validate_toolchain_compat_artifact(toolchain_payload)
-    if toolchain_check.is_err() {
-        return report_failure(toolchain_check.unwrap_err().message)
+    if toolchain_check.message != "" {
+        return report_failure(toolchain_check.message)
     }
     toolchain_write := std.fs.write_text_file(toolchain_path, toolchain_payload)
     if toolchain_write.is_err() {
@@ -475,8 +475,8 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
     perf_path := output + ".perf"
     perf_payload := build_backend_perf_baseline_artifact(arch, ssa_text, midend.report, runtime_metrics_text(runtime_metrics_result.unwrap()))
     perf_check := validate_backend_perf_baseline(perf_payload)
-    if perf_check.is_err() {
-        return report_failure(perf_check.unwrap_err().message)
+    if perf_check.message != "" {
+        return report_failure(perf_check.message)
     }
     perf_write := std.fs.write_text_file(perf_path, perf_payload)
     if perf_write.is_err() {
@@ -1202,7 +1202,7 @@ func build_toolchain_compat_artifact(source_file source, string arch) string {
     join_lines(lines)
 }
 
-func validate_toolchain_compat_artifact(string payload) ((), backend_error) {
+func validate_toolchain_compat_artifact(string payload) backend_error {
     if !has_substring(payload, "toolchain-compat version=1") {
         return backend_error { message: "backend error: toolchain compatibility header missing" }
     }
@@ -1230,7 +1230,7 @@ func validate_toolchain_compat_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "go_equiv ") {
         return backend_error { message: "backend error: toolchain compatibility go equivalence marker missing" }
     }
-    ()
+    backend_error { message: "" }
 }
 
 func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
@@ -2313,7 +2313,7 @@ func build_backend_perf_baseline_artifact(string arch, string ssa_text, string m
     join_lines(lines)
 }
 
-func validate_backend_perf_baseline(string payload) ((), backend_error) {
+func validate_backend_perf_baseline(string payload) backend_error {
     if !has_substring(payload, "perf-baseline version=1") {
         return backend_error { message: "backend error: perf baseline header missing" }
     }
@@ -2341,7 +2341,7 @@ func validate_backend_perf_baseline(string payload) ((), backend_error) {
     if !has_substring(payload, "regression_gate_arch ") {
         return backend_error { message: "backend error: perf baseline arch gate missing" }
     }
-    ()
+    backend_error { message: "" }
 }
 
 func build_midend_opt_artifact(string midend_report) string {
