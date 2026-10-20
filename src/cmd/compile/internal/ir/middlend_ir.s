@@ -102,13 +102,13 @@ func ir_make_const_value(string const_val, string type_info) ir_value {
     }
 }
 
-func ir_value_var(string name, string type_info) ir_value {
+func ir_make_var_value(string name, string type_info) ir_value {
     ir_value {
         value_type: ir_value_var, value_id 0, type_info type_info, var_name name, line 0, column 0
     }
 }
 
-func ir_value_param(int index, string type_info) ir_value {
+func ir_make_param_value(int index, string type_info) ir_value {
     ir_value {
         value_type: ir_value_param, value_id 0, type_info type_info, param_index index, line 0, column 0
     }

@@ -123,7 +123,7 @@ func ir_builder_visit_parameters(ir_builder_context* ctx, params_node* parser.as
         param_name := param_node.name
         param_type := "int"
 
-        param_value := ir_value_param(i, param_type)
+        param_value := ir_make_param_value(i, param_type)
         param_value.var_name = param_name
         param_value.value_id = ctx.value_counter
         ctx.value_counter = ctx.value_counter + 1
@@ -262,7 +262,7 @@ func ir_builder_visit_binary_op(ir_builder_context* ctx, binop_node* parser.ast_
 }
 
 func ir_builder_visit_ident(ir_builder_context* ctx, ident_node* parser.ast_node) ir_value {
-    ir_value_var(ident_node.name, "int")
+    ir_make_var_value(ident_node.name, "int")
 }
 
 func ir_builder_visit_call(ir_builder_context* ctx, call_node* parser.ast_node) ir_value {
