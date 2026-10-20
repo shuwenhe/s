@@ -1270,7 +1270,7 @@ func validate_go_asm_bridge_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "gas_preview=") {
         return backend_error { message: "backend error: go asm artifact preview missing" }
     }
-    ()
+    return (), backend_error { message: "" }
 }
 
 func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backend_error) {
