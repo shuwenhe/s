@@ -224,7 +224,7 @@ func mir_point_text(mir_graph graph, mir_point point) string {
     "BB" + std.prelude.to_string(point.block_id) + "(" + label + "):stmt" + std.prelude.to_string(point.statement_index)
 }
 
-func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_ownership_facts {
+func mir_build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_ownership_facts {
     facts := mir_empty_ownership_facts(len(points.points))
     block_index := 0
     for block_index < len(graph.blocks) {
@@ -270,7 +270,7 @@ func build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) mir_o
 }
 
 func build_ownership_analysis_input_from_mir(mir_graph graph, mir_point_map points) ownership_analysis_input {
-    build_ownership_facts_from_mir(graph, points).input
+    mir_build_ownership_facts_from_mir(graph, points).input
 }
 
 func mir_empty_ownership_facts(int point_count) mir_ownership_facts {
@@ -367,7 +367,7 @@ func mir_points_string(int bits) string {
 
 func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
     points := mir_build_point_map(graph)
-    facts := build_ownership_facts_from_mir(graph, points)
+    facts := mir_build_ownership_facts_from_mir(graph, points)
     input := facts.input
     out := "PointCount = " + std.prelude.to_string(input.point_count)
     i := 0
@@ -410,7 +410,7 @@ func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
 
 func dump_ownership_shadow_from_mir(mir_graph graph) string {
     points := mir_build_point_map(graph)
-    facts := build_ownership_facts_from_mir(graph, points)
+    facts := mir_build_ownership_facts_from_mir(graph, points)
     analysis := compile.internal.ownership.analysis.analyze_ownership_liveness(facts.input)
     out := "RealMIROwnershipShadow\n"
     out = out + "RealMIRFacts(point_count=" + std.prelude.to_string(facts.input.point_count) + ", refs=" + std.prelude.to_string(len(facts.ref_names)) + ", loans=" + std.prelude.to_string(facts.input.loan_count) + ", outlives=" + std.prelude.to_string(facts.input.outlives_count) + ")\n"
