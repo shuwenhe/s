@@ -185,9 +185,9 @@ struct abi_behavior_entry {
 func build_object(string path, string output, string ssa_margin_override) int {
     source_result := std.fs.read_to_string(path)
     if source_result.is_err() { return report_failure("failed to read source: " + path) }
-    parsed, parse_err := load_source_graph(path, source_result.unwrap())
-    if parse_err.message != "" { return report_failure(parse_err.message) }
-    module := compile.internal.ir.lower.lower_program_to_mir(parsed)
+    parsed_result := load_source_graph(path, source_result.unwrap())
+    if parsed_result.is_err() { return report_failure(parsed_result.unwrap_err().message) }
+    module := compile.internal.ir.lower.lower_program_to_mir(parsed_result.unwrap())
     if module.error != "" { return report_failure(module.error) }
     return native_build_object_program(module.program, path, output, ssa_margin_override)
 }
@@ -2518,58 +2518,58 @@ func ends_with_local(string text, string suffix) bool {
     std.prelude.slice(text, std.prelude.len(text) - std.prelude.len(suffix), std.prelude.len(text)) == suffix
 }
 
-func load_source_graph(string path, string source) (source_file, backend_error) {
+func load_source_graph(string path, string source) result[source_file, backend_error] {
     combined, parse_err := compile.internal.parser.syntax.parse_source(source)
     if parse_err.message != "" {
-        return backend_error { message: "parse failed: " + parse_err.message }
+        return result.err(backend_error { message: "parse failed: " + parse_err.message })
     }
     visited := string[]()
     visited = append(visited, path)
     deps_result := append_dependency_items(combined, combined.uses, visited)
     if deps_result.is_err() {
-        return deps_result.unwrap_err()
+        return result.err(deps_result.unwrap_err())
     }
     if !should_skip_semantic_check(path) {
         semantic_result := compile.internal.semantic.check_source_file(combined, source)
         if std.prelude.len(semantic_result.errors) > 0 {
-            return backend_error { message: "semantic check failed before monomorphization" }
+            return result.err(backend_error { message: "semantic check failed before monomorphization" })
         }
         mono_result := compile.internal.mono.monomorphize_file(combined, semantic_result)
         if mono_result.invariant_errors != 0 {
-            return backend_error { message: "monomorphization failed: unresolved generic residue" }
+            return result.err(backend_error { message: "monomorphization failed: unresolved generic residue" })
         }
         
         
         
         if !mono_result.m1_gate.declarations_received {
-            return backend_error { message: "M1 gate FAILED: no declarations received from semantic phase" }
+            return result.err(backend_error { message: "M1 gate FAILED: no declarations received from semantic phase" })
         }
         if mono_result.m1_gate.declarations_count == 0 {
-            return backend_error { message: "M1 gate WARNING: semantic phase produced no declarations (may be expected for simple programs)" }
+            return result.err(backend_error { message: "M1 gate WARNING: semantic phase produced no declarations (may be expected for simple programs)" })
         }
         if mono_result.m1_gate.work_items_without_ref_count > 0 {
-            return backend_error { message: "M1 gate FAILED: work_items exist without declaration_ref - indicates uninitialized refs" }
+            return result.err(backend_error { message: "M1 gate FAILED: work_items exist without declaration_ref - indicates uninitialized refs" })
         }
         if !mono_result.m1_gate.all_refs_have_valid_package_path {
-            return backend_error { message: "M1 gate FAILED: some declaration_refs missing package_path" }
+            return result.err(backend_error { message: "M1 gate FAILED: some declaration_refs missing package_path" })
         }
         if !mono_result.m1_gate.all_refs_have_valid_path {
-            return backend_error { message: "M1 gate FAILED: some declaration_refs missing path" }
+            return result.err(backend_error { message: "M1 gate FAILED: some declaration_refs missing path" })
         }
         
         
         
         
         if !mono_result.m1_gate.all_refs_traced_to_semantic {
-            return backend_error { message: "M1 gate FAILED: PROVENANCE - some work_item refs not found in semantic declarations - indicates reconstruction or re-lookup" }
+            return result.err(backend_error { message: "M1 gate FAILED: PROVENANCE - some work_item refs not found in semantic declarations - indicates reconstruction or re-lookup" })
         }
         if mono_result.m1_gate.work_items_with_untraced_source > 0 {
-            return backend_error { message: "M1 gate FAILED: PROVENANCE - untraced refs indicate Mono did not use semantic declarations" }
+            return result.err(backend_error { message: "M1 gate FAILED: PROVENANCE - untraced refs indicate Mono did not use semantic declarations" })
         }
         
-        return mono_result.file
+        return result.ok(mono_result.file)
     }
-    combined
+    result.ok(combined)
 }
 
 func append_dependency_items(source_file combined, use_decl[] uses, string[] visited) ((), backend_error) {
