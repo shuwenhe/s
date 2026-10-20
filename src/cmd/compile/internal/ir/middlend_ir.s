@@ -96,7 +96,7 @@ struct ir_module {
     ir_value[] global_vars
 }
 
-func ir_value_const(string const_val, string type_info) ir_value {
+func ir_make_const_value(string const_val, string type_info) ir_value {
     ir_value {
         value_type: ir_value_const, value_id 0, type_info type_info, const_value const_val, line 0, column 0
     }

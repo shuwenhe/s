@@ -167,7 +167,7 @@ func ir_builder_visit_statement(ir_builder_context* ctx, stmt_node* parser.ast_n
 
 func ir_builder_visit_return_stmt(ir_builder_context* ctx, return_node* parser.ast_node) {
 
-    value := ir_value_const("0", "int")
+    value := ir_make_const_value("0", "int")
 
     if return_node.children != nil && return_node.children.len() > 0 {
         expr_node := return_node.children[0]
@@ -180,7 +180,7 @@ func ir_builder_visit_return_stmt(ir_builder_context* ctx, return_node* parser.a
 
 func ir_builder_visit_if_stmt(ir_builder_context* ctx, if_node* parser.ast_node) {
 
-    cond_value := ir_value_const("1", "bool")
+    cond_value := ir_make_const_value("1", "bool")
     if if_node.children != nil && if_node.children.len() > 0 {
         cond_node := if_node.children[0]
         cond_value = ir_builder_visit_expression(ctx, cond_node)
@@ -225,7 +225,7 @@ func ir_builder_visit_var_decl(ir_builder_context* ctx, var_node* parser.ast_nod
 
 func ir_builder_visit_expression(ir_builder_context* ctx, expr_node* parser.ast_node) ir_value {
     if expr_node == nil {
-        return ir_value_const("0", "int")
+        return ir_make_const_value("0", "int")
     }
 
     switch expr_node.node_type {
@@ -238,17 +238,17 @@ func ir_builder_visit_expression(ir_builder_context* ctx, expr_node* parser.ast_
         case parser.ast_call:
             return ir_builder_visit_call(ctx, expr_node)
         default:
-            return ir_value_const("0", "int")
+            return ir_make_const_value("0", "int")
     }
 }
 
 func ir_builder_visit_int_lit(ir_builder_context* ctx, int_node* parser.ast_node) ir_value {
-    ir_value_const(int_node.string_data, "int")
+    ir_make_const_value(int_node.string_data, "int")
 }
 
 func ir_builder_visit_binary_op(ir_builder_context* ctx, binop_node* parser.ast_node) ir_value {
     if binop_node.children == nil || binop_node.children.len() < 2 {
-        return ir_value_const("0", "int")
+        return ir_make_const_value("0", "int")
     }
 
     left := ir_builder_visit_expression(ctx, binop_node.children[0])
