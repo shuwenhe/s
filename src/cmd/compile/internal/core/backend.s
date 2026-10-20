@@ -4020,10 +4020,11 @@ func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op
                 i = i + 1
             }
             return fail_value("backend error: unknown owned box")
-        },
-        _ : (),
+        }
+        _ : {
+            return fail_value("backend error: box_free requires a box value")
+        }
     }
-    fail_value("backend error: box_free requires a box value")
 }
 
 func cleanup_scope_owned_values(binding[] env, int local_start, value keep, runtime_state runtime) () {
