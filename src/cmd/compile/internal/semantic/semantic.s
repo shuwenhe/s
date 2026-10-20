@@ -3261,15 +3261,15 @@ func last_path_segment(string path) string {
 func trim_text(string text) string {
     start := 0
     end := std.prelude.len(text)
-    for start < end && is_space(std.prelude.char_at(text, start)) {
+    for start < end && semantic_is_space(std.prelude.char_at(text, start)) {
         start = start + 1
     }
-    for end > start && is_space(std.prelude.char_at(text, end - 1)) {
+    for end > start && semantic_is_space(std.prelude.char_at(text, end - 1)) {
         end = end - 1
     }
     std.prelude.slice(text, start, end)
 }
 
-func is_space(string ch) bool {
+func semantic_is_space(string ch) bool {
     ch == " " || ch == "\n" || ch == "\t" || ch == "\r"
 }
