@@ -12,11 +12,11 @@ struct composite_literal_plan {
     int init_kind
 }
 
-func complit_module_name() string {
+func walk_complit_module_name() string {
     "walk/complit.s"
 }
 
-func complit_module_apply() int {
+func walk_complit_module_apply() int {
     0
 }
 

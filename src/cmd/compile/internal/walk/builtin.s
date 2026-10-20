@@ -8,11 +8,11 @@ struct builtin_plan {
     bool preserves_length
 }
 
-func builtin_module_name() string {
+func walk_builtin_module_name() string {
     "walk/builtin.s"
 }
 
-func builtin_module_apply() int {
+func walk_builtin_module_apply() int {
     0
 }
 

@@ -7,11 +7,11 @@ struct compare_plan {
     bool needs_runtime
 }
 
-func compare_module_name() string {
+func walk_compare_module_name() string {
     "walk/compare.s"
 }
 
-func compare_module_apply() int {
+func walk_compare_module_apply() int {
     0
 }
 

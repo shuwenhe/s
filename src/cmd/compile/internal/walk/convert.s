@@ -8,11 +8,11 @@ struct convert_plan {
     bool needs_temp
 }
 
-func convert_module_name() string {
+func walk_convert_module_name() string {
     "walk/convert.s"
 }
 
-func convert_module_apply() int {
+func walk_convert_module_apply() int {
     0
 }
 

@@ -8,11 +8,11 @@ struct switch_plan {
     string lowering
 }
 
-func switch_module_name() string {
+func walk_switch_module_name() string {
     "walk/switch.s"
 }
 
-func switch_module_apply() int {
+func walk_switch_module_apply() int {
     0
 }
 

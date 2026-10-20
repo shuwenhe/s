@@ -7,11 +7,11 @@ struct select_plan {
     string lowering
 }
 
-func select_module_name() string {
+func walk_select_module_name() string {
     "walk/select.s"
 }
 
-func select_module_apply() int {
+func walk_select_module_apply() int {
     0
 }
 

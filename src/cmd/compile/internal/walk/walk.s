@@ -24,11 +24,11 @@ struct walk_stats {
     int size_calcs
 }
 
-func walk_module_name() string {
+func walk_walk_module_name() string {
     "walk/walk.s"
 }
 
-func walk_module_apply() int {
+func walk_walk_module_apply() int {
     0
 }
 

@@ -8,11 +8,11 @@ struct expr_plan {
     bool may_call
 }
 
-func expr_module_name() string {
+func walk_expr_module_name() string {
     "walk/expr.s"
 }
 
-func expr_module_apply() int {
+func walk_expr_module_apply() int {
     0
 }
 
