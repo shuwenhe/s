@@ -7,6 +7,9 @@ import (
     "compile.internal.mono"
     "compile.internal.parser.syntax"
     "compile.internal.safety"
+    "compile.internal.inline"
+    "compile.internal.escape"
+    "compile.internal.dispatch.devirtualize"
 )
 
 struct backend_error {
