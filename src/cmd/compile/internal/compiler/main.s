@@ -159,6 +159,65 @@ func compiler_main(string[] args) int {
     return 0
 }
 
+func compiler_remove_duplicate_packages(string source) string {
+    // Remove all but the first 'package' declaration for multi-file compilation
+    result := ""
+    seen_package := false
+    in_package_line := false
+    line_start := 0
+    i := 0
+    while i <= len(source) {
+        if i == len(source) || __host_char_at(source, i) == "\n" {
+            line := ""
+            if i > line_start {
+                line = __host_slice(source, line_start, i)
+            }
+            if !in_package_line {
+                if compiler_starts_with_trimmed(line, "package ") {
+                    if seen_package {
+                        // Skip this package line
+                        in_package_line = true
+                        line_start = i + 1
+                        i = i + 1
+                        continue
+                    } else {
+                        seen_package = true
+                    }
+                }
+            } else if compiler_starts_with_trimmed(line, "package ") || (line != "" && !compiler_starts_with_trimmed(line, "//")) {
+                // End of skipped package section
+                if !compiler_starts_with_trimmed(line, "package ") {
+                    in_package_line = false
+                    line_start = line_start - 1
+                    i = line_start
+                    continue
+                }
+            }
+            if !in_package_line {
+                result = result + line
+                if i < len(source) { result = result + "\n" }
+            }
+            line_start = i + 1
+        }
+        i = i + 1
+    }
+    return result
+}
+
+func compiler_starts_with_trimmed(string line, string prefix) bool {
+    i := 0
+    while i < len(line) && (__host_char_at(line, i) == " " || __host_char_at(line, i) == "\t") {
+        i = i + 1
+    }
+    if i + len(prefix) > len(line) { return false }
+    j := 0
+    while j < len(prefix) {
+        if __host_char_at(line, i + j) != __host_char_at(prefix, j) { return false }
+        j = j + 1
+    }
+    return true
+}
+
 func handle_compile_unit(string[] args) int {
     if len(args) < 4 {
         eprintln("usage: --compile-unit <output.ir> <input.s>...")
@@ -194,6 +253,8 @@ func handle_compile_unit(string[] args) int {
         eprintln("compiler: empty compile unit")
         return 1
     }
+    // Remove duplicate package declarations for multi-file compilation
+    source = compiler_remove_duplicate_packages(source)
     result := compiler_compile(source)
     if result.error != "" { eprintln(result.error); return 1 }
     if __host_write_text_file(output, result.code) != 0 { eprintln("compiler: cannot write output"); return 1 }
