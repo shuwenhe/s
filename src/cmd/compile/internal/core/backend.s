@@ -1466,38 +1466,38 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
     if starts_with_local(operand, "$") {
         imm := std.prelude.prelude_slice(operand, 1, std.prelude.len(operand))
         if ends_with_local(imm, "(SB)") {
-            return "$" + normalize_go_symbol(std.prelude.prelude_slice(imm, 0, std.prelude.len(imm) - std.prelude.len("(SB)")))
+            return "$" + normalize_go_symbol(std.prelude.prelude_slice(imm, 0, std.prelude.len(imm) - std.prelude.len("(SB)"))), backend_error { message: "" }
         }
-        return "$" + normalize_go_symbol(imm)
+        return "$" + normalize_go_symbol(imm), backend_error { message: "" }
     }
     if ends_with_local(operand, "(SB)") {
         sym := normalize_go_symbol(std.prelude.prelude_slice(operand, 0, std.prelude.len(operand) - std.prelude.len("(SB)")))
         if sym == "" {
             return backend_error { message: "go asm translation error: empty symbol operand" }
         }
-        return sym
+        return sym, backend_error { message: "" }
     }
     paren := index_of(operand, "(")
     if paren >= 0 && ends_with_local(operand, ")") {
         base := std.prelude.prelude_slice(operand, paren + 1, std.prelude.len(operand) - 1)
         if base == "SB" {
-            return normalize_go_symbol(std.prelude.prelude_slice(operand, 0, paren))
+            return normalize_go_symbol(std.prelude.prelude_slice(operand, 0, paren)), backend_error { message: "" }
         }
         mapped_base := map_go_register(base, arch)
         if mapped_base == "" {
             return backend_error { message: "go asm translation error: unsupported base register " + base }
         }
         disp := parse_go_disp(std.prelude.prelude_slice(operand, 0, paren))
-        return disp + "(" + mapped_base + ")"
+        return disp + "(" + mapped_base + ")", backend_error { message: "" }
     }
     mapped_reg := map_go_register(operand, arch)
     if mapped_reg != "" {
-        return mapped_reg
+        return mapped_reg, backend_error { message: "" }
     }
     if starts_with_local(operand, ".") {
-        return normalize_go_symbol(operand)
+        return normalize_go_symbol(operand), backend_error { message: "" }
     }
-    normalize_go_symbol(operand)
+    return normalize_go_symbol(operand), backend_error { message: "" }
 }
 
 func map_go_register(string reg, string arch) string {
