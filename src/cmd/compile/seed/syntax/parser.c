@@ -894,6 +894,23 @@ static ast_node *parse_call(parser *p) {
 		}
 		expr = member;
 	}
+	/* A generic struct literal such as `box[t] { ... }` is represented by
+	 * the existing struct-expression node.  Consume the type arguments before
+	 * the brace classifier; the semantic type text remains the base name and
+	 * the field expressions retain their normal shape. */
+	if (expr && (expr->kind == AST_IDENT_EXPR || expr->kind == AST_MEMBER_EXPR) &&
+		check(p, TOKEN_LBRACKET)) {
+		size_t saved = p->current;
+		int bracket_depth = 0;
+		do {
+			if (check(p, TOKEN_LBRACKET)) bracket_depth++;
+			else if (check(p, TOKEN_RBRACKET)) bracket_depth--;
+			advance_tok(p);
+		} while (bracket_depth > 0 && !is_at_end(p));
+		if (bracket_depth != 0 || !check(p, TOKEN_LBRACE)) {
+			p->current = saved;
+		}
+	}
 	if (expr && (expr->kind == AST_IDENT_EXPR || expr->kind == AST_MEMBER_EXPR) &&
 		check(p, TOKEN_LBRACE) && looks_like_struct_literal(p)) {
 		char *type_name = member_expr_to_name(expr);
@@ -2539,6 +2556,29 @@ static ast_node *parse_fn_statement(parser *p) {
 		ast_free(node);
 		return NULL;
 	}
+	/* Generic function parameters are part of the source-level signature.
+	 * The current Seed AST does not retain a separate parameter vector for
+	 * them, but it must still consume the bracketed list so the declaration
+	 * and its return type are parsed at the correct boundary. */
+	if (match(p, TOKEN_LBRACKET)) {
+		int bracket_depth = 1;
+		while (bracket_depth > 0 && !is_at_end(p)) {
+			if (check(p, TOKEN_LBRACKET)) {
+				bracket_depth++;
+				advance_tok(p);
+			} else if (check(p, TOKEN_RBRACKET)) {
+				bracket_depth--;
+				advance_tok(p);
+			} else {
+				advance_tok(p);
+			}
+		}
+		if (bracket_depth != 0) {
+			parse_error(p, peek(p), "unmatched generic parameter brackets in function declaration");
+			ast_free(node);
+			return NULL;
+		}
+	}
 	if (receiver_name) {
 		node->as.fn_stmt.params = (char **)malloc(4 * sizeof(char *));
 		node->as.fn_stmt.param_types = (char **)malloc(4 * sizeof(char *));
@@ -3765,9 +3805,34 @@ static ast_node *parse_extern_decl(parser *p) {
 	}
 	if (!expect(p, TOKEN_RPAREN, "')' after extern parameters")) { ast_free(node); return NULL; }
 	if (check(p, TOKEN_LPAREN)) {
+		size_t ret_type_start;
+		int paren_depth;
 		advance_tok(p);
-		if (!expect(p, TOKEN_RPAREN, "')' in unit return type")) { ast_free(node); return NULL; }
-		node->as.extern_decl.return_type = dup_cstr("()");
+		ret_type_start = p->current;
+		paren_depth = 1;
+		while (paren_depth > 0 && !is_at_end(p)) {
+			if (check(p, TOKEN_LPAREN)) {
+				paren_depth++;
+				advance_tok(p);
+			} else if (check(p, TOKEN_RPAREN)) {
+				paren_depth--;
+				if (paren_depth == 0) break;
+				advance_tok(p);
+			} else {
+				advance_tok(p);
+			}
+		}
+		if (paren_depth != 0) {
+			parse_error(p, peek(p), "unmatched parenthesis in extern return type");
+			ast_free(node);
+			return NULL;
+		}
+		if (ret_type_start < p->current) {
+			node->as.extern_decl.return_type = join_lexemes_range(p->tokens, ret_type_start, p->current);
+		} else {
+			node->as.extern_decl.return_type = dup_cstr("()");
+		}
+		if (!expect(p, TOKEN_RPAREN, "')' in extern return type")) { ast_free(node); return NULL; }
 	} else {
 		size_t type_start = p->current;
 		size_t type_line = peek(p)->pos.line;
@@ -3864,6 +3929,30 @@ static ast_node *parse_struct_decl(parser *p) {
 		return NULL;
 	}
 	name_tok = prev(p);
+	/* Generic struct declarations use the same bracket syntax as generic
+	 * functions and enums (for example `struct box[t]`).  The current Seed
+	 * AST stores the declaration body as a struct expression, so preserve the
+	 * existing type-name representation while consuming the generic parameter
+	 * list here.  Type identity remains available through the field/type text
+	 * used by semantic analysis. */
+	if (match(p, TOKEN_LBRACKET)) {
+		int bracket_depth = 1;
+		while (bracket_depth > 0 && !is_at_end(p)) {
+			if (check(p, TOKEN_LBRACKET)) {
+				bracket_depth++;
+				advance_tok(p);
+			} else if (check(p, TOKEN_RBRACKET)) {
+				bracket_depth--;
+				advance_tok(p);
+			} else {
+				advance_tok(p);
+			}
+		}
+		if (bracket_depth != 0) {
+			parse_error(p, peek(p), "unmatched generic parameter brackets in struct declaration");
+			return NULL;
+		}
+	}
 	if (!expect(p, TOKEN_LBRACE, "'{' after struct name")) {
 		return NULL;
 	}

@@ -21,14 +21,13 @@ struct token {
 }
 
 func token_kind_name(token_kind kind) string {
-    switch kind {
-        token_kind.ident : "ident",
-        token_kind.int : "int",
-        token_kind.string : "string",
-        token_kind.keyword : "keyword",
-        token_kind.symbol : "symbol",
-        token_kind.eof : "eof",
-    }
+    if kind == token_kind.ident { return "ident" }
+    if kind == token_kind.int { return "int" }
+    if kind == token_kind.string { return "string" }
+    if kind == token_kind.keyword { return "keyword" }
+    if kind == token_kind.symbol { return "symbol" }
+    if kind == token_kind.eof { return "eof" }
+    return ""
 }
 
 func dump_tokens(token[] tokens) string {
@@ -54,37 +53,6 @@ func dump_tokens(token[] tokens) string {
 }
 
 func is_keyword(string text) bool {
-    switch text {
-        "package" : true,
-        "use" : true,
-        "as" : true,
-        "pub" : true,
-        "func" : true,
-        "const" : true,
-        "var" : true,
-        "static" : true,
-        "struct" : true,
-        "enum" : true,
-        "trait" : true,
-        "for" : true,
-        "if" : true,
-        "else" : true,
-        "while" : true,
-        "switch" : true,
-        "select" : true,
-        "case" : true,
-        "default" : true,
-        "return" : true,
-        "break" : true,
-        "continue" : true,
-        "sroutine" : true,
-        "true" : true,
-        "false" : true,
-        "nil" : true,
-        "unsafe" : true,
-        "extern" : true,
-        "where" : true,
-        "in" : true,
-        _ : false,
-    }
+    if text == "package" || text == "use" || text == "as" || text == "pub" || text == "func" || text == "const" || text == "var" || text == "static" || text == "struct" || text == "enum" || text == "trait" || text == "for" || text == "if" || text == "else" || text == "while" || text == "switch" || text == "select" || text == "case" || text == "default" || text == "return" || text == "break" || text == "continue" || text == "sroutine" || text == "true" || text == "false" || text == "nil" || text == "unsafe" || text == "extern" || text == "where" || text == "in" { return true }
+    return false
 }

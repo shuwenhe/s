@@ -6,14 +6,8 @@ import (
     "std.option"
 )
 
-enum canonical_type_kind {
-    primitive_kind,
-    declared_kind,
-    pointer_kind,
-}
-
 struct canonical_type {
-    kind canonical_type_kind
+    string kind
     
     primitive_name string
     
@@ -24,7 +18,7 @@ struct canonical_type {
 
 func primitive(string name) canonical_type {
     canonical_type {
-        kind: canonical_type_kind.primitive_kind,
+        kind: "primitive",
         primitive_name: name,
         declared_ref: std.option.none,
         child: std.option.none,
@@ -33,7 +27,7 @@ func primitive(string name) canonical_type {
 
 func declared(semantic.declaration_ref ref) canonical_type {
     canonical_type {
-        kind: canonical_type_kind.declared_kind,
+        kind: "declared",
         primitive_name: "",
         declared_ref: std.option.some(ref),
         child: std.option.none,
@@ -42,7 +36,7 @@ func declared(semantic.declaration_ref ref) canonical_type {
 
 func pointer(canonical_type inner) canonical_type {
     canonical_type {
-        kind: canonical_type_kind.pointer_kind,
+        kind: "pointer",
         primitive_name: "",
         declared_ref: std.option.none,
         child: std.option.some(inner),
@@ -56,11 +50,11 @@ func canonical_same_type(canonical_type left, canonical_type right) bool {
     }
     
     switch left.kind {
-        canonical_type_kind.primitive_kind : {
+        "primitive" : {
             
             return left.primitive_name == right.primitive_name
         }
-        canonical_type_kind.declared_kind : {
+        "declared" : {
             
             if left.declared_ref.is_none() || right.declared_ref.is_none() {
                 return left.declared_ref.is_none() && right.declared_ref.is_none()
@@ -70,7 +64,7 @@ func canonical_same_type(canonical_type left, canonical_type right) bool {
                 right.declared_ref.unwrap()
             )
         }
-        canonical_type_kind.pointer_kind : {
+        "pointer" : {
             
             if left.child.is_none() || right.child.is_none() {
                 return left.child.is_none() && right.child.is_none()
@@ -87,16 +81,16 @@ func canonical_same_type(canonical_type left, canonical_type right) bool {
 
 func canonical_type_to_string(canonical_type t) string {
     switch t.kind {
-        canonical_type_kind.primitive_kind : {
+        "primitive" : {
             return t.primitive_name
         }
-        canonical_type_kind.declared_kind : {
+        "declared" : {
             if t.declared_ref.is_none() {
                 return "unknown"
             }
             return semantic.declaration_ref_display(t.declared_ref.unwrap())
         }
-        canonical_type_kind.pointer_kind : {
+        "pointer" : {
             if t.child.is_none() {
                 return "*unknown"
             }
@@ -118,7 +112,7 @@ func construct_canonical_from_string(string type_str, semantic.declaration_ref[]
     base_name := std.prelude.slice(type_str, pointer_depth, std.prelude.len(type_str))
     
     base_canonical := canonical_type {
-        kind: canonical_type_kind.primitive_kind,
+        kind: "primitive",
         primitive_name: "",
         declared_ref: std.option.none,
         child: std.option.none,

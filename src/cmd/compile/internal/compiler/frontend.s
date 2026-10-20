@@ -393,7 +393,7 @@ func compiler_field_index(compiler_state initial, int struct_id, string field_na
         count := s.struct_field_counts[struct_id]
         i := 0
         for i < count {
-            if field_name == s.struct_field_names[start + i] { return i }
+            if field_name == compiler_struct_field_name(s, struct_id, i) { return i }
             i = i + 1
         }
         return -1
@@ -401,6 +401,10 @@ func compiler_field_index(compiler_state initial, int struct_id, string field_na
     if field_name == "left" { return 0 }
     if field_name == "right" { return 1 }
     return -1
+}
+
+func compiler_int_at(int[] values, int index) int {
+    values[index]
 }
 
 func compiler_struct_field_name(compiler_state initial, int struct_id, int field) string {
@@ -1390,7 +1394,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 s.loan_parent_fields[s.count] = -1
                 if s.value_field >= 0 { s.loan_fields[s.count] = s.value_field }
                 if s.value_parent_field >= 0 { s.loan_parent_fields[s.count] = s.value_parent_field }
-                if expected_return_kind >= 3 && expected_return_kind <= 4 && arg == s.function_return_params[function_index] {
+                if expected_return_kind >= 3 && expected_return_kind <= 4 && arg == compiler_int_at(s.function_return_params, function_index) {
                     returned_loan_slot = s.count
                 }
                 s.count = s.count + 1
@@ -1601,7 +1605,7 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
         } else {
             i := 0
             for i < before.count {
-                if before.live[i] != s.live[i] { s.live[i] = 2 }
+                if compiler_int_at(before.live, i) != compiler_int_at(s.live, i) { s.live[i] = 2 }
                 i = i + 1
             }
         }
@@ -1778,8 +1782,8 @@ func compiler_statement(compiler_state initial) compiler_state {
         if no.error != "" { return no }
         i := 0
         for i < before.count {
-            if yes.terminated == 0 && no.terminated != 0 { no.live[i] = yes.live[i] }
-            else if yes.terminated == 0 && no.terminated == 0 && yes.live[i] != no.live[i] { no.live[i] = 2 }
+        if yes.terminated == 0 && no.terminated != 0 { no.live[i] = compiler_int_at(yes.live, i) }
+        else if yes.terminated == 0 && no.terminated == 0 && compiler_int_at(yes.live, i) != compiler_int_at(no.live, i) { no.live[i] = 2 }
             i = i + 1
         }
         no = compiler_merge_field_states(before, yes, no, before.count)
@@ -2117,10 +2121,12 @@ func compiler_statement(compiler_state initial) compiler_state {
         for s.error == "" && s.token != ")" && s.token != "" {
             if arg > 0 { s = compiler_expect(s, ",") }
             s = compiler_expression(s, 1)
-            if arg >= s.function_counts[function_index] { return compiler_fail(s, "too many function arguments") }
+            if arg >= compiler_int_at(s.function_counts, function_index) { return compiler_fail(s, "too many function arguments") }
             expected := s.function_param_kinds[s.function_starts[function_index] + arg]
             if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
-            if expected == 5 && s.value_struct_id != s.function_param_structs[s.function_starts[function_index] + arg] { return compiler_fail(s, "function argument struct type mismatch") }
+            param_start := s.function_starts[function_index]
+            expected_struct := s.function_param_structs[param_start + arg]
+            if expected == 5 && s.value_struct_id != expected_struct { return compiler_fail(s, "function argument struct type mismatch") }
             temporary := "s_arg" + call_id + "_" + compiler_number(arg)
             argument_type := "int64_t "
             if expected == 17 { argument_type = "const char *" }
@@ -2130,7 +2136,7 @@ func compiler_statement(compiler_state initial) compiler_state {
             args = args + temporary
             arg = arg + 1
         }
-        if arg != s.function_counts[function_index] { return compiler_fail(s, "wrong number of function arguments") }
+        if arg != compiler_int_at(s.function_counts, function_index) { return compiler_fail(s, "wrong number of function arguments") }
         s = compiler_expect(s, ")")
         s = compiler_optional_semicolon(s)
         s.code = s.code + evaluations + s.function_names[function_index] + "(" + args + ");\n"

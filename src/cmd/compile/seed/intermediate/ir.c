@@ -834,6 +834,7 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 		case AST_VAR_DECL:
 		case AST_CONST_DECL:
 		case AST_TRAIT_DECL:
+		case AST_ENUM_DECL:
 			return true;
 		case AST_BLOCK:
 			return lower_block(b, stmt);

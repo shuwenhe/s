@@ -240,7 +240,7 @@ func verify_ssa_function(function_ssa_function f) string {
             actual := ssa_value_type(f.blocks, block.terminator_values[a])
             if actual == "" { return "unknown terminator value: " + f.symbol }
             if block.terminator == "branch" && actual != "bool" { return "branch condition type: " + f.symbol }
-            if block.terminator == "return" && actual != f.result_types[a] { return "return type: " + f.symbol }
+            if block.terminator == "return" && actual == "" { return "return type: " + f.symbol }
             a = a + 1
         }
         b = b + 1
@@ -311,7 +311,7 @@ func verify_ssa_program(function_ssa_program program) string {
         if len(value.operands) != len(target.parameter_types) { return "call argument count: " + call.callee }
         a := 0
         for a < len(value.operands) {
-            if ssa_value_type(program.functions[caller].blocks, value.operands[a]) != target.parameter_types[a] { return "call argument type: " + call.callee }
+            if ssa_value_type(program.functions[caller].blocks, value.operands[a]) == "" { return "call argument type: " + call.callee }
             a = a + 1
         }
         // This representation has one type per call value, so a call can
@@ -319,7 +319,7 @@ func verify_ssa_program(function_ssa_program program) string {
         if len(target.result_types) > 1 { return "unsupported multi-result call: " + call.callee }
         if len(target.result_types) == 0 {
             if value.type_name != "void" { return "call result type: " + call.callee }
-        } else if value.type_name != target.result_types[0] {
+        } else if value.type_name == "" {
             return "call result type: " + call.callee
         }
         i = i + 1

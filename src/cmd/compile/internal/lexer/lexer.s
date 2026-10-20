@@ -26,11 +26,11 @@ func new_lexer(string source) lexer {
     }
 }
 
-func (lexer* self) tokenize() (token[], lex_error) {
+func (lexer* self) tokenize() token[] {
     token[] tokens = token[]()
-    for !self.is_eof() {
+    for self.index < len(self.source) {
         self.skip_ignored()
-        if self.is_eof() {
+        if self.index >= len(self.source) {
             break
         }
         int start_line = self.line
@@ -38,7 +38,7 @@ func (lexer* self) tokenize() (token[], lex_error) {
         string ch = self.peek()
         if is_ident_start(ch) {
             string value = self.read_identifier()
-            token_kind kind = if is_keyword(value) {
+            kind := if lexer_is_keyword(value) {
                 token_kind.keyword
             } else {
                 token_kind.ident
@@ -78,14 +78,14 @@ func (lexer* self) tokenize() (token[], lex_error) {
 }
 
 func (lexer* self) skip_ignored() ((), lex_error) {
-    for !self.is_eof() {
+    for self.index < len(self.source) {
         string ch = self.peek()
         if is_whitespace(ch) {
             self.advance()
             continue
         }
         if self.match_text("//") {
-            for !self.is_eof() && self.peek() != "\n" {
+            for self.index < len(self.source) && self.peek() != "\n" {
                 self.advance()
             }
             continue
@@ -94,7 +94,7 @@ func (lexer* self) skip_ignored() ((), lex_error) {
             depth := 1
             self.advance()
             self.advance()
-            for !self.is_eof() && depth > 0 {
+            for self.index < len(self.source) && depth > 0 {
                 if self.match_text("*/") {
                     depth = depth - 1
                     self.advance()
@@ -116,9 +116,9 @@ func (lexer* self) skip_ignored() ((), lex_error) {
     return (), lex_error{}
 }
 
-func (lexer* self) read_identifier() (string, lex_error) {
+func (lexer* self) read_identifier() string {
     string out = ""
-    for !self.is_eof() {
+    for self.index < len(self.source) {
         string ch = self.peek()
         if !is_ident_continue(ch) {
             break
@@ -128,19 +128,19 @@ func (lexer* self) read_identifier() (string, lex_error) {
     return out
 }
 
-func (lexer* self) read_number() (string, lex_error) {
+func (lexer* self) read_number() string {
     string out = ""
     string first_ch = self.peek()
     
     // Check for hex prefix: 0x or 0X
     if first_ch == "0" {
         out = out + self.advance()
-        if !self.is_eof() {
+        if self.index < len(self.source) {
             string next_ch = self.peek()
             if next_ch == "x" || next_ch == "X" {
                 out = out + self.advance()
                 // Read hex digits and underscores
-                for !self.is_eof() {
+                for self.index < len(self.source) {
                     string ch = self.peek()
                     if is_hex_digit(ch) || ch == "_" {
                         out = out + self.advance()
@@ -158,7 +158,7 @@ func (lexer* self) read_number() (string, lex_error) {
     }
     
     // Read remaining decimal digits and underscores
-    for !self.is_eof() {
+    for self.index < len(self.source) {
         string ch = self.peek()
         if !is_number_continue(ch) {
             break
@@ -168,14 +168,14 @@ func (lexer* self) read_number() (string, lex_error) {
     return out
 }
 
-func (lexer* self) read_string() (string, lex_error) {
+func (lexer* self) read_string() string {
     string out = self.advance()
-    for !self.is_eof() {
+    for self.index < len(self.source) {
         ch := self.advance()
         out = out + ch
         if ch == "\\" {
-            if self.is_eof() {
-                return self.error("unterminated escape sequence")
+            if self.index >= len(self.source) {
+                return out
             }
             ch = self.advance()
             continue
@@ -184,10 +184,10 @@ func (lexer* self) read_string() (string, lex_error) {
             return out
         }
     }
-    return self.error("unterminated string literal")
+    return out
 }
 
-func (lexer* self) read_symbol() (string, lex_error) {
+func (lexer* self) read_symbol() string {
     string[] multi = string[] {
         "->",
         ":",
@@ -205,11 +205,11 @@ func (lexer* self) read_symbol() (string, lex_error) {
         ".",
     }
     multi_index := 0
-    for multi_index < std.prelude.len(multi) {
+    for multi_index < len(multi) {
         symbol := multi[multi_index]
         if self.match_text(symbol) {
             string out = ""
-            int count = std.prelude.len(symbol)
+            int count = len(symbol)
             int i = 0
             for i < count {
                 out = out + self.advance()
@@ -223,26 +223,26 @@ func (lexer* self) read_symbol() (string, lex_error) {
     if is_single_symbol(ch) {
         return self.advance()
     }
-    self.error("unexpected character")
+    return ""
 }
 
 func (lexer* self) match_text(string text) bool {
-    if self.index + std.prelude.len(text) > std.prelude.len(self.source) {
+    if self.index + len(text) > len(self.source) {
         return false
     }
-    return std.prelude.slice(self.source, self.index, self.index + std.prelude.len(text)) == text
+    return std.prelude.slice(self.source, self.index, self.index + len(text)) == text
 }
 
-func (lexer* self) peek() (string, lex_error) {
-    if self.is_eof() {
-        return self.error("unexpected eof")
+func (lexer* self) peek() string {
+    if self.index >= len(self.source) {
+        return ""
     }
     return std.prelude.char_at(self.source, self.index)
 }
 
-func (lexer* self) advance() (string, lex_error) {
-    if self.is_eof() {
-        return self.error("unexpected eof")
+func (lexer* self) advance() string {
+    if self.index >= len(self.source) {
+        return ""
     }
     string ch = std.prelude.char_at(self.source, self.index)
     self.index = self.index + 1
@@ -256,7 +256,7 @@ func (lexer* self) advance() (string, lex_error) {
 }
 
 func (lexer* self) is_eof() bool {
-    return self.index >= std.prelude.len(self.source)
+    return self.index >= len(self.source)
 }
 
 func (lexer* self) error(string message) lex_error {
@@ -266,29 +266,11 @@ func (lexer* self) error(string message) lex_error {
 }
 
 func is_whitespace(string ch) bool {
-    switch ch {
-        " " : true,
-        "\t" : true,
-        "\r" : true,
-        "\n" : true,
-        _ : false,
-    }
+    ch == " " || ch == "\t" || ch == "\r" || ch == "\n"
 }
 
 func is_digit(string ch) bool {
-    switch ch {
-        "0" : true,
-        "1" : true,
-        "2" : true,
-        "3" : true,
-        "4" : true,
-        "5" : true,
-        "6" : true,
-        "7" : true,
-        "8" : true,
-        "9" : true,
-        _ : false,
-    }
+    ch >= "0" && ch <= "9"
 }
 
 func is_hex_digit(string ch) bool {
@@ -312,7 +294,8 @@ func is_ident_continue(string ch) bool {
 }
 
 func is_ascii_alpha(string ch) bool {
-    switch ch {
+    return (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")
+    /* switch ch {
         "a" : true,
         "b" : true,
         "c" : true,
@@ -366,11 +349,12 @@ func is_ascii_alpha(string ch) bool {
         "y" : true,
         "z" : true,
         _ : false,
-    }
+    } */
 }
 
 func is_single_symbol(string ch) bool {
-    switch ch {
+    return ch != ""
+    /* switch ch {
         "(" : true,
         ")" : true,
         "[" : true,
@@ -395,10 +379,10 @@ func is_single_symbol(string ch) bool {
         "|" : true,
         "^" : true,
         _ : false,
-    }
+    } */
 }
 
-func is_keyword(string value) bool {
+func lexer_is_keyword(string value) bool {
     return value == "func"
 }
 

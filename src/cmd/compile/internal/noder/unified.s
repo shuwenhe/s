@@ -9,7 +9,7 @@ func run_unified(string path, string[] quirks) (noder_output, noder_error) {
     apply_quirks(quirks, unit)?
     tokens := lex_source(unit)?
     imports := parse_imports(unit)
-    ast_result := s.parse_source(unit.text)
+    ast_result := s.legacy_parse_source(unit.text)
     if ast_result.is_err() {
         err := ast_result.unwrap_err()
         return make_error(code_parse_failed(), err.message, unit.path, err.line, err.column)

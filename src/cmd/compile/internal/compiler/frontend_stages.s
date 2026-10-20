@@ -217,7 +217,7 @@ func compiler_stage7_declaration_param_kind_fact(compiler_state initial, string 
     s := initial
     function_index := compiler_stage7_type_environment_lookup_function(s, package_identity, declaration_ref_identity)
     if function_index < 0 { return 0 }
-    if param_index < 0 || param_index >= s.function_counts[function_index] { return 0 }
+    if param_index < 0 || param_index >= compiler_int_at(s.function_counts, function_index) { return 0 }
     return s.function_param_kinds[s.function_starts[function_index] + param_index]
 }
 
@@ -225,7 +225,7 @@ func compiler_stage7_declaration_param_struct_fact(compiler_state initial, strin
     s := initial
     function_index := compiler_stage7_type_environment_lookup_function(s, package_identity, declaration_ref_identity)
     if function_index < 0 { return -1 }
-    if param_index < 0 || param_index >= s.function_counts[function_index] { return -1 }
+    if param_index < 0 || param_index >= compiler_int_at(s.function_counts, function_index) { return -1 }
     return s.function_param_structs[s.function_starts[function_index] + param_index]
 }
 
