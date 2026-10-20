@@ -1800,7 +1800,7 @@ func normalize_stmt_counts(string mir_text, int target_total) string {
     if current_total <= 0 || target_total >= current_total {
         return mir_text
     }
-    return reduce_numeric_marker_budget(mir_text, " stmts=", current_total - target_total
+    return reduce_numeric_marker_budget(mir_text, " stmts=", current_total - target_total)
 }
 
 func reduce_numeric_marker_budget(string text, string marker, int budget) string {
