@@ -890,9 +890,9 @@ func find_block_index_by_id(mir_graph graph, int id) int {
 }
 
 func validate_ssa_abi_contracts(string arch, string ssa_text) ((), backend_error) {
-    spills := parse_number_after(ssa_text, "spills=")
-    reloads := parse_number_after(ssa_text, "reloads=")
-    pressure := parse_number_after(ssa_text, "call_pressure=")
+    spills := backend_parse_number_after(ssa_text, "spills=")
+    reloads := backend_parse_number_after(ssa_text, "reloads=")
+    pressure := backend_parse_number_after(ssa_text, "call_pressure=")
     if spills > 0 && reloads >= 0 && reloads < spills {
         return backend_error { message: "backend error: reload count lower than spill count" }
     }
@@ -918,11 +918,11 @@ func validate_ssa_abi_contracts(string arch, string ssa_text) ((), backend_error
 }
 
 func validate_callsite_preservation(string ssa_text) ((), backend_error) {
-    clobber := parse_number_after(ssa_text, "callee_saved_clobber=")
+    clobber := backend_parse_number_after(ssa_text, "callee_saved_clobber=")
     if clobber > 0 {
         return backend_error { message: "backend error: callee-saved registers clobbered at callsite" }
     }
-    restore_missing := parse_number_after(ssa_text, "caller_restore_missing=")
+    restore_missing := backend_parse_number_after(ssa_text, "caller_restore_missing=")
     if restore_missing > 0 {
         return backend_error { message: "backend error: caller restore is missing at callsite" }
     }
@@ -1139,7 +1139,7 @@ func build_abi_machine_matrix_artifact(string arch, source_file source, string s
     lines = append(lines, "axis caller_saved=" + std.prelude.to_string(abi_caller_saved_count(arch)) + " callee_saved=" + std.prelude.to_string(abi_callee_saved_count(arch)))
     lines = append(lines, "axis stack_align=" + std.prelude.to_string(abi_stack_alignment(arch)) + " variadic_gp=" + std.prelude.to_string(abi_variadic_gp_limit(arch)))
     functions := function_item_count(source)
-    spills := parse_number_after(ssa_text, "spills=")
+    spills := backend_parse_number_after(ssa_text, "spills=")
     if spills < 0 {
         spills = 0
     }
@@ -1629,7 +1629,7 @@ func build_stackmap_artifact(string arch, source_file source, string ssa_text, s
 }
 
 func estimate_stack_slots(string ssa_text) int {
-    spills := parse_number_after(ssa_text, "spills=")
+    spills := backend_parse_number_after(ssa_text, "spills=")
     if spills < 0 {
         return 0
     }
@@ -2072,7 +2072,7 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
 }
 
 func build_dwarf_continuity_metric(string ssa_text, string debug_map) string {
-    lines := parse_number_after(ssa_text, "dbg_lines=")
+    lines := backend_parse_number_after(ssa_text, "dbg_lines=")
     if lines < 1 {
         lines = 1
     }
@@ -2088,7 +2088,7 @@ func build_dwarf_continuity_metric(string ssa_text, string debug_map) string {
 }
 
 func build_dwarf_budget_policy(string ssa_text) string {
-    budget := parse_number_after(ssa_text, "dbg_budget=")
+    budget := backend_parse_number_after(ssa_text, "dbg_budget=")
     if budget < 0 {
         budget = 0
     }
@@ -2103,7 +2103,7 @@ func build_dwarf_budget_policy(string ssa_text) string {
 }
 
 func build_dwarf_regression_gate(string ssa_text, string debug_map) string {
-    budget := parse_number_after(ssa_text, "dbg_budget=")
+    budget := backend_parse_number_after(ssa_text, "dbg_budget=")
     if budget < 0 {
         budget = 0
     }
@@ -2146,7 +2146,7 @@ func append_debug_loc_section(string[] lines, string debug_map) () {
 }
 
 func append_debug_ranges_section(string[] lines, source_file source, string ssa_text) () {
-    dbg_lines := parse_number_after(ssa_text, "dbg_lines=")
+    dbg_lines := backend_parse_number_after(ssa_text, "dbg_lines=")
     if dbg_lines < 1 {
         dbg_lines = 1
     }
@@ -2154,7 +2154,7 @@ func append_debug_ranges_section(string[] lines, source_file source, string ssa_
     if range_span < 16 {
         range_span = 16
     }
-    loops := parse_number_after(ssa_text, "loops=")
+    loops := backend_parse_number_after(ssa_text, "loops=")
     if loops < 0 {
         loops = 0
     }
@@ -2186,7 +2186,7 @@ func append_debug_ranges_section(string[] lines, source_file source, string ssa_
 }
 
 func dwarf_inline_depth_hint(string fn_name, string ssa_text) int {
-    loops := parse_number_after(ssa_text, "loops=")
+    loops := backend_parse_number_after(ssa_text, "loops=")
     if loops < 0 {
         loops = 0
     }
@@ -2220,7 +2220,7 @@ func build_drop_metadata_artifact(string arch, source_file source, string ssa_te
         i = i + 1
     }
     lines = append(lines, "contract ownership=checked drop=deterministic")
-    lines = append(lines, "proof rollback=" + std.prelude.to_string(parse_number_after(ssa_text, "rollback=")) + " proof_fail=" + std.prelude.to_string(parse_number_after(ssa_text, "proof_fail=")))
+    lines = append(lines, "proof rollback=" + std.prelude.to_string(backend_parse_number_after(ssa_text, "rollback=")) + " proof_fail=" + std.prelude.to_string(backend_parse_number_after(ssa_text, "proof_fail=")))
     join_lines(lines)
 }
 
@@ -2246,7 +2246,7 @@ func validate_dwarf_consumability(string dwarf_payload, string ssa_text) ((), ba
     if !has_substring(dwarf_payload, "metric location_continuity=") {
         return backend_error { message: "backend error: dwarf continuity metric missing" }
     }
-    budget := parse_number_after(ssa_text, "dbg_budget=")
+    budget := backend_parse_number_after(ssa_text, "dbg_budget=")
     if budget >= 0 && budget < 15 {
         return backend_error { message: "backend error: dwarf consumability budget too low" }
     }
@@ -2274,7 +2274,7 @@ func validate_drop_contract_chain(string drop_payload, source_file source, strin
     if expected > 0 && got < expected {
         return backend_error { message: "backend error: drop contract function coverage mismatch" }
     }
-    proof_fail := parse_number_after(ssa_text, "proof_fail=")
+    proof_fail := backend_parse_number_after(ssa_text, "proof_fail=")
     if proof_fail > 0 {
         return backend_error { message: "backend error: drop contract blocked by failed ssa proofs" }
     }
@@ -2284,22 +2284,22 @@ func validate_drop_contract_chain(string drop_payload, source_file source, strin
 func build_backend_perf_baseline_artifact(string arch, string ssa_text, string midend_report, string runtime_report) string {
     lines := string[]()
     lines = append(lines, "perf-baseline version=1 arch=" + arch)
-    lines = append(lines, "ssa spills=" + std.prelude.to_string(parse_number_after(ssa_text, "spills="))
-        + " splits=" + std.prelude.to_string(parse_number_after(ssa_text, "splits="))
-        + " remat=" + std.prelude.to_string(parse_number_after(ssa_text, "remat="))
-        + " sched_tp=" + std.prelude.to_string(parse_number_after(ssa_text, "sched_tp="))
-        + " sched_lat=" + std.prelude.to_string(parse_number_after(ssa_text, "sched_lat=")))
+    lines = append(lines, "ssa spills=" + std.prelude.to_string(backend_parse_number_after(ssa_text, "spills="))
+        + " splits=" + std.prelude.to_string(backend_parse_number_after(ssa_text, "splits="))
+        + " remat=" + std.prelude.to_string(backend_parse_number_after(ssa_text, "remat="))
+        + " sched_tp=" + std.prelude.to_string(backend_parse_number_after(ssa_text, "sched_tp="))
+        + " sched_lat=" + std.prelude.to_string(backend_parse_number_after(ssa_text, "sched_lat=")))
     lines = append(lines, "midend " + midend_report)
     lines.push("scheduler queue_policy=priority-rr select_policy=multi-chan-priority-rr"
-        + " sroutine_sites=" + std.prelude.to_string(parse_number_after(midend_report, "sroutine_sites="))
-        + " select_weighted_sites=" + std.prelude.to_string(parse_number_after(midend_report, "select_weighted_sites="))
-        + " select_timeout_sites=" + std.prelude.to_string(parse_number_after(midend_report, "select_timeout_sites="))
-        + " select_send_sites=" + std.prelude.to_string(parse_number_after(midend_report, "select_send_sites="))
-        + " sched_tp=" + std.prelude.to_string(parse_number_after(ssa_text, "sched_tp="))
-        + " sched_lat=" + std.prelude.to_string(parse_number_after(ssa_text, "sched_lat=")))
+        + " sroutine_sites=" + std.prelude.to_string(backend_parse_number_after(midend_report, "sroutine_sites="))
+        + " select_weighted_sites=" + std.prelude.to_string(backend_parse_number_after(midend_report, "select_weighted_sites="))
+        + " select_timeout_sites=" + std.prelude.to_string(backend_parse_number_after(midend_report, "select_timeout_sites="))
+        + " select_send_sites=" + std.prelude.to_string(backend_parse_number_after(midend_report, "select_send_sites="))
+        + " sched_tp=" + std.prelude.to_string(backend_parse_number_after(ssa_text, "sched_tp="))
+        + " sched_lat=" + std.prelude.to_string(backend_parse_number_after(ssa_text, "sched_lat=")))
     lines.push("scheduler_counters"
-        + " select_default_fallbacks=" + std.prelude.to_string(parse_number_after(runtime_report, "select_default_fallbacks="))
-        + " select_timeouts=" + std.prelude.to_string(parse_number_after(runtime_report, "select_timeouts=")))
+        + " select_default_fallbacks=" + std.prelude.to_string(backend_parse_number_after(runtime_report, "select_default_fallbacks="))
+        + " select_timeouts=" + std.prelude.to_string(backend_parse_number_after(runtime_report, "select_timeouts=")))
     lines.push("runtime_memory strategy=ownership+explicit-drop")
     lines = append(lines, runtime_report)
     lines = append(lines, "regression_gate p95_latency=stable throughput=stable")
@@ -2344,24 +2344,24 @@ func build_midend_opt_artifact(string midend_report) string {
     lines = append(lines, "midend-opt version=1")
     lines = append(lines, "report " + midend_report)
     lines.push("summary"
-        + " inline_sites=" + std.prelude.to_string(parse_number_after(midend_report, "inline_sites="))
-        + " escape_sites=" + std.prelude.to_string(parse_number_after(midend_report, "escape_sites="))
-        + " devirtualized=" + std.prelude.to_string(parse_number_after(midend_report, "devirtualized="))
-        + " cross_pkg_inline=" + std.prelude.to_string(parse_number_after(midend_report, "cross_pkg_inline="))
-        + " const_prop=" + std.prelude.to_string(parse_number_after(midend_report, "const_prop="))
-        + " const_fold_hits=" + std.prelude.to_string(parse_number_after(midend_report, "const_fold_hits=")))
+        + " inline_sites=" + std.prelude.to_string(backend_parse_number_after(midend_report, "inline_sites="))
+        + " escape_sites=" + std.prelude.to_string(backend_parse_number_after(midend_report, "escape_sites="))
+        + " devirtualized=" + std.prelude.to_string(backend_parse_number_after(midend_report, "devirtualized="))
+        + " cross_pkg_inline=" + std.prelude.to_string(backend_parse_number_after(midend_report, "cross_pkg_inline="))
+        + " const_prop=" + std.prelude.to_string(backend_parse_number_after(midend_report, "const_prop="))
+        + " const_fold_hits=" + std.prelude.to_string(backend_parse_number_after(midend_report, "const_fold_hits=")))
     lines.push("scheduler_opt"
-        + " sroutine_sites=" + std.prelude.to_string(parse_number_after(midend_report, "sroutine_sites="))
-        + " select_weighted_sites=" + std.prelude.to_string(parse_number_after(midend_report, "select_weighted_sites="))
-        + " select_timeout_sites=" + std.prelude.to_string(parse_number_after(midend_report, "select_timeout_sites="))
-        + " select_send_sites=" + std.prelude.to_string(parse_number_after(midend_report, "select_send_sites=")))
+        + " sroutine_sites=" + std.prelude.to_string(backend_parse_number_after(midend_report, "sroutine_sites="))
+        + " select_weighted_sites=" + std.prelude.to_string(backend_parse_number_after(midend_report, "select_weighted_sites="))
+        + " select_timeout_sites=" + std.prelude.to_string(backend_parse_number_after(midend_report, "select_timeout_sites="))
+        + " select_send_sites=" + std.prelude.to_string(backend_parse_number_after(midend_report, "select_send_sites=")))
     lines.push("passes"
-        + " rm_unreachable=" + std.prelude.to_string(parse_number_after(midend_report, "pass_rm_unreachable="))
-        + " fold_branch=" + std.prelude.to_string(parse_number_after(midend_report, "pass_fold_branch="))
-        + " simplify_j2r=" + std.prelude.to_string(parse_number_after(midend_report, "pass_simplify_j2r="))
-        + " trim_unit=" + std.prelude.to_string(parse_number_after(midend_report, "pass_trim_unit="))
-        + " dedup=" + std.prelude.to_string(parse_number_after(midend_report, "pass_dedup="))
-        + " ipo_synergy=" + std.prelude.to_string(parse_number_after(midend_report, "ipo_synergy=")))
+        + " rm_unreachable=" + std.prelude.to_string(backend_parse_number_after(midend_report, "pass_rm_unreachable="))
+        + " fold_branch=" + std.prelude.to_string(backend_parse_number_after(midend_report, "pass_fold_branch="))
+        + " simplify_j2r=" + std.prelude.to_string(backend_parse_number_after(midend_report, "pass_simplify_j2r="))
+        + " trim_unit=" + std.prelude.to_string(backend_parse_number_after(midend_report, "pass_trim_unit="))
+        + " dedup=" + std.prelude.to_string(backend_parse_number_after(midend_report, "pass_dedup="))
+        + " ipo_synergy=" + std.prelude.to_string(backend_parse_number_after(midend_report, "ipo_synergy=")))
     join_lines(lines)
 }
 
@@ -3415,7 +3415,7 @@ func index_of_from(string text, string needle, int start) int {
     -1
 }
 
-func parse_number_after(string text, string marker) int {
+func backend_parse_number_after(string text, string marker) int {
     start := index_of(text, marker)
     if start < 0 {
         return -1
