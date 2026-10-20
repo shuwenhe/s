@@ -81,7 +81,7 @@ func parser_match(parser* p, int token_type) int {
     return 0
 }
 
-func parser_skip_newlines(parser* p) {
+func syntax_parser_skip_newlines(parser* p) {
     for {
         if parser_current_token(p).kind != 86 {
             break
@@ -91,7 +91,7 @@ func parser_skip_newlines(parser* p) {
 }
 
 func parser_parse_program(parser* p) ast_node* {
-    parser_skip_newlines(p)
+    syntax_parser_skip_newlines(p)
     prog := alloc(ast_node)
     prog.kind = ast_program
     prog.line = parser_current_token(p).line
@@ -101,7 +101,7 @@ func parser_parse_program(parser* p) ast_node* {
         if parser_current_token(p).kind == 0 {
             break
         }
-        parser_skip_newlines(p)
+        syntax_parser_skip_newlines(p)
         current := parser_current_token(p)
         if current.kind == 10 {
             func_decl := parser_parse_func_decl(p)
@@ -164,7 +164,7 @@ func parser_parse_struct_decl(parser* p) ast_node* {
     if parser_current_token(p).kind == 28 {
         parser_advance(p)
         for {
-            parser_skip_newlines(p)
+            syntax_parser_skip_newlines(p)
             if parser_current_token(p).kind == 29 {
                 parser_advance(p)
                 break
@@ -173,7 +173,7 @@ func parser_parse_struct_decl(parser* p) ast_node* {
                 parser_advance(p)
                 parser_parse_type(p)
             }
-            parser_skip_newlines(p)
+            syntax_parser_skip_newlines(p)
         }
     }
     return struct_decl
@@ -285,13 +285,13 @@ func parser_parse_block_stmt(parser* p) ast_node* {
     if parser_current_token(p).kind == 28 {
         parser_advance(p)
         for {
-            parser_skip_newlines(p)
+            syntax_parser_skip_newlines(p)
             if parser_current_token(p).kind == 29 {
                 parser_advance(p)
                 break
             }
             parser_parse_statement(p)
-            parser_skip_newlines(p)
+            syntax_parser_skip_newlines(p)
         }
     }
     return block
