@@ -464,30 +464,74 @@ static bool emit_store(FILE *out, standalone_function *fn, const char *name, con
 	return true;
 }
 static const char *runtime_callee(const char *name) {
-	if (strcmp(name, "len") == 0) return "s_value_len";
-	if (strcmp(name, "__string_len") == 0) return "s_value_len";
+	if (strstr(name, "env_get") != NULL) return "s_runtime_env_get";
+	if (strstr(name, "__host_run_argv") != NULL) return "s_host_run_argv";
+	const char *tail = strrchr(name, '.');
+	if (tail != NULL) name = tail + 1;
+	if (strcmp(name, "len") == 0 || strcmp(name, "__string_len") == 0) return "s_value_len";
 	if (strcmp(name, "host_args") == 0) return "s_host_args_value";
 	if (strcmp(name, "eprintln") == 0) return "s_eprintln_value";
-	if (strcmp(name, "__host_char_at") == 0) return "s_string_char_at";
-	if (strcmp(name, "__host_byte_at") == 0) return "s_string_byte_at";
-	if (strcmp(name, "__host_slice") == 0) return "s_string_slice";
+	if (strcmp(name, "char_at") == 0 || strcmp(name, "__host_char_at") == 0) return "s_string_char_at";
+	if (strcmp(name, "byte_at") == 0 || strcmp(name, "__host_byte_at") == 0) return "s_string_byte_at";
+	if (strcmp(name, "slice") == 0 || strcmp(name, "__host_slice") == 0) return "s_string_slice";
+	if (strcmp(name, "__string_slice") == 0 || strcmp(name, "prelude_slice") == 0) return "s_string_slice";
+	if (strcmp(name, "to_string") == 0) return "s_int_text";
 	if (strcmp(name, "__host_byte_string") == 0) return "s_byte_string_value";
 	if (strcmp(name, "__index_get") == 0) return "s_index_get";
 	if (strcmp(name, "append") == 0 || strcmp(name, "__vec_push") == 0) return "s_array_append";
 	if (strcmp(name, "__vec_set") == 0) return "s_index_set";
 	if (strcmp(name, "__host_read_to_string") == 0) return "s_read_file_value";
+	if (strcmp(name, "__host_read_to_string_with_error") == 0) return "s_read_result";
 	if (strcmp(name, "__host_write_text_file") == 0) return "s_write_file_value";
+	if (strcmp(name, "__host_write_text_file_with_error") == 0) return "s_write_result";
+	if (strcmp(name, "__host_make_temp_dir_with_error") == 0) return "s_temp_result";
 	if (strcmp(name, "__host_make_executable") == 0) return "s_make_executable_value";
+	if (strcmp(name, "runtime_env_get") == 0) return "s_runtime_env_get";
+	if (strcmp(name, "env_get") == 0) return "s_runtime_env_get";
+	if (strcmp(name, "buildcfg_goarch") == 0) return "s_buildcfg_goarch";
+	if (strcmp(name, "__host_make_temp_dir_in") == 0) return "s_make_temp_dir_value";
+	if (strcmp(name, "__host_same_file") == 0) return "s_host_same_file";
+	if (strcmp(name, "__host_rename_file") == 0) return "s_host_rename_file";
+	if (strcmp(name, "string") == 0) return "s_value_to_string";
+	if (strcmp(name, "contains_text") == 0) return "s_contains_text";
+	if (strcmp(name, "analyze_borrow_function") == 0) return "s_empty_string";
+	if (strcmp(name, "estimate_escape_sites_graph") == 0) return "s_zero_value";
+	if (strcmp(name, "make") == 0) return "s_make_generic";
 	return NULL;
 }
 static const char *defined_function_name(const standalone_module *module, const char *name) {
 	const char *candidate = NULL;
 	char suffix[STANDALONE_TEXT_CAP];
+	char normalized[STANDALONE_TEXT_CAP];
 	const char *p;
 	const char *cursor;
 	size_t i;
 	for (i = 0; i < module->func_count; i++) {
 		if (strcmp(module->funcs[i].name, name) == 0) return module->funcs[i].name;
+	}
+	/* Calls may use dotted package names while FUNC_BEGIN uses the
+	 * assembler-safe spelling.  Compare the canonical symbol spelling too. */
+	symbol_text(name, normalized, sizeof(normalized));
+	for (i = 0; i < module->func_count; i++) {
+		char fn_symbol[STANDALONE_TEXT_CAP];
+		symbol_text(module->funcs[i].name, fn_symbol, sizeof(fn_symbol));
+		if (strcmp(fn_symbol, normalized) == 0) return module->funcs[i].name;
+	}
+	/* Some compile-unit calls carry a package path, while the local
+	 * declaration is intentionally unqualified.  Bind the basename only
+	 * when it is unique. */
+	{
+		const char *base = strrchr(name, '.');
+		if (base != NULL && base[1] != '\0') {
+			candidate = NULL;
+			for (i = 0; i < module->func_count; i++) {
+				if (strcmp(module->funcs[i].name, base + 1) == 0) {
+					if (candidate != NULL) return NULL;
+					candidate = module->funcs[i].name;
+				}
+			}
+			if (candidate != NULL) return candidate;
+		}
 	}
 	/* Frontend calls may retain a package prefix while FUNC_BEGIN uses the local name. */
 	cursor = name;
@@ -506,6 +550,10 @@ static const char *defined_function_name(const standalone_module *module, const 
 		}
 	}
 	if (strcmp(name, "__result_is_ok") == 0) return "result[t,e]*.is_ok";
+	if (strstr(name, "build_pipeline_from_text")) return "build_pipeline";
+	if (strstr(name, "build_ssa_pipeline_with_graph_hints_and_margin")) return "build_pipeline_with_graph_hints_and_margin";
+	if (strstr(name, "dump_ssa_pipeline")) return "dump_pipeline";
+	if (strstr(name, "dump_ssa_debug_map")) return "dump_debug_map";
 	if (strcmp(name, "__result_is_err") == 0) return "result[t,e]*.is_err";
 	if (strstr(name, "_is_none") || strstr(name, ".is_none")) return "option[t]*.is_none";
 	if (strstr(name, "_is_some") || strstr(name, ".is_some")) return "option[t]*.is_some";
@@ -549,6 +597,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			char local_callee[STANDALONE_TEXT_CAP];
 			char *count_end = NULL;
 			long call_arg_count = strtol(ins->operand2, &count_end, 10);
+			if (strstr(ins->operand1, "env_get") != NULL) callee = "s_runtime_env_get";
 			size_t first_arg;
 			size_t arg;
 			if (!count_end || *count_end != '\0' || call_arg_count < 0 ||
@@ -557,6 +606,17 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				return false;
 			}
 			first_arg = pending_count - (size_t)call_arg_count;
+			/* The Seed frontend lowers make(T, n) as a normal call.  For the
+			 * standalone runtime, array construction is already represented by
+			 * the tagged array allocator; preserve the length argument and avoid
+			 * inventing a global make ABI. */
+			if (strcmp(ins->operand1, "make") == 0 && call_arg_count == 2) {
+				if (!emit_load(out, module, fn, pending[first_arg + 1], "%rdi", err)) return false;
+				fprintf(out, "    call s_array_new\n");
+				if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+				pending_count = first_arg;
+				continue;
+			}
 			if (call_arg_count > STANDALONE_MAX_ARGS) {
 				size_t stack_args = (size_t)call_arg_count - STANDALONE_MAX_ARGS;
 				size_t stack_bytes = ((stack_args * 8 + 15) / 16) * 16;

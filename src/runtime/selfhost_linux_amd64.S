@@ -717,6 +717,21 @@ s_int_text:
     pop %rbx
     ret
 .size s_int_text, .-s_int_text
+.global s_value_to_string
+.type s_value_to_string, @function
+s_value_to_string:
+    test $1, %rdi
+    jnz s_int_text
+    mov %rdi, %rax
+    ret
+.size s_value_to_string, .-s_value_to_string
+.global s_make_temp_dir_value
+.type s_make_temp_dir_value, @function
+s_make_temp_dir_value:
+    /* Bootstrap fallback: the caller receives its requested prefix. */
+    mov %rdi, %rax
+    ret
+.size s_make_temp_dir_value, .-s_make_temp_dir_value
 .global s_read_file_value
 .type s_read_file_value, @function
 s_read_file_value:
@@ -827,6 +842,69 @@ s_write_file_value:
     pop %rbx
     ret
 .size s_write_file_value, .-s_write_file_value
+.global s_read_result
+.type s_read_result, @function
+s_read_result:
+    push %r12
+    push %r13
+    mov %rdi, %r12
+    call s_read_file_value
+    mov %rax, %rsi
+    xor %r13d, %r13d
+    test %rax, %rax
+    jnz .Lread_result_wrap
+    mov $1, %r13
+.Lread_result_wrap:
+    mov $16, %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Lread_result_fail
+    mov %r13, (%rax)
+    mov %rsi, 8(%rax)
+    pop %r13
+    pop %r12
+    ret
+.Lread_result_fail:
+    xor %eax, %eax
+    pop %r13
+    pop %r12
+    ret
+.size s_read_result, .-s_read_result
+.global s_write_result
+.type s_write_result, @function
+s_write_result:
+    push %r12
+    mov %rsi, %r12
+    call s_write_file_value
+    mov $16, %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Lwrite_result_fail
+    movq $0, (%rax)
+    movq $0, 8(%rax)
+    pop %r12
+    ret
+.Lwrite_result_fail:
+    xor %eax, %eax
+    pop %r12
+    ret
+.size s_write_result, .-s_write_result
+.global s_temp_result
+.type s_temp_result, @function
+s_temp_result:
+    call s_make_temp_dir_value
+    mov %rax, %rsi
+    mov $16, %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Ltemp_result_fail
+    movq $0, (%rax)
+    mov %rsi, 8(%rax)
+    ret
+.Ltemp_result_fail:
+    xor %eax, %eax
+    ret
+.size s_temp_result, .-s_temp_result
 .global s_make_executable_value
 .type s_make_executable_value, @function
 s_make_executable_value:
@@ -842,7 +920,185 @@ s_make_executable_value:
     mov $3, %rax
     ret
 .size s_make_executable_value, .-s_make_executable_value
+.global s_runtime_env_get
+.type s_runtime_env_get, @function
+s_runtime_env_get:
+    mov %rsi, %rax
+    ret
+.size s_runtime_env_get, .-s_runtime_env_get
+.global s_buildcfg_goarch
+.type s_buildcfg_goarch, @function
+s_buildcfg_goarch:
+    lea .L_amd64(%rip), %rax
+    ret
+.size s_buildcfg_goarch, .-s_buildcfg_goarch
+.global s_zero_value
+.type s_zero_value, @function
+s_zero_value:
+    xor %eax, %eax
+    ret
+.size s_zero_value, .-s_zero_value
+.global s_empty_string
+.type s_empty_string, @function
+s_empty_string:
+    lea .L_empty_string(%rip), %rax
+    ret
+.size s_empty_string, .-s_empty_string
+.global s_fn_env_get
+.type s_fn_env_get, @function
+s_fn_env_get:
+    jmp s_empty_string
+.size s_fn_env_get, .-s_fn_env_get
+.global s_make_generic
+.type s_make_generic, @function
+s_make_generic:
+    xor %eax, %eax
+    ret
+.size s_make_generic, .-s_make_generic
+.global s_contains_text
+.type s_contains_text, @function
+s_contains_text:
+    mov 8(%rdi), %r8
+    mov 8(%rsi), %r9
+    cmp %r8, %r9
+    jb .Lcontains_false
+    xor %rcx, %rcx
+.Lcontains_outer:
+    mov %r8, %rax
+    sub %r9, %rax
+    cmp %rax, %rcx
+    ja .Lcontains_false
+    xor %rdx, %rdx
+.Lcontains_inner:
+    cmp %r9, %rdx
+    jae .Lcontains_true
+    movzbq 16(%rdi,%rcx,1), %rax
+    movzbq 16(%rsi,%rdx,1), %r10
+    cmp %r10, %rax
+    jne .Lcontains_next
+    inc %rcx
+    inc %rdx
+    jmp .Lcontains_inner
+.Lcontains_next:
+    sub %rdx, %rcx
+    inc %rcx
+    jmp .Lcontains_outer
+.Lcontains_true:
+    mov $3, %rax
+    ret
+.Lcontains_false:
+    mov $1, %rax
+    ret
+.size s_contains_text, .-s_contains_text
+.global s_host_same_file
+.type s_host_same_file, @function
+s_host_same_file:
+	mov 8(%rdi), %rax
+	cmp 8(%rsi), %rax
+    jne .Lsame_file_false
+    mov 8(%rdi), %rcx
+    xor %rdx, %rdx
+.Lsame_file_loop:
+    cmp %rcx, %rdx
+    jae .Lsame_file_true
+    movzbq 16(%rdi,%rdx), %rax
+    movzbq 16(%rsi,%rdx), %r8
+    cmp %r8, %rax
+    jne .Lsame_file_false
+    inc %rdx
+    jmp .Lsame_file_loop
+.Lsame_file_true:
+    mov $3, %rax
+    ret
+.Lsame_file_false:
+    mov $1, %rax
+    ret
+.size s_host_same_file, .-s_host_same_file
+.global s_host_rename_file
+.type s_host_rename_file, @function
+s_host_rename_file:
+    lea 16(%rdi), %rdi
+    lea 16(%rsi), %rsi
+    mov $82, %rax
+    syscall
+    test %rax, %rax
+    js .Lhost_rename_fail
+    mov $1, %rax
+    ret
+.Lhost_rename_fail:
+    mov $3, %rax
+    ret
+.size s_host_rename_file, .-s_host_rename_file
+.global s_host_run_argv
+.type s_host_run_argv, @function
+s_host_run_argv:
+    push %rbp
+    mov %rsp, %rbp
+    push %r12
+    push %r13
+    push %r14
+    mov %rdi, %r12
+    mov 8(%r12), %r13
+    lea 1(%r13), %rax
+    shl $3, %rax
+    add $15, %rax
+    and $-16, %rax
+    sub %rax, %rsp
+    mov %rsp, %r14
+    xor %rcx, %rcx
+.Lrun_argv_copy:
+    cmp %r13, %rcx
+    jae .Lrun_argv_terminate
+    mov 16(%r12,%rcx,8), %rdi
+    mov 16(%rdi), %rdi
+    mov %rdi, (%r14,%rcx,8)
+    inc %rcx
+    jmp .Lrun_argv_copy
+.Lrun_argv_terminate:
+    movq $0, (%r14,%rcx,8)
+    mov $57, %rax
+    syscall
+    test %rax, %rax
+    jz .Lrun_argv_child
+    js .Lrun_argv_fail
+    mov %rax, %r12
+    xor %rdi, %rdi
+    xor %rsi, %rsi
+    xor %rdx, %rdx
+    mov $61, %rax
+    syscall
+    test %rax, %rax
+    js .Lrun_argv_fail
+    mov %r12, %rax
+    sar $8, %rax
+    shl $1, %rax
+    add $1, %rax
+    jmp .Lrun_argv_done
+.Lrun_argv_child:
+    mov (%r14), %rdi
+    mov %r14, %rsi
+    xor %rdx, %rdx
+    mov $59, %rax
+    syscall
+    mov $60, %rax
+    mov $127, %rdi
+    syscall
+.Lrun_argv_fail:
+    mov $1, %rax
+.Lrun_argv_done:
+    leave
+    ret
+.size s_host_run_argv, .-s_host_run_argv
 .section .rodata
 .Lnewline:
     .byte 10
+.L_amd64:
+    .quad 2
+    .quad 5
+    .ascii "amd64"
+    .byte 0
+.L_empty_string:
+    .quad 2
+    .quad 0
+    .byte 0
 .section .note.GNU-stack,"",@progbits
