@@ -20,13 +20,13 @@ func test_ir_instructions() {
     left := ir_value_const("10", "int")
     right := ir_value_const("20", "int")
 
-    add_instr := ir_instr_binop(ir_op_add, left, right, "int")
+    add_instr := ir_make_instr_binop(ir_op_add, left, right, "int")
     if add_instr.instr_type != ir_instr_binop || add_instr.opcode != ir_op_add {
         panic("IR binary operation instruction creation failed")
     }
 
     cond := ir_value_const("1", "bool")
-    br_instr := ir_instr_condbr(cond, 1, 2)
+    br_instr := ir_make_instr_condbr(cond, 1, 2)
     if br_instr.instr_type != ir_instr_condbr {
         panic("IR conditional branch instruction creation failed")
     }
@@ -41,7 +41,7 @@ func test_ir_basicblock() {
         panic("IR basic block creation failed")
     }
 
-    instr := ir_instr_binop(ir_op_add,
+    instr := ir_make_instr_binop(ir_op_add,
                            ir_value_const("1", "int"),
                            ir_value_const("2", "int"),
                            "int")

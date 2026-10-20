@@ -114,47 +114,47 @@ func ir_make_param_value(int index, string type_info) ir_value {
     }
 }
 
-func ir_instr_binop(int op, ir_value left, ir_value right, string result_type) ir_instruction {
+func ir_make_instr_binop(int op, ir_value left, ir_value right, string result_type) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_binop, opcode op,
         operands: [left, right], result ir_value { value_type: ir_value_binop, type_info result_type }
     }
 }
 
-func ir_instr_unop(int op, ir_value operand, string result_type) ir_instruction {
+func ir_make_instr_unop(int op, ir_value operand, string result_type) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_unop, opcode op,
         operands: [operand], result ir_value { value_type: ir_value_unop, type_info result_type }
     }
 }
 
-func ir_instr_call(string func_name, ir_value[] args, string return_type) ir_instruction {
+func ir_make_instr_call(string func_name, ir_value[] args, string return_type) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_call, var_name func_name, operands args, result ir_value { value_type: ir_value_call, type_info return_type }
     }
 }
 
-func ir_instr_return(ir_value value) ir_instruction {
+func ir_make_instr_return(ir_value value) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_return,
         operands: [value]
     }
 }
 
-func ir_instr_br(int target_block_id) ir_instruction {
+func ir_make_instr_br(int target_block_id) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_br, branch_target_true target_block_id
     }
 }
 
-func ir_instr_condbr(ir_value cond, int true_block, int false_block) ir_instruction {
+func ir_make_instr_condbr(ir_value cond, int true_block, int false_block) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_condbr,
         operands: [cond], branch_target_true true_block, branch_target_false false_block
     }
 }
 
-func ir_instr_phi(ir_value[] operands, int[] operand_blocks) ir_instruction {
+func ir_make_instr_phi(ir_value[] operands, int[] operand_blocks) ir_instruction {
     ir_instruction {
         instr_type: ir_instr_phi, operands operands, branch_targets operand_blocks
     }
