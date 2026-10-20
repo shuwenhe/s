@@ -1,4 +1,7 @@
 package compile.internal
+import (
+    "std.result"
+)
 
 struct backend_error {
     string message
