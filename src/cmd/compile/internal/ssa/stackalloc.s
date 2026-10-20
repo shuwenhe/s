@@ -1,4 +1,4 @@
-package compile.internal.ssa
+package compile.internal
 func stackalloc_module_name() string {
     "ssa/stackalloc.s"
 }

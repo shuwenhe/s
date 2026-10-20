@@ -1,4 +1,4 @@
-package compile.internal.walk
+package compile.internal
 
 struct order_plan {
     int stmt_count

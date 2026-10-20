@@ -1,4 +1,4 @@
-package compile.internal.walk
+package compile.internal
 
 struct convert_plan {
     string source_kind

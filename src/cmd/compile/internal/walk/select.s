@@ -1,4 +1,4 @@
-package compile.internal.walk
+package compile.internal
 
 struct select_plan {
     int case_count

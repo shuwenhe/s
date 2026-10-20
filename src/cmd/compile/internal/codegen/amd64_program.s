@@ -1,8 +1,5 @@
-package compile.internal.codegen
+package compile.internal
 
-import (
-    "compile.internal.ssa"
-)
 
 // This is instruction selection, not an interpreter or a C source producer.
 // GNU as encodes these instructions and ELF relocations; GNU ld links them.

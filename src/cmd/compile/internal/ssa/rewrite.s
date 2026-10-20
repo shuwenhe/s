@@ -1,4 +1,4 @@
-package compile.internal.ssa
+package compile.internal
 func run_arch_rewrite(ssa_func f, string arch) int {
     if arch == "amd64" {
         return run_rewrite_amd64(f)

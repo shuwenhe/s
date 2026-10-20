@@ -1,4 +1,4 @@
-package compile.internal.ssa
+package compile.internal
 func check_func(ssa_func f) int {
     i := 0
     for i < len(f.values) {

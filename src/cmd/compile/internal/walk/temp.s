@@ -1,4 +1,4 @@
-package compile.internal.walk
+package compile.internal
 
 struct temp_plan {
     string type_name

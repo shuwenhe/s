@@ -1,4 +1,4 @@
-package compile.internal.ssa
+package compile.internal
 func dump_func(ssa_func f) string {
     out := "ssa-func " + f.name + "\n"
     bi := 0

@@ -1,4 +1,4 @@
-package compile.compiler
+package compile.internal
 
 func compiler_extract_int64_constant(string value) string {
     if len(value) < 9 { return "" }

@@ -1,7 +1,4 @@
-package compile.internal.ssa
-import (
-    "std"
-)
+package compile.internal
 struct prove_fact {
     int value_id
     bool known_zero

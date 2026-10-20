@@ -1,4 +1,4 @@
-package compile.internal.walk
+package compile.internal
 
 struct assign_plan {
     string op

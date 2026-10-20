@@ -1,4 +1,4 @@
-package compile.compiler
+package compile.internal
 
 struct stage12_mir_operand {
     string kind

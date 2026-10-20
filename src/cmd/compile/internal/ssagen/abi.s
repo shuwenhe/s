@@ -1,7 +1,4 @@
-package compile.internal.ssagen
-import (
-    "std"
-)
+package compile.internal
 struct abi_location {
     bool in_reg
     string place

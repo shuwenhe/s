@@ -1,10 +1,6 @@
-package compile.internal.pipeline
+package compile.internal
 
-import (
-    "compile.internal.core"
-)
 
-use std.io.eprintln
 
 struct pipeline_context {
     string input

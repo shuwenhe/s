@@ -1,4 +1,4 @@
-package compile.internal.walk
+package compile.internal
 
 struct expr_plan {
     string op

@@ -1,4 +1,4 @@
-package compile.compiler
+package compile.internal
 
 func compiler_main(string[] args) int {
     if len(args) == 4 && args[1] == "--emit-native-object" {

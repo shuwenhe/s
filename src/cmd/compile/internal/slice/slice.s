@@ -1,8 +1,5 @@
-package compile.internal.slice
+package compile.internal
 
-import (
-    "compile.internal.ir"
-)
 
 struct slice_info {
     string name

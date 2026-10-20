@@ -1,4 +1,4 @@
-package compile.compiler
+package compile.internal
 
 // The executable frontend accepts the documented straight-line integer subset.
 // It shares the compiler's token scanner, then constructs structured MIR from

@@ -1,4 +1,4 @@
-package compile.internal.ssa
+package compile.internal
 func cache_module_name() string {
     "ssa/cache.s"
 }

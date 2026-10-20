@@ -1,4 +1,4 @@
-package compile.compiler
+package compile.internal
 
 func compiler_number(int n) string {
     digits := "0123456789"

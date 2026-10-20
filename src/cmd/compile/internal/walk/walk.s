@@ -1,8 +1,5 @@
-package compile.internal.walk
+package compile.internal
 
-import (
-    "compile.internal.ir"
-)
 
 const tmpstringbufsize = 64
 const tmprunebufsize = 32

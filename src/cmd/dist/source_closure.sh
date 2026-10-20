@@ -24,17 +24,28 @@ all_pkg_index="$tmp.all.pkg"
 
 trap 'rm -f "$tmp" "$pkg_index" "$all_pkg_index" "$tmp.queue" "$tmp.seen"' EXIT HUP INT TERM
 
-find "$root/src" -name '*.s' -type f | while IFS= read -r source_file; do
+python3 - "$root/src" "$all_pkg_index" <<'PY'
+import re
+import sys
+from pathlib import Path
 
-    pkg=$(sed -n 's/^[[:space:]]*package[[:space:]]\{1,\}\([^[:space:]]\{1,\}\).*/\1/p' "$source_file" | head -n 1)
+source_root = Path(sys.argv[1]).resolve()
+output = Path(sys.argv[2])
+package = re.compile(r"^\s*package\s+(\S+)")
 
-    if [ -n "$pkg" ]; then
-
-        printf '%s\t%s\n' "$pkg" "$source_file" | sed "s#	$root/#	#"
-
-    fi
-
-done >"$all_pkg_index"
+with output.open("w", encoding="utf-8") as stream:
+    for source_file in sorted(source_root.rglob("*.s")):
+        try:
+            with source_file.open("r", encoding="utf-8") as source:
+                for line in source:
+                    match = package.match(line)
+                    if match:
+                        relative = source_file.relative_to(source_root.parent)
+                        stream.write(f"{match.group(1)}\t{relative.as_posix()}\n")
+                        break
+        except (OSError, UnicodeDecodeError):
+            continue
+PY
 
 if [ "$mode" = production ]; then
     awk -F '\t' '$2 !~ /[^/]+_test\.s$/ && $2 !~ /\/testdata\// { print }' "$all_pkg_index" >"$pkg_index"

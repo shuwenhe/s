@@ -1,6 +1,5 @@
-package compile.internal.ssa
+package compile.internal
 
-import "compile.internal.mir"
 
 struct function_ssa_result {
     function_ssa_program program

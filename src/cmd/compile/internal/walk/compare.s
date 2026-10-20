@@ -1,4 +1,4 @@
-package compile.internal.walk
+package compile.internal
 
 struct compare_plan {
     string op
