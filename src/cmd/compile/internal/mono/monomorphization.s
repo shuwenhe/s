@@ -1109,8 +1109,8 @@ func contains_generic_atom(string text, string atom) bool {
     i := 0
     for i < len(text) {
         if slice(text, i, i + 1) == atom {
-            left_ok := i == 0 || !is_ident_char(slice(text, i - 1, i))
-            right_ok := i + 1 >= len(text) || !is_ident_char(slice(text, i + 1, i + 2))
+            left_ok := i == 0 || !mono_is_ident_char(slice(text, i - 1, i))
+            right_ok := i + 1 >= len(text) || !mono_is_ident_char(slice(text, i + 1, i + 2))
             if left_ok && right_ok {
                 return true
             }
@@ -1120,7 +1120,7 @@ func contains_generic_atom(string text, string atom) bool {
     false
 }
 
-func is_ident_char(string ch) bool {
+func mono_is_ident_char(string ch) bool {
     (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || (ch >= "0" && ch <= "9") || ch == "_"
 }
 
