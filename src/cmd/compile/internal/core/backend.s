@@ -1,30 +1,4 @@
-package compile.internal.core
-
-import (
-    "compile.internal.abi"
-    "compile.internal.dispatch.devirtualize"
-    "compile.internal.escape"
-    "compile.internal.inline"
-    "compile.internal.ir.lower"
-    "compile.internal.mir"
-    "compile.internal.mono"
-    "compile.internal.rewriteresults"
-    "compile.internal.safety"
-    "compile.internal.semantic"
-    "compile.internal.slice"
-    "compile.internal.ssa"
-    "compile.internal.ssagen"
-    "compile.internal.parser.syntax"
-    "compile.internal.walk"
-    "s"
-    "std"
-    "std.fs"
-    "std.io"
-    "std.option"
-    "std.result"
-    "std.prelude"
-    "std.process"
-)
+package compile.internal
 
 struct backend_error {
     string message
