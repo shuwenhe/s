@@ -1,6 +1,10 @@
 package compile.internal
 import (
     "std.result"
+    "compile.internal.ir.lower"
+    "compile.internal.semantic"
+    "compile.internal.mono"
+    "compile.internal.parser.syntax"
 )
 
 struct backend_error {
