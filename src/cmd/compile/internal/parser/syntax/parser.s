@@ -52,7 +52,7 @@ struct parser {
     int pos
 }
 
-func parser_new(token* tokens, int token_count) parser* {
+func syntax_parser_new(token* tokens, int token_count) parser* {
     p := alloc(parser)
     p.tokens = tokens
     p.token_count = token_count
