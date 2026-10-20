@@ -5778,6 +5778,7 @@ struct backend_context {
     target_arch: string,
     target_os: string,
 }
+}
 
 func new_backend_context(string input, string output, bool native) backend_context {
     backend_context ctx
