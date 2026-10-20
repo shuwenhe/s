@@ -1346,7 +1346,7 @@ func parse_go_text_symbol(string line) (string, backend_error) {
     if symbol == "" {
         return backend_error { message: "go asm translation error: empty TEXT symbol" }
     }
-    symbol
+    return symbol, backend_error { message: "" }
 }
 
 func translate_go_instruction_line(string line, string arch) (string, backend_error) {
@@ -1362,7 +1362,7 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
         return backend_error { message: "go asm translation error: unsupported opcode " + op }
     }
     if args_text == "" {
-        return "    " + gas_op
+        return "    " + gas_op, backend_error { message: "" }
     }
     comma := index_of(args_text, ",")
     if comma < 0 {
@@ -1370,7 +1370,7 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
         if one.is_err() {
             return one.unwrap_err()
         }
-        return "    " + gas_op + " " + one.unwrap()
+        return "    " + gas_op + " " + one.unwrap(), backend_error { message: "" }
     }
     left_raw := trim_spaces(std.prelude.prelude_slice(args_text, 0, comma))
     right_raw := trim_spaces(std.prelude.prelude_slice(args_text, comma + 1, std.prelude.len(args_text)))
@@ -1382,7 +1382,7 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
     if right.is_err() {
         return right.unwrap_err()
     }
-    "    " + gas_op + " " + left.unwrap() + ", " + right.unwrap()
+    return "    " + gas_op + " " + left.unwrap() + ", " + right.unwrap(), backend_error { message: "" }
 }
 
 func map_go_opcode(string op) string {
