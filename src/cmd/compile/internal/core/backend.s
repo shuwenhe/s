@@ -2679,7 +2679,8 @@ func package_index_candidate_paths() string[] {
                 paths = append(paths, value)
             }
         }
-        option.none : (),
+        option.none : {
+        },
     }
     project := resolve_project_root()
     if project != "" {
