@@ -2673,14 +2673,12 @@ func lookup_package_index(string module) option[string] {
 
 func package_index_candidate_paths() string[] {
     paths := string[]()
-    switch env_get("s_package_index") {
-        option.some(value) : {
-            if value != "" {
-                paths = append(paths, value)
-            }
+    package_index := env_get("s_package_index")
+    if package_index.is_some() {
+        value := package_index.unwrap()
+        if value != "" {
+            paths = append(paths, value)
         }
-        option.none : {
-        },
     }
     project := resolve_project_root()
     if project != "" {
@@ -2861,16 +2859,15 @@ func module_search_roots() string[] {
 }
 
 func push_workspace_roots(string[] roots) () {
-    switch env_get("s_work_file") {
-        option.some(path) : {
-            if path != "" {
-                work := std.fs.read_to_string(path)
-                if work.is_ok() {
-                    append_workspace_roots(roots, work.unwrap())
-                }
+    work_path := env_get("s_work_file")
+    if work_path.is_some() {
+        path := work_path.unwrap()
+        if path != "" {
+            work := std.fs.read_to_string(path)
+            if work.is_ok() {
+                append_workspace_roots(roots, work.unwrap())
             }
         }
-        option.none : (),
     }
 }
 
@@ -2891,25 +2888,23 @@ func append_workspace_roots(string[] roots, string text) () {
 }
 
 func resolve_s_root() string {
-    switch env_get("S_ROOT") {
-        option.some(value) : {
-            if value != "" {
-                return value
-            }
+    root := env_get("S_ROOT")
+    if root.is_some() {
+        value := root.unwrap()
+        if value != "" {
+            return value
         }
-        option.none : (),
     }
     "/app/s"
 }
 
 func resolve_project_root() string {
-    switch env_get("S_PROJECT_ROOT") {
-        option.some(value) : {
-            if value != "" {
-                return value
-            }
+    root := env_get("S_PROJECT_ROOT")
+    if root.is_some() {
+        value := root.unwrap()
+        if value != "" {
+            return value
         }
-        option.none : (),
     }
     ""
 }
@@ -3030,21 +3025,19 @@ func build_compiler_runtime_launcher(string output) int {
 }
 
 func resolve_bootstrap_base_compiler() string {
-    switch env_get("s_bootstrap_base_compiler") {
-        option.some(value) : {
-            if value != "" {
-                return value
-            }
+    base := env_get("s_bootstrap_base_compiler")
+    if base.is_some() {
+        value := base.unwrap()
+        if value != "" {
+            return value
         }
-        option.none : (),
     }
-    switch env_get("S_BOOTSTRAP_BASE_COMPILER") {
-        option.some(value) : {
-            if value != "" {
-                return value
-            }
+    base = env_get("S_BOOTSTRAP_BASE_COMPILER")
+    if base.is_some() {
+        value := base.unwrap()
+        if value != "" {
+            return value
         }
-        option.none : (),
     }
     "/app/s/bin/s_arm64"
 }
@@ -3774,7 +3767,9 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] en
             fn_name := ""
             switch callee_result.unwrap() {
                 value.fn_ref(name) : fn_name = name,
-                _ : return backend_error { message: "backend error: sroutine expects function call target" }
+                _ : {
+                    return backend_error { message: "backend error: sroutine expects function call target" }
+                }
             }
             arg_values := value[]()
             ai := 0
