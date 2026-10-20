@@ -947,7 +947,17 @@ s_empty_string:
 .global s_fn_env_get
 .type s_fn_env_get, @function
 s_fn_env_get:
-    jmp s_empty_string
+    mov $16, %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Lenv_get_fail
+    movq $0, (%rax)
+    lea .L_empty_string(%rip), %rcx
+    mov %rcx, 8(%rax)
+    ret
+.Lenv_get_fail:
+    xor %eax, %eax
+    ret
 .size s_fn_env_get, .-s_fn_env_get
 .global s_make_generic
 .type s_make_generic, @function
