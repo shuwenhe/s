@@ -4829,18 +4829,31 @@ func eval_index_expr(index_expr value, source_file source, binding[] env, write_
         return index_result
     }
     key := stringify_value(index_result.unwrap())
-    switch target_result.unwrap() {
-        value.fn_map(entries) : {
-            i := 0
-            for i < std.prelude.len(entries) {
-                if entries[i].key == key {
-                    return value.fn_ref(entries[i].func_name)
-                }
-                i = i + 1
-            }
-            backend_error { message: "backend error: map key not found " + key }
+    map_result := fn_map_from_value(target_result.unwrap())
+    if map_result.is_none() {
+        return backend_error { message: "backend error: index target is not a function map" }
+    }
+    entries := map_result.unwrap()
+    i := 0
+    for i < std.prelude.len(entries) {
+        if entries[i].key == key {
+            return value.fn_ref(entries[i].func_name)
         }
-        _ : backend_error { message: "backend error: index target is not a function map" },
+        i = i + 1
+    }
+    backend_error { message: "backend error: map key not found " + key }
+}
+
+func fn_map_from_value(value target) option[fn_map_entry_value[]] {
+    switch target {
+        value.fn_map(entries) : option.some(entries),
+        value.int(_) : option.none,
+        value.string(_) : option.none,
+        value.bool(_) : option.none,
+        value.unit(_) : option.none,
+        value.channel(_) : option.none,
+        value.fn_ref(_) : option.none,
+        value.owned_box(_) : option.none,
     }
 }
 
