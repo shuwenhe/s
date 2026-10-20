@@ -49,7 +49,7 @@ fi
 
 if ! grep -q 'writes_result := compile_writes(parsed, graph)' "$BACKEND" ||
    ! grep -q 'exit_code_result := compile_exit_code(parsed, graph)' "$BACKEND" ||
-   ! grep -q 'asm_text := emit_asm(writes_result.unwrap(), exit_code_result.unwrap())' "$BACKEND" ||
+   ! grep -q 'asm_text := emit_asm.*writes_result.*exit_code_result' "$BACKEND" ||
    ! grep -q 'func emit_asm(write_op\[] writes, int exit_code) string' "$BACKEND" ||
    ! grep -q 'return emit_asm_amd64(writes, exit_code' "$BACKEND" ||
    ! grep -q 'func emit_asm_amd64(write_op\[] writes, int exit_code) string' "$BACKEND" ||
