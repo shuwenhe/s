@@ -28,7 +28,7 @@ func run_optimization_pipeline(ir_module* module) {
         cfg_compute_post_dominators(&cfg)
         cfg_compute_dominance_frontier(&cfg)
 
-        opt_constant_folding(&cfg)
+        apply_opt_constant_folding(&cfg)
         opt_dead_code_elimination(&cfg)
         opt_constant_propagation(&cfg)
         opt_global_value_numbering(&cfg)
@@ -36,7 +36,7 @@ func run_optimization_pipeline(ir_module* module) {
     }
 }
 
-func opt_constant_folding(cfg* control_flow_graph) {
+func apply_opt_constant_folding(cfg* control_flow_graph) {
     for b_idx := 0; b_idx < cfg.blocks.len(); b_idx = b_idx + 1 {
         block := cfg.blocks[b_idx]
 
