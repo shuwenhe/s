@@ -90,7 +90,7 @@ func syntax_parser_skip_newlines(parser* p) {
     }
 }
 
-func parser_parse_program(parser* p) ast_node* {
+func syntax_parser_parse_program(parser* p) ast_node* {
     syntax_parser_skip_newlines(p)
     prog := alloc(ast_node)
     prog.kind = ast_program
