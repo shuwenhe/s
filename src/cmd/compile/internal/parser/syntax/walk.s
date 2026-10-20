@@ -1,8 +1,8 @@
 package compile.internal.parser.syntax
-func walk_module_name() string {
+func syntax_walk_module_name() string {
     "parser/syntax/walk.s"
 }
 
-func walk_module_apply() int {
+func syntax_walk_module_apply() int {
     0
 }
