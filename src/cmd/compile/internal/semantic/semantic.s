@@ -1276,21 +1276,21 @@ func receiver_mode_from_signature(function_decl method_decl) string {
     receiver_mode_from_params(method_decl.sig.params)
 }
 
-func receiver_mode_from_param_name(param_decl[] params) string {
+func receiver_mode_from_param_name(param[] params) string {
     receiver_mode_from_params(params)
 }
 
-func receiver_mode_from_params(param_decl[] params) string {
+func receiver_mode_from_params(param[] params) string {
     if std.prelude.len(params) == 0 {
         return "value"
     }
     if params[0].name != "self" {
         return "value"
     }
-    if starts_with(params[0].kindname, "&") {
+    if starts_with(params[0].type_name, "&") {
         return "mut_ref"
     }
-    if starts_with(params[0].kindname, "&") {
+    if starts_with(params[0].type_name, "*") {
         return "ref"
     }
     "value"
