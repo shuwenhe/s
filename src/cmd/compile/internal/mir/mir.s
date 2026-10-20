@@ -160,7 +160,7 @@ struct mir_ownership_facts {
     mir_place[] loan_borrowed_places
 }
 
-func build_mir_point_map(mir_graph graph) mir_point_map {
+func mir_build_point_map(mir_graph graph) mir_point_map {
     points := mir_point[]()
     emitted_blocks := 0
     next_block_id := 0
@@ -366,7 +366,7 @@ func mir_points_string(int bits) string {
 }
 
 func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
-    points := build_mir_point_map(graph)
+    points := mir_build_point_map(graph)
     facts := build_ownership_facts_from_mir(graph, points)
     input := facts.input
     out := "PointCount = " + std.prelude.to_string(input.point_count)
@@ -409,7 +409,7 @@ func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
 }
 
 func dump_ownership_shadow_from_mir(mir_graph graph) string {
-    points := build_mir_point_map(graph)
+    points := mir_build_point_map(graph)
     facts := build_ownership_facts_from_mir(graph, points)
     analysis := compile.internal.ownership.analysis.analyze_ownership_liveness(facts.input)
     out := "RealMIROwnershipShadow\n"
