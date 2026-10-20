@@ -144,7 +144,7 @@ func fatal_error(error_context ctx, string message) {
     print_diagnostic(diag)
     
     // Exit immediately
-    std.process.exit(2)
+    process_exit(2)
 }
 
 // Print a single diagnostic message
