@@ -4883,20 +4883,31 @@ func eval_if_expr(if_expr value, source_file source, binding[] env, write_op[] w
     if cond_result.is_err() {
         cond_result.unwrap_err()
     }
-    switch cond_result.unwrap() {
-        value.bool(flag) : {
-            if flag {
-                execute_block_in_place(value.then_branch, source, env, writes, runtime)
-            } else {
-                switch value.else_branch {
-                    option.some(expr) : eval_expr(expr.value, source, env, writes, runtime),
-                    option.none : value.unit(unit_value {}),
-                }
-            }
-        }
-        _ : backend_error { message: "backend error: if condition must be bool" },
+    flag_result := bool_from_value(cond_result.unwrap())
+    if flag_result.is_none() {
+        return backend_error { message: "backend error: if condition must be bool" }
     }
+    if flag_result.unwrap() {
+        execute_block_in_place(value.then_branch, source, env, writes, runtime)
+        return value.unit(unit_value {})
+    }
+    if value.else_branch.is_some() {
+        return eval_expr(value.else_branch.unwrap().value, source, env, writes, runtime)
+    }
+    value.unit(unit_value {})
 }
+
+func bool_from_value(value input) option[bool] {
+    switch input {
+        value.bool(flag) : option.some(flag),
+        value.int(_) : option.none,
+        value.string(_) : option.none,
+        value.unit(_) : option.none,
+        value.channel(_) : option.none,
+        value.fn_ref(_) : option.none,
+        value.fn_map(_) : option.none,
+        value.owned_box(_) : option.none,
+    }
 
 func eval_while_expr(while_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     for true {
