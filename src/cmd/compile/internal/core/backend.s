@@ -4134,14 +4134,12 @@ func eval_chan_make_call(expr[] args, source_file source, binding[] env, write_o
     if cap_value.is_err() {
         return cap_value
     }
-    cap := 1
-    switch cap_value.unwrap() {
-        value.int(n) : {
-            if n > 0 {
-                cap = n
-            }
-        }
-        _ : return backend_error { message: "backend error: chan_make capacity must be int" },
+    cap := int_value_or_default(cap_value.unwrap(), -1)
+    if cap < 0 {
+        return backend_error { message: "backend error: chan_make capacity must be int" }
+    }
+    if cap == 0 {
+        cap = 1
     }
     id := runtime.next_channel_id
     runtime.next_channel_id = runtime.next_channel_id + 1
@@ -4149,6 +4147,19 @@ func eval_chan_make_call(expr[] args, source_file source, binding[] env, write_o
         id: id, capacity cap, buffer value[](), closed false, sends 0, recvs 0,
     })
     value.channel(channel_handle_value { id: id })
+}
+
+func int_value_or_default(value input, int fallback) int {
+    switch input {
+        value.int(n) : n,
+        value.string(_) : fallback,
+        value.bool(_) : fallback,
+        value.unit(_) : fallback,
+        value.channel(_) : fallback,
+        value.fn_ref(_) : fallback,
+        value.fn_map(_) : fallback,
+        value.owned_box(_) : fallback,
+    }
 }
 
 func eval_chan_send_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
