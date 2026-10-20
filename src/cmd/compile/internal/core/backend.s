@@ -10,6 +10,11 @@ import (
     "compile.internal.inline"
     "compile.internal.escape"
     "compile.internal.dispatch.devirtualize"
+    "compile.internal.rewriteresults"
+    "compile.internal.slice"
+    "compile.internal.walk"
+    "compile.internal.ssa"
+    "compile.internal.ssagen"
 )
 
 struct backend_error {
@@ -528,11 +533,11 @@ func run_midend_pipeline(mir_graph graph) midend_result {
         iter = iter + 1
     }
     rewritten := compile.internal.mir.dump_graph(rewritten_graph)
-    rewrite_results := compile.internal.rewriteresults.estimate_rewrite_results_graph(rewritten)
-    slice_stack_moves := compile.internal.slice.estimate_slice_stack_moves_graph(rewritten)
-    walk_lowerings := compile.internal.walk.estimate_walk_lowerings_graph(rewritten)
-    ssa_compile := compile.internal.ssa.estimate_ssa_compile_graph(rewritten)
-    ssagen_plan := compile.internal.ssagen.estimate_ssagen_plan_graph(rewritten)
+    rewrite_results := estimate_rewrite_results_graph(rewritten)
+    slice_stack_moves := estimate_slice_stack_moves_graph(rewritten)
+    walk_lowerings := estimate_walk_lowerings_graph(rewritten)
+    ssa_compile := estimate_ssa_compile_graph(rewritten)
+    ssagen_plan := estimate_ssagen_plan_graph(rewritten)
     if inlined > 0 {
         rewritten = rewritten + " inline=" + std.prelude.to_string(inlined)
     }
