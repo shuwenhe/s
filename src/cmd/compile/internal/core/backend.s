@@ -5,53 +5,53 @@ struct backend_error {
 }
 
 func ok_function(function_decl value) (function_decl, backend_error) {
-    result.ok(value);
+    return result.ok(value)
 }
 
 func fail_function(string message) (function_decl, backend_error) {
-    result.err(backend_error {
+    return result.err(backend_error {
         message: message,
-    });
+    })
 }
 
 func ok_write_ops(write_op[] value) (write_op[], backend_error) {
-    result.ok(value);
+    return result.ok(value)
 }
 
 func fail_write_ops(string message) (write_op[], backend_error) {
-    result.err(backend_error {
+    return result.err(backend_error {
         message: message,
-    });
+    })
 }
 
 func ok_value(value value) (value, backend_error) {
-    result.ok(value);
+    return result.ok(value)
 }
 
 func fail_value(string message) (value, backend_error) {
-    result.err(backend_error {
+    return result.err(backend_error {
         message: message,
-    });
+    })
 }
 
 func ok_unit() ((), backend_error) {
-    result.ok(());
+    return result.ok(())
 }
 
 func fail_unit(string message) ((), backend_error) {
-    result.err(backend_error {
+    return result.err(backend_error {
         message: message,
-    });
+    })
 }
 
 func ok_int(int value) (int, backend_error) {
-    result.ok(value);
+    return result.ok(value)
 }
 
 func fail_int(string message) (int, backend_error) {
-    result.err(backend_error {
+    return result.err(backend_error {
         message: message,
-    });
+    })
 }
 control_panic_active := "@panic.active"
 control_panic_payload := "@panic.payload"
