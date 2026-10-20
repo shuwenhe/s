@@ -1246,14 +1246,14 @@ func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
     lines := string[]()
     lines = append(lines, "go-asm version=1 arch=" + arch + " syntax=plan9")
     translated := translate_go_plan9_to_gas(arch, plan9_source)
-    if translated.is_err() {
+    if text_backend_pair_is_err(translated.left, translated.right) {
         lines = append(lines, "status=error")
-        lines = append(lines, "reason=" + translated.unwrap_err().message)
+        lines = append(lines, "reason=" + translated.right.message)
         return join_lines(lines)
     }
     lines = append(lines, "status=ok")
     lines = append(lines, "translator=plan9-to-gas")
-    lines = append(lines, "gas_preview=" + flatten_multiline(translated.unwrap()))
+    lines = append(lines, "gas_preview=" + flatten_multiline(translated.left))
     join_lines(lines)
 }
 
@@ -1286,10 +1286,10 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
         }
         if starts_with_local(cleaned, "TEXT ") {
             symbol_result := parse_go_text_symbol(cleaned)
-            if symbol_result.is_err() {
-                return symbol_result.unwrap_err()
+            if text_backend_pair_is_err(symbol_result.left, symbol_result.right) {
+                return symbol_result.right
             }
-            symbol := symbol_result.unwrap()
+            symbol := symbol_result.left
             saw_text_directive = true
             output_lines = append(output_lines, "    .text")
             output_lines = append(output_lines, "    .globl " + symbol)
@@ -1316,16 +1316,20 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
             continue
         }
         instr_result := translate_go_instruction_line(cleaned, arch)
-        if instr_result.is_err() {
-            return instr_result.unwrap_err()
+        if text_backend_pair_is_err(instr_result.left, instr_result.right) {
+            return instr_result.right
         }
-        output_lines = append(output_lines, instr_result.unwrap())
+        output_lines = append(output_lines, instr_result.left)
         i = i + 1
     }
     if !saw_text_directive {
         return backend_error { message: "go asm translation error: no TEXT directive found" }
     }
     join_lines(output_lines)
+}
+
+func text_backend_pair_is_err(string value, backend_error err) bool {
+    err.message != ""
 }
 
 func parse_go_text_symbol(string line) (string, backend_error) {
