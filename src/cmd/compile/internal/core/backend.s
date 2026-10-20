@@ -4807,10 +4807,9 @@ func eval_map_literal(map_literal value, source_file source, binding[] env, writ
         if val_result.is_err() {
             return val_result.unwrap_err()
         }
-        mapped_name := ""
-        switch val_result.unwrap() {
-            value.fn_ref(fn_name) : mapped_name = fn_name,
-            _ : return backend_error { message: "backend error: map literal currently supports function values only" },
+        mapped_name := function_name_from_value(val_result.unwrap())
+        if mapped_name == "" {
+            return backend_error { message: "backend error: map literal currently supports function values only" }
         }
         entries.push(fn_map_entry_value {
             key: stringify_value(key_result.unwrap()), func_name mapped_name,
