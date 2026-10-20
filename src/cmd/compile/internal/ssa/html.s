@@ -1,5 +1,5 @@
 package compile.internal.ssa
-func html_module_name() string {
+func ssa_html_module_name() string {
     "ssa/html.s"
 }
 
