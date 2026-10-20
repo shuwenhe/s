@@ -1747,8 +1747,8 @@ func build_abi_emit_plan(string arch, source_file source) string {
         switch source.items[i] {
             item.function(fn_decl) : {
                 line := "fn " + fn_decl.sig.name
-                abi_info := compile.internal.abi.abi_analyze_types(
-                    compile.internal.abi.new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
+                abi_info := abi_analyze_types(
+                    new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
                     collect_fn_param_types(fn_decl),
                     collect_fn_result_types(fn_decl)
                 )
@@ -1952,8 +1952,8 @@ func collect_abi_behavior(string arch, source_file source) abi_behavior_entry[] 
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
             item.function(fn_decl) : {
-                abi_info := compile.internal.abi.abi_analyze_types(
-                    compile.internal.abi.new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
+                abi_info := abi_analyze_types(
+                    new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
                     collect_fn_param_types(fn_decl),
                     collect_fn_result_types(fn_decl)
                 )
