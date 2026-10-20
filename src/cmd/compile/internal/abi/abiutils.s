@@ -268,41 +268,42 @@ func append_param_offsets(int[] offsets, int at, string type_name) offset_result
 }
 
 func append_param_types(string[] rts, string type_name) string[] {
+    updated_types := rts
     if type_size(type_name) == 0 {
-        return rts
+        return updated_types
     }
     if is_complex_type(type_name) {
-        rts = append(rts, "float")
-        rts = append(rts, "float")
-        return rts
+        updated_types = append(updated_types, "float")
+        updated_types = append(updated_types, "float")
+        return updated_types
     }
     if is_float_type(type_name) {
-        rts = append(rts, "float")
-        return rts
+        updated_types = append(updated_types, "float")
+        return updated_types
     }
     if is_string_type(type_name) {
-        rts = append(rts, "ptr")
-        rts = append(rts, "int")
-        return rts
+        updated_types = append(updated_types, "ptr")
+        updated_types = append(updated_types, "int")
+        return updated_types
     }
     if is_slice_type(type_name) {
-        rts = append(rts, "ptr")
-        rts = append(rts, "int")
-        rts = append(rts, "int")
-        return rts
+        updated_types = append(updated_types, "ptr")
+        updated_types = append(updated_types, "int")
+        updated_types = append(updated_types, "int")
+        return updated_types
     }
     if is_interface_type(type_name) {
-        rts = append(rts, "ptr")
-        rts = append(rts, "ptr")
-        return rts
+        updated_types = append(updated_types, "ptr")
+        updated_types = append(updated_types, "ptr")
+        return updated_types
     }
     if type_size(type_name) > reg_size() {
-        rts = append(rts, "uint32")
-        rts = append(rts, "uint32")
-        return rts
+        updated_types = append(updated_types, "uint32")
+        updated_types = append(updated_types, "uint32")
+        return updated_types
     }
-    rts = append(rts, type_name)
-    rts
+    updated_types = append(updated_types, type_name)
+    updated_types
 }
 
 func assign_param(assign_state state, string type_name, string name, bool is_result) abi_param_assignment {
