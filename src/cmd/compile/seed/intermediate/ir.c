@@ -1,10 +1,12 @@
 #include "ir.h"
 #include "array_type.h"
+#include "../syntax/enum_type.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 typedef struct ir_builder {
 	IR *ir;
+	ast_node *root;
 	compile_error *err;
 	int temp_counter;
 	int label_counter;
@@ -202,6 +204,117 @@ static bool lower_struct_literal(ir_builder *b, ast_node *expr, char out[IR_OPER
 	return true;
 }
 static bool lower_stmt(ir_builder *b, ast_node *stmt);
+static bool lower_enum_construct(ir_builder *b, ast_node *decl, ast_enum_variant *variant,
+	ast_node *payload, source_pos pos, char out[IR_OPERAND_CAP]) {
+	char tag[IR_OPERAND_CAP];
+	snprintf(tag, sizeof(tag), "%lld", (long long)variant->resolved_value);
+	if (!seed_enum_has_payload(decl)) {
+		copy_str(out, tag);
+		return true;
+	}
+	{
+		char alias[IR_OPERAND_CAP], field[IR_OPERAND_CAP], value[IR_OPERAND_CAP];
+		next_temp(b, out);
+		snprintf(alias, sizeof(alias), "\"%s\"", out);
+		if (!emit_ins(b, IR_MOV, out, alias, "", pos)) return false;
+		if (snprintf(field, sizeof(field), "%s.__type", out) >= (int)sizeof(field)) return false;
+		snprintf(value, sizeof(value), "\"%s\"", decl->as.enum_decl.name);
+		if (!emit_ins(b, IR_MOV, field, value, "", pos)) return false;
+		if (snprintf(field, sizeof(field), "%s.__variant", out) >= (int)sizeof(field) ||
+			!emit_ins(b, IR_MOV, field, tag, "", pos)) return false;
+		if (payload) {
+			if (!lower_expr(b, payload, value)) return false;
+			if (snprintf(field, sizeof(field), "%s.value", out) >= (int)sizeof(field)) return false;
+			if (!emit_ins(b, IR_MOV, field, value, "", pos)) return false;
+		}
+	}
+	return true;
+}
+static bool lower_value_branch(ir_builder *b, ast_node *node, char out[IR_OPERAND_CAP], bool *has_value) {
+	size_t i;
+	*has_value = false;
+	if (!node) return true;
+	if (node->kind == AST_BLOCK) {
+		for (i = 0; i < node->as.block.statements.len; i++) {
+			ast_node *child = node->as.block.statements.data[i];
+			if (i + 1 == node->as.block.statements.len)
+				return lower_value_branch(b, child, out, has_value);
+			if (!lower_stmt(b, child)) return false;
+		}
+		return true;
+	}
+	if (node->kind == AST_RETURN_STMT || node->kind == AST_BREAK_STMT ||
+		node->kind == AST_CONTINUE_STMT) return lower_stmt(b, node);
+	if (node->kind == AST_EXPR_STMT) node = node->as.expr_stmt.expr;
+	if (!lower_expr(b, node, out)) return false;
+	*has_value = true;
+	return true;
+}
+
+static bool lower_if_value(ir_builder *b, ast_node *node, char out[IR_OPERAND_CAP]) {
+	ast_node *arm = node;
+	char subject[IR_OPERAND_CAP] = "";
+	char end_label[IR_OPERAND_CAP];
+	next_temp(b, out);
+	next_label(b, end_label);
+	if (node->as.if_stmt.is_switch_arm) {
+		char value[IR_OPERAND_CAP];
+		if (!lower_expr(b, node->as.if_stmt.pattern_subject, value)) return false;
+		/* Snapshot the subject, even when it is a mutable variable. */
+		next_temp(b, subject);
+		if (!emit_ins(b, IR_MOV, subject, value, "", node->pos)) return false;
+	}
+	while (arm && arm->kind == AST_IF_STMT) {
+		char cond[IR_OPERAND_CAP] = "1";
+		char next_arm[IR_OPERAND_CAP];
+		char value[IR_OPERAND_CAP];
+		bool has_value;
+		next_label(b, next_arm);
+		if (arm->as.if_stmt.is_pattern_arm) {
+			if (arm->as.if_stmt.pattern_kind == PATTERN_VARIANT) {
+				ast_node *decl = seed_find_enum(b->root, arm->as.if_stmt.variant_owner);
+				ast_enum_variant *variant = seed_find_variant(decl, arm->as.if_stmt.variant_name);
+				char tag[IR_OPERAND_CAP], field[IR_OPERAND_CAP];
+				if (!variant) {
+					error_set(b->err, ERR_SEMANTIC, arm->pos.line, arm->pos.column, "unknown enum variant in pattern");
+					return false;
+				}
+				snprintf(tag, sizeof(tag), "%lld", (long long)variant->resolved_value);
+				if (snprintf(field, sizeof(field), "%s%s", subject,
+					seed_enum_has_payload(decl) ? ".__variant" : "") >= (int)sizeof(field)) return false;
+				next_temp(b, cond);
+				if (!emit_ins(b, IR_CMP_EQ, cond, field, tag, arm->pos)) return false;
+			}
+		} else if (arm->as.if_stmt.condition) {
+			if (arm->as.if_stmt.is_switch_arm) {
+				if (!lower_expr(b, arm->as.if_stmt.condition->as.binary_expr.right, value)) return false;
+				next_temp(b, cond);
+				if (!emit_ins(b, IR_CMP_EQ, cond, subject, value, arm->pos)) return false;
+			} else if (!lower_expr(b, arm->as.if_stmt.condition, cond)) return false;
+		}
+		if (!emit_ins(b, IR_JUMP_IF_FALSE, next_arm, cond, "", arm->pos)) return false;
+		if (arm->as.if_stmt.payload_binding_name) {
+			char field[IR_OPERAND_CAP];
+			if (snprintf(field, sizeof(field), "%s.value", subject) >= (int)sizeof(field) ||
+				!emit_ins(b, IR_MOV, arm->as.if_stmt.payload_binding_name, field, "", arm->pos)) return false;
+		}
+		if (arm->as.if_stmt.binding_name &&
+			!emit_ins(b, IR_MOV, arm->as.if_stmt.binding_name, subject, "", arm->pos)) return false;
+		if (!lower_value_branch(b, arm->as.if_stmt.then_branch, value, &has_value)) return false;
+		if (has_value && !emit_ins(b, IR_MOV, out, value, "", arm->pos)) return false;
+		if (!emit_ins(b, IR_JUMP, end_label, "", "", arm->pos) ||
+			!emit_ins(b, IR_LABEL, next_arm, "", "", arm->pos)) return false;
+		arm = arm->as.if_stmt.else_branch;
+	}
+	if (arm) {
+		char value[IR_OPERAND_CAP];
+		bool has_value;
+		if (!lower_value_branch(b, arm, value, &has_value)) return false;
+		if (has_value && !emit_ins(b, IR_MOV, out, value, "", arm->pos)) return false;
+	}
+	return emit_ins(b, IR_LABEL, end_label, "", "", node->pos);
+}
+
 static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
 	size_t i;
 	int written;
@@ -453,6 +566,8 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 		return true;
 	}
 	switch (expr->kind) {
+		case AST_IF_STMT:
+			return lower_if_value(b, expr, out);
 		case AST_NUMBER_EXPR:
 			snprintf(out, IR_OPERAND_CAP, "%s", expr->as.number_expr.literal);
 			return true;
@@ -475,6 +590,13 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			return true;
 		case AST_MEMBER_EXPR: {
 			char object_name[IR_OPERAND_CAP];
+			if (expr->as.member_expr.resolved_enum_type &&
+				seed_enum_owner_name(expr->as.member_expr.object, object_name, sizeof(object_name))) {
+				ast_node *decl = seed_find_enum(b->root, object_name);
+				ast_enum_variant *variant = seed_find_variant(decl, expr->as.member_expr.member);
+				if (variant && !variant->payload_type)
+					return lower_enum_construct(b, decl, variant, NULL, expr->pos, out);
+			}
 			if (!lower_expr(b, expr->as.member_expr.object, object_name)) {
 				return false;
 			}
@@ -559,6 +681,14 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			size_t argc = expr->as.call_expr.args.len;
 			char callee[IR_OPERAND_CAP] = "call";
 			char argc_text[IR_OPERAND_CAP];
+			ast_node *member = expr->as.call_expr.callee;
+			if (member && member->kind == AST_MEMBER_EXPR && member->as.member_expr.resolved_enum_type &&
+				seed_enum_owner_name(member->as.member_expr.object, callee, sizeof(callee))) {
+				ast_node *decl = seed_find_enum(b->root, callee);
+				ast_enum_variant *variant = seed_find_variant(decl, member->as.member_expr.member);
+				if (variant) return lower_enum_construct(b, decl, variant,
+					expr->as.call_expr.args.len ? expr->as.call_expr.args.data[0] : NULL, expr->pos, out);
+			}
 			if (expr->as.call_expr.resolved_array_type) {
 				if (!seed_array_new_valid(expr->as.call_expr.resolved_array_type, "0")) {
 					error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "invalid resolved array constructor type");
@@ -795,9 +925,11 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
 		size_t n = stmt->as.fn_stmt.body->as.block.statements.len;
 		for (i = 0; i < n; i++) {
 			ast_node *child = stmt->as.fn_stmt.body->as.block.statements.data[i];
-			if (non_unit && i + 1 == n && child && child->kind == AST_EXPR_STMT) {
+			if (non_unit && i + 1 == n && child &&
+				(child->kind == AST_EXPR_STMT ||
+				 (child->kind == AST_IF_STMT && child->as.if_stmt.is_switch_arm))) {
 				char ret_value[IR_OPERAND_CAP];
-				if (!lower_expr(b, child->as.expr_stmt.expr, ret_value)) {
+				if (!lower_expr(b, child->kind == AST_EXPR_STMT ? child->as.expr_stmt.expr : child, ret_value)) {
 					return false;
 				}
 				if (!emit_ins(b, IR_RET, ret_value, "", "", child->pos)) {
@@ -885,6 +1017,7 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 			return emit_ins(b, IR_SROUTINE, callee, argc_text, "", stmt->pos);
 		}
 		case AST_IF_STMT:
+			if (stmt->as.if_stmt.is_switch_arm) return lower_if_value(b, stmt, value);
 			return lower_if(b, stmt);
 		case AST_WHILE_STMT:
 			return lower_while(b, stmt);
@@ -901,6 +1034,11 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 			}
 			return true;
 		}
+		case AST_BINARY_EXPR: case AST_ASSIGN_EXPR: case AST_UNARY_EXPR:
+		case AST_IDENT_EXPR: case AST_MEMBER_EXPR: case AST_INDEX_EXPR:
+		case AST_CALL_EXPR: case AST_SLICE_EXPR: case AST_NUMBER_EXPR:
+		case AST_BOOL_EXPR: case AST_STRING_EXPR: case AST_ARRAY_EXPR: case AST_STRUCT_EXPR:
+			return lower_expr(b, stmt, value);
 		default:
 			error_set(b->err, ERR_SEMANTIC, stmt->pos.line, stmt->pos.column, "unsupported statement in IR lowering");
 			return false;
@@ -913,6 +1051,7 @@ bool ir_generate_from_ast(ast_node *root, IR *ir, compile_error *err) {
 	}
 	error_clear(err);
 	b.ir = ir;
+	b.root = root;
 	b.err = err;
 	b.temp_counter = 0;
 	b.label_counter = 0;

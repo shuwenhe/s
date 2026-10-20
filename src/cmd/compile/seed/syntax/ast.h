@@ -120,6 +120,7 @@ struct ast_node {
 			ast_node *then_branch;
 			ast_node *else_branch;
 			bool is_pattern_arm;
+			bool is_switch_arm;
 			pattern_kind pattern_kind;
 			char *binding_name;
 			ast_node *pattern_subject;
@@ -203,6 +204,7 @@ struct ast_node {
 			ast_node *object;
 			char *member;
 			char *resolved_method;
+			char *resolved_enum_type;
 		} member_expr;
 		struct {
 			ast_node *object;

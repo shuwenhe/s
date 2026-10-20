@@ -2072,7 +2072,7 @@ static int host_dispatch_call(
 		*out = value_make_string_owned(lowered);
 		return 1;
 	}
-	if (strcmp(name, "len") == 0) {
+	if (strcmp(name, "len") == 0 || strcmp(name, "__runtime_len") == 0) {
 		const char *text = NULL;
 		char text_buf[64];
 		if (argc != 1) {
