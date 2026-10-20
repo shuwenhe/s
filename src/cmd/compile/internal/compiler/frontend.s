@@ -1530,7 +1530,12 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         if s.kinds[slot] == 15 || s.kinds[slot] == 16 { data = compiler_var(slot); length = compiler_var(slot) + "_len" }
         if s.kinds[slot] == 18 { data = compiler_var(slot); length = compiler_var(slot) + "_len" }
         s.value = data + "[compiler_index(" + length + "," + index + ")]"
-        s.value_kind = 1
+        // For string array indexing (kind=18), element type is string (kind=2)
+        if s.kinds[slot] == 18 {
+            s.value_kind = 2
+        } else {
+            s.value_kind = 1
+        }
         s.value_slot = -1
         return s
     }
