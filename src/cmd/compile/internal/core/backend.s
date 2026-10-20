@@ -185,9 +185,9 @@ struct abi_behavior_entry {
 func build_object(string path, string output, string ssa_margin_override) int {
     source_result := std.fs.read_to_string(path)
     if source_result.is_err() { return report_failure("failed to read source: " + path) }
-    parsed_result := load_source_graph(path, source_result.unwrap())
-    if parsed_result.is_err() { return report_failure(parsed_result.unwrap_err().message) }
-    module := compile.internal.ir.lower.lower_program_to_mir(parsed_result.unwrap())
+    parsed, parse_err := load_source_graph(path, source_result.unwrap())
+    if parse_err.message != "" { return report_failure(parse_err.message) }
+    module := compile.internal.ir.lower.lower_program_to_mir(parsed)
     if module.error != "" { return report_failure(module.error) }
     return native_build_object_program(module.program, path, output, ssa_margin_override)
 }
