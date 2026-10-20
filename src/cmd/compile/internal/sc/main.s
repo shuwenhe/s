@@ -46,7 +46,7 @@ func main() {
     start_ns := __runtime_nanotime()
     args := std.env.args()
     status := run_compile_main(args, start_ns)
-    std.process.exit(status)
+    process_exit(status)
 }
 
 func run_compile_main(string[] args, int start_ns) int {

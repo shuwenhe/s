@@ -127,10 +127,10 @@ func Main(func(any) void arch_init) {
         stats_print(stats)
         timer_print(timer, nil)
         std.io.eprintln("[compile] Success!")
-        std.process.exit(0)
+        process_exit(0)
     } else {
         print_error_summary(ctx)
-        std.process.exit(1)
+        process_exit(1)
     }
 }
 
