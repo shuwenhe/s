@@ -3764,12 +3764,9 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] en
             if callee_result.is_err() {
                 return callee_result.unwrap_err()
             }
-            fn_name := ""
-            switch callee_result.unwrap() {
-                value.fn_ref(name) : fn_name = name,
-                _ : {
-                    return backend_error { message: "backend error: sroutine expects function call target" }
-                }
+            fn_name := function_name_from_value(callee_result.unwrap())
+            if fn_name == "" {
+                return backend_error { message: "backend error: sroutine expects function call target" }
             }
             arg_values := value[]()
             ai := 0
@@ -3789,6 +3786,13 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] en
             return
         }
         _ : backend_error { message: "backend error: sroutine expects a call expression" },
+    }
+}
+
+func function_name_from_value(value target) string {
+    switch target {
+        value.fn_ref(name) : name,
+        _ : "",
     }
 }
 
