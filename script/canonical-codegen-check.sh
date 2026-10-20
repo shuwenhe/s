@@ -63,7 +63,7 @@ fi
 
 if ! grep -q 'func (is\* instr_selector) select_add_i64' "$INSTR_SELECT" ||
    ! grep -q 'func new_instruction_selector() instruction_selector' "$INSTRUCTION_SELECTOR" ||
-   ! grep -q 'func (m\* ssa_to_machine) lower_value(int value_id)' "$SSA_LOWER"; then
+   ! grep -q 'func (ssa_to_machine\* m) lower_value(int value_id)' "$SSA_LOWER"; then
     fail "S17.2" "side selector modules are not observable"
     exit $?
 fi
