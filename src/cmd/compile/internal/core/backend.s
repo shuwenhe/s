@@ -449,8 +449,8 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
     drop_path := output + ".dropmap"
     drop_payload := build_drop_metadata_artifact(arch, parsed, ssa_text)
     drop_check := validate_drop_contract_chain(drop_payload, parsed, ssa_text)
-    if drop_check.is_err() {
-        return report_failure(drop_check.unwrap_err().message)
+    if drop_check.message != "" {
+        return report_failure(drop_check.message)
     }
     drop_write := std.fs.write_text_file(drop_path, drop_payload)
     if drop_write.is_err() {
@@ -2261,7 +2261,7 @@ func validate_dwarf_consumability(string dwarf_payload, string ssa_text) backend
     backend_error { message: "" }
 }
 
-func validate_drop_contract_chain(string drop_payload, source_file source, string ssa_text) ((), backend_error) {
+func validate_drop_contract_chain(string drop_payload, source_file source, string ssa_text) backend_error {
     if !has_substring(drop_payload, "dropmap version=1") {
         return backend_error { message: "backend error: drop contract missing dropmap header" }
     }
@@ -2283,7 +2283,7 @@ func validate_drop_contract_chain(string drop_payload, source_file source, strin
     if proof_fail > 0 {
         return backend_error { message: "backend error: drop contract blocked by failed ssa proofs" }
     }
-    ()
+    backend_error { message: "" }
 }
 
 func build_backend_perf_baseline_artifact(string arch, string ssa_text, string midend_report, string runtime_report) string {
