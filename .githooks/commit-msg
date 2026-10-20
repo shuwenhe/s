@@ -1,0 +1,21 @@
+#!/bin/bash
+# Hook to prevent Copilot Co-authored-by trailers from being committed
+# This ensures all commits only have shuwenhe as the author
+
+commit_msg_file=$1
+
+# Check if commit message contains Copilot Co-authored-by trailer
+if grep -E "^Co-authored-by:.*Copilot" "$commit_msg_file" > /dev/null; then
+    echo ""
+    echo "❌ ERROR: Commit message contains Copilot Co-authored-by trailer!"
+    echo ""
+    echo "Current message:"
+    cat "$commit_msg_file"
+    echo ""
+    echo "Policy: Only shuwenhe (1201220707@pku.edu.cn) should be credited."
+    echo "Remove the Co-authored-by: Copilot line and try again."
+    echo ""
+    exit 1
+fi
+
+exit 0
