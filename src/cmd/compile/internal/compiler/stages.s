@@ -1108,7 +1108,7 @@ struct compiler_stage18_regalloc_result {
     string error
 }
 
-func linear_scan_regalloc_with_spill(string mir_text, int value_count, string goarch) regalloc_result {
+func compiler_linear_scan_regalloc_with_spill(string mir_text, int value_count, string goarch) regalloc_result {
     call_sites := count_stage18_token(mir_text, " call=")
     remat_sites := count_stage18_token(mir_text, " const") + count_stage18_token(mir_text, " imm") + count_stage18_token(mir_text, " literal=")
     blocks := parse_number_after(mir_text, "blocks=")
@@ -1236,7 +1236,7 @@ func compiler_stage18_observe_regalloc_authority(string source, string goarch) c
     }
     
     
-    allocation := linear_scan_regalloc_with_spill(mir_text, value_count, goarch)
+    allocation := compiler_linear_scan_regalloc_with_spill(mir_text, value_count, goarch)
     
     
     regalloc_quality := compute_regalloc_quality(allocation, parse_number_after(mir_text, "blocks="))
