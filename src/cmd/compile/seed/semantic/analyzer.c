@@ -27,6 +27,7 @@ typedef struct scope {
 	symbol *symbols;
 	struct scope *parent;
 } scope;
+typedef struct signature_spec signature_spec;
 typedef struct semantic_ctx {
 	scope *current_scope;
 	ast_node *root;
@@ -35,6 +36,8 @@ typedef struct semantic_ctx {
 	int loop_depth;
 	int short_circuit_rhs_depth;
 	const char *current_return_type;
+	signature_spec *unit_signatures;
+	size_t unit_signatures_len;
 } semantic_ctx;
 typedef enum flow_exit_kind {
 	FLOW_EXIT_NONE = 0,
@@ -312,6 +315,64 @@ static int append_import_signature(compile_error *err, const char *name, int min
 	}
 	import_signatures = next;
 	import_signatures[import_signatures_len++] = spec;
+	return 1;
+}
+
+/* A compile unit already owns the parsed declarations. Register their public
+ * call signatures before checking bodies so package identity and forward calls
+ * do not depend on a guessed filesystem path for an imported package. */
+static int collect_unit_package_signatures(semantic_ctx *ctx) {
+	ast_node *root = ctx->root;
+	compile_error *err = ctx->err;
+	const char *package_name = "";
+	size_t i;
+	if (!root || root->kind != AST_PROGRAM) return 1;
+	for (i = 0; i < root->as.program.statements.len; i++) {
+		ast_node *decl = root->as.program.statements.data[i];
+		const char *name, *return_type;
+		size_t param_count;
+		char qualified[1024];
+		int n;
+		if (decl->kind == AST_PACKAGE_DECL) {
+			package_name = decl->as.package_decl.name;
+			continue;
+		}
+		if (!package_name || !package_name[0]) continue;
+		if (decl->kind == AST_FN_STMT && !decl->as.fn_stmt.receiver_type) {
+			name = decl->as.fn_stmt.name;
+			return_type = decl->as.fn_stmt.return_type;
+			param_count = decl->as.fn_stmt.param_count;
+		} else if (decl->kind == AST_EXTERN_DECL) {
+			name = decl->as.extern_decl.name;
+			return_type = decl->as.extern_decl.return_type;
+			param_count = decl->as.extern_decl.param_count;
+		} else continue;
+		n = snprintf(qualified, sizeof(qualified), "%s.%s", package_name, name);
+		if (n < 0 || (size_t)n >= sizeof(qualified)) {
+			error_set(err, ERR_SEMANTIC, decl->pos.line, decl->pos.column,
+				"package function name is too long");
+			return 0;
+		}
+		{
+			signature_spec *next = realloc(ctx->unit_signatures,
+				(ctx->unit_signatures_len + 1) * sizeof(*next));
+			signature_spec *spec;
+			if (!next) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				return 0;
+			}
+			ctx->unit_signatures = next;
+			spec = &next[ctx->unit_signatures_len++];
+			spec->name = dup_cstr(qualified);
+			spec->min_arity = (int)param_count;
+			spec->max_arity = (int)param_count;
+			spec->return_type = dup_cstr(return_type ? return_type : TYPE_ANY);
+			if (!spec->name || !spec->return_type) {
+				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
+				return 0;
+			}
+		}
+	}
 	return 1;
 }
 
@@ -782,7 +843,7 @@ static int construct_qualified_name(ast_node *node, char *buf, size_t buf_size) 
 
 // Helper: Check if this is a qualified import function call
 // Returns 1 if found in import_signatures, sets out_type and out_min_arity/out_max_arity
-static int resolve_qualified_import_call(ast_node *member_expr, char *full_name, 
+static int resolve_qualified_import_call(semantic_ctx *ctx, ast_node *member_expr, char *full_name,
                                         size_t full_name_size, const char **out_type,
                                         int *out_min_arity, int *out_max_arity) {
 	const signature_spec *spec;
@@ -797,7 +858,8 @@ static int resolve_qualified_import_call(ast_node *member_expr, char *full_name,
 	}
 	
 	// Look up in import_signatures
-	spec = find_signature(import_signatures, import_signatures_len, full_name);
+	spec = find_signature(ctx->unit_signatures, ctx->unit_signatures_len, full_name);
+	if (!spec) spec = find_signature(import_signatures, import_signatures_len, full_name);
 	if (!spec) {
 		return 0;  // Not found in import signatures
 	}
@@ -809,18 +871,41 @@ static int resolve_qualified_import_call(ast_node *member_expr, char *full_name,
 }
 
 static int split_result_tuple_type(const char *type_name, char **ok_type, char **err_type) {
-	const char *comma;
+	const char *start, *end, *p, *comma = NULL;
+	int depth = 0;
 	size_t ok_len;
 	size_t err_len;
-	if (!type_name || type_name[0] != '(') return 0;
-	comma = strchr(type_name, ',');
-	if (!comma) return 0;
-	err_len = strlen(comma + 1);
-	if (err_len == 0 || comma[err_len] != ')') return 0;
-	ok_len = (size_t)(comma - type_name - 1);
-	if (ok_len == 0 || err_len <= 1) return 0;
+	if (!type_name) return 0;
+	start = type_name;
+	end = start + strlen(start);
+	while (start < end && isspace((unsigned char)*start)) start++;
+	while (end > start && isspace((unsigned char)end[-1])) end--;
+	/* The parser stores return lists as T,E; metadata may spell (T,E).
+	 * Remove only a pair enclosing the entire list, not the unit type in
+	 * (),E or parentheses belonging to a nested tuple. */
+	if (start < end && *start == '(') {
+		for (p = start; p < end; p++) {
+			if (*p == '(') depth++;
+			if (*p == ')' && --depth == 0) break;
+		}
+		if (p == end - 1) { start++; end--; }
+	}
+	depth = 0;
+	for (p = start; p < end; p++) {
+		if (*p == '(' || *p == '[') depth++;
+		else if (*p == ')' || *p == ']') depth--;
+		else if (*p == ',' && depth == 0) {
+			if (comma) return 0;
+			comma = p;
+		}
+		if (depth < 0) return 0;
+	}
+	if (!comma || depth != 0) return 0;
+	ok_len = (size_t)(comma - start);
+	err_len = (size_t)(end - comma - 1);
+	if (!ok_len || !err_len) return 0;
 	*ok_type = (char *)malloc(ok_len + 1);
-	*err_type = (char *)malloc(err_len);
+	*err_type = (char *)malloc(err_len + 1);
 	if (!*ok_type || !*err_type) {
 		free(*ok_type);
 		free(*err_type);
@@ -828,10 +913,10 @@ static int split_result_tuple_type(const char *type_name, char **ok_type, char *
 		*err_type = NULL;
 		return 0;
 	}
-	memcpy(*ok_type, type_name + 1, ok_len);
+	memcpy(*ok_type, start, ok_len);
 	(*ok_type)[ok_len] = '\0';
-	memcpy(*err_type, comma + 1, err_len - 1);
-	(*err_type)[err_len - 1] = '\0';
+	memcpy(*err_type, comma + 1, err_len);
+	(*err_type)[err_len] = '\0';
 	{
 		char *trimmed_ok = trim_inplace(*ok_type);
 		char *trimmed_err = trim_inplace(*err_type);
@@ -871,9 +956,11 @@ static int analyze_enum_member(semantic_ctx *ctx, ast_node *member, ast_vec *arg
 		return 0;
 	}
 	if (variant->payload_type && !analyze_expr(ctx, args->data[0], &actual)) return 0;
-	if (0 && variant->payload_type && decl->as.enum_decl.generic_count == 0 &&
+	if (variant->payload_type && decl->as.enum_decl.generic_count == 0 &&
 		!is_type_assignable_ctx(ctx, variant->payload_type, actual)) {
-		error_set(ctx->err, ERR_SEMANTIC, member->pos.line, member->pos.column, "enum payload type mismatch");
+		error_set(ctx->err, ERR_SEMANTIC, member->pos.line, member->pos.column,
+			"enum payload type mismatch: expected '%s', got '%s'",
+			variant->payload_type, actual ? actual : TYPE_ANY);
 		return 0;
 	}
 	if (decl->as.enum_decl.generic_count == 1) {
@@ -1889,7 +1976,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 						*out_type = "(any,any)";
 						return 1;
 					}
-					if (resolve_qualified_import_call(member, full_qualified_name, sizeof(full_qualified_name),
+					if (resolve_qualified_import_call(ctx, member, full_qualified_name, sizeof(full_qualified_name),
 													 &imported_return_type, &imported_min_arity, &imported_max_arity)) {
 						if (strstr(full_qualified_name, "canonical_type") != NULL) {
 							*out_type = TYPE_ANY;
@@ -1947,7 +2034,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					*out_type = TYPE_INT;
 					return 1;
 				}
-				if (lhs_type && lhs_type[0] == '(') {
+				if (lhs_type && strchr(lhs_type, ',')) {
 					char *ok_type = NULL;
 					char *err_type = NULL;
 					const char *result_method = member->as.member_expr.member;
@@ -2192,6 +2279,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 	}
 	switch (node->kind) {
 		case AST_PROGRAM:
+			if (!collect_unit_package_signatures(ctx)) return 0;
 
 			for (i = 0; i < node->as.program.statements.len; i++) {
 				ast_node *decl = node->as.program.statements.data[i];
@@ -2831,11 +2919,18 @@ bool semantic_analyze(ast_node *root, compile_error *err) {
 	ctx.loop_depth = 0;
 	ctx.short_circuit_rhs_depth = 0;
 	ctx.current_return_type = TYPE_ANY;
+	ctx.unit_signatures = NULL;
+	ctx.unit_signatures_len = 0;
 	if (!define_builtins(global_scope, err)) {
 		scope_free(global_scope);
 		return false;
 	}
 	ok = analyze_node(&ctx, root) ? true : false;
+	for (size_t i = 0; i < ctx.unit_signatures_len; i++) {
+		free(ctx.unit_signatures[i].name);
+		free(ctx.unit_signatures[i].return_type);
+	}
+	free(ctx.unit_signatures);
 	scope_free(global_scope);
 	return ok;
 }
