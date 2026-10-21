@@ -13,14 +13,14 @@ struct package_ir {
     decl_ir[] decls
 }
 enum decl_ir {
-    function(func_decl),
+    fn_decl(func_decl_ir),
     type_decl(type_decl),
     let(var_decl),
-    const(const_decl),
+    const(const_decl_ir),
     method(method_decl),
 }
 
-struct func_decl {
+struct func_decl_ir {
     string name
     sig func_sig
     option[block_ir] body
@@ -38,16 +38,16 @@ struct type_decl { string name, string type_expr }
 
 struct var_decl { string name, string type_name, option[string] init }
 
-struct const_decl { string name, string value }
+struct const_decl_ir { string name, string value }
 
-struct method_decl { string receiver_name, string receiver_type, func_decl method }
+struct method_decl { string receiver_name, string receiver_type, func_decl_ir method }
 
 struct block_ir { stmt_ir[] statements, option[expr_ir] final_expr }
 enum stmt_ir {
     let(var_stmt),
     assign(assign_stmt),
     increment(increment_stmt),
-    cfor(c_for_stmt),
+    cfor(c_for_stmt_ir),
     expr(expr_stmt),
     return_stmt(return_stmt),
 }
@@ -58,7 +58,7 @@ struct assign_stmt { string name, expr_ir value }
 
 struct increment_stmt { string name }
 
-struct c_for_stmt { stmt_ir init, expr_ir condition, stmt_ir step, block_ir body }
+struct c_for_stmt_ir { stmt_ir init, expr_ir condition, stmt_ir step, block_ir body }
 
 struct expr_stmt { expr_ir expr }
 
@@ -95,5 +95,5 @@ struct map_entry_expr { expr_ir key, expr_ir value }
 struct map_expr { option[string] type_name, map_entry_expr[] entries }
 
 func make_empty_package(string name) package_ir {
-    package_ir { name: name, decls decl_ir[]() }
+    package_ir { name: name, decls: decl_ir[]() }
 }

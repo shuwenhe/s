@@ -2600,7 +2600,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			if (!analyze_expr(ctx, node->as.return_stmt.value, &expr_type)) {
 				return 0;
 			}
-			if (!is_type_assignable(ctx->current_return_type, expr_type)) {
+			if (!is_type_assignable_ctx(ctx, ctx->current_return_type, expr_type)) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"return type mismatch: expected '%s', got '%s'",
 					ctx->current_return_type ? ctx->current_return_type : TYPE_ANY,
