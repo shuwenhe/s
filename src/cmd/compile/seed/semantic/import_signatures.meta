@@ -5,6 +5,8 @@ compile.internal.backend_elf64.build|4|4|int
 compile.internal.build.main|1|1|int
 compile.internal.semantic.check_text|1|1|int
 compile.internal.syntax.parse_source|1|1|(source_file,syntax_error)
+compile.internal.syntax.contains_source_text|2|2|bool
+compile.internal.syntax.parse_source_status|1|1|int
 compile.internal.syntax.read_source|1|1|(string,syntax_error)
 compile.internal.syntax.tokenize|1|1|(token[],syntax_error)
 compile.internal.tests.test_backend_abi.run_backend_abi_suite|0|0|int

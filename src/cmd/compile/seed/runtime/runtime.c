@@ -2959,9 +2959,25 @@ static int functions_add(runtime_functions *funcs, const runtime_function *fn) {
 }
 static const runtime_function *functions_find(const runtime_functions *funcs, const char *name) {
 	size_t i;
+	const runtime_function *candidate = NULL;
 	for (i = 0; i < funcs->len; i++) {
 		if (strcmp(funcs->data[i].name, name) == 0) {
 			return &funcs->data[i];
+		}
+	}
+	/* Compile-unit calls may retain their package-qualified spelling while
+	 * FUNC_BEGIN records the local declaration name.  Bind the basename only
+	 * when it is unique; ambiguity must remain an error. */
+	{
+		const char *base = strrchr(name, '.');
+		if (base != NULL && base[1] != '\0') {
+			for (i = 0; i < funcs->len; i++) {
+				if (strcmp(funcs->data[i].name, base + 1) == 0) {
+					if (candidate != NULL) return NULL;
+					candidate = &funcs->data[i];
+				}
+			}
+			if (candidate != NULL) return candidate;
 		}
 	}
 	return NULL;
@@ -4267,7 +4283,12 @@ static int execute_function(
 				pc++;
 				continue;
 			}
-			if (strncmp(ins->op1, "@method.", 8) == 0) {
+			/* Builtin length must stay host-dispatched even when the standard
+			 * library also contains a wrapper named len. */
+			if (strcmp(ins->op1, "len") == 0 || strcmp(ins->op1, "__runtime_len") == 0 ||
+				(strlen(ins->op1) > 4 && strcmp(ins->op1 + strlen(ins->op1) - 4, ".len") == 0)) {
+				callee = NULL;
+			} else if (strncmp(ins->op1, "@method.", 8) == 0) {
 				runtime_data_value type_tag = value_make_int(0);
 				char type_field[1024];
 				if (call_argc == 0 || pending_args[call_base].kind != RUNTIME_STRING ||

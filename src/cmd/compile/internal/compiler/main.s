@@ -8,7 +8,10 @@ func compiler_main(string[] args) int {
         source := __host_read_to_string(args[2])
         if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
         parsed, parse_err := compile.internal.syntax.parse_source(source)
-        if parse_err.message != "" { eprintln("canonical-ast-error: parse " + parse_err.message); return 1 }
+          if compile.internal.syntax.parse_source_status(source) != 0 {
+              eprintln("canonical-ast-error: parse failed")
+              return 1
+          }
         semantic_result := compile.internal.semantic.check_source_file(parsed, source)
         if len(semantic_result.errors) > 0 {
             error := semantic_result.errors[0]
