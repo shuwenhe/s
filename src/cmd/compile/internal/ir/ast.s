@@ -44,7 +44,7 @@ struct method_decl { string receiver_name, string receiver_type, func_decl_ir me
 
 struct block_ir { stmt_ir[] statements, option[expr_ir] final_expr }
 enum stmt_ir {
-    let(var_stmt),
+    let(var_stmt_ir),
     assign(assign_stmt),
     increment(increment_stmt),
     cfor(c_for_stmt_ir),
@@ -52,7 +52,7 @@ enum stmt_ir {
     return_stmt(return_stmt),
 }
 
-struct var_stmt { string name, option[string] type_name, expr_ir value }
+struct var_stmt_ir { string name, option[string] type_name, expr_ir value }
 
 struct assign_stmt { string name, expr_ir value }
 
