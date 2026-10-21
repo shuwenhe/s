@@ -53,7 +53,7 @@ struct ast_node {
     int column
     string string_data
     int int_data
-    vec[ast_node] children
+    ast_node[] children
     string name
     string type_name
 }
@@ -65,7 +65,7 @@ func ast_new(int node_type, int line, int column) ast_node* {
         column: column,
         string_data: "",
         int_data: 0,
-        children: vec[ast_node](),
+        children: ast_node[](),
         name: "",
         type_name: "",
     }
