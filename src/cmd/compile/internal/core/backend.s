@@ -3609,9 +3609,9 @@ func find_main(source_file source) result[function_decl, backend_error] {
     fail_function("backend error: entry function main not found")
 }
 
-func call_function(source_file source, string name, value[] args, binding[] caller_env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func call_function(source_file source, string name, value[] args, binding[] caller_env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     captured := captured_binding[]()
-    call_function_with_capture(source, name, args, caller_env, writes, runtime, captured)
+    return call_function_with_capture(source, name, args, caller_env, writes, runtime, captured)
 }
 
 func call_function_with_capture(
@@ -3622,29 +3622,29 @@ func call_function_with_capture(
     write_op[] writes,
     runtime_state runtime,
     captured_binding[] captured_env
-) (value, backend_error) {
+) result[value, backend_error] {
     fn_result := find_function(source, name)
     if function_result_is_err(fn_result) {
-        return fail_value(function_result_error(fn_result).message)
+        return result.err(function_result_error(fn_result))
     }
     function := function_result_value(fn_result)
     if function.body.is_none() {
-        return fail_value("backend error: function " + name + " has no body")
+        return result.err(backend_error { message: "backend error: function " + name + " has no body" })
     }
     if std.prelude.len(function.sig.params) != std.prelude.len(args) {
-        return fail_value(
+        return result.err(backend_error { message:
             "backend error: function "
                 + name
                 + " expects "
                 + std.prelude.to_string(std.prelude.len(function.sig.params))
                 + " args, got "
                 + std.prelude.to_string(std.prelude.len(args))
-        )
+        })
     }
     env := binding[]()
     const_bindings := collect_const_bindings(source)
     if binding_result_is_err(const_bindings) {
-        return fail_value(binding_result_error(const_bindings).message)
+        return result.err(binding_result_error(const_bindings))
     }
     env = copy_bindings(binding_result_value(const_bindings))
     captured := restore_captured_bindings(captured_env)
@@ -3660,17 +3660,17 @@ func call_function_with_capture(
     }
     body_result := execute_block_in_place(function.body.unwrap(), source, env, writes, runtime)
     if value_result_is_err(body_result) {
-        return fail_value(value_result_error(body_result).message)
+        return result.err(value_result_error(body_result))
     }
     if control_return_is_active(env) {
         returned := value_result_value(body_result)
         set_control(env, control_return_active, value.bool(false))
         set_control(env, control_return_value, value.unit(unit_value {}))
         copy_control_bindings(env, caller_env)
-        return returned
+        return result.ok(returned)
     }
     copy_control_bindings(env, caller_env)
-    ok_value(body_result.unwrap())
+    return result.ok(value_result_value(body_result))
 }
 
 func find_function(source_file source, string name) result[function_decl, backend_error] {
@@ -3992,33 +3992,65 @@ func eval_expr(expr expr, source_file source, binding[] env, write_op[] writes, 
             }
             result.ok(value_result_value(name_result))
         }
-        expr.binary(value) : eval_binary(value, source, env, writes, runtime),
-        expr.call(value) : eval_call(value, source, env, writes, runtime),
-        expr.if(value) : eval_if_expr(value, source, env, writes, runtime),
-        expr.while(value) : eval_while_expr(value, source, env, writes, runtime),
-        expr.block(value) : execute_block(value, source, env, writes, runtime),
+        expr.binary(value) : {
+            binary_result := eval_binary(value, source, env, writes, runtime)
+            if value_result_is_err(binary_result) { return result.err(value_result_error(binary_result)) }
+            result.ok(value_result_value(binary_result))
+        }
+        expr.call(value) : {
+            call_result := eval_call(value, source, env, writes, runtime)
+            if value_result_is_err(call_result) { return result.err(value_result_error(call_result)) }
+            result.ok(value_result_value(call_result))
+        }
+        expr.if(value) : {
+            if_result := eval_if_expr(value, source, env, writes, runtime)
+            if value_result_is_err(if_result) { return result.err(value_result_error(if_result)) }
+            result.ok(value_result_value(if_result))
+        }
+        expr.while(value) : {
+            while_result := eval_while_expr(value, source, env, writes, runtime)
+            if value_result_is_err(while_result) { return result.err(value_result_error(while_result)) }
+            result.ok(value_result_value(while_result))
+        }
+        expr.block(value) : {
+            block_result := execute_block(value, source, env, writes, runtime)
+            if value_result_is_err(block_result) { return result.err(value_result_error(block_result)) }
+            result.ok(value_result_value(block_result))
+        }
         expr.for(_) : result.err(backend_error { message: "backend error: for expressions are not supported in the mvp backend" }),
         expr.switch(_) : result.err(backend_error { message: "backend error: switch expressions are not supported in the mvp backend" }),
         expr.borrow(_) : result.err(backend_error { message: "backend error: borrow expressions are not supported in the mvp backend" }),
-        expr.member(value) : eval_member_expr(value, source, env, writes, runtime),
-        expr.index(value) : eval_index_expr(value, source, env, writes, runtime),
+        expr.member(value) : {
+            member_result := eval_member_expr_result(value, source, env, writes, runtime)
+            if value_result_is_err(member_result) { return result.err(value_result_error(member_result)) }
+            result.ok(value_result_value(member_result))
+        }
+        expr.index(value) : {
+            index_result := eval_index_expr_result(value, source, env, writes, runtime)
+            if value_result_is_err(index_result) { return result.err(value_result_error(index_result)) }
+            result.ok(value_result_value(index_result))
+        }
         expr.array(_) : result.err(backend_error { message: "backend error: array literals are not supported in the mvp backend" }),
-        expr.map(value) : eval_map_literal(value, source, env, writes, runtime),
+        expr.map(value) : {
+            map_result := eval_map_literal_result(value, source, env, writes, runtime)
+            if value_result_is_err(map_result) { return result.err(value_result_error(map_result)) }
+            result.ok(value_result_value(map_result))
+        }
     }
 }
 
 func eval_binary(binary_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     left_result := eval_expr(value.left.value, source, env, writes, runtime)
-    if left_result.is_err() {
-        left_result.unwrap_err()
+    if value_result_is_err(left_result) {
+        return result.err(value_result_error(left_result))
     }
     right_result := eval_expr(value.right.value, source, env, writes, runtime)
-    if right_result.is_err() {
-        right_result.unwrap_err()
+    if value_result_is_err(right_result) {
+        return result.err(value_result_error(right_result))
     }
-    left := left_result.unwrap()
-    right := right_result.unwrap()
-    switch value.op {
+    left := value_result_value(left_result)
+    right := value_result_value(right_result)
+    return switch value.op {
         "+" : add_values(left, right),
         "-" : numeric_binary(left, right, value.op),
         "*" : numeric_binary(left, right, value.op),
@@ -4032,7 +4064,7 @@ func eval_binary(binary_expr value, source_file source, binding[] env, write_op[
         ">=" : ordered_compare(left, right, value.op),
         "&&" : logical_binary(left, right, true),
         "||" : logical_binary(left, right, false),
-        _ : backend_error { message: "backend error: unsupported binary operator " + value.op },
+        _ : result.err(backend_error { message: "backend error: unsupported binary operator " + value.op }),
     }
 }
 
@@ -4043,10 +4075,10 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
             ai := 0
             for ai < std.prelude.len(value.args) {
                 arg_result := eval_expr(value.args[ai], source, env, writes, runtime)
-                if arg_result.is_err() {
-                    return arg_result.unwrap_err()
+                if value_result_is_err(arg_result) {
+                    return result.err(value_result_error(arg_result))
                 }
-                arg_values = append(arg_values, arg_result.unwrap())
+                arg_values = append(arg_values, value_result_value(arg_result))
                 ai = ai + 1
             }
             return call_function(source, resolved, arg_values, env, writes, runtime)
@@ -4110,76 +4142,76 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
         _ : (),
     }
     callee_result := eval_expr(value.callee.value, source, env, writes, runtime)
-    if callee_result.is_err() {
-        return callee_result
+    if value_result_is_err(callee_result) {
+        return result.err(value_result_error(callee_result))
     }
     arg_values := value[]()
     ai := 0
     for ai < std.prelude.len(value.args) {
         arg_result := eval_expr(value.args[ai], source, env, writes, runtime)
-        if arg_result.is_err() {
-            return arg_result.unwrap_err()
+        if value_result_is_err(arg_result) {
+            return result.err(value_result_error(arg_result))
         }
-        arg_values = append(arg_values, arg_result.unwrap())
+        arg_values = append(arg_values, value_result_value(arg_result))
         ai = ai + 1
     }
-    target_name := function_name_from_value(callee_result.unwrap())
+    target_name := function_name_from_value(value_result_value(callee_result))
     if target_name == "" {
-        return backend_error { message: "backend error: unsupported call target" }
+        return result.err(backend_error { message: "backend error: unsupported call target" })
     }
     if value.resolved_callee.is_some() {
         target_name = value.resolved_callee.unwrap()
     }
-    call_function(source, target_name, arg_values, env, writes, runtime)
+    return call_function(source, target_name, arg_values, env, writes, runtime)
 }
 
-func eval_box_new_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_box_new_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     if std.prelude.len(args) != 1 {
-        return fail_value("backend error: box expects exactly one value")
+        return result.err(backend_error { message: "backend error: box expects exactly one value" })
     }
     payload_result := eval_expr(args[0], source, env, writes, runtime)
-    if payload_result.is_err() {
-        return payload_result.unwrap_err()
+    if value_result_is_err(payload_result) {
+        return result.err(value_result_error(payload_result))
     }
     id := runtime.next_owned_box_id
     runtime.next_owned_box_id = runtime.next_owned_box_id + 1
-    owned := owned_box_value { id: id, payload payload_result.unwrap(), live true }
+    owned := owned_box_value { id: id, payload value_result_value(payload_result), live true }
     runtime.owned_boxes.push(owned)
-    value.owned_box(owned)
+    return result.ok(value.owned_box(owned))
 }
 
-func eval_copy_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_copy_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     if std.prelude.len(args) != 1 {
-        return fail_value("backend error: copy expects exactly one value")
+        return result.err(backend_error { message: "backend error: copy expects exactly one value" })
     }
-    eval_expr(args[0], source, env, writes, runtime)
+    return eval_expr(args[0], source, env, writes, runtime)
 }
 
-func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     if std.prelude.len(args) != 1 {
-        return fail_value("backend error: box_free expects exactly one value")
+        return result.err(backend_error { message: "backend error: box_free expects exactly one value" })
     }
     owned_result := eval_expr(args[0], source, env, writes, runtime)
-    if owned_result.is_err() {
-        return owned_result.unwrap_err()
+    if value_result_is_err(owned_result) {
+        return result.err(value_result_error(owned_result))
     }
-    handle_result := owned_box_from_value(owned_result.unwrap())
+    handle_result := owned_box_from_value(value_result_value(owned_result))
     if handle_result.is_none() {
-        return fail_value("backend error: box_free requires a box value")
+        return result.err(backend_error { message: "backend error: box_free requires a box value" })
     }
     handle := handle_result.unwrap()
     i := 0
     for i < std.prelude.len(runtime.owned_boxes) {
         if runtime.owned_boxes[i].id == handle.id {
             if !runtime.owned_boxes[i].live {
-                return fail_value("backend error: box_free on released box")
+                return result.err(backend_error { message: "backend error: box_free on released box" })
             }
             runtime.owned_boxes[i].live = false
-            return value.unit(unit_value {})
+            return result.ok(value.unit(unit_value {}))
         }
         i = i + 1
     }
-    fail_value("backend error: unknown owned box")
+    return result.err(backend_error { message: "backend error: unknown owned box" })
 }
 
 func owned_box_from_value(value target) option[owned_box_value] {
@@ -4229,71 +4261,71 @@ func release_owned_value(value candidate, runtime_state runtime, int keep_id) ()
     }
 }
 
-func eval_member_expr(member_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    target_result := eval_expr(member_expr.target.value, source, env, writes, runtime)
-    if target_result.is_err() {
-        return target_result.unwrap_err()
+func eval_member_expr_result(member_expr member, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
+    target_result := eval_expr(member.target.value, source, env, writes, runtime)
+    if value_result_is_err(target_result) {
+        return result.err(value_result_error(target_result))
     }
-    handle_result := owned_box_from_value(target_result.unwrap())
+    handle_result := owned_box_from_value(value_result_value(target_result))
     if handle_result.is_none() {
-        return fail_value("backend error: member access is not supported for this value")
+        return result.err(backend_error { message: "backend error: member access is not supported for this value" })
     }
     handle := handle_result.unwrap()
-    if member_expr.member != "unwrap" {
-        return fail_value("backend error: unknown box member " + member_expr.member)
+    if member.member != "unwrap" {
+        return result.err(backend_error { message: "backend error: unknown box member " + member.member })
     }
     if !handle.live {
-        return fail_value("backend error: use of released box")
+        return result.err(backend_error { message: "backend error: use of released box" })
     }
     i := 0
     for i < std.prelude.len(runtime.owned_boxes) {
         if runtime.owned_boxes[i].id == handle.id {
             if !runtime.owned_boxes[i].live {
-                return fail_value("backend error: use of released box")
+                return result.err(backend_error { message: "backend error: use of released box" })
             }
-            return ok_value(runtime.owned_boxes[i].payload)
+            return result.ok(runtime.owned_boxes[i].payload)
         }
         i = i + 1
     }
-    fail_value("backend error: unknown owned box")
+    return result.err(backend_error { message: "backend error: unknown owned box" })
 }
 
-func eval_panic_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_panic_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     if std.prelude.len(args) != 1 {
-        return backend_error { message: "backend error: panic expects exactly one argument" }
+        return result.err(backend_error { message: "backend error: panic expects exactly one argument" })
     }
     arg_result := eval_expr(args[0], source, env, writes, runtime)
-    if arg_result.is_err() {
-        return arg_result
+    if value_result_is_err(arg_result) {
+        return result.err(value_result_error(arg_result))
     }
-    return panic_error(stringify_value(arg_result.unwrap()))
+    return result.err(panic_error(stringify_value(value_result_value(arg_result))))
 }
 
-func eval_recover_call(binding[] env, runtime_state runtime) (value, backend_error) {
+func eval_recover_call(binding[] env, runtime_state runtime) result[value, backend_error] {
     if !control_in_defer_mode(env) {
-        return value.unit(unit_value {})
+        return result.ok(value.unit(unit_value {}))
     }
     if !control_panic_is_active(env) {
-        return value.unit(unit_value {})
+        return result.ok(value.unit(unit_value {}))
     }
     payload := control_panic_payload_text(env)
     set_control(env, control_panic_active, value.bool(false))
     set_control(env, control_panic_payload, value.string(""))
     runtime.sroutine_recovered = runtime.sroutine_recovered + 1
-    value.string(payload)
+    return result.ok(value.string(payload))
 }
 
-func eval_chan_make_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_chan_make_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     if std.prelude.len(args) != 1 {
-        return backend_error { message: "backend error: chan_make expects one capacity argument" }
+        return result.err(backend_error { message: "backend error: chan_make expects one capacity argument" })
     }
     cap_value := eval_expr(args[0], source, env, writes, runtime)
-    if cap_value.is_err() {
-        return cap_value
+    if value_result_is_err(cap_value) {
+        return result.err(value_result_error(cap_value))
     }
-    cap := int_value_or_default(cap_value.unwrap(), -1)
+    cap := int_value_or_default(value_result_value(cap_value), -1)
     if cap < 0 {
-        return backend_error { message: "backend error: chan_make capacity must be int" }
+        return result.err(backend_error { message: "backend error: chan_make capacity must be int" })
     }
     if cap == 0 {
         cap = 1
@@ -4303,7 +4335,7 @@ func eval_chan_make_call(expr[] args, source_file source, binding[] env, write_o
     runtime.channels.push(channel_runtime_state {
         id: id, capacity cap, buffer value[](), closed false, sends 0, recvs 0,
     })
-    value.channel(channel_handle_value { id: id })
+    return result.ok(value.channel(channel_handle_value { id: id }))
 }
 
 func int_value_or_default(value input, int fallback) int {
@@ -4319,50 +4351,50 @@ func int_value_or_default(value input, int fallback) int {
     }
 }
 
-func eval_chan_send_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_chan_send_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     if std.prelude.len(args) != 2 {
-        return backend_error { message: "backend error: chan_send expects channel and value" }
+        return result.err(backend_error { message: "backend error: chan_send expects channel and value" })
     }
     ch := eval_expr(args[0], source, env, writes, runtime)
-    if ch.is_err() {
-        return ch
+    if value_result_is_err(ch) {
+        return result.err(value_result_error(ch))
     }
     payload := eval_expr(args[1], source, env, writes, runtime)
-    if payload.is_err() {
-        return payload
+    if value_result_is_err(payload) {
+        return result.err(value_result_error(payload))
     }
-    idx := find_channel_index(runtime, ch.unwrap())
+    idx := find_channel_index(runtime, value_result_value(ch))
     if idx < 0 {
-        return backend_error { message: "backend error: chan_send target is not channel" }
+        return result.err(backend_error { message: "backend error: chan_send target is not channel" })
     }
     if runtime.channels[idx].closed {
-        return backend_error { message: "backend error: chan_send on closed channel" }
+        return result.err(backend_error { message: "backend error: chan_send on closed channel" })
     }
     if std.prelude.len(runtime.channels[idx].buffer) >= runtime.channels[idx].capacity {
-        return backend_error { message: "backend error: chan_send would block" }
+        return result.err(backend_error { message: "backend error: chan_send would block" })
     }
     ch_state := runtime.channels[idx]
-    ch_state.buffer = append(ch_state.buffer, payload.unwrap())
+    ch_state.buffer = append(ch_state.buffer, value_result_value(payload))
     ch_state.sends = ch_state.sends + 1
     runtime.channels.set(idx, ch_state)
-    value.unit(unit_value {})
+    return result.ok(value.unit(unit_value {}))
 }
 
-func eval_chan_recv_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime, bool is_select) (value, backend_error) {
+func eval_chan_recv_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime, bool is_select) result[value, backend_error] {
     if std.prelude.len(args) == 0 {
-        return backend_error { message: "backend error: chan_recv/select_recv expects at least one channel argument" }
+        return result.err(backend_error { message: "backend error: chan_recv/select_recv expects at least one channel argument" })
     }
     if !is_select && std.prelude.len(args) != 1 {
-        return backend_error { message: "backend error: chan_recv expects exactly one channel argument" }
+        return result.err(backend_error { message: "backend error: chan_recv expects exactly one channel argument" })
     }
     channels := value[]()
     ai := 0
     for ai < std.prelude.len(args) {
         ch := eval_expr(args[ai], source, env, writes, runtime)
-        if ch.is_err() {
-            return ch
+        if value_result_is_err(ch) {
+            return result.err(value_result_error(ch))
         }
-        channels = append(channels, ch.unwrap())
+        channels = append(channels, value_result_value(ch))
         ai = ai + 1
     }
     if is_select {
@@ -4377,40 +4409,40 @@ func eval_chan_recv_call(expr[] args, source_file source, binding[] env, write_o
         if is_select && std.prelude.len(channels) > 0 {
             runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % std.prelude.len(channels)
         }
-        return value.unit(unit_value {})
+        return result.ok(value.unit(unit_value {}))
     }
     if is_select {
-        return backend_error { message: "backend error: select_recv has no ready channel" }
+        return result.err(backend_error { message: "backend error: select_recv has no ready channel" })
     }
-    value.unit(unit_value {})
+    return result.ok(value.unit(unit_value {}))
 }
 
-func eval_select_recv_weighted_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_select_recv_weighted_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     if std.prelude.len(args) < 2 || (std.prelude.len(args) % 2) != 0 {
-        return backend_error { message: "backend error: select_recv_weighted expects channel/weight pairs" }
+        return result.err(backend_error { message: "backend error: select_recv_weighted expects channel/weight pairs" })
     }
     runtime.select_attempts = runtime.select_attempts + 1
     weighted := value[]()
     ai := 0
     for ai < std.prelude.len(args) {
         ch := eval_expr(args[ai], source, env, writes, runtime)
-        if ch.is_err() {
-            return ch
+        if value_result_is_err(ch) {
+            return result.err(value_result_error(ch))
         }
         weight := eval_expr(args[ai + 1], source, env, writes, runtime)
-        if weight.is_err() {
-            return weight
+        if value_result_is_err(weight) {
+            return result.err(value_result_error(weight))
         }
-        copies := int_value_or_default(weight.unwrap(), -1)
+        copies := int_value_or_default(value_result_value(weight), -1)
         if copies < 0 {
-            return backend_error { message: "select_recv_weighted weights must be int" }
+            return result.err(backend_error { message: "select_recv_weighted weights must be int" })
         }
         if copies == 0 {
             copies = 1
         }
         wi := 0
         for wi < copies {
-            weighted = append(weighted, ch.unwrap())
+            weighted = append(weighted, value_result_value(ch))
             wi = wi + 1
         }
         ai = ai + 2
@@ -4424,22 +4456,22 @@ func eval_select_recv_weighted_call(expr[] args, source_file source, binding[] e
         if std.prelude.len(weighted) > 0 {
             runtime.select_rr_cursor = (closed_pick.unwrap() + 1) % std.prelude.len(weighted)
         }
-        return value.unit(unit_value {})
+        return result.ok(value.unit(unit_value {}))
     }
-    return backend_error { message: "backend error: select_recv_weighted has no ready channel" }
+    return result.err(backend_error { message: "backend error: select_recv_weighted has no ready channel" })
 }
 
-func eval_select_recv_timeout_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_select_recv_timeout_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     if std.prelude.len(args) < 2 {
-        return backend_error { message: "backend error: select_recv_timeout expects channels followed by timeout ticks" }
+        return result.err(backend_error { message: "backend error: select_recv_timeout expects channels followed by timeout ticks" })
     }
     timeout := eval_expr(args[std.prelude.len(args) - 1], source, env, writes, runtime)
-    if timeout.is_err() {
-        return timeout
+    if value_result_is_err(timeout) {
+        return result.err(value_result_error(timeout))
     }
-    timeout_value := int_value_or_default(timeout.unwrap(), -1)
+    timeout_value := int_value_or_default(value_result_value(timeout), -1)
     if timeout_value < 0 {
-        return backend_error { message: "backend error: select_recv_timeout timeout must be int" }
+        return result.err(backend_error { message: "backend error: select_recv_timeout timeout must be int" })
     }
     ch_args := expr[]()
     i := 0
@@ -4448,16 +4480,16 @@ func eval_select_recv_timeout_call(expr[] args, source_file source, binding[] en
         i = i + 1
     }
     recv := eval_chan_recv_call(ch_args, source, env, writes, runtime, true)
-    if recv.is_ok() {
-        return recv
+    if !value_result_is_err(recv) {
+        return result.ok(value_result_value(recv))
     }
     runtime.select_timeouts = runtime.select_timeouts + 1
-    value.unit(unit_value {})
+    return result.ok(value.unit(unit_value {}))
 }
 
-func eval_select_send_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_select_send_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     if std.prelude.len(args) < 2 || (std.prelude.len(args) % 2) != 0 {
-        return backend_error { message: "backend error: select_send expects channel/value pairs" }
+        return result.err(backend_error { message: "backend error: select_send expects channel/value pairs" })
     }
     runtime.select_attempts = runtime.select_attempts + 1
     channels := value[]()
@@ -4465,23 +4497,23 @@ func eval_select_send_call(expr[] args, source_file source, binding[] env, write
     ai := 0
     for ai < std.prelude.len(args) {
         ch := eval_expr(args[ai], source, env, writes, runtime)
-        if ch.is_err() {
-            return ch
+        if value_result_is_err(ch) {
+            return result.err(value_result_error(ch))
         }
         payload := eval_expr(args[ai + 1], source, env, writes, runtime)
-        if payload.is_err() {
-            return payload
+        if value_result_is_err(payload) {
+            return result.err(value_result_error(payload))
         }
-        channels = append(channels, ch.unwrap())
-        payloads = append(payloads, payload.unwrap())
+        channels = append(channels, value_result_value(ch))
+        payloads = append(payloads, value_result_value(payload))
         ai = ai + 2
     }
     pick := choose_sendable_channel(runtime, channels)
     if pick.is_none() {
-        return backend_error { message: "backend error: select_send has no ready channel" }
+        return result.err(backend_error { message: "backend error: select_send has no ready channel" })
     }
     if pick.unwrap() < 0 {
-        return backend_error { message: "backend error: select_send target is not channel" }
+        return result.err(backend_error { message: "backend error: select_send target is not channel" })
     }
     pi := pick.unwrap()
     idx := find_channel_index(runtime, channels[pi])
@@ -4489,29 +4521,29 @@ func eval_select_send_call(expr[] args, source_file source, binding[] env, write
     ch_state.buffer = append(ch_state.buffer, payloads[pi])
     ch_state.sends = ch_state.sends + 1
     runtime.channels.set(idx, ch_state)
-    value.unit(unit_value {})
+    return result.ok(value.unit(unit_value {}))
 }
 
-func eval_select_send_default_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_select_send_default_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     sent := eval_select_send_call(args, source, env, writes, runtime)
-    if sent.is_ok() {
-        return sent
+    if !value_result_is_err(sent) {
+        return result.ok(value_result_value(sent))
     }
     runtime.select_default_fallbacks = runtime.select_default_fallbacks + 1
-    value.unit(unit_value {})
+    return result.ok(value.unit(unit_value {}))
 }
 
-func eval_select_send_timeout_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_select_send_timeout_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     if std.prelude.len(args) < 3 || ((std.prelude.len(args) - 1) % 2) != 0 {
-        return backend_error { message: "backend error: select_send_timeout expects channel/value pairs followed by timeout ticks" }
+        return result.err(backend_error { message: "backend error: select_send_timeout expects channel/value pairs followed by timeout ticks" })
     }
     timeout := eval_expr(args[std.prelude.len(args) - 1], source, env, writes, runtime)
-    if timeout.is_err() {
-        return timeout
+    if value_result_is_err(timeout) {
+        return result.err(value_result_error(timeout))
     }
-    timeout_value := int_value_or_default(timeout.unwrap(), -1)
+    timeout_value := int_value_or_default(value_result_value(timeout), -1)
     if timeout_value < 0 {
-        return backend_error { message: "backend error: select_send_timeout timeout must be int" }
+        return result.err(backend_error { message: "backend error: select_send_timeout timeout must be int" })
     }
     send_args := expr[]()
     i := 0
@@ -4520,11 +4552,11 @@ func eval_select_send_timeout_call(expr[] args, source_file source, binding[] en
         i = i + 1
     }
     sent := eval_select_send_call(send_args, source, env, writes, runtime)
-    if sent.is_ok() {
-        return sent
+    if !value_result_is_err(sent) {
+        return result.ok(value_result_value(sent))
     }
     runtime.select_timeouts = runtime.select_timeouts + 1
-    value.unit(unit_value {})
+    return result.ok(value.unit(unit_value {}))
 }
 
 func choose_ready_channel(runtime_state runtime, value[] channels) option[int] {
@@ -4590,13 +4622,13 @@ func choose_sendable_channel(runtime_state runtime, value[] channels) option[int
     option.none
 }
 
-func drain_selected_channel(runtime_state runtime, int idx) (value, backend_error) {
+func drain_selected_channel(runtime_state runtime, int idx) result[value, backend_error] {
     if idx < 0 {
-        return backend_error { message: "backend error: recv target is not channel" }
+        return result.err(backend_error { message: "backend error: recv target is not channel" })
     }
     ch_state := runtime.channels[idx]
     if std.prelude.len(ch_state.buffer) == 0 {
-        return value.unit(unit_value {})
+        return result.ok(value.unit(unit_value {}))
     }
     first := ch_state.buffer[0]
     rest := value[]()
@@ -4608,37 +4640,37 @@ func drain_selected_channel(runtime_state runtime, int idx) (value, backend_erro
     ch_state.buffer = rest
     ch_state.recvs = ch_state.recvs + 1
     runtime.channels.set(idx, ch_state)
-    first
+    return result.ok(first)
 }
 
-func eval_select_recv_default_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_select_recv_default_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     recv := eval_chan_recv_call(args, source, env, writes, runtime, true)
-    if recv.is_ok() {
-        return recv
+    if !value_result_is_err(recv) {
+        return result.ok(value_result_value(recv))
     }
     runtime.select_default_fallbacks = runtime.select_default_fallbacks + 1
-    value.unit(unit_value {})
+    return result.ok(value.unit(unit_value {}))
 }
 
-func eval_chan_close_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_chan_close_call(expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     if std.prelude.len(args) != 1 {
-        return backend_error { message: "backend error: chan_close expects one channel argument" }
+        return result.err(backend_error { message: "backend error: chan_close expects one channel argument" })
     }
     ch := eval_expr(args[0], source, env, writes, runtime)
-    if ch.is_err() {
-        return ch
+    if value_result_is_err(ch) {
+        return result.err(value_result_error(ch))
     }
-    idx := find_channel_index(runtime, ch.unwrap())
+    idx := find_channel_index(runtime, value_result_value(ch))
     if idx < 0 {
-        return backend_error { message: "backend error: chan_close target is not channel" }
+        return result.err(backend_error { message: "backend error: chan_close target is not channel" })
     }
     ch_state := runtime.channels[idx]
     if ch_state.closed {
-        return backend_error { message: "backend error: chan_close on closed channel" }
+        return result.err(backend_error { message: "backend error: chan_close on closed channel" })
     }
     ch_state.closed = true
     runtime.channels.set(idx, ch_state)
-    value.unit(unit_value {})
+    return result.ok(value.unit(unit_value {}))
 }
 
 func find_channel_index(runtime_state runtime, value v) int {
@@ -4667,24 +4699,24 @@ func execute_deferred(expr[] deferred, source_file source, binding[] env, write_
     for i > 0 {
         i = i - 1
         call_result := eval_expr(deferred[i], source, env, writes, runtime)
-        if call_result.is_err() {
-            err := call_result.unwrap_err()
+        if value_result_is_err(call_result) {
+            err := value_result_error(call_result)
             if is_panic_error(err) {
                 set_control(env, control_panic_active, value.bool(true))
                 set_control(env, control_panic_payload, value.string(panic_payload(err)))
                 continue
             }
             set_control(env, control_in_defer, value.bool(false))
-            return err
+            return result.err(err)
         }
     }
     set_control(env, control_in_defer, value.bool(false))
-    ()
+    return result.ok(())
 }
 
 func run_sroutine_scheduler_step(source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[(), backend_error] {
     if std.prelude.len(runtime.runq) == 0 {
-        return
+        return result.ok(())
     }
     task := runtime.runq[0]
     rest := sroutine_task[]()
@@ -4698,26 +4730,26 @@ func run_sroutine_scheduler_step(source_file source, binding[] env, write_op[] w
     captured := restore_captured_bindings(task.captured_env)
     propagate_bindings(task_env, captured)
     task_result := call_function_with_capture(source, task.fn_name, task.args, task_env, writes, runtime, task.captured_env)
-    if task_result.is_err() {
-        err := task_result.unwrap_err()
+    if value_result_is_err(task_result) {
+        err := value_result_error(task_result)
         if is_panic_error(err) {
             runtime.sroutine_panics = runtime.sroutine_panics + 1
-            return err
+            return result.err(err)
         }
-        return err
+        return result.err(err)
     }
     runtime.sroutine_completed = runtime.sroutine_completed + 1
-    ()
+    return result.ok(())
 }
 
 func run_sroutine_scheduler_flush(source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[(), backend_error] {
     for std.prelude.len(runtime.runq) > 0 {
         step := run_sroutine_scheduler_step(source, env, writes, runtime)
-        if step.is_err() {
-            return step
+        if unit_result_is_err(step) {
+            return result.err(unit_result_error(step))
         }
     }
-    ()
+    return result.ok(())
 }
 
 func panic_error(string payload) backend_error {
@@ -4757,7 +4789,7 @@ func set_control(binding[] env, string name, value v) () {
         env.set(index, binding { name: name, value v })
         return
     }
-    env = append(env, binding { name: name, value v });
+    append(env, binding { name: name, value v });
 }
 
 func control_in_defer_mode(binding[] env) bool {
@@ -4814,28 +4846,28 @@ func control_return_payload(binding[] env) value {
     env[index].value
 }
 
-func collect_const_bindings(source_file source) (binding[], backend_error) {
+func collect_const_bindings(source_file source) result[binding[], backend_error] {
     out := binding[]()
     visited := string[]()
     collect_result := collect_const_bindings_in_source(source, out, visited)
-    if collect_result.is_err() {
-        return collect_result.unwrap_err()
+    if unit_result_is_err(collect_result) {
+        return result.err(unit_result_error(collect_result))
     }
-    out
+    return result.ok(out)
 }
 
-func collect_const_bindings_in_source(source_file source, binding[] out, string[] visited) ((), backend_error) {
+func collect_const_bindings_in_source(source_file source, binding[] out, string[] visited) result[(), backend_error] {
     if string_vec_contains(visited, source.pkg) {
-        return
+        return result.ok(())
     }
-    visited = append(visited, source.pkg)
+    append(visited, source.pkg)
     last_expr := option.none
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
             item.const(const_decl) : {
                 if find_binding_index(out, const_decl.name) >= 0 {
-                    return backend_error { message: "backend error: duplicate const declaration " + const_decl.name }
+                    return result.err(backend_error { message: "backend error: duplicate const declaration " + const_decl.name })
                 }
                 expr_to_eval := option.none
                 switch const_decl.value {
@@ -4846,14 +4878,14 @@ func collect_const_bindings_in_source(source_file source, binding[] out, string[
                     option.none : expr_to_eval = last_expr,
                 }
                 if expr_to_eval.is_none() {
-                    return backend_error { message: "backend error: const declaration missing initializer " + const_decl.name }
+                    return result.err(backend_error { message: "backend error: const declaration missing initializer " + const_decl.name })
                 }
                 value_result := eval_const_value_expr(expr_to_eval.unwrap(), out, const_decl.iota_index)
-                if value_result.is_err() {
-                    return backend_error { message: "backend error: const evaluation failed for " + const_decl.name + ": " + value_result.unwrap_err().message }
+                if value_result_is_err(value_result) {
+                    return result.err(backend_error { message: "backend error: const evaluation failed for " + const_decl.name + ": " + value_result_error(value_result).message })
                 }
                 out.push(binding {
-                    name: const_decl.name, value value_result.unwrap(),
+                    name: const_decl.name, value: value_result_value(value_result),
                 })
                 ;
             }
@@ -4864,16 +4896,16 @@ func collect_const_bindings_in_source(source_file source, binding[] out, string[
     ui := 0
     for ui < std.prelude.len(source.uses) {
         dep_result := load_source_graph_for_use(source.uses[ui].path)
-        if dep_result.is_err() {
-            return dep_result.unwrap_err()
+        if source_graph_is_err(dep_result) {
+            return result.err(source_graph_error(dep_result))
         }
-        nested_result := collect_const_bindings_in_source(dep_result.unwrap(), out, visited)
-        if nested_result.is_err() {
-            return nested_result
+        nested_result := collect_const_bindings_in_source(source_graph_value(dep_result), out, visited)
+        if unit_result_is_err(nested_result) {
+            return result.err(unit_result_error(nested_result))
         }
         ui = ui + 1
     }
-    ()
+    return result.ok(())
 }
 
 func load_source_graph_for_use(string module_path) result[source_file, backend_error] {
@@ -4889,51 +4921,51 @@ func load_source_graph_for_use(string module_path) result[source_file, backend_e
     if dep_parse_err.message != "" {
         return result.err(backend_error { message: "backend error: parse failed in module " + module_path + ": " + dep_parse_err.message })
     }
-    result.ok(dep_combined)
+    return result.ok(dep_combined)
 }
 
-func eval_const_value_expr(expr value, binding[] const_env, int iota_value) (value, backend_error) {
-    switch value {
-        expr.int(int_expr) : value.int(parse_int_literal(int_expr.value)),
-        expr.string(string_expr) : value.string(decode_string_literal(string_expr.value)),
-        expr.bool(bool_expr) : value.bool(bool_expr.value),
+func eval_const_value_expr(value expr, binding[] const_env, int iota_value) result[value, backend_error] {
+    return switch expr {
+        expr.int(int_expr) : result.ok(value.int(parse_int_literal(int_expr.value))),
+        expr.string(string_expr) : result.ok(value.string(decode_string_literal(string_expr.value))),
+        expr.bool(bool_expr) : result.ok(value.bool(bool_expr.value)),
         expr.name(name_expr) : {
             if name_expr.name == "iota" {
-                return value.int(iota_value)
+                return result.ok(value.int(iota_value))
             }
             const_value := lookup_value(const_env, name_expr.name)
-            if const_value.is_err() {
-                return backend_error { message: "unknown const name " + name_expr.name }
+            if value_result_is_err(const_value) {
+                return result.err(backend_error { message: "unknown const name " + name_expr.name })
             }
-            const_value.unwrap()
+            value_result_value(const_value)
         }
         expr.binary(binary_expr) : {
             left := eval_const_value_expr(binary_expr.left.value, const_env, iota_value)
-            if left.is_err() {
-                return left
+            if value_result_is_err(left) {
+                return value_result_error(left)
             }
             right := eval_const_value_expr(binary_expr.right.value, const_env, iota_value)
-            if right.is_err() {
-                return right
+            if value_result_is_err(right) {
+                return value_result_error(right)
             }
-            switch binary_expr.op {
-                "+" : add_values(left.unwrap(), right.unwrap()),
-                "-" : numeric_binary(left.unwrap(), right.unwrap(), binary_expr.op),
-                "*" : numeric_binary(left.unwrap(), right.unwrap(), binary_expr.op),
-                "/" : numeric_binary(left.unwrap(), right.unwrap(), binary_expr.op),
-                "%" : numeric_binary(left.unwrap(), right.unwrap(), binary_expr.op),
-                "==" : compare_values(left.unwrap(), right.unwrap(), true),
-                "!=" : compare_values(left.unwrap(), right.unwrap(), false),
-                "<" : ordered_compare(left.unwrap(), right.unwrap(), binary_expr.op),
-                "<=" : ordered_compare(left.unwrap(), right.unwrap(), binary_expr.op),
-                ">" : ordered_compare(left.unwrap(), right.unwrap(), binary_expr.op),
-                ">=" : ordered_compare(left.unwrap(), right.unwrap(), binary_expr.op),
-                "&&" : logical_binary(left.unwrap(), right.unwrap(), true),
-                "||" : logical_binary(left.unwrap(), right.unwrap(), false),
-                _ : backend_error { message: "unsupported const operator " + binary_expr.op },
-            }
+            left_value := value_result_value(left)
+            right_value := value_result_value(right)
+            if binary_expr.op == "+" { return add_values(left_value, right_value) }
+            if binary_expr.op == "-" { return numeric_binary(left_value, right_value, binary_expr.op) }
+            if binary_expr.op == "*" { return numeric_binary(left_value, right_value, binary_expr.op) }
+            if binary_expr.op == "/" { return numeric_binary(left_value, right_value, binary_expr.op) }
+            if binary_expr.op == "%" { return numeric_binary(left_value, right_value, binary_expr.op) }
+            if binary_expr.op == "==" { return compare_values(left_value, right_value, true) }
+            if binary_expr.op == "!=" { return compare_values(left_value, right_value, false) }
+            if binary_expr.op == "<" { return ordered_compare(left_value, right_value, binary_expr.op) }
+            if binary_expr.op == "<=" { return ordered_compare(left_value, right_value, binary_expr.op) }
+            if binary_expr.op == ">" { return ordered_compare(left_value, right_value, binary_expr.op) }
+            if binary_expr.op == ">=" { return ordered_compare(left_value, right_value, binary_expr.op) }
+            if binary_expr.op == "&&" { return logical_binary(left_value, right_value, true) }
+            if binary_expr.op == "||" { return logical_binary(left_value, right_value, false) }
+            return result.err(backend_error { message: "unsupported const operator " + binary_expr.op })
         }
-        _ : backend_error { message: "unsupported const expression kind" },
+        _ : result.err(backend_error { message: "unsupported const expression kind" }),
     }
 }
 
@@ -4952,41 +4984,41 @@ func lookup_name_or_function(binding[] env, source_file source, string name) res
     return result.err(backend_error { message: "backend error: unknown name " + name })
 }
 
-func eval_map_literal(map_literal value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_map_literal(map_literal literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     entries := fn_map_entry_value[]()
     i := 0
-    for i < std.prelude.len(value.entries) {
-        key_result := eval_expr(value.entries[i].key, source, env, writes, runtime)
-        if key_result.is_err() {
-            return key_result.unwrap_err()
+    for i < std.prelude.len(literal.entries) {
+        key_result := eval_expr(literal.entries[i].key, source, env, writes, runtime)
+        if value_result_is_err(key_result) {
+            return value_result_error(key_result)
         }
-        val_result := eval_expr(value.entries[i].value, source, env, writes, runtime)
-        if val_result.is_err() {
-            return val_result.unwrap_err()
+        val_result := eval_expr(literal.entries[i].value, source, env, writes, runtime)
+        if value_result_is_err(val_result) {
+            return value_result_error(val_result)
         }
-        mapped_name := function_name_from_value(val_result.unwrap())
+        mapped_name := function_name_from_value(value_result_value(val_result))
         if mapped_name == "" {
             return backend_error { message: "backend error: map literal currently supports function values only" }
         }
         entries.push(fn_map_entry_value {
-            key: stringify_value(key_result.unwrap()), func_name mapped_name,
+            key: stringify_value(value_result_value(key_result)), func_name mapped_name,
         })
         i = i + 1
     }
-    value.fn_map(entries)
+    return value.fn_map(entries)
 }
 
-func eval_index_expr(index_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    target_result := eval_expr(value.target.value, source, env, writes, runtime)
-    if target_result.is_err() {
-        return target_result
+func eval_index_expr(index_expr literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+    target_result := eval_expr(literal.target.value, source, env, writes, runtime)
+    if value_result_is_err(target_result) {
+        return value_result_error(target_result)
     }
-    index_result := eval_expr(value.index.value, source, env, writes, runtime)
-    if index_result.is_err() {
-        return index_result
+    index_result := eval_expr(literal.index.value, source, env, writes, runtime)
+    if value_result_is_err(index_result) {
+        return value_result_error(index_result)
     }
-    key := stringify_value(index_result.unwrap())
-    map_result := fn_map_from_value(target_result.unwrap())
+    key := stringify_value(value_result_value(index_result))
+    map_result := fn_map_from_value(value_result_value(target_result))
     if map_result.is_none() {
         return backend_error { message: "backend error: index target is not a function map" }
     }
@@ -4998,7 +5030,7 @@ func eval_index_expr(index_expr value, source_file source, binding[] env, write_
         }
         i = i + 1
     }
-    backend_error { message: "backend error: map key not found " + key }
+    return backend_error { message: "backend error: map key not found " + key }
 }
 
 func fn_map_from_value(value target) option[fn_map_entry_value[]] {
@@ -5021,37 +5053,37 @@ func eval_print_call(string name, expr[] args, source_file source, binding[] env
     text := ""
     if std.prelude.len(args) == 1 {
         arg_result := eval_expr(args[0], source, env, writes, runtime)
-        if arg_result.is_err() {
-            arg_result.unwrap_err()
+        if value_result_is_err(arg_result) {
+            return value_result_error(arg_result)
         }
-        text = stringify_value(arg_result.unwrap())
+        text = stringify_value(value_result_value(arg_result))
     }
     op_text := text + "\n"
     if name == "println" {
-        writes = append(writes, write_op { fd: 1, text op_text });
+        append(writes, write_op { fd: 1, text op_text });
     } else {
-        writes = append(writes, write_op { fd: 2, text op_text });
+        append(writes, write_op { fd: 2, text op_text });
     }
-    value.unit(unit_value {})
+    return value.unit(unit_value {})
 }
 
-func eval_if_expr(if_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    cond_result := eval_expr(value.condition.value, source, env, writes, runtime)
-    if cond_result.is_err() {
-        cond_result.unwrap_err()
+func eval_if_expr(if_expr literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+    cond_result := eval_expr(literal.condition.value, source, env, writes, runtime)
+    if value_result_is_err(cond_result) {
+        return value_result_error(cond_result)
     }
-    flag_result := bool_from_value(cond_result.unwrap())
+    flag_result := bool_from_value(value_result_value(cond_result))
     if flag_result.is_none() {
         return backend_error { message: "backend error: if condition must be bool" }
     }
     if flag_result.unwrap() {
-        execute_block_in_place(value.then_branch, source, env, writes, runtime)
+        execute_block_in_place(literal.then_branch, source, env, writes, runtime)
         return value.unit(unit_value {})
     }
-    if value.else_branch.is_some() {
-        return eval_expr(value.else_branch.unwrap().value, source, env, writes, runtime)
+    if literal.else_branch.is_some() {
+        return eval_expr(literal.else_branch.unwrap().value, source, env, writes, runtime)
     }
-    value.unit(unit_value {})
+    return value.unit(unit_value {})
 }
 
 func bool_from_value(value input) option[bool] {
@@ -5066,25 +5098,22 @@ func bool_from_value(value input) option[bool] {
         value.owned_box(_) : option.none,
     }
 
-func eval_while_expr(while_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_while_expr(while_expr literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     for true {
-        cond_result := eval_expr(value.condition.value, source, env, writes, runtime)
-        if cond_result.is_err() {
-            cond_result.unwrap_err()
+        cond_result := eval_expr(literal.condition.value, source, env, writes, runtime)
+        if value_result_is_err(cond_result) {
+            return value_result_error(cond_result)
         }
-        flag_result := bool_from_value(cond_result.unwrap())
+        flag_result := bool_from_value(value_result_value(cond_result))
         if flag_result.is_none() {
             return backend_error { message: "backend error: while condition must be bool" }
         }
         if !flag_result.unwrap() {
             break
         }
-        body_result := execute_block_in_place(value.body, source, env, writes, runtime)
-        if body_result.is_err() {
-            body_result.unwrap_err()
-        }
+        execute_block_in_place(literal.body, source, env, writes, runtime)
     }
-    value.unit(unit_value {})
+    return value.unit(unit_value {})
 }
 
 func lookup_value(binding[] env, string name) result[value, backend_error] {
@@ -5096,52 +5125,52 @@ func lookup_value(binding[] env, string name) result[value, backend_error] {
 }
 
 func add_values(value left, value right) (value, backend_error) {
-    switch left {
+    return switch left {
         value.int(left_int) : {
             switch right {
-                value.int(right_int) : value.int(left_int + right_int),
-                _ : backend_error { message: "backend error: + expects matching types" },
+                value.int(right_int) : ok_value(value.int(left_int + right_int)),
+                _ : fail_value("backend error: + expects matching types"),
             }
         }
         value.string(left_text) : {
             switch right {
-                value.string(right_text) : value.string(left_text + right_text),
-                _ : backend_error { message: "backend error: + expects matching string types" },
+                value.string(right_text) : ok_value(value.string(left_text + right_text)),
+                _ : fail_value("backend error: + expects matching string types"),
             }
         }
-        _ : backend_error { message: "backend error: unsupported + operands" },
+        _ : fail_value("backend error: unsupported + operands"),
     }
 }
 
 func numeric_binary(value left, value right, string op) (value, backend_error) {
-    switch left {
+    return switch left {
         value.int(left_int) : {
             switch right {
                 value.int(right_int) : {
                     if op == "-" {
-                        value.int(left_int - right_int)
-                    } else if op == "*" {
-                        value.int(left_int * right_int)
-                    } else if op == "/" {
-                        if right_int == 0 {
-                            backend_error { message: "backend error: division by zero" }
-                        } else {
-                            value.int(left_int / right_int)
-                        }
-                    } else if op == "%" {
-                        if right_int == 0 {
-                            backend_error { message: "backend error: modulo by zero" }
-                        } else {
-                            value.int(left_int % right_int)
-                        }
-                    } else {
-                        backend_error { message: "backend error: unsupported numeric operator " + op }
+                        return ok_value(value.int(left_int - right_int))
                     }
+                    if op == "*" {
+                        return ok_value(value.int(left_int * right_int))
+                    }
+                    if op == "/" {
+                        if right_int == 0 {
+                            return fail_value("backend error: division by zero")
+                        }
+                        return ok_value(value.int(left_int / right_int))
+                    }
+                    if op == "%" {
+                        if right_int == 0 {
+                            return fail_value("backend error: modulo by zero")
+                        }
+                        return ok_value(value.int(left_int % right_int))
+                    }
+                    return fail_value("backend error: unsupported numeric operator " + op)
                 }
-                _ : backend_error { message: "backend error: numeric operator expects int operands" },
+                _ : fail_value("backend error: numeric operator expects int operands"),
             }
         }
-        _ : backend_error { message: "backend error: numeric operator expects int operands" },
+        _ : fail_value("backend error: numeric operator expects int operands"),
     }
 }
 
@@ -5189,71 +5218,77 @@ func compare_values(value left, value right, bool equal) (value, backend_error) 
         }
     }
     if equal {
-        value.bool(same)
-    } else {
-        value.bool(!same)
+        return ok_value(value.bool(same))
     }
+    return ok_value(value.bool(!same))
 }
 
 func ordered_compare(value left, value right, string op) (value, backend_error) {
-    switch left {
+    return switch left {
         value.int(left_int) : {
             switch right {
                 value.int(right_int) : {
                     if op == "<" {
-                        value.bool(left_int < right_int)
-                    } else if op == "<=" {
-                        value.bool(left_int <= right_int)
-                    } else if op == ">" {
-                        value.bool(left_int > right_int)
-                    } else if op == ">=" {
-                        value.bool(left_int >= right_int)
-                    } else {
-                        backend_error { message: "backend error: unsupported ordered comparison " + op }
+                        return ok_value(value.bool(left_int < right_int))
                     }
+                    if op == "<=" {
+                        return ok_value(value.bool(left_int <= right_int))
+                    }
+                    if op == ">" {
+                        return ok_value(value.bool(left_int > right_int))
+                    }
+                    if op == ">=" {
+                        return ok_value(value.bool(left_int >= right_int))
+                    }
+                    return fail_value("backend error: unsupported ordered comparison " + op)
                 }
-                _ : backend_error { message: "backend error: ordered comparison expects int operands" },
+                _ : fail_value("backend error: ordered comparison expects int operands"),
             }
         }
-        _ : backend_error { message: "backend error: ordered comparison expects int operands" },
+        _ : fail_value("backend error: ordered comparison expects int operands"),
     }
 }
 
 func logical_binary(value left, value right, bool and_op) (value, backend_error) {
-    switch left {
+    return switch left {
         value.bool(left_bool) : {
             switch right {
                 value.bool(right_bool) : {
                     if and_op {
-                        value.bool(left_bool && right_bool)
-                    } else {
-                        value.bool(left_bool || right_bool)
+                        return ok_value(value.bool(left_bool && right_bool))
                     }
+                    return ok_value(value.bool(left_bool || right_bool))
                 }
-                _ : backend_error { message: "backend error: logical operator expects bool operands" },
+                _ : fail_value("backend error: logical operator expects bool operands"),
             }
         }
-        _ : backend_error { message: "backend error: logical operator expects bool operands" },
+        _ : fail_value("backend error: logical operator expects bool operands"),
     }
 }
 
 func value_to_exit_code(value value) (int, backend_error) {
-    switch value {
-        value.int(number) : number,
-        value.bool(flag) : if flag { 1 } else { 0 },
-        value.unit(_) : 0,
-        value.string(_) : backend_error { message: "backend error: main cannot return string" },
-        value.channel(_) : backend_error { message: "backend error: main cannot return channel" },
-        value.fn_ref(_) : backend_error { message: "backend error: main cannot return function reference" },
-        value.fn_map(_) : backend_error { message: "backend error: main cannot return function map" },
+    return switch value {
+        value.int(number) : ok_int(number),
+        value.bool(flag) : {
+            if flag { return ok_int(1) }
+            return ok_int(0)
+        },
+        value.unit(_) : ok_int(0),
+        value.string(_) : fail_int("backend error: main cannot return string"),
+        value.channel(_) : fail_int("backend error: main cannot return channel"),
+        value.fn_ref(_) : fail_int("backend error: main cannot return function reference"),
+        value.fn_map(_) : fail_int("backend error: main cannot return function map"),
     }
 }
 
 func stringify_value(value value) string {
-    switch value {
+    return switch value {
         value.int(number) : std.prelude.to_string(number),
         value.string(text) : text,
-        value.bool(flag) : if flag { "true" } else { "false" },
+        value.bool(flag) : {
+            if flag { return "true" }
+            return "false"
+        },
         value.unit(_) : "()",
         value.channel(handle) : "<chan:" + std.prelude.to_string(handle.id) + ">",
         value.fn_ref(name) : "<func:" + name + ">",
@@ -5804,47 +5839,47 @@ func emit_asm_s390x(write_op[] writes, int exit_code) string {
 
 func append_write_op(string[] data_lines, string[] text_lines, write_op op, int index) () {
     label := "message_" + std.prelude.to_string(index)
-    data_lines = append(data_lines, label + ":")
-    data_lines = append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
-    text_lines = append(text_lines, "    mov $1, %rax")
-    text_lines = append(text_lines, "    mov $" + std.prelude.to_string(op.fd) + ", %rdi")
-    text_lines = append(text_lines, "    lea " + label + "(%rip), %rsi")
-    text_lines = append(text_lines, "    mov $" + std.prelude.to_string(std.prelude.len(op.text)) + ", %rdx")
-    text_lines = append(text_lines, "    syscall")
+    append(data_lines, label + ":")
+    append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
+    append(text_lines, "    mov $1, %rax")
+    append(text_lines, "    mov $" + std.prelude.to_string(op.fd) + ", %rdi")
+    append(text_lines, "    lea " + label + "(%rip), %rsi")
+    append(text_lines, "    mov $" + std.prelude.to_string(std.prelude.len(op.text)) + ", %rdx")
+    append(text_lines, "    syscall")
 }
 
 func append_write_op_arm64(string[] data_lines, string[] text_lines, write_op op, int index) () {
     label := "message_" + std.prelude.to_string(index)
-    data_lines = append(data_lines, label + ":")
-    data_lines = append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
-    text_lines = append(text_lines, "    mov x8, #64")
-    text_lines = append(text_lines, "    mov x0, #" + std.prelude.to_string(op.fd))
-    text_lines = append(text_lines, "    adrp x1, " + label)
-    text_lines = append(text_lines, "    add x1, x1, :lo12:" + label)
-    text_lines = append(text_lines, "    ldr x2, =" + std.prelude.to_string(std.prelude.len(op.text)))
-    text_lines = append(text_lines, "    svc #0")
+    append(data_lines, label + ":")
+    append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
+    append(text_lines, "    mov x8, #64")
+    append(text_lines, "    mov x0, #" + std.prelude.to_string(op.fd))
+    append(text_lines, "    adrp x1, " + label)
+    append(text_lines, "    add x1, x1, :lo12:" + label)
+    append(text_lines, "    ldr x2, =" + std.prelude.to_string(std.prelude.len(op.text)))
+    append(text_lines, "    svc #0")
 }
 
 func append_write_op_riscv64(string[] data_lines, string[] text_lines, write_op op, int index) () {
     label := "message_" + std.prelude.to_string(index)
-    data_lines = append(data_lines, label + ":")
-    data_lines = append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
-    text_lines = append(text_lines, "    li a7, 64")
-    text_lines = append(text_lines, "    li a0, " + std.prelude.to_string(op.fd))
-    text_lines = append(text_lines, "    la a1, " + label)
-    text_lines = append(text_lines, "    li a2, " + std.prelude.to_string(std.prelude.len(op.text)))
-    text_lines = append(text_lines, "    ecall")
+    append(data_lines, label + ":")
+    append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
+    append(text_lines, "    li a7, 64")
+    append(text_lines, "    li a0, " + std.prelude.to_string(op.fd))
+    append(text_lines, "    la a1, " + label)
+    append(text_lines, "    li a2, " + std.prelude.to_string(std.prelude.len(op.text)))
+    append(text_lines, "    ecall")
 }
 
 func append_write_op_s390x(string[] data_lines, string[] text_lines, write_op op, int index) () {
     label := "message_" + std.prelude.to_string(index)
-    data_lines = append(data_lines, label + ":")
-    data_lines = append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
-    text_lines = append(text_lines, "    lghi %r1, 4")
-    text_lines = append(text_lines, "    lghi %r2, " + std.prelude.to_string(op.fd))
-    text_lines = append(text_lines, "    larl %r3, " + label)
-    text_lines = append(text_lines, "    lghi %r4, " + std.prelude.to_string(std.prelude.len(op.text)))
-    text_lines = append(text_lines, "    svc 0")
+    append(data_lines, label + ":")
+    append(data_lines, "    .ascii \"" + escape_asm_string(op.text) + "\"")
+    append(text_lines, "    lghi %r1, 4")
+    append(text_lines, "    lghi %r2, " + std.prelude.to_string(op.fd))
+    append(text_lines, "    larl %r3, " + label)
+    append(text_lines, "    lghi %r4, " + std.prelude.to_string(std.prelude.len(op.text)))
+    append(text_lines, "    svc 0")
 }
 
 func escape_asm_string(string text) string {
@@ -5940,49 +5975,7 @@ func join_with(string[] values, string sep) string {
 
 func report_failure(string message) int {
     std.io.eprintln("backend error: " + message)
-    1
+    return 1
 }
 
-struct backend_context {
-    input_source: string,
-    output_executable: string,
-    native_enabled: bool,
-    target_arch: string,
-    target_os: string,
-}
-}
-
-func new_backend_context(string input, string output, bool native) backend_context {
-    backend_context ctx
-    ctx.input_source = input
-    ctx.output_executable = output
-    ctx.native_enabled = native
-    ctx.target_arch = "x86_64"
-    ctx.target_os = "linux"
-    ctx
-}
-
-func (backend_context* bc) compile_native() int {
-    if !bc.native_enabled {
-        return -1
-    }
-    compiler := new_native_compiler(bc.input_source, bc.output_executable)
-    result := compiler.compile_to_assembly()
-    if result != 0 {
-        return result
-    }
-    result = compiler.assemble_to_object()
-    if result != 0 {
-        return result
-    }
-    result = compiler.link_to_executable()
-    if result != 0 {
-        return result
-    }
-    0
-}
-
-func (backend_context* bc) get_assembly_output() string {
-    compiler := new_native_compiler(bc.input_source, bc.output_executable)
-    compiler.get_assembly()
 }

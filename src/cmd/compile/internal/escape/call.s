@@ -1,5 +1,16 @@
 package compile.internal.escape
 
+import (
+    "compile.internal.base"
+    "compile.internal.ir"
+)
+
+const escape_none = 0
+const escape_func = 1
+const escape_global = 2
+const escape_heap = 3
+const nil = 0
+
 func classify_call_escape(string callee, int arg_count, bool returns_pointer) int {
     if callee == "box" || callee == "make" || callee == "new" {
         return escape_heap

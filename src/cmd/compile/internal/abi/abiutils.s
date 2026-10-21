@@ -259,11 +259,11 @@ func append_param_offsets(int[] initial_offsets, int at, string type_name) offse
     }
     if is_complex_type(type_name) || size > reg_size() {
         half := size / 2
-        offsets = append(offsets, at)
-        offsets = append(offsets, at + half)
+        append(offsets, at)
+        append(offsets, at + half)
         return offset_result { offsets: offsets, next at + size }
     }
-    offsets = append(offsets, at)
+    append(offsets, at)
     offset_result { offsets: offsets, next at + size }
 }
 
@@ -273,36 +273,36 @@ func append_param_types(string[] initial_rts, string type_name) string[] {
         return rts
     }
     if is_complex_type(type_name) {
-        rts = append(rts, "float")
-        rts = append(rts, "float")
+        append(rts, "float")
+        append(rts, "float")
         return rts
     }
     if is_float_type(type_name) {
-        rts = append(rts, "float")
+        append(rts, "float")
         return rts
     }
     if is_string_type(type_name) {
-        rts = append(rts, "ptr")
-        rts = append(rts, "int")
+        append(rts, "ptr")
+        append(rts, "int")
         return rts
     }
     if is_slice_type(type_name) {
-        rts = append(rts, "ptr")
-        rts = append(rts, "int")
-        rts = append(rts, "int")
+        append(rts, "ptr")
+        append(rts, "int")
+        append(rts, "int")
         return rts
     }
     if is_interface_type(type_name) {
-        rts = append(rts, "ptr")
-        rts = append(rts, "ptr")
+        append(rts, "ptr")
+        append(rts, "ptr")
         return rts
     }
     if type_size(type_name) > reg_size() {
-        rts = append(rts, "uint32")
-        rts = append(rts, "uint32")
+        append(rts, "uint32")
+        append(rts, "uint32")
         return rts
     }
-    rts = append(rts, type_name)
+    append(rts, type_name)
     rts
 }
 
