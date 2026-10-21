@@ -12,6 +12,6 @@ func main() int {
     assert(read(&cell) == 7)
     assert(read(cell) == 7)
     drop(cell)
-    assert(allocations() == 0)
+    assert(live_allocations() == 0)
     return 0
 }
