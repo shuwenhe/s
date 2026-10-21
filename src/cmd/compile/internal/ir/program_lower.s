@@ -147,7 +147,8 @@ func program_binary_opcode(string op) string {
     return ""
 }
 
-func program_lower_expression(expr expression, string package_name, mir_program_function[] signatures, program_lower_state state) program_lower_state {
+func program_lower_expression(expr expression, string package_name, mir_program_function[] signatures, program_lower_state initial_state) program_lower_state {
+    state := initial_state
     if state.error != "" { return state }
     switch expression {
         expr.int(literal) : { return program_emit_integer(state, literal.value) }
