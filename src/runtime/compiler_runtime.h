@@ -42,6 +42,92 @@ static inline int64_t compiler_index(int64_t length, int64_t index) {
     if (index < 0 || index >= length) compiler_trap("array index out of bounds");
     return index;
 }
+typedef struct compiler_array {
+    void *data;
+    int64_t len;
+    size_t element_size;
+    const char *element_type;
+    void (*destroy_element)(void *);
+    int copyable;
+} compiler_array;
+static inline compiler_array *compiler_array_new(int64_t count, size_t size,
+        const char *type, const void *initial, void (*destroy)(void *), int copyable) {
+    if (count < 0) compiler_trap("negative array length");
+    if (size == 0 || (uint64_t)count > SIZE_MAX / size)
+        compiler_trap("array allocation size overflow");
+    compiler_array *array = (compiler_array *)malloc(sizeof(*array));
+    if (!array) compiler_trap("allocation failed");
+    array->data = calloc(count ? (size_t)count : 1, size);
+    if (!array->data) { free(array); compiler_trap("allocation failed"); }
+    array->len = count;
+    array->element_size = size;
+    array->element_type = type;
+    array->destroy_element = destroy;
+    array->copyable = copyable;
+    if (initial) {
+        for (int64_t i = 0; i < count; ++i)
+            memcpy((char *)array->data + (size_t)i * size, initial, size);
+    }
+#ifdef S_COMPILER_CHECK_ALLOCATIONS
+    compiler_objects += 2;
+#endif
+    return array;
+}
+static inline void *compiler_array_at(compiler_array *array, int64_t index) {
+    if (!array) compiler_trap("access to moved array");
+    return (char *)array->data + (size_t)compiler_index(array->len, index) * array->element_size;
+}
+static inline void *compiler_array_copy_element(compiler_array *array, int64_t index) {
+    if (!array->copyable) compiler_trap("array element is not copyable");
+    const void *source = compiler_array_at(array, index);
+    void *value = malloc(array->element_size);
+    if (!value) compiler_trap("allocation failed");
+    memcpy(value, source, array->element_size);
+#ifdef S_COMPILER_CHECK_ALLOCATIONS
+    ++compiler_objects;
+#endif
+    return value;
+}
+static inline void compiler_array_store_record(compiler_array *array, int64_t index, void *value) {
+    void *target = compiler_array_at(array, index);
+    if (!value) compiler_trap("move from null record");
+    if (array->destroy_element) array->destroy_element(target);
+    memcpy(target, value, array->element_size);
+    free(value);
+#ifdef S_COMPILER_CHECK_ALLOCATIONS
+    --compiler_objects;
+#endif
+}
+static inline void compiler_array_copy(compiler_array *target, compiler_array *source, int64_t count) {
+    if (!target || !source) compiler_trap("access to moved array");
+    if (target->element_size != source->element_size || strcmp(target->element_type, source->element_type))
+        compiler_trap("array copy element type mismatch");
+    if (!target->copyable || !source->copyable) compiler_trap("array element is not copyable");
+    if (count < 0 || count > target->len || count > source->len)
+        compiler_trap("array copy out of bounds");
+    memmove(target->data, source->data, (size_t)count * target->element_size);
+}
+static inline compiler_array *compiler_array_move(compiler_array **source) {
+    compiler_array *array = *source;
+    *source = NULL;
+    return array;
+}
+static inline void compiler_array_drop(compiler_array **owner) {
+    if (*owner) {
+        compiler_array *array = *owner;
+        if (array->destroy_element) {
+            for (int64_t i = 0; i < array->len; ++i)
+                array->destroy_element((char *)array->data + (size_t)i * array->element_size);
+        }
+        free(array->data);
+        free(array);
+        *owner = NULL;
+#ifdef S_COMPILER_CHECK_ALLOCATIONS
+        compiler_objects -= 2;
+#endif
+    }
+}
+
 typedef struct compiler_slice {
     int64_t *data;
     int64_t len;

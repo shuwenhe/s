@@ -133,14 +133,12 @@ func (lexer* self) read_number() string {
     string out = ""
     string first_ch = self.peek()
     
-    // Check for hex prefix: 0x or 0X
     if first_ch == "0" {
         out = out + self.advance()
         if self.index < len(self.source) {
             string next_ch = self.peek()
             if next_ch == "x" || next_ch == "X" {
                 out = out + self.advance()
-                // Read hex digits and underscores
                 for self.index < len(self.source) {
                     string ch = self.peek()
                     if is_hex_digit(ch) || ch == "_" {
@@ -152,13 +150,10 @@ func (lexer* self) read_number() string {
                 return out
             }
         }
-        // If not hex, continue reading as decimal (which started with 0)
     } else {
-        // Start reading decimal number
         out = out + self.advance()
     }
     
-    // Read remaining decimal digits and underscores
     for self.index < len(self.source) {
         string ch = self.peek()
         if !is_number_continue(ch) {
