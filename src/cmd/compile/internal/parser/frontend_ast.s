@@ -136,8 +136,8 @@ func ast_node_type_name(int ast_type) string {
     case ast_type_struct : "type_struct"
     case ast_type_enum : "type_enum"
     case ast_type_generic : "type_generic"
-    case _ : "unknown"
     }
+    return "unknown"
 }
 
 func ast_dump(node* ast_node, int indent) {
