@@ -31,12 +31,12 @@ compile() {
         cat "$work/$name.cc.log" >&2; return 1;
     }
 }
-for name in r_node_chain r_node_replace; do
+for name in r_node_chain r_node_replace r_null_return; do
     compile "$name"
     record "$work/$name.run.log" timeout 5s "$work/$name" || { cat "$work/$name.run.log" >&2; exit 1; }
     printf '%s: executed\n' "$name"
 done
-for name in r_null_read r_null_call; do
+for name in r_null_read r_null_call r_null_address; do
     compile "$name"
     status=0
     record "$work/$name.run.log" timeout 5s "$work/$name" || status=$?
@@ -59,4 +59,5 @@ reject r_wrong_node 'struct type mismatch'
 reject r_self_cycle 'self field assignment'
 reject r_shared_take 'cannot move.*borrowed'
 reject r_null_scalar 'field assignment type mismatch'
+reject r_untyped_nil 'nil binding requires a typed owner'
 printf 'Recursive owner links checked; real Parser execution remains a separate gate.\n'
