@@ -43,7 +43,7 @@ func ownership_join_text(string[] values, string sep) string {
 }
 
 func make_plan_trace(string[] type_env) string[] {
-    string[] plan
+    plan := string[]()
     i := 0
     for i < len(type_env) {
         ty := type_env[i]
@@ -116,7 +116,7 @@ func ownership_next_colon(string text, int start) int {
 }
 
 func ownership_check_events(string[] events) ownership_check_result {
-    ownership_slot[] slots
+    slots := ownership_slot[]()
     errors := 0
     message := ""
     i := 0
@@ -211,7 +211,7 @@ func borrow_find_slot(borrow_slot[] slots, string name) int {
 }
 
 func borrow_check_events(string[] events) borrow_check_result {
-    borrow_slot[] slots
+    slots := borrow_slot[]()
     errors := 0
     message := ""
     i := 0
@@ -355,10 +355,10 @@ func lifetime_second_colon(string text, int first) int {
 }
 
 func lifetime_check_events(string[] events) lifetime_check_result {
-    lifetime_reference[] refs
-    string[] active_scopes
-    string[] ended_scopes
-    string[] ended_refs
+    refs := lifetime_reference[]()
+    active_scopes := string[]()
+    ended_scopes := string[]()
+    ended_refs := string[]()
     errors := 0
     message := ""
     i := 0

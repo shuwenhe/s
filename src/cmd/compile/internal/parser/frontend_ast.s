@@ -53,23 +53,22 @@ struct ast_node {
     int column
     string string_data
     int int_data
-    ast_node[] children
+    ast_node*[] children
     string name
     string type_name
 }
 
 func ast_new(int node_type, int line, int column) ast_node* {
-    node := ast_node {
-        node_type: node_type,
-        line: line,
-        column: column,
-        string_data: "",
-        int_data: 0,
-        children: ast_node[](),
-        name: "",
-        type_name: "",
-    }
-    &node
+    node := alloc(compile.internal.parser.ast_node)
+    node.node_type = node_type
+    node.line = line
+    node.column = column
+    node.string_data = ""
+    node.int_data = 0
+    node.children = make(ast_node*[], 0)
+    node.name = ""
+    node.type_name = ""
+    return node
 }
 
 func ast_add_child(node* ast_node,child* ast_node) {
@@ -137,7 +136,7 @@ func ast_node_type_name(int ast_type) string {
     case ast_type_struct : "type_struct"
     case ast_type_enum : "type_enum"
     case ast_type_generic : "type_generic"
-    default : "unknown"
+    case _ : "unknown"
     }
 }
 

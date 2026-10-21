@@ -1,5 +1,6 @@
 package compile.internal.mono
 import (
+    "compile.internal.ast"
     "compile.internal.semantic"
     "compile.internal.typesys"
     "s"
@@ -296,7 +297,7 @@ func verify_identity_threading(mono_context ctx) m1_identity_verification {
 func monomorphize_file(source_file file, semantic_result result) monomorphize_file_result {
 
     ctx := new_context_with_result(result)
-    extra_items := item[]()
+    extra_items := compile.internal.ast.item[]()
 
     i := 0
     for i < len(file.items) {
@@ -628,10 +629,10 @@ func collect_stmt_instances(stmt value, item[] all_items, mono_cache cache, mono
         stmt.assign(v) : collect_expr_instances(v.value, all_items, cache, worklist),
         stmt.increment(_) : cache,
         stmt.c_for(v) : {
-            cache = collect_stmt_instances(v.init.value, all_items, cache, worklist)
-            cache = collect_expr_instances(v.condition, all_items, cache, worklist)
-            cache = collect_stmt_instances(v.step.value, all_items, cache, worklist)
-            collect_block_instances(v.body, all_items, cache, worklist)
+            out := collect_stmt_instances(v.init.value, all_items, cache, worklist)
+            out = collect_expr_instances(v.condition, all_items, out, worklist)
+            out = collect_stmt_instances(v.step.value, all_items, out, worklist)
+            collect_block_instances(v.body, all_items, out, worklist)
         }
         stmt.return(v) : {
             switch v.value {
@@ -646,67 +647,69 @@ func collect_stmt_instances(stmt value, item[] all_items, mono_cache cache, mono
 }
 
 func collect_expr_instances(expr value, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
+	out := cache
     switch value {
-        expr.borrow(v) : collect_expr_instances(v.target.value, all_items, cache, worklist),
+		expr.borrow(v) : collect_expr_instances(v.target.value, all_items, out, worklist),
         expr.binary(v) : {
-            cache = collect_expr_instances(v.left.value, all_items, cache, worklist)
-            collect_expr_instances(v.right.value, all_items, cache, worklist)
+			out = collect_expr_instances(v.left.value, all_items, out, worklist)
+			collect_expr_instances(v.right.value, all_items, out, worklist)
         }
-        expr.member(v) : collect_expr_instances(v.target.value, all_items, cache, worklist),
+		expr.member(v) : collect_expr_instances(v.target.value, all_items, out, worklist),
         expr.index(v) : {
-            cache = collect_expr_instances(v.target.value, all_items, cache, worklist)
-            collect_expr_instances(v.index.value, all_items, cache, worklist)
+			out = collect_expr_instances(v.target.value, all_items, out, worklist)
+			collect_expr_instances(v.index.value, all_items, out, worklist)
         }
         expr.call(v) : {
-            cache = collect_call_instance(v, all_items, cache, worklist)
+            out = collect_call_instance(v, all_items, out, worklist)
             i := 0
             for i < len(v.args) {
-                cache = collect_expr_instances(v.args[i], all_items, cache, worklist)
+                out = collect_expr_instances(v.args[i], all_items, out, worklist)
                 i = i + 1
             }
-            collect_expr_instances(v.callee.value, all_items, cache, worklist)
+            collect_expr_instances(v.callee.value, all_items, out, worklist)
         }
         expr.if(v) : {
-            cache = collect_expr_instances(v.condition.value, all_items, cache, worklist)
-            cache = collect_block_instances(v.then_branch, all_items, cache, worklist)
+            out = collect_expr_instances(v.condition.value, all_items, out, worklist)
+            out = collect_block_instances(v.then_branch, all_items, out, worklist)
             switch v.else_branch {
-                option.some(e) : collect_expr_instances(e.value, all_items, cache, worklist),
-                option.none : cache,
+                option.some(e) : collect_expr_instances(e.value, all_items, out, worklist),
+                option.none : out,
             }
         }
-        expr.for(v) : collect_for_instances(v, all_items, cache, worklist),
-        expr.block(v) : collect_block_instances(v, all_items, cache, worklist),
+        expr.for(v) : collect_for_instances(v, all_items, out, worklist),
+        expr.block(v) : collect_block_instances(v, all_items, out, worklist),
         expr.switch(v) : {
-            cache = collect_expr_instances(v.subject.value, all_items, cache, worklist)
+            out = collect_expr_instances(v.subject.value, all_items, out, worklist)
             i := 0
             for i < len(v.arms) {
-                cache = collect_expr_instances(v.arms[i].expr, all_items, cache, worklist)
+                out = collect_expr_instances(v.arms[i].expr, all_items, out, worklist)
                 i = i + 1
             }
-            cache
+            out
         }
         expr.array(v) : {
             i := 0
             for i < len(v.items) {
-                cache = collect_expr_instances(v.items[i], all_items, cache, worklist)
+                out = collect_expr_instances(v.items[i], all_items, out, worklist)
                 i = i + 1
             }
-            cache
+            out
         }
         expr.map(v) : {
             i := 0
             for i < len(v.entries) {
-                cache = collect_expr_instances(v.entries[i].key, all_items, cache, worklist)
-                cache = collect_expr_instances(v.entries[i].value, all_items, cache, worklist)
+                out = collect_expr_instances(v.entries[i].key, all_items, out, worklist)
+                out = collect_expr_instances(v.entries[i].value, all_items, out, worklist)
                 i = i + 1
             }
-            cache
+            out
         }
-        _ : cache,
+        _ : out,
     }
 }
 
 func collect_call_instance(call_expr call, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
+	out := cache
     if len(call.kindargs) == 0 {
         return cache
     }
@@ -724,34 +727,32 @@ func collect_call_instance(call_expr call, item[] all_items, mono_cache cache, m
     if source.sig.name == "" {
         return cache
     }
-    existing := mono_cache_lookup(cache, generic_name, call.kindargs)
-    result := mono_cache_get_or_create(cache, generic_name, call.kindargs)
-    cache = result.cache
-    if existing == "" && result.instance_name == resolved {
-        decl_ref := find_declaration_ref_for_item(ctx, "function", generic_name)
-        worklist = append(worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.kindargs, declaration_ref: decl_ref })
-    }
-    cache
+    existing := mono_cache_lookup(out, generic_name, call.kindargs)
+    result := mono_cache_get_or_create(out, generic_name, call.kindargs)
+    out = result.cache
+    /* Work items are appended by the context-aware collector. */
+    out
 }
 
 func collect_for_instances(for_expr v, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
+    out := cache
     switch v.init {
-        option.some(s) : cache = collect_stmt_instances(s.value, all_items, cache, worklist),
+        option.some(s) : out = collect_stmt_instances(s.value, all_items, out, worklist),
         option.none : (),
     }
     switch v.condition {
-        option.some(e) : cache = collect_expr_instances(e.value, all_items, cache, worklist),
+        option.some(e) : out = collect_expr_instances(e.value, all_items, out, worklist),
         option.none : (),
     }
     switch v.post {
-        option.some(s) : cache = collect_stmt_instances(s.value, all_items, cache, worklist),
+        option.some(s) : out = collect_stmt_instances(s.value, all_items, out, worklist),
         option.none : (),
     }
     switch v.iterable {
-        option.some(e) : cache = collect_expr_instances(e.value, all_items, cache, worklist),
+        option.some(e) : out = collect_expr_instances(e.value, all_items, out, worklist),
         option.none : (),
     }
-    collect_block_instances(v.body, all_items, cache, worklist)
+    collect_block_instances(v.body, all_items, out, worklist)
 }
 
 func find_generic_function(item[] items, string name) function_decl {
@@ -767,8 +768,7 @@ func find_generic_function(item[] items, string name) function_decl {
         }
         i = i + 1
     }
-    function_decl empty
-    empty
+    return function_decl {}
 }
 
 func find_generic_method(item[] items, string receiver_type, string name) receiver_method_decl {
@@ -786,8 +786,7 @@ func find_generic_method(item[] items, string receiver_type, string name) receiv
         }
         i = i + 1
     }
-    receiver_method_decl empty
-    empty
+    return receiver_method_decl {}
 }
 
 func verify_monomorphized_file(source_file file) int {
@@ -846,7 +845,7 @@ func finalize_block(block_expr block) block_expr {
 
 func finalize_stmt(stmt value) stmt {
     switch value {
-        stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name v.kindname, value finalize_expr(v.value) }),
+        stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name v.type_name, value finalize_expr(v.value) }),
         stmt.assign(v) : stmt.assign(assign_stmt { name: v.name, value finalize_expr(v.value) }),
         stmt.increment(v) : stmt.increment(v),
         stmt.c_for(v) : stmt.c_for(c_for_stmt { init: std.prelude.box(finalize_stmt(v.init.value)), condition finalize_expr(v.condition), step std.prelude.box(finalize_stmt(v.step.value)), body finalize_block(v.body) }),
@@ -858,7 +857,7 @@ func finalize_stmt(stmt value) stmt {
             }
             stmt.return(return_stmt { value: ret })
         }
-        stmt.expr(v) : stmt.s.expr(expr_stmt { expr: finalize_expr(v.expr) }),
+        stmt.expr(v) : stmt.expr(expr_stmt { expr: finalize_expr(v.expr) }),
         stmt.defer(v) : stmt.defer(defer_stmt { expr: finalize_expr(v.expr) }),
         stmt.sroutine(v) : stmt.sroutine(sroutine_stmt { expr: finalize_expr(v.expr) }),
     }
@@ -892,6 +891,7 @@ func finalize_expr(expr value) expr {
             expr.if(if_expr { condition: std.prelude.box(finalize_expr(v.condition.value)), then_branch finalize_block(v.then_branch), else_branch else_branch, inferred_type v.inferred_type })
         }
         expr.for(v) : finalize_for_expr(v),
+        expr.while(v) : expr.while(while_expr { condition: std.prelude.box(finalize_expr(v.condition.value)), body finalize_block(v.body), inferred_type v.inferred_type }),
         expr.block(v) : expr.block(finalize_block(v)),
         expr.switch(v) : {
             arms := switch_arm[]()
@@ -988,7 +988,7 @@ func verify_block_no_generics(block_expr block) int {
 
 func verify_stmt_no_generics(stmt value) int {
     switch value {
-        stmt.let(v) : verify_optional_type_no_generics(v.kindname) + verify_expr_no_generics(v.value),
+        stmt.let(v) : verify_optional_type_no_generics(v.type_name) + verify_expr_no_generics(v.value),
         stmt.assign(v) : verify_expr_no_generics(v.value),
         stmt.increment(_) : 0,
         stmt.c_for(v) : verify_stmt_no_generics(v.init.value) + verify_expr_no_generics(v.condition) + verify_stmt_no_generics(v.step.value) + verify_block_no_generics(v.body),
@@ -1024,6 +1024,7 @@ func verify_expr_no_generics(expr value) int {
             errors
         }
         expr.for(v) : verify_for_no_generics(v),
+        expr.while(v) : verify_optional_type_no_generics(v.inferred_type) + verify_expr_no_generics(v.condition.value) + verify_block_no_generics(v.body),
         expr.block(v) : verify_block_no_generics(v),
         expr.switch(v) : {
             errors := verify_optional_type_no_generics(v.inferred_type) + verify_expr_no_generics(v.subject.value)
@@ -1102,7 +1103,7 @@ func verify_optional_type_no_generics(option[string] type_name) int {
 }
 
 func looks_like_generic_residue(string type_name) bool {
-    clean := compile.internal.typesys.parse_type(type_name)
+    clean := type_name
     if clean == "T" || clean == "U" || clean == "V" {
         return true
     }
@@ -1128,27 +1129,27 @@ func mono_is_ident_char(string ch) bool {
     (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || (ch >= "0" && ch <= "9") || ch == "_"
 }
 
-func substitute_type(string type_name, string[] generic_names, string[] type_args) string {
+func substitute_type(string type_name, string[] keys, string[] replacements) string {
     clean := compile.internal.typesys.parse_type(type_name)
     i := 0
-    for i < len(generic_names) {
-        if clean == generic_names[i] {
-            if i < len(type_args) { return type_args[i] }
+    for i < len(keys) {
+        if compile.internal.typesys.same_type(clean, keys[i]) {
+            if i < len(replacements) { return replacements[i] }
             return "unknown"
         }
         i = i + 1
     }
     if starts_with(clean, "&mut") {
-        return "&mut " + substitute_type(prelude_slice(clean, 4, len(clean)), generic_names, type_args)
+        return "&mut " + substitute_type(prelude_slice(clean, 4, len(clean)), keys, replacements)
     }
     if starts_with(clean, "&") {
-        return "&" + substitute_type(prelude_slice(clean, 1, len(clean)), generic_names, type_args)
+        return "&" + substitute_type(prelude_slice(clean, 1, len(clean)), keys, replacements)
     }
     if ends_with(clean, "[]") {
-        return substitute_type(prelude_slice(clean, 0, len(clean) - 2), generic_names, type_args) + "[]"
+        return substitute_type(prelude_slice(clean, 0, len(clean) - 2), keys, replacements) + "[]"
     }
     if starts_with(clean, "[]") {
-        return "[]" + substitute_type(prelude_slice(clean, 2, len(clean)), generic_names, type_args)
+        return "[]" + substitute_type(prelude_slice(clean, 2, len(clean)), keys, replacements)
     }
     args := compile.internal.typesys.extract_type_args(clean)
     if len(args) == 0 {
@@ -1161,7 +1162,7 @@ func substitute_type(string type_name, string[] generic_names, string[] type_arg
         if i > 0 {
             built = built + ", "
         }
-        built = built + substitute_type(args[i], generic_names, type_args)
+        built = built + substitute_type(args[i], keys, replacements)
         i = i + 1
     }
     built + "]"
@@ -1263,7 +1264,7 @@ func substitute_block(block_expr block, string[] generic_names, string[] type_ar
 
 func substitute_stmt(stmt value, string[] generic_names, string[] type_args) stmt {
     switch value {
-        stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name substitute_optional_type(v.kindname, generic_names, type_args), value substitute_expr(v.value, generic_names, type_args) }),
+        stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name substitute_optional_type(v.type_name, generic_names, type_args), value substitute_expr(v.value, generic_names, type_args) }),
         stmt.assign(v) : stmt.assign(assign_stmt { name: v.name, value substitute_expr(v.value, generic_names, type_args) }),
         stmt.increment(v) : stmt.increment(increment_stmt { name: v.name }),
         stmt.c_for(v) : stmt.c_for(c_for_stmt { init: std.prelude.box(substitute_stmt(v.init.value, generic_names, type_args)), condition substitute_expr(v.condition, generic_names, type_args), step std.prelude.box(substitute_stmt(v.step.value, generic_names, type_args)), body substitute_block(v.body, generic_names, type_args) }),
@@ -1275,7 +1276,7 @@ func substitute_stmt(stmt value, string[] generic_names, string[] type_args) stm
             }
             stmt.return(return_stmt { value: ret })
         }
-        stmt.expr(v) : stmt.s.expr(expr_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
+        stmt.expr(v) : stmt.expr(expr_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
         stmt.defer(v) : stmt.defer(defer_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
         stmt.sroutine(v) : stmt.sroutine(sroutine_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
     }
@@ -1329,6 +1330,7 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
             expr.if(if_expr { condition: std.prelude.box(substitute_expr(v.condition.value, generic_names, type_args)), then_branch substitute_block(v.then_branch, generic_names, type_args), else_branch else_branch, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) })
         }
         expr.for(v) : substitute_for_expr(v, generic_names, type_args),
+        expr.while(v) : expr.while(while_expr { condition: std.prelude.box(substitute_expr(v.condition.value, generic_names, type_args)), body substitute_block(v.body, generic_names, type_args), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
         expr.block(v) : expr.block(substitute_block(v, generic_names, type_args)),
         expr.switch(v) : expr.switch(substitute_switch(v, generic_names, type_args)),
         expr.array(v) : substitute_array_expr(v, generic_names, type_args),
