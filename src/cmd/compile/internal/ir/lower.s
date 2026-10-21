@@ -542,13 +542,12 @@ func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) expr_ir {
         stmt.sroutine(sroutine_stmt) : stmt_sroutine_to_expr(sroutine_stmt, const_entries),
         stmt.c_for(c_for_stmt) : stmt_c_for_to_expr(c_for_stmt, const_entries),
     }
+    return ir_ast.expr_ir.name("unit")
 }
 
 func stmt_let_to_expr(var_stmt var_stmt, const_rewrite_entry[] entries) ir_ast.expr_ir {
     args := ir_ast.expr_ir[]()
-    args.push(ir_ast.expr_ir.string(var_stmt.name))
-    args.push(convert_expr(var_stmt.value, entries))
-    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.let", args args })
+    return ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.let", args args })
 }
 
 func stmt_assign_to_expr(assign_stmt value, const_rewrite_entry[] entries) ir_ast.expr_ir {
