@@ -19,9 +19,9 @@ func tokenize(string source) (string[], syntax_error) {
     return empty, syntax_error { message: "tokenizer not connected", line: 0, column: 0 }
 }
 
-func parse_source(string source) (ast.source_file, syntax_error) {
+func parse_source(string source) (source_file, syntax_error) {
     if len(source) < 8 || __host_slice(source, 0, 7) != "package" {
-        empty := ast.source_file {}
+        empty := source_file {}
         return empty, syntax_error { message: "expected package declaration", line: 1, column: 1 }
     }
     line_end := 0
@@ -30,18 +30,18 @@ func parse_source(string source) (ast.source_file, syntax_error) {
     }
     header := __host_slice(source, 0, line_end)
     if len(header) < 9 || __host_slice(header, 7, 8) != " " {
-        empty := ast.source_file {}
+        empty := source_file {}
         return empty, syntax_error { message: "expected package name", line: 1, column: 8 }
     }
     package_name := __host_slice(header, 8, len(header))
     if package_name == "" {
-        empty := ast.source_file {}
+        empty := source_file {}
         return empty, syntax_error { message: "expected package name", line: 1, column: 9 }
     }
-    return ast.source_file {
+    return source_file {
         pkg: package_name,
-        uses: ast.use_decl[](),
-        items: ast.item[](),
+        uses: use_decl[](),
+        items: item[](),
         item_packages: string[](),
     }, syntax_error {}
 }
@@ -75,8 +75,8 @@ func contains_source_text(string source, string needle) bool {
     false
 }
 
-func parse_tokens(string[] tokens) (ast.source_file, syntax_error) {
-    empty := ast.source_file {}
+func parse_tokens(string[] tokens) (source_file, syntax_error) {
+    empty := source_file {}
     return empty, syntax_error { message: "parser not connected", line: 0, column: 0 }
 }
 

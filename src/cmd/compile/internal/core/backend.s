@@ -2549,8 +2549,8 @@ func load_source_graph(string path, string source) result[source_file, backend_e
     visited := string[]()
     visited = append(visited, path)
     deps_result := append_dependency_items(combined, combined.uses, visited)
-    if deps_result.is_err() {
-        return result.err(deps_result.unwrap_err())
+    if unit_result_is_err(deps_result) {
+        return result.err(unit_result_error(deps_result))
     }
     if !should_skip_semantic_check(path) {
         semantic_result := check_source_file(combined, source)
@@ -2592,7 +2592,7 @@ func load_source_graph(string path, string source) result[source_file, backend_e
         
         return result.ok(mono_result.file)
     }
-    result.ok(combined)
+    return result.ok(combined)
 }
 
 func source_graph_is_err(result[source_file, backend_error] value) bool {
@@ -2616,34 +2616,49 @@ func source_graph_error(result[source_file, backend_error] value) backend_error 
     }
 }
 
-func append_dependency_items(source_file combined, use_decl[] uses, string[] visited) ((), backend_error) {
+func append_dependency_items(source_file combined, use_decl[] uses, string[] visited) result[(), backend_error] {
+    seen := visited
     i := 0
     for i < std.prelude.len(uses) {
         module_result := resolve_module_source_path(uses[i].path)
         if module_result.is_none() {
-            return backend_error { message: "module resolver failed: " + uses[i].path }
+            return result.err(backend_error { message: "module resolver failed: " + uses[i].path })
         }
         dep_path := module_result.unwrap()
-        if !string_vec_contains(visited, dep_path) {
-            visited = append(visited, dep_path)
+        if !string_vec_contains(seen, dep_path) {
+            seen = append(seen, dep_path)
             dep_source_result := std.fs.read_to_string(dep_path)
             if dep_source_result.is_err() {
-                return backend_error { message: "failed to read module " + uses[i].path + " at " + dep_path + ": " + dep_source_result.unwrap_err().message }
+                return result.err(backend_error { message: "failed to read module " + uses[i].path + " at " + dep_path + ": " + dep_source_result.unwrap_err().message })
             }
             dep_combined, dep_parse_err := compile.internal.parser.syntax.parse_source(dep_source_result.unwrap())
             if dep_parse_err.message != "" {
-                return backend_error { message: "parse failed in module " + uses[i].path + ": " + dep_parse_err.message }
+                return result.err(backend_error { message: "parse failed in module " + uses[i].path + ": " + dep_parse_err.message })
             }
             dep := dep_combined
-            nested_result := append_dependency_items(combined, dep.uses, visited)
-            if nested_result.is_err() {
-                return nested_result
+            nested_result := append_dependency_items(combined, dep.uses, seen)
+            if unit_result_is_err(nested_result) {
+                return result.err(unit_result_error(nested_result))
             }
             append_source_items(combined, dep)
         }
         i = i + 1
     }
-    ()
+    return result.ok(())
+}
+
+func unit_result_is_err(result[(), backend_error] value) bool {
+    switch value {
+        result::ok(_) : false,
+        result::err(_) : true,
+    }
+}
+
+func unit_result_error(result[(), backend_error] value) backend_error {
+    switch value {
+        result::ok(_) : backend_error { message: "" },
+        result::err(err) : err,
+    }
 }
 
 func append_source_items(source_file combined, source_file dep) () {
@@ -2692,7 +2707,7 @@ func resolve_module_source_path(string module) option[string] {
         }
         i = i + 1
     }
-    option.none
+    return option.none
 }
 
 func lookup_package_index(string module) option[string] {
@@ -2712,7 +2727,7 @@ func lookup_package_index(string module) option[string] {
         }
         pi = pi + 1
     }
-    option.none
+    return option.none
 }
 
 func package_index_candidate_paths() string[] {
@@ -2753,7 +2768,7 @@ func lookup_module_in_package_index_text(string text, string module) option[stri
         }
         i = i + 1
     }
-    option.none
+    return option.none
 }
 
 func normalize_package_index_path(string project, string path) string {
