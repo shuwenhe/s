@@ -570,23 +570,24 @@ func collect_method_call_instance_ctx(call_expr call, item[] all_items, mono_con
 }
 
 func collect_for_instances_ctx(for_expr v, item[] all_items, mono_context ctx) mono_context {
+	out := ctx
     switch v.init {
-        option.some(s) : ctx = collect_stmt_instances_ctx(s.value, all_items, ctx),
+		option.some(s) : out = collect_stmt_instances_ctx(s.value, all_items, out),
         option.none : (),
     }
     switch v.condition {
-        option.some(e) : ctx = collect_expr_instances_ctx(e.value, all_items, ctx),
+		option.some(e) : out = collect_expr_instances_ctx(e.value, all_items, out),
         option.none : (),
     }
     switch v.post {
-        option.some(s) : ctx = collect_stmt_instances_ctx(s.value, all_items, ctx),
+        option.some(s) : out = collect_stmt_instances_ctx(s.value, all_items, out),
         option.none : (),
     }
     switch v.iterable {
-        option.some(e) : ctx = collect_expr_instances_ctx(e.value, all_items, ctx),
+        option.some(e) : out = collect_expr_instances_ctx(e.value, all_items, out),
         option.none : (),
     }
-    collect_block_instances_ctx(v.body, all_items, ctx)
+    collect_block_instances_ctx(v.body, all_items, out)
 }
 
 func collect_item_instances(item value, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
@@ -608,16 +609,17 @@ func collect_item_instances(item value, item[] all_items, mono_cache cache, mono
 }
 
 func collect_block_instances(block_expr block, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
+	out := cache
     i := 0
     for i < len(block.statements) {
-        cache = collect_stmt_instances(block.statements[i], all_items, cache, worklist)
+		out = collect_stmt_instances(block.statements[i], all_items, out, worklist)
         i = i + 1
     }
     switch block.final_expr {
-        option.some(value) : cache = collect_expr_instances(value, all_items, cache, worklist),
+		option.some(value) : out = collect_expr_instances(value, all_items, out, worklist),
         option.none : (),
     }
-    cache
+	out
 }
 
 func collect_stmt_instances(stmt value, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
