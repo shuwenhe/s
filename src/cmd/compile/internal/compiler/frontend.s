@@ -228,6 +228,7 @@ func compiler_c_type_for_kind(compiler_state initial, int kind, int struct_id) s
     if kind == 20 { return compiler_struct_c_name(s, struct_id) + " *" }
     if kind == 21 { return "const char * const *" }
     if kind == 22 { return "const char **" }
+    if kind == 23 { return "compiler_array *" }
     if kind == 17 { return "const char *" }
     "int64_t "
 }
@@ -392,6 +393,7 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     s.code = s.code + "#ifdef S_COMPILER_CHECK_ALLOCATIONS\n    ++compiler_objects;\n#endif\n"
     s.code = s.code + "    return value;\n}\n"
     s.code = s.code + fields_drop
+    s.code = s.code + "static inline __attribute__((unused)) void compiler_array_destroy_" + struct_name + "(void *element) { compiler_drop_user_" + struct_name + "((S_" + struct_name + " *)element); compiler_drop_fields_" + struct_name + "((S_" + struct_name + " *)element); }\n"
     s.code = s.code + "static inline __attribute__((unused)) void compiler_drop_owned_" + struct_name + "(S_" + struct_name + " **owner) {\n"
     s.code = s.code + "    if (*owner) { compiler_drop_user_" + struct_name + "(*owner); compiler_drop_fields_" + struct_name + "(*owner); free(*owner); *owner = NULL;\n"
     s.code = s.code + "#ifdef S_COMPILER_CHECK_ALLOCATIONS\n    --compiler_objects;\n#endif\n"
@@ -456,6 +458,161 @@ func compiler_parse_owned_allocation(compiler_state initial) compiler_state {
     s.value_struct_id = struct_id
     s.value_slot = -1
     return s
+}
+
+func compiler_parse_array_allocation(compiler_state initial) compiler_state {
+    s := compiler_expect(compiler_next(initial), "(")
+    if !compiler_ident(s.token) { return compiler_fail(s, "alloc_array requires a known type") }
+    type_name := s.token
+    short_name := s.token
+    s = compiler_next(s)
+    for s.token == "." {
+        s = compiler_next(s)
+        if !compiler_ident(s.token) { return compiler_fail(s, "alloc_array requires a known type") }
+        short_name = s.token
+        type_name = type_name + "." + short_name
+        s = compiler_next(s)
+    }
+    element_struct := -1
+    ctype := "int64_t"
+    initial_value := "NULL"
+    destructor := "NULL"
+    copyable := "1"
+    if type_name != "int" {
+        element_struct = compiler_find_struct(s, short_name)
+        if element_struct < 0 { return compiler_fail(s, "alloc_array requires a known type: " + type_name) }
+        if type_name != short_name && type_name != compiler_scan_package_identity(s.source) + "." + short_name {
+            return compiler_fail(s, "alloc_array requires a known type: " + type_name)
+        }
+        ctype = compiler_struct_c_name(s, element_struct)
+        type_name = compiler_scan_package_identity(s.source) + "." + short_name
+        initial_value = "&(" + ctype + "){"
+        field := 0
+        start := s.struct_field_starts[element_struct]
+        field_count := s.struct_field_counts[element_struct]
+        for field < field_count {
+            if field > 0 { initial_value = initial_value + "," }
+            initial_value = initial_value + "." + s.struct_field_names[start + field] + "="
+            kind := s.struct_field_kinds[start + field]
+            if kind == 1 { initial_value = initial_value + "0" }
+            else if kind == 17 { initial_value = initial_value + "\"\"" }
+            else { return compiler_fail(s, "alloc_array currently requires scalar struct fields") }
+            field = field + 1
+        }
+        initial_value = initial_value + "}"
+        destructor = "compiler_array_destroy_" + short_name
+        if s.struct_custom_drops[element_struct] != 0 { copyable = "0" }
+    }
+    s = compiler_expect(s, ",")
+    s = compiler_expression(s, 1)
+    if s.value_kind != 1 { return compiler_fail(s, "array length requires an integer") }
+    length := s.value
+    s = compiler_expect(s, ")")
+    s.value = "compiler_array_new(" + length + ",sizeof(" + ctype + "),\"" + type_name + "\"," + initial_value + "," + destructor + "," + copyable + ")"
+    s.value_kind = 23
+    s.value_struct_id = element_struct
+    s.value_slot = -1
+    return s
+}
+
+func compiler_read_owned_array(compiler_state initial, int slot) compiler_state {
+    s := compiler_expression(compiler_next(initial), 1)
+    if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }
+    index := s.value
+    s = compiler_expect(s, "]")
+    element_struct := s.struct_ids[slot]
+    place := "compiler_array_at(" + compiler_var(slot) + "," + index + ")"
+    if element_struct < 0 {
+        s.value = "(*(int64_t *)" + place + ")"
+        s.value_kind = 1
+        s.value_struct_id = -1
+    } else {
+        ctype := compiler_struct_c_name(s, element_struct)
+        if s.token == "." {
+            s = compiler_next(s)
+            field := compiler_field_index(s, element_struct, s.token)
+            if field < 0 { return compiler_fail(s, "unknown array element field") }
+            s.value = "((" + ctype + " *)" + place + ")->" + compiler_struct_field_name(s, element_struct, field)
+            s.value_kind = compiler_struct_field_kind(s, element_struct, field)
+            s.value_struct_id = -1
+            s = compiler_next(s)
+        } else {
+            if s.struct_custom_drops[element_struct] != 0 { return compiler_fail(s, "array element copy requires copyable elements") }
+            s.value = "((" + ctype + " *)compiler_array_copy_element(" + compiler_var(slot) + "," + index + "))"
+            s.value_kind = 5
+            s.value_struct_id = element_struct
+        }
+    }
+    s.value_slot = -1
+    s.value_field = -1
+    return s
+}
+
+func compiler_write_owned_array(compiler_state initial, int slot) compiler_state {
+    s := compiler_expression(compiler_next(initial), 1)
+    if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }
+    index := "s_index" + compiler_number(s.pos)
+    s.code = s.code + "int64_t " + index + " = " + s.value + ";\n"
+    s = compiler_expect(s, "]")
+    element_struct := s.struct_ids[slot]
+    field := -1
+    expected := 1
+    if element_struct >= 0 {
+        expected = 5
+        if s.token == "." {
+            s = compiler_next(s)
+            field = compiler_field_index(s, element_struct, s.token)
+            if field < 0 { return compiler_fail(s, "unknown array element field") }
+            expected = compiler_struct_field_kind(s, element_struct, field)
+            s = compiler_next(s)
+        }
+    }
+    s = compiler_expect(s, "=")
+    s = compiler_expression(s, 1)
+    if s.value_kind != expected { return compiler_fail(s, "array element type mismatch") }
+    if expected == 5 && s.value_struct_id != element_struct { return compiler_fail(s, "array element struct type mismatch") }
+    rhs := s.value
+    if expected == 5 {
+        if s.value_field >= 0 {
+            s = compiler_move_value_field_expr(s)
+            if s.error != "" { return s }
+            rhs = s.value
+        } else if s.value_slot >= 0 {
+            origin := s.value_slot
+            s = compiler_consume(s, origin)
+            if s.error != "" { return s }
+            rhs = "compiler_move_" + s.struct_names[element_struct] + "(&" + compiler_var(origin) + ")"
+        }
+        s.code = s.code + "compiler_array_store_record(" + compiler_var(slot) + "," + index + "," + rhs + ");\n"
+    } else {
+        target := "(*(int64_t *)compiler_array_at(" + compiler_var(slot) + "," + index + "))"
+        if field >= 0 { target = "((" + compiler_struct_c_name(s, element_struct) + " *)compiler_array_at(" + compiler_var(slot) + "," + index + "))->" + compiler_struct_field_name(s, element_struct, field) }
+        s.code = s.code + target + " = " + rhs + ";\n"
+    }
+    return compiler_optional_semicolon(s)
+}
+
+func compiler_copy_owned_arrays(compiler_state initial) compiler_state {
+    s := compiler_expect(compiler_next(initial), "(")
+    target := compiler_find(s, s.token)
+    s = compiler_available(s, target)
+    if s.error != "" { return s }
+    if s.kinds[target] != 23 { return compiler_fail(s, "copy_array requires owned arrays") }
+    s = compiler_expect(compiler_next(s), ",")
+    source := compiler_find(s, s.token)
+    s = compiler_available(s, source)
+    if s.error != "" { return s }
+    if s.kinds[source] != 23 { return compiler_fail(s, "copy_array requires owned arrays") }
+    element_struct := s.struct_ids[target]
+    source_element_struct := s.struct_ids[source]
+    if element_struct != source_element_struct { return compiler_fail(s, "array copy element type mismatch") }
+    if element_struct >= 0 && s.struct_custom_drops[element_struct] != 0 { return compiler_fail(s, "array copy requires copyable elements") }
+    s = compiler_expect(compiler_next(s), ",")
+    s = compiler_expression(s, 1)
+    if s.value_kind != 1 { return compiler_fail(s, "array copy length requires an integer") }
+    s = compiler_expect(s, ")")
+    s.code = s.code + "compiler_array_copy(" + compiler_var(target) + "," + compiler_var(source) + "," + s.value + ");\n"
+    return compiler_optional_semicolon(s)
 }
 
 func compiler_find(compiler_state initial, string name) int {
@@ -1082,6 +1239,7 @@ func compiler_drop_owner(compiler_state initial, int slot) string {
         return "compiler_pair_drop(&" + compiler_var(slot) + ");\n"
     }
     if s.kinds[slot] == 9 { return "compiler_slice_drop(&" + compiler_var(slot) + ");\n" }
+    if s.kinds[slot] == 23 { return "compiler_array_drop(&" + compiler_var(slot) + ");\n" }
     ""
 }
 
@@ -1297,6 +1455,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         return s
     }
     if t == "alloc" { return compiler_parse_owned_allocation(s) }
+    if t == "alloc_array" { return compiler_parse_array_allocation(s) }
     if t == "box" {
         s = compiler_expect(compiler_next(s), "(")
         s = compiler_expression(s, 1)
@@ -1323,10 +1482,10 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         }
         s = compiler_available(s, slot)
         if s.error != "" { return s }
-        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 && s.kinds[slot] != 15 && s.kinds[slot] != 16 && s.kinds[slot] != 18 { return compiler_fail(s, "len requires an integer array or slice") }
+        if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 && s.kinds[slot] != 15 && s.kinds[slot] != 16 && s.kinds[slot] != 18 && s.kinds[slot] != 23 { return compiler_fail(s, "len requires an array, slice or string") }
         s = compiler_expect(compiler_next(s), ")")
         s.value = "INT64_C(" + compiler_array_length(s, slot) + ")"
-        if s.kinds[slot] == 9 { s.value = compiler_var(slot) + "->len" }
+        if s.kinds[slot] == 9 || s.kinds[slot] == 23 { s.value = compiler_var(slot) + "->len" }
         else if s.kinds[slot] == 15 || s.kinds[slot] == 16 { s.value = compiler_var(slot) + "_len" }
         else if s.kinds[slot] == 18 { s.value = compiler_var(slot) + "_len" }
         else if s.array_lengths[slot] < 0 { s.value = compiler_var(slot) + "_len" }
@@ -1647,6 +1806,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     if s.error != "" { return s }
     s = compiler_next(s)
     if s.token == "[" {
+        if s.kinds[slot] == 23 { return compiler_read_owned_array(s, slot) }
         if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 && s.kinds[slot] != 15 && s.kinds[slot] != 16 && s.kinds[slot] != 18 { return compiler_fail(s, "indexing requires an integer array or slice") }
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }
@@ -1806,14 +1966,14 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if !compiler_ident(name) { return compiler_fail(s, "expected variable name") }
     if is_declaration { slot = s.count }
     if !is_declaration && s.kinds[slot] != s.value_kind { return compiler_fail(s, "assignment changes variable type") }
-    if !is_declaration && s.value_kind == 5 && s.struct_ids[slot] != s.value_struct_id { return compiler_fail(s, "assignment changes struct type") }
+    if !is_declaration && (s.value_kind == 5 || s.value_kind == 23) && s.struct_ids[slot] != s.value_struct_id { return compiler_fail(s, "assignment changes element or struct type") }
     if !is_declaration && compiler_is_borrow_kind(s.value_kind) { return compiler_fail(s, "reference reassignment is not supported") }
     if !is_declaration && (s.value_kind == 1 || s.value_kind == 17) && compiler_conflict(s, slot, true) {
         return compiler_fail(s, "cannot assign borrowed local")
     }
     rhs := s.value
     origin := s.value_slot
-    if s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9 {
+    if s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9 || s.value_kind == 23 {
         if s.value_field >= 0 {
             if s.kinds[origin] != 5 { return compiler_fail(s, "field move requires a pair") }
             s = compiler_move_value_field_expr(s)
@@ -1832,6 +1992,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
                 else { rhs = "compiler_pair_move(&" + compiler_var(origin) + ")" }
             }
             else if s.value_kind == 9 { rhs = "compiler_slice_move(&" + compiler_var(origin) + ")" }
+            else if s.value_kind == 23 { rhs = "compiler_array_move(&" + compiler_var(origin) + ")" }
             else { rhs = "compiler_move(&" + compiler_var(origin) + ")" }
         }
     }
@@ -1844,10 +2005,11 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     ctype := compiler_c_type_for_kind(s, s.value_kind, s.value_struct_id)
     if s.value_kind == 6 { ctype = "int64_t " }
     if !is_declaration { ctype = "" }
-    if !is_declaration && (s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9) {
+    if !is_declaration && (s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9 || s.value_kind == 23) {
         replacement_type := "int64_t *"
         if s.value_kind == 5 { replacement_type = compiler_c_type_for_kind(s, s.value_kind, s.value_struct_id) }
         if s.value_kind == 9 { replacement_type = "compiler_slice *" }
+        if s.value_kind == 23 { replacement_type = "compiler_array *" }
         s.code = s.code + "{ " + replacement_type + "compiler_new = " + rhs + ";\n" + compiler_overwrite_old_owner(s, slot) + compiler_var(slot) + " = compiler_new; }\n"
     } else if s.value_kind == 6 {
         if !is_declaration { return compiler_fail(s, "array reassignment is not supported") }
@@ -2233,6 +2395,9 @@ func compiler_statement(compiler_state initial) compiler_state {
         if s.kinds[slot] == 2 || s.kinds[slot] == 5 {
             s = compiler_consume(s, slot)
             s.code = s.code + compiler_drop_owner(s, slot)
+        } else if s.kinds[slot] == 23 {
+            s = compiler_consume(s, slot)
+            s.code = s.code + "compiler_array_drop(&" + compiler_var(slot) + ");\n"
         } else if s.kinds[slot] == 9 {
             s = compiler_consume(s, slot)
             s.code = s.code + "compiler_slice_drop(&" + compiler_var(slot) + ");\n"
@@ -2246,6 +2411,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         s = compiler_expect(compiler_next(s), ")")
         return compiler_optional_semicolon(s)
     }
+    if s.token == "copy_array" { return compiler_copy_owned_arrays(s) }
     if s.token == "assert" {
         s = compiler_expect(compiler_next(s), "(")
         s = compiler_expression(s, 1)
@@ -2313,6 +2479,7 @@ func compiler_statement(compiler_state initial) compiler_state {
         slot := compiler_find(s, name)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
+        if s.kinds[slot] == 23 { return compiler_write_owned_array(s, slot) }
         if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 && s.kinds[slot] != 15 && s.kinds[slot] != 16 { return compiler_fail(s, "index assignment requires an integer array or slice") }
         s = compiler_expression(compiler_next(s), 1)
         if s.value_kind != 1 { return compiler_fail(s, "array index requires an integer") }

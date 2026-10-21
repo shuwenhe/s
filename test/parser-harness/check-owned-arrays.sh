@@ -31,11 +31,12 @@ compile() {
         cat "$work/$name.cc.log" >&2; return 1;
     }
 }
-for name in a_int_array a_record_array a_array_copy a_qualified_array; do
+for name in a_int_array a_record_array a_array_copy a_qualified_array a_drop_hook; do
     compile "$name"
     record "$work/$name.run.log" timeout 5s "$work/$name" || { cat "$work/$name.run.log" >&2; exit 1; }
     printf '%s: executed\n' "$name"
 done
+record "$work/a_drop_hook.output.log" diff -u test/parser-harness/fixtures/a_drop_hook.stdout "$work/a_drop_hook.run.log"
 trap_case() {
     local name=$1 diagnostic=$2 status=0
     compile "$name"
@@ -66,4 +67,7 @@ reject a_record_type 'array element struct type mismatch'
 reject a_copy_type 'array copy element type mismatch'
 reject a_unknown_type 'alloc_array requires a known type'
 reject a_bad_count 'array length requires an integer'
+reject a_noncopyable_read 'array element copy requires copyable elements'
+reject a_noncopyable_copy 'array copy requires copyable elements'
+reject a_record_use_after_move 'moved|unavailable'
 printf 'Owned integer/leaf-record arrays verified; Parser execution is a separate gate.\n'
