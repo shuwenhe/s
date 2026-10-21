@@ -1612,13 +1612,24 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
         precedence := compiler_precedence(op)
         left := s.value
         temporary := "s_left" + compiler_number(s.pos)
-        if s.value_kind != 1 { return compiler_fail(s, "binary operator requires integers") }
+        left_kind := s.value_kind
+        if op == "==" || op == "!=" {
+            if s.value_kind != 1 && s.value_kind != 2 && s.value_kind != 17 { return compiler_fail(s, "comparison requires integers or strings") }
+        } else if s.value_kind != 1 { return compiler_fail(s, "binary operator requires integers") }
         before := s
         if op != "&&" && op != "||" {
-            s.code = s.code + "int64_t " + temporary + ";\n"
+            if op == "==" || op == "!=" {
+                if s.value_kind == 2 || s.value_kind == 17 { s.code = s.code + "const char * " + temporary + ";\n" }
+                else { s.code = s.code + "int64_t " + temporary + ";\n" }
+            } else {
+                s.code = s.code + "int64_t " + temporary + ";\n"
+            }
         }
         s = compiler_expression(compiler_next(s), precedence + 1)
-        if s.value_kind != 1 { return compiler_fail(s, "binary operator requires integers") }
+        if op == "==" || op == "!=" {
+            if s.value_kind != 1 && s.value_kind != 2 && s.value_kind != 17 { return compiler_fail(s, "comparison requires integers or strings") }
+            if (left_kind == 1 && s.value_kind != 1) || (left_kind != 1 && s.value_kind == 1) { return compiler_fail(s, "cannot compare different types") }
+        } else if s.value_kind != 1 { return compiler_fail(s, "binary operator requires integers") }
         original_left := left
         if op != "&&" && op != "||" { left = temporary }
         helper := ""
@@ -1627,8 +1638,13 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
         if op == "*" { helper = "compiler_mul" }
         if op == "/" { helper = "compiler_div" }
         if op == "%" { helper = "compiler_mod" }
-        if helper != "" { s.value = helper + "(" + left + "," + s.value + ")" }
-        else { s.value = "(" + left + op + s.value + ")" }
+        if op == "==" && (left_kind == 2 || left_kind == 17) { helper = "(!strcmp" }
+        if op == "!=" && (left_kind == 2 || left_kind == 17) { helper = "strcmp" }
+        if helper != "" {
+            if op == "==" && (left_kind == 2 || left_kind == 17) { s.value = helper + "(" + left + "," + s.value + "))" }
+            else if op == "!=" && (left_kind == 2 || left_kind == 17) { s.value = helper + "(" + left + "," + s.value + ")" }
+            else { s.value = helper + "(" + left + "," + s.value + ")" }
+        } else { s.value = "(" + left + op + s.value + ")" }
         if op != "&&" && op != "||" {
             s.value = "((" + temporary + " = " + original_left + ")," + s.value + ")"
         } else {
