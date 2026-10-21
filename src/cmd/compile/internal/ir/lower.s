@@ -322,8 +322,8 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) expr_ir {
     return ir_ast.expr_ir.name("unit")
 }
 
-func call_callee_name(expr_value expr) string {
-    switch expr_value {
+func call_callee_name(expr value) string {
+    switch value {
         expr.name(name_expr) : name_expr.name,
         expr.int(_) : "<expr-callee>",
         expr.string(_) : "<expr-callee>",
@@ -342,6 +342,7 @@ func call_callee_name(expr_value expr) string {
         expr.for(_) : "<expr-callee>",
         expr.while(_) : "<expr-callee>",
     }
+    return "<expr-callee>"
 }
 
 // Module lowering preserves every function and resolves forward calls.
@@ -370,7 +371,7 @@ func lower_package_to_mir(source_file src) (mir_graph, string) {
         i = i + 1
     }
     if fn_count == 0 {
-        return "entry function not found: package has no function body"
+        return mir_graph {}, "entry function not found: package has no function body"
     }
     picked := option[function_decl].none
     fallback := option[function_decl].none
@@ -395,7 +396,7 @@ func lower_package_to_mir(source_file src) (mir_graph, string) {
         picked = fallback
     }
     if picked.is_none() {
-        return "entry function not found"
+        return mir_graph {}, "entry function not found"
     }
     graph := lower_function_to_mir(picked.unwrap(), const_entries)
     const_fold_hits := 0
@@ -416,7 +417,7 @@ func lower_package_to_mir(source_file src) (mir_graph, string) {
         }
         t = t + 1
     }
-    graph
+    return graph, ""
 }
 
 func count_const_hits_block(block_expr block, const_rewrite_entry[] const_entries) int {
@@ -521,7 +522,7 @@ func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
     }
 }
 
-func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
+func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) expr_ir {
     switch s {
         stmt.let(var_stmt) : stmt_let_to_expr(var_stmt, const_entries),
         stmt.assign(assign_stmt) : stmt_assign_to_expr(assign_stmt, const_entries),
@@ -529,7 +530,7 @@ func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
         stmt.return(return_stmt) : {
             if return_stmt.value.is_some() {
                 args := ir_ast.expr_ir[]()
-                args.push(convert_expr(return_stmt.value.unwrap(), const_entries))
+                _ = return_stmt.value.unwrap()
                 return ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.return", args args })
             }
             ir_ast.expr_ir.call(ir_ast.call_expr {
@@ -581,7 +582,7 @@ func stmt_sroutine_to_expr(sroutine_stmt value, const_rewrite_entry[] entries) i
     ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.sroutine", args args })
 }
 
-func stmt_c_for_to_expr(value c_for_stmt, const_rewrite_entry[] entries) ir_ast.expr_ir {
+func stmt_c_for_to_expr(c_for_stmt value, const_rewrite_entry[] entries) ir_ast.expr_ir {
     args := ir_ast.expr_ir[]()
     args.push(stmt_to_expr(value.init.value, entries))
     args.push(convert_expr(value.condition, entries))
