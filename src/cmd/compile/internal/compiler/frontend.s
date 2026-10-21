@@ -1431,6 +1431,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                     scalar_address = true
                     if kind == 4 { kind = 22 } else { kind = 21 }
                 } else if compiler_is_struct_access_kind(s.kinds[slot]) && s.struct_ids[slot] >= 0 {
+                    if compiler_has_moved_field(s, slot) { return compiler_fail(s, "cannot borrow partially moved struct") }
                     if kind == 4 { kind = 20 } else { kind = 24 }
                     if kind == 20 && s.kinds[slot] == 24 { return compiler_fail(s, "mutable struct reference requires an owner or mutable struct reference") }
                     s.value_struct_id = s.struct_ids[slot]
