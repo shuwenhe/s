@@ -82,6 +82,22 @@ static bool test_runtime_array_len_and_index(void) {
 	long ret = 0;
 	return execute_source_main(src, &ret, &err) && ret == 10;
 }
+static bool test_runtime_qualified_call_binds_unique_local_function(void) {
+	const char *ir =
+		"TARGET|x86_64-unknown-linux-gnu\n"
+		"FUNC_BEGIN|main|_|_\n"
+		"ARG|_|_|_\n"
+		"CALL|t0|compile.internal.syntax.parse_source|0\n"
+		"RETURN|t0|_|_\n"
+		"FUNC_END|main|_|_\n"
+		"FUNC_BEGIN|parse_source|_|_\n"
+		"CONST|t1|7|_\n"
+		"RETURN|t1|_|_\n"
+		"FUNC_END|parse_source|_|_\n";
+	compile_error err;
+	long ret = 0;
+	return runtime_execute_text(ir, "main", &ret, &err) && ret == 7;
+}
 static bool test_runtime_array_index_assignment(void) {
 	const char *src =
 		"fn main() int { "
@@ -398,6 +414,10 @@ int main(int argc, char **argv) {
 	bool network_only = argc == 2 && strcmp(argv[1], "--network-only") == 0;
 	if (!network_only && !test_runtime_array_len_and_index()) {
 		fprintf(stderr, "FAIL: %s\n", "test_runtime_array_len_and_index");
+		ok = false;
+	}
+	if (!network_only && !test_runtime_qualified_call_binds_unique_local_function()) {
+		fprintf(stderr, "FAIL: %s\n", "test_runtime_qualified_call_binds_unique_local_function");
 		ok = false;
 	}
 	if (!network_only && !test_runtime_array_index_assignment()) {
