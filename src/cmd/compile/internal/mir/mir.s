@@ -474,7 +474,7 @@ func lower_block_graph(string function_name, param[] params, block_expr block) m
         index = index + 1
     }
     if block.final_expr.is_some() {
-        trace_text = trace_text + " | " + indent(1) + "yield " + s.dump_expr(block.final_expr.unwrap())
+        trace_text = trace_text + " | " + indent(1) + "yield " + compile.internal.ast.dump_expr(block.final_expr.unwrap())
     } else {
         trace_text = trace_text + " | " + indent(1) + "yield unit"
     }
@@ -546,8 +546,7 @@ func mir_remove(string[] values, string value) string[] {
 
 func mir_add_unique(string[] values, string value) string[] {
     if value == "" || mir_contains(values, value) { return values }
-    values = append(values, value)
-    values
+    return append(values, value)
 }
 
 func mir_apply_flow_event(mir_flow_state state, string event) mir_flow_state {
@@ -583,7 +582,7 @@ func mir_place_from_expr(expr value) mir_place {
         }
         expr.index(index_expr) : {
             place := mir_place_from_expr(index_expr.target.unwrap())
-            place.projections = append(place.projections, mir_place_projection { kind: mir_projection_kind.index, value: s.dump_expr(index_expr.index.unwrap()) })
+            place.projections = append(place.projections, mir_place_projection { kind: mir_projection_kind.index, value: compile.internal.ast.dump_expr(index_expr.index.unwrap()) })
             return place
         }
         _ : { return mir_place { root: "", projections: mir_place_projection[]() } }
@@ -951,7 +950,7 @@ func lower_block(block_expr block) string {
     }
     if block.final_expr.is_some() {
         tail := block.final_expr.unwrap()
-        return text + " | " + indent(1) + "yield " + s.dump_expr(tail)
+        return text + " | " + indent(1) + "yield " + compile.internal.ast.dump_expr(tail)
     } else {
         return text + " | " + indent(1) + "yield unit"
     }
