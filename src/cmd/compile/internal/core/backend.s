@@ -21,11 +21,11 @@ struct backend_error {
     string message
 }
 
-func ok_function(function_decl value) (function_decl, backend_error) {
+func ok_function(function_decl value) result[function_decl, backend_error] {
     return result.ok(value)
 }
 
-func fail_function(string message) (function_decl, backend_error) {
+func fail_function(string message) result[function_decl, backend_error] {
     return result.err(backend_error {
         message: message,
     })
@@ -701,7 +701,7 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     rewritten := graph
     reachable := int[]()
     work := int[]()
-    work = append(work, rewritten.entry)
+    append(work, rewritten.entry)
     work_count := std.prelude.len(work)
     for work_count > 0 {
         work_count = work_count - 1
@@ -718,7 +718,7 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
         for ei < std.prelude.len(rewritten.blocks[bi].terminator.edges) {
             next := rewritten.blocks[bi].terminator.edges[ei].target
             if !contains_int32(reachable, next) {
-                work = append(work, next)
+                append(work, next)
                 work_count = work_count + 1
             }
             ei = ei + 1
@@ -2711,22 +2711,6 @@ func resolve_module_source_path(string module) option[string] {
 }
 
 func lookup_package_index(string module) option[string] {
-    paths := package_index_candidate_paths()
-    pi := 0
-    for pi < std.prelude.len(paths) {
-        read_result := std.fs.read_to_string(paths[pi])
-        if read_result.is_ok() {
-            found := lookup_module_in_package_index_text(read_result.unwrap(), module)
-            if found.is_some() {
-                path := found.unwrap()
-                probe := std.fs.read_to_string(path)
-                if probe.is_ok() {
-                    return option.some(path)
-                }
-            }
-        }
-        pi = pi + 1
-    }
     return option.none
 }
 
@@ -2736,14 +2720,14 @@ func package_index_candidate_paths() string[] {
     if package_index.is_some() {
         value := package_index.unwrap()
         if value != "" {
-            paths = append(paths, value)
+            append(paths, value)
         }
     }
     project := resolve_project_root()
     if project != "" {
-        paths = append(paths, project + "/build/s-package-index.tsv")
-        paths = append(paths, project + "/script/s-package-index.tsv")
-        paths = append(paths, project + "/s-package-index.tsv")
+        append(paths, project + "/build/s-package-index.tsv")
+        append(paths, project + "/script/s-package-index.tsv")
+        append(paths, project + "/s-package-index.tsv")
     }
     paths
 }
@@ -2828,19 +2812,19 @@ func add_module_candidates_in_root(string[] candidates, string root, string modu
         add_neurx_module_candidates(candidates, root, std.prelude.prelude_slice(module, std.prelude.len("neurx."), std.prelude.len(module)))
         return
     }
-    candidates = append(candidates, root + "/" + dot_to_slash(module) + ".s")
-    candidates = append(candidates, root + "/" + dot_to_slash(module) + "/" + last_segment(module) + ".s")
+    append(candidates, root + "/" + dot_to_slash(module) + ".s")
+    append(candidates, root + "/" + dot_to_slash(module) + "/" + last_segment(module) + ".s")
 }
 
 func add_neurx_module_candidates(string[] candidates, string root, string tail) () {
     add_std_layout_candidates(candidates, root, tail)
     if has_dot_local(tail) {
         last := last_segment(tail)
-        candidates = append(candidates, root + "/" + last + "/" + last + ".s")
-        candidates = append(candidates, root + "/" + last + ".s")
+        append(candidates, root + "/" + last + "/" + last + ".s")
+        append(candidates, root + "/" + last + ".s")
     }
-    candidates = append(candidates, root + "/app/" + dot_to_slash(tail) + ".s")
-    candidates = append(candidates, root + "/platform/" + dot_to_slash(tail) + ".s")
+    append(candidates, root + "/app/" + dot_to_slash(tail) + ".s")
+    append(candidates, root + "/platform/" + dot_to_slash(tail) + ".s")
 }
 
 func has_dot_local(string text) bool {
@@ -2855,57 +2839,57 @@ func has_dot_local(string text) bool {
 }
 
 func add_compile_module_candidates(string[] candidates, string root, string tail) () {
-    candidates = append(candidates, root + "/src/cmd/compile/" + dot_to_slash(tail) + ".s")
-    candidates = append(candidates, root + "/src/cmd/compile/" + dot_to_slash(tail) + "/" + last_segment(tail) + ".s")
+    append(candidates, root + "/src/cmd/compile/" + dot_to_slash(tail) + ".s")
+    append(candidates, root + "/src/cmd/compile/" + dot_to_slash(tail) + "/" + last_segment(tail) + ".s")
     pkg := drop_last_segment(tail)
     if pkg != "" {
-        candidates = append(candidates, root + "/src/cmd/compile/" + dot_to_slash(pkg) + ".s")
-        candidates = append(candidates, root + "/src/cmd/compile/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
+        append(candidates, root + "/src/cmd/compile/" + dot_to_slash(pkg) + ".s")
+        append(candidates, root + "/src/cmd/compile/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
     }
     if starts_with_local(tail, "internal.abi.") {
-        candidates = append(candidates, root + "/src/cmd/compile/internal/abi/abiutils.s")
+        append(candidates, root + "/src/cmd/compile/internal/abi/abiutils.s")
     }
 }
 
 func add_std_module_candidates(string[] candidates, string root, string tail) () {
     if starts_with_local(tail, "prelude.") {
-        candidates = append(candidates, root + "/src/prelude/prelude.s")
+        append(candidates, root + "/src/prelude/prelude.s")
         return
     }
     pkg := drop_last_segment(tail)
     if pkg == "" {
         pkg = tail
     }
-    candidates = append(candidates, root + "/src/" + dot_to_slash(pkg) + ".s")
-    candidates = append(candidates, root + "/src/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
+    append(candidates, root + "/src/" + dot_to_slash(pkg) + ".s")
+    append(candidates, root + "/src/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
 }
 
 func add_std_layout_candidates(string[] candidates, string root, string tail) () {
     slash_path := dot_to_slash(tail)
-    candidates = append(candidates, root + "/" + slash_path + ".s")
-    candidates = append(candidates, root + "/" + slash_path + "/" + last_segment(tail) + ".s")
+    append(candidates, root + "/" + slash_path + ".s")
+    append(candidates, root + "/" + slash_path + "/" + last_segment(tail) + ".s")
     pkg := drop_last_segment(tail)
     if pkg != "" {
         pkg_slash := dot_to_slash(pkg)
-        candidates = append(candidates, root + "/" + pkg_slash + ".s")
-        candidates = append(candidates, root + "/" + pkg_slash + "/" + last_segment(pkg) + ".s")
+        append(candidates, root + "/" + pkg_slash + ".s")
+        append(candidates, root + "/" + pkg_slash + "/" + last_segment(pkg) + ".s")
     }
 }
 
 func add_s_module_candidates(string[] candidates, string root, string symbol) () {
     if symbol == "parse_source" || symbol == "parse_tokens" {
-        candidates = append(candidates, root + "/src/cmd/compile/internal/parser/parser.s")
+        append(candidates, root + "/src/cmd/compile/internal/parser/parser.s")
     }
     if symbol == "tokenize" || symbol == "lexer" {
-        candidates = append(candidates, root + "/src/cmd/compile/internal/lexer/lexer.s")
+        append(candidates, root + "/src/cmd/compile/internal/lexer/lexer.s")
     }
     if symbol == "token" || symbol == "token_kind" {
-        candidates = append(candidates, root + "/src/cmd/compile/internal/token/token.s")
+        append(candidates, root + "/src/cmd/compile/internal/token/token.s")
     }
-    candidates = append(candidates, root + "/src/cmd/compile/internal/ast/ast.s")
-    candidates = append(candidates, root + "/src/cmd/compile/internal/parser/parser.s")
-    candidates = append(candidates, root + "/src/cmd/compile/internal/lexer/lexer.s")
-    candidates = append(candidates, root + "/src/cmd/compile/internal/token/token.s")
+    append(candidates, root + "/src/cmd/compile/internal/ast/ast.s")
+    append(candidates, root + "/src/cmd/compile/internal/parser/parser.s")
+    append(candidates, root + "/src/cmd/compile/internal/lexer/lexer.s")
+    append(candidates, root + "/src/cmd/compile/internal/token/token.s")
 }
 
 func module_search_roots() string[] {
@@ -2975,7 +2959,7 @@ func push_module_search_root(string[] roots, string root) () {
     if string_vec_contains(roots, root) {
         return
     }
-    roots = append(roots, root)
+    append(roots, root)
 }
 
 func find_quote_from(string text, int start) int {
@@ -3054,11 +3038,11 @@ func build_compiler_runtime_launcher(string output) int {
     temp_dir := temp_dir_result.unwrap()
     asm_path := temp_dir + "/launcher.s"
     obj_path := temp_dir + "/launcher.o"
-    asm_text_result := emit_runtime_launcher_asm(base_compiler)
-    if asm_text_result.is_err() {
-        return report_failure(asm_text_result.unwrap_err().message)
+    asm_text := emit_runtime_launcher_asm(base_compiler)
+    if asm_text == "" {
+        return report_failure("unsupported target architecture for runtime launcher")
     }
-    write_result := std.fs.write_text_file(asm_path, asm_text_result.unwrap())
+    write_result := std.fs.write_text_file(asm_path, asm_text)
     if write_result.is_err() {
         return report_failure("failed to write launcher assembly: " + write_result.unwrap_err().message)
     }
@@ -3101,7 +3085,7 @@ func resolve_bootstrap_base_compiler() string {
     "/app/s/bin/s_arm64"
 }
 
-func emit_runtime_launcher_asm(string base_compiler) (string, backend_error) {
+func emit_runtime_launcher_asm(string base_compiler) string {
     arch := buildcfg_goarch()
     if arch == "arm64" {
         return emit_runtime_launcher_asm_arm64(base_compiler)
@@ -3109,7 +3093,7 @@ func emit_runtime_launcher_asm(string base_compiler) (string, backend_error) {
     if arch == "amd64" || arch == "amd64p32" {
         return emit_runtime_launcher_asm_amd64(base_compiler)
     }
-    backend_error { message: "unsupported architecture for compiler launcher: " + arch }
+    ""
 }
 
 func emit_runtime_launcher_asm_arm64(string base_compiler) string {
@@ -3239,14 +3223,35 @@ func compile_writes(source_file source, mir_graph graph) result[write_op[], back
         return result.err(backend_error { message: "backend error: mir graph has no blocks" })
     }
     source_exec := execute_source_main(source)
-    if source_exec.is_ok() {
-        return result.ok(source_exec.unwrap().writes)
+    if !mir_result_is_err(source_exec) {
+        return result.ok(mir_result_value(source_exec).writes)
     }
     exec_result := execute_mir_graph(graph)
-    if exec_result.is_err() {
-        return result.err(source_exec.unwrap_err())
+    if mir_result_is_err(exec_result) {
+        return result.err(mir_result_error(exec_result))
     }
-    result.ok(exec_result.unwrap().writes)
+    return result.ok(mir_result_value(exec_result).writes)
+}
+
+func mir_result_is_err(result[mir_execution_result, backend_error] value) bool {
+    switch value {
+        result::ok(_) : false,
+        result::err(_) : true,
+    }
+}
+
+func mir_result_error(result[mir_execution_result, backend_error] value) backend_error {
+    switch value {
+        result::ok(_) : backend_error { message: "" },
+        result::err(err) : err,
+    }
+}
+
+func mir_result_value(result[mir_execution_result, backend_error] value) mir_execution_result {
+    switch value {
+        result::ok(output) : output,
+        result::err(_) : mir_execution_result { writes: write_op[](), exit_code 1, runtime runtime_metrics { sroutine_scheduled: 0, sroutine_completed 0, sroutine_panics 0, sroutine_recovered 0, sroutine_yields 0, select_attempts 0, select_default_fallbacks 0, select_timeouts 0, channels 0, channel_sends 0, channel_recvs 0, channel_closed 0 } },
+    }
 }
 
 func compile_exit_code(source_file source, mir_graph graph) result[int, backend_error] {
@@ -3254,14 +3259,14 @@ func compile_exit_code(source_file source, mir_graph graph) result[int, backend_
         return result.err(backend_error { message: "backend error: mir graph has no blocks" })
     }
     source_exec := execute_source_main(source)
-    if source_exec.is_ok() {
-        return result.ok(source_exec.unwrap().exit_code)
+    if !mir_result_is_err(source_exec) {
+        return result.ok(mir_result_value(source_exec).exit_code)
     }
     exec_result := execute_mir_graph(graph)
-    if exec_result.is_err() {
-        return result.err(source_exec.unwrap_err())
+    if mir_result_is_err(exec_result) {
+        return result.err(mir_result_error(exec_result))
     }
-    result.ok(exec_result.unwrap().exit_code)
+    return result.ok(mir_result_value(exec_result).exit_code)
 }
 
 func write_result_is_err(result[write_op[], backend_error] value) bool {
@@ -3311,14 +3316,14 @@ func compile_runtime_metrics(source_file source, mir_graph graph) result[runtime
         return result.err(backend_error { message: "backend error: mir graph has no blocks" })
     }
     source_exec := execute_source_main(source)
-    if source_exec.is_ok() {
-        return result.ok(source_exec.unwrap().runtime)
+    if !mir_result_is_err(source_exec) {
+        return result.ok(mir_result_value(source_exec).runtime)
     }
     exec_result := execute_mir_graph(graph)
-    if exec_result.is_err() {
-        return result.err(source_exec.unwrap_err())
+    if mir_result_is_err(exec_result) {
+        return result.err(mir_result_error(exec_result))
     }
-    result.ok(exec_result.unwrap().runtime)
+    return result.ok(mir_result_value(exec_result).runtime)
 }
 
 func runtime_metrics_is_err(result[runtime_metrics, backend_error] value) bool {
@@ -3335,64 +3340,64 @@ func runtime_metrics_error(result[runtime_metrics, backend_error] value) backend
     }
 }
 
-func execute_source_main(source_file source) (mir_execution_result, backend_error) {
+func execute_source_main(source_file source) result[mir_execution_result, backend_error] {
     main_result := find_main(source)
-    if main_result.is_err() {
-        return main_result.unwrap_err()
+    if function_result_is_err(main_result) {
+        return result.err(function_result_error(main_result))
     }
-    main_fn := main_result.unwrap()
+    main_fn := function_result_value(main_result)
     if main_fn.body.is_none() {
-        return backend_error { message: "backend error: entry function main has no body" }
+        return result.err(backend_error { message: "backend error: entry function main has no body" })
     }
     writes := write_op[]()
     runtime := make_runtime_state()
     const_bindings := collect_const_bindings(source)
-    if const_bindings.is_err() {
-        return const_bindings.unwrap_err()
+    if binding_result_is_err(const_bindings) {
+        return result.err(binding_result_error(const_bindings))
     }
-    env := copy_bindings(const_bindings.unwrap())
+    env := copy_bindings(binding_result_value(const_bindings))
     eval_result := execute_block_in_place(main_fn.body.unwrap(), source, env, writes, runtime)
-    if eval_result.is_err() {
-        return eval_result.unwrap_err()
+    if value_result_is_err(eval_result) {
+        return result.err(value_result_error(eval_result))
     }
-    code_result := value_to_exit_code(eval_result.unwrap())
-    if code_result.is_err() {
-        return code_result.unwrap_err()
+    code_result := value_to_exit_code(value_result_value(eval_result))
+    if int_result_is_err(code_result) {
+        return result.err(int_result_error(code_result))
     }
-    mir_execution_result {
-        writes: writes, exit_code code_result.unwrap(), runtime collect_runtime_metrics(runtime),
-    }
+    return result.ok(mir_execution_result {
+        writes: writes, exit_code int_result_value(code_result), runtime collect_runtime_metrics(runtime),
+    })
 }
 
-func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
+func execute_mir_graph(mir_graph graph) result[mir_execution_result, backend_error] {
     writes := write_op[]()
     current := graph.entry
     steps := 0
     max_steps := 100000
     for steps < max_steps {
         block_result := find_mir_block(graph, current)
-        if block_result.is_err() {
-            return block_result.unwrap_err()
+        if block_result_is_err(block_result) {
+            return result.err(block_result_error(block_result))
         }
-        block := block_result.unwrap()
+        block := block_result_value(block_result)
         si := 0
         for si < len(block.statements) {
             stmt_result := execute_mir_statement(block.statements[si], writes)
-            if stmt_result.is_err() {
-                return stmt_result.unwrap_err()
+            if unit_result_is_err(stmt_result) {
+                return result.err(unit_result_error(stmt_result))
             }
             si = si + 1
         }
         if block.terminator.kind == "return" {
-            return mir_execution_result {
+            return result.ok(mir_execution_result {
                 writes: writes, exit_code 0, runtime runtime_metrics {
                     sroutine_scheduled: 0, sroutine_completed 0, sroutine_panics 0, sroutine_recovered 0, sroutine_yields 0, select_attempts 0, select_default_fallbacks 0, select_timeouts 0, channels 0, channel_sends 0, channel_recvs 0, channel_closed 0,
                 },
-            }
+            })
         }
         if block.terminator.kind == "jump" {
             if std.prelude.len(block.terminator.edges) == 0 {
-                return backend_error { message: "backend error: jump terminator has no target" }
+                return result.err(backend_error { message: "backend error: jump terminator has no target" })
             }
             current = block.terminator.edges[0].target
             steps = steps + 1
@@ -3401,37 +3406,58 @@ func execute_mir_graph(mir_graph graph) (mir_execution_result, backend_error) {
         if block.terminator.kind == "branch" {
             target := select_branch_target(block.terminator.edges)
             if target < 0 {
-                return backend_error { message: "backend error: branch terminator has no target" }
+                return result.err(backend_error { message: "backend error: branch terminator has no target" })
             }
             current = target
             steps = steps + 1
             continue
         }
-        return backend_error { message: "backend error: unsupported mir terminator kind " + block.terminator.kind }
+        return result.err(backend_error { message: "backend error: unsupported mir terminator kind " + block.terminator.kind })
     }
-    backend_error { message: "backend error: mir execution exceeded step limit" }
+    return result.err(backend_error { message: "backend error: mir execution exceeded step limit" })
 }
 
-func find_mir_block(mir_graph graph, int id) (mir_basic_block, backend_error) {
+func find_mir_block(mir_graph graph, int id) result[mir_basic_block, backend_error] {
     i := 0
     for i < std.prelude.len(graph.blocks) {
         if graph.blocks[i].id == id {
-            return graph.blocks[i]
+            return result.ok(graph.blocks[i])
         }
         i = i + 1
     }
-    backend_error { message: "backend error: missing mir block id " + std.prelude.to_string(id) }
+    return result.err(backend_error { message: "backend error: missing mir block id " + std.prelude.to_string(id) })
 }
 
-func execute_mir_statement(mir_statement statement, write_op[] writes) ((), backend_error) {
-    switch statement {
+func block_result_is_err(result[mir_basic_block, backend_error] value) bool {
+    switch value {
+        result::ok(_) : false,
+        result::err(_) : true,
+    }
+}
+
+func block_result_error(result[mir_basic_block, backend_error] value) backend_error {
+    switch value {
+        result::ok(_) : backend_error { message: "" },
+        result::err(err) : err,
+    }
+}
+
+func block_result_value(result[mir_basic_block, backend_error] value) mir_basic_block {
+    switch value {
+        result::ok(block) : block,
+        result::err(_) : mir_basic_block { id: -1, statements: mir_statement[](), terminator: mir_terminator { kind: "", edges: mir_edge[]() } },
+    }
+}
+
+func execute_mir_statement(mir_statement statement, write_op[] writes) result[(), backend_error] {
+    return switch statement {
         mir_statement.eval(eval_stmt) : {
             if std.prelude.len(eval_stmt.args) > 0 {
                 emit_print_from_line(eval_stmt.args[0], writes)
             }
-            ()
+            result.ok(())
         }
-        _ : (),
+        _ : result.ok(()),
     }
 }
 
@@ -3567,7 +3593,7 @@ func select_branch_target(mir_control_edge[] edges) int {
     edges[0].target
 }
 
-func find_main(source_file source) (function_decl, backend_error) {
+func find_main(source_file source) result[function_decl, backend_error] {
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
@@ -3598,10 +3624,10 @@ func call_function_with_capture(
     captured_binding[] captured_env
 ) (value, backend_error) {
     fn_result := find_function(source, name)
-    if fn_result.is_err() {
-        return fail_value(fn_result.unwrap_err().message)
+    if function_result_is_err(fn_result) {
+        return fail_value(function_result_error(fn_result).message)
     }
-    function := fn_result.unwrap()
+    function := function_result_value(fn_result)
     if function.body.is_none() {
         return fail_value("backend error: function " + name + " has no body")
     }
@@ -3617,10 +3643,10 @@ func call_function_with_capture(
     }
     env := binding[]()
     const_bindings := collect_const_bindings(source)
-    if const_bindings.is_err() {
-        return fail_value(const_bindings.unwrap_err().message)
+    if binding_result_is_err(const_bindings) {
+        return fail_value(binding_result_error(const_bindings).message)
     }
-    env = copy_bindings(const_bindings.unwrap())
+    env = copy_bindings(binding_result_value(const_bindings))
     captured := restore_captured_bindings(captured_env)
     propagate_bindings(env, captured)
     propagate_bindings(captured, env)
@@ -3633,11 +3659,11 @@ func call_function_with_capture(
         pi = pi + 1
     }
     body_result := execute_block_in_place(function.body.unwrap(), source, env, writes, runtime)
-    if body_result.is_err() {
-        return fail_value(body_result.unwrap_err().message)
+    if value_result_is_err(body_result) {
+        return fail_value(value_result_error(body_result).message)
     }
     if control_return_is_active(env) {
-        returned := body_result.unwrap()
+        returned := value_result_value(body_result)
         set_control(env, control_return_active, value.bool(false))
         set_control(env, control_return_value, value.unit(unit_value {}))
         copy_control_bindings(env, caller_env)
@@ -3647,16 +3673,16 @@ func call_function_with_capture(
     ok_value(body_result.unwrap())
 }
 
-func find_function(source_file source, string name) (function_decl, backend_error) {
+func find_function(source_file source, string name) result[function_decl, backend_error] {
     visited := string[]()
     return find_function_in_source_graph(source, name, visited)
 }
 
-func find_function_in_source_graph(source_file source, string name, string[] visited) (function_decl, backend_error) {
+func find_function_in_source_graph(source_file source, string name, string[] visited) result[function_decl, backend_error] {
     if string_vec_contains(visited, source.pkg) {
-        return backend_error { message: "backend error: unknown function " + name }
+        return result.err(backend_error { message: "backend error: unknown function " + name })
     }
-    visited = append(visited, source.pkg)
+    seen := append(visited, source.pkg)
     i := 0
     for i < std.prelude.len(source.items) {
         pkg := source.pkg
@@ -3666,7 +3692,7 @@ func find_function_in_source_graph(source_file source, string name, string[] vis
         switch source.items[i] {
             item.function(value) : {
                 if value.sig.name == name || pkg + "." + value.sig.name == name {
-                    return value
+                    return result.ok(value)
                 }
             }
             _ : (),
@@ -3676,25 +3702,25 @@ func find_function_in_source_graph(source_file source, string name, string[] vis
     ui := 0
     for ui < std.prelude.len(source.uses) {
         dep_result := load_source_graph_for_use(source.uses[ui].path)
-        if dep_result.is_err() {
-            return dep_result.unwrap_err()
+        if source_graph_is_err(dep_result) {
+            return result.err(source_graph_error(dep_result))
         }
-        found := find_function_in_source_graph(dep_result.unwrap(), name, visited)
-        if found.is_ok() {
+        found := find_function_in_source_graph(source_graph_value(dep_result), name, seen)
+        if !function_result_is_err(found) {
             return found
         }
         ui = ui + 1
     }
-    backend_error { message: "backend error: unknown function " + name }
+    return result.err(backend_error { message: "backend error: unknown function " + name })
 }
 
 func execute_block(block_expr block, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     local_env := copy_bindings(env)
     result := execute_block_in_place(block, source, local_env, writes, runtime)
-    if result.is_err() {
-        result.unwrap_err()
+    if value_result_is_err(result) {
+        value_result_error(result)
     }
-    result.unwrap()
+    value_result_value(result)
 }
 
 func execute_block_in_place(block_expr block, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
@@ -3711,13 +3737,13 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
             _ : (),
         }
         stmt_result := execute_stmt(block.statements[si], source, env, writes, runtime)
-        if stmt_result.is_err() {
-            err := stmt_result.unwrap_err()
+        if unit_result_is_err(stmt_result) {
+            err := unit_result_error(stmt_result)
             if is_panic_error(err) {
                 run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
-                if run_deferred.is_err() {
+                if unit_result_is_err(run_deferred) {
                     cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                    return run_deferred.unwrap_err()
+                    return unit_result_error(run_deferred)
                 }
                 if control_panic_is_active(env) {
                     cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
@@ -3730,13 +3756,13 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
             return err
         }
         schedule_step := run_sroutine_scheduler_step(source, env, writes, runtime)
-        if schedule_step.is_err() {
-            err := schedule_step.unwrap_err()
+        if unit_result_is_err(schedule_step) {
+            err := unit_result_error(schedule_step)
             if is_panic_error(err) {
                 run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
-                if run_deferred.is_err() {
+                if unit_result_is_err(run_deferred) {
                     cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                    return run_deferred.unwrap_err()
+                    return unit_result_error(run_deferred)
                 }
                 if control_panic_is_active(env) {
                     cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
@@ -3759,13 +3785,13 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
     switch block.final_expr {
         option.some(expr) : {
             final_result := eval_expr(expr, source, env, writes, runtime)
-            if final_result.is_err() {
-                err := final_result.unwrap_err()
+            if value_result_is_err(final_result) {
+                err := value_result_error(final_result)
                 if is_panic_error(err) {
                     run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
-                    if run_deferred.is_err() {
+                    if unit_result_is_err(run_deferred) {
                         cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                        return run_deferred.unwrap_err()
+                        return unit_result_error(run_deferred)
                     }
                     if control_panic_is_active(env) {
                         cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
@@ -3777,44 +3803,45 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
                 cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
                 return err
             }
-            final_value = final_result.unwrap()
+            final_value = value_result_value(final_result)
         }
         option.none : (),
     }
     run_deferred := execute_deferred(deferred, source, env, writes, runtime, "")
-    if run_deferred.is_err() {
+    if unit_result_is_err(run_deferred) {
         cleanup_scope_owned_values(env, local_start, final_value, runtime)
-        return run_deferred.unwrap_err()
+        return unit_result_error(run_deferred)
     }
     schedule_flush := run_sroutine_scheduler_flush(source, env, writes, runtime)
-    if schedule_flush.is_err() {
+    if unit_result_is_err(schedule_flush) {
         cleanup_scope_owned_values(env, local_start, final_value, runtime)
-        return schedule_flush.unwrap_err()
+        return unit_result_error(schedule_flush)
     }
     cleanup_scope_owned_values(env, local_start, final_value, runtime)
-    final_value
+    return result.ok(final_value)
 }
 
-func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
-    switch stmt {
+func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[(), backend_error] {
+    return switch stmt {
         stmt.let(value) : {
             expr_result := eval_expr(value.value, source, env, writes, runtime)
-            if expr_result.is_err() {
-                return expr_result.unwrap_err()
+            if value_result_is_err(expr_result) {
+                return result.err(value_result_error(expr_result))
             }
             env.push(binding {
-                name: value.name, value: expr_result.unwrap()
+                name: value.name, value: value_result_value(expr_result)
             })
+            result.ok(())
         }
         stmt.assign(value) : {
             expr_result := eval_expr(value.value, source, env, writes, runtime)
-            if expr_result.is_err() {
-                return expr_result.unwrap_err()
+            if value_result_is_err(expr_result) {
+                return result.err(value_result_error(expr_result))
             }
-            replacement := expr_result.unwrap()
+            replacement := value_result_value(expr_result)
             index := find_binding_index(env, value.name)
             if index < 0 {
-                return backend_error { message: "backend error: unknown name " + value.name }
+                return result.err(backend_error { message: "backend error: unknown name " + value.name })
             }
             replacement_id := -1
             switch replacement {
@@ -3825,72 +3852,77 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
             env.set(index, binding {
                 name: value.name, value: replacement
             })
-            ()
+            result.ok(())
         }
-        stmt.increment(value) : {
-            index := find_binding_index(env, value.name)
+        stmt.increment(inc) : {
+            index := find_binding_index(env, inc.name)
             if index < 0 {
-                return backend_error { message: "backend error: unknown name " + value.name }
+                return result.err(backend_error { message: "backend error: unknown name " + inc.name })
             }
-            current := env.get(index).unwrap().value
-            switch current {
+            switch env.get(index).unwrap().value {
                 value.int(number) : {
-                    env.set(index, binding {
-                        name: value.name, value value.int(number + 1)
+                    env.set(find_binding_index(env, inc.name), binding {
+                        name: inc.name, value: value.int(number + 1)
                     })
-                    ()
+                    result.ok(())
                 }
-                _ : backend_error { message: "backend error: increment expects int for " + value.name }
+                _ : result.err(backend_error { message: "backend error: increment expects int for " + inc.name })
             }
         }
-        stmt.c_for(value) : execute_c_for(value, source, env, writes, runtime)
+        stmt.c_for(value) : {
+            c_for_result := execute_c_for_result(value, source, env, writes, runtime)
+            if unit_result_is_err(c_for_result) {
+                return result.err(unit_result_error(c_for_result))
+            }
+            result.ok(())
+        }
         stmt.return(ret_stmt) : {
             returned := value.unit(unit_value {})
             switch ret_stmt.value {
                 option.some(expr_value) : {
                     expr_result := eval_expr(expr_value, source, env, writes, runtime)
-                    if expr_result.is_err() {
-                        return expr_result.unwrap_err()
+                    if value_result_is_err(expr_result) {
+                        return result.err(value_result_error(expr_result))
                     }
-                    returned = expr_result.unwrap()
+                    returned = value_result_value(expr_result)
                 }
                 option.none : ()
             }
             set_control(env, control_return_active, value.bool(true))
             set_control(env, control_return_value, returned)
-            ()
+            result.ok(())
         }
         stmt.expr(value) : {
             expr_result := eval_expr(value.expr, source, env, writes, runtime)
-            if expr_result.is_err() {
-                return expr_result.unwrap_err()
+            if value_result_is_err(expr_result) {
+                return result.err(value_result_error(expr_result))
             }
-            ()
+            result.ok(())
         }
-        stmt.defer(_) : ()
-        stmt.sroutine(value) : execute_sroutine_stmt(value, source, env, writes, runtime)
+        stmt.defer(_) : result.ok(())
+        stmt.sroutine(value) : execute_sroutine_stmt_result(value, source, env, writes, runtime)
     }
 }
 
-func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
-    switch value.expr {
+func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[(), backend_error] {
+    return switch value.expr {
         expr.call(call_expr) : {
             callee_result := eval_expr(call_expr.callee.value, source, env, writes, runtime)
-            if callee_result.is_err() {
-                return callee_result.unwrap_err()
+            if value_result_is_err(callee_result) {
+                return result.err(value_result_error(callee_result))
             }
-            fn_name := function_name_from_value(callee_result.unwrap())
+            fn_name := function_name_from_value(value_result_value(callee_result))
             if fn_name == "" {
-                return backend_error { message: "backend error: sroutine expects function call target" }
+                return result.err(backend_error { message: "backend error: sroutine expects function call target" })
             }
             arg_values := value[]()
             ai := 0
             for ai < std.prelude.len(call_expr.args) {
                 arg_result := eval_expr(call_expr.args[ai], source, env, writes, runtime)
-                if arg_result.is_err() {
-                    return arg_result.unwrap_err()
+                if value_result_is_err(arg_result) {
+                    return result.err(value_result_error(arg_result))
                 }
-                arg_values = append(arg_values, arg_result.unwrap())
+                arg_values = append(arg_values, value_result_value(arg_result))
                 ai = ai + 1
             }
             runtime.runq.push(sroutine_task {
@@ -3898,9 +3930,9 @@ func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] en
             })
             runtime.sroutine_scheduled = runtime.sroutine_scheduled + 1
             runtime.sroutine_yields = runtime.sroutine_yields + 1
-            return
+            return result.ok(())
         }
-        _ : backend_error { message: "backend error: sroutine expects a call expression" },
+        _ : result.err(backend_error { message: "backend error: sroutine expects a call expression" }),
     }
 }
 
@@ -3911,18 +3943,18 @@ func function_name_from_value(value target) string {
     }
 }
 
-func execute_c_for(c_for_stmt value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
+func execute_c_for(c_for_stmt value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[(), backend_error] {
     loop_env := copy_bindings(env)
     init_result := execute_stmt(value.init.value, source, loop_env, writes, runtime)
-    if init_result.is_err() {
-        init_result.unwrap_err()
+    if unit_result_is_err(init_result) {
+        return result.err(unit_result_error(init_result))
     }
     for true {
         cond_result := eval_expr(value.condition, source, loop_env, writes, runtime)
-        if cond_result.is_err() {
-            cond_result.unwrap_err()
+        if value_result_is_err(cond_result) {
+            return result.err(value_result_error(cond_result))
         }
-        cond_value := cond_result.unwrap()
+        cond_value := value_result_value(cond_result)
         switch cond_value {
             value.bool(flag) : {
                 if !flag {
@@ -3932,40 +3964,50 @@ func execute_c_for(c_for_stmt value, source_file source, binding[] env, write_op
             _ : backend_error { message: "backend error: for condition must be bool" },
         }
         body_result := execute_block_in_place(value.body, source, loop_env, writes, runtime)
-        if body_result.is_err() {
-            body_result.unwrap_err()
+        if value_result_is_err(body_result) {
+            return result.err(value_result_error(body_result))
         }
         step_result := execute_stmt(value.step.value, source, loop_env, writes, runtime)
-        if step_result.is_err() {
-            step_result.unwrap_err()
+        if unit_result_is_err(step_result) {
+            return result.err(unit_result_error(step_result))
         }
     }
     propagate_bindings(env, loop_env)
-    ()
+    return result.ok(())
 }
 
-func eval_expr(expr expr, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    switch expr {
-        expr.int(value) : value.int(parse_int_literal(value.value)),
-        expr.string(value) : value.string(decode_string_literal(value.value)),
-        expr.bool(value) : value.bool(value.value),
-        expr.name(value) : lookup_name_or_function(env, source, value.name),
+func execute_c_for_result(c_for_stmt value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[(), backend_error] {
+    return execute_c_for(value, source, env, writes, runtime)
+}
+
+func eval_expr(expr expr, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
+    return switch expr {
+        expr.int(int_expr) : result.ok(value.int(parse_int_literal(int_expr.value))),
+        expr.string(string_expr) : result.ok(value.string(decode_string_literal(string_expr.value))),
+        expr.bool(bool_expr) : result.ok(value.bool(bool_expr.value)),
+        expr.name(value) : {
+            name_result := lookup_name_or_function(env, source, value.name)
+            if value_result_is_err(name_result) {
+                return result.err(value_result_error(name_result))
+            }
+            result.ok(value_result_value(name_result))
+        }
         expr.binary(value) : eval_binary(value, source, env, writes, runtime),
         expr.call(value) : eval_call(value, source, env, writes, runtime),
         expr.if(value) : eval_if_expr(value, source, env, writes, runtime),
         expr.while(value) : eval_while_expr(value, source, env, writes, runtime),
         expr.block(value) : execute_block(value, source, env, writes, runtime),
-        expr.for(_) : backend_error { message: "backend error: for expressions are not supported in the mvp backend" },
-        expr.switch(_) : backend_error { message: "backend error: switch expressions are not supported in the mvp backend" },
-        expr.borrow(_) : backend_error { message: "backend error: borrow expressions are not supported in the mvp backend" },
+        expr.for(_) : result.err(backend_error { message: "backend error: for expressions are not supported in the mvp backend" }),
+        expr.switch(_) : result.err(backend_error { message: "backend error: switch expressions are not supported in the mvp backend" }),
+        expr.borrow(_) : result.err(backend_error { message: "backend error: borrow expressions are not supported in the mvp backend" }),
         expr.member(value) : eval_member_expr(value, source, env, writes, runtime),
         expr.index(value) : eval_index_expr(value, source, env, writes, runtime),
-        expr.array(_) : backend_error { message: "backend error: array literals are not supported in the mvp backend" },
+        expr.array(_) : result.err(backend_error { message: "backend error: array literals are not supported in the mvp backend" }),
         expr.map(value) : eval_map_literal(value, source, env, writes, runtime),
     }
 }
 
-func eval_binary(binary_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_binary(binary_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     left_result := eval_expr(value.left.value, source, env, writes, runtime)
     if left_result.is_err() {
         left_result.unwrap_err()
@@ -3994,7 +4036,7 @@ func eval_binary(binary_expr value, source_file source, binding[] env, write_op[
     }
 }
 
-func eval_call(call_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_call(call_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     switch value.resolved_callee {
         option.some(resolved) : {
             arg_values := value[]()
@@ -4187,8 +4229,8 @@ func release_owned_value(value candidate, runtime_state runtime, int keep_id) ()
     }
 }
 
-func eval_member_expr(member member_expr, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    target_result := eval_expr(member.target.value, source, env, writes, runtime)
+func eval_member_expr(member_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+    target_result := eval_expr(member_expr.target.value, source, env, writes, runtime)
     if target_result.is_err() {
         return target_result.unwrap_err()
     }
@@ -4197,8 +4239,8 @@ func eval_member_expr(member member_expr, source_file source, binding[] env, wri
         return fail_value("backend error: member access is not supported for this value")
     }
     handle := handle_result.unwrap()
-    if member.member != "unwrap" {
-        return fail_value("backend error: unknown box member " + member.member)
+    if member_expr.member != "unwrap" {
+        return fail_value("backend error: unknown box member " + member_expr.member)
     }
     if !handle.live {
         return fail_value("backend error: use of released box")
@@ -4615,7 +4657,7 @@ func find_channel_index(runtime_state runtime, value v) int {
     -1
 }
 
-func execute_deferred(expr[] deferred, source_file source, binding[] env, write_op[] writes, runtime_state runtime, string panic_payload_text) ((), backend_error) {
+func execute_deferred(expr[] deferred, source_file source, binding[] env, write_op[] writes, runtime_state runtime, string panic_payload_text) result[(), backend_error] {
     if panic_payload_text != "" {
         set_control(env, control_panic_active, value.bool(true))
         set_control(env, control_panic_payload, value.string(panic_payload_text))
@@ -4640,7 +4682,7 @@ func execute_deferred(expr[] deferred, source_file source, binding[] env, write_
     ()
 }
 
-func run_sroutine_scheduler_step(source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
+func run_sroutine_scheduler_step(source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[(), backend_error] {
     if std.prelude.len(runtime.runq) == 0 {
         return
     }
@@ -4668,7 +4710,7 @@ func run_sroutine_scheduler_step(source_file source, binding[] env, write_op[] w
     ()
 }
 
-func run_sroutine_scheduler_flush(source_file source, binding[] env, write_op[] writes, runtime_state runtime) ((), backend_error) {
+func run_sroutine_scheduler_flush(source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[(), backend_error] {
     for std.prelude.len(runtime.runq) > 0 {
         step := run_sroutine_scheduler_step(source, env, writes, runtime)
         if step.is_err() {
@@ -4834,20 +4876,20 @@ func collect_const_bindings_in_source(source_file source, binding[] out, string[
     ()
 }
 
-func load_source_graph_for_use(string module_path) (source_file, backend_error) {
+func load_source_graph_for_use(string module_path) result[source_file, backend_error] {
     module_result := resolve_module_source_path(module_path)
     if module_result.is_none() {
-        return backend_error { message: "backend error: module resolver failed: " + module_path }
+        return result.err(backend_error { message: "backend error: module resolver failed: " + module_path })
     }
     dep_source_result := std.fs.read_to_string(module_result.unwrap())
     if dep_source_result.is_err() {
-        return backend_error { message: "backend error: failed to read module " + module_path + ": " + dep_source_result.unwrap_err().message }
+        return result.err(backend_error { message: "backend error: failed to read module " + module_path + ": " + dep_source_result.unwrap_err().message })
     }
     dep_combined, dep_parse_err := compile.internal.parser.syntax.parse_source(dep_source_result.unwrap())
     if dep_parse_err.message != "" {
-        return backend_error { message: "backend error: parse failed in module " + module_path + ": " + dep_parse_err.message }
+        return result.err(backend_error { message: "backend error: parse failed in module " + module_path + ": " + dep_parse_err.message })
     }
-    dep_combined
+    result.ok(dep_combined)
 }
 
 func eval_const_value_expr(expr value, binding[] const_env, int iota_value) (value, backend_error) {
@@ -4895,19 +4937,19 @@ func eval_const_value_expr(expr value, binding[] const_env, int iota_value) (val
     }
 }
 
-func lookup_name_or_function(binding[] env, source_file source, string name) (value, backend_error) {
+func lookup_name_or_function(binding[] env, source_file source, string name) result[value, backend_error] {
     if name == "nil" {
-        return value.unit(unit_value {})
+        return result.ok(value.unit(unit_value {}))
     }
     local := lookup_value(env, name)
-    if local.is_ok() {
-        return local
+    if !value_result_is_err(local) {
+        return result.ok(value_result_value(local))
     }
     fn_result := find_function(source, name)
-    if fn_result.is_ok() {
-        return value.fn_ref(name)
+    if !function_result_is_err(fn_result) {
+        return result.ok(value.fn_ref(name))
     }
-    backend_error { message: "backend error: unknown name " + name }
+    return result.err(backend_error { message: "backend error: unknown name " + name })
 }
 
 func eval_map_literal(map_literal value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
@@ -5045,12 +5087,12 @@ func eval_while_expr(while_expr value, source_file source, binding[] env, write_
     value.unit(unit_value {})
 }
 
-func lookup_value(binding[] env, string name) (value, backend_error) {
+func lookup_value(binding[] env, string name) result[value, backend_error] {
     index := find_binding_index(env, name)
     if index < 0 {
-        backend_error { message: "backend error: unknown name " + name }
+        return result.err(backend_error { message: "backend error: unknown name " + name })
     }
-    env[index].value
+    return result.ok(env[index].value)
 }
 
 func add_values(value left, value right) (value, backend_error) {
