@@ -1,5 +1,9 @@
 package compile.internal
 
+// Host intrinsic functions for string manipulation
+extern "intrinsic" func __host_char_at(string s, int index) string
+extern "intrinsic" func __host_slice(string s, int start, int end) string
+
 func compiler_number(int n) string {
     digits := "0123456789"
     if n < 10 { return __host_char_at(digits, n) }

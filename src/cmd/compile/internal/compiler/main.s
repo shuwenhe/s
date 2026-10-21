@@ -3,6 +3,13 @@ import (
     "compile.internal.semantic"
     "compile.internal.syntax"
 )
+
+// Host intrinsic functions for file I/O
+extern "intrinsic" func __host_read_to_string(string path) string
+extern "intrinsic" func __host_write_text_file(string path, string data) int
+extern "intrinsic" func __host_char_at(string s, int index) string
+extern "intrinsic" func __host_slice(string s, int start, int end) string
+
 func compiler_main(string[] args) int {
     if len(args) == 4 && args[1] == "--canonical-ast-check" {
         source := __host_read_to_string(args[2])
