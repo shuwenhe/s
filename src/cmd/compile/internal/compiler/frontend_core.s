@@ -58,6 +58,7 @@ struct compiler_state {
     int return_param
     int[] function_starts
     int[] function_param_kinds
+    string[] function_param_names
     int[] function_param_structs
     int[] function_return_structs
     int[] function_observed_return_kinds

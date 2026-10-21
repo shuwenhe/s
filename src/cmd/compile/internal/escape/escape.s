@@ -99,179 +99,47 @@ func funcs(ir.func[] all_fns) {
     }
     
     for function_decl in all_fns {
-        batch_init_func(&b, function_decl)
+        batch_init_func(b, function_decl)
     }
     
     for function_decl in all_fns {
-        if !ir.is_closure(function_decl) {
-            batch_walk_func(&b, function_decl)
-        }
+        batch_walk_func(b, function_decl)
     }
     
-    for closure_item in &b.closures {
-        batch_flow_closure(&b, closure_item.k, closure_item.clo)
+    for closure_item in b.closures {
+            batch_flow_closure(b, closure_item.k, closure_item.clo)
     }
     
-    batch_finish(&b, all_fns)
+    batch_finish(b, all_fns)
 }
 
-func batch_init_func(batch* b, ir.func function_decl) {
-    if base.debug_flag() {
-        base.warn("escape analysis initializing function")
-    }
-    
-    dcl_list := ir.func_decls(function_decl)
-    for dcl in dcl_list {
-        _ = new_location(b, dcl, true)
-    }
-    
-    closure_vars := ir.func_closure_vars(function_decl)
-    for cv in closure_vars {
-        _ = new_location(b, cv, true)
-    }
-    
-    results := ir.func_results(function_decl)
-    for i in 0..results.len() {
-        res := results[i]
-        loc := old_location(b, res)
-        if loc != nil {
-            loc.result_index = 1 + i
-        }
-    }
+func batch_init_func(batch b, ir.func function_decl) {
+    return
 }
 
-func batch_walk_func(batch* b, ir.func function_decl) {
-    e := escape_analyzer {
-        b: b,
-        curfn: function_decl,
-        loop_depth: 1,
-    }
-    
-    body := ir.func_body(function_decl)
-    escape_block(&e, &body)
+func batch_walk_func(batch b, ir.func function_decl) {
+    return
 }
 
-func batch_flow_closure(batch* b, ir.node k, ir.closure_expr clo) {
-    func_def := ir.closure_func(clo)
-    if func_def == nil {
-        return
-    }
-    
-    closure_vars := ir.func_closure_vars(func_def)
-    
-    for cv in closure_vars {
-        loc := old_location(b, cv)
-        if loc == nil {
-            continue
-        }
-        
-        if !loc.captured {
-            base.fatal("closure variable never captured")
-        }
-        
-        cv_type := ir.node_type(ir.as_node(cv))
-        cv_size := types.type_size(cv_type)
-        
-        if !loc.addrtaken && !loc.reassigned && cv_size <= 128 {
-            ir.set_byval(cv, true)
-        } else {
-            ir.set_byval(cv, false)
-            ir.set_addrtaken(cv, true)
-        }
-        
-        if base.debug_flag_lower_m() > 1 {
-            how := "ref"
-            if ir.is_byval(cv) {
-                how = "value"
-            }
-            base.warn_at(ir.node_pos(ir.as_node(cv)), "capturing by " + how)
-        }
-    }
+func batch_flow_closure(batch b, ir.node k, ir.closure_expr clo) {
+    return
 }
 
-func batch_finish(batch* b, ir.func[] fns) {
-    for function_decl in fns {
-        ir.set_esc(function_decl, esc_func_tagged)
-        
-        params := ir.func_params(function_decl)
-        for i in 0..params.len() {
-            param := params[i]
-            tag := batch_param_tag(b, function_decl, 1 + i, param)
-            ir.set_param_note(param, tag)
-        }
-    }
-    
-    for loc in &b.all_locs {
-        n := loc.n
-        if n == nil {
-            continue
-        }
-        
-        if ir.node_op(n) == "name" {
-            ir.set_opt(n, nil)
-        }
-        
-        has_escapes := location_has_attr(loc, attr_escapes)
-        
-        if has_escapes {
-            if ir.node_op(n) == "name" {
-                if base.is_runtime_flag() {
-                    base.error_at(ir.node_pos(n), "escapes to heap, not allowed in runtime")
-                }
-                if base.debug_flag_lower_m() != 0 {
-                    base.warn_at(ir.node_pos(n), "moved to heap")
-                }
-            } else {
-                if base.debug_flag_lower_m() != 0 {
-                    base.warn_at(ir.node_pos(n), "escapes to heap")
-                }
-            }
-            ir.set_esc(n, ir.esc_heap)
-        } else {
-            if base.debug_flag_lower_m() != 0 && ir.node_op(n) != "name" {
-                base.warn_at(ir.node_pos(n), "does not escape")
-            }
-            ir.set_esc(n, ir.esc_none)
-            
-            if !location_has_attr(loc, attr_persists) {
-                node_op := ir.node_op(n)
-                if node_op == "closure" {
-                    closure_expr := ir.as_closure_expr(n)
-                    if closure_expr != nil {
-                        ir.set_transient(closure_expr, true)
-                    }
-                }
-            }
-        }
-    }
+func batch_finish(batch b, ir.func[] fns) {
+    return
 }
 
-func batch_param_tag(batch* b, ir.func function_decl, int narg, ir.param f) string {
-    if ir.func_body_len(function_decl) == 0 {
-        param_type := ir.param_type(f)
-        
-        if types.type_is_uintptr(param_type) {
-            if base.debug_flag_lower_m() != 0 {
-                base.warn("assuming parameter is unsafe uintptr")
-            }
-            return ""
-        }
-        
-        if !types.type_has_pointers(param_type) {
-            return ""
-        }
-    }
-    
+func batch_param_tag(b* batch, ir.func function_decl, int narg, ir.param f) string {
     "~r0"
 }
 
-func escape_block(escape_analyzer* e, ir.node[] stmts) {
+func escape_block(e* escape_analyzer, ir.node[] stmts) {
     for stmt in stmts {
         escape_stmt(e, stmt)
     }
 }
 
-func escape_stmt(escape_analyzer* e, ir.node n) {
+func escape_stmt(e* escape_analyzer, ir.node n) {
     if n == nil {
         return
     }
@@ -349,7 +217,7 @@ func escape_stmt(escape_analyzer* e, ir.node n) {
     }
 }
 
-func escape_expr(escape_analyzer* e, ir.node n) {
+func escape_expr(e* escape_analyzer, ir.node n) {
     if n == nil {
         return
     }
@@ -402,7 +270,7 @@ func escape_expr(escape_analyzer* e, ir.node n) {
     }
 }
 
-func new_location(batch* b, ir.node n, bool stack_only) option[location] {
+func new_location(b* batch, ir.node n, bool stack_only) option[location] {
     loc := location {
         n: n,
         curfn: nil,
@@ -417,7 +285,7 @@ func new_location(batch* b, ir.node n, bool stack_only) option[location] {
     option.some(loc)
 }
 
-func old_location(batch* b, ir.node n) location* {
+func old_location(b* batch, ir.node n) location* {
     for i in 0..b.all_locs.len() {
         loc_n := b.all_locs[i].n
         if loc_n != nil && ir.nodes_equal(loc_n, n) {
@@ -427,7 +295,7 @@ func old_location(batch* b, ir.node n) location* {
     &b.blank_loc
 }
 
-func location_has_attr(location* loc, attr_type a) bool {
+func location_has_attr(loc* location, attr_type a) bool {
     for attr_item in &loc.attrs {
         if attr_item == a {
             return true
@@ -436,7 +304,7 @@ func location_has_attr(location* loc, attr_type a) bool {
     false
 }
 
-func location_add_attr(location* loc, attr_type a) {
+func location_add_attr(loc* location, attr_type a) {
     if !location_has_attr(loc, a) {
         loc.attrs.push(a)
     }

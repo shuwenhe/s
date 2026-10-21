@@ -1,12 +1,5 @@
 package compile.internal.escape
 
-enum escape_level {
-    escape_none,
-    escape_func,
-    escape_global,
-    escape_heap,
-}
-
 struct leaks {
     int heap
     int result
