@@ -233,7 +233,7 @@ func mir_build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) m
             point := mir_point_id(points, graph.blocks[block_index].id, stmt_index)
             switch graph.blocks[block_index].statements[stmt_index] {
                 mir_statement.mir_borrow(borrow_stmt) : {
-                    ref_id := mir_ownership_ref_id(&facts, borrow_stmt.ref_name)
+                    ref_id := mir_ownership_ref_id(facts, borrow_stmt.ref_name)
                     loan_id := facts.input.loan_count
                     facts.input.loan_count = facts.input.loan_count + 1
                     facts.input.loan_points = append(facts.input.loan_points, mir_add_point_value(0, point))
@@ -246,12 +246,12 @@ func mir_build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) m
                     facts.input.region_points[ref_id] = mir_add_point_value(facts.input.region_points[ref_id], point)
                 }
                 mir_statement.ref_use(use_stmt) : {
-                    ref_id := mir_ownership_ref_id(&facts, use_stmt.ref_name)
+                    ref_id := mir_ownership_ref_id(facts, use_stmt.ref_name)
                     facts.input.region_points[ref_id] = mir_add_point_value(facts.input.region_points[ref_id], point)
                 }
                 mir_statement.ref_assign(assign_stmt) : {
-                    target_ref := mir_ownership_ref_id(&facts, assign_stmt.target_ref)
-                    source_ref := mir_ownership_ref_id(&facts, assign_stmt.source_ref)
+                    target_ref := mir_ownership_ref_id(facts, assign_stmt.target_ref)
+                    source_ref := mir_ownership_ref_id(facts, assign_stmt.source_ref)
                     facts.input.ref_loans[target_ref] = facts.input.ref_loans[source_ref]
                     facts.input.outlives_from = append(facts.input.outlives_from, source_ref)
                     facts.input.outlives_to = append(facts.input.outlives_to, target_ref)
@@ -318,7 +318,7 @@ func mir_place_from_fields(string root, string[] fields) mir_place {
     }
 }
 
-func mir_ownership_ref_id(facts* mir_ownership_facts, string name) int {
+func mir_ownership_ref_id(mir_ownership_facts facts, string name) int {
     i := 0
     for i < len(facts.ref_names) {
         if facts.ref_names[i] == name { return i }
@@ -411,7 +411,7 @@ func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
 func dump_ownership_shadow_from_mir(mir_graph graph) string {
     points := mir_build_point_map(graph)
     facts := mir_build_ownership_facts_from_mir(graph, points)
-    analysis := compile.internal.ownership.analysis.analyze_ownership_liveness(facts.input)
+    analysis := compile.internal.mir.analyze_ownership_liveness(facts.input)
     out := "RealMIROwnershipShadow\n"
     out = out + "RealMIRFacts(point_count=" + std.prelude.to_string(facts.input.point_count) + ", refs=" + std.prelude.to_string(len(facts.ref_names)) + ", loans=" + std.prelude.to_string(facts.input.loan_count) + ", outlives=" + std.prelude.to_string(facts.input.outlives_count) + ")\n"
     i := 0
@@ -455,7 +455,7 @@ func lower_block_graph(string function_name, param[] params, block_expr block) m
     }
     index := 0
     for index < len(block.statements) {
-        stmt_text := join_text(s.dump_stmt(block.statements[index], indent(1)), " | ")
+        stmt_text := join_text(compile.internal.ast.dump_stmt(block.statements[index], indent(1)), " | ")
         args := string[]()
         args = append(args, stmt_text)
         statements.push(mir_statement.eval(mir_eval_stmt {
@@ -470,12 +470,12 @@ func lower_block_graph(string function_name, param[] params, block_expr block) m
         mir_append_ownership_semantics_from_expr(statements, block.final_expr.unwrap(), "")
     }
     mir_append_scope_drops(locals, statements, events)
-    borrow_result := compile.internal.borrow.borrow_check_events(events)
+    borrow_result := compile.internal.ownership.borrow.borrow_check_events(events)
     trace := string[]()
     trace_text := "block"
     index = 0
     for index < len(block.statements) {
-        stmt_trace := join_text(s.dump_stmt(block.statements[index], indent(1)), " | ")
+        stmt_trace := join_text(compile.internal.ast.dump_stmt(block.statements[index], indent(1)), " | ")
         trace_text = trace_text + " | " + indent(1) + stmt_trace
         index = index + 1
     }
@@ -951,7 +951,7 @@ func lower_block(block_expr block) string {
     text := "block"
     index := 0
     for index < len(block.statements) {
-        stmt_text := join_text(s.dump_stmt(block.statements[index], indent(1)), " | ")
+        stmt_text := join_text(compile.internal.ast.dump_stmt(block.statements[index], indent(1)), " | ")
         text = text + " | " + indent(1) + stmt_text
         index = index + 1
     }

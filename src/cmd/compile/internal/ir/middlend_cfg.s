@@ -34,6 +34,11 @@ struct loop_info {
     int[] exit_blocks
 }
 
+struct loop_info_result {
+    loop_info[] loops
+    int loop_id
+}
+
 func cfg_new(ir_function ir_func) control_flow_graph {
     cfg := control_flow_graph {
         function: ir_func, entry_block_id 0
@@ -214,28 +219,32 @@ func cfg_detect_loops(cfg* control_flow_graph) loop_info[] {
             target_id := block.successors[j]
 
             if target_id < cfg.blocks.len() && cfg.dominators[i][target_id] != 0 {
-
-                loop_id := cfg.find_or_create_loop(loops, target_id)
+                result := cfg_find_or_create_loop(loops, target_id)
+                loop_id := result.loop_id
                 loops[loop_id].back_edges = append(loops[loop_id].back_edges, i)
             }
         }
     }
 
-    loops
+    return loops
 }
 
-func cfg_find_or_create_loop(loop_info[] loops, int header_id) int {
+func cfg_find_or_create_loop(loop_info[] loops, int header_id) loop_info_result {
     for i := 0; i < loops.len(); i = i + 1 {
         if loops[i].header_id == header_id {
-            return i
+            return loop_info_result {
+                loops: loops, loop_id: i
+            }
         }
     }
 
     new_loop := loop_info {
-        loop_id: loops.len(), header_id header_id
+        loop_id: loops.len(), header_id: header_id
     }
-    loops = append(loops, new_loop)
-    loops.len() - 1
+    updated := append(loops, new_loop)
+    return loop_info_result {
+        loops: updated, loop_id: len(updated) - 1
+    }
 }
 
 func cfg_dump(cfg* control_flow_graph) string {
@@ -243,21 +252,21 @@ func cfg_dump(cfg* control_flow_graph) string {
 
     for i := 0; i < cfg.blocks.len(); i = i + 1 {
         block := cfg.blocks[i]
-        result = result + "Block " + block.block_id + " (" + block.label + "):\n"
+        result = result + "Block " + to_string(block.block_id) + " (" + block.label + "):\n"
 
         result = result + "  Predecessors: "
         for j := 0; j < block.predecessors.len(); j = j + 1 {
-            result = result + block.predecessors[j] + " "
+            result = result + to_string(block.predecessors[j]) + " "
         }
         result = result + "\n"
 
         result = result + "  Successors: "
         for j := 0; j < block.successors.len(); j = j + 1 {
-            result = result + block.successors[j] + " "
+            result = result + to_string(block.successors[j]) + " "
         }
         result = result + "\n"
 
-        result = result + "  Instructions: " + block.instructions.len() + "\n"
+        result = result + "  Instructions: " + to_string(block.instructions.len()) + "\n"
     }
 
     result

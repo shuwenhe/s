@@ -545,68 +545,58 @@ func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) expr_ir {
     return ir_ast.expr_ir.name("unit")
 }
 
-func stmt_let_to_expr(var_stmt var_stmt, const_rewrite_entry[] entries) ir_ast.expr_ir {
+func stmt_let_to_expr(var_stmt var_stmt, const_rewrite_entry[] entries) expr_ir {
     args := ir_ast.expr_ir[]()
     return ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.let", args args })
 }
 
-func stmt_assign_to_expr(assign_stmt value, const_rewrite_entry[] entries) ir_ast.expr_ir {
+func stmt_assign_to_expr(assign_stmt value, const_rewrite_entry[] entries) expr_ir {
     args := ir_ast.expr_ir[]()
-    args.push(ir_ast.expr_ir.string(value.name))
-    args.push(convert_expr(value.value, entries))
-    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.assign", args args })
+    return ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.assign", args args })
 }
 
-func stmt_increment_to_expr(increment_stmt value) ir_ast.expr_ir {
+func stmt_increment_to_expr(increment_stmt value) expr_ir {
     args := ir_ast.expr_ir[]()
-    args.push(ir_ast.expr_ir.string(value.name))
-    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.increment", args args })
+    return ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.increment", args args })
 }
 
-func stmt_expr_to_expr(expr_stmt value, const_rewrite_entry[] entries) ir_ast.expr_ir {
+func stmt_expr_to_expr(expr_stmt value, const_rewrite_entry[] entries) expr_ir {
     args := ir_ast.expr_ir[]()
-    args.push(convert_expr(value.expr, entries))
-    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.expr", args args })
+    return ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.expr", args args })
 }
 
-func stmt_defer_to_expr(defer_stmt value, const_rewrite_entry[] entries) ir_ast.expr_ir {
+func stmt_defer_to_expr(defer_stmt value, const_rewrite_entry[] entries) expr_ir {
     args := ir_ast.expr_ir[]()
-    args.push(convert_expr(value.expr, entries))
-    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.defer", args args })
+    return ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.defer", args args })
 }
 
-func stmt_sroutine_to_expr(sroutine_stmt value, const_rewrite_entry[] entries) ir_ast.expr_ir {
+func stmt_sroutine_to_expr(sroutine_stmt value, const_rewrite_entry[] entries) expr_ir {
     args := ir_ast.expr_ir[]()
-    args.push(convert_expr(value.expr, entries))
-    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.sroutine", args args })
+    return ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.sroutine", args args })
 }
 
-func stmt_c_for_to_expr(c_for_stmt value, const_rewrite_entry[] entries) ir_ast.expr_ir {
+func stmt_c_for_to_expr(c_for_stmt value, const_rewrite_entry[] entries) expr_ir {
     args := ir_ast.expr_ir[]()
-    args.push(stmt_to_expr(value.init.value, entries))
-    args.push(convert_expr(value.condition, entries))
-    args.push(stmt_to_expr(value.step.value, entries))
-    args.push(block_to_expr(value.body, entries))
-    ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.c_for", args args })
+    return ir_ast.expr_ir.call(ir_ast.call_expr { callee: "stmt.c_for", args args })
 }
 
-func block_to_expr(block_expr block, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
-    ir_ast.expr_ir.block(convert_block(block, const_entries))
+func block_to_expr(block_expr block, const_rewrite_entry[] const_entries) expr_ir {
+    return ir_ast.expr_ir.block(convert_block(block, const_entries))
 }
 
-func array_to_expr(array_literal lit, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
+func array_to_expr(array_literal lit, const_rewrite_entry[] const_entries) expr_ir {
     items := ir_ast.expr_ir[]()
     i := 0
     for i < len(lit.items) {
         items = append(items, convert_expr(lit.items[i], const_entries))
         i = i + 1
     }
-    ir_ast.expr_ir.array(ir_ast.array_expr {
+    return ir_ast.expr_ir.array(ir_ast.array_expr {
         type_name: lit.type_text, items items,
     })
 }
 
-func map_to_expr(map_literal lit, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
+func map_to_expr(map_literal lit, const_rewrite_entry[] const_entries) expr_ir {
     entries := ir_ast.map_entry_expr[]()
     i := 0
     for i < len(lit.entries) {
@@ -616,7 +606,7 @@ func map_to_expr(map_literal lit, const_rewrite_entry[] const_entries) ir_ast.ex
         })
         i = i + 1
     }
-    ir_ast.expr_ir.map(ir_ast.map_expr {
+    return ir_ast.expr_ir.map(ir_ast.map_expr {
         type_name: lit.type_text, entries entries,
     })
 }
@@ -651,7 +641,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 entry_edges := mir_control_edge[]()
                 entry_edges = append(entry_edges, make_edge("then", 1))
                 entry_edges = append(entry_edges, make_edge("else", 2))
-                condition_text := substitute_const_text(s.dump_expr(if_expr.condition.value), const_entries)
+                condition_text := substitute_const_text(compile.internal.ast.dump_expr(if_expr.condition.value), const_entries)
                 branch_condition := option.some(mir_operand {
                     kind: "expr", value: condition_text, type_name: "bool",
                 })
@@ -663,7 +653,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 else_lines = append(else_lines, "if.else")
                 blocks = append(blocks, ir_make_block(2, "if.else", else_lines, "jump", vec1_edge("merge", 3)))
                 merge_lines := string[]()
-                merge_lines = append(merge_lines, "yield " + s.dump_expr(tail))
+                merge_lines = append(merge_lines, "yield " + compile.internal.ast.dump_expr(tail))
                 blocks = append(blocks, ir_make_block(3, "if.merge", merge_lines, "return", mir_control_edge[]()))
                 trace = append(trace, "control if -> blocks(entry, if.then, if.else, if.merge)")
                 return make_graph(function_name, blocks, trace, 0, 3)
@@ -671,7 +661,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
             expr.while(while_expr) : {
                 blocks = append(blocks, make_entry_block(0, "entry", stmt_texts, block.statements, "jump", vec1_edge("cond", 1)))
                 cond_lines := string[]()
-                condition_text := substitute_const_text(s.dump_expr(while_expr.condition.value), const_entries)
+                condition_text := substitute_const_text(compile.internal.ast.dump_expr(while_expr.condition.value), const_entries)
                 cond_lines = append(cond_lines, "while.cond " + condition_text)
                 while_condition := option.some(mir_operand {
                     kind: "expr", value: condition_text, type_name: "bool",
@@ -698,7 +688,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
                 blocks = append(blocks, ir_make_block(1, "switch.case0", vec1("switch.case0"), "jump", vec1_edge("merge", 4)))
                 blocks = append(blocks, ir_make_block(2, "switch.case1", vec1("switch.case1"), "jump", vec1_edge("merge", 4)))
                 blocks = append(blocks, ir_make_block(3, "switch.default", vec1("switch.default"), "jump", vec1_edge("merge", 4)))
-                blocks = append(blocks, ir_make_block(4, "switch.merge", vec1("yield " + substitute_const_text(s.dump_expr(tail), const_entries)), "return", mir_control_edge[]()))
+                blocks = append(blocks, ir_make_block(4, "switch.merge", vec1("yield " + substitute_const_text(compile.internal.ast.dump_expr(tail), const_entries)), "return", mir_control_edge[]()))
                 trace = append(trace, "control switch -> blocks(entry, switch.case0, switch.case1, switch.default, switch.merge)")
                 return make_graph(function_name, blocks, trace, 0, 4)
             }
@@ -718,7 +708,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
     }
     final_lines := clone_lines(stmt_texts)
     if block.final_expr.is_some() {
-        final_lines = append(final_lines, "yield " + substitute_const_text(s.dump_expr(block.final_expr.unwrap()), const_entries))
+        final_lines = append(final_lines, "yield " + substitute_const_text(compile.internal.ast.dump_expr(block.final_expr.unwrap()), const_entries))
     } else {
         final_lines = append(final_lines, "yield unit")
     }
@@ -732,9 +722,9 @@ func dump_expr_stmt(stmt s, const_rewrite_entry[] const_entries) string {
         stmt.assign(assign_stmt) : "assign " + assign_stmt.name,
         stmt.increment(increment_stmt) : "increment " + increment_stmt.name,
         stmt.return(return_stmt) : "return",
-        stmt.expr(expr_stmt) : "expr " + substitute_const_text(s.dump_expr(expr_stmt.expr), const_entries),
-        stmt.defer(defer_stmt) : "defer " + substitute_const_text(s.dump_expr(defer_stmt.expr), const_entries),
-        stmt.sroutine(sroutine_stmt) : "sroutine " + substitute_const_text(s.dump_expr(sroutine_stmt.expr), const_entries),
+        stmt.expr(expr_stmt) : "expr " + substitute_const_text(compile.internal.ast.dump_expr(expr_stmt.expr), const_entries),
+        stmt.defer(defer_stmt) : "defer " + substitute_const_text(compile.internal.ast.dump_expr(defer_stmt.expr), const_entries),
+        stmt.sroutine(sroutine_stmt) : "sroutine " + substitute_const_text(compile.internal.ast.dump_expr(sroutine_stmt.expr), const_entries),
         stmt.c_for(c_for_stmt) : "c_for",
     }
 }
@@ -785,7 +775,7 @@ func render_const_folded_entry(string name, expr value, const_rewrite_entry[] ou
         }
     }
     const_rewrite_entry {
-        name: name, expr_text substitute_const_text(s.dump_expr(value), out),
+        name: name, expr_text substitute_const_text(compile.internal.ast.dump_expr(value), out),
         value_kind: "unknown", int_value 0,
         string_value: "", bool_value false,
     }
@@ -932,7 +922,7 @@ func lookup_const_expr_text(const_rewrite_entry[] entries, string name) string {
     entry.unwrap().expr_text
 }
 
-func resolve_const_name_expr(string name, const_rewrite_entry[] const_entries) ir_ast.expr_ir {
+func resolve_const_name_expr(string name, const_rewrite_entry[] const_entries) expr_ir {
     entry := lookup_const_entry(const_entries, name)
     if entry.is_none() {
         return ir_ast.expr_ir.name(name)
