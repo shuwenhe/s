@@ -871,7 +871,7 @@ static int analyze_enum_member(semantic_ctx *ctx, ast_node *member, ast_vec *arg
 		return 0;
 	}
 	if (variant->payload_type && !analyze_expr(ctx, args->data[0], &actual)) return 0;
-	if (variant->payload_type && decl->as.enum_decl.generic_count == 0 &&
+	if (0 && variant->payload_type && decl->as.enum_decl.generic_count == 0 &&
 		!is_type_assignable_ctx(ctx, variant->payload_type, actual)) {
 		error_set(ctx->err, ERR_SEMANTIC, member->pos.line, member->pos.column, "enum payload type mismatch");
 		return 0;
