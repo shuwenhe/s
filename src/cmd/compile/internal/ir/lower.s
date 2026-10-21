@@ -1,6 +1,7 @@
 package compile.internal.ir.lower
 
 import (
+    "compile.internal.ir.ast"
     "compile.internal.mir"
     "s"
     "std"
@@ -24,7 +25,7 @@ func from_syntax(source_file src) ir_ast.package_ir {
         switch it {
             item.function(function_decl) : {
                 fd := convert_function(function_decl, const_entries)
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir.func(fd))
+                pkg.decls = append(pkg.decls, ir_ast.decl_ir.function(fd))
             }
             item.const(const_decl) : {
                 value_text := lookup_const_expr_text(const_entries, const_decl.name)
@@ -65,7 +66,7 @@ func validate_lowering_contract(ir_ast.package_ir pkg) ((), string) {
     i := 0
     for i < len(pkg.decls) {
         switch pkg.decls[i] {
-            ir_ast.decl_ir.func(fd) : {
+            ir_ast.decl_ir.function(fd) : {
                 if fd.body.is_some() {
                     checked := validate_block_contract(fd.body.unwrap())
                     if checked.is_err() {

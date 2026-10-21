@@ -277,7 +277,7 @@ func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
     i := 0
     for i < len(pkg.decls) {
         switch pkg.decls[i] {
-            ir_ast.decl_ir.func(fd) : {
+            ir_ast.decl_ir.function(fd) : {
                 if fd.name == "main" && fd.body.is_some() {
                     body := fd.body.unwrap()
                     if body.final_expr.is_some() {
@@ -303,7 +303,7 @@ func collect_ir_package_features(ir_ast.package_ir pkg) int {
     i := 0
     for i < len(pkg.decls) {
         switch pkg.decls[i] {
-            ir_ast.decl_ir.func(fd) : {
+            ir_ast.decl_ir.function(fd) : {
                 if fd.name == "main" && fd.body.is_some() {
                     body := fd.body.unwrap()
                     j := 0
