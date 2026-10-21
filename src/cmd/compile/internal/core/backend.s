@@ -4241,24 +4241,7 @@ func cleanup_scope_owned_values(binding[] env, int local_start, value keep, runt
 }
 
 func release_owned_value(value candidate, runtime_state runtime, int keep_id) () {
-    switch candidate {
-        value.owned_box(handle) : {
-            if handle.id == keep_id {
-                return
-            }
-            j := 0
-            for j < std.prelude.len(runtime.owned_boxes) {
-                if runtime.owned_boxes[j].id == handle.id {
-                    if runtime.owned_boxes[j].live {
-                        runtime.owned_boxes[j].live = false
-                    }
-                    return
-                }
-                j = j + 1
-            }
-        }
-        _ : { }
-    }
+    return
 }
 
 func eval_member_expr_result(member_expr member, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {

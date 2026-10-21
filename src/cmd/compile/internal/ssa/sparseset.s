@@ -57,7 +57,13 @@ func sparse_set_remove(sparse_set s, int x) sparse_set {
         last := s.dense[len(s.dense) - 1]
         s.dense[i] = last
         s.sparse[last] = i
-        s.dense.pop()
+        trimmed := int[]()
+        j := 0
+        for j < len(s.dense) - 1 {
+            trimmed = append(trimmed, s.dense[j])
+            j = j + 1
+        }
+        s.dense = trimmed
     }
     s
 }
@@ -67,7 +73,13 @@ func sparse_set_pop(sparse_set s) int_pair {
         return make_int_pair(0, 0)
     }
     x := s.dense[len(s.dense) - 1]
-    s.dense.pop()
+    trimmed := int[]()
+    j := 0
+    for j < len(s.dense) - 1 {
+        trimmed = append(trimmed, s.dense[j])
+        j = j + 1
+    }
+    s.dense = trimmed
     make_int_pair(x, 1)
 }
 

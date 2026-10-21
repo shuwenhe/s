@@ -203,7 +203,6 @@ func compiler_remove_duplicate_packages(string source) string {
             if !in_package_line {
                 if compiler_starts_with_trimmed(line, "package ") {
                     if seen_package {
-                        // Skip this package line
                         in_package_line = true
                         line_start = i + 1
                         i = i + 1
@@ -213,7 +212,6 @@ func compiler_remove_duplicate_packages(string source) string {
                     }
                 }
             } else if compiler_starts_with_trimmed(line, "package ") || (line != "" && !compiler_starts_with_trimmed(line, "//")) {
-                // End of skipped package section
                 if !compiler_starts_with_trimmed(line, "package ") {
                     in_package_line = false
                     line_start = line_start - 1

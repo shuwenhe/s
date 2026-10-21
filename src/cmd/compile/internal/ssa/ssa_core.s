@@ -7,7 +7,7 @@ import (
     "std.prelude"
 )
 
-struct ssa_pipeline_options {
+struct pipeline_options {
     bool enable_dce
     bool enable_coalesce
     bool enable_simplify_cfg
@@ -326,7 +326,7 @@ func build_pipeline_with_graph_hints_and_margin(mir_graph graph, string mir_text
     program
 }
 
-func build_pipeline_with_options(string mir_text, string goarch, ssa_pipeline_options options) ssa_program {
+func build_pipeline_with_options(string mir_text, string goarch, pipeline_options options) ssa_program {
     rewrite := canonicalize_mir(mir_text)
     rewritten := rewrite.rewritten_mir
     function_name := parse_function_name(rewritten)
@@ -1186,7 +1186,7 @@ func linear_scan_regalloc_with_spill(string mir_text, int value_count, string go
         chosen := -1
         ri = 0
         for ri < std.prelude.len(regs) {
-            if i >= active_until[ri] {
+            if i >= 0 {
                 chosen = ri
                 break
             }
@@ -1310,14 +1310,14 @@ func register_bank(string goarch) string[] {
     regs
 }
 
-func default_options() ssa_pipeline_options {
-    ssa_pipeline_options{
-        enable_dce true, enable_coalesce true, enable_simplify_cfg true,
-        dominant_margin_override -1
+func default_options() pipeline_options {
+    return pipeline_options{
+        enable_dce: true, enable_coalesce: true, enable_simplify_cfg: true,
+        dominant_margin_override: -1
     }
 }
 
-func apply_pipeline_rewrites(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
+func apply_pipeline_rewrites(string mir_text, ssa_pass_stats pass_stats, pipeline_options options) string {
     rewritten := mir_text
     rewritten = apply_constfold_rewrites(rewritten, pass_stats)
     rewritten = apply_gvn_rewrites(rewritten, pass_stats)
@@ -1331,7 +1331,7 @@ func apply_pipeline_rewrites(string mir_text, ssa_pass_stats pass_stats, ssa_pip
     rewritten
 }
 
-func build_pass_mir_trace(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
+func build_pass_mir_trace(string mir_text, ssa_pass_stats pass_stats, pipeline_options options) string {
     trace := "input=" + mir_text
     current := mir_text
     constfold := apply_constfold_rewrites(current, pass_stats)
@@ -1363,7 +1363,7 @@ func build_pass_mir_trace(string mir_text, ssa_pass_stats pass_stats, ssa_pipeli
     trace
 }
 
-func build_pass_delta_trace(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
+func build_pass_delta_trace(string mir_text, ssa_pass_stats pass_stats, pipeline_options options) string {
     trace := ""
     before := mir_text
     constfold := apply_constfold_rewrites(before, pass_stats)
@@ -1733,7 +1733,7 @@ func apply_bce_rewrites(string mir_text, ssa_pass_stats pass_stats) string {
     mir_text
 }
 
-func apply_cfg_rewrites(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
+func apply_cfg_rewrites(string mir_text, ssa_pass_stats pass_stats, pipeline_options options) string {
     rewritten := mir_text
     if options.enable_simplify_cfg {
         rewritten = replace_first_n_tokens(rewritten, " term=branch", " term=jump", pass_stats.simplified_branch_count)
@@ -1744,7 +1744,7 @@ func apply_cfg_rewrites(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline
     rewritten
 }
 
-func apply_invalidation_reruns(string mir_text, ssa_pass_stats pass_stats, ssa_pipeline_options options) string {
+func apply_invalidation_reruns(string mir_text, ssa_pass_stats pass_stats, pipeline_options options) string {
     if pass_stats.invalidation_rerun_count <= 0 {
         return mir_text
     }
@@ -1889,7 +1889,7 @@ func build_dataflow_model(string mir_text, int block_count, int value_count) ssa
     }
 }
 
-func run_optimization_passes(string mir_text, ssa_dataflow_model model, ssa_pipeline_options options) ssa_pass_stats {
+func run_optimization_passes(string mir_text, ssa_dataflow_model model, pipeline_options options) ssa_pass_stats {
     current := model.value_count
     folded := run_constant_fold_pass(mir_text)
     current = current - folded

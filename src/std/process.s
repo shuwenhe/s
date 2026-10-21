@@ -18,41 +18,27 @@ func run_command(string cmd_line) (int, string) {
     if len(argv) == 0 {
         return -1, "empty command"
     }
-    pid := syscall.fork()
-    if pid < 0 {
-        return pid, "fork failed"
-    }
-    if pid == 0 {
-        _ := syscall.execve(argv[0], argv, string[]{})
-        syscall.exit(127)
-    }
-    exit_code := wait_for_process(pid)
-    return exit_code, ""
+    return -1, "process execution unavailable in native bootstrap"
 }
 
 func run_command_capture(string cmd_line) (int, string) {
-    0, ""
+    return -1, "process execution unavailable in native bootstrap"
 }
 
 func run_command_io(string cmd_line, string stdin_data) (int, string, string) {
-    0, "", ""
+    return -1, "", "process execution unavailable in native bootstrap"
 }
 
 func wait_for_process(int pid) int {
-    status_ptr := 0
-    ret := syscall.waitpid(pid, status_ptr, 0)
-    if ret < 0 {
-        return ret
-    }
-    0
+    return -1
 }
 
 func parse_command_line(string cmd_line) string[] {
-    string[]{}
+    return string[]{}
 }
 
 func find_in_path(string program) (string, bool) {
-    "", false
+    return "", false
 }
 
 func compile_to_ir(string compiler_bin, string source_file, string output_ir) (int, string) {
@@ -74,5 +60,5 @@ func emit_ir_binary(string ir_codegen_bin, string input_ir, string output_bin) (
 }
 
 func pipe_commands(string cmd1, string cmd2) (int, string) {
-    0, ""
+    return -1, "process execution unavailable in native bootstrap"
 }
