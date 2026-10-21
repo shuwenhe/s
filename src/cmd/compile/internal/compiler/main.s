@@ -1,10 +1,21 @@
 package compile.internal
+import (
+    "compile.internal.semantic"
+    "compile.internal.syntax"
+)
 func compiler_main(string[] args) int {
     if len(args) == 4 && args[1] == "--canonical-ast-check" {
         source := __host_read_to_string(args[2])
         if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
-        result := CanonicalAstCheck(source)
-        if __host_slice(result, 0, 20) == "canonical-ast-error:" { eprintln(result); return 1 }
+        parsed, parse_err := compile.internal.syntax.parse_source(source)
+        if parse_err.message != "" { eprintln("canonical-ast-error: parse " + parse_err.message); return 1 }
+        semantic_result := compile.internal.semantic.check_source_file(parsed, source)
+        if len(semantic_result.errors) > 0 {
+            error := semantic_result.errors[0]
+            eprintln("canonical-ast-error: semantic " + error.code + ": " + error.message)
+            return 1
+        }
+        result := "canonical-ast package=" + parsed.pkg + " source_file=canonical semantic=checked"
         if __host_write_text_file(args[3], result + "\n") != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }

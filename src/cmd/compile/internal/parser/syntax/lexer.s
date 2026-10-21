@@ -98,7 +98,7 @@ struct token {
     int col
 }
 
-struct lexer {
+struct syntax_lexer {
     string* source
     int pos
     int line
@@ -108,8 +108,8 @@ struct lexer {
     int token_capacity
 }
 
-func lexer_new(string* source) lexer* {
-    l := alloc(lexer)
+func lexer_new(string* source) syntax_lexer* {
+    l := alloc(syntax_lexer)
     l.source = source
     l.pos = 0
     l.line = 1
@@ -120,14 +120,14 @@ func lexer_new(string* source) lexer* {
     return l
 }
 
-func lexer_current_char(lexer* l) int {
+func lexer_current_char(syntax_lexer* l) int {
     if l.pos >= len(l.source) {
         return 0
     }
     return l.source[l.pos]
 }
 
-func lexer_peek_char(lexer* l, int offset) int {
+func lexer_peek_char(syntax_lexer* l, int offset) int {
     pos := l.pos + offset
     if pos >= len(l.source) {
         return 0
@@ -135,7 +135,7 @@ func lexer_peek_char(lexer* l, int offset) int {
     return l.source[pos]
 }
 
-func lexer_advance(lexer* l) {
+func lexer_advance(syntax_lexer* l) {
     if l.pos < len(l.source) {
         if l.source[l.pos] == 10 {
             l.line = l.line + 1
@@ -147,7 +147,7 @@ func lexer_advance(lexer* l) {
     }
 }
 
-func lexer_skip_whitespace(lexer* l) {
+func lexer_skip_whitespace(syntax_lexer* l) {
     for true {
         ch := lexer_current_char(l)
         if ch != 32 && ch != 9 {
@@ -157,7 +157,7 @@ func lexer_skip_whitespace(lexer* l) {
     }
 }
 
-func lexer_skip_line_comment(l* lexer) {
+func lexer_skip_line_comment(l* syntax_lexer) {
     for true {
         ch := lexer_current_char(l)
         if ch == 10 || ch == 0 {
@@ -167,7 +167,7 @@ func lexer_skip_line_comment(l* lexer) {
     }
 }
 
-func lexer_skip_block_comment(l* lexer) {
+func lexer_skip_block_comment(l* syntax_lexer) {
     lexer_advance(l)
     lexer_advance(l)
     for true {
@@ -198,7 +198,7 @@ func is_alphanum(int ch) int {
     return is_letter(ch) || syntax_is_digit(ch) || ch == 95
 }
 
-func lexer_read_ident(l* lexer) token {
+func lexer_read_ident(l* syntax_lexer) token {
     start := l.pos
     start_col := l.col
     for true {
@@ -296,7 +296,7 @@ func lexer_keyword_type(string* s) int {
     return 0
 }
 
-func lexer_read_number(l* lexer) token {
+func lexer_read_number(l* syntax_lexer) token {
     start := l.pos
     start_col := l.col
     if lexer_current_char(l) == 48 && lexer_peek_char(l, 1) == 120 {
@@ -356,7 +356,7 @@ func syntax_is_hex_digit(int ch) int {
     return 0
 }
 
-func lexer_read_string(l* lexer) token {
+func lexer_read_string(l* syntax_lexer) token {
     start_col := l.col
     quote := lexer_current_char(l)
     lexer_advance(l)
@@ -389,7 +389,7 @@ func lexer_read_string(l* lexer) token {
     return *tok
 }
 
-func lexer_add_token(l* lexer, tok* token) {
+func lexer_add_token(l* syntax_lexer, tok* token) {
     if l.token_count >= l.token_capacity {
         new_capacity := l.token_capacity * 2
         new_tokens := alloc_array(token, new_capacity)
@@ -401,7 +401,7 @@ func lexer_add_token(l* lexer, tok* token) {
     l.token_count = l.token_count + 1
 }
 
-func lexer_tokenize(l* lexer) {
+func lexer_tokenize(l* syntax_lexer) {
     for true {
         lexer_skip_whitespace(l)
         ch := lexer_current_char(l)
@@ -605,10 +605,10 @@ func lexer_tokenize(l* lexer) {
     lexer_add_token(l, eof_tok)
 }
 
-func lexer_get_tokens(l* lexer) token* {
+func lexer_get_tokens(l* syntax_lexer) token* {
     return l.tokens
 }
 
-func lexer_get_token_count(l* lexer) int {
+func lexer_get_token_count(l* syntax_lexer) int {
     return l.token_count
 }
