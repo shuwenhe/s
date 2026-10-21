@@ -20,10 +20,10 @@ git rev-parse HEAD > "$work/commit.txt"
 sha256sum "$compiler" test/parser-harness/fixtures/*.s \
     src/cmd/compile/internal/compiler/frontend.s > "$work/input-hashes.txt"
 failed=0
-for name in box_reference box_mutation box_field_mutation independent_field_borrows functions pair; do
+for name in box_reference box_mutation box_field_mutation independent_field_borrows functions pair array; do
     source="test/parser-harness/fixtures/$name.s"
     expected=0
-    if [[ "$name" == functions || "$name" == pair ]]; then
+    if [[ "$name" == functions || "$name" == pair || "$name" == array ]]; then
         source="test/compiler/$name.s"
         expected=42
         sha256sum "$source" >> "$work/input-hashes.txt"
