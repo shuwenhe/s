@@ -226,19 +226,25 @@ func compiler_c_type_for_kind(compiler_state initial, int kind, int struct_id) s
     if kind == 18 { return "const void *" }
     if kind == 19 { return "void *" }
     if kind == 20 { return compiler_struct_c_name(s, struct_id) + " *" }
+    if kind == 21 { return "const char * const *" }
+    if kind == 22 { return "const char **" }
     if kind == 17 { return "const char *" }
     "int64_t "
 }
 
 func compiler_is_borrow_kind(int kind) bool {
     if kind == 3 || kind == 4 { return true }
-    if kind == 18 || kind == 19 { return true }
+    if kind == 18 || kind == 19 || kind == 21 || kind == 22 { return true }
     return false
 }
 
 func compiler_is_mutable_borrow_kind(int kind) bool {
-    if kind == 4 || kind == 19 { return true }
+    if kind == 4 || kind == 19 || kind == 22 { return true }
     return false
+}
+
+func compiler_is_scalar_reference_kind(int kind) bool {
+    return kind == 3 || kind == 4 || kind == 21 || kind == 22
 }
 
 func compiler_is_struct_access_kind(int kind) bool {
@@ -376,7 +382,7 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     if field_count == 0 { return compiler_subset_fail(s, "structs require at least one field") }
     s = compiler_expect(s, "}")
     typedef_code = typedef_code + "} S_" + struct_name + ";\n"
-    fields_drop = "static inline __attribute__((unused)) void compiler_drop_fields_" + struct_name + "(S_" + struct_name + " *value) {\n" + fields_drop + "}\n"
+    fields_drop = "static inline __attribute__((unused)) void compiler_drop_fields_" + struct_name + "(S_" + struct_name + " *value) {\n    (void)value;\n" + fields_drop + "}\n"
     s.code = s.code + typedef_code
     s.code = s.code + "static void compiler_drop_user_" + struct_name + "(S_" + struct_name + " *value);\n"
     s.code = s.code + "static inline __attribute__((unused)) S_" + struct_name + " *compiler_make_" + struct_name + "(" + make_params + ") {\n"
@@ -402,6 +408,54 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     s.struct_count = s.struct_count + 1
     s.function_param_total = s.function_param_total + field_count
     return compiler_optional_semicolon(s)
+}
+
+// alloc consumes a type operand, not an expression or a runtime type-name
+// string. Reuse the existing owner constructors, moves and drop glue.
+func compiler_parse_owned_allocation(compiler_state initial) compiler_state {
+    s := compiler_expect(compiler_next(initial), "(")
+    if !compiler_ident(s.token) { return compiler_fail(s, "alloc requires a known type") }
+    type_name := s.token
+    short_name := s.token
+    s = compiler_next(s)
+    for s.token == "." {
+        s = compiler_next(s)
+        if !compiler_ident(s.token) { return compiler_fail(s, "alloc requires a known type") }
+        short_name = s.token
+        type_name = type_name + "." + short_name
+        s = compiler_next(s)
+    }
+    if s.token != ")" { return compiler_fail(s, "alloc expects exactly one type argument") }
+    s = compiler_expect(s, ")")
+    if type_name == "int" {
+        s.value = "compiler_box(INT64_C(0))"
+        s.value_kind = 2
+        s.value_struct_id = -1
+        s.value_slot = -1
+        return s
+    }
+    struct_id := compiler_find_struct(s, short_name)
+    if struct_id < 0 { return compiler_fail(s, "alloc requires a known type: " + type_name) }
+    if type_name != short_name && type_name != compiler_scan_package_identity(s.source) + "." + short_name {
+        return compiler_fail(s, "alloc requires a known type: " + type_name)
+    }
+    arguments := ""
+    field := 0
+    start := s.struct_field_starts[struct_id]
+    field_count := s.struct_field_counts[struct_id]
+    for field < field_count {
+        if field > 0 { arguments = arguments + "," }
+        kind := s.struct_field_kinds[start + field]
+        if kind == 1 { arguments = arguments + "INT64_C(0)" }
+        else if kind == 17 { arguments = arguments + "\"\"" }
+        else { return compiler_fail(s, "alloc currently requires scalar struct fields") }
+        field = field + 1
+    }
+    s.value = "compiler_make_" + short_name + "(" + arguments + ")"
+    s.value_kind = 5
+    s.value_struct_id = struct_id
+    s.value_slot = -1
+    return s
 }
 
 func compiler_find(compiler_state initial, string name) int {
@@ -507,6 +561,9 @@ func compiler_clear_nested_field_state(compiler_state initial, int slot, int par
         idx := compiler_nested_field_index(slot, parent_field, field)
         if slot >= 0 && parent_field >= 0 && parent_field < 8 && idx < len(s.nested_field_state) {
             s.nested_field_state[idx] = 1
+        }
+        if slot >= 0 && parent_field >= 0 && parent_field < 8 && idx < len(s.nested_field_borrow_state) {
+            s.nested_field_borrow_state[idx] = 0
         }
         field = field + 1
     }
@@ -820,9 +877,11 @@ func compiler_conflict_at(compiler_state initial, int owner, int field, bool exc
     s := initial
     i := 0
     for i < s.count {
-        same_field := field < 0 || s.loan_fields[i] < 0 || s.loan_fields[i] == field
+        loan_field := s.loan_fields[i]
+        if s.loan_parent_fields[i] >= 0 { loan_field = s.loan_parent_fields[i] }
+        same_field := field < 0 || loan_field < 0 || loan_field == field
         mutable_loan := compiler_is_mutable_borrow_kind(s.kinds[i]) || s.kinds[i] == 11
-        shared_loan := s.kinds[i] == 3 || s.kinds[i] == 10 || s.kinds[i] == 18
+        shared_loan := (compiler_is_borrow_kind(s.kinds[i]) && !compiler_is_mutable_borrow_kind(s.kinds[i])) || s.kinds[i] == 10
         if s.live[i] != 0 && s.roots[i] == owner && same_field && (mutable_loan || (exclusive && shared_loan)) { return true }
         i = i + 1
     }
@@ -838,7 +897,7 @@ func compiler_child_conflict(compiler_state initial, int parent, bool exclusive)
     s := initial
     i := 0
     for i < s.count {
-        if s.live[i] != 0 && s.parents[i] == parent && (compiler_is_mutable_borrow_kind(s.kinds[i]) || (exclusive && (s.kinds[i] == 3 || s.kinds[i] == 18))) { return true }
+        if s.live[i] != 0 && s.parents[i] == parent && (compiler_is_mutable_borrow_kind(s.kinds[i]) || (exclusive && compiler_is_borrow_kind(s.kinds[i]))) { return true }
         i = i + 1
     }
     return false
@@ -1114,6 +1173,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         field := -1
         parent_field := -1
         field_path := ""
+        scalar_address := false
         if !reborrow {
             s = compiler_next(s)
             if s.token == "." {
@@ -1125,7 +1185,11 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 field_error := compiler_field_unavailable_message(field_state)
                 if field_error != "" { return compiler_fail(s, field_error) }
                 field_kind := compiler_struct_field_kind(s, s.struct_ids[slot], field)
-                if field_kind != 2 {
+                if field_kind == 1 { scalar_address = true }
+                else if field_kind == 17 {
+                    scalar_address = true
+                    if kind == 4 { kind = 22 } else { kind = 21 }
+                } else if field_kind != 2 {
                     if kind == 4 { kind = 19 }
                     else { kind = 18 }
                 }
@@ -1142,7 +1206,13 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                     nested_error := compiler_field_unavailable_message(nested_state)
                     if nested_error != "" { return compiler_fail(s, nested_error) }
                     nested_kind := compiler_struct_field_kind(s, parent_struct, field)
-                    if nested_kind != 2 {
+                    if nested_kind == 1 {
+                        scalar_address = true
+                        if compiler_is_mutable_borrow_kind(kind) { kind = 4 } else { kind = 3 }
+                    } else if nested_kind == 17 {
+                        scalar_address = true
+                        if compiler_is_mutable_borrow_kind(kind) { kind = 22 } else { kind = 21 }
+                    } else if nested_kind != 2 {
                         if kind == 4 { kind = 19 }
                         else { kind = 18 }
                     }
@@ -1152,23 +1222,33 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         }
         root := slot
         if reborrow {
-            if s.kinds[slot] < 3 { return compiler_fail(s, "reborrow requires a reference") }
-            if kind == 4 && s.kinds[slot] == 3 { return compiler_fail(s, "cannot mutably reborrow a shared reference") }
+            if !compiler_is_scalar_reference_kind(s.kinds[slot]) { return compiler_fail(s, "reborrow requires a scalar reference") }
+            if kind == 4 && !compiler_is_mutable_borrow_kind(s.kinds[slot]) { return compiler_fail(s, "cannot mutably reborrow a shared reference") }
             if compiler_child_conflict(s, slot, kind == 4) { return compiler_fail(s, "conflicting reborrow: " + s.names[slot]) }
+            if s.kinds[slot] == 21 || s.kinds[slot] == 22 {
+                if kind == 4 { kind = 22 } else { kind = 21 }
+            }
             root = s.roots[slot]
             s.value_parent = slot
         } else {
-            if field < 0 && s.kinds[slot] != 2 { return compiler_fail(s, "borrow requires an owned box or pair field; use &*reference to reborrow") }
+            if field < 0 {
+                if s.kinds[slot] == 1 { scalar_address = true }
+                else if s.kinds[slot] == 17 {
+                    scalar_address = true
+                    if kind == 4 { kind = 22 } else { kind = 21 }
+                } else if s.kinds[slot] != 2 { return compiler_fail(s, "borrow requires a scalar local, owned box or pair field; use &*reference to reborrow") }
+            }
             if field >= 0 {
                 if parent_field >= 0 {
-                    if compiler_conflict_at(s, slot, parent_field, kind == 4) { return compiler_fail(s, "conflicting field borrow: " + s.names[slot]) }
+                    if compiler_conflict_at(s, slot, parent_field, compiler_is_mutable_borrow_kind(kind)) { return compiler_fail(s, "conflicting field borrow: " + s.names[slot]) }
                     if compiler_nested_field_has_borrow(s, slot, parent_field, field) { return compiler_fail(s, "conflicting nested field borrow: " + s.names[slot]) }
-                } else if compiler_conflict_at(s, slot, field, kind == 4) { return compiler_fail(s, "conflicting field borrow: " + s.names[slot]) }
-            } else if compiler_conflict(s, slot, kind == 4) { return compiler_fail(s, "conflicting borrow: " + s.names[slot]) }
+                } else if compiler_conflict_at(s, slot, field, compiler_is_mutable_borrow_kind(kind)) { return compiler_fail(s, "conflicting field borrow: " + s.names[slot]) }
+            } else if compiler_conflict(s, slot, compiler_is_mutable_borrow_kind(kind)) { return compiler_fail(s, "conflicting borrow: " + s.names[slot]) }
         }
         if reborrow || parent_field >= 0 { s = compiler_next(s) }
         s.value = compiler_var(slot)
         if field >= 0 { s.value = compiler_var(slot) + "->" + field_path }
+        if scalar_address { s.value = "&(" + s.value + ")" }
         if kind == 18 { s.value = "(const void *)" + s.value }
         if kind == 19 { s.value = "(void *)" + s.value }
         s.value_kind = kind
@@ -1183,6 +1263,13 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         slot := compiler_find(s, s.token)
         s = compiler_available(s, slot)
         if s.error != "" { return s }
+        if s.kinds[slot] == 21 || s.kinds[slot] == 22 {
+            if compiler_child_conflict(s, slot, false) { return compiler_fail(s, "cannot read reference during a mutable reborrow") }
+            s.value = "(*" + compiler_var(slot) + ")"
+            s.value_kind = 17
+            s.value_slot = -1
+            return compiler_next(s)
+        }
         if s.kinds[slot] != 2 && s.kinds[slot] != 3 && s.kinds[slot] != 4 && !compiler_is_struct_access_kind(s.kinds[slot]) { return compiler_fail(s, "dereference requires a box or integer reference") }
         field := -1
         s = compiler_next(s)
@@ -1209,6 +1296,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         s.value_slot = -1
         return s
     }
+    if t == "alloc" { return compiler_parse_owned_allocation(s) }
     if t == "box" {
         s = compiler_expect(compiler_next(s), "(")
         s = compiler_expression(s, 1)
@@ -1222,6 +1310,17 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
     if t == "len" {
         s = compiler_expect(compiler_next(s), "(")
         slot := compiler_find(s, s.token)
+        string_operand := s.token == "*" || compiler_is_string_literal(s.token)
+        if slot >= 0 && s.kinds[slot] == 17 { string_operand = true }
+        if string_operand {
+            s = compiler_expression(s, 1)
+            if s.value_kind != 17 { return compiler_fail(s, "len requires a string, integer array or slice") }
+            s = compiler_expect(s, ")")
+            s.value = "((int64_t)strlen(" + s.value + "))"
+            s.value_kind = 1
+            s.value_slot = -1
+            return s
+        }
         s = compiler_available(s, slot)
         if s.error != "" { return s }
         if s.kinds[slot] != 6 && s.kinds[slot] != 7 && s.kinds[slot] != 8 && s.kinds[slot] != 9 && s.kinds[slot] != 15 && s.kinds[slot] != 16 && s.kinds[slot] != 18 { return compiler_fail(s, "len requires an integer array or slice") }
@@ -1300,6 +1399,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             s = compiler_expression(s, 1)
             expected := s.struct_field_kinds[field_start + field]
             expected_struct := s.struct_field_structs[field_start + field]
+            if compiler_is_borrow_kind(expected) { return compiler_fail(s, "reference fields require lifetime tracking") }
             if s.value_kind != expected { return compiler_fail(s, "struct field initializer type mismatch") }
             if expected == 5 && s.value_struct_id != expected_struct { return compiler_fail(s, "struct field initializer struct type mismatch") }
             argument := s.value
@@ -1392,7 +1492,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         expected_param_count := compiler_stage7_declaration_param_count_fact(s, package_identity, declaration_type_fact_key)
         expected_return_kind := compiler_stage7_declaration_return_kind_fact(s, package_identity, declaration_type_fact_key)
         expected_return_struct := compiler_stage7_declaration_return_struct_fact(s, package_identity, declaration_type_fact_key)
-        if function_index < 0 || expected_param_count < 0 || expected_return_kind == 0 { }
+        if function_index < 0 || expected_param_count < 0 { }
         else {
         s = compiler_expect(compiler_next(s), "(")
         args := ""
@@ -1404,7 +1504,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         for s.error == "" && s.token != ")" && s.token != "" {
             if arg > 0 { s = compiler_expect(s, ",") }
             s = compiler_expression(s, 1)
-            if s.value_kind < 1 || (s.value_kind > 9 && s.value_kind != 17 && s.value_kind != 18) { return compiler_fail(s, "function arguments require integers, strings, owners, arrays, slices, pairs or references") }
+            if s.value_kind < 1 || (s.value_kind > 9 && s.value_kind != 17 && s.value_kind != 18 && s.value_kind != 21 && s.value_kind != 22) { return compiler_fail(s, "function arguments require integers, strings, owners, arrays, slices, pairs or references") }
             if arg >= expected_param_count { return compiler_fail(s, "too many function arguments") }
             expected := compiler_stage7_declaration_param_kind_fact(s, package_identity, declaration_type_fact_key, arg)
             expected_struct := compiler_stage7_declaration_param_struct_fact(s, package_identity, declaration_type_fact_key, arg)
@@ -1425,13 +1525,13 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                     if s.value_kind == 9 { argument = compiler_var(s.value_slot) + "->data" }
                 }
             }
-            if expected >= 3 && expected <= 4 {
+            if compiler_is_scalar_reference_kind(expected) {
                 root := s.value_slot
                 parent := s.value_parent
                 if !s.new_borrow {
                     parent = s.value_slot
                     root = s.roots[parent]
-                    if compiler_child_conflict(s, parent, expected == 4) { return compiler_fail(s, "conflicting argument reborrow") }
+                    if compiler_child_conflict(s, parent, compiler_is_mutable_borrow_kind(expected)) { return compiler_fail(s, "conflicting argument reborrow") }
                 }
                 if s.count >= len(s.names) { return compiler_fail(s, "argument loan capacity exceeded") }
                 s.names[s.count] = ""
@@ -1596,6 +1696,9 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         field_kind := compiler_struct_field_kind(s, s.struct_ids[slot], field)
         field_struct := compiler_struct_field_struct(s, s.struct_ids[slot], field)
         field_name := compiler_struct_field_name(s, s.struct_ids[slot], field)
+        if (field_kind == 1 || field_kind == 17) && compiler_conflict_at(s, slot, field, false) {
+            return compiler_fail(s, "cannot read field during a mutable borrow")
+        }
         s.value = compiler_var(slot) + "->" + field_name
         s.value_kind = field_kind
         s.value_slot = slot
@@ -1613,6 +1716,9 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             nested_kind := compiler_struct_field_kind(s, field_struct, nested_field)
             nested_struct := compiler_struct_field_struct(s, field_struct, nested_field)
             nested_name := compiler_struct_field_name(s, field_struct, nested_field)
+            if (nested_kind == 1 || nested_kind == 17) && compiler_conflict_at(s, slot, field, false) {
+                return compiler_fail(s, "cannot read field during a mutable borrow")
+            }
             s.value = compiler_var(slot) + "->" + field_name + "->" + nested_name
             s.value_kind = nested_kind
             s.value_slot = slot
@@ -1622,6 +1728,9 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             s = compiler_next(s)
         }
         return s
+    }
+    if (s.kinds[slot] == 1 || s.kinds[slot] == 17) && compiler_conflict(s, slot, false) {
+        return compiler_fail(s, "cannot read local during a mutable borrow")
     }
     s.value = compiler_var(slot)
     s.value_kind = s.kinds[slot]
@@ -1689,6 +1798,7 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
 
 func compiler_bind(compiler_state initial, string name, bool declaration) compiler_state {
     s := initial
+    if s.value_kind == 0 { return compiler_fail(s, "void call cannot be used as a value") }
     slot := compiler_find(s, name)
     is_declaration := declaration
     if is_declaration && slot >= 0 { is_declaration = false }
@@ -1698,6 +1808,9 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
     if !is_declaration && s.kinds[slot] != s.value_kind { return compiler_fail(s, "assignment changes variable type") }
     if !is_declaration && s.value_kind == 5 && s.struct_ids[slot] != s.value_struct_id { return compiler_fail(s, "assignment changes struct type") }
     if !is_declaration && compiler_is_borrow_kind(s.value_kind) { return compiler_fail(s, "reference reassignment is not supported") }
+    if !is_declaration && (s.value_kind == 1 || s.value_kind == 17) && compiler_conflict(s, slot, true) {
+        return compiler_fail(s, "cannot assign borrowed local")
+    }
     rhs := s.value
     origin := s.value_slot
     if s.value_kind == 2 || s.value_kind == 5 || s.value_kind == 9 {
@@ -1759,6 +1872,7 @@ func compiler_bind(compiler_state initial, string name, bool declaration) compil
         fi := 0
         for fi < field_count {
             s.field_state[slot * 8 + fi] = 1
+            s.field_borrow_state[slot * 8 + fi] = 0
             s = compiler_clear_nested_field_state(s, slot, fi)
             fi = fi + 1
         }
@@ -2009,6 +2123,9 @@ func compiler_statement(compiler_state initial) compiler_state {
             return compiler_fail(s, "reference return must use a parameter")
         }
         if expected_return_kind >= 3 && expected_return_kind <= 4 {
+            if !compiler_is_scalar_reference_kind(s.kinds[s.value_slot]) {
+                return compiler_fail(s, "reference return must use a borrowed parameter")
+            }
             if s.return_param < 0 { s.return_param = s.value_slot }
             else if s.return_param != s.value_slot { return compiler_fail(s, "reference return parameter differs across paths") }
             s.function_return_params[s.function_count - 1] = s.return_param
@@ -2026,6 +2143,7 @@ func compiler_statement(compiler_state initial) compiler_state {
             s.function_observed_compat[s.function_count - 1] = "compatible"
         }
         result_type := "int64_t "
+        if s.value_kind == 17 { result_type = "const char *" }
         if s.value_kind == 2 {
             result_type = "int64_t *"
             if s.value_field >= 0 {
@@ -2159,14 +2277,16 @@ func compiler_statement(compiler_state initial) compiler_state {
             target = compiler_var(slot) + "->" + compiler_struct_field_name(s, s.struct_ids[slot], field)
             s = compiler_next(s)
         } else {
-            if s.kinds[slot] != 2 && s.kinds[slot] != 4 { return compiler_fail(s, "write requires an owner or mutable reference") }
-            if s.kinds[slot] == 4 && compiler_child_conflict(s, slot, true) { return compiler_fail(s, "cannot write reference with a live reborrow") }
+            if s.kinds[slot] != 2 && s.kinds[slot] != 4 && s.kinds[slot] != 22 { return compiler_fail(s, "write requires an owner or mutable reference") }
+            if compiler_is_mutable_borrow_kind(s.kinds[slot]) && compiler_child_conflict(s, slot, true) { return compiler_fail(s, "cannot write reference with a live reborrow") }
             if s.kinds[slot] == 2 && compiler_conflict(s, slot, true) { return compiler_fail(s, "cannot write borrowed owner") }
             s = compiler_next(s)
         }
         s = compiler_expect(s, "=")
         s = compiler_expression(s, 1)
-        if s.value_kind != 1 { return compiler_fail(s, "box write requires an integer") }
+        expected_kind := 1
+        if s.kinds[slot] == 22 { expected_kind = 17 }
+        if s.value_kind != expected_kind { return compiler_fail(s, "reference write type mismatch") }
         s = compiler_available(s, slot)
         s = compiler_optional_semicolon(s)
         s = compiler_end_last_use_borrows(s)
@@ -2182,34 +2302,11 @@ func compiler_statement(compiler_state initial) compiler_state {
     }
     s = compiler_next(s)
     if s.token == "(" && compiler_find_func(s, name) >= 0 {
-        function_index := compiler_find_func(s, name)
-        s = compiler_expect(s, "(")
-        args := ""
-        evaluations := ""
-        call_id := compiler_number(s.pos)
-        arg := 0
-        for s.error == "" && s.token != ")" && s.token != "" {
-            if arg > 0 { s = compiler_expect(s, ",") }
-            s = compiler_expression(s, 1)
-            if arg >= compiler_int_at(s.function_counts, function_index) { return compiler_fail(s, "too many function arguments") }
-            expected := s.function_param_kinds[s.function_starts[function_index] + arg]
-            if s.value_kind != expected { return compiler_fail(s, "function argument type mismatch") }
-            param_start := s.function_starts[function_index]
-            expected_struct := s.function_param_structs[param_start + arg]
-            if expected == 5 && s.value_struct_id != expected_struct { return compiler_fail(s, "function argument struct type mismatch") }
-            temporary := "s_arg" + call_id + "_" + compiler_number(arg)
-            argument_type := "int64_t "
-            if expected == 17 { argument_type = "const char *" }
-            s.code = s.code + argument_type + temporary + ";\n"
-            evaluations = evaluations + temporary + " = " + s.value + ";\n"
-            if arg > 0 { args = args + "," }
-            args = args + temporary
-            arg = arg + 1
-        }
-        if arg != compiler_int_at(s.function_counts, function_index) { return compiler_fail(s, "wrong number of function arguments") }
-        s = compiler_expect(s, ")")
+        // Statement calls share argument typing and loan handling with calls
+        // used as expressions; pointer arguments must not become integers.
+        s = compiler_expression(initial, 1)
         s = compiler_optional_semicolon(s)
-        s.code = s.code + evaluations + s.function_names[function_index] + "(" + args + ");\n"
+        s.code = s.code + s.value + ";\n"
         return s
     }
     if s.token == "[" {
@@ -2242,12 +2339,17 @@ func compiler_statement(compiler_state initial) compiler_state {
         if field < 0 { return compiler_fail(s, "unknown owned struct field") }
         field_kind := compiler_struct_field_kind(s, s.struct_ids[slot], field)
         field_struct := compiler_struct_field_struct(s, s.struct_ids[slot], field)
-        if field_kind != 2 && field_kind != 5 && field_kind != 9 { return compiler_fail(s, "field assignment requires an owned field") }
+        if field_kind != 1 && field_kind != 17 && field_kind != 2 && field_kind != 5 && field_kind != 9 { return compiler_fail(s, "field assignment requires a supported field type") }
         if compiler_conflict_at(s, slot, field, true) { return compiler_fail(s, "cannot overwrite borrowed struct field") }
         s = compiler_expect(compiler_next(s), "=")
         s = compiler_expression(s, 1)
         if s.value_kind != field_kind { return compiler_fail(s, "field assignment type mismatch") }
         if field_kind == 5 && s.value_struct_id != field_struct { return compiler_fail(s, "field assignment struct type mismatch") }
+        if field_kind == 1 || field_kind == 17 {
+            target := compiler_var(slot) + "->" + compiler_struct_field_name(s, s.struct_ids[slot], field)
+            s.code = s.code + target + " = " + s.value + ";\n"
+            return compiler_optional_semicolon(s)
+        }
         rhs := s.value
         origin := s.value_slot
         if s.value_field >= 0 {
@@ -2331,6 +2433,10 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         }
         else { return compiler_fail(s, "function parameters require int, string, box, ref, mutref or pair") }
         s = compiler_next(s)
+        if (kind == 3 || kind == 4) && s.token == "string" {
+            if kind == 3 { kind = 21 } else { kind = 22 }
+            s = compiler_next(s)
+        }
         if kind == 1 && s.token == "[" {
             s = compiler_expect(s, "[")
             s = compiler_expect(s, "]")
@@ -2403,6 +2509,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
 
     signature := "static int64_t " + name + "("
     if s.return_kind == 0 { signature = "static void " + name + "(" }
+    if s.return_kind == 17 { signature = "static const char *" + name + "(" }
     if s.return_kind == 2 || s.return_kind == 4 || s.return_kind == 18 { signature = "static int64_t *" + name + "(" }
     else if s.return_kind == 5 { signature = "static " + compiler_c_type_for_kind(s, s.return_kind, return_struct) + name + "(" }
     else if s.return_kind == 9 { signature = "static compiler_slice *" + name + "(" }
@@ -2436,7 +2543,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         s.names[pi] = s.function_param_names[start + pi]
         s.struct_ids[pi] = s.function_param_structs[start + pi]
         s.roots[pi] = -1
-        if s.kinds[pi] >= 3 && s.kinds[pi] <= 4 { s.roots[pi] = pi }
+        if compiler_is_scalar_reference_kind(s.kinds[pi]) { s.roots[pi] = pi }
         s.parents[pi] = -1
         s.loan_fields[pi] = -1
         s.loan_parent_fields[pi] = -1
@@ -2449,6 +2556,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
             fi := 0
             for fi < field_count {
                 s.field_state[pi * 8 + fi] = 1
+                s.field_borrow_state[pi * 8 + fi] = 0
                 s = compiler_clear_nested_field_state(s, pi, fi)
                 fi = fi + 1
             }
@@ -2881,6 +2989,9 @@ func compiler_compile(string source) compiler_state {
     struct_field_counts := [0, 0, 0, 0, 0, 0, 0, 0];
     struct_custom_drops := [0, 0, 0, 0, 0, 0, 0, 0];
     s := compiler_state { source: source, pos: 0, line: 1, token: "", error: "", code: "#include \"compiler_runtime.h\"\n", names: names, kinds: kinds, live: live, roots: roots, parents: parents, loan_fields: loan_fields, loan_parent_fields: loan_parent_fields, array_lengths: array_lengths, struct_ids: struct_ids, field_state: field_state, field_borrow_state: field_borrow_state, nested_field_state: nested_field_state, nested_field_borrow_state: nested_field_borrow_state, count: 0, loop_floor: -1, loop_cleanup: -1, depth: 0, expr_depth: 0, terminated: 0, value: "", value_kind: 0, value_slot: -1, value_parent: -1, value_field: -1, value_parent_field: -1, value_array_length: 0, value_struct_id: -1, new_borrow: false, function_names: function_names, function_declaration_refs: function_declaration_refs, function_counts: function_counts, function_returns: function_returns, function_return_constants: function_return_constants, function_return_call_targets: function_return_call_targets, function_branch_conditions: function_branch_conditions, function_branch_true_constants: function_branch_true_constants, function_branch_false_constants: function_branch_false_constants, pending_branch_condition: "", pending_branch_true_constant: "", function_return_params: function_return_params, function_starts: function_starts, function_param_kinds: function_param_kinds, function_param_structs: function_param_structs, function_return_structs: function_return_structs, function_observed_return_kinds: function_observed_return_kinds, function_observed_return_structs: function_observed_return_structs, function_observed_compat: function_observed_compat, function_param_total: 0, function_count: 0, struct_names: struct_names, struct_field_lefts: struct_field_lefts, struct_field_rights: struct_field_rights, struct_field_left_kinds: struct_field_left_kinds, struct_field_right_kinds: struct_field_right_kinds, struct_field_names: struct_field_names, struct_field_kinds: struct_field_kinds, struct_field_structs: struct_field_structs, struct_field_starts: struct_field_starts, struct_field_counts: struct_field_counts, struct_custom_drops: struct_custom_drops, struct_count: 0, function_name: "", function_main: false, method_names: method_names, method_structs: method_structs, method_returns: method_returns, method_count: 0, stage7_compatibility_actual_source: "", stage7_compatibility_expected_source: "", stage7_compatibility_expected_key: "", stage7_compatibility_result: "", stage7_compatibility_action: "", stage7_compatibility_name_reresolution: "", stage7_compatibility_declaration_ref: "", stage7_rejection_source: "", stage7_rejection_kind: "", stage7_rejection_diagnostic: "", stage7_rejection_expected_key: "", stage7_rejection_name_reresolution: "" }
+    // Helper signatures retain parameter names alongside their kinds. This
+    // table needs the same capacity as local names, including in hosted runs.
+    s.function_param_names = names
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }
