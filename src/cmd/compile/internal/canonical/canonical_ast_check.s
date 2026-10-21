@@ -1,12 +1,12 @@
-package compile.internal
+package compile.internal.canonical
 
 import (
-    "compile.internal.parser.syntax"
+    "compile.internal.syntax"
     "compile.internal.semantic"
 )
 
 func CanonicalAstCheck(string source) string {
-    parsed, parse_err := syntax.parse_source(source)
+    parsed, parse_err := compile.internal.syntax.parse_source(source)
     if parse_err.message != "" {
         return "canonical-ast-error: parse " + parse_err.message
     }

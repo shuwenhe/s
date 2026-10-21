@@ -327,8 +327,8 @@ func append_item_dump(string[] lines, item item) () {
 
 func dump_const(const_decl item) string[] {
     switch item.value {
-        option.some(value) : string[] { "const " + item.name + " = " + dump_expr(value) },
-        option.none : string[] { "const " + item.name },
+        option.some(value) : single_line("const " + item.name + " = " + dump_expr(value)),
+        option.none : single_line("const " + item.name),
     }
 }
 
@@ -339,8 +339,8 @@ func dump_var(var_decl item) string[] {
         option.none : {},
     }
     switch item.value {
-        option.some(v) : string[] { decl + " = " + dump_expr(v) },
-        option.none : string[] { decl },
+        option.some(v) : single_line(decl + " = " + dump_expr(v)),
+        option.none : single_line(decl),
     }
 }
 
