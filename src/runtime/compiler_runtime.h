@@ -42,6 +42,11 @@ static inline int64_t compiler_index(int64_t length, int64_t index) {
     if (index < 0 || index >= length) compiler_trap("array index out of bounds");
     return index;
 }
+static inline const void *compiler_require_struct(const void *value) {
+    if (!value) compiler_trap("null struct reference");
+    return value;
+}
+
 typedef struct compiler_array {
     void *data;
     int64_t len;

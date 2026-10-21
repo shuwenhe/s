@@ -265,6 +265,18 @@ func compiler_struct_access_conflict(compiler_state initial, int slot, int field
     return compiler_conflict_at(s, slot, field, exclusive)
 }
 
+func compiler_checked_struct_value(compiler_state initial, string value, int kind, int struct_id) string {
+    return "((" + compiler_c_type_for_kind(initial, kind, struct_id) + ")compiler_require_struct(" + value + "))"
+}
+
+func compiler_struct_field_is_pointer(compiler_state initial, int struct_id, int field) bool {
+    s := initial
+    if struct_id < 0 { return false }
+    index := s.struct_field_starts[struct_id] + field
+    if index >= len(s.struct_field_pointers) { return false }
+    return s.struct_field_pointers[index] != 0
+}
+
 func compiler_drop_field_code(compiler_state initial, string target, int kind, int struct_id) string {
     s := initial
     if kind == 2 { return "if (" + target + " != NULL) { compiler_drop(&" + target + "); }\n" }
@@ -318,9 +330,13 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     if compiler_find_struct(s, struct_name) >= 0 { return compiler_fail(s, "duplicate struct: " + struct_name) }
     if s.struct_count >= 32 { return compiler_fail(s, "too many structs") }
     struct_id := s.struct_count
+    // Register the nominal identity before reading fields, so a pointer field
+    // can refer to its enclosing struct without a second AST/type authority.
+    s.struct_names[struct_id] = struct_name
+    s.struct_count = s.struct_count + 1
     field_start := s.function_param_total
     field_count := 0
-    typedef_code := "typedef struct S_" + struct_name + " {\n"
+    typedef_code := "typedef struct S_" + struct_name + " S_" + struct_name + ";\nstruct S_" + struct_name + " {\n"
     make_params := ""
     make_args := ""
     make_body := ""
@@ -331,6 +347,8 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
         if !compiler_ident(s.token) { return compiler_subset_fail(s, "struct fields require type and name") }
         first := s.token
         s = compiler_next(s)
+        is_pointer := s.token == "*"
+        if is_pointer { s = compiler_next(s) }
         // Handle array type syntax: if next token is [], consume it as part of type
         is_array := s.token == "["
         if is_array {
@@ -374,11 +392,14 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
         }
         if duplicate { return compiler_subset_fail(s, "struct fields must have distinct names") }
         if field_kind == 0 { return compiler_subset_fail(s, "struct field type is not supported") }
+        if is_pointer && (field_kind != 5 || field_struct < 0) { return compiler_fail(s, "owned pointer field requires a known struct type") }
         if field_count >= 128 { return compiler_fail(s, "too many struct fields") }
         index := field_start + field_count
         s.struct_field_names[index] = field_name
         s.struct_field_kinds[index] = field_kind
         s.struct_field_structs[index] = field_struct
+        s.struct_field_pointers[index] = 0
+        if is_pointer { s.struct_field_pointers[index] = 1 }
         ctype := compiler_c_type_for_kind(s, field_kind, field_struct)
         // For array types, use pointer representation
         if field_kind == 7 { ctype = "void*" }
@@ -395,10 +416,11 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     }
     if field_count == 0 { return compiler_subset_fail(s, "structs require at least one field") }
     s = compiler_expect(s, "}")
-    typedef_code = typedef_code + "} S_" + struct_name + ";\n"
+    typedef_code = typedef_code + "};\n"
     fields_drop = "static inline __attribute__((unused)) void compiler_drop_fields_" + struct_name + "(S_" + struct_name + " *value) {\n    (void)value;\n" + fields_drop + "}\n"
     s.code = s.code + typedef_code
     s.code = s.code + "static void compiler_drop_user_" + struct_name + "(S_" + struct_name + " *value);\n"
+    s.code = s.code + "static inline __attribute__((unused)) void compiler_drop_owned_" + struct_name + "(S_" + struct_name + " **owner);\n"
     s.code = s.code + "static inline __attribute__((unused)) S_" + struct_name + " *compiler_make_" + struct_name + "(" + make_params + ") {\n"
     s.code = s.code + "    S_" + struct_name + " *value = (S_" + struct_name + " *)malloc(sizeof(*value));\n"
     s.code = s.code + "    if (!value) compiler_trap(\"allocation failed\");\n"
@@ -420,7 +442,6 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     s.struct_field_counts[struct_id] = field_count
     if field_count >= 1 { s.struct_field_lefts[struct_id] = s.struct_field_names[field_start]; s.struct_field_left_kinds[struct_id] = s.struct_field_kinds[field_start] }
     if field_count >= 2 { s.struct_field_rights[struct_id] = s.struct_field_names[field_start + 1]; s.struct_field_right_kinds[struct_id] = s.struct_field_kinds[field_start + 1] }
-    s.struct_count = s.struct_count + 1
     s.function_param_total = s.function_param_total + field_count
     return compiler_optional_semicolon(s)
 }
@@ -463,6 +484,7 @@ func compiler_parse_owned_allocation(compiler_state initial) compiler_state {
         kind := s.struct_field_kinds[start + field]
         if kind == 1 { arguments = arguments + "INT64_C(0)" }
         else if kind == 17 { arguments = arguments + "\"\"" }
+        else if kind == 5 && compiler_struct_field_is_pointer(s, struct_id, field) { arguments = arguments + "NULL" }
         else { return compiler_fail(s, "alloc currently requires scalar struct fields") }
         field = field + 1
     }
@@ -1806,6 +1828,13 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         return s
         }
     }
+    if t == "nil" {
+        s.value = "NULL"
+        s.value_kind = 25
+        s.value_slot = -1
+        s.value_struct_id = -1
+        return compiler_next(s)
+    }
     if t == "true" || t == "false" {
         s.value = "0"
         if t == "true" { s.value = "1" }
@@ -1892,7 +1921,9 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         if (field_kind == 1 || field_kind == 17) && compiler_struct_access_conflict(s, slot, field, false) {
             return compiler_fail(s, "cannot read field during a mutable borrow")
         }
-        s.value = compiler_var(slot) + "->" + field_name
+        base := compiler_var(slot)
+        if s.struct_ids[slot] >= 0 { base = compiler_checked_struct_value(s, base, s.kinds[slot], s.struct_ids[slot]) }
+        s.value = base + "->" + field_name
         s.value_kind = field_kind
         s.value_slot = slot
         s.value_field = field
@@ -1912,7 +1943,8 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             if (nested_kind == 1 || nested_kind == 17) && compiler_struct_access_conflict(s, slot, field, false) {
                 return compiler_fail(s, "cannot read field during a mutable borrow")
             }
-            s.value = compiler_var(slot) + "->" + field_name + "->" + nested_name
+            nested_base := compiler_checked_struct_value(s, base + "->" + field_name, field_kind, field_struct)
+            s.value = nested_base + "->" + nested_name
             s.value_kind = nested_kind
             s.value_slot = slot
             s.value_parent_field = field
@@ -1941,13 +1973,16 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
         left := s.value
         temporary := "s_left" + compiler_number(s.pos)
         left_kind := s.value_kind
+        left_struct := s.value_struct_id
         if op == "==" || op == "!=" {
-            if s.value_kind != 1 && s.value_kind != 2 && s.value_kind != 17 { return compiler_fail(s, "comparison requires integers or strings") }
+            if s.value_kind != 1 && s.value_kind != 2 && s.value_kind != 17 && s.value_kind != 5 && s.value_kind != 25 { return compiler_fail(s, "comparison requires integers, strings or owned pointers") }
         } else if s.value_kind != 1 { return compiler_fail(s, "binary operator requires integers") }
         before := s
         if op != "&&" && op != "||" {
             if op == "==" || op == "!=" {
-                if s.value_kind == 2 || s.value_kind == 17 { s.code = s.code + "const char * " + temporary + ";\n" }
+                if s.value_kind == 5 { s.code = s.code + compiler_c_type_for_kind(s, 5, left_struct) + temporary + ";\n" }
+                else if s.value_kind == 25 { s.code = s.code + "const void *" + temporary + ";\n" }
+                else if s.value_kind == 2 || s.value_kind == 17 { s.code = s.code + "const char * " + temporary + ";\n" }
                 else { s.code = s.code + "int64_t " + temporary + ";\n" }
             } else {
                 s.code = s.code + "int64_t " + temporary + ";\n"
@@ -1955,8 +1990,13 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
         }
         s = compiler_expression(compiler_next(s), precedence + 1)
         if op == "==" || op == "!=" {
-            if s.value_kind != 1 && s.value_kind != 2 && s.value_kind != 17 { return compiler_fail(s, "comparison requires integers or strings") }
-            if (left_kind == 1 && s.value_kind != 1) || (left_kind != 1 && s.value_kind == 1) { return compiler_fail(s, "cannot compare different types") }
+            if left_kind == 5 || left_kind == 25 {
+                if s.value_kind != 5 && s.value_kind != 25 { return compiler_fail(s, "cannot compare different types") }
+                if left_kind == 5 && s.value_kind == 5 && left_struct != s.value_struct_id { return compiler_fail(s, "cannot compare different struct types") }
+            } else {
+                if s.value_kind != 1 && s.value_kind != 2 && s.value_kind != 17 { return compiler_fail(s, "comparison requires integers or strings") }
+                if (left_kind == 1 && s.value_kind != 1) || (left_kind != 1 && s.value_kind == 1) { return compiler_fail(s, "cannot compare different types") }
+            }
         } else if s.value_kind != 1 { return compiler_fail(s, "binary operator requires integers") }
         original_left := left
         if op != "&&" && op != "||" { left = temporary }
@@ -2545,10 +2585,14 @@ func compiler_statement(compiler_state initial) compiler_state {
         if compiler_struct_access_conflict(s, slot, field, true) { return compiler_fail(s, "cannot overwrite borrowed struct field") }
         s = compiler_expect(compiler_next(s), "=")
         s = compiler_expression(s, 1)
+        if field_kind == 5 && s.value_kind == 25 && compiler_struct_field_is_pointer(s, s.struct_ids[slot], field) {
+            s.value_kind = 5
+            s.value_struct_id = field_struct
+        }
         if s.value_kind != field_kind { return compiler_fail(s, "field assignment type mismatch") }
         if field_kind == 5 && s.value_struct_id != field_struct { return compiler_fail(s, "field assignment struct type mismatch") }
         if field_kind == 1 || field_kind == 17 {
-            target := compiler_var(slot) + "->" + compiler_struct_field_name(s, s.struct_ids[slot], field)
+            target := compiler_checked_struct_value(s, compiler_var(slot), s.kinds[slot], s.struct_ids[slot]) + "->" + compiler_struct_field_name(s, s.struct_ids[slot], field)
             s.code = s.code + target + " = " + s.value + ";\n"
             return compiler_optional_semicolon(s)
         }
@@ -2620,7 +2664,8 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
         kind := 0
         param_struct := -1
         pointer_name := ""
-        if compiler_ident(s.token) && compiler_type_kind(s.token) == 0 && !compiler_is_declared_struct_type(s, s.token) {
+        parameter_look := compiler_next(s)
+        if compiler_ident(s.token) && parameter_look.token == "*" && compiler_type_kind(s.token) == 0 && !compiler_is_declared_struct_type(s, s.token) {
             pointer_name = s.token
             s = compiler_expect(compiler_next(s), "*")
             param_struct = compiler_find_struct(s, s.token)
@@ -2704,6 +2749,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     else if s.token == "slice" { s.return_kind = 9 }
     else if s.token != "{" { return compiler_fail(s, "function return type must be int, string, box, ref, mutref, pair or struct") }
     if s.return_kind == 3 || s.return_kind == 4 || s.return_kind == 5 || s.return_kind == 9 { s = compiler_next(s) }
+    if s.return_kind == 5 && s.token == "*" { s = compiler_next(s) }
     s.parameter_count = param_count
     s.return_param = -1
 
@@ -3210,6 +3256,7 @@ func compiler_compile(string source) compiler_state {
     // Helper signatures retain parameter names alongside their kinds. This
     // table needs the same capacity as local names, including in hosted runs.
     s.function_param_names = names
+    s.struct_field_pointers = struct_field_kinds
     s = compiler_next(s)
     s = compiler_expect(s, "package")
     if !compiler_ident(s.token) { return compiler_fail(s, "expected package name") }

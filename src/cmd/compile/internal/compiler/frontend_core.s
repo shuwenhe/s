@@ -74,6 +74,7 @@ struct compiler_state {
     string[] struct_field_names
     int[] struct_field_kinds
     int[] struct_field_structs
+    int[] struct_field_pointers
     int[] struct_field_starts
     int[] struct_field_counts
     int[] struct_custom_drops
