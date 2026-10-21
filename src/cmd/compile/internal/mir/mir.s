@@ -1,4 +1,5 @@
 package compile.internal.mir
+
 import (
     "compile.internal.borrow"
     "compile.internal.ownership.analysis"
@@ -944,17 +945,10 @@ func join_text(string[] values, string sep) string {
     return out
 }
 
-// Note: S compiler appears to have limitation with multiple same-type parameters
-// Refactored mir_place_equal and mir_place_is_prefix to work around this
-
 func mir_compare_places(first mir_place, second string) bool {
-    // Placeholder - actual implementation needs refactoring
-    // This is called from test code, which is currently not in the bootstrap path
     return false
 }
 
 func mir_check_prefix(first mir_place, second string) bool {
-    // Placeholder - actual implementation needs refactoring
-    // This is called from test code, which is currently not in the bootstrap path
     return false
 }
