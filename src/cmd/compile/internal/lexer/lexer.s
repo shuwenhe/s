@@ -1,4 +1,5 @@
 package s
+
 import (
     "std"
     "std.prelude"

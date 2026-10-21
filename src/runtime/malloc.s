@@ -1,14 +1,17 @@
 package src.runtime
+
 import (
     "std"
     "std.result"
 )
+
 struct obj_header {
     int size
     int type_id
     int mark
     int next_free
 }
+
 const num_size_classes = 68
 const max_small_size   = 32768
 const min_alloc        = 8
