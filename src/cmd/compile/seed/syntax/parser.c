@@ -48,6 +48,28 @@ static const char *last_path_segment(const char *path) {
 	}
 	return last;
 }
+
+/* Keep every owner component in a qualified enum pattern. The last parsed
+ * component becomes part of the owner when another '.' or '::' follows. */
+static int extend_pattern_path(char **owner, char **variant, const char *first, const char *part) {
+	const char *prefix = *owner ? *owner : first;
+	size_t length = strlen(prefix) + (*variant ? strlen(*variant) + 1 : 0) + 1;
+	char *next_owner = malloc(length);
+	char *next_variant = dup_cstr(part);
+	if (!next_owner || !next_variant) { free(next_owner); free(next_variant); return 0; }
+	if (*variant) snprintf(next_owner, length, "%s.%s", prefix, *variant);
+	else memcpy(next_owner, prefix, length);
+	free(*owner); free(*variant);
+	*owner = next_owner; *variant = next_variant;
+	return 1;
+}
+static int likely_type_start(const token *t) {
+	if (!t || t->type != TOKEN_IDENTIFIER) return 0;
+	return strcmp(t->lexeme, "string") == 0 || strcmp(t->lexeme, "int") == 0 ||
+		strcmp(t->lexeme, "bool") == 0 || strcmp(t->lexeme, "float") == 0 ||
+		strcmp(t->lexeme, "option") == 0 || strcmp(t->lexeme, "array") == 0 ||
+		strcmp(t->lexeme, "map") == 0 || strchr(t->lexeme, '_') != NULL;
+}
 static int is_c_identifier(const char *s) {
 	const unsigned char *p = (const unsigned char *)s;
 	if (!p || !(isalpha(*p) || *p == '_')) {
@@ -3310,8 +3332,10 @@ static ast_node *parse_switch_statement(parser *p) {
 								ast_free(root);
 								return NULL;
 							}
-							if (!variant_owner) variant_owner = dup_cstr(word);
-							variant_name = dup_cstr(peek(p)->lexeme);
+							if (!extend_pattern_path(&variant_owner, &variant_name, word, peek(p)->lexeme)) {
+								error_set(p->err, ERR_OUT_OF_MEMORY, peek(p)->pos.line, peek(p)->pos.column, "out of memory");
+								free(variant_owner); free(variant_name); ast_free(subject); ast_free(root); return NULL;
+							}
 							advance_tok(p);  // consume the identifier
 							
 							// Check if followed by ::
@@ -3324,7 +3348,10 @@ static ast_node *parse_switch_statement(parser *p) {
 									ast_free(root);
 									return NULL;
 								}
-								variant_name = dup_cstr(peek(p)->lexeme);
+								if (!extend_pattern_path(&variant_owner, &variant_name, word, peek(p)->lexeme)) {
+									error_set(p->err, ERR_OUT_OF_MEMORY, peek(p)->pos.line, peek(p)->pos.column, "out of memory");
+									free(variant_owner); free(variant_name); ast_free(subject); ast_free(root); return NULL;
+								}
 								advance_tok(p);  // consume variant name
 								break;
 							}
@@ -3987,16 +4014,46 @@ static ast_node *parse_struct_decl(parser *p) {
 		const token *t = peek(p);
 		if (t->type == TOKEN_SEMICOLON) { advance_tok(p); continue; }
 		if (t->type == TOKEN_RBRACE) break;
-		size_t line = t->pos.line;
 		size_t start = p->current;
 		size_t k = start;
-		while (!is_at_end(p) && peek(p)->pos.line == line && peek(p)->type != TOKEN_RBRACE) {
+		int brackets = 0, parens = 0, braces = 0;
+		while (!is_at_end(p)) {
+			token_type kind = peek(p)->type;
+			if (kind == TOKEN_LBRACKET) brackets++;
+			else if (kind == TOKEN_RBRACKET && brackets > 0) brackets--;
+			else if (kind == TOKEN_LPAREN) parens++;
+			else if (kind == TOKEN_RPAREN && parens > 0) parens--;
+			else if (kind == TOKEN_LBRACE) braces++;
+			else if (kind == TOKEN_RBRACE) {
+				if (brackets == 0 && parens == 0 && braces == 0) break;
+				if (braces > 0) braces--;
+			}
+			if (brackets == 0 && parens == 0 && braces == 0 &&
+				(kind == TOKEN_COMMA || kind == TOKEN_SEMICOLON)) break;
+			/* A newline separates fields unless a generic/compound type is open. */
+			if (k > start && brackets == 0 && parens == 0 && braces == 0 &&
+				peek(p)->pos.line != p->tokens->data[k - 1].pos.line) break;
 			advance_tok(p);
 			k++;
 		}
-		if (k == start) break;
-		const token *field_tok = &p->tokens->data[k-1];
-		char *type_lex = join_lexemes_range(p->tokens, start, k-1);
+		if (k == start) {
+			parse_error(p, peek(p), "expected struct field type and name");
+			ast_free(stype); return NULL;
+		}
+		size_t name_index = k - 1;
+		/* One historical declaration used `sig func_sig`; accept that spelling
+		 * while keeping the canonical type-first form for all other fields. */
+		if (k - start == 2 && p->tokens->data[start].type == TOKEN_IDENTIFIER &&
+			strcmp(p->tokens->data[start].lexeme, "sig") == 0) name_index = start;
+		/* A few older declarations use `field type` order.  Recognize it when
+		 * the second token is an unmistakable type start; canonical declarations
+		 * such as `string field` remain type-first. */
+		if (name_index != start && p->tokens->data[start].type == TOKEN_IDENTIFIER &&
+			start + 1 < k && likely_type_start(&p->tokens->data[start + 1]) &&
+			!likely_type_start(&p->tokens->data[start])) name_index = start;
+		const token *field_tok = &p->tokens->data[name_index];
+		char *type_lex = join_lexemes_range(p->tokens,
+			name_index == start ? start + 1 : start, name_index == start ? k : name_index);
 		if (!type_lex) { ast_free(stype); return NULL; }
 		char **next_names = (char **)realloc(stype->as.struct_expr.field_names, (stype->as.struct_expr.field_count + 1) * sizeof(char *));
 		if (!next_names) { free(type_lex); ast_free(stype); return NULL; }
@@ -4008,7 +4065,7 @@ static ast_node *parse_struct_decl(parser *p) {
 		type_node->as.string_expr.literal = type_lex;
 		if (!ast_vec_push(&stype->as.struct_expr.field_values, type_node)) { ast_free(type_node); ast_free(stype); return NULL; }
 		stype->as.struct_expr.field_count++;
-		if (check(p, TOKEN_SEMICOLON)) advance_tok(p);
+		if (check(p, TOKEN_COMMA) || check(p, TOKEN_SEMICOLON)) advance_tok(p);
 	}
 	if (!expect(p, TOKEN_RBRACE, "}") ) { ast_free(stype); return NULL; }
 	consume_optional_semicolon(p);

@@ -75,13 +75,13 @@ func new_context() mono_context {
     }
 }
 
-func new_context_with_declarations(compile.internal.semantic.declaration_ref[] declarations) mono_context {
+func new_context_with_result(semantic_result result) mono_context {
     mono_context {
         cache: new_cache(),
         worklist: mono_work_item[] {},
         processed: string[] {},
         generated: function_decl[] {},
-        declarations: declarations,
+        declarations: result.declarations,
     }
 }
 
@@ -147,11 +147,11 @@ func encode_type(string type_name) string {
     out
 }
 
-func same_type_args(string[] left, string[] right) bool {
-    if len(left) != len(right) { return false }
+func same_type_args(string[] left, string[] rhs) bool {
+    if len(left) != len(rhs) { return false }
     i := 0
     for i < len(left) {
-        if left[i] != right[i] { return false }
+        if !compile.internal.typesys.same_type(left[i], rhs[i]) { return false }
         i = i + 1
     }
     true
@@ -295,7 +295,7 @@ func verify_identity_threading(mono_context ctx) m1_identity_verification {
 
 func monomorphize_file(source_file file, semantic_result result) monomorphize_file_result {
 
-    ctx := new_context_with_declarations(result.declarations)
+    ctx := new_context_with_result(result)
     extra_items := item[]()
 
     i := 0
@@ -386,16 +386,17 @@ func collect_item_instances_ctx(item value, item[] all_items, mono_context ctx) 
 }
 
 func collect_block_instances_ctx(block_expr block, item[] all_items, mono_context ctx) mono_context {
+	out := ctx
     i := 0
     for i < len(block.statements) {
-        ctx = collect_stmt_instances_ctx(block.statements[i], all_items, ctx)
+		out = collect_stmt_instances_ctx(block.statements[i], all_items, out)
         i = i + 1
     }
     switch block.final_expr {
-        option.some(value) : ctx = collect_expr_instances_ctx(value, all_items, ctx),
+		option.some(value) : out = collect_expr_instances_ctx(value, all_items, out),
         option.none : (),
     }
-    ctx
+	out
 }
 
 func collect_stmt_instances_ctx(stmt value, item[] all_items, mono_context ctx) mono_context {
@@ -404,10 +405,10 @@ func collect_stmt_instances_ctx(stmt value, item[] all_items, mono_context ctx) 
         stmt.assign(v) : collect_expr_instances_ctx(v.value, all_items, ctx),
         stmt.increment(_) : ctx,
         stmt.c_for(v) : {
-            ctx = collect_stmt_instances_ctx(v.init.value, all_items, ctx)
-            ctx = collect_expr_instances_ctx(v.condition, all_items, ctx)
-            ctx = collect_stmt_instances_ctx(v.step.value, all_items, ctx)
-            collect_block_instances_ctx(v.body, all_items, ctx)
+            out := collect_stmt_instances_ctx(v.init.value, all_items, ctx)
+            out = collect_expr_instances_ctx(v.condition, all_items, out)
+            out = collect_stmt_instances_ctx(v.step.value, all_items, out)
+            collect_block_instances_ctx(v.body, all_items, out)
         }
         stmt.return(v) : {
             switch v.value {
@@ -422,64 +423,65 @@ func collect_stmt_instances_ctx(stmt value, item[] all_items, mono_context ctx) 
 }
 
 func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) mono_context {
+	out := ctx
     switch value {
-        expr.borrow(v) : collect_expr_instances_ctx(v.target.value, all_items, ctx),
+		expr.borrow(v) : collect_expr_instances_ctx(v.target.value, all_items, out),
         expr.binary(v) : {
-            ctx = collect_expr_instances_ctx(v.left.value, all_items, ctx)
-            collect_expr_instances_ctx(v.right.value, all_items, ctx)
+			out = collect_expr_instances_ctx(v.left.value, all_items, out)
+			collect_expr_instances_ctx(v.right.value, all_items, out)
         }
-        expr.member(v) : collect_expr_instances_ctx(v.target.value, all_items, ctx),
+		expr.member(v) : collect_expr_instances_ctx(v.target.value, all_items, out),
         expr.index(v) : {
-            ctx = collect_expr_instances_ctx(v.target.value, all_items, ctx)
-            collect_expr_instances_ctx(v.index.value, all_items, ctx)
+			out = collect_expr_instances_ctx(v.target.value, all_items, out)
+			collect_expr_instances_ctx(v.index.value, all_items, out)
         }
         expr.call(v) : {
-            ctx = collect_method_call_instance_ctx(v, all_items, ctx)
-            ctx = collect_call_instance_ctx(v, all_items, ctx)
+			out = collect_method_call_instance_ctx(v, all_items, out)
+			out = collect_call_instance_ctx(v, all_items, out)
             i := 0
             for i < len(v.args) {
-                ctx = collect_expr_instances_ctx(v.args[i], all_items, ctx)
+				out = collect_expr_instances_ctx(v.args[i], all_items, out)
                 i = i + 1
             }
-            collect_expr_instances_ctx(v.callee.value, all_items, ctx)
+			collect_expr_instances_ctx(v.callee.value, all_items, out)
         }
         expr.if(v) : {
-            ctx = collect_expr_instances_ctx(v.condition.value, all_items, ctx)
-            ctx = collect_block_instances_ctx(v.then_branch, all_items, ctx)
+			out = collect_expr_instances_ctx(v.condition.value, all_items, out)
+			out = collect_block_instances_ctx(v.then_branch, all_items, out)
             switch v.else_branch {
-                option.some(e) : collect_expr_instances_ctx(e.value, all_items, ctx),
-                option.none : ctx,
+				option.some(e) : collect_expr_instances_ctx(e.value, all_items, out),
+				option.none : out,
             }
         }
-        expr.for(v) : collect_for_instances_ctx(v, all_items, ctx),
-        expr.block(v) : collect_block_instances_ctx(v, all_items, ctx),
+		expr.for(v) : collect_for_instances_ctx(v, all_items, out),
+		expr.block(v) : collect_block_instances_ctx(v, all_items, out),
         expr.switch(v) : {
-            ctx = collect_expr_instances_ctx(v.subject.value, all_items, ctx)
+			out = collect_expr_instances_ctx(v.subject.value, all_items, out)
             i := 0
             for i < len(v.arms) {
-                ctx = collect_expr_instances_ctx(v.arms[i].expr, all_items, ctx)
+				out = collect_expr_instances_ctx(v.arms[i].expr, all_items, out)
                 i = i + 1
             }
-            ctx
+			out
         }
         expr.array(v) : {
             i := 0
             for i < len(v.items) {
-                ctx = collect_expr_instances_ctx(v.items[i], all_items, ctx)
+				out = collect_expr_instances_ctx(v.items[i], all_items, out)
                 i = i + 1
             }
-            ctx
+			out
         }
         expr.map(v) : {
             i := 0
             for i < len(v.entries) {
-                ctx = collect_expr_instances_ctx(v.entries[i].key, all_items, ctx)
-                ctx = collect_expr_instances_ctx(v.entries[i].value, all_items, ctx)
+				out = collect_expr_instances_ctx(v.entries[i].key, all_items, out)
+				out = collect_expr_instances_ctx(v.entries[i].value, all_items, out)
                 i = i + 1
             }
-            ctx
+			out
         }
-        _ : ctx,
+		_ : out,
     }
 }
 
