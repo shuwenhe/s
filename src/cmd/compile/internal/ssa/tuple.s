@@ -30,7 +30,7 @@ func tuple_equal(int_tuple a, int_tuple b) bool {
     }
     i := 0
     for i < len(a.items) {
-        if a.items[i] != b.items[i] {
+        if tuple_at(a, i) != tuple_at(b, i) {
             return false
         }
         i = i + 1

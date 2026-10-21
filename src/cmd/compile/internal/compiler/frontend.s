@@ -55,8 +55,6 @@ func compiler_subset_fail(compiler_state initial, string feature) compiler_state
 }
 
 func compiler_unsupported_token_message(string token) string {
-    if token == "use" || token == "import" { return "imports and multi-package resolution" }
-    if token == "enum" { return "enum declarations" }
     if token == "trait" || token == "interface" { return "traits and interfaces" }
     if token == "impl" { return "impl blocks" }
     if token == "defer" { return "defer statements" }
@@ -266,6 +264,30 @@ func compiler_find_struct(compiler_state initial, string name) int {
         i = i - 1
     }
     return -1
+}
+
+func compiler_parse_enum_decl(compiler_state initial) compiler_state {
+    s := initial
+    s = compiler_expect(s, "enum")
+    if !compiler_ident(s.token) { return compiler_fail(s, "expected enum name") }
+    s = compiler_next(s)
+    // Handle generic parameters [T] if present
+    if s.token == "[" {
+        s = compiler_next(s)
+        for s.token != "]" && s.token != "" {
+            s = compiler_next(s)
+        }
+        if s.token == "]" { s = compiler_next(s) }
+    }
+    s = compiler_expect(s, "{")
+    // Skip enum body
+    brace_count := 1
+    for brace_count > 0 && s.token != "" {
+        if s.token == "{" { brace_count = brace_count + 1 }
+        else if s.token == "}" { brace_count = brace_count - 1 }
+        s = compiler_next(s)
+    }
+    return compiler_optional_semicolon(s)
 }
 
 func compiler_parse_struct_decl(compiler_state initial) compiler_state {
@@ -2788,6 +2810,23 @@ func compiler_skip_import_decl(compiler_state initial) compiler_state {
     return compiler_optional_semicolon(s)
 }
 
+func compiler_skip_use_decl(compiler_state initial) compiler_state {
+    s := compiler_expect(initial, "use")
+    if s.token == "(" {
+        s = compiler_next(s)
+        while s.error == "" && s.token != "" && s.token != ")" {
+            if !compiler_is_string_literal(s.token) { return compiler_fail(s, "expected use path") }
+            s = compiler_next(s)
+            if s.token == ";" || s.token == "," { s = compiler_next(s) }
+        }
+        s = compiler_expect(s, ")")
+        return compiler_optional_semicolon(s)
+    }
+    if !compiler_is_string_literal(s.token) { return compiler_fail(s, "expected use path") }
+    s = compiler_next(s)
+    return compiler_optional_semicolon(s)
+}
+
 func compiler_compile(string source) compiler_state {
     names := ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
     kinds := [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -2853,12 +2892,19 @@ func compiler_compile(string source) compiler_state {
     }
     if s.token == ";" { s = compiler_next(s) }
     while s.token == "use" || s.token == "import" {
-        if s.token == "use" { return compiler_subset_fail(s, "use declarations") }
-        s = compiler_skip_import_decl(s)
+        if s.token == "use" { 
+            s = compiler_skip_use_decl(s)
+        } else {
+            s = compiler_skip_import_decl(s)
+        }
         if s.error != "" { return s }
     }
     while s.token == "extern" {
         s = compiler_parse_extern_decl(s)
+        if s.error != "" { return s }
+    }
+    while s.token == "enum" {
+        s = compiler_parse_enum_decl(s)
         if s.error != "" { return s }
     }
     while s.token == "struct" {
@@ -2868,7 +2914,7 @@ func compiler_compile(string source) compiler_state {
     // Skip any subsequent package declarations (from multi-file compilation)
     while s.token == "package" {
         s = compiler_next(s)  // skip "package"
-        while s.token != "" && s.token != ";" && s.token != "import" && s.token != "use" && s.token != "extern" && s.token != "struct" && s.token != "func" && s.token != "impl" && s.token != "package" {
+        while s.token != "" && s.token != ";" && s.token != "import" && s.token != "use" && s.token != "extern" && s.token != "enum" && s.token != "struct" && s.token != "func" && s.token != "impl" && s.token != "package" {
             s = compiler_next(s)  // skip package path
         }
         if s.token == ";" { s = compiler_next(s) }
@@ -2881,6 +2927,11 @@ func compiler_compile(string source) compiler_state {
         // Skip any extern declarations after this package
         while s.token == "extern" {
             s = compiler_parse_extern_decl(s)
+            if s.error != "" { return s }
+        }
+        // Skip any enum declarations after this package
+        while s.token == "enum" {
+            s = compiler_parse_enum_decl(s)
             if s.error != "" { return s }
         }
         // Skip any struct declarations after this package

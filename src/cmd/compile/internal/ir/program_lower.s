@@ -288,9 +288,12 @@ func program_lower_function(string package_name, function_decl declaration, mir_
         if state.error != "" { output.error = state.error; return output }
         if state.expression_value >= 0 { returns = append(returns, state.expression_value) }
     }
-    output.function_value.blocks = mir_program_block[]{mir_program_block {
+    blocks := mir_program_block[]()
+    block := mir_program_block{
         id: 0, instructions: state.instructions, terminator: "return", return_values: returns,
-    }}
+    }
+    blocks = append(blocks, block)
+    output.function_value.blocks = blocks
     return output
 }
 

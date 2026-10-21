@@ -15,18 +15,18 @@ struct safety_proof {
     string summary
 }
 
-func classify_safety_error(semantic_error diagnostic, safety_proof* proof) () {
+func classify_safety_error(semantic_error diagnostic) int {
     code := diagnostic.code
     if code == "e3055" || code == "e3056" || code == "e3057" || code == "e3058" {
-        proof.borrow_errors = proof.borrow_errors + 1
+        return 1
     } else if code == "e3052" || code == "e3053" {
-        proof.lifetime_errors = proof.lifetime_errors + 1
+        return 2
     } else if code == "e3059" || code == "e3066" || code == "e3067" {
-        proof.ownership_errors = proof.ownership_errors + 1
+        return 3
     } else if code == "e3060" || code == "e3061" {
-        proof.unsafe_errors = proof.unsafe_errors + 1
+        return 4
     } else {
-        proof.kinderrors = proof.kinderrors + 1
+        return 5
     }
 }
 
@@ -44,15 +44,20 @@ func prove_safety(string source) safety_proof {
     }
     i := 0
     for i < len(diagnostics) {
-        classify_safety_error(diagnostics[i], &proof)
+        category := classify_safety_error(diagnostics[i])
+        if category == 1 { proof.borrow_errors = proof.borrow_errors + 1 }
+        else if category == 2 { proof.lifetime_errors = proof.lifetime_errors + 1 }
+        else if category == 3 { proof.ownership_errors = proof.ownership_errors + 1 }
+        else if category == 4 { proof.unsafe_errors = proof.unsafe_errors + 1 }
+        else { proof.type_errors = proof.type_errors + 1 }
         i = i + 1
     }
-    proof.summary = "safety-proof type=" + (proof.kinderrors as string)
-        + " ownership=" + (proof.ownership_errors as string)
-        + " borrow=" + (proof.borrow_errors as string)
-        + " lifetime=" + (proof.lifetime_errors as string)
-        + " unsafe=" + (proof.unsafe_errors as string)
-        + " diagnostics=" + (proof.diagnostic_count as string)
+    proof.summary = "safety-proof type=" + std.prelude.to_string(proof.type_errors)
+        + " ownership=" + std.prelude.to_string(proof.ownership_errors)
+        + " borrow=" + std.prelude.to_string(proof.borrow_errors)
+        + " lifetime=" + std.prelude.to_string(proof.lifetime_errors)
+        + " unsafe=" + std.prelude.to_string(proof.unsafe_errors)
+        + " diagnostics=" + std.prelude.to_string(proof.diagnostic_count)
     proof
 }
 

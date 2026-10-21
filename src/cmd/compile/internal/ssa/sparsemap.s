@@ -66,7 +66,13 @@ func sparse_map_remove(sparse_map s, int key) sparse_map {
         last := s.dense[len(s.dense) - 1]
         s.dense[i] = last
         s.sparse[last.key] = i
-        s.dense.pop()
+        trimmed := sparse_entry[]()
+        j := 0
+        for j < len(s.dense) - 1 {
+            trimmed = append(trimmed, s.dense[j])
+            j = j + 1
+        }
+        s.dense = trimmed
     }
     s
 }

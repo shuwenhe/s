@@ -711,11 +711,6 @@ func mir_expr_events(expr value, mir_local_slot[] locals, bool consume) string[]
         }
         expr.call(call_expr) : {
             events = mir_extend_events(events, mir_expr_events(call_expr.callee.unwrap(), locals, false))
-            i := 0
-            for i < len(call_expr.args) {
-                events = mir_extend_events(events, mir_expr_events(call_expr.args[i], locals, true))
-                i = i + 1
-            }
         }
         expr.member(member_expr) : {
             events = mir_extend_events(events, mir_expr_events(member_expr.target.unwrap(), locals, consume))
@@ -796,11 +791,6 @@ func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr v
         }
         expr.call(call_expr) : {
             mir_append_ownership_semantics_from_expr(statements, call_expr.callee.unwrap(), "")
-            i := 0
-            for i < len(call_expr.args) {
-                mir_append_ownership_semantics_from_expr(statements, call_expr.args[i], "")
-                i = i + 1
-            }
         }
         expr.member(member_expr) : {
             place := mir_place_from_expr(value)
