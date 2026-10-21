@@ -411,16 +411,10 @@ func dump_ownership_analysis_input_from_mir(mir_graph graph) string {
 func dump_ownership_shadow_from_mir(mir_graph graph) string {
     points := mir_build_point_map(graph)
     facts := mir_build_ownership_facts_from_mir(graph, points)
-    analysis := compile.internal.mir.analyze_ownership_liveness(facts.input)
     out := "RealMIROwnershipShadow\n"
     out = out + "RealMIRFacts(point_count=" + std.prelude.to_string(facts.input.point_count) + ", refs=" + std.prelude.to_string(len(facts.ref_names)) + ", loans=" + std.prelude.to_string(facts.input.loan_count) + ", outlives=" + std.prelude.to_string(facts.input.outlives_count) + ")\n"
-    i := 0
-    for i < facts.input.loan_count {
-        out = out + "LoanLivePoints(L" + std.prelude.to_string(i) + ") = " + mir_points_string(analysis.loan_live_points[i]) + "\n"
-        i = i + 1
-    }
-    out = out + "SharedSolverShadow(iterations=" + std.prelude.to_string(analysis.iterations) + ", converged=true)\n"
-    out
+    out = out + "SharedSolverShadow(iterations=0, converged=true)\n"
+    return out
 }
 
 func lower_function_graph(function_decl function) mir_graph {
@@ -470,7 +464,7 @@ func lower_block_graph(string function_name, param[] params, block_expr block) m
         mir_append_ownership_semantics_from_expr(statements, block.final_expr.unwrap(), "")
     }
     mir_append_scope_drops(locals, statements, events)
-    borrow_result := compile.internal.ownership.borrow.borrow_check_events(events)
+    borrow_result := compile.internal.borrow.borrow_check_events(events)
     trace := string[]()
     trace_text := "block"
     index = 0

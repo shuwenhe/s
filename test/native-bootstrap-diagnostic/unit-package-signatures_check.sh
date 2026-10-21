@@ -24,4 +24,10 @@ if "$seed" --compile-unit "$work/bad.ir" "$fixtures/bad.s" "$fixtures/relocated.
 fi
 grep -Fq 'expects 1' "$work/bad.log"
 test ! -s "$work/bad.ir"
+if "$seed" --compile-unit "$work/invalid.ir" "$fixtures/invalid-payload.s" >"$work/invalid.log" 2>&1; then
+    echo 'FAIL: enum constructor accepted an incompatible payload' >&2
+    exit 1
+fi
+grep -Fq 'enum payload type mismatch' "$work/invalid.log"
+test ! -s "$work/invalid.ir"
 printf 'unit package signatures: PASS (declaration path, forward call, native behavior, arity rejection)\n'

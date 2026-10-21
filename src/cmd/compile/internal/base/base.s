@@ -1,11 +1,15 @@
 package compile.internal.base
+
 import (
     "std"
 )
+
 enable_trace := false
+
 struct at_exit_entry {
     string name
 }
+
 at_exit_funcs := at_exit_entry[]()
 
 func at_exit(string name) () {
