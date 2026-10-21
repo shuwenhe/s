@@ -13,7 +13,7 @@ struct package_ir {
     decl_ir[] decls
 }
 enum decl_ir {
-    func(func_decl),
+    function(func_decl),
     type_decl(type_decl),
     let(var_decl),
     const(const_decl),

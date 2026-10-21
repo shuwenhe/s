@@ -236,6 +236,10 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/ssa/print.s \
 	src/cmd/compile/internal/ssa/compile.s
 
+# P1 canonical AST authority slice. Resolve its imported S parser and semantic
+# consumer from the source graph so the production artifact carries one AST.
+COMPILER_SOURCES += $(shell mkdir -p .bootstrap/compiler; ./src/cmd/dist/source_closure.sh src/cmd/compile/internal/canonical/canonical_ast_check.s .bootstrap/compiler/p1-canonical-closure.txt >/dev/null; cat .bootstrap/compiler/p1-canonical-closure.txt)
+
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
 	@echo "compiler-entry=$(CURDIR)/src/cmd/compile/main.s"

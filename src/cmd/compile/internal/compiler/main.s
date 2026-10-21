@@ -1,6 +1,13 @@
 package compile.internal
-
 func compiler_main(string[] args) int {
+    if len(args) == 4 && args[1] == "--canonical-ast-check" {
+        source := __host_read_to_string(args[2])
+        if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
+        result := CanonicalAstCheck(source)
+        if __host_slice(result, 0, 20) == "canonical-ast-error:" { eprintln(result); return 1 }
+        if __host_write_text_file(args[3], result + "\n") != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
     if len(args) == 4 && args[1] == "build" {
         return handle_build_command(args[2], args[3])
     }

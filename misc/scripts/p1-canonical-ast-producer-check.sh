@@ -25,9 +25,9 @@ invalid_out="$work/invalid.out"
 invalid_log="$work/invalid.log"
 
 set +e
-"$compiler" --emit-c "$valid" "$valid_out" >"$valid_log" 2>&1
+"$compiler" --canonical-ast-check "$valid" "$valid_out" >"$valid_log" 2>&1
 valid_status=$?
-"$compiler" --emit-c "$invalid" "$invalid_out" >"$invalid_log" 2>&1
+"$compiler" --canonical-ast-check "$invalid" "$invalid_out" >"$invalid_log" 2>&1
 invalid_status=$?
 set -e
 
