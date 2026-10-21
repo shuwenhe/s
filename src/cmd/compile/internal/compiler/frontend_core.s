@@ -54,6 +54,7 @@ struct compiler_state {
     string pending_branch_true_constant
     int[] function_return_params
     int return_kind
+    bool return_pointer
     int parameter_count
     int return_param
     int[] function_starts

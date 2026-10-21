@@ -1438,9 +1438,9 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             }
             if field >= 0 {
                 if parent_field >= 0 {
-                    if compiler_conflict_at(s, slot, parent_field, compiler_is_mutable_borrow_kind(kind)) { return compiler_fail(s, "conflicting field borrow: " + s.names[slot]) }
+                    if compiler_struct_access_conflict(s, slot, parent_field, compiler_is_mutable_borrow_kind(kind)) { return compiler_fail(s, "conflicting field borrow: " + s.names[slot]) }
                     if compiler_nested_field_has_borrow(s, slot, parent_field, field) { return compiler_fail(s, "conflicting nested field borrow: " + s.names[slot]) }
-                } else if compiler_conflict_at(s, slot, field, compiler_is_mutable_borrow_kind(kind)) { return compiler_fail(s, "conflicting field borrow: " + s.names[slot]) }
+                } else if compiler_struct_access_conflict(s, slot, field, compiler_is_mutable_borrow_kind(kind)) { return compiler_fail(s, "conflicting field borrow: " + s.names[slot]) }
             } else if compiler_struct_access_conflict(s, slot, -1, compiler_is_mutable_borrow_kind(kind)) { return compiler_fail(s, "conflicting borrow: " + s.names[slot]) }
             if compiler_is_struct_reference_kind(s.kinds[slot]) {
                 if compiler_is_mutable_borrow_kind(kind) && !compiler_is_mutable_borrow_kind(s.kinds[slot]) { return compiler_fail(s, "mutable struct reference requires an owner or mutable struct reference") }
@@ -1450,7 +1450,16 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         }
         if reborrow || parent_field >= 0 { s = compiler_next(s) }
         s.value = compiler_var(slot)
-        if field >= 0 { s.value = compiler_var(slot) + "->" + field_path }
+        if field >= 0 {
+            base := compiler_var(slot)
+            if s.struct_ids[slot] >= 0 { base = compiler_checked_struct_value(s, base, s.kinds[slot], s.struct_ids[slot]) }
+            if parent_field >= 0 {
+                parent_name := compiler_struct_field_name(s, s.struct_ids[slot], parent_field)
+                parent_struct := compiler_struct_field_struct(s, s.struct_ids[slot], parent_field)
+                base = compiler_checked_struct_value(s, base + "->" + parent_name, 5, parent_struct)
+                s.value = base + "->" + compiler_struct_field_name(s, parent_struct, field)
+            } else { s.value = base + "->" + field_path }
+        }
         if scalar_address { s.value = "&(" + s.value + ")" }
         if kind == 18 { s.value = "(const void *)" + s.value }
         if kind == 19 { s.value = "(void *)" + s.value }
@@ -1718,9 +1727,15 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
                 if expected == 20 && s.value_kind == 24 { return compiler_fail(s, "mutable struct reference requires an owner or mutable struct reference") }
                 if s.value_kind == 5 {
                     if s.value_slot < 0 { return compiler_fail(s, "struct argument borrow requires a named owner") }
-                    if compiler_conflict_at(s, s.value_slot, s.value_field, expected == 20) { return compiler_fail(s, "conflicting struct argument borrow") }
+                    if s.value_field < 0 && compiler_has_moved_field(s, s.value_slot) { return compiler_fail(s, "cannot borrow partially moved struct") }
+                    if compiler_struct_access_conflict(s, s.value_slot, s.value_field, expected == 20) { return compiler_fail(s, "conflicting struct argument borrow") }
                     s.new_borrow = true
                     s.value_parent = -1
+                    if compiler_is_struct_reference_kind(s.kinds[s.value_slot]) {
+                        if expected == 20 && s.kinds[s.value_slot] == 24 { return compiler_fail(s, "mutable struct reference requires an owner or mutable struct reference") }
+                        s.value_parent = s.value_slot
+                        s.value_slot = s.roots[s.value_slot]
+                    }
                 }
             } else if expected == 7 || expected == 8 {
                 if s.value_kind != 6 && s.value_kind != 7 && s.value_kind != 8 { return compiler_fail(s, "function argument requires an integer array") }
@@ -1899,7 +1914,8 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
             method_index := compiler_find_method(s, s.struct_ids[slot], member_name)
             if method_index >= 0 && method_look.token == "(" {
                 if !compiler_is_struct_access_kind(s.kinds[slot]) { return compiler_fail(s, "method call requires an owned struct receiver") }
-                if compiler_conflict(s, slot, false) { return compiler_fail(s, "cannot call method while receiver is mutably borrowed") }
+                if s.kinds[slot] == 24 { return compiler_fail(s, "cannot call a mutable receiver method through a shared struct reference") }
+                if compiler_struct_access_conflict(s, slot, -1, true) { return compiler_fail(s, "cannot call method while receiver is borrowed") }
                 s = compiler_expect(method_look, "(")
                 if s.token != ")" { return compiler_fail(s, "receiver methods in this subset do not accept extra arguments") }
                 s = compiler_expect(s, ")")
@@ -2032,6 +2048,7 @@ func compiler_expression(compiler_state initial, int minimum) compiler_state {
 func compiler_bind(compiler_state initial, string name, bool declaration) compiler_state {
     s := initial
     if s.value_kind == 0 { return compiler_fail(s, "void call cannot be used as a value") }
+    if s.value_kind == 25 { return compiler_fail(s, "nil binding requires a typed owner") }
     slot := compiler_find(s, name)
     is_declaration := declaration
     if is_declaration && slot >= 0 { is_declaration = false }
@@ -2337,6 +2354,10 @@ func compiler_statement(compiler_state initial) compiler_state {
                 expected_source = "declaration-type-fact"
                 expected_key = "canonical-declaration-ref"
             }
+        }
+        if s.value_kind == 25 && expected_return_kind == 5 && s.return_pointer {
+            s.value_kind = 5
+            s.value_struct_id = expected_return_struct
         }
         if s.value_kind != expected_return_kind && !(expected_return_kind == 18 && s.value_kind == 18) {
             s.stage7_rejection_source = "real-type-checker"
@@ -2734,6 +2755,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     }
     s = compiler_expect(s, ")")
     s.return_kind = 0
+    s.return_pointer = false
     return_struct := -1
     if s.token == "int" { s.return_kind = 1; s = compiler_next(s) }
     else if s.token == "string" { s.return_kind = 17; s = compiler_next(s) }
@@ -2749,7 +2771,7 @@ func compiler_parse_helper(compiler_state initial) compiler_state {
     else if s.token == "slice" { s.return_kind = 9 }
     else if s.token != "{" { return compiler_fail(s, "function return type must be int, string, box, ref, mutref, pair or struct") }
     if s.return_kind == 3 || s.return_kind == 4 || s.return_kind == 5 || s.return_kind == 9 { s = compiler_next(s) }
-    if s.return_kind == 5 && s.token == "*" { s = compiler_next(s) }
+    if s.return_kind == 5 && s.token == "*" { s.return_pointer = true; s = compiler_next(s) }
     s.parameter_count = param_count
     s.return_param = -1
 

@@ -18,6 +18,6 @@ func main() int {
     }
     assert(cell.value == 19)
     drop(cell)
-    assert(allocations() == 0)
+    assert(live_allocations() == 0)
     return 0
 }
