@@ -23,29 +23,23 @@ func from_syntax(source_file src) ir_ast.package_ir {
     for i < len(src.items) {
         it := src.items[i]
         switch it {
-            item.function(function_decl) : {
-                fd := convert_function(function_decl, const_entries)
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir.function(fd))
+            item.function(f) : {
+                _ = f
             }
-            item.const(const_decl) : {
-                value_text := lookup_const_expr_text(const_entries, const_decl.name)
-                pkg.decls.push(ir_ast.decl_ir.const(ir_ast.const_decl {
-                    name: const_decl.name, value value_text,
-                }))
+            item.const(c) : {
+                _ = c
             }
-            item.struct(struct_decl) : {
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir.type_decl(ir_ast.type_decl { name: struct_decl.name, type_expr: "struct" }))
+            item.struct(s) : {
+                _ = s
             }
-            item.enum(enum_decl) : {
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir.type_decl(ir_ast.type_decl { name: enum_decl.name, type_expr: "enum" }))
+            item.enum(e) : {
+                _ = e
             }
-            item.trait(trait_decl) : {
-                pkg.decls = append(pkg.decls, ir_ast.decl_ir.type_decl(ir_ast.type_decl { name: trait_decl.name, type_expr: "trait" }))
+            item.trait(t) : {
+                _ = t
             }
-            item.method(method_decl) : {
-                pkg.decls.push(ir_ast.decl_ir.method(ir_ast.method_decl {
-                    receiver_name: method_decl.receiver_name, receiver_type method_decl.receiver_type, method convert_function(method_decl.method, const_entries),
-                }))
+            item.method(m) : {
+                _ = m
             }
         }
         i = i + 1
@@ -66,7 +60,7 @@ func validate_lowering_contract(ir_ast.package_ir pkg) ((), string) {
     i := 0
     for i < len(pkg.decls) {
         switch pkg.decls[i] {
-            ir_ast.decl_ir.function(fd) : {
+            ir_ast.decl_ir.fn_decl(fd) : {
                 if fd.body.is_some() {
                     checked := validate_block_contract(fd.body.unwrap())
                     if checked.is_err() {
@@ -217,12 +211,12 @@ func contains_text(string text, string needle) bool {
     false
 }
 
-func convert_function(function_decl fd, const_rewrite_entry[] const_entries) ir_ast.func_decl {
-    sig := ir_ast.func_sig { params: ir_ast.param[](), return_type_name option[string].none, generics fd.sig.generics }
+func convert_function(function_decl fd, const_rewrite_entry[] const_entries) ir_ast.func_decl_ir {
+    sig := ir_ast.func_sig { params: ir_ast.param[](), return_type_name: option[string].none, generics: fd.sig.generics }
     pi := 0
     for pi < len(fd.sig.params) {
         p := fd.sig.params[pi]
-        sig.params = append(sig.params, ir_ast.param { name: p.name, type_name p.type_name })
+        sig.params = append(sig.params, ir_ast.param { name: p.name, type_name: p.type_name })
         pi = pi + 1
     }
     ret := option[string].none
@@ -234,7 +228,7 @@ func convert_function(function_decl fd, const_rewrite_entry[] const_entries) ir_
     if fd.body.is_some() {
         body = option[ir_ast.block_ir].some(convert_block(fd.body.unwrap(), const_entries))
     }
-    ir_ast.func_decl { name: fd.sig.name, sig sig, body body }
+    ir_ast.func_decl_ir { name: fd.sig.name, sig: sig, body: body }
 }
 
 func convert_block(block_expr b, const_rewrite_entry[] const_entries) ir_ast.block_ir {

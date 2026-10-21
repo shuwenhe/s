@@ -59,7 +59,7 @@ func inline_leaf_calls(mir_graph caller, mir_graph callee) inline_result {
     block_index := 0
     for block_index < len(result.graph.blocks) {
         block := result.graph.blocks[block_index]
-        mir_statement[] rewritten
+        rewritten := mir_statement[]()
         statement_index := 0
         has_call := inline_count_token(compile.internal.mir.dump_graph(caller), callee.function_name) > 0
         for statement_index < len(block.statements) {
