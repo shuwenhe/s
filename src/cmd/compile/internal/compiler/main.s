@@ -9,6 +9,12 @@ extern "intrinsic" func __host_read_to_string(string path) string
 extern "intrinsic" func __host_write_text_file(string path, string data) int
 extern "intrinsic" func __host_char_at(string s, int index) string
 extern "intrinsic" func __host_slice(string s, int start, int end) string
+extern "intrinsic" func host_args() string[]
+
+func main() int {
+    args := host_args()
+    return compiler_main(args)
+}
 
 func compiler_main(string[] args) int {
     if len(args) == 4 && args[1] == "--canonical-ast-check" {
@@ -48,6 +54,15 @@ func compiler_main(string[] args) int {
         return handle_emit_bin(args)
     }
     
+    // Default mode: compile S source to IR
+    // Usage: compiler <input.s> <output.ir>
+    if len(args) == 3 {
+        source := __host_read_to_string(args[1])
+        if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
+        ir := emit_canonical_mir_public(source)
+        if __host_write_text_file(args[2], ir) != 0 { eprintln("compiler: cannot write output"); return 1 }
+        return 0
+    }
     if len(args) != 4 || (args[1] != "stage5-name-resolution-proof" && args[1] != "declaration-ref-proof" && args[1] != "type-checking-proof" && args[1] != "type-facts-observation-proof" && args[1] != "canonical-type-ref-proof" && args[1] != "canonical-semantic-proof" && args[1] != "canonical-lowering-proof" && args[1] != "canonical-mir-verification-proof" && args[1] != "canonical-ownership-proof" && args[1] != "canonical-monomorphization-proof" && args[1] != "canonical-optimization-proof" && args[1] != "canonical-layout-proof" && args[1] != "canonical-abi-proof" && args[1] != "canonical-codegen-proof" && args[1] != "canonical-regalloc-proof" && args[1] != "--emit-c" && args[1] != "--emit-lowered-view" && args[1] != "--emit-mir" && args[1] != "--emit-mir-after-drop" && args[1] != "--emit-mir-place" && args[1] != "--emit-mir-movepath" && args[1] != "--emit-mir-partial-move" && args[1] != "--emit-mir-reinit" && args[1] != "--emit-mir-partial-drop" && args[1] != "--emit-mir-place-borrow" && args[1] != "--emit-mir-reference-liveness" && args[1] != "--emit-mir-loan-liveness" && args[1] != "--emit-mir-region-constraints" && args[1] != "--emit-mir-region-solver" && args[1] != "--emit-mir-nll-borrow-check" && args[1] != "--emit-mir-nll-shadow" && args[1] != "--emit-mir-nll-real-cfg" && args[1] != "--emit-mir-ownership-solver-check" && args[1] != "--emit-mir-nll-ownership") {
         eprintln("usage: s_compiler (stage5-name-resolution-proof|declaration-ref-proof|type-checking-proof|type-facts-observation-proof|canonical-type-ref-proof|canonical-semantic-proof|canonical-lowering-proof|canonical-mir-verification-proof|canonical-ownership-proof|canonical-monomorphization-proof|canonical-optimization-proof|canonical-layout-proof|canonical-abi-proof|canonical-codegen-proof|canonical-regalloc-proof|--emit-c|--emit-lowered-view|--emit-mir|--emit-mir-after-drop|--emit-mir-place|--emit-mir-movepath|--emit-mir-partial-move|--emit-mir-reinit|--emit-mir-partial-drop|--emit-mir-place-borrow|--emit-mir-reference-liveness|--emit-mir-loan-liveness|--emit-mir-region-constraints|--emit-mir-region-solver|--emit-mir-nll-borrow-check|--emit-mir-nll-shadow|--emit-mir-nll-real-cfg|--emit-mir-ownership-solver-check|--emit-mir-nll-ownership) input.s output")
         return 2
