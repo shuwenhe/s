@@ -2,6 +2,26 @@
 
 SELFHOST = NOT_PROVEN.
 
+## Main integration verification
+
+Merged into main as `a937ba96b` after fetching origin, preserving the three
+subsequent main commits. The sections below retain the isolated-worktree audit
+as historical evidence; their statement that the branch was unmerged describes
+that earlier run.
+
+On the merged main tree:
+
+- `make selfhost-native-record-check`: exit **0**.
+- `make selfhost-protocol-check`: exit **0**.
+- `make selfhost`: exit **2**, source closure **252 files**.
+- Latest FIRST RED: `src/cmd/compile/internal/parser/frontend_parser.s:152:5`,
+  `p.peek_token = lexer_next_token(p.lexer*)`, diagnostic:
+  `unproven record borrow: escaping handle or unsupported call/body`.
+- No full Stage1, Stage2 or Stage3 was generated. Selfhosting remains unproven.
+
+Merged validation logs: `/tmp/s-main-merged-record.log`,
+`/tmp/s-main-merged-protocol.log`, `/tmp/s-main-merged-selfhost.log`.
+
 ## Reproduction boundary
 
 Worktree: `/tmp/s-ast-borrow`, branch `fix/owned-recursive-ast-borrow`, based on
