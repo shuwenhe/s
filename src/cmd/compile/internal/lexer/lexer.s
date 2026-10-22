@@ -1,4 +1,4 @@
-package s
+package compile.internal.lexer
 
 import (
     "std"
