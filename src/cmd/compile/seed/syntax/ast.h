@@ -146,6 +146,7 @@ struct ast_node {
 			char *receiver_type;
 			char *export_abi;
 			char *export_symbol;
+            unsigned long long native_borrow_mask;
 			char **params;
 			char **param_types;
 			size_t param_count;
@@ -219,6 +220,7 @@ struct ast_node {
 			ast_node *callee;
 			ast_vec args;
 			char *resolved_array_type;
+            unsigned long long native_borrow_mask;
 		} call_expr;
 	} as;
 };

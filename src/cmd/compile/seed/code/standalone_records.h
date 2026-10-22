@@ -118,6 +118,7 @@ static bool standalone_validate_record_defaults(standalone_module *m, int index,
     r->default_state = 2;
     return true;
 }
+static bool standalone_borrow_metadata_proven(standalone_module *, const standalone_ins *);
 static bool standalone_validate_record_contracts(standalone_module *m, compile_error *err) {
     size_t i;
     bool in_function = false;
@@ -126,7 +127,7 @@ static bool standalone_validate_record_contracts(standalone_module *m, compile_e
         if (!strcmp(ins->op, "NOP") &&
             (!strncmp(ins->result, "param-transfer:", 15) || !strncmp(ins->result, "return-transfer:", 16))) {
             const char *t = ins->operand2;
-            if (strchr(t, '*') || strchr(t, '&') || !strcmp(t, "box") || !strncmp(t, "own ", 4) ||
+            if ((strchr(t, '*') && !standalone_borrow_metadata_proven(m,ins)) || strchr(t, '&') || !strcmp(t, "box") || !strncmp(t, "own ", 4) ||
                 !strncmp(t, "ref ", 4) || !strncmp(t, "mutref ", 7)) {
                 error_set(err, ERR_SEMANTIC, 0, 0, "native record transfer unsupported_owner or unproven borrow at IR record %zu: %s", i+2, t); return false;
             }

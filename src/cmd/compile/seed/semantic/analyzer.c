@@ -2226,6 +2226,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					return 0;
 				}
 				if (sym->kind == SYMBOL_FN && i < sym->param_count &&
+                    !(i < 64 && (node->as.call_expr.native_borrow_mask & (1ULL << i))) &&
 					!is_type_assignable_ctx(ctx, sym->param_types[i], rhs_type)) {
 					error_set(ctx->err, ERR_SEMANTIC, node->as.call_expr.args.data[i]->pos.line,
 						node->as.call_expr.args.data[i]->pos.column,
