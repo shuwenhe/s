@@ -2308,23 +2308,58 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 		p->tokens->data[p->current + 2].type == TOKEN_IDENTIFIER) {
 		/* Pattern: IDENT * IDENT
 		 * Could be name-first (lex* int) or type-first (lexer* lex).
-		 * Disambiguate: try to parse content after second IDENT as type annotation.
-		 * If successful, it's name-first (lex* int_annotation).
-		 * If it fails, check whether second IDENT could be a type itself (type-first).
+		 * Key distinction: in name-first, the content AFTER second_ident is part of type annotation.
+		 * In type-first, the second_ident itself IS the parameter name, so next token is terminator.
+		 * 
+		 * Heuristic: check what follows the second IDENT.
+		 * - If it's a type-annotation-like token (* [ [ or similar), it's name-first.
+		 * - If it's a terminator (COMMA, RPAREN), it's type-first.
+		 * - Otherwise, attempt name-first parse; if it consumes beyond terminator, backtrack.
 		 */
 		char *base_type = NULL;
 		size_t saved_current = p->current;
+		size_t after_second = p->current + 3;
 		const char *first_ident = p->tokens->data[p->current].lexeme;
 		const char *second_ident = p->tokens->data[p->current + 2].lexeme;
 		
-		fprintf(stderr, "[PARSER_DEBUG] IDENT*IDENT pattern: first=%s, second=%s\n", first_ident, second_ident);
+		/* Check token after second IDENT to disambiguate */
+		int looks_like_type_first = 0;
+		if (after_second < p->tokens->len) {
+			token_type after_token = p->tokens->data[after_second].type;
+			/* If next token is COMMA, RPAREN, RBRACE, etc., it's likely type-first */
+			if (after_token == TOKEN_COMMA || after_token == TOKEN_RPAREN || 
+			    after_token == TOKEN_RBRACE || after_token == TOKEN_SEMICOLON) {
+				looks_like_type_first = 1;
+			}
+			/* If next token is *, [, (, it's likely name-first (type annotation continues) */
+			else if (after_token == TOKEN_STAR || after_token == TOKEN_LBRACKET || after_token == TOKEN_LPAREN) {
+				looks_like_type_first = 0;
+			}
+		}
+		
+		if (looks_like_type_first) {
+			/* Type-first: first_ident is type, second_ident is name */
+			*out_name = dup_cstr(second_ident);
+			size_t type_len = strlen(first_ident);
+			*out_type = (char *)malloc(type_len + 2);
+			if (*out_type) snprintf(*out_type, type_len + 2, "%s*", first_ident);
+			if (!*out_name || !*out_type) {
+				free(*out_name); free(*out_type);
+				*out_name = NULL; *out_type = NULL;
+				error_set(p->err, ERR_OUT_OF_MEMORY, p->tokens->data[p->current].pos.line, p->tokens->data[p->current].pos.column, "out of memory");
+				p->current = saved;
+				return 0;
+			}
+			advance_tok(p);  /* skip first_ident */
+			advance_tok(p);  /* skip * */
+			advance_tok(p);  /* skip second_ident */
+			return 1;
+		}
 		
 		/* Try name-first interpretation: first_ident is name, parse after second_ident as type */
 		advance_tok(p);  /* skip first_ident */
 		advance_tok(p);  /* skip * */
 		int name_first_success = try_parse_type_annotation(p, &base_type);
-		
-		fprintf(stderr, "[PARSER_DEBUG] name_first_success=%d, base_type=%s\n", name_first_success, base_type ? base_type : "NULL");
 		
 		if (name_first_success && base_type) {
 			/* name-first format confirmed: lex* int */
@@ -2333,7 +2368,6 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 			*out_type = (char *)malloc(n + 2);
 			if (*out_type) snprintf(*out_type, n + 2, "%s*", base_type);
 			free(base_type);
-			fprintf(stderr, "[PARSER_DEBUG] name-first path: out_name=%s, out_type=%s\n", *out_name, *out_type);
 			if (!*out_name || !*out_type) {
 				free(*out_name); free(*out_type);
 				*out_name = NULL; *out_type = NULL;
@@ -2344,7 +2378,7 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 			return 1;
 		}
 		
-		/* name-first failed; try type-first: first_ident is type, second_ident is name */
+		/* Neither heuristic nor name-first parse succeeded, fallback to type-first */
 		if (base_type) free(base_type);
 		p->current = saved_current;
 		
@@ -2352,8 +2386,6 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 		size_t type_len = strlen(first_ident);
 		*out_type = (char *)malloc(type_len + 2);
 		if (*out_type) snprintf(*out_type, type_len + 2, "%s*", first_ident);
-		
-		fprintf(stderr, "[PARSER_DEBUG] type-first path: out_name=%s, out_type=%s\n", *out_name, *out_type);
 		
 		if (!*out_name || !*out_type) {
 			free(*out_name); free(*out_type);
