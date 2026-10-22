@@ -179,7 +179,7 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
                     if(expected!=args[first+a].borrow || (expected && args[first+a].kind!=target->borrow_schema[a])) goto bad;
                 }
                 int result=-1;
-                if(target && !target->borrow_mask) {
+                if(target) {
                     int expected=borrow_flow_type(&types,standalone_transfer(m,"return-transfer:",target->name,NULL),NULL,0);
                     if(expected>=0 && (size_t)expected<m->record_count) {
                         int values[64]; const char *sources[64]; bool reborrows[64];
