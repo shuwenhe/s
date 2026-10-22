@@ -60,22 +60,3 @@ struct ownership_decision_diff {
     bool match
 }
 
-func analysis_loan_live_at(
-    ownership_analysis* analysis,
-    int loan_id,
-    int point_id
-) bool {
-    
-    if analysis == nil {
-        return false
-    }
-    if loan_id < 0 || loan_id >= len(analysis.loan_live_points) {
-        return false
-    }
-    if point_id < 0 || point_id >= 31 {  
-        return false
-    }
-    
-    mask := 1 << point_id
-    return (analysis.loan_live_points[loan_id] & mask) != 0
-}
