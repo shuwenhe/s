@@ -76,6 +76,20 @@ func native_install_program(mir_program program, string input, string output, st
     }
     emitted := native_program_assembly(program, executable)
     if emitted.error != "" { eprintln(emitted.error); return 1 }
+    return native_install_assembly(emitted.assembly, input, output, executable)
+}
+
+// Assembly is a separate artifact boundary: emission does not re-read source
+// or invoke the seed compiler. Only the selected assembler and linker run here.
+func native_install_assembly(string assembly, string input, string output, bool executable) int {
+    if output == "" || input == output || __host_same_file(input, output) {
+        eprintln("native compiler: output must not overwrite input artifact")
+        return 2
+    }
+    if !native_target_supported() {
+        eprintln("native compiler: P0 supports Linux/amd64")
+        return 2
+    }
     directory := native_output_directory(output)
     if __host_run_argv(["mkdir", "-p", "--", directory]) != 0 {
         eprintln("native compiler: cannot create output directory")
@@ -83,10 +97,14 @@ func native_install_program(mir_program program, string input, string output, st
     }
     temporary := __host_make_temp_dir_in(directory)
     if temporary == "" { eprintln("native compiler: cannot create temporary directory"); return 1 }
+    if temporary == directory || __host_same_file(temporary, directory) {
+        eprintln("native compiler: host must create a private temporary directory")
+        return 1
+    }
     assembly_path := temporary + "/program.s"
     object_path := temporary + "/program.o"
     binary_path := temporary + "/program"
-    if __host_write_text_file(assembly_path, emitted.assembly) != 0 {
+    if __host_write_text_file(assembly_path, assembly) != 0 {
         native_remove_temporary(temporary)
         eprintln("native compiler: cannot write temporary assembly")
         return 1

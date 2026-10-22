@@ -1,173 +1,70 @@
 #!/usr/bin/env bash
-# Self-hosted compiler bootstrap without manifest file
-# Uses automatic import resolution (Go-style)
-#
-# Architecture:
-#   seed compiler → trace imports → resolve packages → compile complete system
-#
-# This script replaces the old materialize-selfhost-source.sh + manifest approach
-# with a modern import-driven bootstrap model.
-
+# Native bootstrap: the C seed is used only to produce stage1.
+# Later stages exchange versioned amd64 assembly, never seed IR or C.
 set -euo pipefail
 
-root=${S_SOURCE_ROOT:-$(pwd)}
+root=$(cd "${S_SOURCE_ROOT:-$(pwd)}" && pwd)
 output_dir=${1:?usage: native-bootstrap-no-manifest.sh OUTPUT_DIR}
 mkdir -p "$output_dir"
-
-# Export environment for seed compiler
-export S_COMPILER_SOURCES="$root/src/cmd/compile"
+output_dir=$(cd "$output_dir" && pwd)
+rm -f "$output_dir/.complete"
+export S_SOURCE_ROOT="$root"
 export S_TARGET_OS=${S_TARGET_OS:-$(uname -s | tr '[:upper:]' '[:lower:]')}
 export S_TARGET_ARCH=${S_TARGET_ARCH:-$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')}
+timeout_seconds=${S_BOOTSTRAP_TIMEOUT:-120}
+verify="$root/misc/scripts/verify_true_selfhost.sh"
+seed="$root/bin/s_seed"
 
-# Verify seed compiler exists
-[ -x "$root/bin/s_seed" ] || {
-    printf 'Error: seed compiler not found at %s/bin/s_seed\n' "$root" >&2
-    exit 1
+fail() { printf 'native bootstrap failed: %s\n' "$*" >&2; exit 1; }
+[ "$S_TARGET_OS/$S_TARGET_ARCH" = linux/amd64 ] || fail 'only Linux/amd64 is supported'
+[ -x "$seed" ] || fail "seed compiler not found: $seed"
+[ -f "$root/src/cmd/compile/main.s" ] || fail 'main entry point not found'
+
+run_stage() {
+    local -a command=("$@")
+    if [ -n "${S_BOOTSTRAP_RUNNER:-}" ]; then
+        command=("$S_BOOTSTRAP_RUNNER" "${command[@]}")
+    fi
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$timeout_seconds" "${command[@]}"
+    else
+        "${command[@]}"
+    fi
 }
 
-# Verify main entry point exists
-[ -f "$root/src/cmd/compile/main.s" ] || {
-    printf 'Error: main entry point not found\n' >&2
-    exit 1
-}
-
-echo "=== S Compiler Bootstrap (Import-Driven Model) ==="
-echo "Source Root: $root"
-echo "Output Dir:  $output_dir"
-echo "Target:      $S_TARGET_OS/$S_TARGET_ARCH"
-echo ""
-
-# Stage 1: Compile with seed compiler
-# Seed compiler automatically traces imports and resolves packages
-echo "=== Stage 1: Bootstrap with Seed Compiler ==="
-printf "Compiling self-hosted compiler entry point...\n"
+printf '=== S Native Bootstrap (Import-Driven Model) ===\nSource Root: %s\nOutput Dir: %s\n' "$root" "$output_dir"
 closure="$output_dir/stage1.sources"
-S_SOURCE_ROOT="$root" "$root/src/cmd/dist/source_closure.sh" \
-    src/cmd/compile/main.s "$closure"
-echo "✓ Resolved source closure: $(wc -l < "$closure" | tr -d ' ') files"
+"$root/src/cmd/dist/source_closure.sh" src/cmd/compile/main.s "$closure"
+sources=()
+while IFS= read -r source; do
+    [ -n "$source" ] && sources+=("$root/$source")
+done < "$closure"
+[ "${#sources[@]}" -gt 0 ] || fail 'empty source closure'
+printf 'Resolved source closure: %s files\n' "${#sources[@]}"
 
-"$root/bin/s_seed" \
-    --compile-unit "$output_dir/stage1.ir" \
-    $(sed "s#^#$root/#" "$closure") \
-    2>&1 | tee "$output_dir/stage1-compile.log" || {
-    printf "Error: Stage 1 compilation failed\n" >&2
-    exit 1
-}
-test -s "$output_dir/stage1.ir" || {
-    printf "Error: Stage 1 IR missing or empty: %s\n" "$output_dir/stage1.ir" >&2
-    exit 1
-}
+printf '[1/3] Seed -> native stage1\n'
+"$seed" --compile-native-unit "$output_dir/stage1.ir" "${sources[@]}" 2>&1 | tee "$output_dir/stage1-compile.log"
+test -s "$output_dir/stage1.ir" || fail 'stage1 seed IR missing or empty'
+# --emit-bin creates a C interpreter wrapper. It is deliberately excluded.
+"$seed" --emit-standalone-amd64 "$output_dir/stage1.ir" "$output_dir/stage1" 2>&1 | tee "$output_dir/stage1-emit.log"
+sh "$verify" "$output_dir/stage1" 2>&1 | tee "$output_dir/stage1-verify.log"
 
-echo "✓ Generated IR: $output_dir/stage1.ir"
+for stage in 2 3; do
+    previous=$((stage - 1))
+    producer="$output_dir/stage$previous"
+    artifact="$output_dir/stage$stage.sasm"
+    binary="$output_dir/stage$stage"
+    # Remove stale intermediates before a producer can report success.
+    rm -f "$artifact" "$binary"
+    printf '[%s/3] stage%s -> stage%s\n' "$stage" "$previous" "$stage"
+    run_stage "$producer" --compile-unit "$artifact" "${sources[@]}" 2>&1 | tee "$output_dir/stage$stage-compile.log"
+    test -s "$artifact" || fail "stage$stage assembly artifact missing or empty"
+    [ "$(head -n 1 "$artifact")" = '# S-NATIVE-AMD64-V1' ] || fail "stage$stage returned an incompatible artifact"
+    run_stage "$producer" --emit-bin "$artifact" "$binary" 2>&1 | tee "$output_dir/stage$stage-emit.log"
+    sh "$verify" "$binary" 2>&1 | tee "$output_dir/stage$stage-verify.log"
+done
 
-# Emit binary for stage 1
-printf "Generating stage 1 binary...\n"
-"$root/bin/s_seed" \
-    --emit-bin "$output_dir/stage1.ir" \
-    "$output_dir/stage1" \
-    2>&1 | tee "$output_dir/stage1-emit.log" || {
-    printf "Error: Stage 1 binary generation failed\n" >&2
-    exit 1
-}
-test -s "$output_dir/stage1" || {
-    printf "Error: Stage 1 binary missing or empty: %s\n" "$output_dir/stage1" >&2
-    exit 1
-}
-
-chmod +x "$output_dir/stage1"
-echo "✓ Generated Binary: $output_dir/stage1"
-
-# Stage 2: Compile with stage1 (self-compilation)
-echo ""
-echo "=== Stage 2: Self-Compilation with Stage 1 ==="
-printf "Compiling with generated compiler...\n"
-
-"$output_dir/stage1" \
-    --compile-unit "$output_dir/stage2.ir" \
-    $(sed "s#^#$root/#" "$closure") \
-    2>&1 | tee "$output_dir/stage2-compile.log" || {
-    printf "Error: Stage 2 compilation failed\n" >&2
-    exit 1
-}
-test -s "$output_dir/stage2.ir" || {
-    printf "Error: Stage 2 IR missing or empty: %s\n" "$output_dir/stage2.ir" >&2
-    exit 1
-}
-
-echo "✓ Generated IR: $output_dir/stage2.ir"
-
-# Emit binary for stage 2
-printf "Generating stage 2 binary...\n"
-"$output_dir/stage1" \
-    --emit-bin "$output_dir/stage2.ir" \
-    "$output_dir/stage2" \
-    2>&1 | tee "$output_dir/stage2-emit.log" || {
-    printf "Error: Stage 2 binary generation failed\n" >&2
-    exit 1
-}
-test -s "$output_dir/stage2" || {
-    printf "Error: Stage 2 binary missing or empty: %s\n" "$output_dir/stage2" >&2
-    exit 1
-}
-
-chmod +x "$output_dir/stage2"
-echo "✓ Generated Binary: $output_dir/stage2"
-
-# Stage 3: Verify convergence (triple verification)
-echo ""
-echo "=== Stage 3: Convergence Verification ==="
-printf "Verifying bootstrap stability...\n"
-
-"$output_dir/stage2" \
-    --compile-unit "$output_dir/stage3.ir" \
-    $(sed "s#^#$root/#" "$closure") \
-    2>&1 | tee "$output_dir/stage3-compile.log" || {
-    printf "Error: Stage 3 compilation failed\n" >&2
-    exit 1
-}
-test -s "$output_dir/stage3.ir" || {
-    printf "Error: Stage 3 IR missing or empty: %s\n" "$output_dir/stage3.ir" >&2
-    exit 1
-}
-
-"$output_dir/stage2" \
-    --emit-bin "$output_dir/stage3.ir" \
-    "$output_dir/stage3" \
-    2>&1 | tee "$output_dir/stage3-emit.log" || {
-    printf "Error: Stage 3 binary generation failed\n" >&2
-    exit 1
-}
-test -s "$output_dir/stage3" || {
-    printf "Error: Stage 3 binary missing or empty: %s\n" "$output_dir/stage3" >&2
-    exit 1
-}
-
-chmod +x "$output_dir/stage3"
-echo "✓ Generated Binary: $output_dir/stage3"
-
-# Convergence check: stage2 and stage3 should be identical
-echo ""
-echo "=== Bootstrap Convergence Check ==="
-if cmp -s "$output_dir/stage2" "$output_dir/stage3"; then
-    echo "✓ SUCCESS: Bootstrap converged (stage2 == stage3)"
-    echo "✓ Bootstrap chain verified: seed → stage1 → stage2 ≡ stage3"
-    
-    # Mark bootstrap as complete
-    touch "$output_dir/.complete"
-    
-    # Summary
-    echo ""
-    echo "=== Bootstrap Summary ==="
-    ls -lh "$output_dir/stage"* | grep -v '\.log' | grep -v '\.ir'
-    echo ""
-    echo "Bootstrap artifacts ready in: $output_dir"
-else
-    # Binary comparison failed, check sizes
-    size2=$(stat -f%z "$output_dir/stage2" 2>/dev/null || stat -c%s "$output_dir/stage2")
-    size3=$(stat -f%z "$output_dir/stage3" 2>/dev/null || stat -c%s "$output_dir/stage3")
-    
-    printf "Error: Bootstrap did not converge\n" >&2
-    printf "  stage2 size: %d bytes\n" "$size2" >&2
-    printf "  stage3 size: %d bytes\n" "$size3" >&2
-    exit 1
-fi
+cmp -s "$output_dir/stage2.sasm" "$output_dir/stage3.sasm" || fail 'stage2/stage3 assembly did not converge'
+cmp -s "$output_dir/stage2" "$output_dir/stage3" || fail 'stage2/stage3 binaries did not converge'
+touch "$output_dir/.complete"
+printf 'Native bootstrap verified: seed -> stage1 -> stage2 == stage3\n'

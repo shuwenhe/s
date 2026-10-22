@@ -1073,7 +1073,7 @@ func compiler_emit_stage17_codegen_proof(string source) string {
     return out
 }
 
-struct regalloc_result {
+struct compiler_regalloc_result {
     int allocated_reg_count
     int spill_count
     int spill_reload_count
@@ -1108,7 +1108,7 @@ struct compiler_stage18_regalloc_result {
     string error
 }
 
-func compiler_linear_scan_regalloc_with_spill(string mir_text, int value_count, string goarch) regalloc_result {
+func compiler_linear_scan_regalloc_with_spill(string mir_text, int value_count, string goarch) compiler_regalloc_result {
     call_sites := count_stage18_token(mir_text, " call=")
     remat_sites := count_stage18_token(mir_text, " const") + count_stage18_token(mir_text, " imm") + count_stage18_token(mir_text, " literal=")
     blocks := parse_number_after(mir_text, "blocks=")
@@ -1139,10 +1139,10 @@ func compiler_linear_scan_regalloc_with_spill(string mir_text, int value_count, 
     if max_live < 0 {
         max_live = 0
     }
-    return regalloc_result { allocated_reg_count: allocated, spill_count: spills, spill_reload_count: spill_reloads, call_pressure_events: call_sites, live_range_splits: splits, rematerialized_values: remat, reuse_count: reuse, max_live: max_live }
+    return compiler_regalloc_result { allocated_reg_count: allocated, spill_count: spills, spill_reload_count: spill_reloads, call_pressure_events: call_sites, live_range_splits: splits, rematerialized_values: remat, reuse_count: reuse, max_live: max_live }
 }
 
-func compiler_compute_regalloc_quality(regalloc_result allocation, int block_count) regalloc_quality_result {
+func compiler_compute_regalloc_quality(compiler_regalloc_result allocation, int block_count) regalloc_quality_result {
     spill_cost := allocation.spill_count * 4 + allocation.spill_reload_count * 2
     if spill_cost < 0 {
         spill_cost = 0

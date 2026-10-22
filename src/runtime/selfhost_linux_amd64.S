@@ -387,6 +387,23 @@ s_value_cmp:
     mov $1, %rax
     ret
 .Lvalue_cmp_string:
+    # Records compare reference identity; their type pointer is not a string
+    # length. Never pass tag-8 headers through the string byte loop.
+    cmpq $8, (%rdi)
+    je .Lvalue_cmp_record
+    cmpq $8, (%rsi)
+    je .Lvalue_cmp_record
+    jmp .Lvalue_cmp_strings
+.Lvalue_cmp_record:
+    xor %eax, %eax
+    cmp %rsi, %rdi
+    je .Lvalue_cmp_record_done
+    mov $-1, %rax
+    jb .Lvalue_cmp_record_done
+    mov $1, %rax
+.Lvalue_cmp_record_done:
+    ret
+.Lvalue_cmp_strings:
     push %rbx
     push %r12
     push %r13
@@ -778,6 +795,14 @@ s_read_file_value:
     add %rax, 8(%r12)
     cmpq $16777216, 8(%r12)
     jb .Lread_file_loop
+    /* A full buffer is not EOF. Refuse oversized input rather than compile a
+       truncated prefix (which could hide invalid bytes past the boundary). */
+    mov %rbx, %rdi
+    lea 16777232(%r12), %rsi
+    mov $1, %rdx
+    call s_read
+    test %rax, %rax
+    jnz .Lread_file_close_fail
 .Lread_file_close_ok:
     mov %rbx, %rdi
     call s_close
@@ -796,6 +821,28 @@ s_read_file_value:
     pop %rbx
     ret
 .size s_read_file_value, .-s_read_file_value
+.global s_read_source_value
+.type s_read_source_value, @function
+s_read_source_value:
+    sub $8, %rsp
+    call s_read_file_value
+    add $8, %rsp
+    test %rax, %rax
+    jz .Lread_source_invalid
+    mov 8(%rax), %rcx
+    xor %rdx, %rdx
+.Lread_source_scan:
+    cmp %rcx, %rdx
+    jae .Lread_source_done
+    cmpb $0, 16(%rax,%rdx)
+    je .Lread_source_invalid
+    inc %rdx
+    jmp .Lread_source_scan
+.Lread_source_invalid:
+    lea .L_empty_string(%rip), %rax
+.Lread_source_done:
+    ret
+.size s_read_source_value, .-s_read_source_value
 .global s_write_file_value
 .type s_write_file_value, @function
 s_write_file_value:
@@ -1102,13 +1149,448 @@ s_host_run_argv:
 .section .rodata
 .Lnewline:
     .byte 10
+.balign 8
 .L_amd64:
     .quad 2
     .quad 5
     .ascii "amd64"
     .byte 0
+.balign 8
 .L_empty_string:
     .quad 2
     .quad 0
     .byte 0
+.section .note.GNU-stack,"",@progbits
+
+/* Bootstrap plain-value records. All public helpers return rax=value,
+   rdx=0 success / 1 allocation failure / 2 invalid operation. */
+.section .text
+.global s_copy_begin
+s_copy_begin:
+    push %rbx
+    mov %rdi, %rbx
+    cmpq $0, s_heap_current(%rip)
+    jne .Lrecord_checkpoint
+    mov $16, %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Lrecord_begin_fail
+.Lrecord_checkpoint:
+    mov s_heap_current(%rip), %rax
+    mov %rax, (%rbx)
+    movq $1, 8(%rbx)
+    mov %rbx, %rax
+    xor %edx, %edx
+    pop %rbx
+    ret
+.Lrecord_begin_fail:
+    mov $1, %edx
+    pop %rbx
+    ret
+.global s_copy_abort
+s_copy_abort:
+    cmpq $1, 8(%rdi)
+    jne .Lrecord_abort_done
+    mov (%rdi), %rax
+    mov %rax, s_heap_current(%rip)
+    movq $0, 8(%rdi)
+.Lrecord_abort_done:
+    xor %edx, %edx
+    ret
+.global s_copy_commit
+s_copy_commit:
+    movq $0, 8(%rdi)
+    xor %edx, %edx
+    ret
+
+.global s_record_error
+s_record_error:
+    cmp $1, %rdi
+    je .Lrecord_oom_exit
+    lea .Lrecord_invalid_message(%rip), %rsi
+    mov $.Lrecord_invalid_length, %edx
+    mov $71, %r8d
+    jmp .Lrecord_error_write
+.Lrecord_oom_exit:
+    lea .Lrecord_oom_message(%rip), %rsi
+    mov $.Lrecord_oom_length, %edx
+    mov $70, %r8d
+.Lrecord_error_write:
+    mov $2, %edi
+    mov $1, %eax
+    syscall
+    mov %r8, %rdi
+    mov $60, %eax
+    syscall
+    ud2
+
+/* Internal allocation, with the outer public helper owning rollback. */
+s_record_new_impl:
+    push %rbx
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    mov %rdi, %r12
+    mov 8(%r12), %r15
+    mov %r15, %rdi
+    shl $4, %rdi
+    add $32, %rdi
+    jc .Lrecord_new_oom
+    call s_alloc
+    test %rax, %rax
+    jz .Lrecord_new_oom
+    mov %rax, %r13
+    movq $8, (%r13)
+    mov (%r12), %rax
+    mov %rax, 8(%r13)
+    mov %r15, 16(%r13)
+    lea 32(%r13), %rax
+    mov %rax, 24(%r13)
+    xor %r14d, %r14d
+.Lrecord_new_fields:
+    cmp %r15, %r14
+    jae .Lrecord_new_success
+    lea (%r14,%r14,2), %rbx
+    lea 16(%r12,%rbx,8), %rbx
+    mov %r14, %rax
+    shl $4, %rax
+    mov (%rbx), %rcx
+    mov %rcx, 32(%r13,%rax)
+    cmpq $0, 8(%rbx)
+    je .Lrecord_default_scalar
+    cmpq $1, 8(%rbx)
+    je .Lrecord_default_string
+    cmpq $2, 8(%rbx)
+    je .Lrecord_default_array
+    cmpq $3, 8(%rbx)
+    jne .Lrecord_new_invalid
+    mov 16(%rbx), %rdi
+    call s_record_new_impl
+    test %rdx, %rdx
+    jnz .Lrecord_new_done
+    jmp .Lrecord_default_store
+.Lrecord_default_scalar:
+    mov $1, %eax
+    jmp .Lrecord_default_store
+.Lrecord_default_string:
+    lea .L_empty_string(%rip), %rax
+    jmp .Lrecord_default_store
+.Lrecord_default_array:
+    mov $1, %edi
+    call s_array_new
+    test %rax, %rax
+    jz .Lrecord_new_oom
+.Lrecord_default_store:
+    mov %r14, %rcx
+    shl $4, %rcx
+    mov %rax, 40(%r13,%rcx)
+    inc %r14
+    jmp .Lrecord_new_fields
+.Lrecord_new_success:
+    mov %r13, %rax
+    xor %edx, %edx
+    jmp .Lrecord_new_done
+.Lrecord_new_invalid:
+    mov $2, %edx
+    jmp .Lrecord_new_done
+.Lrecord_new_oom:
+    xor %eax, %eax
+    mov $1, %edx
+.Lrecord_new_done:
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    pop %rbx
+    ret
+
+.global s_record_new
+s_record_new:
+    push %rbp
+    mov %rsp, %rbp
+    sub $48, %rsp
+    mov %rdi, -24(%rbp)
+    lea -16(%rbp), %rdi
+    call s_copy_begin
+    test %rdx, %rdx
+    jnz .Lrecord_new_public_done
+    mov -24(%rbp), %rdi
+    call s_record_new_impl
+    mov %rax, -32(%rbp)
+    mov %rdx, -40(%rbp)
+    lea -16(%rbp), %rdi
+    test %rdx, %rdx
+    jnz .Lrecord_new_public_abort
+    call s_copy_commit
+    jmp .Lrecord_new_public_result
+.Lrecord_new_public_abort:
+    call s_copy_abort
+.Lrecord_new_public_result:
+    mov -32(%rbp), %rax
+    mov -40(%rbp), %rdx
+.Lrecord_new_public_done:
+    leave
+    ret
+
+/* Return a field slot address, including the read-only __type projection. */
+s_record_slot:
+    push %rbx
+    push %r12
+    push %r13
+    mov %rdi, %rbx
+    mov %rsi, %r12
+    test %rbx, %rbx
+    jz .Lrecord_slot_invalid
+    test $7, %rbx
+    jnz .Lrecord_slot_invalid
+    cmpq $8, (%rbx)
+    jne .Lrecord_slot_invalid
+    lea .Lrecord_type_key(%rip), %rdi
+    call s_value_cmp
+    test %rax, %rax
+    jz .Lrecord_slot_type
+    xor %r13d, %r13d
+.Lrecord_slot_loop:
+    cmp 16(%rbx), %r13
+    jae .Lrecord_slot_invalid
+    mov %r13, %rax
+    shl $4, %rax
+    add 24(%rbx), %rax
+    mov (%rax), %rdi
+    mov %r12, %rsi
+    call s_value_cmp
+    test %rax, %rax
+    jz .Lrecord_slot_found
+    inc %r13
+    jmp .Lrecord_slot_loop
+.Lrecord_slot_type:
+    lea 8(%rbx), %rax
+    jmp .Lrecord_slot_success
+.Lrecord_slot_found:
+    mov %r13, %rax
+    shl $4, %rax
+    add 24(%rbx), %rax
+    add $8, %rax
+.Lrecord_slot_success:
+    xor %edx, %edx
+    jmp .Lrecord_slot_done
+.Lrecord_slot_invalid:
+    xor %eax, %eax
+    mov $2, %edx
+.Lrecord_slot_done:
+    pop %r13
+    pop %r12
+    pop %rbx
+    ret
+.global s_record_get
+s_record_get:
+    sub $8, %rsp
+    call s_record_slot
+    add $8, %rsp
+    test %rdx, %rdx
+    jnz .Lrecord_get_done
+    mov (%rax), %rax
+.Lrecord_get_done:
+    ret
+.global s_record_set
+s_record_set:
+    push %rbx
+    push %r12
+    sub $8, %rsp
+    mov %rdi, %rbx
+    mov %rdx, %r12
+    call s_record_slot
+    test %rdx, %rdx
+    jnz .Lrecord_set_done
+    lea 8(%rbx), %rcx
+    cmp %rcx, %rax
+    je .Lrecord_set_invalid
+    mov %r12, (%rax)
+    mov %rbx, %rax
+    jmp .Lrecord_set_done
+.Lrecord_set_invalid:
+    mov $2, %edx
+.Lrecord_set_done:
+    add $8, %rsp
+    pop %r12
+    pop %rbx
+    ret
+.global s_record_type
+s_record_type:
+    lea .Lrecord_type_key(%rip), %rsi
+    jmp s_record_get
+
+s_value_copy_impl:
+    test %rdi, %rdi
+    jz .Lrecord_copy_scalar
+    test $1, %rdi
+    jnz .Lrecord_copy_scalar
+    cmpq $8, (%rdi)
+    je .Lrecord_copy_object
+    cmpq $4, (%rdi)
+    je .Lrecord_copy_array
+.Lrecord_copy_scalar:
+    mov %rdi, %rax
+    xor %edx, %edx
+    ret
+.Lrecord_copy_object:
+    push %rbx
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    mov %rdi, %r12
+    mov 16(%r12), %r15
+    mov %r15, %rdi
+    shl $4, %rdi
+    add $32, %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Lrecord_copy_oom
+    mov %rax, %r13
+    movq $8, (%r13)
+    mov 8(%r12), %rax
+    mov %rax, 8(%r13)
+    mov %r15, 16(%r13)
+    lea 32(%r13), %rax
+    mov %rax, 24(%r13)
+    xor %r14d, %r14d
+.Lrecord_copy_fields:
+    cmp %r15, %r14
+    jae .Lrecord_copy_success
+    mov %r14, %rbx
+    shl $4, %rbx
+    add 24(%r12), %rbx
+    mov (%rbx), %rcx
+    mov %r14, %rax
+    shl $4, %rax
+    mov %rcx, 32(%r13,%rax)
+    mov 8(%rbx), %rdi
+    call s_value_copy_impl
+    test %rdx, %rdx
+    jnz .Lrecord_copy_done
+    mov %r14, %rcx
+    shl $4, %rcx
+    mov %rax, 40(%r13,%rcx)
+    inc %r14
+    jmp .Lrecord_copy_fields
+.Lrecord_copy_array:
+    push %rbx
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    mov %rdi, %r12
+    mov 8(%r12), %r15
+    lea 1(%r15,%r15), %rdi
+    call s_array_new
+    test %rax, %rax
+    jz .Lrecord_copy_oom
+    mov %rax, %r13
+    xor %r14d, %r14d
+.Lrecord_copy_elements:
+    cmp %r15, %r14
+    jae .Lrecord_copy_success
+    mov 16(%r12,%r14,8), %rdi
+    call s_value_copy_impl
+    test %rdx, %rdx
+    jnz .Lrecord_copy_done
+    mov %rax, 16(%r13,%r14,8)
+    inc %r14
+    jmp .Lrecord_copy_elements
+.Lrecord_copy_success:
+    mov %r13, %rax
+    xor %edx, %edx
+    jmp .Lrecord_copy_done
+.Lrecord_copy_oom:
+    xor %eax, %eax
+    mov $1, %edx
+.Lrecord_copy_done:
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    pop %rbx
+    ret
+.global s_value_copy
+.global s_record_copy
+s_record_copy:
+s_value_copy:
+    /* The current emitted descriptor 0 is the statically checked plain-value
+       subset. Unknown descriptors are never guessed to mean copyable. */
+    test %rsi, %rsi
+    jnz .Lrecord_copy_bad_descriptor
+    push %rbx
+    mov %rdx, %rbx
+    call s_value_copy_impl
+    test %rdx, %rdx
+    jz .Lrecord_copy_public_done
+    push %rax
+    push %rdx
+    mov %rbx, %rdi
+    call s_copy_abort
+    pop %rdx
+    pop %rax
+.Lrecord_copy_public_done:
+    pop %rbx
+    ret
+.Lrecord_copy_bad_descriptor:
+    sub $8, %rsp
+    mov %rdx, %rdi
+    call s_copy_abort
+    add $8, %rsp
+    xor %eax, %eax
+    mov $2, %edx
+    ret
+.global s_value_snapshot
+s_value_snapshot:
+    test %rdi, %rdi
+    jz .Lrecord_snapshot_scalar
+    test $1, %rdi
+    jnz .Lrecord_snapshot_scalar
+    cmpq $8, (%rdi)
+    je .Lrecord_snapshot_allocate
+    cmpq $4, (%rdi)
+    je .Lrecord_snapshot_allocate
+.Lrecord_snapshot_scalar:
+    mov %rdi, %rax
+    xor %edx, %edx
+    ret
+.Lrecord_snapshot_allocate:
+    push %rbp
+    mov %rsp, %rbp
+    sub $32, %rsp
+    mov %rdi, -24(%rbp)
+    lea -16(%rbp), %rdi
+    call s_copy_begin
+    test %rdx, %rdx
+    jnz .Lrecord_snapshot_error
+    mov -24(%rbp), %rdi
+    xor %esi, %esi
+    lea -16(%rbp), %rdx
+    call s_value_copy
+    test %rdx, %rdx
+    jnz .Lrecord_snapshot_error
+    mov %rax, -24(%rbp)
+    lea -16(%rbp), %rdi
+    call s_copy_commit
+    mov -24(%rbp), %rax
+    leave
+    ret
+.Lrecord_snapshot_error:
+    mov %rdx, %rdi
+    call s_record_error
+    ud2
+.section .rodata
+.balign 8
+.Lrecord_type_key:
+    .quad 2, 6
+    .asciz "__type"
+.Lrecord_oom_message:
+    .ascii "native record allocation failed\n"
+.set .Lrecord_oom_length, .-.Lrecord_oom_message
+.Lrecord_invalid_message:
+    .ascii "native record invalid operation\n"
+.set .Lrecord_invalid_length, .-.Lrecord_invalid_message
 .section .note.GNU-stack,"",@progbits

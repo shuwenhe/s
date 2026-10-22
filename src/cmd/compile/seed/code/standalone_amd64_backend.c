@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include "target.h"
 #include "../intermediate/array_type.h"
-#define STANDALONE_MAX_INS 131072
+#define STANDALONE_MAX_INS 262144
 #define STANDALONE_MAX_FUNCS 4096
 #define STANDALONE_MAX_SLOTS 2048
 #define STANDALONE_MAX_LITERALS 65536
@@ -48,7 +48,20 @@ typedef struct standalone_literal {
 	unsigned char bytes[STANDALONE_TEXT_CAP];
 	size_t len;
 } standalone_literal;
+typedef struct standalone_record_field {
+    char name[STANDALONE_TEXT_CAP];
+    char type[STANDALONE_TEXT_CAP];
+    int kind, nested, name_literal;
+} standalone_record_field;
+typedef struct standalone_record_schema {
+    char name[STANDALONE_TEXT_CAP];
+    standalone_record_field *fields;
+    size_t count;
+    int type_literal, state, default_state;
+} standalone_record_schema;
 typedef struct standalone_module {
+	standalone_record_schema *records;
+	size_t record_count;
 	standalone_ir ir;
 	standalone_function funcs[STANDALONE_MAX_FUNCS];
 	size_t func_count;
@@ -263,11 +276,13 @@ static int literal_index(standalone_module *module, const char *encoded, compile
 	if (!decode_literal(encoded, &module->literals[module->literal_count], err)) return -1;
 	return (int)module->literal_count++;
 }
+#include "standalone_records.h"
 static bool analyze_module(standalone_module *module, compile_error *err) {
 	size_t i;
 	standalone_function *current = NULL;
 	module->func_count = 0;
 	module->literal_count = 0;
+	if (!standalone_collect_record_schemas(module, err)) return false;
 	for (i = 0; i < module->ir.len; i++) {
 		standalone_ins *ins = &module->ir.ins[i];
 		const char *values[3] = {ins->result, ins->operand1, ins->operand2};
@@ -290,7 +305,7 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 			current->end = i;
 			assign_local_registers(current);
 			detect_integer_only(module, current);
-			current->frame_size = (int)(((current->slot_count * 8 + 15) / 16) * 16);
+			current->frame_size = (int)((((current->slot_count + 4) * 8 + STANDALONE_MAX_PENDING_ARGS * 8 + 15) / 16) * 16);
 			current = NULL;
 			continue;
 		}
@@ -339,7 +354,7 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "unterminated standalone function: %s", current->name);
 		return false;
 	}
-	return module->func_count > 0;
+	return module->func_count > 0 && standalone_validate_record_contracts(module, err);
 }
 static int find_literal(const standalone_module *module, const char *encoded) {
 	size_t i;
@@ -412,10 +427,72 @@ static bool emit_array_literal(FILE *out, standalone_module *module, standalone_
 	if (strcmp(reg, "%rax") != 0) fprintf(out, "    mov %%rax, %s\n", reg);
 	return true;
 }
+static const char *record_saved_regs[] = {"%rax", "%rcx", "%rdx", "%rsi", "%rdi", "%r8", "%r9", "%r10", "%r11"};
+static void emit_record_save(FILE *out) {
+    size_t i;
+    for (i = 0; i < 9; i++) fprintf(out, "    push %s\n", record_saved_regs[i]);
+    fprintf(out, "    mov %%rsp, %%r11\n    and $-16, %%rsp\n    sub $16, %%rsp\n    mov %%r11, (%%rsp)\n");
+}
+static bool emit_record_restore(FILE *out, const char *result_reg, compile_error *err) {
+    int index = -1, i;
+    if (result_reg) {
+        for (i = 0; i < 9; i++) if (!strcmp(result_reg, record_saved_regs[i])) index = i;
+        if (index < 0) { error_set(err, ERR_SEMANTIC, 0, 0, "invalid record result register: %s", result_reg); return false; }
+        fprintf(out, "    mov (%%rsp), %%r11\n    mov %%rax, %d(%%r11)\n", (8-index)*8);
+    }
+    fprintf(out, "    mov (%%rsp), %%rsp\n");
+    for (i = 8; i >= 0; i--) fprintf(out, "    pop %s\n", record_saved_regs[i]);
+    return true;
+}
+static void emit_record_status(FILE *out) {
+    /* Numeric local labels may be repeated safely in each helper sequence. */
+    fprintf(out, "    test %%rdx, %%rdx\n    jz 1f\n    mov %%rdx, %%rdi\n    call s_record_error\n1:\n");
+}
+static bool emit_record_projection(FILE *out, standalone_module *m, standalone_function *fn,
+    const char *path, const char *reg, bool store, compile_error *err) {
+    char root[STANDALONE_TEXT_CAP], key[STANDALONE_TEXT_CAP];
+    const char *dot = strchr(path, '.');
+    size_t n = (size_t)(dot - path);
+    memcpy(root, path, n); root[n] = 0;
+    int slot = slot_index(fn, root, false);
+    if (slot < 0) return false;
+    int saved = -1, k;
+    for (k = 0; k < 9; k++) if (!strcmp(reg, record_saved_regs[k])) saved = k;
+    if (saved < 0) return false;
+    emit_record_save(out);
+    if (fn->slots[slot].reg[0]) fprintf(out, "    mov %s, %%rdi\n", fn->slots[slot].reg);
+    else fprintf(out, "    mov %d(%%rbp), %%rdi\n", fn->slots[slot].offset);
+    const char *start = dot + 1;
+    for (;;) {
+        const char *next = strchr(start, '.');
+        n = next ? (size_t)(next - start) : strlen(start);
+        if (!n || n >= sizeof(key)) return false;
+        memcpy(key, start, n); key[n] = 0;
+        int literal = standalone_record_literal(m, key, err);
+        if (literal < 0) return false;
+        fprintf(out, "    lea .Ls_literal_%d(%%rip), %%rsi\n", literal);
+        if (store && !next) {
+            fprintf(out, "    mov (%%rsp), %%r11\n    mov %d(%%r11), %%rdx\n    call s_record_set\n", (8-saved)*8);
+        } else fprintf(out, "    call s_record_get\n");
+        emit_record_status(out);
+        if (!next) break;
+        fprintf(out, "    mov %%rax, %%rdi\n");
+        start = next + 1;
+    }
+    return emit_record_restore(out, store ? NULL : reg, err);
+}
+static bool record_local_projection(standalone_function *fn, const char *path) {
+    const char *dot = strchr(path, '.');
+    char root[STANDALONE_TEXT_CAP];
+    if (!dot || dot == path || (size_t)(dot-path) >= sizeof(root)) return false;
+    memcpy(root, path, (size_t)(dot-path)); root[dot-path] = 0;
+    return slot_index(fn, root, false) >= 0;
+}
 static bool emit_load(FILE *out, standalone_module *module, standalone_function *fn,
 	const char *value, const char *reg, compile_error *err) {
 	int slot;
 	const char *dot;
+	if (record_local_projection(fn, value)) return emit_record_projection(out, module, fn, value, reg, false, err);
 	if (!value || !*value || strcmp(value, "_") == 0) {
 		fprintf(out, "    mov $1, %s\n", reg);
 		return true;
@@ -478,9 +555,10 @@ static bool emit_load(FILE *out, standalone_module *module, standalone_function 
 	else fprintf(out, "    mov %d(%%rbp), %s\n", fn->slots[slot].offset, reg);
 	return true;
 }
-static bool emit_store(FILE *out, standalone_function *fn, const char *name, const char *reg, compile_error *err) {
+static bool emit_store(FILE *out, standalone_module *module, standalone_function *fn, const char *name, const char *reg, compile_error *err) {
 	int slot;
 	if (!name || !*name || strcmp(name, "_") == 0) return true;
+	if (record_local_projection(fn, name)) return emit_record_projection(out, module, fn, name, reg, true, err);
 	slot = slot_index(fn, name, false);
 	if (slot < 0) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "unknown standalone destination %s in %s", name, fn->name);
@@ -508,6 +586,7 @@ static const char *runtime_callee(const char *name) {
 	if (strcmp(name, "append") == 0 || strcmp(name, "__vec_push") == 0) return "s_array_append";
 	if (strcmp(name, "__vec_set") == 0) return "s_index_set";
 	if (strcmp(name, "__host_read_to_string") == 0) return "s_read_file_value";
+	if (strcmp(name, "__host_read_source") == 0) return "s_read_source_value";
 	if (strcmp(name, "__host_read_to_string_with_error") == 0) return "s_read_result";
 	if (strcmp(name, "__host_write_text_file") == 0) return "s_write_file_value";
 	if (strcmp(name, "__host_write_text_file_with_error") == 0) return "s_write_result";
@@ -597,6 +676,10 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 	size_t i;
 	char symbol[STANDALONE_TEXT_CAP];
 	symbol_text(fn->name, symbol, sizeof(symbol));
+	/* Keep parsed production sources in the unit, but let the linker discard
+	 * functions outside the executable's call graph. Unused experimental
+	 * subsystems must not require implementations of their external services. */
+	fprintf(out, ".section .text.s_fn_%s,\"ax\",@progbits\n", symbol);
 	fprintf(out, ".global s_fn_%s\n.type s_fn_%s, @function\ns_fn_%s:\n", symbol, symbol, symbol);
 	fprintf(out, "    push %%rbp\n    mov %%rsp, %%rbp\n");
 	if (fn->slot_count > 0) fprintf(out, "    push %%r12\n    push %%r13\n    push %%r14\n    push %%r15\n");
@@ -605,11 +688,11 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 		standalone_ins *ins = &module->ir.ins[i];
 		if (strcmp(ins->op, "PARAM") == 0) {
 			if (param_count < STANDALONE_MAX_ARGS) {
-				if (!emit_store(out, fn, ins->result, arg_regs[param_count], err)) return false;
+				if (!emit_store(out, module, fn, ins->result, arg_regs[param_count], err)) return false;
 			} else {
 				/* SysV AMD64: the first stack argument is 16(%rbp). */
 				fprintf(out, "    mov %zu(%%rbp), %%rax\n", 16 + (param_count - STANDALONE_MAX_ARGS) * 8);
-				if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+				if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
 			}
 			param_count++;
 		} else if (strcmp(ins->op, "ARG") == 0) {
@@ -617,7 +700,11 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				error_set(err, ERR_SEMANTIC, 0, 0, "too many pending call arguments in %s", fn->name);
 				return false;
 			}
-			pending[pending_count++] = ins->result;
+            if (!emit_load(out, module, fn, ins->result, "%rdi", err)) return false;
+            if (strcmp(ins->operand1, "shared_borrow")) fprintf(out, "    call s_value_snapshot\n");
+            else fprintf(out, "    mov %%rdi, %%rax\n");
+            fprintf(out, "    mov %%rax, -%zu(%%rbp)\n", (fn->slot_count + 4 + pending_count + 1)*8);
+            pending[pending_count++] = ins->result;
 		} else if (strcmp(ins->op, "CALL") == 0) {
 			const char *callee = runtime_callee(ins->operand1);
 			const char *defined = NULL;
@@ -640,7 +727,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			if (strcmp(ins->operand1, "make") == 0 && call_arg_count == 2) {
 				if (!emit_load(out, module, fn, pending[first_arg + 1], "%rdi", err)) return false;
 				fprintf(out, "    call s_array_new\n");
-				if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+				if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
 				pending_count = first_arg;
 				continue;
 			}
@@ -649,13 +736,17 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				size_t stack_bytes = ((stack_args * 8 + 15) / 16) * 16;
 				fprintf(out, "    sub $%zu, %%rsp\n", stack_bytes);
 				for (arg = STANDALONE_MAX_ARGS; arg < (size_t)call_arg_count; arg++) {
-					if (!emit_load(out, module, fn, pending[first_arg + arg], "%rax", err)) return false;
+					if (callee) {
+                    if (!emit_load(out, module, fn, pending[first_arg + arg], "%rax", err)) return false;
+                } else fprintf(out, "    mov -%zu(%%rbp), %%rax\n", (fn->slot_count + 4 + first_arg + arg + 1)*8);
 					fprintf(out, "    mov %%rax, %zu(%%rsp)\n", (arg - STANDALONE_MAX_ARGS) * 8);
 				}
 			}
 			for (arg = 0; arg < (size_t)call_arg_count; arg++) {
 				if (arg >= STANDALONE_MAX_ARGS) break;
-				if (!emit_load(out, module, fn, pending[first_arg + arg], arg_regs[arg], err)) return false;
+				if (callee) {
+                    if (!emit_load(out, module, fn, pending[first_arg + arg], arg_regs[arg], err)) return false;
+                } else fprintf(out, "    mov -%zu(%%rbp), %s\n", (fn->slot_count + 4 + first_arg + arg + 1)*8, arg_regs[arg]);
 			}
 			if (!callee) defined = defined_function_name(module, ins->operand1);
 			if (!callee && !defined) {
@@ -672,15 +763,36 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				size_t stack_bytes = ((stack_args * 8 + 15) / 16) * 16;
 				fprintf(out, "    add $%zu, %%rsp\n", stack_bytes);
 			}
-			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
 			pending_count = first_arg;
 		} else if (strcmp(ins->op, "ARRAY_NEW") == 0) {
 			/* Tagged zero length. The runtime uses its existing array layout. */
 			fprintf(out, "    mov $1, %%rdi\n    call s_array_new\n");
-			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "MOV") == 0) {
-			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
-				!emit_store(out, fn, ins->result, "%rax", err)) return false;
+            bool constructor = false;
+            if (i + 1 < fn->end && is_string_literal(ins->operand1)) {
+                standalone_ins *tag = &module->ir.ins[i + 1];
+                char type_field[STANDALONE_TEXT_CAP];
+                if (snprintf(type_field, sizeof(type_field), "%s.__type", ins->result) < (int)sizeof(type_field) &&
+                    !strcmp(tag->op, "MOV") && !strcmp(tag->result, type_field) && is_string_literal(tag->operand1)) {
+                    standalone_literal type;
+                    if (!decode_literal(tag->operand1, &type, err)) return false;
+                    type.bytes[type.len] = 0;
+                    int schema = standalone_record_index(module, (char *)type.bytes);
+                    if (schema >= 0) {
+                        fprintf(out, "    lea .Ls_record_schema_%d(%%rip), %%rdi\n    call s_record_new\n", schema);
+                        emit_record_status(out);
+                        if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
+                        i++; constructor = true;
+                    }
+                }
+            }
+            if (!constructor) {
+                if (!emit_load(out, module, fn, ins->operand1, "%rdi", err)) return false;
+                fprintf(out, "    call s_value_snapshot\n");
+                if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
+            }
 		} else if (strcmp(ins->op, "ADD") == 0) {
 			const char *store_name = ins->result;
 			if (!emit_load(out, module, fn, ins->operand1, "%rdi", err) ||
@@ -699,31 +811,31 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				store_name = module->ir.ins[i + 1].result;
 				i++;
 			}
-			if (!emit_store(out, fn, store_name, "%rax", err)) return false;
+			if (!emit_store(out, module, fn, store_name, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "SUB") == 0 || strcmp(ins->op, "MUL") == 0) {
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
 				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
 			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n");
 			fprintf(out, strcmp(ins->op, "SUB") == 0 ? "    sub %%rcx, %%rax\n" : "    imul %%rcx, %%rax\n");
 			fprintf(out, "    lea 1(%%rax,%%rax), %%rax\n");
-			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "DIV") == 0 || strcmp(ins->op, "MOD") == 0) {
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
 				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
 			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n    cqo\n    idiv %%rcx\n");
 			if (strcmp(ins->op, "MOD") == 0) fprintf(out, "    mov %%rdx, %%rax\n");
 			fprintf(out, "    lea 1(%%rax,%%rax), %%rax\n");
-			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "BOR") == 0) {
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
 				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
 			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n    or %%rcx, %%rax\n    lea 1(%%rax,%%rax), %%rax\n");
-			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "BXOR") == 0) {
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
 				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
 			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n    xor %%rcx, %%rax\n    lea 1(%%rax,%%rax), %%rax\n");
-			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "BAND") == 0 || strcmp(ins->op, "SHL") == 0 ||
 			strcmp(ins->op, "SHR") == 0) {
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
@@ -733,7 +845,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			else if (strcmp(ins->op, "SHL") == 0) fprintf(out, "    shl %%cl, %%rax\n");
 			else fprintf(out, "    sar %%cl, %%rax\n");
 			fprintf(out, "    lea 1(%%rax,%%rax), %%rax\n");
-			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
 		} else if (strncmp(ins->op, "CMP_", 4) == 0) {
 			const char *store_name = ins->result;
 			const char *setcc = "sete";
@@ -780,7 +892,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				store_name = module->ir.ins[i + 1].result;
 				i++;
 			}
-			if (!emit_store(out, fn, store_name, "%rax", err)) return false;
+			if (!emit_store(out, module, fn, store_name, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "JUMP_IF_FALSE") == 0) {
 			char label[STANDALONE_TEXT_CAP];
 			symbol_text(ins->result, label, sizeof(label));
@@ -808,10 +920,10 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			if (!emit_load(out, module, fn, ins->operand1, "%rdi", err) ||
 				!emit_load(out, module, fn, index_value, "%rsi", err)) return false;
 			fprintf(out, "    call s_index_get\n");
-			if (!emit_store(out, fn, ins->result, "%rax", err)) return false;
+			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
 		} else if (strcmp(ins->op, "RET") == 0) {
-			if (!emit_load(out, module, fn, ins->result, "%rax", err)) return false;
-			fprintf(out, "    jmp .Ls_%s_return\n", symbol);
+            if (!emit_load(out, module, fn, ins->result, "%rdi", err)) return false;
+            fprintf(out, "    call s_value_snapshot\n    jmp .Ls_%s_return\n", symbol);
 		} else if (strcmp(ins->op, "NOP") != 0 && strcmp(ins->op, "EXPORT") != 0) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "unsupported standalone opcode %s", ins->op);
 			return false;
@@ -829,10 +941,22 @@ static bool emit_assembly(FILE *out, standalone_module *module, compile_error *e
 	for (i = 0; i < module->func_count; i++) {
 		if (!emit_function(out, module, &module->funcs[i], err)) return false;
 	}
-	fprintf(out, ".section .rodata\n");
+    for (i = 0; i < module->record_count; i++) {
+        standalone_record_schema *r = &module->records[i];
+        size_t j;
+        if (r->state != 2) continue;
+        fprintf(out, ".section .rodata.s_record_%zu,\"a\",@progbits\n.balign 8\n.Ls_record_schema_%zu:\n    .quad .Ls_literal_%d\n    .quad %zu\n", i, i, r->type_literal, r->count);
+        for (j = 0; j < r->count; j++) {
+            standalone_record_field *f = &r->fields[j];
+            fprintf(out, "    .quad .Ls_literal_%d\n    .quad %d\n", f->name_literal, f->kind);
+            if (f->kind == 3) fprintf(out, "    .quad .Ls_record_schema_%d\n", f->nested);
+            else fprintf(out, "    .quad 0\n");
+        }
+    }
 	for (i = 0; i < module->literal_count; i++) {
 		size_t j;
 		standalone_literal *lit = &module->literals[i];
+		fprintf(out, ".section .rodata.s_literal_%zu,\"a\",@progbits\n", i);
 		fprintf(out, ".balign 8\n.Ls_literal_%zu:\n    .quad 2\n    .quad %zu\n    .byte ", i, lit->len);
 		for (j = 0; j < lit->len; j++) fprintf(out, "%s%u", j ? "," : "", (unsigned)lit->bytes[j]);
 		fprintf(out, "%s0\n", lit->len ? "," : "");
@@ -887,6 +1011,7 @@ bool emit_standalone_amd64_assembly_from_ir_file(const char *input_ir_path, cons
 	ok = true;
 done:
 	if (out) fclose(out);
+	standalone_free_record_schemas(module);
 	free(module);
 	return ok;
 }
@@ -905,7 +1030,7 @@ bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *o
 	bool ok = false;
 	char *as_program[] = {(char *)(assembler && *assembler ? assembler : "as"), "--64", "-o", obj_path, asm_path, NULL};
 	char *as_runtime[] = {(char *)(assembler && *assembler ? assembler : "as"), "--64", "-o", runtime_obj_path, runtime_source, NULL};
-	char *ld_program[] = {(char *)(linker && *linker ? linker : "ld"), "-static", "-T", linker_script, "-o", (char *)output_binary_path, runtime_obj_path, obj_path, NULL};
+	char *ld_program[] = {(char *)(linker && *linker ? linker : "ld"), "-static", "--gc-sections", "-T", linker_script, "-o", (char *)output_binary_path, runtime_obj_path, obj_path, NULL};
 	error_clear(err);
 	if (!input_ir_path || !output_binary_path) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "invalid standalone backend input");
@@ -947,6 +1072,7 @@ done:
 	unlink(obj_path);
 	unlink(runtime_obj_path);
 	rmdir(temp_dir);
+	standalone_free_record_schemas(module);
 	free(module);
 	return ok;
 }
@@ -992,6 +1118,7 @@ done:
 	if (out) fclose(out);
 	unlink(asm_path);
 	rmdir(temp_dir);
+	standalone_free_record_schemas(module);
 	free(module);
 	return ok;
 }

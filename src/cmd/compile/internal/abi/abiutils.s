@@ -36,8 +36,8 @@ struct register_layout {
 }
 
 struct assign_state {
-    r_total reg_amounts
-    r_used reg_amounts
+    reg_amounts r_total
+    reg_amounts r_used
     int stack_offset
     int spill_offset
 }
