@@ -124,7 +124,7 @@ func compiler_next(compiler_state initial) compiler_state {
         if s.pos < n { pair = pair + __host_char_at(s.source, s.pos) }
         if pair == ":=" || pair == "==" || pair == "!=" || pair == "<=" || pair == ">=" || pair == "&&" || pair == "||" {
             s.pos = s.pos + 1
-        } else if c != "(" && c != ")" && c != "{" && c != "}" && c != "[" && c != "]" && c != ";" && c != "," && c != "." && c != "+" && c != "-" && c != "*" && c != "/" && c != "%" && c != "&" && c != "=" && c != "!" && c != "<" && c != ">" {
+        } else if c != "(" && c != ")" && c != "{" && c != "}" && c != "[" && c != "]" && c != ";" && c != "," && c != "." && c != ":" && c != "+" && c != "-" && c != "*" && c != "/" && c != "%" && c != "&" && c != "=" && c != "!" && c != "<" && c != ">" {
             return compiler_fail(s, "unsupported token: " + c)
         }
     }
