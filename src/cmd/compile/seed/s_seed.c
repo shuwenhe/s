@@ -130,6 +130,7 @@ bool seed_compile_file(const char *input_path, const char *output_path, compile_
 	}
 	return ok;
 }
+#include "semantic/native_borrow.h"
 #include "semantic/record_contracts.h"
 typedef struct seed_source_file {
 	ast_node *root;
@@ -247,6 +248,7 @@ static bool seed_compile_files_mode(int input_count, char **input_paths, const c
 			statements->data[j] = NULL; /* Transfer ownership exactly once. */
 		}
 	}
+	if (native_records && !borrow_prove_unit(unit, err)) goto done;
 	if (!semantic_analyze(unit, err)) goto done;
     record_contracts contracts;
     if (native_records && !record_validate_transfer_contracts(unit, &contracts, err)) goto done;

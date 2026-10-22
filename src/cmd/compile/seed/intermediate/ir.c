@@ -853,7 +853,7 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 				if (!lower_expr(b, expr->as.call_expr.args.data[i], arg_tmp)) {
 					return false;
 				}
-				if (!emit_ins(b, IR_ARG, arg_tmp, "", "", expr->pos)) {
+				if (!emit_ins(b, IR_ARG, arg_tmp, i < 64 && (expr->as.call_expr.native_borrow_mask & (1ULL << i)) ? "mutable_borrow" : "", "", expr->pos)) {
 					return false;
 				}
 			}
@@ -1027,6 +1027,14 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
         if (snprintf(key, sizeof(key), "return-transfer:%s", stmt->as.fn_stmt.name) >= (int)sizeof(key) ||
             !emit_ins(b, IR_NOP, key, "", stmt->as.fn_stmt.return_type ? stmt->as.fn_stmt.return_type : "()", stmt->pos)) return false;
         for (i = 0; i < stmt->as.fn_stmt.param_count; i++) {
+            if (i < 64 && (stmt->as.fn_stmt.native_borrow_mask & (1ULL << i))) {
+                char base[IR_OPERAND_CAP], qualified[IR_OPERAND_CAP];
+                size_t n=strlen(stmt->as.fn_stmt.param_types[i]);
+                if(n<2 || n>=sizeof(base)) return false;
+                memcpy(base,stmt->as.fn_stmt.param_types[i],n-1); base[n-1]=0;
+                if(!record_type_name(b,base,qualified) || snprintf(key,sizeof(key),"borrow-param:%s",stmt->as.fn_stmt.name)>=(int)sizeof(key) ||
+                    !emit_ins(b,IR_NOP,key,stmt->as.fn_stmt.params[i],qualified,stmt->pos)) return false;
+            }
             if (snprintf(key, sizeof(key), "param-transfer:%s", stmt->as.fn_stmt.name) >= (int)sizeof(key) ||
                 !emit_ins(b, IR_NOP, key, stmt->as.fn_stmt.params[i], stmt->as.fn_stmt.param_types[i], stmt->pos)) return false;
         }
@@ -1034,7 +1042,7 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
     /* PARAM records stay contiguous for the existing hosted function loader. */
     if (!emit_ins(b, IR_FUNC_BEGIN, stmt->as.fn_stmt.name, "", "", stmt->pos)) return false;
     for (i = 0; i < stmt->as.fn_stmt.param_count; i++) {
-        if (!emit_ins(b, IR_PARAM, stmt->as.fn_stmt.params[i], "", "", stmt->pos)) return false;
+        if (!emit_ins(b, IR_PARAM, stmt->as.fn_stmt.params[i], i < 64 && (stmt->as.fn_stmt.native_borrow_mask & (1ULL << i)) ? "mutable_borrow" : "", "", stmt->pos)) return false;
     }
 	if (stmt->as.fn_stmt.body && stmt->as.fn_stmt.body->kind == AST_BLOCK) {
 		size_t n = stmt->as.fn_stmt.body->as.block.statements.len;

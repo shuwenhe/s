@@ -42,6 +42,8 @@ typedef struct standalone_function {
 	size_t slot_count;
 	int frame_size;
 	bool integer_only;
+    unsigned long long borrow_mask;
+    int borrow_schema[64];
 } standalone_function;
 typedef struct standalone_literal {
 	char encoded[STANDALONE_TEXT_CAP];
@@ -276,7 +278,9 @@ static int literal_index(standalone_module *module, const char *encoded, compile
 	if (!decode_literal(encoded, &module->literals[module->literal_count], err)) return -1;
 	return (int)module->literal_count++;
 }
+static const char *runtime_callee(const char *name);
 #include "standalone_records.h"
+#include "standalone_borrows.h"
 static bool analyze_module(standalone_module *module, compile_error *err) {
 	size_t i;
 	standalone_function *current = NULL;
@@ -354,7 +358,7 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "unterminated standalone function: %s", current->name);
 		return false;
 	}
-	return module->func_count > 0 && standalone_validate_record_contracts(module, err);
+	return module->func_count > 0 && standalone_validate_borrows(module, err) && standalone_validate_record_contracts(module, err);
 }
 static int find_literal(const standalone_module *module, const char *encoded) {
 	size_t i;
@@ -701,7 +705,8 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				return false;
 			}
             if (!emit_load(out, module, fn, ins->result, "%rdi", err)) return false;
-            fprintf(out, "    call s_value_snapshot\n");
+            if (!strcmp(ins->operand1,"mutable_borrow")) fprintf(out,"    mov %%rdi, %%rax\n");
+            else fprintf(out,"    call s_value_snapshot\n");
             fprintf(out, "    mov %%rax, -%zu(%%rbp)\n", (fn->slot_count + 4 + pending_count + 1)*8);
             pending[pending_count++] = ins->result;
 		} else if (strcmp(ins->op, "CALL") == 0) {

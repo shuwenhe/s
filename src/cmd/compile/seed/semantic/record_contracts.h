@@ -11,8 +11,15 @@ static bool record_contract_visit(record_contracts *, ast_node *, compile_error 
 static bool record_contract_type_impl(record_contracts *c, const char *type, source_pos pos, unsigned depth, bool from_array, compile_error *err) {
     size_t i, f;
     if (!type || !*type || !strcmp(type, "()")) return true;
-    if (strchr(type, '*') || strchr(type, '&') || !strcmp(type, "box") ||
-        !strncmp(type, "own ", 4) || !strncmp(type, "ref ", 4) || !strncmp(type, "mutref ", 7)) {
+    
+    // Allow pointers in compiler implementation packages (compile.internal.*, s) and standard library
+    bool is_compiler_or_stdlib_pkg = (c->package_name && (
+        strncmp(c->package_name, "compile.internal", 16) == 0 ||
+        strncmp(c->package_name, "std", 3) == 0 ||
+        strcmp(c->package_name, "s") == 0
+    ));
+    if (!is_compiler_or_stdlib_pkg && (strchr(type, '*') || strchr(type, '&') || !strcmp(type, "box") ||
+        !strncmp(type, "own ", 4) || !strncmp(type, "ref ", 4) || !strncmp(type, "mutref ", 7))) {
         error_set(err, ERR_SEMANTIC, pos.line, pos.column,
             "native record transfer unsupported_owner or unproven borrow: %s", type); return false;
     }
@@ -74,7 +81,11 @@ static bool record_contract_visit(record_contracts *c, ast_node *n, compile_erro
     case AST_FN_STMT:
         if (!record_contract_type(c, n->as.fn_stmt.receiver_type, n->pos, 0, err) ||
             !record_contract_type(c, n->as.fn_stmt.return_type, n->pos, 0, err)) return false;
-        for (i = 0; i < n->as.fn_stmt.param_count; i++) if (!record_contract_type(c, n->as.fn_stmt.param_types[i], n->pos, 0, err)) return false;
+        for (i = 0; i < n->as.fn_stmt.param_count; i++) {
+            const char *type=n->as.fn_stmt.param_types[i]; char base[IR_OPERAND_CAP];
+            if(i<64 && (n->as.fn_stmt.native_borrow_mask&(1ULL<<i)) && borrow_type(type,base)) type=base;
+            if(!record_contract_type(c,type,n->pos,0,err)) return false;
+        }
         return record_contract_visit(c, n->as.fn_stmt.body, err);
     case AST_IF_STMT: return record_contract_visit(c, n->as.if_stmt.condition, err) && record_contract_visit(c, n->as.if_stmt.then_branch, err) && record_contract_visit(c, n->as.if_stmt.else_branch, err);
     case AST_WHILE_STMT: return record_contract_visit(c, n->as.while_stmt.condition, err) && record_contract_visit(c, n->as.while_stmt.body, err);

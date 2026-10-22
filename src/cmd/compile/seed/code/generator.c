@@ -72,10 +72,10 @@ void generate_code(IR *ir, FILE *output) {
                 emit_record(output, "JUMP_IF_FALSE", instr->result, instr->operand1, "");
                 break;
             case IR_PARAM:
-                emit_record(output, "PARAM", instr->result, "", "");
+                emit_record(output, "PARAM", instr->result, instr->operand1, "");
                 break;
             case IR_ARG:
-                emit_record(output, "ARG", instr->result, "", "");
+                emit_record(output, "ARG", instr->result, instr->operand1, "");
                 break;
             case IR_CALL:
                 emit_record(output, "CALL", instr->result, instr->operand1, instr->operand2);

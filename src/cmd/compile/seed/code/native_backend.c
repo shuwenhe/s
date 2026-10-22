@@ -266,6 +266,11 @@ static bool emit_hosted_from_ir_file(const char *input_ir_path, const char *outp
 		error_set(err, ERR_SEMANTIC, 1, 1, "invalid IR header");
 		return false;
 	}
+    if (strstr(ir_text,"\nNOP|borrow-param:")) {
+        free(ir_text);
+        error_set(err, ERR_SEMANTIC, 0, 0, "proven record borrow IR requires the standalone native backend");
+        return false;
+    }
 	snprintf(temp_path, sizeof(temp_path), "/tmp/s_seed_native_%ld_%ld.c", (long)getpid(), (long)time(NULL));
 	out = fopen(temp_path, "wb");
 	if (!out) {
