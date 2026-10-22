@@ -853,7 +853,7 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 				if (!lower_expr(b, expr->as.call_expr.args.data[i], arg_tmp)) {
 					return false;
 				}
-				if (!emit_ins(b, IR_ARG, arg_tmp, i < 64 && (expr->as.call_expr.native_shared_mask & (1ULL << i)) ? "shared_borrow" : "", "", expr->pos)) {
+				if (!emit_ins(b, IR_ARG, arg_tmp, "", "", expr->pos)) {
 					return false;
 				}
 			}
@@ -1034,7 +1034,7 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
     /* PARAM records stay contiguous for the existing hosted function loader. */
     if (!emit_ins(b, IR_FUNC_BEGIN, stmt->as.fn_stmt.name, "", "", stmt->pos)) return false;
     for (i = 0; i < stmt->as.fn_stmt.param_count; i++) {
-        if (!emit_ins(b, IR_PARAM, stmt->as.fn_stmt.params[i], i < 64 && (stmt->as.fn_stmt.native_shared_mask & (1ULL << i)) ? "shared_borrow" : "", "", stmt->pos)) return false;
+        if (!emit_ins(b, IR_PARAM, stmt->as.fn_stmt.params[i], "", "", stmt->pos)) return false;
     }
 	if (stmt->as.fn_stmt.body && stmt->as.fn_stmt.body->kind == AST_BLOCK) {
 		size_t n = stmt->as.fn_stmt.body->as.block.statements.len;

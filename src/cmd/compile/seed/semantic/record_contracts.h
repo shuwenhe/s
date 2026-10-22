@@ -74,12 +74,7 @@ static bool record_contract_visit(record_contracts *c, ast_node *n, compile_erro
     case AST_FN_STMT:
         if (!record_contract_type(c, n->as.fn_stmt.receiver_type, n->pos, 0, err) ||
             !record_contract_type(c, n->as.fn_stmt.return_type, n->pos, 0, err)) return false;
-        for (i = 0; i < n->as.fn_stmt.param_count; i++) {
-            char base[IR_OPERAND_CAP];
-            const char *t = n->as.fn_stmt.param_types[i];
-            if (i < 64 && (n->as.fn_stmt.native_shared_mask & (1ULL << i)) && shared_type(t, base)) t = base;
-            if (!record_contract_type(c, t, n->pos, 0, err)) return false;
-        }
+        for (i = 0; i < n->as.fn_stmt.param_count; i++) if (!record_contract_type(c, n->as.fn_stmt.param_types[i], n->pos, 0, err)) return false;
         return record_contract_visit(c, n->as.fn_stmt.body, err);
     case AST_IF_STMT: return record_contract_visit(c, n->as.if_stmt.condition, err) && record_contract_visit(c, n->as.if_stmt.then_branch, err) && record_contract_visit(c, n->as.if_stmt.else_branch, err);
     case AST_WHILE_STMT: return record_contract_visit(c, n->as.while_stmt.condition, err) && record_contract_visit(c, n->as.while_stmt.body, err);

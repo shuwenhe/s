@@ -730,10 +730,6 @@ static int is_type_assignable(const char *expected, const char *actual) {
 		return 1;
 	}
 	if (normalized_type_equal(expected, actual)) return 1;
-    /* Shared record parameters use an implicit call-duration borrow. Native
-     * eligibility separately proves owner provenance, no writes and no escape. */
-    if (strlen(expected) > 1 && expected[strlen(expected)-1] == '&' &&
-        strlen(actual) == strlen(expected)-1 && !strncmp(expected, actual, strlen(actual))) return 1;
 	/* A nullary generic variant carries no payload from which to infer T.
 	 * Its empty arguments are fixed by the receiving contextual type. */
 	{
@@ -1538,7 +1534,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			else if (lookup_type && lookup_type[0] == '&') lookup_type++;
 			if (lookup_type) {
 				size_t lookup_len = strlen(lookup_type);
-				if (lookup_len > 0 && (lookup_type[lookup_len - 1] == '*' || lookup_type[lookup_len - 1] == '&')) {
+				if (lookup_len > 0 && lookup_type[lookup_len - 1] == '*') {
 					char *base = dup_cstr(lookup_type);
 					if (!base) return 0;
 					base[lookup_len - 1] = '\0';
