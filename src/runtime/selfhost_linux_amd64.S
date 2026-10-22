@@ -387,23 +387,6 @@ s_value_cmp:
     mov $1, %rax
     ret
 .Lvalue_cmp_string:
-    # Records compare reference identity; their type pointer is not a string
-    # length. Never pass tag-8 headers through the string byte loop.
-    cmpq $8, (%rdi)
-    je .Lvalue_cmp_record
-    cmpq $8, (%rsi)
-    je .Lvalue_cmp_record
-    jmp .Lvalue_cmp_strings
-.Lvalue_cmp_record:
-    xor %eax, %eax
-    cmp %rsi, %rdi
-    je .Lvalue_cmp_record_done
-    mov $-1, %rax
-    jb .Lvalue_cmp_record_done
-    mov $1, %rax
-.Lvalue_cmp_record_done:
-    ret
-.Lvalue_cmp_strings:
     push %rbx
     push %r12
     push %r13

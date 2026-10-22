@@ -701,8 +701,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				return false;
 			}
             if (!emit_load(out, module, fn, ins->result, "%rdi", err)) return false;
-            if (strcmp(ins->operand1, "shared_borrow")) fprintf(out, "    call s_value_snapshot\n");
-            else fprintf(out, "    mov %%rdi, %%rax\n");
+            fprintf(out, "    call s_value_snapshot\n");
             fprintf(out, "    mov %%rax, -%zu(%%rbp)\n", (fn->slot_count + 4 + pending_count + 1)*8);
             pending[pending_count++] = ins->result;
 		} else if (strcmp(ins->op, "CALL") == 0) {
