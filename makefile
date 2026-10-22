@@ -109,6 +109,18 @@ native-bootstrap-imports: seed-compiler-bin
 	  ./src/cmd/dist/native-bootstrap-no-manifest.sh .bootstrap/native-imports
 	@echo "✓ Import-driven bootstrap complete (.bootstrap/native-imports)"
 
+.PHONY: selfhost-protocol-check
+selfhost-protocol-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/hosted_program_check.sh
+	@bash test/native-bootstrap-diagnostic/native_artifact_check.sh
+	@bash test/native-bootstrap-diagnostic/native_bootstrap_gate_check.sh
+	@bash test/native-bootstrap-diagnostic/standalone_reachability_check.sh
+	@bash test/native-bootstrap-diagnostic/native_source_reader_check.sh
+
+.PHONY: selfhost-native-stage1-check
+selfhost-native-stage1-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_stage1_check.sh
+
 .PHONY: validate-imports
 validate-imports:
 	@echo "Validating import statements for bootstrap..."
@@ -247,7 +259,7 @@ compiler: seed-compiler-bin
 	@./bin/s_seed --compile-unit .bootstrap/compiler/compiler.ir $(COMPILER_SOURCES)
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$$(uname -s | tr '[:upper:]' '[:lower:]') \
 	  S_TARGET_ARCH=$$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/') \
-	  ./bin/s_seed --emit-bin .bootstrap/compiler/compiler.ir ./bin/s_compiler
+	  ./bin/s_seed --emit-hosted-program .bootstrap/compiler/compiler.ir ./bin/s_compiler
 	@cp misc/scripts/s-driver.sh ./bin/s
 	@chmod +x ./bin/s
 
@@ -264,8 +276,8 @@ install: compiler
 # ============================================================================
 # Self-hosted compiler
 # ============================================================================
-selfhost: native-bootstrap
-	@$(INSTALL_PROGRAM) -m 0755 $(SELFHOST_DIR)/native/stage2 ./bin/s
+selfhost: native-bootstrap-imports
+	@$(INSTALL_PROGRAM) -m 0755 .bootstrap/native-imports/stage3 ./bin/s
 	@echo "Installed S self-hosted compiler: ./bin/s"
 	@echo "Verified bootstrap chain: seed -> stage1 -> stage2 -> stage3"
 
@@ -303,3 +315,9 @@ help:
 	@echo "  make install"
 	@echo "  make selfhost"
 	@echo "  make clean"
+
+.PHONY: selfhost-native-record-check
+selfhost-native-record-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_records_check.sh
+	@bash test/native-bootstrap-diagnostic/native_record_preflight_check.sh
+	@bash test/native-bootstrap-diagnostic/native_record_rollback_check.sh

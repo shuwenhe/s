@@ -51,7 +51,7 @@ void generate_code(IR *ir, FILE *output) {
         const IRInstruction *instr = &ir->instructions[i];
         switch (instr->type) {
             case IR_NOP:
-                emit_record(output, "NOP", "", "", "");
+                emit_record(output, "NOP", instr->result, instr->operand1, instr->operand2);
                 break;
             case IR_EXPORT:
                 emit_record(output, "EXPORT", instr->result, instr->operand1, instr->operand2);

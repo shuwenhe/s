@@ -2609,6 +2609,7 @@ typedef struct runtime_function {
 	size_t start_pc;
 	size_t end_pc;
 	char params[32][64];
+    int shared_params[32];
 	size_t param_count;
 } runtime_function;
 typedef struct runtime_functions {
@@ -3567,6 +3568,7 @@ static int build_function_table(const runtime_program *prog, runtime_functions *
 					return 0;
 				}
 				strcpy(fn.params[fn.param_count], prog->data[j].result);
+                fn.shared_params[fn.param_count] = !strcmp(prog->data[j].operand1, "shared_borrow");
 				fn.param_count++;
 				j++;
 			}
@@ -3789,10 +3791,11 @@ static int execute_function(
 	for (i = 0; i < argc; i++) {
 		if (caller_vals && args[i].record_alias && args[i].kind == RUNTIME_STRING && args[i].str_value && args[i].str_value[0] != '\0' &&
 		    values_have_prefixed(caller_vals, args[i].str_value)) {
-			runtime_data_value remapped_arg = value_make_record_alias(fn->params[i]);
+			const char *identity = fn->shared_params[i] ? args[i].str_value : fn->params[i];
+            runtime_data_value remapped_arg = value_make_record_alias(identity);
 			if (remapped_arg.str_value == NULL ||
 			    !values_set(&vals, fn->params[i], &remapped_arg) ||
-			    !values_copy_prefixed(caller_vals, args[i].str_value, &vals, fn->params[i])) {
+			    !values_copy_prefixed(caller_vals, args[i].str_value, &vals, identity)) {
 				value_clear(&remapped_arg);
 				error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory");
 				values_free(&vals);
@@ -4133,6 +4136,14 @@ static int execute_function(
 				values_free(&vals);
 				return 0;
 			}
+            /* Capture value arguments before later argument expressions mutate
+             * the originating record or array. */
+            if (strcmp(ins->operand1, "shared_borrow") && !values_copy_array_aliases(&vals, &a, &vals, 0)) {
+                error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "argument snapshot failed");
+                value_clear(&a);
+                values_free(&vals);
+                return 0;
+            }
 			pending_args[pending_len++] = a;
 			pc++;
 			continue;

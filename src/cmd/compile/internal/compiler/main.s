@@ -32,16 +32,19 @@ func compiler_main(string[] args) int {
     if len(args) == 4 && args[1] == "build" {
         return handle_build_command(args[2], args[3])
     }
+    if len(args) == 5 && args[1] == "build" && args[3] == "-o" {
+        return handle_build_command(args[2], args[4])
+    }
     if len(args) == 4 && args[1] == "--emit-native-object" {
         return native_build_object(args[2], args[3])
     }
     if len(args) == 4 && (args[1] == "--emit-amd64" || args[1] == "--emit-amd64-executable") {
         return native_emit_asm_file(args[2], args[3], args[1] == "--emit-amd64-executable")
     }
-    if len(args) >= 3 && args[1] == "--compile-unit" {
+    if len(args) >= 2 && args[1] == "--compile-unit" {
         return handle_compile_unit(args)
     }
-    if len(args) == 4 && args[1] == "--emit-bin" {
+    if len(args) >= 2 && args[1] == "--emit-bin" {
         return handle_emit_bin(args)
     }
     
@@ -250,46 +253,49 @@ func handle_compile_unit(string[] args) int {
         return 2
     }
     output := args[2]
+    if output == "" { eprintln("compiler: empty output path"); return 2 }
+    if !native_target_supported() { eprintln("native compiler: P0 supports Linux/amd64"); return 2 }
     source := ""
     i := 3
     for i < len(args) {
-        if compiler_contains_text(args[i], "frontend_core.s") {
-            part := __host_read_to_string(args[i])
-            if part == "" {
-                eprintln("compiler: empty or unreadable input: " + args[i])
-                return 1
-            }
-            source = source + part + "\n"
+        if args[i] == output || __host_same_file(args[i], output) {
+            eprintln("native compiler: output must not overwrite input source")
+            return 2
         }
-        i = i + 1
-    }
-    i = 3
-    for i < len(args) {
-        if !compiler_contains_text(args[i], "frontend_core.s") {
-            part := __host_read_to_string(args[i])
-            if part == "" {
-                eprintln("compiler: empty or unreadable input: " + args[i])
-                return 1
-            }
-            source = source + part + "\n"
+        part := __host_read_source(args[i])
+        if part == "" {
+            eprintln("compiler: empty or unreadable input: " + args[i])
+            return 1
         }
+        source = source + part + "\n"
         i = i + 1
     }
     if source == "" {
         eprintln("compiler: empty compile unit")
         return 1
     }
-    // Remove duplicate package declarations for multi-file compilation
-    source = compiler_remove_duplicate_packages(source)
-    result := compiler_compile(source)
-    if result.error != "" { eprintln(result.error); return 1 }
-    if __host_write_text_file(output, result.code) != 0 { eprintln("compiler: cannot write output"); return 1 }
+    mirrored := native_source_to_mir(source)
+    if mirrored.error != "" { eprintln(mirrored.error); return 1 }
+    emitted := native_program_assembly(mirrored.program, true)
+    if emitted.error != "" { eprintln(emitted.error); return 1 }
+    // This is target assembly, not seed IR or the legacy C backend's output.
+    artifact := "# S-NATIVE-AMD64-V1\n" + emitted.assembly
+    if __host_write_text_file(output, artifact) != 0 { eprintln("compiler: cannot write output"); return 1 }
     return 0
 }
 
 func handle_emit_bin(string[] args) int {
-    eprintln("compiler: --emit-bin not yet implemented")
-    return 1
+    if len(args) != 4 {
+        eprintln("usage: --emit-bin <input.sasm> <output.bin>")
+        return 2
+    }
+    artifact := __host_read_source(args[2])
+    header := "# S-NATIVE-AMD64-V1\n"
+    if len(artifact) <= len(header) || __host_slice(artifact, 0, len(header)) != header {
+        eprintln("compiler: expected S-NATIVE-AMD64-V1 assembly artifact")
+        return 1
+    }
+    return native_install_assembly(artifact, args[2], args[3], true)
 }
 
 func handle_build_command(string input, string output) int {

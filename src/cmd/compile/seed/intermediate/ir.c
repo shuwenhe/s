@@ -8,6 +8,8 @@ typedef struct ir_builder {
 	IR *ir;
 	ast_node *root;
 	compile_error *err;
+	const char *package_name;
+	int record_depth;
 	int temp_counter;
 	int label_counter;
 	char break_labels[64][IR_OPERAND_CAP];
@@ -166,6 +168,110 @@ static const char *current_continue_label(ir_builder *b) {
 }
 static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]);
 static bool lower_place_assignment(ir_builder *b, ast_node *target, const char *value, char out[IR_OPERAND_CAP]);
+/* Record declarations are parsed as `let name:struct = struct-expression`.
+ * Preserve their type information as deterministic NOP metadata; the hosted
+ * executor keeps its existing value behavior while native lowering uses it. */
+static bool record_declaration(ast_node *node) {
+    return node && node->kind == AST_LET_STMT && node->as.let_stmt.type_name &&
+        strcmp(node->as.let_stmt.type_name, "struct") == 0 &&
+        node->as.let_stmt.value && node->as.let_stmt.value->kind == AST_STRUCT_EXPR;
+}
+static bool record_type_name(ir_builder *b, const char *raw, char out[IR_OPERAND_CAP]) {
+    const char *pkg = "";
+    size_t i;
+    if (!raw) raw = "";
+    for (i = 0; b->root->kind == AST_PROGRAM && i < b->root->as.program.statements.len; i++) {
+        ast_node *n = b->root->as.program.statements.data[i];
+        if (n->kind == AST_PACKAGE_DECL) pkg = n->as.package_decl.name;
+        if (record_declaration(n) && strcmp(n->as.let_stmt.name, raw) == 0 &&
+            strcmp(pkg, b->package_name) == 0) {
+            if (snprintf(out, IR_OPERAND_CAP, "%s%s%s", pkg, *pkg ? "." : "", raw) >= IR_OPERAND_CAP) return false;
+            return true;
+        }
+    }
+    return snprintf(out, IR_OPERAND_CAP, "%s", raw) < IR_OPERAND_CAP;
+}
+static bool emit_record_schemas(ir_builder *b) {
+    size_t i, f;
+    if (b->root->kind != AST_PROGRAM) return true;
+    for (i = 0; i < b->root->as.program.statements.len; i++) {
+        ast_node *decl = b->root->as.program.statements.data[i];
+        char key[IR_OPERAND_CAP], name[IR_OPERAND_CAP];
+        if (decl->kind == AST_PACKAGE_DECL) b->package_name = decl->as.package_decl.name;
+        if (!record_declaration(decl)) continue;
+        if (!record_type_name(b, decl->as.let_stmt.name, name) ||
+            snprintf(key, sizeof(key), "record-type:%s", name) >= (int)sizeof(key) ||
+            !emit_ins(b, IR_NOP, key, "", "", decl->pos)) return false;
+        if (snprintf(key, sizeof(key), "record-field:%s", name) >= (int)sizeof(key)) return false;
+        ast_node *body = decl->as.let_stmt.value;
+        for (f = 0; f < body->as.struct_expr.field_count; f++) {
+            char field_type[IR_OPERAND_CAP];
+            ast_node *t = body->as.struct_expr.field_values.data[f];
+            if (t->kind != AST_STRING_EXPR || !record_type_name(b, t->as.string_expr.literal, field_type) ||
+                !emit_ins(b, IR_NOP, key, body->as.struct_expr.field_names[f], field_type, decl->pos)) return false;
+        }
+    }
+    b->package_name = "";
+    return true;
+}
+static bool lower_struct_literal(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]);
+static ast_node *record_find_declaration(ir_builder *b, const char *type) {
+    const char *pkg = "";
+    size_t i;
+    char full[IR_OPERAND_CAP], wanted[IR_OPERAND_CAP];
+    if (!record_type_name(b, type, wanted)) return NULL;
+    for (i = 0; b->root->kind == AST_PROGRAM && i < b->root->as.program.statements.len; i++) {
+        ast_node *n = b->root->as.program.statements.data[i];
+        if (n->kind == AST_PACKAGE_DECL) pkg = n->as.package_decl.name;
+        if (record_declaration(n) && snprintf(full, sizeof(full), "%s%s%s", pkg, *pkg ? "." : "", n->as.let_stmt.name) < (int)sizeof(full) && !strcmp(full, wanted)) return n;
+    }
+    return NULL;
+}
+static bool lower_record_defaults_impl(ir_builder *b, ast_node *expr, const char *root) {
+    ast_node *decl = record_find_declaration(b, expr->as.struct_expr.type_name);
+    size_t f, j;
+    if (!decl) return true;
+    ast_node *schema = decl->as.let_stmt.value;
+    for (f = 0; f < schema->as.struct_expr.field_count; f++) {
+        const char *name = schema->as.struct_expr.field_names[f];
+        for (j = 0; j < expr->as.struct_expr.field_count; j++) if (!strcmp(name, expr->as.struct_expr.field_names[j])) break;
+        if (j < expr->as.struct_expr.field_count) continue;
+        const char *type = schema->as.struct_expr.field_values.data[f]->as.string_expr.literal;
+        char dest[IR_OPERAND_CAP], value[IR_OPERAND_CAP];
+        if (snprintf(dest, sizeof(dest), "%s.%s", root, name) >= (int)sizeof(dest)) return false;
+        if (!strcmp(type, "string")) copy_str(value, "\"\"");
+        else if (strlen(type) >= 2 && !strcmp(type + strlen(type) - 2, "[]")) {
+            next_temp(b, value);
+            if (!emit_ins(b, IR_ARRAY_NEW, value, type, "0", expr->pos)) return false;
+        } else if (record_find_declaration(b, type)) {
+            ast_node nested;
+            memset(&nested, 0, sizeof(nested)); nested.kind = AST_STRUCT_EXPR;
+            nested.pos = expr->pos; nested.as.struct_expr.type_name = (char *)type;
+            if (b->record_depth >= 64) { error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "recursive by-value record defaults"); return false; }
+            b->record_depth++;
+            bool ok = lower_struct_literal(b, &nested, value);
+            b->record_depth--;
+            if (!ok) return false;
+        } else copy_str(value, "0");
+        if (!emit_ins(b, IR_MOV, dest, value, "", expr->pos)) return false;
+    }
+    return true;
+}
+static bool lower_record_defaults(ir_builder *b, ast_node *expr, const char *root) {
+    ast_node *decl = record_find_declaration(b, expr->as.struct_expr.type_name);
+    const char *saved_package = b->package_name;
+    const char *pkg = "";
+    for (size_t i = 0; decl && i < b->root->as.program.statements.len; i++) {
+        ast_node *n = b->root->as.program.statements.data[i];
+        if (n->kind == AST_PACKAGE_DECL) pkg = n->as.package_decl.name;
+        if (n == decl) { b->package_name = pkg; break; }
+    }
+    /* Resolve both the declaration and its nested field types in its own
+     * package; the caller's import context must not redefine those names. */
+    bool ok = lower_record_defaults_impl(b, expr, root);
+    b->package_name = saved_package;
+    return ok;
+}
 static bool lower_struct_literal(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
 	size_t i;
 	char alias_literal[IR_OPERAND_CAP];
@@ -180,13 +286,16 @@ static bool lower_struct_literal(ir_builder *b, ast_node *expr, char out[IR_OPER
 	{
 		char type_field[IR_OPERAND_CAP];
 		char type_literal[IR_OPERAND_CAP];
+		char qualified_type[IR_OPERAND_CAP];
+		if (!record_type_name(b, expr->as.struct_expr.type_name, qualified_type)) return false;
 		if (snprintf(type_field, sizeof(type_field), "%s.__type", out) >= (int)sizeof(type_field) ||
-			snprintf(type_literal, sizeof(type_literal), "\"%s\"", expr->as.struct_expr.type_name) >= (int)sizeof(type_literal) ||
+			snprintf(type_literal, sizeof(type_literal), "\"%s\"", qualified_type) >= (int)sizeof(type_literal) ||
 			!emit_ins(b, IR_MOV, type_field, type_literal, "", expr->pos)) {
 			error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "struct type tag too long for IR operand");
 			return false;
 		}
 	}
+	if (!lower_record_defaults(b, expr, out)) return false;
 	for (i = 0; i < expr->as.struct_expr.field_count; i++) {
 		char field_value[IR_OPERAND_CAP];
 		char field_name[IR_OPERAND_CAP];
@@ -744,7 +853,7 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 				if (!lower_expr(b, expr->as.call_expr.args.data[i], arg_tmp)) {
 					return false;
 				}
-				if (!emit_ins(b, IR_ARG, arg_tmp, "", "", expr->pos)) {
+				if (!emit_ins(b, IR_ARG, arg_tmp, i < 64 && (expr->as.call_expr.native_shared_mask & (1ULL << i)) ? "shared_borrow" : "", "", expr->pos)) {
 					return false;
 				}
 			}
@@ -913,14 +1022,20 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
 			return false;
 		}
 	}
-	if (!emit_ins(b, IR_FUNC_BEGIN, stmt->as.fn_stmt.name, "", "", stmt->pos)) {
-		return false;
-	}
-	for (i = 0; i < stmt->as.fn_stmt.param_count; i++) {
-		if (!emit_ins(b, IR_PARAM, stmt->as.fn_stmt.params[i], "", "", stmt->pos)) {
-			return false;
-		}
-	}
+    {
+        char key[IR_OPERAND_CAP];
+        if (snprintf(key, sizeof(key), "return-transfer:%s", stmt->as.fn_stmt.name) >= (int)sizeof(key) ||
+            !emit_ins(b, IR_NOP, key, "", stmt->as.fn_stmt.return_type ? stmt->as.fn_stmt.return_type : "()", stmt->pos)) return false;
+        for (i = 0; i < stmt->as.fn_stmt.param_count; i++) {
+            if (snprintf(key, sizeof(key), "param-transfer:%s", stmt->as.fn_stmt.name) >= (int)sizeof(key) ||
+                !emit_ins(b, IR_NOP, key, stmt->as.fn_stmt.params[i], stmt->as.fn_stmt.param_types[i], stmt->pos)) return false;
+        }
+    }
+    /* PARAM records stay contiguous for the existing hosted function loader. */
+    if (!emit_ins(b, IR_FUNC_BEGIN, stmt->as.fn_stmt.name, "", "", stmt->pos)) return false;
+    for (i = 0; i < stmt->as.fn_stmt.param_count; i++) {
+        if (!emit_ins(b, IR_PARAM, stmt->as.fn_stmt.params[i], i < 64 && (stmt->as.fn_stmt.native_shared_mask & (1ULL << i)) ? "shared_borrow" : "", "", stmt->pos)) return false;
+    }
 	if (stmt->as.fn_stmt.body && stmt->as.fn_stmt.body->kind == AST_BLOCK) {
 		size_t n = stmt->as.fn_stmt.body->as.block.statements.len;
 		for (i = 0; i < n; i++) {
@@ -961,6 +1076,8 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 	}
 	switch (stmt->kind) {
 		case AST_PACKAGE_DECL:
+			b->package_name = stmt->as.package_decl.name;
+			return true;
 		case AST_USE_DECL:
 		case AST_EXTERN_DECL:
 		case AST_VAR_DECL:
@@ -1053,6 +1170,8 @@ bool ir_generate_from_ast(ast_node *root, IR *ir, compile_error *err) {
 	b.ir = ir;
 	b.root = root;
 	b.err = err;
+	b.package_name = "";
+	b.record_depth = 0;
 	b.temp_counter = 0;
 	b.label_counter = 0;
 	b.loop_depth = 0;
@@ -1066,5 +1185,6 @@ bool ir_generate_from_ast(ast_node *root, IR *ir, compile_error *err) {
 			if (decl->kind == AST_CONST_DECL && b.constant_count < 128) b.constants[b.constant_count++] = decl;
 		}
 	}
+	if (!emit_record_schemas(&b)) return false;
 	return lower_stmt(&b, root);
 }

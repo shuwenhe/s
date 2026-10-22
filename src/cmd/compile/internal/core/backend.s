@@ -956,7 +956,7 @@ func build_cfi_artifact(string arch, string ssa_text, string debug_map) string {
     lines = append(lines, "ssa " + ssa_text)
     lines = append(lines, "debug " + debug_map)
     lines = append(lines, ".cfi_endproc")
-    join_lines(lines)
+    backend_join_lines(lines)
 }
 
 func validate_cfi_artifact(string payload) backend_error {
@@ -1134,7 +1134,7 @@ func emit_wasm_c_source(write_op[] writes, int exit_code) string {
     lines = append(lines, "void _start(void) {")
     lines = append(lines, "  proc_exit(s_main());")
     lines = append(lines, "}")
-    join_lines(lines) + "\n"
+    backend_join_lines(lines) + "\n"
 }
 
 func estimate_ipo_synergy(int inlined, int escaped, int devirt, int cross_pkg_inline, int const_prop) int {
@@ -1162,7 +1162,7 @@ func build_abi_machine_matrix_artifact(string arch, source_file source, string s
     lines = append(lines, "matrix callseq=normal,variadic-home,normal+multi-ret,variadic-home+multi-ret")
     lines = append(lines, "matrix ret=reg,sret,tuple2,tupleN")
     lines = append(lines, "cross_arch_consistency=" + abi_cross_arch_consistency_status(arch, spills, functions))
-    join_lines(lines)
+    backend_join_lines(lines)
 }
 
 func abi_cross_arch_consistency_status(string arch, int spills, int functions) string {
@@ -1209,7 +1209,7 @@ func build_toolchain_compat_artifact(source_file source, string arch) string {
     lines = append(lines, "interop cgo=roadmap asm=go-plan9-min linker=elf64-only")
     lines = append(lines, "go_asm syntax=plan9 translator=enabled status=ok")
     lines = append(lines, "go_equiv module=planned build_tags=planned test=partial cover=partial profile=planned")
-    join_lines(lines)
+    backend_join_lines(lines)
 }
 
 func validate_toolchain_compat_artifact(string payload) backend_error {
@@ -1250,12 +1250,12 @@ func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
     if text_backend_pair_is_err(translated.left, translated.right) {
         lines = append(lines, "status=error")
         lines = append(lines, "reason=" + translated.right.message)
-        return join_lines(lines)
+        return backend_join_lines(lines)
     }
     lines = append(lines, "status=ok")
     lines = append(lines, "translator=plan9-to-gas")
     lines = append(lines, "gas_preview=" + flatten_multiline(translated.left))
-    join_lines(lines)
+    backend_join_lines(lines)
 }
 
 func validate_go_asm_bridge_artifact(string payload) ((), backend_error) {
@@ -1326,7 +1326,7 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
     if !saw_text_directive {
         return backend_error { message: "go asm translation error: no TEXT directive found" }
     }
-    return join_lines(output_lines), backend_error { message: "" }
+    return backend_join_lines(output_lines), backend_error { message: "" }
 }
 
 func text_backend_pair_is_err(string value, backend_error err) bool {
@@ -1624,7 +1624,7 @@ func flatten_multiline(string text) string {
         }
         i = i + 1
     }
-    join_with(out, " | ")
+    backend_join_with(out, " | ")
 }
 
 func build_stackmap_artifact(string arch, source_file source, string ssa_text, string debug_map) string {
@@ -1644,7 +1644,7 @@ func build_stackmap_artifact(string arch, source_file source, string ssa_text, s
         i = i + 1
     }
     lines = append(lines, "meta " + debug_map)
-    join_lines(lines)
+    backend_join_lines(lines)
 }
 
 func estimate_stack_slots(string ssa_text) int {
@@ -1736,7 +1736,7 @@ func build_abi_behavior_artifact(string arch, source_file source) string {
         )
         i = i + 1
     }
-    join_lines(lines)
+    backend_join_lines(lines)
 }
 
 func build_abi_emit_plan(string arch, source_file source) string {
@@ -1783,7 +1783,7 @@ func build_abi_emit_plan(string arch, source_file source) string {
         }
         i = i + 1
     }
-    join_lines(lines)
+    backend_join_lines(lines)
 }
 
 func abi_param_location(string arch, int index) string {
@@ -2087,7 +2087,7 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
     lines = append(lines, build_dwarf_continuity_metric(ssa_text, debug_map))
     lines = append(lines, build_dwarf_budget_policy(ssa_text))
     lines = append(lines, build_dwarf_regression_gate(ssa_text, debug_map))
-    join_lines(lines)
+    backend_join_lines(lines)
 }
 
 func build_dwarf_continuity_metric(string ssa_text, string debug_map) string {
@@ -2244,7 +2244,7 @@ func build_drop_metadata_artifact(string arch, source_file source, string ssa_te
     }
     lines = append(lines, "contract ownership=checked drop=deterministic")
     lines = append(lines, "proof rollback=" + std.prelude.to_string(backend_parse_number_after(ssa_text, "rollback=")) + " proof_fail=" + std.prelude.to_string(backend_parse_number_after(ssa_text, "proof_fail=")))
-    join_lines(lines)
+    backend_join_lines(lines)
 }
 
 func validate_dwarf_consumability(string dwarf_payload, string ssa_text) backend_error {
@@ -2328,7 +2328,7 @@ func build_backend_perf_baseline_artifact(string arch, string ssa_text, string m
     lines = append(lines, "regression_gate p95_latency=stable throughput=stable")
     lines = append(lines, "regression_gate_long p99_latency=watch code_size=watch compile_time=watch")
     lines = append(lines, "regression_gate_arch amd64=watch arm64=watch tail_cases=watch")
-    join_lines(lines)
+    backend_join_lines(lines)
 }
 
 func validate_backend_perf_baseline(string payload) backend_error {
@@ -2385,7 +2385,7 @@ func build_midend_opt_artifact(string midend_report) string {
         + " trim_unit=" + std.prelude.to_string(backend_parse_number_after(midend_report, "pass_trim_unit="))
         + " dedup=" + std.prelude.to_string(backend_parse_number_after(midend_report, "pass_dedup="))
         + " ipo_synergy=" + std.prelude.to_string(backend_parse_number_after(midend_report, "ipo_synergy=")))
-    join_lines(lines)
+    backend_join_lines(lines)
 }
 
 func validate_midend_opt_artifact(string payload) backend_error {
@@ -2463,7 +2463,7 @@ func build_export_data_artifact(source_file source, string arch) string {
                     "fn " + fn_decl.sig.name
                         + " public=" + std.prelude.to_string(fn_decl.is_public as int)
                         + " params=" + signature
-                        + " generics=" + join_with(fn_decl.sig.generics, ",")
+                        + " generics=" + backend_join_with(fn_decl.sig.generics, ",")
                         + " returns=" + result_type
                 )
             }
@@ -2476,7 +2476,7 @@ func build_export_data_artifact(source_file source, string arch) string {
                     f = f + 1
                 }
                 lines.push("struct " + st.name + " public=" + std.prelude.to_string(st.is_public as int)
-                    + " generics=" + join_with(st.generics, ",") + " fields=" + fields)
+                    + " generics=" + backend_join_with(st.generics, ",") + " fields=" + fields)
             }
             item.enum(en) : {
                 variants := ""
@@ -2491,7 +2491,7 @@ func build_export_data_artifact(source_file source, string arch) string {
                     v = v + 1
                 }
                 lines.push("enum " + en.name + " public=" + std.prelude.to_string(en.is_public as int)
-                    + " generics=" + join_with(en.generics, ",") + " variants=" + variants)
+                    + " generics=" + backend_join_with(en.generics, ",") + " variants=" + variants)
             }
             item.trait(tr) : {
                 methods := ""
@@ -2502,14 +2502,14 @@ func build_export_data_artifact(source_file source, string arch) string {
                     m = m + 1
                 }
                 lines.push("trait " + tr.name + " public=" + std.prelude.to_string(tr.is_public as int)
-                    + " generics=" + join_with(tr.generics, ",") + " methods=" + methods)
+                    + " generics=" + backend_join_with(tr.generics, ",") + " methods=" + methods)
             }
             item.method(method) : {
                 fn_decl := method.method
                 lines.push("method " + method.receiver_type + "." + fn_decl.sig.name
                     + " public=" + std.prelude.to_string(fn_decl.is_public as int)
                     + " params=" + std.prelude.to_string(std.prelude.len(fn_decl.sig.params))
-                    + " generics=" + join_with(fn_decl.sig.generics, ","))
+                    + " generics=" + backend_join_with(fn_decl.sig.generics, ","))
             }
             item.const(cn) : lines.push("const " + cn.name + " iota=" + std.prelude.to_string(cn.iota_index)),
             item.var(vr) : {
@@ -2524,7 +2524,7 @@ func build_export_data_artifact(source_file source, string arch) string {
         }
         i = i + 1
     }
-    join_lines(lines)
+    backend_join_lines(lines)
 }
 
 func starts_with_local(string text, string prefix) bool {
@@ -5735,7 +5735,7 @@ func emit_asm_amd64(write_op[] writes, int exit_code) string {
     text_lines = append(text_lines, "    mov $" + std.prelude.to_string(exit_code) + ", %eax")
     text_lines = append(text_lines, "    leave")
     text_lines = append(text_lines, "    ret")
-    join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
+    backend_join_lines(data_lines) + "\n\n" + backend_join_lines(text_lines) + "\n"
 }
 
 func emit_asm_arm64(write_op[] writes, int exit_code) string {
@@ -5763,7 +5763,7 @@ func emit_asm_arm64(write_op[] writes, int exit_code) string {
     text_lines = append(text_lines, "    mov x0, #" + std.prelude.to_string(exit_code))
     text_lines = append(text_lines, "    ldp x29, x30, [sp], #16")
     text_lines = append(text_lines, "    ret")
-    join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
+    backend_join_lines(data_lines) + "\n\n" + backend_join_lines(text_lines) + "\n"
 }
 
 func emit_asm_riscv64(write_op[] writes, int exit_code) string {
@@ -5792,7 +5792,7 @@ func emit_asm_riscv64(write_op[] writes, int exit_code) string {
     text_lines = append(text_lines, "    ld ra, 8(sp)")
     text_lines = append(text_lines, "    addi sp, sp, 16")
     text_lines = append(text_lines, "    ret")
-    join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
+    backend_join_lines(data_lines) + "\n\n" + backend_join_lines(text_lines) + "\n"
 }
 
 func emit_asm_s390x(write_op[] writes, int exit_code) string {
@@ -5817,7 +5817,7 @@ func emit_asm_s390x(write_op[] writes, int exit_code) string {
     }
     text_lines = append(text_lines, "    lghi %r2, " + std.prelude.to_string(exit_code))
     text_lines = append(text_lines, "    br %r14")
-    join_lines(data_lines) + "\n\n" + join_lines(text_lines) + "\n"
+    backend_join_lines(data_lines) + "\n\n" + backend_join_lines(text_lines) + "\n"
 }
 
 func append_write_op(string[] data_lines, string[] text_lines, write_op op, int index) () {
@@ -5920,8 +5920,8 @@ func propagate_bindings(binding[] outer, binding[] inner) () {
     }
 }
 
-func join_lines(string[] lines) string {
-    join_with(lines, "\n")
+func backend_join_lines(string[] lines) string {
+    backend_join_with(lines, "\n")
 }
 
 func count_occurrences(string text, string token) int {
@@ -5941,7 +5941,7 @@ func count_occurrences(string text, string token) int {
     total
 }
 
-func join_with(string[] values, string sep) string {
+func backend_join_with(string[] values, string sep) string {
     out := ""
     first := true
     i := 0

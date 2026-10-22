@@ -470,8 +470,14 @@ func native_source_to_mir(string source) mir_program_result {
         returned: false, function_index: 0, error: "",
     }
     state = native_parse_package(native_advance(state))
+    unit_package := state.package_name
     for state.error == "" && state.lex.token != "" {
-        if state.lex.token == "extern" {
+        if state.lex.token == "package" {
+            state = native_parse_package(state)
+            if state.package_name != unit_package {
+                state = native_fail(state, "native compile-unit requires one package")
+            }
+        } else if state.lex.token == "extern" {
             // Skip extern declarations - they are handled by the full frontend
             state = native_advance(state)  // skip 'extern'
             if state.lex.token == "\"" || state.lex.token == "\"\"" {

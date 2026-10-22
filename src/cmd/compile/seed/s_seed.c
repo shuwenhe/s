@@ -130,6 +130,8 @@ bool seed_compile_file(const char *input_path, const char *output_path, compile_
 	}
 	return ok;
 }
+#include "semantic/shared_borrow.h"
+#include "semantic/record_contracts.h"
 typedef struct seed_source_file {
 	ast_node *root;
 	const char *path;
@@ -165,7 +167,7 @@ static void remap_unit_error(seed_source_file *files, int count, compile_error *
 	}
 }
 
-bool seed_compile_files(int input_count, char **input_paths, const char *output_path, compile_error *err) {
+static bool seed_compile_files_mode(int input_count, char **input_paths, const char *output_path, bool native_records, compile_error *err) {
 	seed_source_file *files = NULL;
 	ast_node *unit = NULL;
 	IR ir;
@@ -246,7 +248,10 @@ bool seed_compile_files(int input_count, char **input_paths, const char *output_
 			statements->data[j] = NULL; /* Transfer ownership exactly once. */
 		}
 	}
-	if (!semantic_analyze(unit, err) || !ir_generate_from_ast(unit, &ir, err)) goto done;
+	if (!semantic_analyze(unit, err)) goto done;
+    record_contracts contracts;
+    if (native_records && (!shared_prove_unit(unit, err) || !record_validate_transfer_contracts(unit, &contracts, err))) goto done;
+    if (!ir_generate_from_ast(unit, &ir, err)) goto done;
 	out = fopen(output_path, "wb");
 	if (!out) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open output: %s", output_path);
@@ -271,6 +276,12 @@ done:
 	for (i = 0; i < input_count; i++) ast_free(files[i].root);
 	free(files);
 	return ok;
+}
+bool seed_compile_files(int count, char **paths, const char *output, compile_error *err) {
+    return seed_compile_files_mode(count, paths, output, false, err);
+}
+bool seed_compile_native_files(int count, char **paths, const char *output, compile_error *err) {
+    return seed_compile_files_mode(count, paths, output, true, err);
 }
 #ifndef SEED_COMPILE_ONLY
 static void dump_ast_indent(FILE *out, int indent) {
@@ -488,6 +499,7 @@ static void print_usage(const char *argv0) {
 	fprintf(stderr, "  %s <input.s> <output.ir>\n", argv0);
 	fprintf(stderr, "  %s ir <input.s> -o <output.ir>\n", argv0);
 	fprintf(stderr, "  %s --emit-bin <input.ir> <output.bin>\n", argv0);
+	fprintf(stderr, "  %s --emit-hosted-program <input.ir> <output.bin> (interpreter; program owns CLI)\n", argv0);
 	fprintf(stderr, "  %s --emit-aot <input.ir> <output.bin>\n", argv0);
 	fprintf(stderr, "  %s --emit-aot-asm <input.ir> <output.S>\n", argv0);
 	fprintf(stderr, "  %s --emit-aot-obj <input.ir> <output.o>\n", argv0);
@@ -502,6 +514,7 @@ static void print_usage(const char *argv0) {
 	fprintf(stderr, "  %s --dump-ast <input.s> <output.ast>\n", argv0);
 	fprintf(stderr, "  %s --link-ir <output.ir> <input.ir>...\n", argv0);
 	fprintf(stderr, "  %s --compile-unit <output.ir> <input.s>...\n", argv0);
+    fprintf(stderr, "  %s --compile-native-unit <output.ir> <input.s>... (native record preflight)\n", argv0);
 }
 static bool default_binary_path_from_source(const char *input_path, char *output_path, size_t output_cap, compile_error *err) {
 	size_t len;
@@ -678,12 +691,15 @@ int main(int argc, char **argv) {
 		printf("linked %d IR modules -> %s\n", argc - 3, argv[2]);
 		return 0;
 	}
-	if (argc >= 2 && strcmp(argv[1], "--compile-unit") == 0) {
+	if (argc >= 2 && (strcmp(argv[1], "--compile-unit") == 0 || strcmp(argv[1], "--compile-native-unit") == 0)) {
 		if (argc < 4) {
 			print_usage(argv[0]);
 			return 2;
 		}
-		if (!seed_compile_files(argc - 3, &argv[3], argv[2], &err)) {
+		bool compiled = !strcmp(argv[1], "--compile-native-unit") ?
+            seed_compile_native_files(argc - 3, &argv[3], argv[2], &err) :
+            seed_compile_files(argc - 3, &argv[3], argv[2], &err);
+        if (!compiled) {
 			print_compile_error(&err);
 			return 1;
 		}
@@ -739,6 +755,18 @@ int main(int argc, char **argv) {
 		}
 		printf("configured target: %s\n", detail);
 		printf("standalone backend: %s\n", s_target_platform_supports_standalone(&target) ? "available" : "unavailable (implemented: linux/amd64 ELF, darwin/arm64 Mach-O hosted)");
+		return 0;
+	}
+	if (argc >= 2 && strcmp(argv[1], "--emit-hosted-program") == 0) {
+		if (argc != 4) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		if (!emit_hosted_program_from_ir_file(argv[2], argv[3], &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("compiled hosted program %s -> %s\n", argv[2], argv[3]);
 		return 0;
 	}
 	if (argc >= 2 && strcmp(argv[1], "--emit-bin") == 0) {

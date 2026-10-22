@@ -114,7 +114,29 @@ static bool write_escaped_ir(FILE *out, const char *ir_text, compile_error *err)
 	}
 	return true;
 }
-static bool write_runner_c_file(FILE *out, const char *ir_text, compile_error *err) {
+static bool write_runner_c_file(FILE *out, const char *ir_text, bool program_only, compile_error *err) {
+	/* A hosted program owns its entire argv surface. The compatibility runner
+	 * below is a seed tool and intercepts compiler flags before S can see them. */
+	if (program_only) {
+		if (fprintf(out,
+			"#include <stdio.h>\n"
+			"#include \"runtime/memory.h\"\n"
+			"#include \"error/error.h\"\n") < 0 ||
+		    !write_escaped_ir(out, ir_text, err)) return false;
+		if (fprintf(out,
+			"int main(int argc, char **argv) {\n"
+			"    long ret = 0; compile_error err; error_clear(&err);\n"
+			"    if (!runtime_execute_text_with_argv(embedded_ir, \"main\", &ret, &err, argc, argv)) {\n"
+			"        fprintf(stderr, \"error[%%d] at %%zu:%%zu: %%s\\n\", (int)err.code, err.line, err.column, err.message);\n"
+			"        return 1;\n"
+			"    }\n"
+			"    return (int)ret;\n"
+			"}\n") < 0) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed to write hosted program runner");
+			return false;
+		}
+		return true;
+	}
 	if (fprintf(out,
 		"#include <stdio.h>\n"
 		"#include <stdlib.h>\n"
@@ -225,7 +247,7 @@ static bool write_runner_c_file(FILE *out, const char *ir_text, compile_error *e
 	}
 	return true;
 }
-bool emit_native_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err) {
+static bool emit_hosted_from_ir_file(const char *input_ir_path, const char *output_binary_path, bool program_only, compile_error *err) {
 	char *ir_text = NULL;
 	char temp_path[256];
 	char command[2048];
@@ -251,7 +273,7 @@ bool emit_native_from_ir_file(const char *input_ir_path, const char *output_bina
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open temporary source file");
 		return false;
 	}
-	if (!write_runner_c_file(out, ir_text, err)) {
+	if (!write_runner_c_file(out, ir_text, program_only, err)) {
 		free(ir_text);
 		fclose(out);
 		remove(temp_path);
@@ -291,6 +313,12 @@ bool emit_native_from_ir_file(const char *input_ir_path, const char *output_bina
 		return false;
 	}
 	return true;
+}
+bool emit_native_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err) {
+	return emit_hosted_from_ir_file(input_ir_path, output_binary_path, false, err);
+}
+bool emit_hosted_program_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err) {
+	return emit_hosted_from_ir_file(input_ir_path, output_binary_path, true, err);
 }
 static bool collect_c_abi_exports(const char *ir_text, c_abi_export *exports, size_t cap, size_t *out_len, compile_error *err) {
 	const char *line = ir_text;
