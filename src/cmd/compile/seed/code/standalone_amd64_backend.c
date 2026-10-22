@@ -44,6 +44,7 @@ typedef struct standalone_function {
 	bool integer_only;
     unsigned long long borrow_mask;
     int borrow_schema[64];
+    int borrow_flow_state;
 } standalone_function;
 typedef struct standalone_literal {
 	char encoded[STANDALONE_TEXT_CAP];
@@ -577,7 +578,7 @@ static const char *runtime_callee(const char *name) {
 	if (strstr(name, "__host_run_argv") != NULL) return "s_host_run_argv";
 	const char *tail = strrchr(name, '.');
 	if (tail != NULL) name = tail + 1;
-	if (strcmp(name, "len") == 0 || strcmp(name, "__string_len") == 0) return "s_value_len";
+	if (strcmp(name, "len") == 0 || strcmp(name, "__string_len") == 0 || strcmp(name, "__vec_len") == 0) return "s_value_len";
 	if (strcmp(name, "host_args") == 0) return "s_host_args_value";
 	if (strcmp(name, "eprintln") == 0) return "s_eprintln_value";
 	if (strcmp(name, "char_at") == 0 || strcmp(name, "__host_char_at") == 0) return "s_string_char_at";
@@ -728,6 +729,18 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			 * standalone runtime, array construction is already represented by
 			 * the tagged array allocator; preserve the length argument and avoid
 			 * inventing a global make ABI. */
+            /* Hosted vector methods carry a quoted slot name. Native code
+             * passes the actual array value rather than the name string. */
+            if (!strcmp(ins->operand1,"__vec_len") && call_arg_count==1) {
+                standalone_literal path;
+                if(!decode_literal(pending[first_arg],&path,err) || memchr(path.bytes,0,path.len)) return false;
+                path.bytes[path.len]=0;
+                if(!emit_load(out,module,fn,(char*)path.bytes,"%rdi",err)) return false;
+                fprintf(out,"    call s_value_len\n");
+                if(!emit_store(out,module,fn,ins->result,"%rax",err)) return false;
+                pending_count=first_arg;
+                continue;
+            }
 			if (strcmp(ins->operand1, "make") == 0 && call_arg_count == 2) {
 				if (!emit_load(out, module, fn, pending[first_arg + 1], "%rdi", err)) return false;
 				fprintf(out, "    call s_array_new\n");

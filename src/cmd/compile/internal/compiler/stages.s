@@ -107,6 +107,18 @@ struct compiler_stage12_ref_use_region_point_result {
     string evidence
 }
 
+struct compiler_stage12_loan_live_query_result {
+    bool consumed
+    string input_authority
+    string analysis_authority
+    string query_authority
+    string mir_reconstruction
+    int loan_id
+    int point
+    bool live
+    string evidence
+}
+
 struct compiler_stage13_generic_resolution_result {
     bool consumed
     string input_authority
