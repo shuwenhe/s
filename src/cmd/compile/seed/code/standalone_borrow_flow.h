@@ -80,8 +80,9 @@ static bool borrow_flow_literal(const char *value,char *text,size_t cap,compile_
     memcpy(text,lit.bytes,lit.len); text[lit.len]=0; return true;
 }
 static int borrow_flow_call(borrow_flow_types *t,standalone_function *fn,int *state,
-        const char *name,int *args,const char **sources,size_t count,compile_error *err) {
+        const char *name,int *args,const char **sources,bool *reborrows,size_t count,compile_error *err) {
     const char *runtime=runtime_callee(name);
+    for(size_t i=0;i<count;i++) if(reborrows[i] && (runtime || !strcmp(name,"make"))) return BF_UNKNOWN;
     if(!strcmp(name,"make")) {
         char type[STANDALONE_TEXT_CAP];
         if(count!=2 || args[0]!=BF_STRING || args[1]!=BF_INT || !borrow_flow_literal(sources[0],type,sizeof(type),err)) return BF_UNKNOWN;
@@ -96,25 +97,33 @@ static int borrow_flow_call(borrow_flow_types *t,standalone_function *fn,int *st
     }
     if(runtime) {
         if(!strcmp(runtime,"s_value_len")) return count==1 && (args[0]==BF_STRING || borrow_flow_is_array(t,args[0]))?BF_INT:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_string_byte_at")) return count==2 && args[0]==BF_STRING && args[1]==BF_INT?BF_INT:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_string_char_at")) return count==2 && args[0]==BF_STRING && args[1]==BF_INT?BF_STRING:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_string_slice")) return count==3 && args[0]==BF_STRING && args[1]==BF_INT && args[2]==BF_INT?BF_STRING:BF_UNKNOWN;
         if(!strcmp(runtime,"s_int_text")) return count==1 && args[0]==BF_INT?BF_STRING:BF_UNKNOWN;
         if(!strcmp(runtime,"s_index_get")) return count==2 && borrow_flow_is_array(t,args[0]) && args[1]==BF_INT?t->elements[args[0]-(int)t->m->record_count]:BF_UNKNOWN;
         if(!strcmp(runtime,"s_array_append")) return count==2 && borrow_flow_is_array(t,args[0]) && args[1]==t->elements[args[0]-(int)t->m->record_count]?args[0]:BF_UNKNOWN;
         return BF_UNKNOWN; /* File/process/resource helpers are not borrowed callees. */
     }
-    standalone_function *target=standalone_borrow_function(t->m,name);
-    if(!target || target->borrow_mask || !standalone_validate_borrow_flow(t->m,target,err)) return BF_UNKNOWN;
+    standalone_function *target=standalone_borrow_callee(t->m,name);
+    if(!target || !standalone_validate_borrow_flow(t->m,target,err)) return BF_UNKNOWN;
     size_t p=0;
     for(size_t i=target->begin;i<target->end && !strcmp(t->m->ir.ins[i].op,"PARAM");i++,p++) {
         if(p>=count) return BF_UNKNOWN;
         const char *type=standalone_transfer(t->m,"param-transfer:",target->name,t->m->ir.ins[i].result);
-        if(args[p]!=borrow_flow_type(t,type,NULL,0) || args[p]==BF_UNKNOWN) return BF_UNKNOWN;
+        bool expected=p<64 && (target->borrow_mask&(1ULL<<p));
+        if(expected!=reborrows[p]) return BF_UNKNOWN;
+        int parameter=expected?target->borrow_schema[p]:borrow_flow_type(t,type,NULL,0);
+        if(args[p]!=parameter || args[p]==BF_UNKNOWN) return BF_UNKNOWN;
+        if(expected) for(size_t j=0;j<count;j++)
+            if(j!=p && !strcmp(sources[p],sources[j])) return BF_UNKNOWN;
     }
     if(p!=count) return BF_UNKNOWN;
     return borrow_flow_type(t,standalone_transfer(t->m,"return-transfer:",target->name,NULL),NULL,0);
 }
 static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,borrow_flow_block *b,
         int *state,bool *borrowed,bool unreachable,compile_error *err,size_t *failure) {
-    int args[64]; const char *sources[64]; size_t argc=0;
+    int args[64]; const char *sources[64]; bool reborrows[64]; size_t argc=0;
     int return_type=borrow_flow_type(t,standalone_transfer(t->m,"return-transfer:",fn->name,NULL),NULL,0);
     if(return_type==BF_UNKNOWN) return false;
     for(size_t i=b->begin;i<b->end;i++) {
@@ -153,7 +162,10 @@ static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,bo
                 continue;
             }
         } else if(!strcmp(x->op,"ARG")) {
-            if(argc==64 || (strcmp(x->operand1,"_") && *x->operand1) || borrow_flow_raw(fn,borrowed,x->result)) return false;
+            bool reborrow=!strcmp(x->operand1,"mutable_borrow");
+            if(argc==64 || (!reborrow && strcmp(x->operand1,"_") && *x->operand1) ||
+               reborrow!=borrow_flow_raw(fn,borrowed,x->result)) return false;
+            reborrows[argc]=reborrow;
             args[argc]=borrow_flow_value(t,fn,state,x->result); sources[argc++]=x->result;
             if(args[argc-1]==BF_UNKNOWN) return false;
             continue;
@@ -161,7 +173,10 @@ static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,bo
             char *end; long n=strtol(x->operand2,&end,10);
             if(*end || n<0 || (size_t)n>argc) return false;
             size_t first=argc-(size_t)n;
-            result=borrow_flow_call(t,fn,state,x->operand1,args+first,sources+first,(size_t)n,err);
+            /* A pending outer exclusive argument must not overlap a nested
+             * call. Source borrow arguments are effect-free as well. */
+            for(size_t a=0;a<first;a++) if(reborrows[a]) return false;
+            result=borrow_flow_call(t,fn,state,x->operand1,args+first,sources+first,reborrows+first,(size_t)n,err);
             argc=first;
         } else if(!strcmp(x->op,"ARRAY_NEW")) {
             if(!seed_array_new_valid(x->operand1,x->operand2)) return false;

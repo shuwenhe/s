@@ -191,6 +191,7 @@ struct ast_node {
 		} bool_expr;
 		struct {
 			char *literal;
+			bool is_type_name;
 		} string_expr;
 		struct {
 			ast_vec items;

@@ -178,15 +178,21 @@ static bool record_declaration(ast_node *node) {
 }
 static bool record_type_name(ir_builder *b, const char *raw, char out[IR_OPERAND_CAP]) {
     const char *pkg = "";
-    size_t i;
+    size_t i, length;
     if (!raw) raw = "";
+    length=strlen(raw);
+    /* Qualify a local record base while retaining pointer/array suffixes. */
+    for (;;) {
+        if(length>=2 && raw[length-2]=='[' && raw[length-1]==']') length-=2;
+        else if(length && raw[length-1]=='*') length--;
+        else break;
+    }
     for (i = 0; b->root->kind == AST_PROGRAM && i < b->root->as.program.statements.len; i++) {
         ast_node *n = b->root->as.program.statements.data[i];
         if (n->kind == AST_PACKAGE_DECL) pkg = n->as.package_decl.name;
-        if (record_declaration(n) && strcmp(n->as.let_stmt.name, raw) == 0 &&
-            strcmp(pkg, b->package_name) == 0) {
-            if (snprintf(out, IR_OPERAND_CAP, "%s%s%s", pkg, *pkg ? "." : "", raw) >= IR_OPERAND_CAP) return false;
-            return true;
+        if (record_declaration(n) && strlen(n->as.let_stmt.name)==length &&
+            !strncmp(n->as.let_stmt.name,raw,length) && !strcmp(pkg,b->package_name)) {
+            return snprintf(out,IR_OPERAND_CAP,"%s%s%s",pkg,*pkg?".":"",raw)<IR_OPERAND_CAP;
         }
     }
     return snprintf(out, IR_OPERAND_CAP, "%s", raw) < IR_OPERAND_CAP;
@@ -241,8 +247,9 @@ static bool lower_record_defaults_impl(ir_builder *b, ast_node *expr, const char
         if (snprintf(dest, sizeof(dest), "%s.%s", root, name) >= (int)sizeof(dest)) return false;
         if (!strcmp(type, "string")) copy_str(value, "\"\"");
         else if (strlen(type) >= 2 && !strcmp(type + strlen(type) - 2, "[]")) {
+            char array_type[IR_OPERAND_CAP];
             next_temp(b, value);
-            if (!emit_ins(b, IR_ARRAY_NEW, value, type, "0", expr->pos)) return false;
+            if (!record_type_name(b,type,array_type) || !emit_ins(b, IR_ARRAY_NEW, value, array_type, "0", expr->pos)) return false;
         } else if (record_find_declaration(b, type)) {
             ast_node nested;
             memset(&nested, 0, sizeof(nested)); nested.kind = AST_STRUCT_EXPR;
@@ -684,6 +691,14 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			snprintf(out, IR_OPERAND_CAP, "%d", expr->as.bool_expr.value ? 1 : 0);
 			return true;
 		case AST_STRING_EXPR:
+			if (expr->as.string_expr.is_type_name) {
+                char type[IR_OPERAND_CAP];
+                if (!record_type_name(b,expr->as.string_expr.literal,type)) return false;
+                if (snprintf(out,IR_OPERAND_CAP,"\"%s\"",type)>=IR_OPERAND_CAP) {
+                    error_set(b->err,ERR_SEMANTIC,expr->pos.line,expr->pos.column,"qualified type argument is too long"); return false;
+                }
+                return true;
+            }
 			snprintf(out, IR_OPERAND_CAP, "\"%s\"", expr->as.string_expr.literal);
 			return true;
 		case AST_ARRAY_EXPR:
@@ -799,12 +814,14 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 					expr->as.call_expr.args.len ? expr->as.call_expr.args.data[0] : NULL, expr->pos, out);
 			}
 			if (expr->as.call_expr.resolved_array_type) {
+                char array_type[IR_OPERAND_CAP];
 				if (!seed_array_new_valid(expr->as.call_expr.resolved_array_type, "0")) {
 					error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "invalid resolved array constructor type");
 					return false;
 				}
 				next_temp(b, out);
-				return emit_ins(b, IR_ARRAY_NEW, out, expr->as.call_expr.resolved_array_type, "0", expr->pos);
+				return record_type_name(b,expr->as.call_expr.resolved_array_type,array_type) &&
+                    emit_ins(b, IR_ARRAY_NEW, out, array_type, "0", expr->pos);
 			}
 			if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_INDEX_EXPR &&
 				!expr->as.call_expr.callee->as.index_expr.index) {
@@ -1023,9 +1040,10 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
 		}
 	}
     {
-        char key[IR_OPERAND_CAP];
-        if (snprintf(key, sizeof(key), "return-transfer:%s", stmt->as.fn_stmt.name) >= (int)sizeof(key) ||
-            !emit_ins(b, IR_NOP, key, "", stmt->as.fn_stmt.return_type ? stmt->as.fn_stmt.return_type : "()", stmt->pos)) return false;
+        char key[IR_OPERAND_CAP], transfer[IR_OPERAND_CAP];
+        if (!record_type_name(b,stmt->as.fn_stmt.return_type?stmt->as.fn_stmt.return_type:"()",transfer) ||
+            snprintf(key, sizeof(key), "return-transfer:%s", stmt->as.fn_stmt.name) >= (int)sizeof(key) ||
+            !emit_ins(b, IR_NOP, key, "", transfer, stmt->pos)) return false;
         for (i = 0; i < stmt->as.fn_stmt.param_count; i++) {
             if (i < 64 && (stmt->as.fn_stmt.native_borrow_mask & (1ULL << i))) {
                 char base[IR_OPERAND_CAP], qualified[IR_OPERAND_CAP];
@@ -1035,8 +1053,9 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
                 if(!record_type_name(b,base,qualified) || snprintf(key,sizeof(key),"borrow-param:%s",stmt->as.fn_stmt.name)>=(int)sizeof(key) ||
                     !emit_ins(b,IR_NOP,key,stmt->as.fn_stmt.params[i],qualified,stmt->pos)) return false;
             }
-            if (snprintf(key, sizeof(key), "param-transfer:%s", stmt->as.fn_stmt.name) >= (int)sizeof(key) ||
-                !emit_ins(b, IR_NOP, key, stmt->as.fn_stmt.params[i], stmt->as.fn_stmt.param_types[i], stmt->pos)) return false;
+            if (!record_type_name(b,stmt->as.fn_stmt.param_types[i],transfer) ||
+                snprintf(key, sizeof(key), "param-transfer:%s", stmt->as.fn_stmt.name) >= (int)sizeof(key) ||
+                !emit_ins(b, IR_NOP, key, stmt->as.fn_stmt.params[i], transfer, stmt->pos)) return false;
         }
     }
     /* PARAM records stay contiguous for the existing hosted function loader. */

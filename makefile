@@ -116,6 +116,7 @@ selfhost-protocol-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/native_bootstrap_gate_check.sh
 	@bash test/native-bootstrap-diagnostic/standalone_reachability_check.sh
 	@bash test/native-bootstrap-diagnostic/native_source_reader_check.sh
+	@bash test/native-bootstrap-diagnostic/native_host_tools_check.sh
 
 .PHONY: selfhost-native-stage1-check
 selfhost-native-stage1-check: seed-compiler-bin
@@ -250,7 +251,7 @@ COMPILER_SOURCES := \
 
 # P1 canonical AST authority slice. Resolve its imported S parser and semantic
 # consumer from the source graph so the production artifact carries one AST.
-COMPILER_SOURCES += $(shell mkdir -p .bootstrap/compiler; ./src/cmd/dist/source_closure.sh src/cmd/compile/internal/canonical/canonical_ast_check.s .bootstrap/compiler/p1-canonical-closure.txt >/dev/null; cat .bootstrap/compiler/p1-canonical-closure.txt)
+COMPILER_SOURCES += $(shell mkdir -p .bootstrap/compiler; canonical_closure=$$(mktemp .bootstrap/compiler/p1-canonical-closure.XXXXXX) || exit 1; trap 'rm -f "$$canonical_closure"' EXIT; ./src/cmd/dist/source_closure.sh src/cmd/compile/internal/canonical/canonical_ast_check.s "$$canonical_closure" >/dev/null && cat "$$canonical_closure")
 
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
@@ -323,3 +324,6 @@ selfhost-native-record-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/native_record_rollback_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_borrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_loop_borrow_check.sh
+	@bash test/native-bootstrap-diagnostic/native_record_import_check.sh
+	@bash test/native-bootstrap-diagnostic/native_record_receiver_check.sh
+	@bash test/native-bootstrap-diagnostic/native_syntax_lexer_check.sh

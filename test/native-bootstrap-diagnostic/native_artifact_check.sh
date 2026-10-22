@@ -71,10 +71,24 @@ cat > "$work/other.s" <<'S'
 package other
 func helper() int { return 3 }
 S
-if "$compiler" --compile-unit "$work/packages.sasm" "$work/unsupported.s" "$work/other.s"; then
+cat > "$work/package-main.s" <<'S'
+package main
+func main() int { return 42 }
+S
+if "$compiler" --compile-unit "$work/packages.sasm" "$work/package-main.s" "$work/other.s"; then
     echo 'different packages merged into one namespace' >&2; exit 1
 fi
 test ! -e "$work/packages.sasm"
+# Unsupported declarations must not disappear from an otherwise valid program.
+for declaration in 'struct missing { int value }' 'extern "intrinsic" func hidden() int' 'const answer = 42' 'import "missing"'; do
+    printf 'package main\n%s\nfunc main() int { return 42 }\n' "$declaration" > "$work/declaration.s"
+    printf 'preserve artifact\n' > "$work/declaration.sasm"
+    cp "$work/declaration.sasm" "$work/declaration.saved"
+    if "$compiler" --compile-unit "$work/declaration.sasm" "$work/declaration.s"; then
+        echo "unsupported declaration silently discarded: $declaration" >&2; exit 1
+    fi
+    cmp "$work/declaration.sasm" "$work/declaration.saved"
+done
 # Assembler failure must preserve an already installed executable.
 if S_AS=false "$compiler" --emit-bin "$work/program.sasm" "$work/program"; then
     echo 'assembler failure ignored' >&2; exit 1

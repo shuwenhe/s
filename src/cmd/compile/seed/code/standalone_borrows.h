@@ -23,6 +23,13 @@ static standalone_function *standalone_borrow_function(standalone_module *m,cons
     }
     return found;
 }
+/* CALL validation must resolve exactly the same symbol as emission, including
+ * package-qualified and normalized names. Descriptor names stay exact. */
+static standalone_function *standalone_borrow_callee(standalone_module *m,const char *name) {
+    if(runtime_callee(name)) return NULL;
+    const char *resolved=defined_function_name(m,name);
+    return resolved?standalone_borrow_function(m,resolved):NULL;
+}
 static bool standalone_borrow_metadata_proven(standalone_module *m,const standalone_ins *x) {
     if(strncmp(x->result,"param-transfer:",15)) return false;
     standalone_function *fn=standalone_borrow_function(m,x->result+15);
@@ -34,6 +41,7 @@ static bool standalone_borrow_metadata_proven(standalone_module *m,const standal
 }
 static int standalone_borrow_kind(standalone_module *m,standalone_function *fn,int *kinds,const char *value) {
     if(is_integer(value)) return -2;
+    if(is_string_literal(value)) return -3;
     int slot=slot_index(fn,value,false);
     if(slot>=0 && !strchr(value,'.')) return kinds[slot];
     const char *dot=strchr(value,'.');
@@ -41,10 +49,10 @@ static int standalone_borrow_kind(standalone_module *m,standalone_function *fn,i
     if(!dot || strchr(dot+1,'.') || (size_t)(dot-value)>=sizeof(root)) return -1;
     memcpy(root,value,(size_t)(dot-value)); root[dot-value]=0;
     slot=slot_index(fn,root,false);
-    if(slot<0 || kinds[slot]<0) return -1;
+    if(slot<0 || kinds[slot]<0 || (size_t)kinds[slot]>=m->record_count) return -1;
     standalone_record_schema *r=&m->records[kinds[slot]];
     for(size_t i=0;i<r->count;i++) if(!strcmp(r->fields[i].name,dot+1))
-        return r->fields[i].kind==0 ? -2 : -1;
+        return r->fields[i].kind==0 ? -2 : r->fields[i].kind==1 ? -3 : -1;
     return -1;
 }
 #include "standalone_borrow_flow.h"
@@ -82,17 +90,32 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
             if(!strcmp(x->operand1,m->ir.ins[j].result) && p<64 && (fn->borrow_mask&(1ULL<<p))) found=true;
         if(!found) goto bad;
     }
-    for(size_t f=0;f<m->func_count;f++) {
-        standalone_function *fn=&m->funcs[f]; bool needed=fn->borrow_mask!=0;
-        for(size_t i=fn->begin; !needed && i<fn->end;i++) {
-            standalone_ins *x=&m->ir.ins[i];
-            if(!strcmp(x->op,"ARG") && !strcmp(x->operand1,"mutable_borrow")) needed=true;
-            if(!strcmp(x->op,"CALL")) {
-                standalone_function *target=standalone_borrow_function(m,x->operand1);
-                if(target && target->borrow_mask) needed=true;
+    /* Every caller of an owner-consuming function must establish its actual
+     * parameter types. Propagate backwards to the native entrypoint, rather
+     * than trusting an intermediate function's annotations in isolation. */
+    bool changed;
+    do {
+        changed=false;
+        for(size_t f=0;f<m->func_count;f++) {
+            standalone_function *fn=&m->funcs[f]; bool needed=fn->borrow_mask!=0;
+            for(size_t i=fn->begin;!needed && i<fn->end;i++) {
+                standalone_ins *x=&m->ir.ins[i];
+                if(!strcmp(x->op,"ARG") && !strcmp(x->operand1,"mutable_borrow")) needed=true;
+                if(!strcmp(x->op,"CALL")) {
+                    standalone_function *target=standalone_borrow_callee(m,x->operand1);
+                    if(target && (target->borrow_mask || target->borrow_owner_needed)) needed=true;
+                }
             }
+            if(needed && !fn->borrow_owner_needed) { fn->borrow_owner_needed=true; changed=true; }
         }
-        if(!needed) continue;
+    } while(changed);
+    for(size_t f=0;f<m->func_count;f++) {
+        standalone_function *fn=&m->funcs[f];
+        if(!fn->borrow_owner_needed) continue;
+        /* The standalone startup supplies raw argc/argv, not tagged language
+         * parameters. Borrowing programs obtain arguments via host_args(). */
+        if(!strcmp(fn->name,"main")) for(size_t i=fn->begin;i<fn->end;i++)
+            if(!strcmp(m->ir.ins[i].op,"PARAM")) { at=i; goto bad; }
         if(fn->borrow_mask) {
             if(!standalone_validate_borrow_flow(m,fn,err)) return false;
             continue;
@@ -104,6 +127,7 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
             int slot=slot_index(fn,m->ir.ins[i].result,false);
             if(slot>=0) writes[slot]++;
         }
+        borrow_flow_types types={0}; types.m=m; types.err=err;
         struct { int kind; bool borrow; const char *root; } args[64];
         size_t argc=0,param=0; bool active=false;
         for(size_t i=fn->begin;i<fn->end;i++) {
@@ -113,7 +137,10 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
             if(!strcmp(x->op,"PARAM")) {
                 if(dst<0) goto bad;
                 if(param<64 && (fn->borrow_mask&(1ULL<<param))) { kinds[dst]=fn->borrow_schema[param]; borrowed[dst]=true; }
-                else if(standalone_borrow_scalar(standalone_transfer(m,"param-transfer:",fn->name,x->result))) kinds[dst]=-2;
+                else {
+                    int type=borrow_flow_type(&types,standalone_transfer(m,"param-transfer:",fn->name,x->result),NULL,0);
+                    if(type==BF_INT || type==BF_STRING || (type>=0 && (size_t)type<m->record_count)) kinds[dst]=type;
+                }
                 param++; continue;
             }
             if(!strcmp(x->op,"ARG")) {
@@ -135,19 +162,34 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
                 char *end; long n=strtol(x->operand2,&end,10);
                 if(*end || n<0 || (size_t)n>argc) goto bad;
                 size_t first=argc-(size_t)n;
-                standalone_function *target=standalone_borrow_function(m,x->operand1);
-                if(target && target->borrow_mask) {
-                    size_t required=0;
-                    for(size_t j=target->begin;j<target->end && !strcmp(m->ir.ins[j].op,"PARAM");j++) required++;
-                    if((size_t)n!=required) goto bad;
+                standalone_function *target=standalone_borrow_callee(m,x->operand1);
+                if(target && target->borrow_owner_needed) {
+                    size_t p=0;
+                    for(size_t j=target->begin;j<target->end && !strcmp(m->ir.ins[j].op,"PARAM");j++,p++) {
+                        if(p>=(size_t)n) goto bad;
+                        bool b=p<64 && (target->borrow_mask&(1ULL<<p));
+                        int expected=b?target->borrow_schema[p]:borrow_flow_type(&types,standalone_transfer(m,"param-transfer:",target->name,m->ir.ins[j].result),NULL,0);
+                        if(expected==BF_UNKNOWN || expected!=args[first+p].kind) goto bad;
+                    }
+                    if(p!=(size_t)n) goto bad;
                 }
                 if(active && first) goto bad;
                 for(size_t a=0;a<(size_t)n;a++) {
                     bool expected=target && a<64 && (target->borrow_mask&(1ULL<<a));
                     if(expected!=args[first+a].borrow || (expected && args[first+a].kind!=target->borrow_schema[a])) goto bad;
                 }
+                int result=-1;
+                if(target && !target->borrow_mask) {
+                    int expected=borrow_flow_type(&types,standalone_transfer(m,"return-transfer:",target->name,NULL),NULL,0);
+                    if(expected>=0 && (size_t)expected<m->record_count) {
+                        int values[64]; const char *sources[64]; bool reborrows[64];
+                        for(size_t a=0;a<(size_t)n;a++) { values[a]=args[first+a].kind; sources[a]=args[first+a].root; reborrows[a]=args[first+a].borrow; }
+                        result=borrow_flow_call(&types,fn,kinds,x->operand1,values,sources,reborrows,(size_t)n,err);
+                        if(result!=expected) goto bad;
+                    }
+                }
                 argc=first; active=false;
-                if(dst>=0) kinds[dst]=-1;
+                if(dst>=0) kinds[dst]=result;
                 continue;
             }
             if(!strcmp(x->op,"MOV")) {
@@ -195,7 +237,11 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
             }
             if(!strncmp(x->op,"CMP_",4) || !strcmp(x->op,"ADD") || !strcmp(x->op,"SUB") || !strcmp(x->op,"MUL") || !strcmp(x->op,"DIV") || !strcmp(x->op,"MOD")) {
                 if(fn->borrow_mask && (standalone_borrow_kind(m,fn,kinds,x->operand1)!=-2 || standalone_borrow_kind(m,fn,kinds,x->operand2)!=-2)) goto bad;
-                if(dst>=0) kinds[dst]=-2;
+                int left=standalone_borrow_kind(m,fn,kinds,x->operand1),right=standalone_borrow_kind(m,fn,kinds,x->operand2);
+                int result=-1;
+                if(left==-2 && right==-2) result=-2;
+                else if(left==-3 && right==-3 && (!strcmp(x->op,"ADD") || !strncmp(x->op,"CMP_",4))) result=!strcmp(x->op,"ADD")?-3:-2;
+                if(dst>=0) kinds[dst]=result;
                 continue;
             }
             if(fn->borrow_mask && strcmp(x->op,"ARRAY_NEW")) goto bad;

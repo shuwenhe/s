@@ -92,39 +92,38 @@ enum token_type {
 }
 
 struct token {
-    token_type kind
+    int kind
     string value
     int line
     int col
 }
 
 struct syntax_lexer {
-    string* source
+    string source
     int pos
     int line
     int col
-    token* tokens
+    token[] tokens
     int token_count
-    int token_capacity
 }
 
-func lexer_new(source* string) compile.internal.parser.syntax.syntax_lexer* {
-    l := alloc(compile.internal.parser.syntax.syntax_lexer)
-    l.source = source
-    l.pos = 0
-    l.line = 1
-    l.col = 1
-    l.token_capacity = 1024
-    l.tokens = alloc_array(compile.internal.parser.syntax.token, l.token_capacity)
-    l.token_count = 0
-    return l
+// The lexer owns value snapshots. Mutation uses proved record borrows;
+// neither the source string nor token storage requires an escaping pointer.
+extern "intrinsic" func __host_byte_at(string source, int index) int
+extern "intrinsic" func __host_slice(string source, int start, int end) string
+
+func lexer_new(string source) syntax_lexer {
+    return syntax_lexer {
+        source: source, pos: 0, line: 1, col: 1,
+        tokens: token[](), token_count: 0,
+    }
 }
 
 func lexer_current_char(l* syntax_lexer) int {
     if l.pos >= len(l.source) {
         return 0
     }
-    return l.source[l.pos]
+    return __host_byte_at(l.source, l.pos)
 }
 
 func lexer_peek_char(l* syntax_lexer, int offset) int {
@@ -132,12 +131,12 @@ func lexer_peek_char(l* syntax_lexer, int offset) int {
     if pos >= len(l.source) {
         return 0
     }
-    return l.source[pos]
+    return __host_byte_at(l.source, pos)
 }
 
 func lexer_advance(l* syntax_lexer) {
     if l.pos < len(l.source) {
-        if l.source[l.pos] == 10 {
+        if __host_byte_at(l.source, l.pos) == 10 {
             l.line = l.line + 1
             l.col = 1
         } else {
@@ -208,8 +207,8 @@ func lexer_read_ident(l* syntax_lexer) token {
         lexer_advance(l)
     }
     length := l.pos - start
-    value := substring(l.source, start, length)
-    tok := alloc(compile.internal.parser.syntax.token)
+    value := __host_slice(l.source, start, start + length)
+    tok := token {}
     tok.line = l.line
     tok.col = start_col
     tok.value = value
@@ -217,80 +216,80 @@ func lexer_read_ident(l* syntax_lexer) token {
     if tok.kind == 0 {
         tok.kind = 1
     }
-    return *tok
+    return tok
 }
 
-func lexer_keyword_type(s* string) int {
-    if s == nil {
+func lexer_keyword_type(string s) int {
+    if s == "" {
         return 0
     }
-    if *s == "if" {
+    if s == "if" {
         return 11
     }
-    if *s == "go" {
+    if s == "go" {
         return 23
     }
-    if *s == "for" {
+    if s == "for" {
         return 13
     }
-    if *s == "var" {
+    if s == "var" {
         return 8
     }
-    if *s == "map" {
+    if s == "map" {
         return 27
     }
-    if *s == "func" {
+    if s == "func" {
         return 5
     }
-    if *s == "else" {
+    if s == "else" {
         return 12
     }
-    if *s == "case" {
+    if s == "case" {
         return 17
     }
-    if *s == "type" {
+    if s == "type" {
         return 21
     }
-    if *s == "true" {
+    if s == "true" {
         return 37
     }
-    if *s == "const" {
+    if s == "const" {
         return 9
     }
-    if *s == "defer" {
+    if s == "defer" {
         return 22
     }
-    if *s == "false" {
+    if s == "false" {
         return 38
     }
-    if *s == "iota" {
+    if s == "iota" {
         return 40
     }
-    if *s == "return" {
+    if s == "return" {
         return 10
     }
-    if *s == "switch" {
+    if s == "switch" {
         return 16
     }
-    if *s == "struct" {
+    if s == "struct" {
         return 6
     }
-    if *s == "import" {
+    if s == "import" {
         return 19
     }
-    if *s == "select" {
+    if s == "select" {
         return 25
     }
-    if *s == "delete" {
+    if s == "delete" {
         return 34
     }
-    if *s == "package" {
+    if s == "package" {
         return 20
     }
-    if *s == "default" {
+    if s == "default" {
         return 18
     }
-    if *s == "interface" {
+    if s == "interface" {
         return 7
     }
     return 0
@@ -310,13 +309,13 @@ func lexer_read_number(l* syntax_lexer) token {
             lexer_advance(l)
         }
         length := l.pos - start
-        value := substring(l.source, start, length)
-        tok := alloc(compile.internal.parser.syntax.token)
+        value := __host_slice(l.source, start, start + length)
+        tok := token {}
         tok.line = l.line
         tok.col = start_col
         tok.kind = 2
         tok.value = value
-        return *tok
+        return tok
     }
     for true {
         if !syntax_is_digit(lexer_current_char(l)) {
@@ -334,13 +333,13 @@ func lexer_read_number(l* syntax_lexer) token {
         }
     }
     length := l.pos - start
-    value := substring(l.source, start, length)
-    tok := alloc(compile.internal.parser.syntax.token)
+    value := __host_slice(l.source, start, start + length)
+    tok := token {}
     tok.line = l.line
     tok.col = start_col
     tok.kind = 2
     tok.value = value
-    return *tok
+    return tok
 }
 
 func syntax_is_hex_digit(int ch) int {
@@ -377,28 +376,21 @@ func lexer_read_string(l* syntax_lexer) token {
         }
     }
     length := l.pos - start
-    value := substring(l.source, start, length)
+    value := __host_slice(l.source, start, start + length)
     if lexer_current_char(l) == quote {
         lexer_advance(l)
     }
-    tok := alloc(compile.internal.parser.syntax.token)
+    tok := token {}
     tok.line = l.line
     tok.col = start_col
     tok.kind = 3
     tok.value = value
-    return *tok
+    return tok
 }
 
 func lexer_add_token(l* syntax_lexer, token tok) {
-    if l.token_count >= l.token_capacity {
-        new_capacity := l.token_capacity * 2
-        new_tokens := alloc_array(compile.internal.parser.syntax.token, new_capacity)
-        copy_array(new_tokens, l.tokens, l.token_count)
-        l.tokens = new_tokens
-        l.token_capacity = new_capacity
-    }
-    l.tokens[l.token_count] = tok
-    l.token_count = l.token_count + 1
+    l.tokens = append(l.tokens, tok)
+    l.token_count = len(l.tokens)
 }
 
 func lexer_tokenize(l* syntax_lexer) {
@@ -588,7 +580,7 @@ func lexer_tokenize(l* syntax_lexer) {
             tok_type = 86
         }
         if tok_type > 0 {
-            tok := alloc(compile.internal.parser.syntax.token)
+            tok := token {}
             tok.kind = tok_type
             tok.line = l.line
             tok.col = col
@@ -596,14 +588,14 @@ func lexer_tokenize(l* syntax_lexer) {
         }
         lexer_advance(l)
     }
-    eof_tok := alloc(compile.internal.parser.syntax.token)
+    eof_tok := token {}
     eof_tok.kind = 0
     eof_tok.line = l.line
     eof_tok.col = l.col
     lexer_add_token(l, eof_tok)
 }
 
-func lexer_get_tokens(l* syntax_lexer) token* {
+func lexer_get_tokens(l* syntax_lexer) token[] {
     return l.tokens
 }
 
