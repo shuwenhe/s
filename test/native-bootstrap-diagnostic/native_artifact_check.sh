@@ -75,10 +75,10 @@ cat > "$work/package-main.s" <<'S'
 package main
 func main() int { return 42 }
 S
-if "$compiler" --compile-unit "$work/packages.sasm" "$work/package-main.s" "$work/other.s"; then
-    echo 'different packages merged into one namespace' >&2; exit 1
-fi
-test ! -e "$work/packages.sasm"
+"$compiler" --compile-unit "$work/packages.sasm" "$work/package-main.s" "$work/other.s"
+"$compiler" --emit-bin "$work/packages.sasm" "$work/packages"
+status=0; "$work/packages" || status=$?
+test "$status" -eq 42
 # Unsupported declarations must not disappear from an otherwise valid program.
 for declaration in 'struct missing { int value }' 'extern "intrinsic" func hidden() int' 'const answer = 42' 'import "missing"'; do
     printf 'package main\n%s\nfunc main() int { return 42 }\n' "$declaration" > "$work/declaration.s"

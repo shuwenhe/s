@@ -3,12 +3,21 @@ package compile.internal
 // The executable frontend accepts the documented straight-line integer subset.
 // It shares the compiler's token scanner, then constructs structured MIR from
 // tokens. The legacy C frontend and canonical AST adapter remain separate.
+struct native_file_scope {
+    string package_name
+    string[] import_names
+    string[] import_packages
+}
+
 struct native_parser {
     compiler_state lex
     string package_name
     mir_program_function[] functions
     int[] body_positions
     int[] body_lines
+    native_file_scope[] scopes
+    int scope_index
+    int[] body_scopes
     string[] binding_names
     int[] binding_values
     mir_program_instruction[] instructions
@@ -72,7 +81,117 @@ func native_parse_package(native_parser initial) native_parser {
         state.package_name = state.package_name + "." + state.lex.token
         state = native_advance(state)
     }
+    state.scope_index = len(state.scopes)
+    state.scopes.push(native_file_scope {
+        package_name: state.package_name, import_names: string[](), import_packages: string[](),
+    })
     return native_semicolon(state)
+}
+
+func native_import_path_valid(string path) bool {
+    start := 0
+    i := 0
+    for i <= len(path) {
+        if i == len(path) || __host_char_at(path, i) == "." {
+            if !native_identifier(__host_slice(path, start, i)) { return false }
+            start = i + 1
+        }
+        i = i + 1
+    }
+    return true
+}
+
+func native_parse_import_item(native_parser initial) native_parser {
+    state := initial
+    alias := ""
+    path := ""
+    if native_identifier(state.lex.token) {
+        path = state.lex.token
+        state = native_advance(state)
+        // Accept the existing use path/as spelling and quoted import paths.
+        if __host_char_at(state.lex.token, 0) == "\"" {
+            alias = path
+            path = ""
+        } else {
+            for state.error == "" && state.lex.token == "." {
+                state = native_advance(state)
+                if !native_identifier(state.lex.token) { return native_fail(state, "expected imported package component") }
+                path = path + "." + state.lex.token
+                state = native_advance(state)
+            }
+        }
+    }
+    if path == "" {
+        literal := state.lex.token
+        if len(literal) < 2 || __host_char_at(literal, 0) != "\"" || __host_char_at(literal, len(literal) - 1) != "\"" {
+            return native_fail(state, "expected imported package path")
+        }
+        path = __host_slice(literal, 1, len(literal) - 1)
+        state = native_advance(state)
+    }
+    if !native_import_path_valid(path) { return native_fail(state, "invalid imported package: " + path) }
+    if state.lex.token == "as" {
+        if alias != "" { return native_fail(state, "duplicate import alias") }
+        state = native_advance(state)
+        if !native_identifier(state.lex.token) { return native_fail(state, "expected import alias") }
+        alias = state.lex.token
+        state = native_advance(state)
+    }
+    if alias == "" {
+        alias = path
+        i := 0
+        for i < len(path) {
+            if __host_char_at(path, i) == "." { alias = __host_slice(path, i + 1, len(path)) }
+            i = i + 1
+        }
+    }
+    scope := state.scopes[state.scope_index]
+    i := 0
+    for i < len(scope.import_names) {
+        if scope.import_names[i] == alias { return native_fail(state, "duplicate import alias: " + alias) }
+        i = i + 1
+    }
+    scope.import_names.push(alias)
+    scope.import_packages.push(path)
+    state.scopes[state.scope_index] = scope
+    return native_semicolon(state)
+}
+
+func native_parse_import(native_parser initial) native_parser {
+    state := native_advance(initial)
+    if state.lex.token != "(" { return native_parse_import_item(state) }
+    state = native_advance(state)
+    for state.error == "" && state.lex.token != ")" && state.lex.token != "" {
+        state = native_parse_import_item(state)
+        if state.lex.token == "," { state = native_advance(state) }
+    }
+    return native_semicolon(native_expect(state, ")"))
+}
+
+func native_imports_error(native_parser state) string {
+    s := 0
+    for s < len(state.scopes) {
+        scope := state.scopes[s]
+        i := 0
+        for i < len(scope.import_packages) {
+            imported_package := scope.import_packages[i]
+            alias := scope.import_names[i]
+            if mir_program_function_index(state.functions, scope.package_name + "." + alias) >= 0 {
+                return "import alias conflicts with function: " + alias
+            }
+            found := false
+            p := 0
+            for p < len(state.scopes) {
+                candidate_scope := state.scopes[p]
+                if candidate_scope.package_name == imported_package { found = true }
+                p = p + 1
+            }
+            if !found { return "imported package not supplied: " + imported_package }
+            i = i + 1
+        }
+        s = s + 1
+    }
+    return ""
 }
 
 func native_append_parameter(mir_program_parameter[] initial, string name) mir_program_parameter[] {
@@ -121,6 +240,7 @@ func native_parse_signature(native_parser initial) native_parser {
     // compiler_next leaves pos immediately after its current token.
     state.body_positions.push(state.lex.pos)
     state.body_lines.push(state.lex.line)
+    state.body_scopes.push(state.scope_index)
     depth := 1
     state = native_advance(state)
     for state.error == "" && depth > 0 && state.lex.token != "" {
@@ -255,9 +375,34 @@ func native_emit_binary(native_parser initial, string op, int left, int right) n
 func native_call(native_parser initial, string path) native_parser {
     state := initial
     symbol := path
-    if !compiler_contains_text(symbol, ".") { symbol = state.package_name + "." + symbol }
+    if !compiler_contains_text(symbol, ".") {
+        symbol = state.package_name + "." + symbol
+    } else {
+        scope := state.scopes[state.scope_index]
+        i := 0
+        for i < len(scope.import_names) {
+            prefix := scope.import_names[i] + "."
+            if len(path) > len(prefix) && __host_slice(path, 0, len(prefix)) == prefix {
+                symbol = scope.import_packages[i] + __host_slice(path, len(prefix) - 1, len(path))
+            }
+            i = i + 1
+        }
+    }
     target := mir_program_function_index(state.functions, symbol)
     if target < 0 { return native_fail(state, "unknown callee: " + symbol) }
+    target_scope_index := state.body_scopes[target]
+    target_scope := state.scopes[target_scope_index]
+    if target_scope.package_name != state.package_name {
+        scope := state.scopes[state.scope_index]
+        imported := false
+        i := 0
+        for i < len(scope.import_packages) {
+            imported_package := scope.import_packages[i]
+            if imported_package == target_scope.package_name { imported = true }
+            i = i + 1
+        }
+        if !imported { return native_fail(state, "callee package not imported: " + target_scope.package_name) }
+    }
     signature := state.functions[target]
     state = native_expect(state, "(")
     operands := int[]()
@@ -423,6 +568,9 @@ func native_statement(native_parser initial) native_parser {
 
 func native_parse_body(native_parser initial, int index) native_parser {
     state := initial
+    state.scope_index = state.body_scopes[index]
+    declaration_scope := state.scopes[state.scope_index]
+    state.package_name = declaration_scope.package_name
     source := state.lex.source
     state.lex = compiler_state {
         source: source, pos: state.body_positions[index], line: state.body_lines[index],
@@ -465,6 +613,7 @@ func native_source_to_mir(string source) mir_program_result {
         lex: compiler_state { source: source, pos: 0, line: 1, token: "", error: "" },
         package_name: "", functions: mir_program_function[](),
         body_positions: int[](), body_lines: int[](), binding_names: string[](),
+        scopes: native_file_scope[](), scope_index: 0, body_scopes: int[](),
         binding_values: int[](), instructions: mir_program_instruction[](),
         next_value: 0, expression_value: -1, expression_type: "", return_values: int[](),
         returned: false, function_index: 0, error: "",
@@ -474,14 +623,17 @@ func native_source_to_mir(string source) mir_program_result {
     for state.error == "" && state.lex.token != "" {
         if state.lex.token == "package" {
             state = native_parse_package(state)
-            if state.package_name != unit_package {
-                state = native_fail(state, "native compile-unit requires one package")
-            }
+        } else if state.lex.token == "import" || state.lex.token == "use" {
+            state = native_parse_import(state)
         } else if state.lex.token == "func" {
             state = native_parse_signature(state)
         } else {
             state = native_fail(state, "unsupported top-level declaration: " + state.lex.token)
         }
+    }
+    if state.error == "" {
+        import_error := native_imports_error(state)
+        if import_error != "" { state = native_fail(state, import_error) }
     }
     i := 0
     for state.error == "" && i < len(state.functions) {
@@ -490,9 +642,9 @@ func native_source_to_mir(string source) mir_program_result {
     }
     if state.error != "" {
         return mir_program_result {
-            program: mir_program { package_name: state.package_name, entry_symbol: state.package_name + ".main", functions: mir_program_function[](), calls: mir_program_call[]() },
+            program: mir_program { package_name: unit_package, entry_symbol: unit_package + ".main", functions: mir_program_function[](), calls: mir_program_call[]() },
             error: state.error,
         }
     }
-    return lower_mir_program(state.package_name, state.package_name + ".main", state.functions)
+    return lower_mir_program(unit_package, unit_package + ".main", state.functions)
 }

@@ -2306,39 +2306,29 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 	if (check(p, TOKEN_IDENTIFIER) && p->current + 2 < p->tokens->len &&
 		p->tokens->data[p->current + 1].type == TOKEN_STAR &&
 		p->tokens->data[p->current + 2].type == TOKEN_IDENTIFIER) {
-		/* Pattern: IDENT * IDENT
-		 * Could be name-first (lex* int) or type-first (lexer* lex).
-		 * Key distinction: in name-first, the content AFTER second_ident is part of type annotation.
-		 * In type-first, the second_ident itself IS the parameter name, so next token is terminator.
-		 * 
-		 * Heuristic: check what follows the second IDENT.
-		 * - If it's a type-annotation-like token (* [ [ or similar), it's name-first.
-		 * - If it's a terminator (COMMA, RPAREN), it's type-first.
-		 * - Otherwise, attempt name-first parse; if it consumes beyond terminator, backtrack.
-		 */
+		/* T* name and name* T have identical tokens, including whitespace.
+		 * A terminator therefore does not prove their order. Keep both names
+		 * in a provisional type-first signature; native borrow resolution uses
+		 * the unit's record declarations to select the referent. A continued
+		 * annotation such as name* package.T is syntactically name-first. */
 		char *base_type = NULL;
 		size_t saved_current = p->current;
 		size_t after_second = p->current + 3;
 		const char *first_ident = p->tokens->data[p->current].lexeme;
 		const char *second_ident = p->tokens->data[p->current + 2].lexeme;
 		
-		/* Check token after second IDENT to disambiguate */
+		/* Preserve the ambiguous short form for declaration-based resolution. */
 		int looks_like_type_first = 0;
 		if (after_second < p->tokens->len) {
 			token_type after_token = p->tokens->data[after_second].type;
-			/* If next token is COMMA, RPAREN, RBRACE, etc., it's likely type-first */
 			if (after_token == TOKEN_COMMA || after_token == TOKEN_RPAREN || 
 			    after_token == TOKEN_RBRACE || after_token == TOKEN_SEMICOLON) {
 				looks_like_type_first = 1;
 			}
-			/* If next token is *, [, (, it's likely name-first (type annotation continues) */
-			else if (after_token == TOKEN_STAR || after_token == TOKEN_LBRACKET || after_token == TOKEN_LPAREN) {
-				looks_like_type_first = 0;
-			}
 		}
 		
 		if (looks_like_type_first) {
-			/* Type-first: first_ident is type, second_ident is name */
+			/* Provisional type-first: semantic resolution may exchange them. */
 			*out_name = dup_cstr(second_ident);
 			size_t type_len = strlen(first_ident);
 			*out_type = (char *)malloc(type_len + 2);
