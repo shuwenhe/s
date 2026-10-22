@@ -24,13 +24,8 @@ struct use_def_chain {
 }
 struct int_set { int[] values }
 
-// NATIVE-ABI-MUTABLE: int_set operations with mutable borrow
-// Lifetime: local to function scope, no escaping references
-// Safety: all mutations are internal to int_set implementation
 func int_set_new() int_set { return int_set { values: int[]() } }
 func int_set_add(set *int_set, int value) {
-    // Mutates set in-place during dataflow computation
-    // Safe: set is not aliased during its lifetime
 }
 func int_set_contains(set int_set, int value) int { return 0 }
 func int_set_union(int_set set1, int_set set2) int_set { return set1 }
