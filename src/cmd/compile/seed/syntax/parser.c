@@ -65,10 +65,21 @@ static int extend_pattern_path(char **owner, char **variant, const char *first, 
 }
 static int likely_type_start(const token *t) {
 	if (!t || t->type != TOKEN_IDENTIFIER) return 0;
-	return strcmp(t->lexeme, "string") == 0 || strcmp(t->lexeme, "int") == 0 ||
+	// Built-in types and types with underscores
+	if (strcmp(t->lexeme, "string") == 0 || strcmp(t->lexeme, "int") == 0 ||
 		strcmp(t->lexeme, "bool") == 0 || strcmp(t->lexeme, "float") == 0 ||
 		strcmp(t->lexeme, "option") == 0 || strcmp(t->lexeme, "array") == 0 ||
-		strcmp(t->lexeme, "map") == 0 || strchr(t->lexeme, '_') != NULL;
+		strcmp(t->lexeme, "map") == 0 || strchr(t->lexeme, '_') != NULL) {
+		return 1;
+	}
+	// Common S enum/struct types without underscores (e.g., expr, pattern, field, param, stmt)
+	if (strcmp(t->lexeme, "expr") == 0 || strcmp(t->lexeme, "pattern") == 0 ||
+		strcmp(t->lexeme, "field") == 0 || strcmp(t->lexeme, "param") == 0 ||
+		strcmp(t->lexeme, "stmt") == 0 || strcmp(t->lexeme, "decl") == 0 ||
+		strcmp(t->lexeme, "type") == 0) {
+		return 1;
+	}
+	return 0;
 }
 static int is_c_identifier(const char *s) {
 	const unsigned char *p = (const unsigned char *)s;
