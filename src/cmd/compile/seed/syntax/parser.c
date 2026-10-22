@@ -2306,25 +2306,67 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 	if (check(p, TOKEN_IDENTIFIER) && p->current + 2 < p->tokens->len &&
 		p->tokens->data[p->current + 1].type == TOKEN_STAR &&
 		p->tokens->data[p->current + 2].type == TOKEN_IDENTIFIER) {
+		/* Pattern: IDENT * IDENT
+		 * Could be name-first (lex* int) or type-first (lexer* lex).
+		 * Disambiguate: try to parse content after second IDENT as type annotation.
+		 * If successful, it's name-first (lex* int_annotation).
+		 * If it fails, check whether second IDENT could be a type itself (type-first).
+		 */
 		char *base_type = NULL;
-		*out_name = dup_cstr(p->tokens->data[p->current].lexeme);
-		advance_tok(p);
-		advance_tok(p);
-		if (try_parse_type_annotation(p, &base_type)) {
+		size_t saved_current = p->current;
+		const char *first_ident = p->tokens->data[p->current].lexeme;
+		const char *second_ident = p->tokens->data[p->current + 2].lexeme;
+		
+		fprintf(stderr, "[PARSER_DEBUG] IDENT*IDENT pattern: first=%s, second=%s\n", first_ident, second_ident);
+		
+		/* Try name-first interpretation: first_ident is name, parse after second_ident as type */
+		advance_tok(p);  /* skip first_ident */
+		advance_tok(p);  /* skip * */
+		int name_first_success = try_parse_type_annotation(p, &base_type);
+		
+		fprintf(stderr, "[PARSER_DEBUG] name_first_success=%d, base_type=%s\n", name_first_success, base_type ? base_type : "NULL");
+		
+		if (name_first_success && base_type) {
+			/* name-first format confirmed: lex* int */
+			*out_name = dup_cstr(first_ident);
 			size_t n = strlen(base_type);
 			*out_type = (char *)malloc(n + 2);
 			if (*out_type) snprintf(*out_type, n + 2, "%s*", base_type);
 			free(base_type);
-		} else {
-			*out_type = dup_cstr("any*");
+			fprintf(stderr, "[PARSER_DEBUG] name-first path: out_name=%s, out_type=%s\n", *out_name, *out_type);
+			if (!*out_name || !*out_type) {
+				free(*out_name); free(*out_type);
+				*out_name = NULL; *out_type = NULL;
+				error_set(p->err, ERR_OUT_OF_MEMORY, peek(p)->pos.line, peek(p)->pos.column, "out of memory");
+				p->current = saved;
+				return 0;
+			}
+			return 1;
 		}
+		
+		/* name-first failed; try type-first: first_ident is type, second_ident is name */
+		if (base_type) free(base_type);
+		p->current = saved_current;
+		
+		*out_name = dup_cstr(second_ident);
+		size_t type_len = strlen(first_ident);
+		*out_type = (char *)malloc(type_len + 2);
+		if (*out_type) snprintf(*out_type, type_len + 2, "%s*", first_ident);
+		
+		fprintf(stderr, "[PARSER_DEBUG] type-first path: out_name=%s, out_type=%s\n", *out_name, *out_type);
+		
 		if (!*out_name || !*out_type) {
 			free(*out_name); free(*out_type);
 			*out_name = NULL; *out_type = NULL;
-			error_set(p->err, ERR_OUT_OF_MEMORY, peek(p)->pos.line, peek(p)->pos.column, "out of memory");
+			error_set(p->err, ERR_OUT_OF_MEMORY, p->tokens->data[p->current].pos.line, p->tokens->data[p->current].pos.column, "out of memory");
 			p->current = saved;
 			return 0;
 		}
+		
+		/* Advance past type-first pattern */
+		advance_tok(p);  /* skip first_ident */
+		advance_tok(p);  /* skip * */
+		advance_tok(p);  /* skip second_ident */
 		return 1;
 	}
 	if (check(p, TOKEN_IDENTIFIER) && p->current + 1 < p->tokens->len &&
