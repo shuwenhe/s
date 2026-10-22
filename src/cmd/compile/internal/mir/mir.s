@@ -286,22 +286,6 @@ func mir_empty_ownership_facts(int point_count) mir_ownership_facts {
     }
 }
 
-func mir_loan_borrowed_place(facts* mir_ownership_facts, int loan_id) (mir_place, bool) {
-    
-    if facts == nil {
-        return mir_place{}, false
-    }
-
-    if loan_id < 0 || loan_id >= facts.input.loan_count {
-        return mir_place{}, false
-    }
-
-    if loan_id >= len(facts.loan_borrowed_places) {
-        return mir_place{}, false
-    }
-
-    return facts.loan_borrowed_places[loan_id], true
-}
 
 func mir_place_from_fields(string root, string[] fields) mir_place {
     projections := mir_place_projection[]()
