@@ -15,6 +15,9 @@ s_byte_values_ready:
     .quad 0
 s_byte_values:
     .skip 6144
+.align 8
+s_temp_sequence:
+    .quad 0
 .section .text.startup
 .global _start
 .type _start, @function
@@ -725,11 +728,153 @@ s_value_to_string:
     mov %rdi, %rax
     ret
 .size s_value_to_string, .-s_value_to_string
+# Convert a flat/rope S string to a private NUL-terminated OS argument.
+# Reject embedded NULs so the OS never observes a silently truncated path.
+.type s_string_cstr, @function
+s_string_cstr:
+    push %rbx
+    push %r12
+    push %r13
+    push %r14
+    sub $8, %rsp
+    test %rdi, %rdi
+    jz .Lcstr_fail
+    test $7, %rdi
+    jnz .Lcstr_fail
+    cmpq $2, (%rdi)
+    je .Lcstr_valid
+    cmpq $6, (%rdi)
+    jne .Lcstr_fail
+.Lcstr_valid:
+    mov %rdi, %rbx
+    mov 8(%rbx), %r12
+    mov %r12, %rdi
+    add $1, %rdi
+    jc .Lcstr_fail
+    call s_alloc
+    test %rax, %rax
+    jz .Lcstr_fail
+    mov %rax, %r13
+    xor %r14d, %r14d
+.Lcstr_copy:
+    cmp %r12, %r14
+    jae .Lcstr_finish
+    mov %rbx, %rdi
+    mov %r14, %rsi
+    call s_string_byte_raw
+    test %al, %al
+    jz .Lcstr_fail
+    mov %al, (%r13,%r14)
+    inc %r14
+    jmp .Lcstr_copy
+.Lcstr_finish:
+    movb $0, (%r13,%r14)
+    mov %r13, %rax
+    jmp .Lcstr_done
+.Lcstr_fail:
+    xor %eax, %eax
+.Lcstr_done:
+    add $8, %rsp
+    pop %r14
+    pop %r13
+    pop %r12
+    pop %rbx
+    ret
+.size s_string_cstr, .-s_string_cstr
 .global s_make_temp_dir_value
 .type s_make_temp_dir_value, @function
 s_make_temp_dir_value:
-    /* Bootstrap fallback: the caller receives its requested prefix. */
-    mov %rdi, %rax
+    push %rbp
+    mov %rsp, %rbp
+    push %rbx
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    sub $24, %rsp
+    call s_string_cstr
+    test %rax, %rax
+    jz .Lprivate_temp_fail
+    cmpb $0, (%rax)
+    je .Lprivate_temp_fail
+    mov %rax, %r12
+    mov %rax, %rdi
+    call s_strlen
+    mov %rax, %r13
+    lea 48(%r13), %rdi
+    cmp %r13, %rdi
+    jb .Lprivate_temp_fail
+    call s_alloc
+    test %rax, %rax
+    jz .Lprivate_temp_fail
+    mov %rax, %r14
+    mov %r14, %rdi
+    mov %r12, %rsi
+    mov %r13, %rdx
+    call s_memcpy
+    lea (%r14,%r13), %rdi
+    lea .Lprivate_temp_prefix(%rip), %rsi
+    mov $11, %rdx
+    call s_memcpy
+    xor %r15d, %r15d
+.Lprivate_temp_try:
+    lea -48(%rbp), %rdi
+    mov $8, %rsi
+    xor %edx, %edx
+    mov $318, %eax
+    syscall
+    cmp $8, %rax
+    je .Lprivate_temp_nonce
+    mov $39, %eax
+    syscall
+    xor s_temp_sequence(%rip), %rax
+    mov %rax, -48(%rbp)
+.Lprivate_temp_nonce:
+    incq s_temp_sequence(%rip)
+    mov -48(%rbp), %rax
+    lea 11(%r14,%r13), %rdi
+    lea .Lprivate_temp_hex(%rip), %rsi
+    mov $16, %ecx
+.Lprivate_temp_digits:
+    mov %rax, %rdx
+    shr $60, %rdx
+    mov (%rsi,%rdx), %dl
+    mov %dl, (%rdi)
+    inc %rdi
+    shl $4, %rax
+    dec %ecx
+    jnz .Lprivate_temp_digits
+    movb $0, (%rdi)
+    mov %r14, %rdi
+    mov $448, %esi
+    mov $83, %eax
+    syscall
+    test %rax, %rax
+    jz .Lprivate_temp_created
+    cmp $-17, %rax
+    jne .Lprivate_temp_fail
+    inc %r15
+    cmp $64, %r15
+    jb .Lprivate_temp_try
+    jmp .Lprivate_temp_fail
+.Lprivate_temp_created:
+    mov %r14, %rdi
+    call s_from_c_string
+    test %rax, %rax
+    jnz .Lprivate_temp_done
+    mov %r14, %rdi
+    mov $84, %eax
+    syscall
+.Lprivate_temp_fail:
+    lea .L_empty_string(%rip), %rax
+.Lprivate_temp_done:
+    add $24, %rsp
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    pop %rbx
+    pop %rbp
     ret
 .size s_make_temp_dir_value, .-s_make_temp_dir_value
 .global s_read_file_value
@@ -737,19 +882,11 @@ s_make_temp_dir_value:
 s_read_file_value:
     push %rbx
     push %r12
-    mov %rdi, %rbx
-    mov 8(%rbx), %rax
-    lea 1(%rax), %rdi
-    call s_alloc
+    sub $8, %rsp
+    call s_string_cstr
     test %rax, %rax
     jz .Lread_file_fail
     mov %rax, %r12
-    mov %rax, %rdi
-    lea 16(%rbx), %rsi
-    mov 8(%rbx), %rdx
-    call s_memcpy
-    mov 8(%rbx), %rcx
-    movb $0, (%r12,%rcx)
     mov $-100, %rdi
     mov %r12, %rsi
     xor %rdx, %rdx
@@ -792,6 +929,7 @@ s_read_file_value:
     mov 8(%r12), %rcx
     movb $0, 16(%r12,%rcx)
     mov %r12, %rax
+    add $8, %rsp
     pop %r12
     pop %rbx
     ret
@@ -800,6 +938,7 @@ s_read_file_value:
     call s_close
 .Lread_file_fail:
     xor %eax, %eax
+    add $8, %rsp
     pop %r12
     pop %rbx
     ret
@@ -832,19 +971,11 @@ s_write_file_value:
     push %rbx
     push %r12
     mov %rsi, %r12
-    mov %rdi, %rbx
-    mov 8(%rbx), %rax
-    lea 1(%rax), %rdi
-    call s_alloc
+    sub $8, %rsp
+    call s_string_cstr
     test %rax, %rax
     jz .Lwrite_file_fail
     mov %rax, %r8
-    mov %rax, %rdi
-    lea 16(%rbx), %rsi
-    mov 8(%rbx), %rdx
-    call s_memcpy
-    mov 8(%rbx), %rcx
-    movb $0, (%r8,%rcx)
     mov $-100, %rdi
     mov %r8, %rsi
     mov $577, %rdx
@@ -863,11 +994,13 @@ s_write_file_value:
     test %rax, %rax
     js .Lwrite_file_fail
     mov $1, %rax
+    add $8, %rsp
     pop %r12
     pop %rbx
     ret
 .Lwrite_file_fail:
     mov $3, %rax
+    add $8, %rsp
     pop %r12
     pop %rbx
     ret
@@ -938,9 +1071,14 @@ s_temp_result:
 .global s_make_executable_value
 .type s_make_executable_value, @function
 s_make_executable_value:
-    lea 16(%rdi), %rdi
-    mov $493, %rsi
-    mov $90, %rax
+    sub $8, %rsp
+    call s_string_cstr
+    add $8, %rsp
+    test %rax, %rax
+    jz .Lmake_executable_fail
+    mov %rax, %rdi
+    mov $493, %esi
+    mov $90, %eax
     syscall
     test %rax, %rax
     js .Lmake_executable_fail
@@ -953,7 +1091,60 @@ s_make_executable_value:
 .global s_runtime_env_get
 .type s_runtime_env_get, @function
 s_runtime_env_get:
-    mov %rsi, %rax
+    push %rbx
+    push %r12
+    push %r13
+    push %r14
+    sub $8, %rsp
+    mov %rsi, %r12
+    call s_string_cstr
+    test %rax, %rax
+    jz .Lruntime_env_fallback
+    mov %rax, %rbx
+    mov %rax, %rdi
+    call s_strlen
+    mov %rax, %r13
+    test %r13, %r13
+    jz .Lruntime_env_fallback
+    mov s_host_argv(%rip), %r14
+    test %r14, %r14
+    jz .Lruntime_env_fallback
+    mov s_host_argc(%rip), %rax
+    lea 8(%r14,%rax,8), %r14
+.Lruntime_env_next:
+    mov (%r14), %rdi
+    test %rdi, %rdi
+    jz .Lruntime_env_fallback
+    xor %ecx, %ecx
+.Lruntime_env_key:
+    cmp %r13, %rcx
+    jae .Lruntime_env_equals
+    mov (%rdi,%rcx), %al
+    test %al, %al
+    jz .Lruntime_env_skip
+    cmp (%rbx,%rcx), %al
+    jne .Lruntime_env_skip
+    inc %rcx
+    jmp .Lruntime_env_key
+.Lruntime_env_equals:
+    cmpb $61, (%rdi,%rcx)
+    jne .Lruntime_env_skip
+    lea 1(%rdi,%rcx), %rdi
+    call s_from_c_string
+    test %rax, %rax
+    jnz .Lruntime_env_done
+    jmp .Lruntime_env_fallback
+.Lruntime_env_skip:
+    add $8, %r14
+    jmp .Lruntime_env_next
+.Lruntime_env_fallback:
+    mov %r12, %rax
+.Lruntime_env_done:
+    add $8, %rsp
+    pop %r14
+    pop %r13
+    pop %r12
+    pop %rbx
     ret
 .size s_runtime_env_get, .-s_runtime_env_get
 .global s_buildcfg_goarch
@@ -1057,16 +1248,32 @@ s_host_same_file:
 .global s_host_rename_file
 .type s_host_rename_file, @function
 s_host_rename_file:
-    lea 16(%rdi), %rdi
-    lea 16(%rsi), %rsi
-    mov $82, %rax
+    push %rbx
+    push %r12
+    sub $8, %rsp
+    mov %rsi, %r12
+    call s_string_cstr
+    test %rax, %rax
+    jz .Lhost_rename_fail
+    mov %rax, %rbx
+    mov %r12, %rdi
+    call s_string_cstr
+    test %rax, %rax
+    jz .Lhost_rename_fail
+    mov %rax, %rsi
+    mov %rbx, %rdi
+    mov $82, %eax
     syscall
     test %rax, %rax
     js .Lhost_rename_fail
     mov $1, %rax
-    ret
+    jmp .Lhost_rename_done
 .Lhost_rename_fail:
     mov $3, %rax
+.Lhost_rename_done:
+    add $8, %rsp
+    pop %r12
+    pop %rbx
     ret
 .size s_host_rename_file, .-s_host_rename_file
 .global s_host_run_argv
@@ -1074,59 +1281,204 @@ s_host_rename_file:
 s_host_run_argv:
     push %rbp
     mov %rsp, %rbp
+    push %rbx
     push %r12
     push %r13
     push %r14
+    push %r15
+    sub $40, %rsp
+    test %rdi, %rdi
+    jz .Lrun_argv_fail
+    test $7, %rdi
+    jnz .Lrun_argv_fail
+    cmpq $4, (%rdi)
+    jne .Lrun_argv_fail
     mov %rdi, %r12
     mov 8(%r12), %r13
-    lea 1(%r13), %rax
-    shl $3, %rax
-    add $15, %rax
-    and $-16, %rax
-    sub %rax, %rsp
-    mov %rsp, %r14
-    xor %rcx, %rcx
+    test %r13, %r13
+    jz .Lrun_argv_fail
+    cmp $4096, %r13
+    ja .Lrun_argv_fail
+    mov %r13, -80(%rbp)
+    lea 8(,%r13,8), %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Lrun_argv_fail
+    mov %rax, %r14
+    xor %ebx, %ebx
 .Lrun_argv_copy:
-    cmp %r13, %rcx
+    cmp %r13, %rbx
     jae .Lrun_argv_terminate
-    mov 16(%r12,%rcx,8), %rdi
-    mov 16(%rdi), %rdi
-    mov %rdi, (%r14,%rcx,8)
-    inc %rcx
+    mov 16(%r12,%rbx,8), %rdi
+    call s_string_cstr
+    test %rax, %rax
+    jz .Lrun_argv_fail
+    mov %rax, (%r14,%rbx,8)
+    inc %rbx
     jmp .Lrun_argv_copy
 .Lrun_argv_terminate:
-    movq $0, (%r14,%rcx,8)
-    mov $57, %rax
+    movq $0, (%r14,%rbx,8)
+    mov (%r14), %rax
+    cmpb $0, (%rax)
+    je .Lrun_argv_fail
+    mov s_host_argv(%rip), %r15
+    test %r15, %r15
+    jz .Lrun_argv_fail
+    mov s_host_argc(%rip), %rax
+    lea 8(%r15,%rax,8), %r15
+    mov $57, %eax
     syscall
     test %rax, %rax
     jz .Lrun_argv_child
     js .Lrun_argv_fail
     mov %rax, %r12
-    xor %rdi, %rdi
-    xor %rsi, %rsi
-    xor %rdx, %rdx
-    mov $61, %rax
+.Lrun_argv_wait:
+    mov %r12, %rdi
+    lea -48(%rbp), %rsi
+    xor %edx, %edx
+    xor %r10d, %r10d
+    mov $61, %eax
     syscall
+    cmp $-4, %rax
+    je .Lrun_argv_wait
     test %rax, %rax
     js .Lrun_argv_fail
-    mov %r12, %rax
-    sar $8, %rax
-    shl $1, %rax
-    add $1, %rax
+    mov -48(%rbp), %eax
+    mov %eax, %edx
+    and $127, %edx
+    jnz .Lrun_argv_signal
+    shr $8, %eax
+    and $255, %eax
+    jmp .Lrun_argv_tag
+.Lrun_argv_signal:
+    lea 128(%rdx), %eax
+.Lrun_argv_tag:
+    lea 1(%rax,%rax), %rax
     jmp .Lrun_argv_done
 .Lrun_argv_child:
-    mov (%r14), %rdi
+    mov (%r14), %r12
+    xor %ecx, %ecx
+.Lrun_argv_slash:
+    mov (%r12,%rcx), %al
+    cmp $47, %al
+    je .Lrun_argv_direct
+    test %al, %al
+    jz .Lrun_argv_find_path
+    inc %rcx
+    jmp .Lrun_argv_slash
+.Lrun_argv_find_path:
+    mov %rcx, %r13
+    mov %r15, %rbx
+.Lrun_argv_env:
+    mov (%rbx), %rax
+    test %rax, %rax
+    jz .Lrun_argv_default_path
+    cmpb $80, (%rax)
+    jne .Lrun_argv_env_next
+    cmpb $65, 1(%rax)
+    jne .Lrun_argv_env_next
+    cmpb $84, 2(%rax)
+    jne .Lrun_argv_env_next
+    cmpb $72, 3(%rax)
+    jne .Lrun_argv_env_next
+    cmpb $61, 4(%rax)
+    jne .Lrun_argv_env_next
+    lea 5(%rax), %rbx
+    jmp .Lrun_argv_path_init
+.Lrun_argv_env_next:
+    add $8, %rbx
+    jmp .Lrun_argv_env
+.Lrun_argv_default_path:
+    lea .Lrun_default_path(%rip), %rbx
+.Lrun_argv_path_init:
+    movq $127, -56(%rbp)
+.Lrun_argv_path:
+    xor %edx, %edx
+.Lrun_argv_path_length:
+    mov (%rbx,%rdx), %al
+    test %al, %al
+    jz .Lrun_argv_path_last
+    cmp $58, %al
+    je .Lrun_argv_path_next
+    inc %rdx
+    jmp .Lrun_argv_path_length
+.Lrun_argv_path_next:
+    lea 1(%rbx,%rdx), %rax
+    mov %rax, -48(%rbp)
+    jmp .Lrun_argv_path_build
+.Lrun_argv_path_last:
+    movq $0, -48(%rbp)
+.Lrun_argv_path_build:
+    mov %rdx, -64(%rbp)
+    lea 2(%rdx,%r13), %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Lrun_argv_child_126
+    mov %rax, -72(%rbp)
+    mov %rax, %rdi
+    mov %rbx, %rsi
+    mov -64(%rbp), %rdx
+    call s_memcpy
+    mov -64(%rbp), %rdx
+    mov -72(%rbp), %rdi
+    add %rdx, %rdi
+    test %rdx, %rdx
+    jz .Lrun_argv_path_name
+    movb $47, (%rdi)
+    inc %rdi
+.Lrun_argv_path_name:
+    mov %r12, %rsi
+    lea 1(%r13), %rdx
+    call s_memcpy
+    mov -72(%rbp), %rdi
     mov %r14, %rsi
-    xor %rdx, %rdx
-    mov $59, %rax
+    mov %r15, %rdx
+    mov $59, %eax
     syscall
-    mov $60, %rax
-    mov $127, %rdi
+    cmp $-13, %rax
+    jne .Lrun_argv_path_error
+    movq $126, -56(%rbp)
+    jmp .Lrun_argv_path_continue
+.Lrun_argv_path_error:
+    cmp $-2, %rax
+    je .Lrun_argv_path_continue
+    cmp $-20, %rax
+    jne .Lrun_argv_child_126
+.Lrun_argv_path_continue:
+    mov -48(%rbp), %rbx
+    test %rbx, %rbx
+    jnz .Lrun_argv_path
+    mov -56(%rbp), %rdi
+    jmp .Lrun_argv_child_exit
+.Lrun_argv_direct:
+    mov %r12, %rdi
+    mov %r14, %rsi
+    mov %r15, %rdx
+    mov $59, %eax
     syscall
+    cmp $-2, %rax
+    je .Lrun_argv_child_127
+    cmp $-20, %rax
+    je .Lrun_argv_child_127
+.Lrun_argv_child_126:
+    mov $126, %edi
+    jmp .Lrun_argv_child_exit
+.Lrun_argv_child_127:
+    mov $127, %edi
+.Lrun_argv_child_exit:
+    mov $60, %eax
+    syscall
+    ud2
 .Lrun_argv_fail:
-    mov $1, %rax
+    mov $-1, %rax
 .Lrun_argv_done:
-    leave
+    add $40, %rsp
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    pop %rbx
+    pop %rbp
     ret
 .size s_host_run_argv, .-s_host_run_argv
 .section .rodata
@@ -1577,3 +1929,11 @@ s_value_snapshot:
     .ascii "native record invalid operation\n"
 .set .Lrecord_invalid_length, .-.Lrecord_invalid_message
 .section .note.GNU-stack,"",@progbits
+
+.section .rodata
+.Lprivate_temp_prefix:
+    .ascii "/.s-native-"
+.Lprivate_temp_hex:
+    .ascii "0123456789abcdef"
+.Lrun_default_path:
+    .asciz "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
