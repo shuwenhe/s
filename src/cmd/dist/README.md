@@ -3,19 +3,24 @@ checks eligible record values, nested copies, defaults, array recursion,
 argument order, callee-saved registers, and allocation rollback. It is a
 component check, not proof of selfhosting. The full 253-file source closure
 now passes the DFA module's pointer signatures and fails native eligibility at
-`ir/middlend_cfg.s:58` (`cfg_compute_dominators`). Loop-based CFG mutation and
-interprocedural borrow contracts remain unproven. Both native bootstrap entrypoints
+`ir/middlend_ir_builder.s:47` (`ir_builder_build`). Import-qualified pointer
+provenance and interprocedural reborrows remain unproven. Both native bootstrap entrypoints
 use `--compile-native-unit` so this rejection happens before IR output.
 Native source mode supports a restricted, proved nonescaping record borrow:
-leaf callees, straight-line callers, eligible resource-free record owners, and direct effect-free
-argument lists. Borrowed arguments preserve identity and may update scalar
+loop-capable callees, straight-line callers, eligible resource-free record owners, and direct effect-free
+argument lists. Borrowed arguments preserve identity and may update typed scalar, record and array
 fields; ordinary value arguments retain snapshot semantics. External IR must
 carry matching PARAM/ARG and schema descriptors and pass an independent proof.
 Borrow IR is native-only; hosted emission rejects it. Receivers, borrowed
 returns, repeated exclusive aliases, and unproved lifetimes remain rejected.
 `native_record_borrow_check.sh` tests mutation, rejected escapes/aliasing/effects,
 forged IR, and the real DFA file using isolated dependency types. That isolated
-DFA test is not a full-source Stage1 proof.
+DFA test is not a full-source Stage1 proof. The loop borrow suite also executes
+the real CFG dominator, post-dominator and dominance-frontier functions using
+isolated IR dependency types. Their native IR is checked with a definite-type
+CFG worklist: every reachable predecessor and loop back edge participates in
+the meet; called value functions are checked transitively. Unsupported resource
+or reference operations remain errors, including unreachable reference escapes.
 Full-source native Stage1 and Stage2/Stage3 convergence remain unproven.
 
 # S distribution bootstrap tools

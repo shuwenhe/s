@@ -1,6 +1,6 @@
 /* Independently prove native IR borrow contracts before invoking native tools.
  * Scalar=-2, unknown=-1, eligible record>=0. The proof deliberately accepts
- * only leaf callees and direct, single-definition record-owner arguments. */
+ * typed nonescaping callees and direct, single-definition record-owner arguments. */
 static bool standalone_borrow_scalar(const char *t) {
     return t && (!strcmp(t,"int") || !strcmp(t,"bool") || !strcmp(t,"byte") || !strcmp(t,"()"));
 }
@@ -47,6 +47,7 @@ static int standalone_borrow_kind(standalone_module *m,standalone_function *fn,i
         return r->fields[i].kind==0 ? -2 : -1;
     return -1;
 }
+#include "standalone_borrow_flow.h"
 static bool standalone_validate_borrows(standalone_module *m,compile_error *err) {
     size_t at=0;
     /* Bind descriptors to real PARAM records; validate the entire referent. */
@@ -92,6 +93,10 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
             }
         }
         if(!needed) continue;
+        if(fn->borrow_mask) {
+            if(!standalone_validate_borrow_flow(m,fn,err)) return false;
+            continue;
+        }
         int kinds[STANDALONE_MAX_SLOTS], writes[STANDALONE_MAX_SLOTS];
         bool borrowed[STANDALONE_MAX_SLOTS];
         for(size_t s=0;s<fn->slot_count;s++) { kinds[s]=-1; writes[s]=0; borrowed[s]=false; }

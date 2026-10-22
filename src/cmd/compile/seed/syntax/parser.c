@@ -76,7 +76,10 @@ static int likely_type_start(const token *t) {
 	if (strcmp(t->lexeme, "expr") == 0 || strcmp(t->lexeme, "pattern") == 0 ||
 		strcmp(t->lexeme, "field") == 0 || strcmp(t->lexeme, "param") == 0 ||
 		strcmp(t->lexeme, "stmt") == 0 || strcmp(t->lexeme, "decl") == 0 ||
-		strcmp(t->lexeme, "type") == 0) {
+		strcmp(t->lexeme, "type") == 0 || strcmp(t->lexeme, "token") == 0 ||
+		strcmp(t->lexeme, "lexer") == 0 || strcmp(t->lexeme, "parser") == 0 ||
+		strcmp(t->lexeme, "node") == 0 || strcmp(t->lexeme, "block") == 0 ||
+		strcmp(t->lexeme, "scope") == 0 || strcmp(t->lexeme, "table") == 0) {
 		return 1;
 	}
 	return 0;
@@ -4052,19 +4055,44 @@ static ast_node *parse_struct_decl(parser *p) {
 			ast_free(stype); return NULL;
 		}
 		size_t name_index = k - 1;
-		/* One historical declaration used `sig func_sig`; accept that spelling
-		 * while keeping the canonical type-first form for all other fields. */
-		if (k - start == 2 && p->tokens->data[start].type == TOKEN_IDENTIFIER &&
-			strcmp(p->tokens->data[start].lexeme, "sig") == 0) name_index = start;
-		/* A few older declarations use `field type` order.  Recognize it when
-		 * the second token is an unmistakable type start; canonical declarations
-		 * such as `string field` remain type-first. */
-		if (name_index != start && p->tokens->data[start].type == TOKEN_IDENTIFIER &&
-			start + 1 < k && likely_type_start(&p->tokens->data[start + 1]) &&
-			!likely_type_start(&p->tokens->data[start])) name_index = start;
+		/* Handle `name: type` syntax. Detect if there's a COLON after the first identifier. */
+		size_t colon_pos = (size_t)-1;
+		for (size_t i = start; i < k; i++) {
+			if (p->tokens->data[i].type == TOKEN_COLON) {
+				colon_pos = i;
+				break;
+			}
+		}
+		if (colon_pos != (size_t)-1 && colon_pos == start + 1 && start + 2 < k) {
+			/* Found `name: type` pattern. Name is at start, type starts after colon. */
+			name_index = start;
+			/* Type will be from colon+1 to k when we call join_lexemes_range */
+		} else {
+			/* One historical declaration used `sig func_sig`; accept that spelling
+			 * while keeping the canonical type-first form for all other fields. */
+			if (k - start == 2 && p->tokens->data[start].type == TOKEN_IDENTIFIER &&
+				strcmp(p->tokens->data[start].lexeme, "sig") == 0) name_index = start;
+			/* A few older declarations use `field type` order.  Recognize it when
+			 * the second token is an unmistakable type start; canonical declarations
+			 * such as `string field` remain type-first. */
+			if (name_index != start && p->tokens->data[start].type == TOKEN_IDENTIFIER &&
+				start + 1 < k && likely_type_start(&p->tokens->data[start + 1]) &&
+				!likely_type_start(&p->tokens->data[start])) name_index = start;
+		}
 		const token *field_tok = &p->tokens->data[name_index];
-		char *type_lex = join_lexemes_range(p->tokens,
-			name_index == start ? start + 1 : start, name_index == start ? k : name_index);
+		size_t type_start, type_end;
+		if (colon_pos != (size_t)-1 && colon_pos == start + 1 && start + 2 < k) {
+			/* For `name: type`, type is from colon+1 to k */
+			type_start = colon_pos + 1;
+			type_end = k;
+		} else if (name_index == start) {
+			type_start = start + 1;
+			type_end = k;
+		} else {
+			type_start = start;
+			type_end = name_index;
+		}
+		char *type_lex = join_lexemes_range(p->tokens, type_start, type_end);
 		if (!type_lex) { ast_free(stype); return NULL; }
 		char **next_names = (char **)realloc(stype->as.struct_expr.field_names, (stype->as.struct_expr.field_count + 1) * sizeof(char *));
 		if (!next_names) { free(type_lex); ast_free(stype); return NULL; }
