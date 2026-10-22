@@ -113,6 +113,7 @@ native-bootstrap-imports: seed-compiler-bin
 selfhost-protocol-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/hosted_program_check.sh
 	@bash test/native-bootstrap-diagnostic/native_artifact_check.sh
+	@bash test/native-bootstrap-diagnostic/native_package_scope_check.sh
 	@bash test/native-bootstrap-diagnostic/native_bootstrap_gate_check.sh
 	@bash test/native-bootstrap-diagnostic/standalone_reachability_check.sh
 	@bash test/native-bootstrap-diagnostic/native_source_reader_check.sh
@@ -319,6 +320,7 @@ help:
 
 .PHONY: selfhost-native-record-check
 selfhost-native-record-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_record_parameter_order_check.sh
 	@bash test/native-bootstrap-diagnostic/native_records_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_preflight_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_rollback_check.sh

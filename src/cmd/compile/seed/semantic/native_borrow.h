@@ -72,19 +72,43 @@ static bool borrow_record_name(borrow_proof *p,ast_node *record,char *out,size_t
     }
     return false;
 }
-/* The compatibility parser accepts both T* name and name* T. When its
- * name-first parse has no referent but the first identifier denotes a record,
- * resolve the canonical declaration using actual unit type identities. */
+/* A known scalar/container/enum/trait remains a type even when its pointer
+ * transfer is unsupported. Never reinterpret it as a variable to manufacture
+ * a record borrow from the other identifier. */
+static bool borrow_nonrecord_type(borrow_proof *p,const char *type) {
+    static const char *const builtins[]={"any","int","int64","uint","uint64","byte","float","string","bool","array","map","option"};
+    for(size_t i=0;i<sizeof(builtins)/sizeof(builtins[0]);i++) if(!strcmp(type,builtins[i])) return true;
+    const char *pkg="";
+    for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
+        ast_node *n=p->unit->as.program.statements.data[i];
+        if(n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
+        if(strcmp(pkg,p->package_name)) continue;
+        const char *name=n->kind==AST_ENUM_DECL?n->as.enum_decl.name:n->kind==AST_TRAIT_DECL?n->as.trait_decl.name:NULL;
+        if(name && !strcmp(name,type)) return true;
+    }
+    return false;
+}
+/* IDENT * IDENT has identical tokens in T* name and name* T. The parser
+ * provisionally keeps the type-first interpretation. Prefer a referent in
+ * the declaration package; only reverse it when the other identifier resolves
+ * to a record. Keep its original spelling: local member lookup still uses
+ * the short declaration name, while qualified imports are already expanded. */
 static bool borrow_resolve_parameter(borrow_proof *p,ast_node *fn,size_t i) {
     char base[IR_OPERAND_CAP];
     if(fn->as.fn_stmt.receiver_type && i==0) return true;
-    if(!borrow_type(fn->as.fn_stmt.param_types[i],base) || borrow_record(p,base) ||
-       (!borrow_record(p,fn->as.fn_stmt.params[i]) && !borrow_record_unique_tail(p,fn->as.fn_stmt.params[i])) || strchr(base,'.')) return true;
-    size_t length=strlen(base);
-    char *type=malloc(length+2),*name=malloc(strlen(fn->as.fn_stmt.params[i])+1);
+    if(!borrow_type(fn->as.fn_stmt.param_types[i],base) || strchr(base,'.') ||
+       borrow_nonrecord_type(p,base) || borrow_record(p,base)) return true;
+    ast_node *record=borrow_record(p,fn->as.fn_stmt.params[i]);
+    if(!record) {
+        if(borrow_record_unique_tail(p,base)) return true;
+        record=borrow_record_unique_tail(p,fn->as.fn_stmt.params[i]);
+    }
+    if(!record) return true;
+    size_t length=strlen(fn->as.fn_stmt.params[i]);
+    char *type=malloc(length+2),*name=malloc(strlen(base)+1);
     if(!type || !name) { free(type); free(name); error_set(p->err,ERR_OUT_OF_MEMORY,fn->pos.line,fn->pos.column,"native pointer parameter allocation failed"); return false; }
-    memcpy(type,base,length); type[length]='*'; type[length+1]=0;
-    strcpy(name,fn->as.fn_stmt.params[i]);
+    memcpy(type,fn->as.fn_stmt.params[i],length); type[length]='*'; type[length+1]=0;
+    strcpy(name,base);
     free(fn->as.fn_stmt.params[i]); free(fn->as.fn_stmt.param_types[i]);
     fn->as.fn_stmt.params[i]=name; fn->as.fn_stmt.param_types[i]=type;
     return true;
@@ -214,6 +238,29 @@ static const char *borrow_root_name(ast_node *n) {
     return n && n->kind==AST_IDENT_EXPR?n->as.ident_expr.name:NULL;
 }
 static bool borrow_read_expr(borrow_proof *,ast_node *,bool);
+/* Argument evaluation must not run arbitrary user code while an exclusive
+ * argument may already be pending. Body readability is a different proof:
+ * even a readable zero-argument call is not an effect-free argument. Native
+ * IR currently rejects every call with a pending borrow, including intrinsics. */
+static bool borrow_argument_effect_free(ast_node *n) {
+    if(!n) return false;
+    switch(n->kind) {
+    case AST_NUMBER_EXPR: case AST_BOOL_EXPR: case AST_STRING_EXPR: case AST_IDENT_EXPR: return true;
+    case AST_MEMBER_EXPR: return borrow_argument_effect_free(n->as.member_expr.object);
+    case AST_INDEX_EXPR:
+        return borrow_argument_effect_free(n->as.index_expr.object) && borrow_argument_effect_free(n->as.index_expr.index);
+    case AST_UNARY_EXPR: return borrow_argument_effect_free(n->as.unary_expr.operand);
+    case AST_BINARY_EXPR:
+        return borrow_argument_effect_free(n->as.binary_expr.left) && borrow_argument_effect_free(n->as.binary_expr.right);
+    case AST_ARRAY_EXPR:
+        for(size_t i=0;i<n->as.array_expr.items.len;i++) if(!borrow_argument_effect_free(n->as.array_expr.items.data[i])) return false;
+        return true;
+    case AST_STRUCT_EXPR:
+        for(size_t i=0;i<n->as.struct_expr.field_values.len;i++) if(!borrow_argument_effect_free(n->as.struct_expr.field_values.data[i])) return false;
+        return true;
+    default: return false;
+    }
+}
 /* A callee may reborrow its own root parameters, never manufacture, retain or
  * export a handle. Arguments are effect-free and exclusive roots are unique. */
 static bool borrow_reborrow_call(borrow_proof *p,ast_node *call,ast_node *target) {
@@ -229,6 +276,7 @@ static bool borrow_reborrow_call(borrow_proof *p,ast_node *call,ast_node *target
     if(target->as.fn_stmt.export_abi || call->as.call_expr.args.len!=target->as.fn_stmt.param_count) return false;
     for(size_t i=0;i<call->as.call_expr.args.len;i++) {
         ast_node *arg=call->as.call_expr.args.data[i];
+        if(target->as.fn_stmt.native_borrow_mask && !borrow_argument_effect_free(arg)) return false;
         if(i<64 && (target->as.fn_stmt.native_borrow_mask&(1ULL<<i))) {
             const char *root_name=borrow_root_name(arg);
             int root=root_name?borrow_param(p,root_name):-1;
@@ -409,6 +457,7 @@ static bool borrow_walk(borrow_proof *p,ast_node *n) {
             if(n->as.call_expr.args.len!=f->as.fn_stmt.param_count) goto unproven;
             for(size_t i=0;i<n->as.call_expr.args.len;i++) {
                 ast_node *arg=n->as.call_expr.args.data[i];
+                if(!borrow_argument_effect_free(arg)) goto unproven;
                 if(i<64 && (f->as.fn_stmt.native_borrow_mask&(1ULL<<i))) {
                     char base[IR_OPERAND_CAP];
                     ast_node *actual=arg->kind==AST_IDENT_EXPR?borrow_binding_record(p,arg->as.ident_expr.name):borrow_expr_record(p,arg);
