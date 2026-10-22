@@ -130,6 +130,7 @@ bool seed_compile_file(const char *input_path, const char *output_path, compile_
 	}
 	return ok;
 }
+#include "semantic/native_record_names.h"
 #include "semantic/native_borrow.h"
 #include "semantic/record_contracts.h"
 typedef struct seed_source_file {
@@ -227,6 +228,11 @@ static bool seed_compile_files_mode(int input_count, char **input_paths, const c
 			files[i].package_name = decl->as.package_decl.name;
 		}
 	}
+    /* Resolve aliases before merging files, preserving each lexical scope. */
+    if (native_records) {
+        for (i = 0; i < input_count; i++)
+            if (!native_record_names_node(files[i].root, files[i].root, err)) goto done;
+    }
 	/* Package and import declarations remain in the unit.  The original
 	 * bootstrap path rejected them before semantic analysis, which made an
 	 * import-driven closure impossible to compile.  Let the semantic layer
@@ -248,15 +254,10 @@ static bool seed_compile_files_mode(int input_count, char **input_paths, const c
 			statements->data[j] = NULL; /* Transfer ownership exactly once. */
 		}
 	}
-	/* Temporarily disable native borrow checking for bootstrap.
-	   TODO: Implement proper lifetime tracking for complex record types. */
-	/* if (native_records && !borrow_prove_unit(unit, err)) goto done; */
+	if (native_records && !borrow_prove_unit(unit, err)) goto done;
 	if (!semantic_analyze(unit, err)) goto done;
-    /* record_contracts contracts; */
-    /* Temporarily disable record transfer contract validation for bootstrap.
-       TODO: Fix int_set* and other pointer-bearing types in IR layer. */
-    /* if (native_records && !record_validate_transfer_contracts(unit, &contracts, err)) goto done; */
-    (void)native_records; /* Suppress unused parameter warning */
+    record_contracts contracts;
+    if (native_records && !record_validate_transfer_contracts(unit, &contracts, err)) goto done;
     if (!ir_generate_from_ast(unit, &ir, err)) goto done;
 	out = fopen(output_path, "wb");
 	if (!out) {

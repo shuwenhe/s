@@ -1,6 +1,5 @@
 #ifndef S_SEED_NATIVE_BORROW_H
 #define S_SEED_NATIVE_BORROW_H
-#pragma GCC diagnostic ignored "-Wunused-function"
 /* Restricted nonescaping record borrows: loop-capable callees,
  * record owners/reborrows with lexical lifetime, effect-free argument lists.
  * All call arguments must have eligible record-owner provenance.
@@ -35,18 +34,120 @@ static ast_node *borrow_record(borrow_proof *p, const char *type) {
 }
 static ast_node *borrow_function(borrow_proof *p, const char *name) {
     const char *pkg="";
+    ast_node *found=NULL;
     for (size_t i=0;i<p->unit->as.program.statements.len;i++) {
         ast_node *n=p->unit->as.program.statements.data[i];
         if(n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
-        if(n->kind==AST_FN_STMT && !strcmp(pkg,p->package_name) && !strcmp(n->as.fn_stmt.name,name)) return n;
+        if(n->kind!=AST_FN_STMT || strcmp(n->as.fn_stmt.name,name)) continue;
+        /* Native receiver symbols include the full declared record identity. */
+        if(strcmp(pkg,p->package_name) && !n->as.fn_stmt.receiver_type) continue;
+        if(found) return NULL;
+        found=n;
     }
-    return NULL;
+    return found;
+}
+static bool borrow_record_name(borrow_proof *p,ast_node *record,char *out,size_t cap) {
+    const char *pkg="";
+    for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
+        ast_node *n=p->unit->as.program.statements.data[i];
+        if(n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
+        if(n==record) return snprintf(out,cap,"%s%s%s",pkg,*pkg?".":"",n->as.let_stmt.name)<(int)cap;
+    }
+    return false;
+}
+/* The compatibility parser accepts both T* name and name* T. When its
+ * name-first parse has no referent but the first identifier denotes a record,
+ * resolve the canonical declaration using actual unit type identities. */
+static bool borrow_resolve_parameter(borrow_proof *p,ast_node *fn,size_t i) {
+    char base[IR_OPERAND_CAP];
+    if(fn->as.fn_stmt.receiver_type && i==0) return true;
+    if(!borrow_type(fn->as.fn_stmt.param_types[i],base) || borrow_record(p,base) ||
+       !borrow_record(p,fn->as.fn_stmt.params[i]) || strchr(base,'.')) return true;
+    size_t length=strlen(fn->as.fn_stmt.params[i]);
+    char *type=malloc(length+2),*name=malloc(strlen(base)+1);
+    if(!type || !name) { free(type); free(name); error_set(p->err,ERR_OUT_OF_MEMORY,fn->pos.line,fn->pos.column,"native pointer parameter allocation failed"); return false; }
+    memcpy(type,fn->as.fn_stmt.params[i],length); type[length]='*'; type[length+1]=0;
+    strcpy(name,base);
+    free(fn->as.fn_stmt.params[i]); free(fn->as.fn_stmt.param_types[i]);
+    fn->as.fn_stmt.params[i]=name; fn->as.fn_stmt.param_types[i]=type;
+    return true;
 }
 static int borrow_param(borrow_proof *p, const char *name) {
     ast_node *f=p->function;
     for(size_t i=0; f && i<f->as.fn_stmt.param_count && i<64;i++)
         if((f->as.fn_stmt.native_borrow_mask & (1ULL<<i)) && !strcmp(name,f->as.fn_stmt.params[i])) return (int)i;
     return -1;
+}
+/* Resolve a signature in its declaration package, not the caller's package. */
+static ast_node *borrow_signature_record(borrow_proof *p, ast_node *function, size_t index) {
+    if(index>=function->as.fn_stmt.param_count) return NULL;
+    const char *saved=p->package_name, *pkg="";
+    for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
+        ast_node *n=p->unit->as.program.statements.data[i];
+        if(n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
+        if(n==function) { p->package_name=pkg; break; }
+    }
+    char base[IR_OPERAND_CAP]; const char *type=function->as.fn_stmt.param_types[index];
+    if(borrow_type(type,base)) type=base;
+    ast_node *record=borrow_record(p,type);
+    p->package_name=saved;
+    return record;
+}
+static ast_node *borrow_method(borrow_proof *p,ast_node *record,const char *name) {
+    ast_node *found=NULL;
+    if(!record) return NULL;
+    for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
+        ast_node *n=p->unit->as.program.statements.data[i];
+        if(n->kind!=AST_FN_STMT || !n->as.fn_stmt.receiver_type) continue;
+        const char *tail=strrchr(n->as.fn_stmt.name,'.');
+        if(!tail || strcmp(tail+1,name) || borrow_signature_record(p,n,0)!=record) continue;
+        if(found) return NULL;
+        found=n;
+    }
+    return found;
+}
+/* Native-only lowering to the already proved explicit-parameter ABI. All
+ * allocations succeed before ownership is moved out of the member tree. */
+static bool borrow_expand_method(borrow_proof *p,ast_node *call,ast_node *target) {
+    ast_node *member=call->as.call_expr.callee;
+    ast_node *callee=ast_new(AST_IDENT_EXPR,member->pos);
+    if(!callee) goto oom;
+    size_t length=strlen(target->as.fn_stmt.name);
+    callee->as.ident_expr.name=malloc(length+1);
+    if(!callee->as.ident_expr.name) { ast_free(callee); goto oom; }
+    memcpy(callee->as.ident_expr.name,target->as.fn_stmt.name,length+1);
+    ast_vec args; ast_vec_init(&args);
+    if(!ast_vec_push(&args,member->as.member_expr.object)) { ast_free(callee); goto oom; }
+    for(size_t i=0;i<call->as.call_expr.args.len;i++) if(!ast_vec_push(&args,call->as.call_expr.args.data[i])) {
+        free(args.data); ast_free(callee); goto oom;
+    }
+    member->as.member_expr.object=NULL;
+    ast_free(member);
+    free(call->as.call_expr.args.data);
+    call->as.call_expr.args=args;
+    call->as.call_expr.callee=callee;
+    return true;
+oom:
+    error_set(p->err,ERR_OUT_OF_MEMORY,call->pos.line,call->pos.column,"native receiver call allocation failed"); return false;
+}
+/* A callee may reborrow its own root parameters, never manufacture, retain or
+ * export a handle. Arguments are effect-free and exclusive roots are unique. */
+static bool borrow_reborrow_call(borrow_proof *p,ast_node *call,ast_node *target) {
+    if(target->as.fn_stmt.export_abi || call->as.call_expr.args.len!=target->as.fn_stmt.param_count) return false;
+    for(size_t i=0;i<call->as.call_expr.args.len;i++) {
+        ast_node *arg=call->as.call_expr.args.data[i];
+        if(i<64 && (target->as.fn_stmt.native_borrow_mask&(1ULL<<i))) {
+            int root=arg->kind==AST_IDENT_EXPR?borrow_param(p,arg->as.ident_expr.name):-1;
+            if(root<0 || borrow_signature_record(p,p->function,(size_t)root)!=borrow_signature_record(p,target,i)) return false;
+            for(size_t j=0;j<call->as.call_expr.args.len;j++) {
+                ast_node *other=call->as.call_expr.args.data[j];
+                if(j!=i && other->kind==AST_IDENT_EXPR && !strcmp(arg->as.ident_expr.name,other->as.ident_expr.name)) return false;
+            }
+        } else if(arg->kind!=AST_NUMBER_EXPR && arg->kind!=AST_BOOL_EXPR &&
+                  (arg->kind!=AST_IDENT_EXPR || borrow_param(p,arg->as.ident_expr.name)>=0)) return false;
+    }
+    call->as.call_expr.native_borrow_mask=target->as.fn_stmt.native_borrow_mask;
+    return true;
 }
 /* Borrowed root handles may only appear as the base of a field projection.
  * Projections are ordinary copyable values; MOV/ARG/RET snapshots preserve
@@ -81,13 +182,25 @@ static bool borrow_read_expr(borrow_proof *p, ast_node *n, bool unused) {
         ast_node *callee=n->as.call_expr.callee;
         if(!callee) return false;
         if(callee->kind==AST_INDEX_EXPR && !callee->as.index_expr.index && n->as.call_expr.args.len==0) return true;
+        if(callee->kind==AST_MEMBER_EXPR && callee->as.member_expr.object && callee->as.member_expr.object->kind==AST_IDENT_EXPR) {
+            int root=borrow_param(p,callee->as.member_expr.object->as.ident_expr.name);
+            ast_node *target=root<0?NULL:borrow_method(p,borrow_signature_record(p,p->function,(size_t)root),callee->as.member_expr.member);
+            if(target) {
+                if(!borrow_expand_method(p,n,target)) return false;
+                callee=n->as.call_expr.callee;
+            }
+        }
         bool make=false;
         if(callee->kind==AST_IDENT_EXPR) {
             const char *name=callee->as.ident_expr.name;
             ast_node *target=borrow_function(p,name);
             make=!strcmp(name,"make");
-            if(target) { if(target->as.fn_stmt.native_borrow_mask || target->as.fn_stmt.receiver_type || target->as.fn_stmt.export_abi) return false; }
-            else if(!make && strcmp(name,"len") && strcmp(name,"append") && strcmp(name,"to_string")) return false;
+            if(target) {
+                if(target->as.fn_stmt.native_borrow_mask) return borrow_reborrow_call(p,n,target);
+                if(target->as.fn_stmt.receiver_type || target->as.fn_stmt.export_abi) return false;
+            }
+            else if(!make && strcmp(name,"len") && strcmp(name,"append") && strcmp(name,"to_string") &&
+                    strcmp(name,"__host_byte_at") && strcmp(name,"__host_char_at") && strcmp(name,"__host_slice")) return false;
         } else if(callee->kind==AST_MEMBER_EXPR) {
             if(strcmp(callee->as.member_expr.member,"len") || n->as.call_expr.args.len || !borrow_read_expr(p,callee->as.member_expr.object,false)) return false;
         } else return false;
@@ -142,7 +255,7 @@ static bool borrow_walk(borrow_proof *p,ast_node *n) {
             if(!borrow_bind(p,n->as.fn_stmt.params[i],borrow_record(p,t))) return false;
         }
         if(!borrow_walk(p,n->as.fn_stmt.body)) return false;
-        if(p->has_borrow_call && p->has_control_flow) goto unproven;
+        if(p->has_borrow_call && p->has_control_flow && !n->as.fn_stmt.native_borrow_mask) goto unproven;
         return true;
     }
     case AST_BLOCK: {
@@ -156,18 +269,40 @@ static bool borrow_walk(borrow_proof *p,ast_node *n) {
         ast_node *v=n->as.let_stmt.value, *r=NULL;
         if(v && v->kind==AST_STRUCT_EXPR) r=borrow_record(p,v->as.struct_expr.type_name);
         else if(v && v->kind==AST_IDENT_EXPR) r=borrow_binding_record(p,v->as.ident_expr.name);
+        else if(v && v->kind==AST_CALL_EXPR && v->as.call_expr.callee && v->as.call_expr.callee->kind==AST_IDENT_EXPR) {
+            ast_node *f=borrow_function(p,v->as.call_expr.callee->as.ident_expr.name);
+            if(f && !f->as.fn_stmt.native_borrow_mask) {
+                const char *saved=p->package_name, *pkg="";
+                for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
+                    ast_node *decl=p->unit->as.program.statements.data[i];
+                    if(decl->kind==AST_PACKAGE_DECL) pkg=decl->as.package_decl.name;
+                    if(decl==f) { p->package_name=pkg; break; }
+                }
+                r=borrow_record(p,f->as.fn_stmt.return_type);
+                p->package_name=saved;
+            }
+        }
         return borrow_bind(p,n->as.let_stmt.name,r);
     }
     case AST_CALL_EXPR: {
         ast_node *callee=n->as.call_expr.callee;
+        if(callee && callee->kind==AST_MEMBER_EXPR && callee->as.member_expr.object && callee->as.member_expr.object->kind==AST_IDENT_EXPR) {
+            ast_node *record=borrow_binding_record(p,callee->as.member_expr.object->as.ident_expr.name);
+            ast_node *method=borrow_method(p,record,callee->as.member_expr.member);
+            if(method) {
+                if(!borrow_expand_method(p,n,method)) return false;
+                callee=n->as.call_expr.callee;
+            } else if(record) goto unproven;
+        }
         ast_node *f=callee && callee->kind==AST_IDENT_EXPR ? borrow_function(p,callee->as.ident_expr.name):NULL;
         if(f && f->as.fn_stmt.native_borrow_mask) {
+            if(n->as.call_expr.args.len!=f->as.fn_stmt.param_count) goto unproven;
             for(size_t i=0;i<n->as.call_expr.args.len;i++) {
                 ast_node *arg=n->as.call_expr.args.data[i];
                 if(i<64 && (f->as.fn_stmt.native_borrow_mask&(1ULL<<i))) {
                     char base[IR_OPERAND_CAP];
                     if(!borrow_type(f->as.fn_stmt.param_types[i],base) || arg->kind!=AST_IDENT_EXPR ||
-                        borrow_binding_record(p,arg->as.ident_expr.name)!=borrow_record(p,base)) goto unproven;
+                        borrow_binding_record(p,arg->as.ident_expr.name)!=borrow_signature_record(p,f,i)) goto unproven;
                 } else if(arg->kind!=AST_NUMBER_EXPR && arg->kind!=AST_BOOL_EXPR && arg->kind!=AST_IDENT_EXPR) goto unproven;
             }
             for(size_t i=0;i<n->as.call_expr.args.len && i<64;i++) if(f->as.fn_stmt.native_borrow_mask&(1ULL<<i)) {
@@ -208,23 +343,23 @@ static bool borrow_prove_unit(ast_node *unit,compile_error *err) {
         if(n->kind==AST_PACKAGE_DECL) p.package_name=n->as.package_decl.name;
         if(n->kind!=AST_FN_STMT) continue;
         n->as.fn_stmt.native_borrow_mask=0; p.function=n;
-        
-        /* Exempt all packages from borrow validation for now.
-         * Record borrow validation is overly restrictive for native code generation.
-         * TODO: Implement proper lifetime tracking for complex record types. */
-        bool skip_borrow_check = true;
-        
         for(size_t j=0;j<n->as.fn_stmt.param_count;j++) {
             char base[IR_OPERAND_CAP];
+            if(!borrow_resolve_parameter(&p,n,j)) return false;
             if(!borrow_type(n->as.fn_stmt.param_types[j],base)) continue;
-            if(skip_borrow_check) {
-                n->as.fn_stmt.native_borrow_mask|=1ULL<<j;
-                continue;
-            }
-            if(j>=64 || n->as.fn_stmt.receiver_type || !borrow_record(&p,base)) goto bad;
+            if(j>=64 || !borrow_record(&p,base)) goto bad;
             n->as.fn_stmt.native_borrow_mask|=1ULL<<j;
         }
-
+        if(n->as.fn_stmt.receiver_type && n->as.fn_stmt.native_borrow_mask) {
+            ast_node *record=borrow_signature_record(&p,n,0);
+            char full[IR_OPERAND_CAP],symbol[IR_OPERAND_CAP];
+            const char *tail=strrchr(n->as.fn_stmt.name,'.');
+            if(!record || !tail || !borrow_record_name(&p,record,full,sizeof(full)) ||
+               snprintf(symbol,sizeof(symbol),"%s%s.%s",full,(n->as.fn_stmt.native_borrow_mask&1ULL)?"*":"",tail+1)>=(int)sizeof(symbol)) goto bad;
+            char *name=malloc(strlen(symbol)+1);
+            if(!name) { error_set(err,ERR_OUT_OF_MEMORY,n->pos.line,n->pos.column,"native receiver symbol allocation failed"); return false; }
+            strcpy(name,symbol); free(n->as.fn_stmt.name); n->as.fn_stmt.name=name;
+        }
         continue;
 bad: error_set(err,ERR_SEMANTIC,n->pos.line,n->pos.column,"unproven record borrow: write, escape, call, or unsupported referent"); return false;
     }

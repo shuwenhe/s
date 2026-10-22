@@ -71,9 +71,13 @@ static bool record_contract_visit(record_contracts *c, ast_node *n, compile_erro
         return record_contract_type(c, n->as.let_stmt.type_name, n->pos, 0, err) && record_contract_visit(c, n->as.let_stmt.value, err);
     case AST_STRUCT_EXPR:
         return record_contract_type(c, n->as.struct_expr.type_name, n->pos, 0, err) && record_contract_vec(c, &n->as.struct_expr.field_values, err);
+    case AST_STRING_EXPR:
+        return !n->as.string_expr.is_type_name || record_contract_type(c, n->as.string_expr.literal, n->pos, 0, err);
     case AST_FN_STMT:
-        if (!record_contract_type(c, n->as.fn_stmt.receiver_type, n->pos, 0, err) ||
-            !record_contract_type(c, n->as.fn_stmt.return_type, n->pos, 0, err)) return false;
+        /* The receiver is already parameter zero and follows its proved
+         * transfer contract; do not reject that same borrow a second time. */
+        if (!(n->as.fn_stmt.native_borrow_mask&1ULL) && !record_contract_type(c, n->as.fn_stmt.receiver_type, n->pos, 0, err)) return false;
+        if (!record_contract_type(c, n->as.fn_stmt.return_type, n->pos, 0, err)) return false;
         for (i = 0; i < n->as.fn_stmt.param_count; i++) {
             const char *type=n->as.fn_stmt.param_types[i]; char base[IR_OPERAND_CAP];
             if(i<64 && (n->as.fn_stmt.native_borrow_mask&(1ULL<<i)) && borrow_type(type,base)) type=base;
@@ -89,7 +93,9 @@ static bool record_contract_visit(record_contracts *c, ast_node *n, compile_erro
     case AST_BINARY_EXPR: return record_contract_visit(c, n->as.binary_expr.left, err) && record_contract_visit(c, n->as.binary_expr.right, err);
     case AST_UNARY_EXPR: return record_contract_visit(c, n->as.unary_expr.operand, err);
     case AST_MEMBER_EXPR: return record_contract_visit(c, n->as.member_expr.object, err);
-    case AST_CALL_EXPR: return record_contract_visit(c, n->as.call_expr.callee, err) && record_contract_vec(c, &n->as.call_expr.args, err);
+    case AST_CALL_EXPR:
+        return record_contract_type(c, n->as.call_expr.resolved_array_type, n->pos, 0, err) &&
+            record_contract_visit(c, n->as.call_expr.callee, err) && record_contract_vec(c, &n->as.call_expr.args, err);
     case AST_ARRAY_EXPR: return record_contract_vec(c, &n->as.array_expr.items, err);
     case AST_INDEX_EXPR: return record_contract_visit(c, n->as.index_expr.object, err) && record_contract_visit(c, n->as.index_expr.index, err);
     case AST_SLICE_EXPR: return record_contract_visit(c, n->as.slice_expr.object, err) && record_contract_visit(c, n->as.slice_expr.start, err) && record_contract_visit(c, n->as.slice_expr.end, err);

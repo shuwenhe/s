@@ -1008,6 +1008,7 @@ static ast_node *parse_call(parser *p) {
 						return NULL;
 					}
 					type_arg->as.string_expr.literal = type_name;
+					type_arg->as.string_expr.is_type_name = true;
 					if (!ast_vec_push(&call->as.call_expr.args, type_arg)) {
 						ast_free(type_arg);
 						ast_free(call);

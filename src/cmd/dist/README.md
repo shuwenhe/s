@@ -2,17 +2,27 @@ Current record ABI status (2026-10-22): `make selfhost-native-record-check`
 checks eligible record values, nested copies, defaults, array recursion,
 argument order, callee-saved registers, and allocation rollback. It is a
 component check, not proof of selfhosting. The full 253-file source closure
-now passes the DFA module's pointer signatures and fails native eligibility at
-`ir/middlend_ir_builder.s:47` (`ir_builder_build`). Import-qualified pointer
-provenance and interprocedural reborrows remain unproven. Both native bootstrap entrypoints
+now resolves imported record type names in each source file before merging the
+unit and first fails body eligibility at `ir/middlend_ir_builder.s` (`ir_builder_build`)
+(`ir_builder_build`). Record receiver methods and direct reborrows
+between proved functions are supported, including loops and recursive call
+cycles. The old syntax lexer now owns a string and a token value array, replacing
+its raw allocations. Primitive pointer borrows, recursive AST pointer ownership,
+multi-result borrowed functions and general allocation remain unproven; moving
+the first diagnostic does not prove the AST builder can execute. Both native bootstrap entrypoints
 use `--compile-native-unit` so this rejection happens before IR output.
 Native source mode supports a restricted, proved nonescaping record borrow:
 loop-capable callees, straight-line callers, eligible resource-free record owners, and direct effect-free
 argument lists. Borrowed arguments preserve identity and may update typed scalar, record and array
 fields; ordinary value arguments retain snapshot semantics. External IR must
 carry matching PARAM/ARG and schema descriptors and pass an independent proof.
-Borrow IR is native-only; hosted emission rejects it. Receivers, borrowed
-returns, repeated exclusive aliases, and unproved lifetimes remain rejected.
+Borrow IR is native-only; hosted emission rejects it. Receiver methods use
+package-qualified record identities and the explicit first-parameter borrow
+ABI. Borrowed returns, repeated exclusive aliases, and unproved lifetimes remain
+rejected. Ordinary callers still require straight-line owner provenance;
+borrowed callees may reborrow only their own root parameters. Arguments stay
+effect-free, and external IR cannot overlap a pending exclusive argument with
+a nested call.
 `native_record_borrow_check.sh` tests mutation, rejected escapes/aliasing/effects,
 forged IR, and the real DFA file using isolated dependency types. That isolated
 DFA test is not a full-source Stage1 proof. The loop borrow suite also executes
@@ -21,6 +31,25 @@ isolated IR dependency types. Their native IR is checked with a definite-type
 CFG worklist: every reachable predecessor and loop back edge participates in
 the meet; called value functions are checked transitively. Unsupported resource
 or reference operations remain errors, including unreachable reference escapes.
+`native_record_import_check.sh` executes imported record construction, nested
+schema defaults, function returns, array constructors and record borrows. It
+checks file-local aliases in both source orders and rejects ambiguous imports
+and resource-bearing array elements before replacing IR output. Ordinary
+string values are not treated as type references.
+`native_record_receiver_check.sh` executes mutation through methods, cross-package
+same-named methods, the seventh ABI parameter, looping reborrows and recursive
+calls. It rejects handle copies/returns, value-parameter escapes, effectful
+borrow arguments, duplicate roots, altered schema targets and pending-call
+overlap before output replacement or assembler/linker invocation.
+`native_syntax_lexer_check.sh` executes the real syntax lexer with its production
+types: owned construction, rope source, token codes and positions, returned
+array snapshots, and 1030 tokens. Constructor-result ownership requires actual
+argument and transitive body/return proof; all callers in an owner-consuming
+chain are checked, using the same symbol resolution as native emission. The
+standalone borrowing entrypoint has no language parameters and uses host_args()
+for environment arguments. Forged fields, ordinary argument types, qualified
+call aliases and entry parameters are rejected before native tools or output
+replacement. Native append preserves its source, item and length across allocation.
 Full-source native Stage1 and Stage2/Stage3 convergence remain unproven.
 
 # S distribution bootstrap tools
@@ -34,21 +63,27 @@ bytes must converge. A failed rerun removes `.complete` before doing any work.
 
 The S `--compile-unit` implementation currently supports the native integer/void
 subset in a single package, including multiple source files and forward calls.
-It rejects unsupported syntax and additional packages. The complete 253-file
-production closure now emits an independent static stage1 that passes the
-structural verifier. Local backend helper prefixes avoid flat-symbol clashes,
-and the standalone linker discards unreachable functions and literals without
-dropping their source files from the compilation unit.
+It rejects unsupported declarations and syntax before replacing the output.
+Function parameters must be parsed and retained; skipping signatures or source
+declarations does not implement those language features.
 
-Full self-hosting remains blocked at execution: the seed native backend's
-flattened record slots do not preserve nested fields across function calls.
-The resulting stage1 crashes in `native_advance` while accessing
-`state.lex.error`, even for a small integer input. The native frontend also
-needs imports, strings, arrays, records, and control flow before it can rebuild
-the full source closure. In addition, native process/file service intrinsics
-still need implementation fixes. Emission now rejects the temporary-directory
-fallback before writing or cleaning the destination directory. Source reads reject embedded NUL and files larger
-than the current 16 MiB buffer instead of accepting a truncated prefix.
+The full 253-file production closure is currently rejected before native IR
+output at `ir/middlend_ir_builder.s` (`ir_builder_build`) because its AST graph and borrowed
+body operations are not supported by the proof. The AST pointer graph still needs
+verified provenance and a supported ownership model.
+The native frontend, MIR/SSA lowering and instruction selection also need
+strings, arrays, records and control flow before S can compile its own source.
+Disabling ownership/schema validation or emitting an inspectable ELF does not
+satisfy this requirement. Stage2 and Stage3 have not been demonstrated.
+
+The seed's native runtime now provides private temporary directories, argv and
+environment propagation, PATH lookup, exit/signal status, and rope-aware file
+paths. File identity checks compare device/inode and detect hard-link and
+symbolic-link aliases before output replacement. `native_host_tools_check.sh` executes a native S program which invokes
+`as` and `ld`, installs and runs a static ELF, and verifies that cleanup preserves
+the destination parent. This checks the build-tool boundary independently of
+the unsupported compiler source. Source reads reject embedded NUL and files
+larger than the current 16 MiB buffer instead of accepting a truncated prefix.
 
 For testing the S CLI while these native gaps remain, the seed provides explicit
 `--emit-hosted-program INPUT.ir OUTPUT`. This interpreter-backed diagnostic
@@ -63,10 +98,11 @@ Run the protocol, source-dependence, independent ELF, and rejection checks with:
 make selfhost-protocol-check
 ```
 
-The still-failing execution frontier is reproduced by
-`make selfhost-native-stage1-check`: it builds and verifies native stage1,
-checks the temporary-directory rejection, then attempts native compilation of
-a small program. Passing ELF inspection alone is not execution proof.
+The current full-source frontier is reproduced by
+`make selfhost-native-stage1-check`. After source eligibility is implemented,
+this gate must build and verify native stage1, emit and run a native assembly
+artifact while preserving the destination parent, then compile and execute a
+small S program. Passing ELF inspection alone is not execution proof.
 
 The following describes the older manifest-based driver:
 

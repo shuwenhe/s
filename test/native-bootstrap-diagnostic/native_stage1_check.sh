@@ -12,11 +12,10 @@ sh "$root/misc/scripts/verify_true_selfhost.sh" "$work/stage1"
 mkdir -p "$work/emission"
 printf 'keep\n' > "$work/emission/keep"
 printf '# S-NATIVE-AMD64-V1\n.global _start\n_start: mov $60, %%rax; xor %%rdi, %%rdi; syscall\n' > "$work/emission/input.sasm"
-# The native temporary-directory service is currently a stub. Until replaced,
-# fail before writing files or running cleanup on the destination parent.
-if timeout 30 "$work/stage1" --emit-bin "$work/emission/input.sasm" "$work/emission/program" > "$work/emission.log" 2>&1; then
-    echo 'native temporary-directory fallback accepted' >&2; exit 1
-fi
+# Exercise the native assembler/linker services without deleting the parent.
+timeout 30 "$work/stage1" --emit-bin "$work/emission/input.sasm" "$work/emission/program" > "$work/emission.log" 2>&1
+sh "$root/misc/scripts/verify_true_selfhost.sh" "$work/emission/program"
+"$work/emission/program"
 test "$(cat "$work/emission/keep")" = keep
 printf 'package main\nfunc main(int value) int { return value * 3 + 4 }\n' > "$work/input.s"
 timeout 30 "$work/stage1" --compile-unit "$work/program.sasm" "$work/input.s"

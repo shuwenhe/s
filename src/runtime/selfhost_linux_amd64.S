@@ -271,41 +271,45 @@ s_array_new:
 .global s_array_append
 .type s_array_append, @function
 s_array_append:
-    test %rdi, %rdi
-    jz .Larray_append_empty
-    mov 8(%rdi), %rcx
-    lea 1(%rcx), %rdx
-    lea 16(,%rdx,8), %r8
-    push %rdi
-    push %rsi
-    mov %r8, %rdi
-    call s_alloc
-    pop %rsi
-    pop %rdi
-    test %rax, %rax
-    jz .Larray_append_fail
-    movq $4, (%rax)
-    mov %rdx, 8(%rax)
-    xor %r8, %r8
-.Larray_append_copy:
-    cmp %rcx, %r8
-    jae .Larray_append_store
-    mov 16(%rdi,%r8,8), %r9
-    mov %r9, 16(%rax,%r8,8)
-    inc %r8
-    jmp .Larray_append_copy
-.Larray_append_store:
-    mov %rsi, 16(%rax,%rcx,8)
-    ret
-.Larray_append_empty:
-    mov $3, %rdi
+    # Preserve source, item and length across allocation. s_alloc/syscall may
+    # clobber all caller-saved registers, including rcx and rdx.
+    push %rbx
+    push %r12
+    push %r13
+    mov %rdi, %rbx
+    mov %rsi, %r12
+    xor %r13d, %r13d
+    test %rbx, %rbx
+    jz .Larray_append_allocate
+    cmp $1, %rbx              # tagged nil / integer zero
+    je .Larray_append_allocate
+    test $1, %rbx
+    jnz .Larray_append_fail
+    cmpq $4, (%rbx)
+    jne .Larray_append_fail
+    mov 8(%rbx), %r13
+.Larray_append_allocate:
+    lea 3(%r13,%r13), %rdi    # tagged (old length + 1)
     call s_array_new
     test %rax, %rax
-    jz .Larray_append_fail
-    mov %rsi, 16(%rax)
-    ret
+    jz .Larray_append_done
+    xor %ecx, %ecx
+.Larray_append_copy:
+    cmp %r13, %rcx
+    jae .Larray_append_store
+    mov 16(%rbx,%rcx,8), %rdx
+    mov %rdx, 16(%rax,%rcx,8)
+    inc %rcx
+    jmp .Larray_append_copy
+.Larray_append_store:
+    mov %r12, 16(%rax,%r13,8)
+    jmp .Larray_append_done
 .Larray_append_fail:
-    xor %rax, %rax
+    xor %eax, %eax
+.Larray_append_done:
+    pop %r13
+    pop %r12
+    pop %rbx
     ret
 .size s_array_append, .-s_array_append
 .global s_value_add
@@ -1224,25 +1228,47 @@ s_contains_text:
 .global s_host_same_file
 .type s_host_same_file, @function
 s_host_same_file:
-	mov 8(%rdi), %rax
-	cmp 8(%rsi), %rax
+    push %rbx
+    push %r12
+    # Linux/amd64 struct stat is 144 bytes; keep both buffers disjoint.
+    # Entry rsp is 8 mod 16; 296 bytes also aligns calls to s_string_cstr.
+    sub $296, %rsp
+    mov %rsi, %r12
+    call s_string_cstr
+    test %rax, %rax
+    jz .Lsame_file_false
+    mov %rax, %rbx
+    mov %r12, %rdi
+    call s_string_cstr
+    test %rax, %rax
+    jz .Lsame_file_false
+    mov %rax, %r12
+    mov %rbx, %rdi
+    mov %rsp, %rsi
+    mov $4, %eax                # stat follows symbolic links
+    syscall
+    test %rax, %rax
+    js .Lsame_file_false
+    mov %r12, %rdi
+    lea 144(%rsp), %rsi
+    mov $4, %eax
+    syscall
+    test %rax, %rax
+    js .Lsame_file_false
+    mov 0(%rsp), %rax          # st_dev
+    cmp 144(%rsp), %rax
     jne .Lsame_file_false
-    mov 8(%rdi), %rcx
-    xor %rdx, %rdx
-.Lsame_file_loop:
-    cmp %rcx, %rdx
-    jae .Lsame_file_true
-    movzbq 16(%rdi,%rdx), %rax
-    movzbq 16(%rsi,%rdx), %r8
-    cmp %r8, %rax
+    mov 8(%rsp), %rax          # st_ino
+    cmp 152(%rsp), %rax
     jne .Lsame_file_false
-    inc %rdx
-    jmp .Lsame_file_loop
-.Lsame_file_true:
-    mov $3, %rax
-    ret
+    mov $3, %rax               # tagged true
+    jmp .Lsame_file_done
 .Lsame_file_false:
-    mov $1, %rax
+    mov $1, %rax               # tagged false, including invalid/missing paths
+.Lsame_file_done:
+    add $296, %rsp
+    pop %r12
+    pop %rbx
     ret
 .size s_host_same_file, .-s_host_same_file
 .global s_host_rename_file

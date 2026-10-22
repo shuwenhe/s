@@ -11,11 +11,6 @@ extern "intrinsic" func __host_char_at(string s, int index) string
 extern "intrinsic" func __host_slice(string s, int start, int end) string
 extern "intrinsic" func host_args() string[]
 
-func main() int {
-    args := host_args()
-    return compiler_main(args)
-}
-
 func compiler_main(string[] args) int {
     if len(args) == 4 && args[1] == "--canonical-ast-check" {
         source := __host_read_to_string(args[2])

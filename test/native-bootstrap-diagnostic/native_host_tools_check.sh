@@ -5,6 +5,9 @@ work=$(mktemp -d /tmp/s-native-host-tools.XXXXXX)
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/parent with space"
 printf keep > "$work/parent with space/keep"
+ln "$work/parent with space/keep" "$work/parent with space/hard alias"
+ln -s keep "$work/parent with space/symbolic alias"
+printf keep > "$work/parent with space/different"
 cat > "$work/tools.s" <<'S'
 package main
 extern "intrinsic" func __host_run_argv(string[] args) int
@@ -15,9 +18,16 @@ extern "intrinsic" func __host_rename_file(string from, string to) int
 extern "intrinsic" func __host_make_executable(string path) int
 extern "intrinsic" func __host_byte_string(int value) string
 extern "intrinsic" func __host_env_get(string key, string fallback) string
+extern "intrinsic" func __host_same_file(string left, string right) bool
 func main() int {
     args := host_args()
     parent := args[1]
+    original := parent + "/keep"
+    if !__host_same_file(original, original) { return 22 }
+    if !__host_same_file(original, parent + "/hard alias") { return 23 }
+    if !__host_same_file(parent + "/symbolic alias", original) { return 24 }
+    if __host_same_file(original, parent + "/different") { return 25 }
+    if __host_same_file(parent + "/missing", parent + "/missing") { return 26 }
     if __host_run_argv(["/bin/sh", "-c", "exit 23"]) != 23 { return 1 }
     if __host_run_argv(["sh", "-c", "test \"$S_PROC_TOKEN\" = \"inherited value\""]) != 0 { return 2 }
     if __host_run_argv(["s-native-command-that-does-not-exist"]) != 127 { return 3 }
@@ -28,6 +38,7 @@ func main() int {
     shell := "s" + "h"
     if __host_run_argv([shell, "-c", "test \"$1\" = '' && test \"$2\" = 'a b;$ literal'", "s-test", "", "a b;$ literal"]) != 0 { return 19 }
     zero := __host_byte_string(0)
+    if __host_same_file(original + zero + "suffix", original) { return 27 }
     nul_command := "exit 0" + zero
     if __host_run_argv(["sh", "-c", nul_command]) != -1 { return 20 }
     first := __host_make_temp_dir_in(parent)

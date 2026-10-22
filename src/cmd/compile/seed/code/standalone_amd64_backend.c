@@ -45,6 +45,7 @@ typedef struct standalone_function {
     unsigned long long borrow_mask;
     int borrow_schema[64];
     int borrow_flow_state;
+    bool borrow_owner_needed;
 } standalone_function;
 typedef struct standalone_literal {
 	char encoded[STANDALONE_TEXT_CAP];
@@ -280,6 +281,7 @@ static int literal_index(standalone_module *module, const char *encoded, compile
 	return (int)module->literal_count++;
 }
 static const char *runtime_callee(const char *name);
+static const char *defined_function_name(const standalone_module *,const char *);
 #include "standalone_records.h"
 #include "standalone_borrows.h"
 static bool analyze_module(standalone_module *module, compile_error *err) {
@@ -574,6 +576,8 @@ static bool emit_store(FILE *out, standalone_module *module, standalone_function
 	return true;
 }
 static const char *runtime_callee(const char *name) {
+    /* Keep validation and emission on the same intrinsic resolution path. */
+    if (strstr(name, "env_get") != NULL) return "s_runtime_env_get";
 	if (strstr(name, "env_get") != NULL) return "s_runtime_env_get";
 	if (strstr(name, "__host_run_argv") != NULL) return "s_host_run_argv";
 	const char *tail = strrchr(name, '.');
@@ -716,7 +720,6 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			char local_callee[STANDALONE_TEXT_CAP];
 			char *count_end = NULL;
 			long call_arg_count = strtol(ins->operand2, &count_end, 10);
-			if (strstr(ins->operand1, "env_get") != NULL) callee = "s_runtime_env_get";
 			size_t first_arg;
 			size_t arg;
 			if (!count_end || *count_end != '\0' || call_arg_count < 0 ||
