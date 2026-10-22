@@ -5,6 +5,17 @@
 #define BF_STRING (-3)
 #define BF_UNIT (-4)
 #define BF_MAX_ARRAYS 4096
+/* Type and ownership are separate lattice facts. READ aliases never acquire
+ * ownership; only value snapshots/constructors/verified returns do. */
+static int borrow_flow_base(int type) { return type<=-16?-type-16:type; }
+static bool borrow_flow_owned(int type) { return type<=-16; }
+static int borrow_flow_snapshot(int type,size_t records) {
+    return type>=0 && (size_t)type<records?-type-16:type;
+}
+static int borrow_flow_meet(int a,int b) {
+    if(a==b) return a;
+    return borrow_flow_base(a)==borrow_flow_base(b)?borrow_flow_base(a):BF_UNKNOWN;
+}
 typedef struct borrow_flow_types {
     standalone_module *m;
     compile_error *err;
@@ -55,20 +66,61 @@ static int borrow_flow_field(borrow_flow_types *t,int record,const char *field,s
         return borrow_flow_type(t,r->fields[i].type,r->name,0);
     return BF_UNKNOWN;
 }
-static int borrow_flow_value(borrow_flow_types *t,standalone_function *fn,int *state,const char *value) {
+static int borrow_flow_value_depth(borrow_flow_types *t,standalone_function *fn,int *state,const char *value,unsigned nesting);
+static int borrow_flow_array_value(borrow_flow_types *t,standalone_function *fn,int *state,const char *value,unsigned nesting) {
+    size_t length=strlen(value);
+    if(length<2 || value[length-1]!=']' || nesting>64) return BF_UNKNOWN;
+    const char *start=value+1,*end=value+length-1;
+    int depth=0,element=BF_UNKNOWN; bool quoted=false,escaped=false;
+    for(const char *p=start;p<=end;p++) {
+        bool separator=p==end || (*p==',' && !quoted && !depth);
+        if(separator) {
+            char item[STANDALONE_TEXT_CAP];
+            const char *first=start,*last=p;
+            while(first<last && isspace((unsigned char)*first)) first++;
+            while(last>first && isspace((unsigned char)last[-1])) last--;
+            size_t n=(size_t)(last-first);
+            if(!n || n>=sizeof(item)) return BF_UNKNOWN;
+            memcpy(item,first,n); item[n]=0;
+            /* Arrays hold values, never raw borrowed handles. */
+            for(size_t param=0;param<64 && param<fn->slot_count;param++) {
+                if(!(fn->borrow_mask&(1ULL<<param))) continue;
+                size_t at=fn->begin+param;
+                if(at<fn->end && !strcmp(t->m->ir.ins[at].op,"PARAM") && !strcmp(item,t->m->ir.ins[at].result)) return BF_UNKNOWN;
+            }
+            int type=borrow_flow_value_depth(t,fn,state,item,nesting+1);
+            if(type==BF_UNKNOWN || (element!=BF_UNKNOWN && type!=element)) return BF_UNKNOWN;
+            element=type; start=p+1;
+        } else if(quoted) {
+            if(escaped) escaped=false;
+            else if(*p=='\\') escaped=true;
+            else if(*p=='"') quoted=false;
+        } else if(*p=='"') quoted=true;
+        else if(*p=='[') depth++;
+        else if(*p==']') { if(!depth) return BF_UNKNOWN; depth--; }
+    }
+    if(depth || quoted) return BF_UNKNOWN;
+    return borrow_flow_array(t,element);
+}
+static int borrow_flow_value_depth(borrow_flow_types *t,standalone_function *fn,int *state,const char *value,unsigned nesting) {
+    if(nesting>64) return BF_UNKNOWN;
+    if(value[0]=='[') return borrow_flow_array_value(t,fn,state,value,nesting);
     if(is_integer(value)) return BF_INT;
     if(is_string_literal(value)) return BF_STRING;
     const char *dot=strchr(value,'.');
-    if(!dot) { int s=slot_index(fn,value,false); return s<0?BF_UNKNOWN:state[s]; }
+    if(!dot) { int s=slot_index(fn,value,false); return s<0?BF_UNKNOWN:borrow_flow_base(state[s]); }
     char root[STANDALONE_TEXT_CAP]; size_t n=(size_t)(dot-value);
     if(n>=sizeof(root)) return BF_UNKNOWN;
     memcpy(root,value,n); root[n]=0;
-    int slot=slot_index(fn,root,false), type=slot<0?BF_UNKNOWN:state[slot];
+    int slot=slot_index(fn,root,false), type=slot<0?BF_UNKNOWN:borrow_flow_base(state[slot]);
     while(dot) {
         const char *next=strchr(dot+1,'.'); size_t len=next?(size_t)(next-dot-1):strlen(dot+1);
         type=borrow_flow_field(t,type,dot+1,len); dot=next;
     }
     return type;
+}
+static int borrow_flow_value(borrow_flow_types *t,standalone_function *fn,int *state,const char *value) {
+    return borrow_flow_value_depth(t,fn,state,value,0);
 }
 static bool borrow_flow_raw(standalone_function *fn,bool *borrowed,const char *value) {
     int s=slot_index(fn,value,false);
@@ -142,7 +194,7 @@ static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,bo
                 if(s<0 || i==fn->begin || borrowed[s] || !borrow_flow_literal(x->operand1,type,sizeof(type),err)) return false;
                 standalone_ins *prev=&t->m->ir.ins[i-1]; char alias[STANDALONE_TEXT_CAP];
                 int r=standalone_record_index(t->m,type);
-                if(r<0 || strcmp(prev->op,"MOV") || strcmp(prev->result,root) || !borrow_flow_literal(prev->operand1,alias,sizeof(alias),err) || strcmp(alias,root) || state[s]!=r) return false;
+                if(r<0 || strcmp(prev->op,"MOV") || strcmp(prev->result,root) || !borrow_flow_literal(prev->operand1,alias,sizeof(alias),err) || strcmp(alias,root) || borrow_flow_base(state[s])!=r) return false;
                 continue;
             }
             if(borrow_flow_raw(fn,borrowed,x->operand1)) return false;
@@ -164,7 +216,12 @@ static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,bo
         } else if(!strcmp(x->op,"ARG")) {
             bool reborrow=!strcmp(x->operand1,"mutable_borrow");
             if(argc==64 || (!reborrow && strcmp(x->operand1,"_") && *x->operand1) ||
-               reborrow!=borrow_flow_raw(fn,borrowed,x->result)) return false;
+               (!reborrow && borrow_flow_raw(fn,borrowed,x->result))) return false;
+            if(reborrow) {
+                int slot=slot_index(fn,x->result,false);
+                if(strchr(x->result,'.') || slot<0 ||
+                   (!borrowed[slot] && !borrow_flow_owned(state[slot]))) return false;
+            }
             reborrows[argc]=reborrow;
             args[argc]=borrow_flow_value(t,fn,state,x->result); sources[argc++]=x->result;
             if(args[argc-1]==BF_UNKNOWN) return false;
@@ -205,7 +262,8 @@ static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,bo
             else return false;
         } else return false;
         if(result==BF_UNKNOWN || dst<0 || borrowed[dst]) return false;
-        state[dst]=result;
+        state[dst]=(!strcmp(x->op,"MOV") || (!strcmp(x->op,"CALL") && !runtime_callee(x->operand1)))?
+            borrow_flow_snapshot(result,t->m->record_count):result;
     }
     return argc==0;
 }
@@ -241,6 +299,7 @@ static bool standalone_validate_borrow_flow(standalone_module *m,standalone_func
         borrowed[slot]=(fn->borrow_mask&(1ULL<<p))!=0;
         initial[slot]=borrowed[slot]?fn->borrow_schema[p]:borrow_flow_type(&types,standalone_transfer(m,"param-transfer:",fn->name,m->ir.ins[i].result),NULL,0);
         if(initial[slot]==BF_UNKNOWN) goto done;
+        if(!borrowed[slot]) initial[slot]=borrow_flow_snapshot(initial[slot],m->record_count);
     }
     for(size_t b=0;b<count;b++) {
         borrow_flow_block *block=&blocks[b]; standalone_ins *last=&m->ir.ins[block->end-1];
@@ -273,7 +332,7 @@ static bool standalone_validate_borrow_flow(standalone_module *m,standalone_func
             int next=blocks[b].successors[edge]; if(next<0) continue;
             int *row=rows+(size_t)next*slots; bool changed=!blocks[next].reached;
             if(changed) { memcpy(row,state,slots*sizeof(int)); blocks[next].reached=true; }
-            else for(size_t s=0;s<slots;s++) { int meet=row[s]==state[s]?row[s]:BF_UNKNOWN; if(meet!=row[s]) { row[s]=meet; changed=true; } }
+            else for(size_t s=0;s<slots;s++) { int meet=borrow_flow_meet(row[s],state[s]); if(meet!=row[s]) { row[s]=meet; changed=true; } }
             if(changed && !blocks[next].queued) { queue[tail]=next; tail=(tail+1)%(count+1); blocks[next].queued=true; }
         }
     }

@@ -130,6 +130,58 @@ static bool borrow_expand_method(borrow_proof *p,ast_node *call,ast_node *target
 oom:
     error_set(p->err,ERR_OUT_OF_MEMORY,call->pos.line,call->pos.column,"native receiver call allocation failed"); return false;
 }
+static ast_node *borrow_binding_record(borrow_proof *,const char *);
+static bool borrow_bind(borrow_proof *,const char *,ast_node *);
+/* A projection is only an owner after the ordinary LET/MOV snapshot. Never
+ * bind a bare borrowed root as a new owner. Keep declaration identities. */
+static bool borrow_expr_type(borrow_proof *p,ast_node *n,char *out,size_t cap) {
+    if(!n) return false;
+    ast_node *record=NULL;
+    if(n->kind==AST_IDENT_EXPR) {
+        int root=borrow_param(p,n->as.ident_expr.name);
+        record=root>=0?borrow_signature_record(p,p->function,(size_t)root):borrow_binding_record(p,n->as.ident_expr.name);
+    } else if(n->kind==AST_STRUCT_EXPR) record=borrow_record(p,n->as.struct_expr.type_name);
+    else if(n->kind==AST_INDEX_EXPR) {
+        if(!borrow_expr_type(p,n->as.index_expr.object,out,cap)) return false;
+        size_t len=strlen(out);
+        if(len<2 || strcmp(out+len-2,"[]")) return false;
+        out[len-2]=0; return true;
+    } else if(n->kind==AST_MEMBER_EXPR) {
+        char parent[IR_OPERAND_CAP];
+        if(!borrow_expr_type(p,n->as.member_expr.object,parent,sizeof(parent))) return false;
+        ast_node *r=borrow_record(p,parent);
+        if(!r || !r->as.let_stmt.value) return false;
+        ast_node *schema=r->as.let_stmt.value;
+        for(size_t i=0;i<schema->as.struct_expr.field_count;i++) {
+            if(strcmp(schema->as.struct_expr.field_names[i],n->as.member_expr.member)) continue;
+            const char *type=schema->as.struct_expr.field_values.data[i]->as.string_expr.literal;
+            char base[IR_OPERAND_CAP],full[IR_OPERAND_CAP]; size_t len=strcspn(type,"[*& ");
+            if(len>=sizeof(base)) return false;
+            memcpy(base,type,len); base[len]=0;
+            const char *dot=strrchr(parent,'.');
+            if(!strchr(base,'.') && dot && snprintf(full,sizeof(full),"%.*s.%s",(int)(dot-parent),parent,base)<(int)sizeof(full) && borrow_record(p,full))
+                return snprintf(out,cap,"%s%s",full,type+len)<(int)cap;
+            return snprintf(out,cap,"%s",type)<(int)cap;
+        }
+        return false;
+    } else if(n->kind==AST_CALL_EXPR && n->as.call_expr.callee && n->as.call_expr.callee->kind==AST_IDENT_EXPR) {
+        ast_node *f=borrow_function(p,n->as.call_expr.callee->as.ident_expr.name);
+        if(!f) return false;
+        const char *saved=p->package_name,*pkg="";
+        for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
+            ast_node *decl=p->unit->as.program.statements.data[i];
+            if(decl->kind==AST_PACKAGE_DECL) pkg=decl->as.package_decl.name;
+            if(decl==f) { p->package_name=pkg; break; }
+        }
+        record=borrow_record(p,f->as.fn_stmt.return_type);
+        p->package_name=saved;
+    }
+    return record && borrow_record_name(p,record,out,cap);
+}
+static ast_node *borrow_expr_record(borrow_proof *p,ast_node *n) {
+    char type[IR_OPERAND_CAP];
+    return borrow_expr_type(p,n,type,sizeof(type))?borrow_record(p,type):NULL;
+}
 /* A callee may reborrow its own root parameters, never manufacture, retain or
  * export a handle. Arguments are effect-free and exclusive roots are unique. */
 static bool borrow_reborrow_call(borrow_proof *p,ast_node *call,ast_node *target) {
@@ -138,7 +190,9 @@ static bool borrow_reborrow_call(borrow_proof *p,ast_node *call,ast_node *target
         ast_node *arg=call->as.call_expr.args.data[i];
         if(i<64 && (target->as.fn_stmt.native_borrow_mask&(1ULL<<i))) {
             int root=arg->kind==AST_IDENT_EXPR?borrow_param(p,arg->as.ident_expr.name):-1;
-            if(root<0 || borrow_signature_record(p,p->function,(size_t)root)!=borrow_signature_record(p,target,i)) return false;
+            ast_node *record=root>=0?borrow_signature_record(p,p->function,(size_t)root):
+                (arg->kind==AST_IDENT_EXPR?borrow_binding_record(p,arg->as.ident_expr.name):NULL);
+            if(!record || record!=borrow_signature_record(p,target,i)) return false;
             for(size_t j=0;j<call->as.call_expr.args.len;j++) {
                 ast_node *other=call->as.call_expr.args.data[j];
                 if(j!=i && other->kind==AST_IDENT_EXPR && !strcmp(arg->as.ident_expr.name,other->as.ident_expr.name)) return false;
@@ -210,14 +264,19 @@ static bool borrow_read_expr(borrow_proof *p, ast_node *n, bool unused) {
     default: return false;
     }
 }
-static bool borrow_leaf(borrow_proof *p, ast_node *n) {
+static bool borrow_leaf(borrow_proof *,ast_node *);
+static bool borrow_leaf_inner(borrow_proof *p, ast_node *n) {
     if(!n) return true;
     switch(n->kind) {
-    case AST_BLOCK:
+    case AST_BLOCK: {
+        size_t saved=p->count;
         for(size_t i=0;i<n->as.block.statements.len;i++) if(!borrow_leaf(p,n->as.block.statements.data[i])) return false;
-        return true;
+        p->count=saved; return true;
+    }
     case AST_RETURN_STMT: return n->as.return_stmt.values.len<=1 && borrow_read_expr(p,n->as.return_stmt.value,false);
-    case AST_LET_STMT: return borrow_read_expr(p,n->as.let_stmt.value,false);
+    case AST_LET_STMT:
+        return borrow_read_expr(p,n->as.let_stmt.value,false) &&
+            borrow_bind(p,n->as.let_stmt.name,borrow_expr_record(p,n->as.let_stmt.value));
     case AST_EXPR_STMT: return borrow_read_expr(p,n->as.expr_stmt.expr,false);
     case AST_ASSIGN_STMT: return borrow_param(p,n->as.assign_stmt.name)<0 && borrow_read_expr(p,n->as.assign_stmt.value,false);
     case AST_ASSIGN_EXPR: return borrow_read_expr(p,n,false);
@@ -227,6 +286,18 @@ static bool borrow_leaf(borrow_proof *p, ast_node *n) {
     case AST_BREAK_STMT: case AST_CONTINUE_STMT: return true;
     default: return false;
     }
+}
+/* Preserve the first rejected expression's location, rather than blaming
+ * the function signature (which obscures distinct failures in one file). */
+static bool borrow_leaf(borrow_proof *p,ast_node *n) {
+    if(borrow_leaf_inner(p,n)) return true;
+    if(!p->err->code) error_set(p->err,ERR_SEMANTIC,n?n->pos.line:0,n?n->pos.column:0,
+        n && n->kind==AST_VAR_DECL?
+        "unproven record borrow: typed local declaration is not supported in borrowed body":
+        n && n->kind==AST_RETURN_STMT && n->as.return_stmt.values.len>1?
+        "unproven record borrow: native multi-value return has no owned result layout":
+        "unproven record borrow: escaping handle or unsupported call/body");
+    return false;
 }
 static ast_node *borrow_binding_record(borrow_proof *p,const char *name) {
     for(size_t i=p->count;i>0;i--) if(!strcmp(p->bindings[i-1].name,name)) return p->bindings[i-1].record;
@@ -266,22 +337,7 @@ static bool borrow_walk(borrow_proof *p,ast_node *n) {
     case AST_LET_STMT: {
         if(n->as.let_stmt.type_name && !strcmp(n->as.let_stmt.type_name,"struct")) return true;
         if(!borrow_walk(p,n->as.let_stmt.value)) return false;
-        ast_node *v=n->as.let_stmt.value, *r=NULL;
-        if(v && v->kind==AST_STRUCT_EXPR) r=borrow_record(p,v->as.struct_expr.type_name);
-        else if(v && v->kind==AST_IDENT_EXPR) r=borrow_binding_record(p,v->as.ident_expr.name);
-        else if(v && v->kind==AST_CALL_EXPR && v->as.call_expr.callee && v->as.call_expr.callee->kind==AST_IDENT_EXPR) {
-            ast_node *f=borrow_function(p,v->as.call_expr.callee->as.ident_expr.name);
-            if(f && !f->as.fn_stmt.native_borrow_mask) {
-                const char *saved=p->package_name, *pkg="";
-                for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
-                    ast_node *decl=p->unit->as.program.statements.data[i];
-                    if(decl->kind==AST_PACKAGE_DECL) pkg=decl->as.package_decl.name;
-                    if(decl==f) { p->package_name=pkg; break; }
-                }
-                r=borrow_record(p,f->as.fn_stmt.return_type);
-                p->package_name=saved;
-            }
-        }
+        ast_node *r=borrow_expr_record(p,n->as.let_stmt.value);
         return borrow_bind(p,n->as.let_stmt.name,r);
     }
     case AST_CALL_EXPR: {
@@ -368,9 +424,11 @@ bad: error_set(err,ERR_SEMANTIC,n->pos.line,n->pos.column,"unproven record borro
         ast_node *n=unit->as.program.statements.data[i];
         if(n->kind==AST_PACKAGE_DECL) p.package_name=n->as.package_decl.name;
         if(n->kind!=AST_FN_STMT || !n->as.fn_stmt.native_borrow_mask) continue;
-        p.function=n;
+        p.function=n; p.count=0;
+        for(size_t j=0;j<n->as.fn_stmt.param_count;j++)
+            if(!borrow_bind(&p,n->as.fn_stmt.params[j],borrow_signature_record(&p,n,j))) return false;
         if(!borrow_leaf(&p,n->as.fn_stmt.body)) {
-            error_set(err,ERR_SEMANTIC,n->pos.line,n->pos.column,"unproven record borrow: escaping handle or unsupported call/body"); return false;
+            return false;
         }
     }
     p.package_name=""; p.function=NULL; p.count=0;

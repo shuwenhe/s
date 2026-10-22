@@ -10,6 +10,9 @@ typedef struct ir_builder {
 	compile_error *err;
 	const char *package_name;
 	int record_depth;
+    unsigned constant_depth;
+    const char *locals[4096];
+    size_t local_count;
 	int temp_counter;
 	int label_counter;
 	char break_labels[64][IR_OPERAND_CAP];
@@ -20,12 +23,33 @@ typedef struct ir_builder {
 	ast_node *constants[128];
 	size_t constant_count;
 } ir_builder;
-static ast_node *find_constant(ir_builder *b, const char *name) {
-	size_t i;
-	for (i = 0; i < b->constant_count; i++) {
-		if (strcmp(b->constants[i]->as.var_decl.name, name) == 0) return b->constants[i]->as.var_decl.value;
-	}
-	return NULL;
+static bool ir_bind_local(ir_builder *b,const char *name,source_pos pos) {
+    if(b->local_count==4096) { error_set(b->err,ERR_SEMANTIC,pos.line,pos.column,"too many IR local bindings"); return false; }
+    b->locals[b->local_count++]=name; return true;
+}
+static bool ir_local_root(ir_builder *b,const char *name) {
+    if(b->constant_depth) return false; /* Initializers use declaration scope. */
+    size_t length=strcspn(name,".");
+    for(size_t i=b->local_count;i>0;i--)
+        if(strlen(b->locals[i-1])==length && !strncmp(b->locals[i-1],name,length)) return true;
+    return false;
+}
+/* Resolve constants by declaration identity, never by a unit-global short
+ * name (different imported packages may declare the same constant). */
+static ast_node *find_constant(ir_builder *b, const char *name, const char **declaration_package) {
+    const char *pkg="";
+    if(ir_local_root(b,name)) return NULL;
+    if(!b->root || b->root->kind!=AST_PROGRAM) return NULL;
+    for(size_t i=0;i<b->root->as.program.statements.len;i++) {
+        ast_node *n=b->root->as.program.statements.data[i];
+        if(n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
+        if(n->kind!=AST_CONST_DECL) continue;
+        char full[IR_OPERAND_CAP];
+        if(snprintf(full,sizeof(full),"%s%s%s",pkg,*pkg?".":"",n->as.var_decl.name)>=(int)sizeof(full)) continue;
+        if(!strcmp(full,name) || (!strcmp(pkg,b->package_name) && !strcmp(n->as.var_decl.name,name)))
+            { *declaration_package=pkg; return n->as.var_decl.value; }
+    }
+    return NULL;
 }
 static ast_node *find_extern(ir_builder *b, const char *name) {
 	size_t i;
@@ -167,6 +191,15 @@ static const char *current_continue_label(ir_builder *b) {
 	return b->continue_labels[b->loop_depth - 1];
 }
 static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]);
+static bool lower_constant(ir_builder *b,ast_node *value,const char *package,char out[IR_OPERAND_CAP]) {
+    if(b->constant_depth>=128) {
+        error_set(b->err,ERR_SEMANTIC,value->pos.line,value->pos.column,"cyclic or excessively nested constant initializer"); return false;
+    }
+    const char *saved=b->package_name; b->package_name=package; b->constant_depth++;
+    bool ok=lower_expr(b,value,out);
+    b->constant_depth--; b->package_name=saved; return ok;
+}
+
 static bool lower_place_assignment(ir_builder *b, ast_node *target, const char *value, char out[IR_OPERAND_CAP]);
 /* Record declarations are parsed as `let name:struct = struct-expression`.
  * Preserve their type information as deterministic NOP metadata; the hosted
@@ -346,7 +379,8 @@ static bool lower_enum_construct(ir_builder *b, ast_node *decl, ast_enum_variant
 	}
 	return true;
 }
-static bool lower_value_branch(ir_builder *b, ast_node *node, char out[IR_OPERAND_CAP], bool *has_value) {
+static bool lower_value_branch(ir_builder *,ast_node *,char [IR_OPERAND_CAP],bool *);
+static bool lower_value_branch_inner(ir_builder *b, ast_node *node, char out[IR_OPERAND_CAP], bool *has_value) {
 	size_t i;
 	*has_value = false;
 	if (!node) return true;
@@ -365,6 +399,13 @@ static bool lower_value_branch(ir_builder *b, ast_node *node, char out[IR_OPERAN
 	if (!lower_expr(b, node, out)) return false;
 	*has_value = true;
 	return true;
+}
+
+static bool lower_value_branch(ir_builder *b,ast_node *node,char out[IR_OPERAND_CAP],bool *has_value) {
+    size_t saved=b->local_count;
+    bool ok=lower_value_branch_inner(b,node,out,has_value);
+    if(node && node->kind==AST_BLOCK && !node->as.block.transparent_scope) b->local_count=saved;
+    return ok;
 }
 
 static bool lower_if_value(ir_builder *b, ast_node *node, char out[IR_OPERAND_CAP]) {
@@ -707,13 +748,19 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			return lower_struct_literal(b, expr, out);
 		case AST_IDENT_EXPR:
 			{
-				ast_node *constant_value = find_constant(b, expr->as.ident_expr.name);
-				if (constant_value) return lower_expr(b, constant_value, out);
+				const char *package="";
+                ast_node *constant_value = find_constant(b, expr->as.ident_expr.name,&package);
+				if (constant_value) return lower_constant(b,constant_value,package,out);
 			}
 			snprintf(out, IR_OPERAND_CAP, "%s", expr->as.ident_expr.name);
 			return true;
 		case AST_MEMBER_EXPR: {
-			char object_name[IR_OPERAND_CAP];
+			char object_name[IR_OPERAND_CAP],constant_name[IR_OPERAND_CAP];
+            if(seed_enum_owner_name(expr,constant_name,sizeof(constant_name))) {
+                const char *package="";
+                ast_node *constant=find_constant(b,constant_name,&package);
+                if(constant) return lower_constant(b,constant,package,out);
+            }
 			if (expr->as.member_expr.resolved_enum_type &&
 				seed_enum_owner_name(expr->as.member_expr.object, object_name, sizeof(object_name))) {
 				ast_node *decl = seed_find_enum(b->root, object_name);
@@ -899,12 +946,14 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 	}
 }
 static bool lower_block(ir_builder *b, ast_node *block) {
+    size_t saved=b->local_count;
 	size_t i;
 	for (i = 0; i < block->as.block.statements.len; i++) {
 		if (!lower_stmt(b, block->as.block.statements.data[i])) {
 			return false;
 		}
 	}
+    if(!block->as.block.transparent_scope) b->local_count=saved;
 	return true;
 }
 static bool lower_if(ir_builder *b, ast_node *stmt) {
@@ -963,6 +1012,7 @@ static bool lower_while(ir_builder *b, ast_node *stmt) {
 	return emit_ins(b, IR_LABEL, end_label, "", "", stmt->pos);
 }
 static bool lower_for(ir_builder *b, ast_node *stmt) {
+    size_t saved=b->local_count;
 	char start_label[IR_OPERAND_CAP];
 	char post_label[IR_OPERAND_CAP];
 	char end_label[IR_OPERAND_CAP];
@@ -1011,9 +1061,14 @@ static bool lower_for(ir_builder *b, ast_node *stmt) {
 	if (!emit_ins(b, IR_JUMP, start_label, "", "", stmt->pos)) {
 			return false;
 		}
-	return emit_ins(b, IR_LABEL, end_label, "", "", stmt->pos);
+	b->local_count=saved;
+    return emit_ins(b, IR_LABEL, end_label, "", "", stmt->pos);
 }
 static bool lower_fn(ir_builder *b, ast_node *stmt) {
+    b->local_count=0;
+    for(size_t param=0;param<stmt->as.fn_stmt.param_count;param++) {
+        if(!ir_bind_local(b,stmt->as.fn_stmt.params[param],stmt->pos)) return false;
+    }
 	size_t i;
 	char signature[IR_OPERAND_CAP];
 	size_t used = 0;
@@ -1094,6 +1149,7 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
 			return false;
 		}
 	}
+    b->local_count=0;
 	return emit_ins(b, IR_FUNC_END, stmt->as.fn_stmt.name, "", "", stmt->pos);
 }
 static bool lower_stmt(ir_builder *b, ast_node *stmt) {
@@ -1118,6 +1174,7 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 			if (!lower_expr(b, stmt->as.let_stmt.value, value)) {
 				return false;
 			}
+            if(!ir_bind_local(b,stmt->as.let_stmt.name,stmt->pos)) return false;
 			return emit_ins(b, IR_MOV, stmt->as.let_stmt.name, value, "", stmt->pos);
 		case AST_ASSIGN_STMT:
 			if (!lower_expr(b, stmt->as.assign_stmt.value, value)) {
@@ -1199,6 +1256,8 @@ bool ir_generate_from_ast(ast_node *root, IR *ir, compile_error *err) {
 	b.err = err;
 	b.package_name = "";
 	b.record_depth = 0;
+    b.constant_depth = 0;
+    b.local_count = 0;
 	b.temp_counter = 0;
 	b.label_counter = 0;
 	b.loop_depth = 0;

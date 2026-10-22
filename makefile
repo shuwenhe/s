@@ -324,6 +324,7 @@ selfhost-native-record-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/native_record_rollback_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_borrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_loop_borrow_check.sh
+	@bash test/native-bootstrap-diagnostic/native_recursive_ast_borrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_import_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_receiver_check.sh
 	@bash test/native-bootstrap-diagnostic/native_syntax_lexer_check.sh

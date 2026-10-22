@@ -130,7 +130,7 @@ func ir_make_instr_unop(int op, ir_value operand, string result_type) ir_instruc
 
 func ir_make_instr_call(string func_name, ir_value[] args, string return_type) ir_instruction {
     ir_instruction {
-        instr_type: ir_instr_call, var_name func_name, operands args, result ir_value { value_type: ir_value_call, type_info return_type }
+        instr_type: ir_instr_call, operands args, result ir_value { value_type: ir_value_call, type_info return_type, var_name func_name }
     }
 }
 
