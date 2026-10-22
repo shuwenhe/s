@@ -326,7 +326,7 @@ func append_item_dump(string[] lines, item item) () {
 }
 
 func dump_const(const_decl item) string[] {
-    switch item.value {
+    return switch item.value {
         option.some(value) : single_line("const " + item.name + " = " + dump_expr(value)),
         option.none : single_line("const " + item.name),
     }
@@ -338,7 +338,7 @@ func dump_var(var_decl item) string[] {
         option.some(t) : decl = decl + " " + t,
         option.none : {},
     }
-    switch item.value {
+    return switch item.value {
         option.some(v) : single_line(decl + " = " + dump_expr(v)),
         option.none : single_line(decl),
     }
@@ -348,7 +348,7 @@ func fmt_generics(string[] generics) string {
     if len(generics) == 0 {
         return ""
     }
-    "[" + join_with(generics, ", ") + "]"
+    return "[" + join_with(generics, ", ") + "]"
 }
 
 func dump_function(function_decl item, string indent) string[] {
@@ -381,7 +381,7 @@ func dump_function(function_decl item, string indent) string[] {
         option.some(body) : append_lines(lines, dump_block(body, indent + "  ")),
         option.none : (),
     }
-    lines
+    return lines
 }
 
 func dump_struct(struct_decl item) string[] {
@@ -540,9 +540,9 @@ func dump_stmt(stmt stmt, string indent) string[] {
 }
 
 func dump_for_clause(stmt stmt) string {
-    switch stmt {
+    return switch stmt {
         stmt.let(value) : {
-            switch value.kindname {
+            return switch value.kindname {
                 option.some(type_name) : type_name + " " + value.name + " = " + dump_expr(value.value),
                 option.none : "" + value.name + " := " + dump_expr(value.value),
             }
@@ -605,7 +605,7 @@ func dump_expr(expr expr) string {
 
 func dump_if_expr(if_expr value) string {
     text := "if " + dump_expr(value.condition.value) + " {...}"
-    switch value.else_branch {
+    return switch value.else_branch {
         option.some(expr) : text + " else " + dump_expr(expr.value),
         option.none : text,
     }
