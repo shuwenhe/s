@@ -492,9 +492,14 @@ static bool borrow_leaf_inner(borrow_proof *p, ast_node *n) {
         /* Switch expressions (is_switch_arm=true) have value expressions in branches.
            Control flow statements (is_switch_arm=false) have statement blocks in branches. */
         if(n->as.if_stmt.is_switch_arm) {
-            return borrow_read_expr(p,n->as.if_stmt.condition,false) &&
-                   borrow_read_expr(p,n->as.if_stmt.then_branch,false) &&
-                   borrow_read_expr(p,n->as.if_stmt.else_branch,false);
+            ast_node *then_br = n->as.if_stmt.then_branch;
+            ast_node *else_br = n->as.if_stmt.else_branch;
+            /* Branches might be wrapped in EXPR_STMT or be raw expressions */
+            bool then_ok = !then_br || (then_br->kind == AST_EXPR_STMT ? 
+                borrow_read_expr(p,then_br->as.expr_stmt.expr,false) : borrow_read_expr(p,then_br,false));
+            bool else_ok = !else_br || (else_br->kind == AST_EXPR_STMT ? 
+                borrow_read_expr(p,else_br->as.expr_stmt.expr,false) : borrow_read_expr(p,else_br,false));
+            return borrow_read_expr(p,n->as.if_stmt.condition,false) && then_ok && else_ok;
         }
         return borrow_read_expr(p,n->as.if_stmt.condition,false) && borrow_leaf(p,n->as.if_stmt.then_branch) && borrow_leaf(p,n->as.if_stmt.else_branch);
     case AST_WHILE_STMT: return borrow_read_expr(p,n->as.while_stmt.condition,false) && borrow_leaf(p,n->as.while_stmt.body);
