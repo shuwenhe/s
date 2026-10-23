@@ -55,6 +55,50 @@ straight-line functions. The frontend rejects structures and control flow;
 the lowering and emitter reject multi-block functions and aggregate types.
 Producing stage1 alone therefore cannot establish self-hosting.
 
+## Implementation progress on 2026-10-23
+
+The original frontend-parser blocker is repaired. Explicit field reborrows
+retain the actual field owner, and both caller and callee IR now undergo the
+same independent CFG ownership/type proof. Parent/child overlap, escaping
+handles, wrong referents, erased metadata, invalid host arguments, and calls
+with pending exclusive arguments remain rejected before native tools run.
+Ordinary host services have explicit scalar/string/container ABI contracts so
+valid I/O between borrows remains supported.
+
+The historical frontend lexer was declared in the modern lexer package,
+colliding with that package's different lexer definition, and was missing
+from the production parser closure. It now lives in `parser/frontend_lexer.s`
+in the parser package, with distinct `frontend_` helper names. Shared token
+constants have one declaration. The parser uses typed error arrays, explicit
+AST returns, and locals for nested argument evaluation before borrowing.
+Number scanning returns a token value and uses an empty-string EOF sentinel;
+the old `\\0` escape was read as character `0` by the seed, causing numeric
+scanning to loop at EOF.
+
+Seed switch lowering now treats a default as unconditional, validates it
+without an absent condition, and joins values only for expression switches.
+Statement switches retain effects without manufacturing unused result joins.
+
+Native execution regressions cover real parser token advancement and integer
+expression parsing, field mutation with value snapshots, and switch default
+selection. The record and bootstrap-protocol suites pass. Independent review
+found an I/O regression in the initial unified proof; explicit host contracts
+and transitive host-tool regression coverage address it.
+
+The complete production closure now contains 253 files. `make selfhost`
+advances past the original failure and rejects `syntax_parser_new` at
+`src/cmd/compile/internal/parser/syntax/parser.s:56`, where a borrowed-body
+constructor allocates a raw parser pointer. That parser also stores raw token
+and AST pointers. No stage1 or convergence has been produced. Its ownership
+representation is the next frontier; the native frontend/MIR/SSA feature
+barrier above also remains.
+
+Baseline failures remain unchanged: the seed unit test
+`test_semantic_qualified_module_call_success`, and the array-constructor cases
+`nested_empty_braces`, `nested_braces_push`, `nested_braces_wrong_push`,
+`nested_braces_unknown`, `unknown_type`, and `value_not_type`. These fail on
+the unmodified baseline as well and are not self-hosting acceptance evidence.
+
 ## Architecture and contracts
 
 ### Seed-to-stage1 ownership proof

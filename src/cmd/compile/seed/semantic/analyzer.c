@@ -2722,6 +2722,14 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			if (!analyze_expr(ctx, node->as.sroutine_stmt.call, &expr_type)) return 0;
 			return 1;
 		case AST_IF_STMT:
+			/* A traditional switch default is an unconditional arm, not an
+			 * ordinary if with a unit-valued condition. Check both branches
+			 * without weakening the truthiness rule for actual if statements. */
+			if (node->as.if_stmt.is_switch_arm && !node->as.if_stmt.is_pattern_arm &&
+				!node->as.if_stmt.condition) {
+				if (!analyze_node(ctx, node->as.if_stmt.then_branch)) return 0;
+				return !node->as.if_stmt.else_branch || analyze_node(ctx, node->as.if_stmt.else_branch);
+			}
 			if (node->as.if_stmt.is_pattern_arm) {
 				scope *old_scope;
 				const char *subject_type = TYPE_ANY;

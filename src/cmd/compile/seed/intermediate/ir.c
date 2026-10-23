@@ -412,7 +412,9 @@ static bool lower_if_value(ir_builder *b, ast_node *node, char out[IR_OPERAND_CA
 	ast_node *arm = node;
 	char subject[IR_OPERAND_CAP] = "";
 	char end_label[IR_OPERAND_CAP];
-	next_temp(b, out);
+	/* A statement switch evaluates its arms for effects only. Do not invent
+	 * a result join between discarded values of unrelated types. */
+	if (out) next_temp(b, out);
 	next_label(b, end_label);
 	if (node->as.if_stmt.is_switch_arm) {
 		char value[IR_OPERAND_CAP];
@@ -449,7 +451,9 @@ static bool lower_if_value(ir_builder *b, ast_node *node, char out[IR_OPERAND_CA
 				if (!emit_ins(b, IR_CMP_EQ, cond, subject, value, arm->pos)) return false;
 			} else if (!lower_expr(b, arm->as.if_stmt.condition, cond)) return false;
 		}
-		if (!emit_ins(b, IR_JUMP_IF_FALSE, next_arm, cond, "", arm->pos)) return false;
+		/* Default/wildcard arms have no false edge. Manufacturing one makes
+		 * their result appear undefined at the join to independent CFG proofs. */
+		if (strcmp(cond, "1") && !emit_ins(b, IR_JUMP_IF_FALSE, next_arm, cond, "", arm->pos)) return false;
 		if (arm->as.if_stmt.payload_binding_name) {
 			char field[IR_OPERAND_CAP];
 			if (snprintf(field, sizeof(field), "%s.value", subject) >= (int)sizeof(field) ||
@@ -457,8 +461,10 @@ static bool lower_if_value(ir_builder *b, ast_node *node, char out[IR_OPERAND_CA
 		}
 		if (arm->as.if_stmt.binding_name &&
 			!emit_ins(b, IR_MOV, arm->as.if_stmt.binding_name, subject, "", arm->pos)) return false;
-		if (!lower_value_branch(b, arm->as.if_stmt.then_branch, value, &has_value)) return false;
-		if (has_value && !emit_ins(b, IR_MOV, out, value, "", arm->pos)) return false;
+		if (out) {
+			if (!lower_value_branch(b, arm->as.if_stmt.then_branch, value, &has_value)) return false;
+			if (has_value && !emit_ins(b, IR_MOV, out, value, "", arm->pos)) return false;
+		} else if (!lower_stmt(b, arm->as.if_stmt.then_branch)) return false;
 		if (!emit_ins(b, IR_JUMP, end_label, "", "", arm->pos) ||
 			!emit_ins(b, IR_LABEL, next_arm, "", "", arm->pos)) return false;
 		arm = arm->as.if_stmt.else_branch;
@@ -466,8 +472,10 @@ static bool lower_if_value(ir_builder *b, ast_node *node, char out[IR_OPERAND_CA
 	if (arm) {
 		char value[IR_OPERAND_CAP];
 		bool has_value;
-		if (!lower_value_branch(b, arm, value, &has_value)) return false;
-		if (has_value && !emit_ins(b, IR_MOV, out, value, "", arm->pos)) return false;
+		if (out) {
+			if (!lower_value_branch(b, arm, value, &has_value)) return false;
+			if (has_value && !emit_ins(b, IR_MOV, out, value, "", arm->pos)) return false;
+		} else if (!lower_stmt(b, arm)) return false;
 	}
 	return emit_ins(b, IR_LABEL, end_label, "", "", node->pos);
 }
@@ -1218,7 +1226,7 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 			return emit_ins(b, IR_SROUTINE, callee, argc_text, "", stmt->pos);
 		}
 		case AST_IF_STMT:
-			if (stmt->as.if_stmt.is_switch_arm) return lower_if_value(b, stmt, value);
+			if (stmt->as.if_stmt.is_switch_arm) return lower_if_value(b, stmt, NULL);
 			return lower_if(b, stmt);
 		case AST_WHILE_STMT:
 			return lower_while(b, stmt);

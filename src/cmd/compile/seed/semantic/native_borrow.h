@@ -234,6 +234,8 @@ static ast_node *borrow_expr_record(borrow_proof *p,ast_node *n) {
     return record?record:borrow_record_unique_tail(p,type);
 }
 static const char *borrow_root_name(ast_node *n) {
+    if(n && n->kind==AST_UNARY_EXPR && n->as.unary_expr.op==TOKEN_STAR)
+        n=n->as.unary_expr.operand;
     while(n && n->kind==AST_MEMBER_EXPR) n=n->as.member_expr.object;
     return n && n->kind==AST_IDENT_EXPR?n->as.ident_expr.name:NULL;
 }
@@ -278,10 +280,13 @@ static bool borrow_reborrow_call(borrow_proof *p,ast_node *call,ast_node *target
         ast_node *arg=call->as.call_expr.args.data[i];
         if(target->as.fn_stmt.native_borrow_mask && !borrow_argument_effect_free(arg)) return false;
         if(i<64 && (target->as.fn_stmt.native_borrow_mask&(1ULL<<i))) {
+            ast_node *place=arg;
+            if(place->kind==AST_UNARY_EXPR && place->as.unary_expr.op==TOKEN_STAR)
+                place=place->as.unary_expr.operand;
             const char *root_name=borrow_root_name(arg);
             int root=root_name?borrow_param(p,root_name):-1;
-            ast_node *record=root>=0?borrow_signature_record(p,p->function,(size_t)root):
-                (arg->kind==AST_IDENT_EXPR?borrow_binding_record(p,arg->as.ident_expr.name):borrow_expr_record(p,arg));
+            if(!root_name || (root<0 && !borrow_binding_record(p,root_name))) return false;
+            ast_node *record=borrow_expr_record(p,place);
                 if(!record || record!=borrow_signature_record(p,target,i)) {
                     error_set(p->err,ERR_SEMANTIC,arg->pos.line,arg->pos.column,
                         "unproven field reborrow argument %zu to %s",i,target->as.fn_stmt.name);
@@ -460,7 +465,12 @@ static bool borrow_walk(borrow_proof *p,ast_node *n) {
                 if(!borrow_argument_effect_free(arg)) goto unproven;
                 if(i<64 && (f->as.fn_stmt.native_borrow_mask&(1ULL<<i))) {
                     char base[IR_OPERAND_CAP];
-                    ast_node *actual=arg->kind==AST_IDENT_EXPR?borrow_binding_record(p,arg->as.ident_expr.name):borrow_expr_record(p,arg);
+                    const char *root=borrow_root_name(arg);
+                    if(!root || !borrow_binding_record(p,root)) goto unproven;
+                    ast_node *place=arg;
+                    if(place->kind==AST_UNARY_EXPR && place->as.unary_expr.op==TOKEN_STAR)
+                        place=place->as.unary_expr.operand;
+                    ast_node *actual=borrow_expr_record(p,place);
                     if(!borrow_type(f->as.fn_stmt.param_types[i],base) ||
                         actual!=borrow_signature_record(p,f,i)) {
                         error_set(p->err,ERR_SEMANTIC,arg->pos.line,arg->pos.column,
