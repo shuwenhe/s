@@ -139,6 +139,19 @@ static type_field_info *find_type_info(const char *type_name) {
 		if (t->type_name && strcmp(t->type_name, type_name) == 0) return t;
 		t = t->next;
 	}
+	/* Try unqualified name if type_name is qualified (e.g., package.type)
+	 * This handles multi-file merging where types appear with different qualifications */
+	if (type_name) {
+		const char *unqualified = strrchr(type_name, '.');
+		if (unqualified) {
+			unqualified++;  /* skip the dot */
+			t = type_registry;
+			while (t) {
+				if (t->type_name && strcmp(t->type_name, unqualified) == 0) return t;
+				t = t->next;
+			}
+		}
+	}
 	return NULL;
 }
 static int register_type_fields(const char *type_name, char **field_names, char **field_types, size_t field_count) {
