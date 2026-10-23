@@ -55,7 +55,7 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
             const char *raw=standalone_transfer(m,"param-transfer:",fn->name,x->result);
             int r=schema?standalone_record_index(m,schema):-1;
             size_t n=raw?strlen(raw):0;
-            if(r<0 || n<2 || raw[n-1]!='*' || strpbrk(raw,"& []")) goto bad;
+            if(r<0 || n<2 || raw[n-1]!='*' || strpbrk(raw,"& ")) goto bad;
             const char *base=strrchr(schema,'.'); base=base?base+1:schema;
             if(!((strlen(base)==n-1 && !strncmp(base,raw,n-1)) || (strlen(schema)==n-1 && !strncmp(schema,raw,n-1)))) goto bad;
             if(!standalone_validate_record_schema(m,r,err)) return false;
@@ -82,8 +82,16 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
         changed=false;
         for(size_t f=0;f<m->func_count;f++) {
             standalone_function *fn=&m->funcs[f]; bool needed=fn->borrow_mask!=0;
+            const char *result=standalone_transfer(m,"return-transfer:",fn->name,NULL);
+            if(result && strchr(result,'[') && standalone_record_index(m,result)>=0) needed=true;
             for(size_t i=fn->begin;!needed && i<fn->end;i++) {
                 standalone_ins *x=&m->ir.ins[i];
+                if(!strcmp(x->op,"PARAM")) {
+                    const char *type=standalone_transfer(m,"param-transfer:",fn->name,x->result);
+                    if(type && strchr(type,'[') && standalone_record_index(m,type)>=0) needed=true;
+                }
+                size_t len=strlen(x->result);
+                if(!strcmp(x->op,"MOV") && len>7 && !strcmp(x->result+len-7,".__type") && strchr(x->operand1,'[')) needed=true;
                 if(!strcmp(x->op,"ARG") && !strcmp(x->operand1,"mutable_borrow")) needed=true;
                 if(!strcmp(x->op,"CALL")) {
                     standalone_function *target=standalone_borrow_callee(m,x->operand1);

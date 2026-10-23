@@ -344,6 +344,7 @@ help:
 
 .PHONY: selfhost-native-record-check
 selfhost-native-record-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_generic_record_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_parameter_order_check.sh
 	@bash test/native-bootstrap-diagnostic/native_field_reborrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_switch_default_check.sh

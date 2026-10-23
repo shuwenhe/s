@@ -44,9 +44,9 @@ static int borrow_flow_type(borrow_flow_types *t,const char *name,const char *co
     if(!strcmp(name,"string")) return BF_STRING;
     char element[STANDALONE_TEXT_CAP];
     if(seed_array_element(name,element,sizeof(element))) return borrow_flow_array(t,borrow_flow_type(t,element,context,depth+1));
-    if(strpbrk(name,"*& []")) return BF_UNKNOWN;
     int r=standalone_record_index(t->m,name);
     if(r>=0) return borrow_flow_record_type(t,r);
+    if(strpbrk(name,"*& []")) return BF_UNKNOWN;
     if(context && !strchr(name,'.')) {
         const char *dot=strrchr(context,'.'); char qualified[STANDALONE_TEXT_CAP];
         if(dot && snprintf(qualified,sizeof(qualified),"%.*s.%s",(int)(dot-context),context,name)<(int)sizeof(qualified))

@@ -3,7 +3,9 @@ struct box[t] {
     t value
 }
 
-extern "intrinsic" func box[t](t value) box[t]
+func box[t](t value) box[t] {
+    return box[t] { value: value }
+}
 
 func len[t](t value) int {
     __runtime_len(value)

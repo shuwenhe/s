@@ -2800,7 +2800,9 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					leave_child_scope(ctx, old_scope);
 					return 0;
 				}
+				ctx->loop_depth++;
 				status = analyze_node(ctx, node->as.for_stmt.body);
+				ctx->loop_depth--;
 				leave_child_scope(ctx, old_scope);
 				return status;
 			}

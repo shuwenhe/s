@@ -17,7 +17,7 @@ static bool borrow_type(const char *t, char *base) {
     size_t n = t ? strlen(t) : 0;
     if (n < 2 || n >= IR_OPERAND_CAP || t[n-1] != '*') return false;
     memcpy(base, t, n-1); base[n-1] = 0;
-    return !strpbrk(base, "*& []");
+    return !strpbrk(base, "*& ");
 }
 static ast_node *borrow_record(borrow_proof *p, const char *type) {
     const char *pkg = "";
@@ -430,6 +430,7 @@ static bool borrow_walk(borrow_proof *p,ast_node *n) {
     case AST_PROGRAM: return borrow_walk_vec(p,&n->as.program.statements);
     case AST_PACKAGE_DECL: p->package_name=n->as.package_decl.name; return true;
     case AST_FN_STMT: {
+        if(n->native_template) return true;
         p->count=0; p->function=n;
         p->has_borrow_call=false; p->has_control_flow=false;
         for(size_t i=0;i<n->as.fn_stmt.param_count;i++) {
@@ -525,7 +526,7 @@ static bool borrow_prove_unit(ast_node *unit,compile_error *err) {
     for(size_t i=0;i<unit->as.program.statements.len;i++) {
         ast_node *n=unit->as.program.statements.data[i];
         if(n->kind==AST_PACKAGE_DECL) p.package_name=n->as.package_decl.name;
-        if(n->kind!=AST_FN_STMT) continue;
+        if(n->kind!=AST_FN_STMT || n->native_template) continue;
         n->as.fn_stmt.native_borrow_mask=0; p.function=n;
         for(size_t j=0;j<n->as.fn_stmt.param_count;j++) {
             char base[IR_OPERAND_CAP];
@@ -545,13 +546,13 @@ static bool borrow_prove_unit(ast_node *unit,compile_error *err) {
             strcpy(name,symbol); free(n->as.fn_stmt.name); n->as.fn_stmt.name=name;
         }
         continue;
-bad: error_set(err,ERR_SEMANTIC,n->pos.line,n->pos.column,"unproven record borrow: write, escape, call, or unsupported referent"); return false;
+bad: error_set(err,ERR_SEMANTIC,n->pos.line,n->pos.column,"unproven record borrow in %s: write, escape, call, or unsupported referent",n->as.fn_stmt.name); return false;
     }
     p.package_name="";
     for(size_t i=0;i<unit->as.program.statements.len;i++) {
         ast_node *n=unit->as.program.statements.data[i];
         if(n->kind==AST_PACKAGE_DECL) p.package_name=n->as.package_decl.name;
-        if(n->kind!=AST_FN_STMT || !n->as.fn_stmt.native_borrow_mask) continue;
+        if(n->kind!=AST_FN_STMT || n->native_template || !n->as.fn_stmt.native_borrow_mask) continue;
         p.function=n; p.count=0;
         for(size_t j=0;j<n->as.fn_stmt.param_count;j++)
             if(!borrow_bind(&p,n->as.fn_stmt.params[j],borrow_signature_record(&p,n,j))) return false;
