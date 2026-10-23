@@ -4215,7 +4215,7 @@ func eval_box_free_call(expr[] args, source_file source, binding[] env, write_op
 }
 
 func owned_box_from_value(value target) option[owned_box_value] {
-    switch target {
+    return switch target {
         value.owned_box(handle) : option.some(handle),
         value.int(_) : option.none,
         value.string(_) : option.none,
@@ -4224,6 +4224,7 @@ func owned_box_from_value(value target) option[owned_box_value] {
         value.channel(_) : option.none,
         value.fn_ref(_) : option.none,
         value.fn_map(_) : option.none,
+        _ : option.none,
     }
 }
 
