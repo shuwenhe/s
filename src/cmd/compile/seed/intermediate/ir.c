@@ -238,6 +238,11 @@ static bool emit_record_schemas(ir_builder *b) {
         char key[IR_OPERAND_CAP], name[IR_OPERAND_CAP];
         if (decl->kind == AST_PACKAGE_DECL) b->package_name = decl->as.package_decl.name;
         if (!record_declaration(decl)) continue;
+        if (decl->native_template) {
+            if (snprintf(key,sizeof(key),"generic-record:%s",decl->as.let_stmt.name)>=(int)sizeof(key) ||
+                !emit_ins(b,IR_NOP,key,decl->generic_parameters,"",decl->pos)) return false;
+            continue;
+        }
         if (!record_type_name(b, decl->as.let_stmt.name, name) ||
             snprintf(key, sizeof(key), "record-type:%s", name) >= (int)sizeof(key) ||
             !emit_ins(b, IR_NOP, key, "", "", decl->pos)) return false;
@@ -1025,6 +1030,23 @@ static bool lower_for(ir_builder *b, ast_node *stmt) {
 	char post_label[IR_OPERAND_CAP];
 	char end_label[IR_OPERAND_CAP];
 	char cond[IR_OPERAND_CAP];
+    char iterable[IR_OPERAND_CAP], index[IR_OPERAND_CAP], length[IR_OPERAND_CAP], shadow[IR_OPERAND_CAP]="";
+    if(stmt->as.for_stmt.iterable) {
+        char value[IR_OPERAND_CAP];
+        if(!lower_expr(b,stmt->as.for_stmt.iterable,value)) return false;
+        /* The loop binding has lexical scope even though IR uses flat slots.
+         * Preserve an outer value on both the empty and break exit paths. */
+        if(ir_local_root(b,stmt->as.for_stmt.iter_name)) {
+            next_temp(b,shadow);
+            if(!emit_ins(b,IR_MOV,shadow,stmt->as.for_stmt.iter_name,"",stmt->pos)) return false;
+        }
+        next_temp(b,iterable); next_temp(b,index); next_temp(b,length);
+        if(!emit_ins(b,IR_MOV,iterable,value,"",stmt->pos) ||
+           !emit_ins(b,IR_MOV,index,"0","",stmt->pos) ||
+           !emit_ins(b,IR_ARG,iterable,"","",stmt->pos) ||
+           !emit_ins(b,IR_CALL,length,"len","1",stmt->pos) ||
+           !ir_bind_local(b,stmt->as.for_stmt.iter_name,stmt->pos)) return false;
+    }
 	if (stmt->as.for_stmt.init && !lower_stmt(b, stmt->as.for_stmt.init)) {
 		return false;
 	}
@@ -1034,6 +1056,14 @@ static bool lower_for(ir_builder *b, ast_node *stmt) {
 	if (!emit_ins(b, IR_LABEL, start_label, "", "", stmt->pos)) {
 		return false;
 	}
+    if(stmt->as.for_stmt.iterable) {
+        next_temp(b,cond);
+        if(!emit_ins(b,IR_CMP_LT,cond,index,length,stmt->pos) ||
+           !emit_ins(b,IR_JUMP_IF_FALSE,end_label,cond,"",stmt->pos) ||
+           !emit_ins(b,IR_ARG,iterable,"","",stmt->pos) ||
+           !emit_ins(b,IR_ARG,index,"","",stmt->pos) ||
+           !emit_ins(b,IR_CALL,stmt->as.for_stmt.iter_name,"__index_get","2",stmt->pos)) return false;
+    }
 	if (stmt->as.for_stmt.condition) {
 		if (!lower_expr(b, stmt->as.for_stmt.condition, cond)) {
 			return false;
@@ -1054,6 +1084,7 @@ static bool lower_for(ir_builder *b, ast_node *stmt) {
 	if (!emit_ins(b, IR_LABEL, post_label, "", "", stmt->pos)) {
 		return false;
 	}
+    if(stmt->as.for_stmt.iterable && !emit_ins(b,IR_ADD,index,index,"1",stmt->pos)) return false;
 	if (stmt->as.for_stmt.post) {
 		if (stmt->as.for_stmt.post->kind == AST_ASSIGN_STMT) {
 			if (!lower_stmt(b, stmt->as.for_stmt.post)) {
@@ -1069,10 +1100,17 @@ static bool lower_for(ir_builder *b, ast_node *stmt) {
 	if (!emit_ins(b, IR_JUMP, start_label, "", "", stmt->pos)) {
 			return false;
 		}
-	b->local_count=saved;
-    return emit_ins(b, IR_LABEL, end_label, "", "", stmt->pos);
+    if(!emit_ins(b,IR_LABEL,end_label,"","",stmt->pos)) return false;
+    if(shadow[0] && !emit_ins(b,IR_MOV,stmt->as.for_stmt.iter_name,shadow,"",stmt->pos)) return false;
+    b->local_count=saved;
+    return true;
 }
 static bool lower_fn(ir_builder *b, ast_node *stmt) {
+    if(stmt->native_template) {
+        char name[IR_OPERAND_CAP];
+        if(snprintf(name,sizeof(name),"generic-function:%s",stmt->as.fn_stmt.name)>=(int)sizeof(name)) return false;
+        return emit_ins(b,IR_NOP,name,stmt->generic_parameters,stmt->as.fn_stmt.return_type,stmt->pos);
+    }
     b->local_count=0;
     for(size_t param=0;param<stmt->as.fn_stmt.param_count;param++) {
         if(!ir_bind_local(b,stmt->as.fn_stmt.params[param],stmt->pos)) return false;
@@ -1179,6 +1217,7 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 		case AST_BLOCK:
 			return lower_block(b, stmt);
 		case AST_LET_STMT:
+            if(stmt->native_template) return true;
 			if (!lower_expr(b, stmt->as.let_stmt.value, value)) {
 				return false;
 			}

@@ -62,6 +62,8 @@ typedef enum pattern_kind {
 struct ast_node {
 	ast_kind kind;
 	source_pos pos;
+	bool native_template;
+	char *generic_parameters;
 	union {
 		struct {
 			ast_vec statements;
@@ -221,6 +223,7 @@ struct ast_node {
 			ast_node *callee;
 			ast_vec args;
 			char *resolved_array_type;
+            char *native_callee_name; /* Original file's import/package candidate. */
             unsigned long long native_borrow_mask;
 		} call_expr;
 	} as;

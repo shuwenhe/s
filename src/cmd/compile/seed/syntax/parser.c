@@ -370,12 +370,14 @@ void ast_free(ast_node *node) {
 		case AST_CALL_EXPR:
 			ast_free(node->as.call_expr.callee);
 			free(node->as.call_expr.resolved_array_type);
+            free(node->as.call_expr.native_callee_name);
 			for (i = 0; i < node->as.call_expr.args.len; i++) {
 				ast_free(node->as.call_expr.args.data[i]);
 			}
 			ast_vec_free(&node->as.call_expr.args);
 			break;
 	}
+	free(node->generic_parameters);
 	free(node);
 }
 static const token *peek(parser *p) {
@@ -931,10 +933,8 @@ static ast_node *parse_call(parser *p) {
 		}
 		expr = member;
 	}
-	/* A generic struct literal such as `box[t] { ... }` is represented by
-	 * the existing struct-expression node.  Consume the type arguments before
-	 * the brace classifier; the semantic type text remains the base name and
-	 * the field expressions retain their normal shape. */
+	/* Keep concrete arguments in the type identity. Dropping [T] silently
+	 * aliases distinct layouts and defeats both semantic and native proofs. */
 	if (expr && (expr->kind == AST_IDENT_EXPR || expr->kind == AST_MEMBER_EXPR) &&
 		check(p, TOKEN_LBRACKET)) {
 		size_t saved = p->current;
@@ -944,8 +944,20 @@ static ast_node *parse_call(parser *p) {
 			else if (check(p, TOKEN_RBRACKET)) bracket_depth--;
 			advance_tok(p);
 		} while (bracket_depth > 0 && !is_at_end(p));
-		if (bracket_depth != 0 || !check(p, TOKEN_LBRACE)) {
+		if (bracket_depth != 0 || !check(p, TOKEN_LBRACE) || !looks_like_struct_literal(p)) {
 			p->current = saved;
+		} else {
+			char *base = member_expr_to_name(expr);
+			char *args = join_lexemes_range(p->tokens, saved, p->current);
+			if (!base || !args) { free(base); free(args); ast_free(expr); return NULL; }
+			size_t size = strlen(base) + strlen(args) + 1;
+			char *name = malloc(size);
+			if (!name) { free(base); free(args); ast_free(expr); return NULL; }
+			snprintf(name, size, "%s%s", base, args);
+			token type = {0}; type.type = TOKEN_IDENTIFIER; type.lexeme = name; type.pos = expr->pos;
+			ast_node *literal = parse_struct_literal_expr(p, &type);
+			free(base); free(args); free(name); ast_free(expr);
+			return literal;
 		}
 	}
 	if (expr && (expr->kind == AST_IDENT_EXPR || expr->kind == AST_MEMBER_EXPR) &&
@@ -2658,11 +2670,9 @@ static ast_node *parse_fn_statement(parser *p) {
 		ast_free(node);
 		return NULL;
 	}
-	/* Generic function parameters are part of the source-level signature.
-	 * The current Seed AST does not retain a separate parameter vector for
-	 * them, but it must still consume the bracketed list so the declaration
-	 * and its return type are parsed at the correct boundary. */
+	/* Retain the generic signature for concrete native specialization. */
 	if (match(p, TOKEN_LBRACKET)) {
+		size_t generic_start = p->current - 1;
 		int bracket_depth = 1;
 		while (bracket_depth > 0 && !is_at_end(p)) {
 			if (check(p, TOKEN_LBRACKET)) {
@@ -2680,6 +2690,9 @@ static ast_node *parse_fn_statement(parser *p) {
 			ast_free(node);
 			return NULL;
 		}
+		char *suffix = join_lexemes_range(p->tokens, generic_start, p->current);
+		if (!suffix) { ast_free(node); return NULL; }
+		node->generic_parameters = suffix;
 	}
 	if (receiver_name) {
 		node->as.fn_stmt.params = (char **)malloc(4 * sizeof(char *));
@@ -4058,12 +4071,8 @@ static ast_node *parse_struct_decl(parser *p) {
 		return NULL;
 	}
 	name_tok = prev(p);
-	/* Generic struct declarations use the same bracket syntax as generic
-	 * functions and enums (for example `struct box[t]`).  The current Seed
-	 * AST stores the declaration body as a struct expression, so preserve the
-	 * existing type-name representation while consuming the generic parameter
-	 * list here.  Type identity remains available through the field/type text
-	 * used by semantic analysis. */
+	size_t generic_start = p->current;
+	/* Keep the parameter list separately from the declaration's base name. */
 	if (match(p, TOKEN_LBRACKET)) {
 		int bracket_depth = 1;
 		while (bracket_depth > 0 && !is_at_end(p)) {
@@ -4085,6 +4094,7 @@ static ast_node *parse_struct_decl(parser *p) {
 	if (!expect(p, TOKEN_LBRACE, "'{' after struct name")) {
 		return NULL;
 	}
+	size_t generic_end = p->current - 1;
 	ast_node *stype = ast_new(AST_STRUCT_EXPR, kw->pos);
 	if (!stype) return NULL;
 	stype->as.struct_expr.type_name = dup_cstr(name_tok->lexeme);
@@ -4179,6 +4189,10 @@ static ast_node *parse_struct_decl(parser *p) {
 	if (!node->as.let_stmt.name) { ast_free(node); ast_free(stype); return NULL; }
 	node->as.let_stmt.type_name = dup_cstr("struct");
 	node->as.let_stmt.value = stype;
+	if (generic_end > generic_start) {
+		node->generic_parameters = join_lexemes_range(p->tokens, generic_start, generic_end);
+		if (!node->generic_parameters) { ast_free(node); return NULL; }
+	}
 	return node;
 }
 static ast_node *parse_trait_method_signature(parser *p) {

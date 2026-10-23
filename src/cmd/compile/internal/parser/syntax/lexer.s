@@ -107,7 +107,498 @@ struct syntax_lexer {
     int token_count
 }
 
-// Dead code - lexer functions removed due to borrow rule violations
-// The entire syntax package is not called from production code
+// The lexer owns value snapshots. Mutation uses proved record borrows;
+// neither the source string nor token storage requires an escaping pointer.
 extern "intrinsic" func __host_byte_at(string source, int index) int
 extern "intrinsic" func __host_slice(string source, int start, int end) string
+
+func lexer_new(string source) syntax_lexer {
+    return syntax_lexer {
+        source: source, pos: 0, line: 1, col: 1,
+        tokens: token[](), token_count: 0,
+    }
+}
+
+func lexer_current_char(l* syntax_lexer) int {
+    if l.pos >= len(l.source) {
+        return 0
+    }
+    return __host_byte_at(l.source, l.pos)
+}
+
+func lexer_peek_char(l* syntax_lexer, int offset) int {
+    pos := l.pos + offset
+    if pos >= len(l.source) {
+        return 0
+    }
+    return __host_byte_at(l.source, pos)
+}
+
+func lexer_advance(l* syntax_lexer) {
+    if l.pos < len(l.source) {
+        if __host_byte_at(l.source, l.pos) == 10 {
+            l.line = l.line + 1
+            l.col = 1
+        } else {
+            l.col = l.col + 1
+        }
+        l.pos = l.pos + 1
+    }
+}
+
+func lexer_skip_whitespace(l* syntax_lexer) {
+    for true {
+        ch := lexer_current_char(l)
+        if ch != 32 && ch != 9 {
+            break
+        }
+        lexer_advance(l)
+    }
+}
+
+func lexer_skip_line_comment(l* syntax_lexer) {
+    for true {
+        ch := lexer_current_char(l)
+        if ch == 10 || ch == 0 {
+            break
+        }
+        lexer_advance(l)
+    }
+}
+
+func lexer_skip_block_comment(l* syntax_lexer) {
+    lexer_advance(l)
+    lexer_advance(l)
+    for true {
+        ch := lexer_current_char(l)
+        if ch == 0 {
+            break
+        }
+        if ch == 42 && lexer_peek_char(l, 1) == 47 {
+            lexer_advance(l)
+            lexer_advance(l)
+            break
+        }
+        lexer_advance(l)
+    }
+}
+
+func is_letter(int ch) bool {
+    return (ch >= 97 && ch <= 122) ||
+           (ch >= 65 && ch <= 90) ||
+           ch == 95
+}
+
+func syntax_is_digit(int ch) bool {
+    return ch >= 48 && ch <= 57
+}
+
+func is_alphanum(int ch) bool {
+    return is_letter(ch) || syntax_is_digit(ch) || ch == 95
+}
+
+func lexer_read_ident(l* syntax_lexer) token {
+    start := l.pos
+    start_col := l.col
+    for true {
+        if !is_alphanum(lexer_current_char(l)) {
+            break
+        }
+        lexer_advance(l)
+    }
+    length := l.pos - start
+    value := __host_slice(l.source, start, start + length)
+    tok := token {}
+    tok.line = l.line
+    tok.col = start_col
+    tok.value = value
+    tok.kind = lexer_keyword_type(value)
+    if tok.kind == 0 {
+        tok.kind = 1
+    }
+    return tok
+}
+
+func lexer_keyword_type(string s) int {
+    if s == "" {
+        return 0
+    }
+    if s == "if" {
+        return 11
+    }
+    if s == "go" {
+        return 23
+    }
+    if s == "for" {
+        return 13
+    }
+    if s == "var" {
+        return 8
+    }
+    if s == "map" {
+        return 27
+    }
+    if s == "func" {
+        return 5
+    }
+    if s == "else" {
+        return 12
+    }
+    if s == "case" {
+        return 17
+    }
+    if s == "type" {
+        return 21
+    }
+    if s == "true" {
+        return 37
+    }
+    if s == "const" {
+        return 9
+    }
+    if s == "defer" {
+        return 22
+    }
+    if s == "false" {
+        return 38
+    }
+    if s == "iota" {
+        return 40
+    }
+    if s == "return" {
+        return 10
+    }
+    if s == "switch" {
+        return 16
+    }
+    if s == "struct" {
+        return 6
+    }
+    if s == "import" {
+        return 19
+    }
+    if s == "select" {
+        return 25
+    }
+    if s == "delete" {
+        return 34
+    }
+    if s == "package" {
+        return 20
+    }
+    if s == "default" {
+        return 18
+    }
+    if s == "interface" {
+        return 7
+    }
+    return 0
+}
+
+func lexer_read_number(l* syntax_lexer) token {
+    start := l.pos
+    start_col := l.col
+    if lexer_current_char(l) == 48 && lexer_peek_char(l, 1) == 120 {
+        lexer_advance(l)
+        lexer_advance(l)
+        for true {
+            ch := lexer_current_char(l)
+            if !syntax_is_hex_digit(ch) {
+                break
+            }
+            lexer_advance(l)
+        }
+        length := l.pos - start
+        value := __host_slice(l.source, start, start + length)
+        tok := token {}
+        tok.line = l.line
+        tok.col = start_col
+        tok.kind = 2
+        tok.value = value
+        return tok
+    }
+    for true {
+        if !syntax_is_digit(lexer_current_char(l)) {
+            break
+        }
+        lexer_advance(l)
+    }
+    if lexer_current_char(l) == 46 && syntax_is_digit(lexer_peek_char(l, 1)) {
+        lexer_advance(l)
+        for true {
+            if !syntax_is_digit(lexer_current_char(l)) {
+                break
+            }
+            lexer_advance(l)
+        }
+    }
+    length := l.pos - start
+    value := __host_slice(l.source, start, start + length)
+    tok := token {}
+    tok.line = l.line
+    tok.col = start_col
+    tok.kind = 2
+    tok.value = value
+    return tok
+}
+
+func syntax_is_hex_digit(int ch) int {
+    if syntax_is_digit(ch) {
+        return 1
+    }
+    if ch >= 97 && ch <= 102 {
+        return 1
+    }
+    if ch >= 65 && ch <= 70 {
+        return 1
+    }
+    return 0
+}
+
+func lexer_read_string(l* syntax_lexer) token {
+    start_col := l.col
+    quote := lexer_current_char(l)
+    lexer_advance(l)
+    start := l.pos
+    for true {
+        ch := lexer_current_char(l)
+        if ch == 0 || ch == 10 {
+            break
+        }
+        if ch == quote {
+            break
+        }
+        if ch == 92 && lexer_peek_char(l, 1) == quote {
+            lexer_advance(l)
+            lexer_advance(l)
+        } else {
+            lexer_advance(l)
+        }
+    }
+    length := l.pos - start
+    value := __host_slice(l.source, start, start + length)
+    if lexer_current_char(l) == quote {
+        lexer_advance(l)
+    }
+    tok := token {}
+    tok.line = l.line
+    tok.col = start_col
+    tok.kind = 3
+    tok.value = value
+    return tok
+}
+
+func lexer_add_token(l* syntax_lexer, token tok) {
+    l.tokens = append(l.tokens, tok)
+    l.token_count = len(l.tokens)
+}
+
+func lexer_tokenize(l* syntax_lexer) {
+    for true {
+        lexer_skip_whitespace(l)
+        ch := lexer_current_char(l)
+        if ch == 0 {
+            break
+        }
+        if ch == 47 {
+            if lexer_peek_char(l, 1) == 47 {
+                lexer_skip_line_comment(l)
+                continue
+            }
+            if lexer_peek_char(l, 1) == 42 {
+                lexer_skip_block_comment(l)
+                continue
+            }
+        }
+        if is_letter(ch) {
+            tok := lexer_read_ident(l)
+            lexer_add_token(l, tok)
+            continue
+        }
+        if syntax_is_digit(ch) {
+            tok := lexer_read_number(l)
+            lexer_add_token(l, tok)
+            continue
+        }
+        if ch == 34 || ch == 39 {
+            tok := lexer_read_string(l)
+            lexer_add_token(l, tok)
+            continue
+        }
+        tok_type := 87
+        col := l.col
+        switch ch {
+        case 43:
+            if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 52
+            } else {
+                tok_type = 41
+            }
+        case 45:
+            if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 53
+            } else {
+                tok_type = 42
+            }
+        case 42:
+            if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 54
+            } else {
+                tok_type = 43
+            }
+        case 47:
+            if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 55
+            } else {
+                tok_type = 44
+            }
+        case 37:
+            if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 56
+            } else {
+                tok_type = 45
+            }
+        case 38:
+            if lexer_peek_char(l, 1) == 38 {
+                lexer_advance(l)
+                tok_type = 63
+            } else if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 57
+            } else if lexer_peek_char(l, 1) == 94 {
+                lexer_advance(l)
+                if lexer_peek_char(l, 1) == 61 {
+                    lexer_advance(l)
+                    tok_type = 62
+                } else {
+                    tok_type = 51
+                }
+            } else {
+                tok_type = 46
+            }
+        case 124:
+            if lexer_peek_char(l, 1) == 124 {
+                lexer_advance(l)
+                tok_type = 64
+            } else if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 58
+            } else {
+                tok_type = 47
+            }
+        case 94:
+            if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 59
+            } else {
+                tok_type = 48
+            }
+        case 60:
+            if lexer_peek_char(l, 1) == 60 {
+                lexer_advance(l)
+                if lexer_peek_char(l, 1) == 61 {
+                    lexer_advance(l)
+                    tok_type = 60
+                } else {
+                    tok_type = 49
+                }
+            } else if lexer_peek_char(l, 1) == 45 {
+                lexer_advance(l)
+                tok_type = 74
+            } else if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 69
+            } else {
+                tok_type = 68
+            }
+        case 62:
+            if lexer_peek_char(l, 1) == 62 {
+                lexer_advance(l)
+                if lexer_peek_char(l, 1) == 61 {
+                    lexer_advance(l)
+                    tok_type = 61
+                } else {
+                    tok_type = 50
+                }
+            } else if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 71
+            } else {
+                tok_type = 70
+            }
+        case 33:
+            if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 67
+            } else {
+                tok_type = 65
+            }
+        case 61:
+            if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 66
+            } else {
+                tok_type = 72
+            }
+        case 58:
+            if lexer_peek_char(l, 1) == 61 {
+                lexer_advance(l)
+                tok_type = 73
+            } else {
+                tok_type = 76
+            }
+        case 46:
+            if lexer_peek_char(l, 1) == 46 && lexer_peek_char(l, 2) == 46 {
+                lexer_advance(l)
+                lexer_advance(l)
+                tok_type = 75
+            } else {
+                tok_type = 77
+            }
+        case 44:
+            tok_type = 78
+        case 59:
+            tok_type = 79
+        case 40:
+            tok_type = 80
+        case 41:
+            tok_type = 81
+        case 123:
+            tok_type = 82
+        case 125:
+            tok_type = 83
+        case 91:
+            tok_type = 84
+        case 93:
+            tok_type = 85
+        case 10:
+            tok_type = 86
+        }
+        if tok_type > 0 {
+            tok := token {}
+            tok.kind = tok_type
+            tok.line = l.line
+            tok.col = col
+            lexer_add_token(l, tok)
+        }
+        lexer_advance(l)
+    }
+    eof_tok := token {}
+    eof_tok.kind = 0
+    eof_tok.line = l.line
+    eof_tok.col = l.col
+    lexer_add_token(l, eof_tok)
+}
+
+func lexer_get_tokens(l* syntax_lexer) token[] {
+    return l.tokens
+}
+
+func lexer_get_token_count(l* syntax_lexer) int {
+    return l.token_count
+}

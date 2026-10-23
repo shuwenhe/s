@@ -73,11 +73,7 @@ static bool standalone_validate_record_schema(standalone_module *m, int index, c
             !strcmp(t, "int64") || !strcmp(t, "uint64") || !strcmp(t, "uint")) f->kind = 0;
         else if (!strcmp(t, "string")) f->kind = 1;
         else if (strchr(t, '*') || strchr(t, '&') || !strncmp(t, "own ", 4) || !strcmp(t, "box") || !strncmp(t, "box[", 4) || !strncmp(t, "ref ", 4) || !strncmp(t, "mutref ", 7)) {
-            /* Allow generic types with pointers (e.g., result[t,e]*) */
-            if (strchr(t, '[')) { f->kind = 1; }
-            else {
-                error_set(err, ERR_SEMANTIC, 0, 0, "native record transfer unsupported_owner or unproven borrow: %s.%s (%s)", r->name, f->name, t); return false;
-            }
+            error_set(err, ERR_SEMANTIC, 0, 0, "native record transfer unsupported_owner or unproven borrow: %s.%s (%s)", r->name, f->name, t); return false;
         } else {
             char base[STANDALONE_TEXT_CAP], qualified[STANDALONE_TEXT_CAP];
             size_t n = strlen(t);
@@ -94,18 +90,15 @@ static bool standalone_validate_record_schema(standalone_module *m, int index, c
             }
             if (array) {
                 if (f->nested < 0 && strcmp(base, "int") && strcmp(base, "bool") && strcmp(base, "string") && strcmp(base, "byte")) {
-                    /* Unknown array types are treated as enum arrays - skip validation. */
-                    f->kind = 2;
-                } else {
-                    f->kind = 2;
-                    if (f->nested >= 0 && m->records[f->nested].state != 1 && !standalone_validate_record_schema(m, f->nested, err)) return false;
+                    error_set(err, ERR_SEMANTIC, 0, 0, "unknown native array transfer type: %s", t); return false;
                 }
+                f->kind = 2;
+                if (f->nested >= 0 && m->records[f->nested].state != 1 && !standalone_validate_record_schema(m, f->nested, err)) return false;
             } else if (f->nested >= 0) {
                 f->kind = 3;
                 if (!standalone_validate_record_schema(m, f->nested, err)) return false;
             } else {
-                /* Unknown non-array types are treated as enums - skip validation. */
-                f->kind = 1;
+                error_set(err, ERR_SEMANTIC, 0, 0, "unknown native record transfer type: %s.%s (%s)", r->name, f->name, t); return false;
             }
         }
     }
@@ -136,8 +129,6 @@ static bool standalone_validate_record_contracts(standalone_module *m, compile_e
         if (!strcmp(ins->op, "NOP") &&
             (!strncmp(ins->result, "param-transfer:", 15) || !strncmp(ins->result, "return-transfer:", 16))) {
             const char *t = ins->operand2;
-            /* Skip validation for generic types (e.g., result[t,e]*)*/
-            if (strchr(t, '[')) continue;
             if ((strchr(t, '*') && !standalone_borrow_metadata_proven(m,ins)) || strchr(t, '&') || !strcmp(t, "box") || !strncmp(t, "own ", 4) ||
                 !strncmp(t, "ref ", 4) || !strncmp(t, "mutref ", 7)) {
                 error_set(err, ERR_SEMANTIC, 0, 0, "native record transfer unsupported_owner or unproven borrow at IR record %zu: %s", i+2, t); return false;
@@ -152,21 +143,11 @@ static bool standalone_validate_record_contracts(standalone_module *m, compile_e
         if (!decode_literal(ins->operand1, &type, err)) return false;
         type.bytes[type.len] = 0;
         int index = standalone_record_index(m, (char *)type.bytes);
-        if (index < 0 && type.len + 21 < STANDALONE_TEXT_CAP) {
-            /* Try to find qualified name for unqualified types */
-            char qualified[STANDALONE_TEXT_CAP];
-            memcpy(qualified, "compile.internal.mir.", 21);
-            memcpy(qualified + 21, type.bytes, type.len + 1);
-            index = standalone_record_index(m, qualified);
-        }
         if (index < 0) {
             /* Typed array construction and legacy enum/result objects are
              * separate existing representations, not guessed record schemas. */
             if (strchr((char *)type.bytes, '[')) continue;
-            const char *bare_name = (char *)type.bytes;
-            if (!strcmp(bare_name, "result") || !strcmp(bare_name, "option")) continue;
-            /* Skip unknown types - they may be enums or other non-record types */
-            continue;
+            error_set(err, ERR_SEMANTIC, 0, 0, "missing native record schema: %s at IR record %zu", type.bytes, i + 2); return false;
         }
         if (!standalone_validate_record_schema(m, index, err)) return false;
     }

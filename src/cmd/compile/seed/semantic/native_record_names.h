@@ -72,6 +72,32 @@ static bool native_record_type_expression(ast_node *file, ast_node **place, comp
     return true;
 }
 static bool native_record_names_node(ast_node *, ast_node *, compile_error *);
+/* Preserve a candidate without rewriting expressions: a local value may
+ * shadow the import or function. Specialization checks that lexical scope. */
+static bool native_function_candidate(ast_node *file, ast_node *call, compile_error *err) {
+    char spelling[IR_OPERAND_CAP];
+    if(!call->as.call_expr.callee || !native_record_type_spelling(call->as.call_expr.callee,spelling,sizeof(spelling))) return true;
+    char *name=malloc(strlen(spelling)+1);
+    if(!name) return false;
+    strcpy(name,spelling);
+    if(!native_record_name(file,&name,call->pos,err)) { free(name); return false; }
+    if(!strchr(name,'.')) {
+        const char *package="", *imported=NULL;
+        for(size_t i=0;i<file->as.program.statements.len;i++) {
+            ast_node *n=file->as.program.statements.data[i];
+            if(n->kind==AST_PACKAGE_DECL) package=n->as.package_decl.name;
+            if(n->kind!=AST_USE_DECL) continue;
+            for(size_t j=0;j<n->as.use_decl.selector_count;j++)
+                if(!strcmp(n->as.use_decl.selectors[j],name)) imported=n->as.use_decl.module_path;
+        }
+        char qualified[IR_OPERAND_CAP]; const char *owner=imported?imported:package;
+        if(snprintf(qualified,sizeof(qualified),"%s%s%s",owner,*owner?".":"",name)>=(int)sizeof(qualified)) { free(name); return false; }
+        free(name); name=malloc(strlen(qualified)+1); if(!name) return false;
+        strcpy(name,qualified);
+    }
+    free(call->as.call_expr.native_callee_name);
+    call->as.call_expr.native_callee_name=name; return true;
+}
 static bool native_record_names_vec(ast_node *file, ast_vec *nodes, compile_error *err) {
     for (size_t i=0; i<nodes->len; i++) if (!native_record_names_node(file,nodes->data[i],err)) return false;
     return true;
@@ -131,6 +157,7 @@ static bool native_record_names_node(ast_node *file, ast_node *n, compile_error 
     case AST_INDEX_EXPR: NODE(n->as.index_expr.object); NODE(n->as.index_expr.index); break;
     case AST_SLICE_EXPR: NODE(n->as.slice_expr.object); NODE(n->as.slice_expr.start); NODE(n->as.slice_expr.end); break;
     case AST_CALL_EXPR:
+        if(!native_function_candidate(file,n,err)) return false;
         if(n->as.call_expr.callee && n->as.call_expr.callee->kind==AST_INDEX_EXPR && !n->as.call_expr.callee->as.index_expr.index)
             if(!native_record_type_expression(file,&n->as.call_expr.callee,err)) return false;
         NODE(n->as.call_expr.callee); VEC(n->as.call_expr.args); break;

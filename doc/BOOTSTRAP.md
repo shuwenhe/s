@@ -1,3 +1,11 @@
+> Current verification (2026-10-23): complete native self-hosting has not
+> passed. Strict generic record/function specialization now exists in the
+> seed; the full 253-file build stops at a concrete generic result enum borrow
+> in `src/result/result.s:18`. The S native frontend/MIR/SSA also still support
+> only a restricted subset. Passing unchecked IR to a linker is not ownership
+> validation or three-stage convergence. See [the verified implementation
+> status](selfhost-implementation.md) for the tested boundary.
+
 # S Compiler Bootstrap Architecture
 
 ## Current Status
