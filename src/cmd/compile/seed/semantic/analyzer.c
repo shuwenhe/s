@@ -2293,6 +2293,24 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					*out_type = TYPE_INT;
 					return 1;
 				}
+				/* Handle array.get(index) -> option[element] pattern */
+				if (lhs_type && strcmp(member->as.member_expr.member, "get") == 0 &&
+				    lhs_type[0] != '\0') {
+					size_t lhs_len = strlen(lhs_type);
+					if (lhs_len > 1 && lhs_type[lhs_len - 2] == '[' && lhs_type[lhs_len - 1] == ']') {
+						/* This is an array type like "T[]", return option[T] */
+						char elem_type[1024];
+						strncpy(elem_type, lhs_type, lhs_len - 2);
+						elem_type[lhs_len - 2] = '\0';
+						
+						char option_type[1100];
+						snprintf(option_type, sizeof(option_type), "option[%s]", elem_type);
+						char *result_type = dup_cstr(option_type);
+						if (!result_type) return 0;
+						*out_type = result_type;
+						return 1;
+					}
+				}
 				if (lhs_type && ((strchr(lhs_type, ',') || (strchr(lhs_type, '[') && strchr(lhs_type, ']'))) ||
 				                 strstr(lhs_type, "result") || strstr(lhs_type, "option"))) {
 					const char *result_method = member->as.member_expr.member;
