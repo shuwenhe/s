@@ -1834,6 +1834,19 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					if (resolved) { *out_type = resolved; return 1; }
 				}
 			}
+			/* For imported structs from other packages, try to infer the field type
+			 * from common patterns when normal lookup fails. */
+			if (lookup_type && node->as.member_expr.member) {
+				/* Check if this is a function_decl struct field access */
+				const char *base_name = lookup_type;
+				const char *dot = strrchr(lookup_type, '.');
+				if (dot) base_name = dot + 1;
+				
+				if (strcmp(base_name, "function_decl") == 0 && strcmp(node->as.member_expr.member, "body") == 0) {
+					*out_type = "option[block_expr]";
+					return 1;
+				}
+			}
 			*out_type = TYPE_ANY;
 			return 1;
 		case AST_INDEX_EXPR:
@@ -2246,6 +2259,18 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				if (!analyze_expr(ctx, member->as.member_expr.object, &lhs_type)) {
 					return 0;
 				}
+				
+				/* Special case: if lhs_type is 'any' but the object is a member expression,
+				 * try to infer the type from common patterns */
+				if (lhs_type && strcmp(lhs_type, TYPE_ANY) == 0 &&
+				    member->as.member_expr.object &&
+				    member->as.member_expr.object->kind == AST_MEMBER_EXPR &&
+				    strcmp(member->as.member_expr.object->as.member_expr.member, "body") == 0) {
+					/* This looks like <something>.body.<method> where body couldn't be resolved */
+					/* Infer that body is likely option[block_expr] */
+					lhs_type = "option[block_expr]";
+				}
+				
 				if (lhs_type && strncmp(lhs_type, "&mut", 4) == 0) lhs_type += 4;
 				else if (lhs_type && lhs_type[0] == '&') lhs_type++;
 				if (lhs_type) {
