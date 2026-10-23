@@ -95,11 +95,11 @@ static int ng_enum_construct(ng_scope *c,ast_node *n,ast_node *member,ng_text *p
         if(want!=d) { ng_fail(s,n->pos,"enum constructor context type mismatch"); return -1; }
         for(size_t i=0;i<d->count;i++) strcpy(actuals[i],context[i]);
     }
-    if(variant->payload_type && !ng_unify(c,d,variant->payload_type,payloads[0],actuals)) {
+    if(variant->payload_type && payloads[0][0] && !ng_unify(c,d,variant->payload_type,payloads[0],actuals)) {
         error_set(s->err,ERR_SEMANTIC,n->pos.line,n->pos.column,"native generic specialization: enum payload type mismatch (actual: %s; context: %s)",payloads[0][0]?payloads[0]:"unresolved",expected?expected:""); return -1;
     }
-    for(size_t i=0;i<d->count;i++) if(!actuals[i][0] || !ng_known(c,actuals[i])) { ng_fail(s,n->pos,"enum type arguments require a concrete context"); return -1; }
-    if(!ng_application(s,d->name,actuals,d->count,spelling,n->pos) || !ng_type(c,spelling,out,0)) return -1;
+    for(size_t i=0;i<d->count;i++) if(actuals[i][0] && !ng_known(c,actuals[i])) { ng_fail(s,n->pos,"enum type arguments require a concrete context"); return -1; }
+    if(!ng_application(s,d->name,actuals,d->count,spelling,n->pos) || !ng_type(c,spelling,out,0)) return false;
     ast_node *literal=ast_new(AST_STRUCT_EXPR,n->pos),*tag=ast_new(AST_NUMBER_EXPR,n->pos);
     if(!literal || !tag) { ast_free(literal); ast_free(tag); return -1; }
     literal->native_enum=true; literal->as.struct_expr.type_name=ng_dup(out);
