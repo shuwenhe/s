@@ -35,7 +35,6 @@ struct ir_scope {
 }
 
 struct type_system {
-    string_ir_type_map type_cache
 }
 
 func ir_builder_context_new() ir_builder_context {
