@@ -752,6 +752,20 @@ static int is_type_assignable(const char *expected, const char *actual) {
 		(strcmp(expected, TYPE_INT) == 0 && strcmp(actual, TYPE_FLOAT) == 0)) {
 		return 1;
 	}
+	/* Allow qualified and unqualified type names to match in multi-package closures.
+	 * The semantic analyzer merges files without preserving package qualifications,
+	 * so types can appear as both "package.type" and just "type" in the same unit. */
+	if (strcmp(expected, actual) != 0) {
+		const char *exp_dot = strrchr(expected, '.');
+		const char *act_dot = strrchr(actual, '.');
+		if (exp_dot && !act_dot) {
+			/* expected is qualified, actual is not: compare unqualified parts */
+			if (strcmp(exp_dot + 1, actual) == 0) return 1;
+		} else if (act_dot && !exp_dot) {
+			/* actual is qualified, expected is not: compare unqualified parts */
+			if (strcmp(act_dot + 1, expected) == 0) return 1;
+		}
+	}
 	return strcmp(expected, actual) == 0;
 }
 static ast_node *find_trait_decl(semantic_ctx *ctx, const char *name) {

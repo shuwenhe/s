@@ -36,6 +36,11 @@ static ast_node *borrow_record(borrow_proof *p, const char *type) {
         lookup_type = base;
     }
     
+    /* Also extract unqualified name from qualified type like compile.internal.ast.foo -> foo */
+    const char *unqualified = strrchr(lookup_type, '.');
+    if (unqualified) unqualified++;
+    else unqualified = lookup_type;
+    
     for (size_t i=0; i<p->unit->as.program.statements.len; i++) {
         ast_node *n=p->unit->as.program.statements.data[i];
         if (n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
@@ -43,20 +48,21 @@ static ast_node *borrow_record(borrow_proof *p, const char *type) {
         /* Check struct definitions (AST_LET_STMT) */
         if (n->kind==AST_LET_STMT && n->as.let_stmt.type_name && !strcmp(n->as.let_stmt.type_name,"struct")) {
             if (snprintf(full,sizeof(full),"%s%s%s",pkg,*pkg?".":"",n->as.let_stmt.name)>=(int)sizeof(full)) return NULL;
-            if (!strcmp(full,lookup_type) || (!strcmp(pkg,p->package_name) && !strcmp(n->as.let_stmt.name,lookup_type))) return n;
+            if (!strcmp(full,lookup_type) || !strcmp(n->as.let_stmt.name,unqualified) ||
+                (!strcmp(pkg,p->package_name) && !strcmp(n->as.let_stmt.name,lookup_type))) return n;
         }
         
         /* Check enum definitions (AST_ENUM_DECL) */
         if (n->kind==AST_ENUM_DECL) {
             if (snprintf(full,sizeof(full),"%s%s%s",pkg,*pkg?".":"",n->as.enum_decl.name)>=(int)sizeof(full)) return NULL;
-            if (!strcmp(full,lookup_type) || (!strcmp(pkg,p->package_name) && !strcmp(n->as.enum_decl.name,lookup_type))) return n;
+            if (!strcmp(full,lookup_type) || !strcmp(n->as.enum_decl.name,unqualified) ||
+                (!strcmp(pkg,p->package_name) && !strcmp(n->as.enum_decl.name,lookup_type))) return n;
         }
     }
     return NULL;
 }
 static ast_node *borrow_record_unique_tail(borrow_proof *p,const char *type) {
     ast_node *found=NULL;
-    size_t length;
     const char *pkg="";
     
     /* Handle generic types like result[t,e] by extracting the base name */
@@ -71,21 +77,26 @@ static ast_node *borrow_record_unique_tail(borrow_proof *p,const char *type) {
         lookup_type = base;
     }
     
-    length = strlen(lookup_type);
     for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
         ast_node *n=p->unit->as.program.statements.data[i];
         if(n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
         
+        /* Extract unqualified name from qualified type */
+        const char *unqualified = strrchr(lookup_type, '.');
+        if (unqualified) unqualified++;
+        else unqualified = lookup_type;
+        size_t unqual_len = strlen(unqualified);
+        
         /* Check struct definitions (AST_LET_STMT) */
         if(n->kind==AST_LET_STMT && n->as.let_stmt.type_name && !strcmp(n->as.let_stmt.type_name,"struct")) {
-            if(strlen(n->as.let_stmt.name)!=length || strcmp(n->as.let_stmt.name,lookup_type)) continue;
+            if(strlen(n->as.let_stmt.name)!=unqual_len || strcmp(n->as.let_stmt.name,unqualified)) continue;
             if(found) return NULL;
             found=n;
         }
         
         /* Check enum definitions (AST_ENUM_DECL) */
         if(n->kind==AST_ENUM_DECL) {
-            if(strlen(n->as.enum_decl.name)!=length || strcmp(n->as.enum_decl.name,lookup_type)) continue;
+            if(strlen(n->as.enum_decl.name)!=unqual_len || strcmp(n->as.enum_decl.name,unqualified)) continue;
             if(found) return NULL;
             found=n;
         }
