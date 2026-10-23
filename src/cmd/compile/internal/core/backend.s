@@ -4336,7 +4336,9 @@ func eval_member_expr_result(member_expr member, source_file source, binding[] e
             if !runtime.owned_boxes[i].live {
                 return result.err(backend_error { message: "backend error: use of released box" })
             }
-            return result.ok(runtime.owned_boxes[i].payload)
+            box := runtime.owned_boxes[i]
+            box_payload := box.payload
+            return result.ok(box_payload)
         }
         i = i + 1
     }
@@ -4977,8 +4979,8 @@ func load_source_graph_for_use(string module_path) result[source_file, backend_e
     return result.ok(dep_combined)
 }
 
-func eval_const_value_expr(value expr, binding[] const_env, int iota_value) result[value, backend_error] {
-    return switch expr {
+func eval_const_value_expr(expr const_expr, binding[] const_env, int iota_value) result[value, backend_error] {
+    return switch const_expr {
         expr.int(int_expr) : result.ok(value.int(parse_int_literal(int_expr.value))),
         expr.string(string_expr) : result.ok(value.string(decode_string_literal(string_expr.value))),
         expr.bool(bool_expr) : result.ok(value.bool(bool_expr.value)),

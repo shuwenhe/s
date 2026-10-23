@@ -324,13 +324,12 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) expr_ir {
     return expr_ir.name("unit")
 }
 
-func call_callee_name(expr value) string {
-    switch value {
+func call_callee_name(expr e) string {
+    switch e {
         expr.name(name_expr) : name_expr.name,
         expr.int(_) : "<expr-callee>",
         expr.string(_) : "<expr-callee>",
         expr.bool(_) : "<expr-callee>",
-        expr.unit(_) : "<expr-callee>",
         expr.binary(_) : "<expr-callee>",
         expr.call(_) : "<expr-callee>",
         expr.if(_) : "<expr-callee>",
