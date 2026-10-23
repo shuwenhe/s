@@ -109,6 +109,30 @@ native-bootstrap-imports: seed-compiler-bin
 	  ./src/cmd/dist/native-bootstrap-no-manifest.sh .bootstrap/native-imports
 	@echo "✓ Import-driven bootstrap complete (.bootstrap/native-imports)"
 
+# ============================================================================
+# Hosted Bootstrap (Go-style multi-stage approach)
+# ============================================================================
+# Workaround for IR backend's lack of generic monomorphization support.
+# Uses hosted compiler to build intermediate stages, similar to Go 1.5+.
+# 
+# Stages:
+#   Stage 0: Seed compiler (C) -> stage1.ir (using native-bootstrap-imports)
+#   Stage 1: Hosted compiler -> stage1_bin (using --emit-c)
+#   Stage 2: stage1_bin -> stage2.ir (self-host)
+#   Stage 3: Verification
+#
+# This approach works around the architectural limitation that the native
+# IR backend cannot generate code for generic methods. Once generic 
+# monomorphization is implemented, this can transition to pure native bootstrap.
+
+.PHONY: hosted-bootstrap
+hosted-bootstrap: native-bootstrap-imports
+	@echo "Building hosted bootstrap..."
+	@mkdir -p .bootstrap/hosted
+	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) \
+	  ./src/cmd/dist/hosted-bootstrap.sh .bootstrap/hosted
+	@echo "✓ Hosted bootstrap complete (.bootstrap/hosted)"
+
 .PHONY: selfhost-protocol-check
 selfhost-protocol-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/hosted_program_check.sh
