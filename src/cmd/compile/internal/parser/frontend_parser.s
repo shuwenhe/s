@@ -4,66 +4,8 @@ struct parser {
     lexer: lexer
     current_token: token
     peek_token: token
-    errors: array
+    errors: string[]
 }
-const token_and = 57
-const token_or = 58
-const token_bit_and = 60
-const token_bit_or = 61
-const token_bit_xor = 62
-const token_lshift = 64
-const token_rshift = 65
-const token_plus = 40
-const token_minus = 41
-const token_star = 42
-const token_slash = 43
-const token_percent = 44
-const token_eq = 45
-const token_ne = 46
-const token_lt = 47
-const token_le = 48
-const token_gt = 49
-const token_ge = 50
-const token_not = 59
-const token_bit_not = 63
-const token_eof = 0
-const token_ident = 10
-const token_int = 11
-const token_float = 12
-const token_string = 13
-const token_true = 15
-const token_false = 16
-const token_package = 20
-const token_use = 21
-const token_func = 22
-const token_struct = 23
-const token_enum = 24
-const token_if = 25
-const token_else = 26
-const token_for = 27
-const token_while = 28
-const token_return = 29
-const token_break = 30
-const token_continue = 31
-const token_switch = 32
-const token_case = 33
-const token_default = 34
-const token_var = 35
-const token_const = 36
-const token_as = 37
-const token_assign = 51
-const token_colon_assign = 52
-const token_lparen = 80
-const token_rparen = 81
-const token_lbrace = 82
-const token_rbrace = 83
-const token_lbracket = 84
-const token_rbracket = 85
-const token_comma = 86
-const token_dot = 87
-const token_colon = 88
-const token_semicolon = 89
-const token_newline = 99
 
 const fp_ast_program = 1
 const fp_ast_package = 2
@@ -140,7 +82,7 @@ func token_precedence(int tok_type) int {
 
 func parser_new(lexer lex) parser {
     p := parser {
-        lexer: lex, current_token: token { token_type: 0, value: "", line: 0, column: 0 }, peek_token: token { token_type: 0, value: "", line: 0, column: 0 }, errors: vec[string]()
+        lexer: lex, current_token: token { token_type: 0, value: "", line: 0, column: 0 }, peek_token: token { token_type: 0, value: "", line: 0, column: 0 }, errors: string[]()
     }
     parser_next_token(p*)
     parser_next_token(p*)
@@ -149,7 +91,7 @@ func parser_new(lexer lex) parser {
 
 func parser_next_token(p* parser) {
     p.current_token = p.peek_token
-    p.peek_token = lexer_next_token(p.lexer*)
+    p.peek_token = frontend_lexer_next_token(p.lexer*)
 }
 
 func parser_current_token_is(p* parser, int tok_type) bool {
@@ -165,13 +107,14 @@ func parser_expect_peek(p* parser, int tok_type) int {
         parser_next_token(p)
         return 1
     } else {
-        parser_add_error(p, "Expected " + token_type_name(tok_type) + " but got " + token_type_name(p.peek_token.token_type))
+        message := "Expected " + frontend_token_type_name(tok_type) + " but got " + frontend_token_type_name(p.peek_token.token_type)
+        parser_add_error(p, message)
         return 0
     }
 }
 
 func parser_add_error(p* parser, string msg) {
-    p.errors.push(msg)
+    p.errors = append(p.errors, msg)
 }
 
 func parser_skip_newlines(p* parser) {
@@ -533,7 +476,7 @@ func parser_parse_block(p* parser) ast_node {
     for !parser_current_token_is(p, token_rbrace) && !parser_current_token_is(p, token_eof) {
         parser_skip_newlines(p)
         stmt := parser_parse_statement(p)
-        if stmt {
+        if stmt.node_type != 0 {
             ast_add_child(block, stmt)
         }
     }
@@ -547,29 +490,29 @@ func parser_parse_block(p* parser) ast_node {
 
 func parser_parse_statement(p* parser) ast_node {
     if parser_current_token_is(p, token_if) {
-        parser_parse_if_stmt(p)
+        return parser_parse_if_stmt(p)
     } else if parser_current_token_is(p, token_for) {
-        parser_parse_for_stmt(p)
+        return parser_parse_for_stmt(p)
     } else if parser_current_token_is(p, token_while) {
-        parser_parse_while_stmt(p)
+        return parser_parse_while_stmt(p)
     } else if parser_current_token_is(p, token_return) {
-        parser_parse_return_stmt(p)
+        return parser_parse_return_stmt(p)
     } else if parser_current_token_is(p, token_break) {
         parser_next_token(p)
-        ast_new(fp_ast_break_stmt, p.current_token.line, p.current_token.column)
+        return ast_new(fp_ast_break_stmt, p.current_token.line, p.current_token.column)
     } else if parser_current_token_is(p, token_continue) {
         parser_next_token(p)
-        ast_new(fp_ast_continue_stmt, p.current_token.line, p.current_token.column)
+        return ast_new(fp_ast_continue_stmt, p.current_token.line, p.current_token.column)
     } else if parser_current_token_is(p, token_switch) {
-        parser_parse_switch_stmt(p)
+        return parser_parse_switch_stmt(p)
     } else if parser_current_token_is(p, token_lbrace) {
-        parser_parse_block(p)
+        return parser_parse_block(p)
     } else {
         expr := parser_parse_expression(p, prec_lowest)
         if parser_current_token_is(p, token_newline) || parser_current_token_is(p, token_semicolon) {
             parser_next_token(p)
         }
-        expr
+        return expr
     }
 }
 
@@ -604,7 +547,7 @@ func parser_parse_for_stmt(p* parser) ast_node {
     parser_next_token(p)
 
     init := parser_parse_statement(p)
-    if init {
+    if init.node_type != 0 {
         ast_add_child(for_stmt, init)
     }
 
@@ -669,7 +612,7 @@ func parser_parse_switch_stmt(p* parser) ast_node {
                             break
                         }
                         stmt := parser_parse_statement(p)
-                        if stmt {
+                        if stmt.node_type != 0 {
                             ast_add_child(case_clause, stmt)
                         }
                     }
@@ -684,7 +627,7 @@ func parser_parse_switch_stmt(p* parser) ast_node {
                         break
                     }
                     stmt := parser_parse_statement(p)
-                    if stmt {
+                    if stmt.node_type != 0 {
                         ast_add_child(switch_stmt, stmt)
                     }
                 }
@@ -697,7 +640,8 @@ func parser_parse_switch_stmt(p* parser) ast_node {
 }
 
 func parser_parse_expression(p* parser, int precedence) ast_node {
-    parser_parse_infix_expression(p, parser_parse_primary_expression(p), precedence)
+    primary := parser_parse_primary_expression(p)
+    return parser_parse_infix_expression(p, primary, precedence)
 }
 
 func parser_parse_primary_expression(p* parser) ast_node {
@@ -705,38 +649,38 @@ func parser_parse_primary_expression(p* parser) ast_node {
         ident := ast_new(fp_ast_ident, p.current_token.line, p.current_token.column)
         ast_set_name(ident, p.current_token.value)
         parser_next_token(p)
-        ident
+        return ident
     } else if parser_current_token_is(p, token_int) {
         int_lit := ast_new(fp_ast_int_lit, p.current_token.line, p.current_token.column)
         ast_set_string_data(int_lit, p.current_token.value)
         parser_next_token(p)
-        int_lit
+        return int_lit
     } else if parser_current_token_is(p, token_float) {
         float_lit := ast_new(fp_ast_float_lit, p.current_token.line, p.current_token.column)
         ast_set_string_data(float_lit, p.current_token.value)
         parser_next_token(p)
-        float_lit
+        return float_lit
     } else if parser_current_token_is(p, token_string) {
         string_lit := ast_new(fp_ast_string_lit, p.current_token.line, p.current_token.column)
         ast_set_string_data(string_lit, p.current_token.value)
         parser_next_token(p)
-        string_lit
+        return string_lit
     } else if parser_current_token_is(p, token_true) {
         bool_lit := ast_new(fp_ast_bool_lit, p.current_token.line, p.current_token.column)
         ast_set_string_data(bool_lit, "true")
         parser_next_token(p)
-        bool_lit
+        return bool_lit
     } else if parser_current_token_is(p, token_false) {
         bool_lit := ast_new(fp_ast_bool_lit, p.current_token.line, p.current_token.column)
         ast_set_string_data(bool_lit, "false")
         parser_next_token(p)
-        bool_lit
+        return bool_lit
     } else if parser_current_token_is(p, token_lparen) {
         parser_next_token(p)
         expr := parser_parse_expression(p, prec_lowest)
         if parser_expect_peek(p, token_rparen) {
         }
-        expr
+        return expr
     } else if parser_current_token_is(p, token_minus) || parser_current_token_is(p, token_not) || parser_current_token_is(p, token_bit_not) || parser_current_token_is(p, token_bit_and) {
         op := p.current_token.value
         parser_next_token(p)
@@ -744,10 +688,10 @@ func parser_parse_primary_expression(p* parser) ast_node {
         ast_set_string_data(unary, op)
         operand := parser_parse_expression(p, prec_unary)
         ast_add_child(unary, operand)
-        unary
+        return unary
     } else {
         parser_add_error(p, "Unexpected token in expression: " + p.current_token.value)
-        ast_new(fp_ast_ident, p.current_token.line, p.current_token.column)
+        return ast_new(fp_ast_ident, p.current_token.line, p.current_token.column)
     }
 }
 
@@ -789,7 +733,8 @@ func parser_parse_infix_expression(p* parser,ast_node left, int precedence) ast_
             op := p.current_token.value
             op_type := p.current_token.token_type
             parser_next_token(p)
-            right := parser_parse_expression(p, token_precedence(op_type))
+            right_precedence := token_precedence(op_type)
+            right := parser_parse_expression(p, right_precedence)
             binary := ast_new(fp_ast_binary_op, p.current_token.line, p.current_token.column)
             ast_set_string_data(binary, op)
             ast_add_child(binary, left)

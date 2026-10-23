@@ -1,4 +1,4 @@
-package compile.internal.lexer
+package compile.internal.parser
 
 struct token {
     token_type: int
@@ -95,7 +95,7 @@ const token_question = 91
 
 const token_newline = 99
 
-func keyword_to_token(string kw) int {
+func frontend_keyword_to_token(string kw) int {
     switch kw {
     case "package" : token_package
     case "use" : token_use
@@ -123,32 +123,33 @@ func keyword_to_token(string kw) int {
     }
 }
 
-func is_letter(string c) bool {
+func frontend_is_letter(string c) bool {
     return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c == "_"
 }
 
-func is_digit(string c) bool {
+func frontend_is_digit(string c) bool {
     return c >= "0" && c <= "9"
 }
 
-func is_whitespace(string c) bool {
+func frontend_is_whitespace(string c) bool {
     return c == " " || c == "\t" || c == "\r"
 }
 
-func lexer_new(string source) lexer {
+func frontend_lexer_new(string source) lexer {
     lex := lexer {
         source: source, position: 0, read_position: 0,
         current_char: ' ', line: 1, column: 0, start_column: 0
     }
-    lexer_read_char(lex*)
+    frontend_lexer_read_char(lex*)
     lex
 }
 
-func lexer_read_char(lexer* lex) {
+// An empty character marks EOF, matching the string indexing intrinsics.
+func frontend_lexer_read_char(lexer* lex) {
     if lex.read_position >= lex.source.len() {
-        lex.current_char = '\0'
+        lex.current_char = ""
     } else {
-        lex.current_char = lex.source[lex.read_position]
+        lex.current_char = __host_char_at(lex.source, lex.read_position)
     }
     lex.position = lex.read_position
     lex.read_position = lex.read_position + 1
@@ -161,97 +162,91 @@ func lexer_read_char(lexer* lex) {
     }
 }
 
-func lexer_peek_char(lexer* lex) string {
+func frontend_lexer_peek_char(lexer* lex) string {
     if lex.read_position >= lex.source.len() {
-        return '\0'
+        return ""
     } else {
-        return lex.source[lex.read_position]
+        return __host_char_at(lex.source, lex.read_position)
     }
 }
 
-func lexer_skip_whitespace(lexer* lex) {
-    for is_whitespace(lex.current_char) {
-        lexer_read_char(lex)
+func frontend_lexer_skip_whitespace(lexer* lex) {
+    for frontend_is_whitespace(lex.current_char) {
+        frontend_lexer_read_char(lex)
     }
 }
 
-func lexer_read_ident(lexer* lex) string {
+func frontend_lexer_read_ident(lexer* lex) string {
     start := lex.position
-    for is_letter(lex.current_char) || is_digit(lex.current_char) {
-        lexer_read_char(lex)
+    for frontend_is_letter(lex.current_char) || frontend_is_digit(lex.current_char) {
+        frontend_lexer_read_char(lex)
     }
-    lexer_slice(lex.source, start, lex.position)
+    frontend_lexer_slice(lex.source, start, lex.position)
 }
 
-func lexer_slice(string source, int start, int end) string {
-    result := ""
-    i := start
-    for i < end {
-        result = result + source[i]
-        i = i + 1
-    }
-    result
+func frontend_lexer_slice(string source, int start, int end) string {
+    return __host_slice(source, start, end)
 }
 
-func lexer_read_number(lexer* lex) (string, int) {
+func frontend_lexer_read_number(lexer* lex) token {
     start := lex.position
     has_dot := 0
 
-    for is_digit(lex.current_char) || (lex.current_char == '.' && !has_dot) {
+    for frontend_is_digit(lex.current_char) || (lex.current_char == '.' && !has_dot) {
         if lex.current_char == '.' {
             has_dot = 1
         }
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     }
 
-    num_str := lexer_slice(lex.source, start, lex.position)
+    num_str := frontend_lexer_slice(lex.source, start, lex.position)
     if has_dot {
-        return num_str, token_float
+        return token { value: num_str, token_type: token_float }
     } else {
-        return num_str, token_int
+        return token { value: num_str, token_type: token_int }
     }
 }
 
-func lexer_read_string(lexer* lex, string quote) string {
-    lexer_read_char(lex)
+func frontend_lexer_read_string(lexer* lex, string quote) string {
+    frontend_lexer_read_char(lex)
     start := lex.position
 
-    for lex.current_char != quote && lex.current_char != '\0' {
+    for lex.current_char != quote && lex.current_char != "" {
         if lex.current_char == '\\' {
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     }
 
-    str := lexer_slice(lex.source, start, lex.position)
+    str := frontend_lexer_slice(lex.source, start, lex.position)
     if lex.current_char == quote {
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     }
     return str
 }
 
-func lexer_skip_line_comment(lexer* lex) {
-    for lex.current_char != '\n' && lex.current_char != '\0' {
-        lexer_read_char(lex)
+func frontend_lexer_skip_line_comment(lexer* lex) {
+    for lex.current_char != '\n' && lex.current_char != "" {
+        frontend_lexer_read_char(lex)
     }
 }
 
-func lexer_skip_block_comment(lexer* lex) {
-    lexer_read_char(lex)
-    lexer_read_char(lex)
+func frontend_lexer_skip_block_comment(lexer* lex) {
+    frontend_lexer_read_char(lex)
+    frontend_lexer_read_char(lex)
 
-    for lex.current_char != '\0' {
-        if lex.current_char == '*' && lexer_peek_char(lex) == '/' {
-            lexer_read_char(lex)
-            lexer_read_char(lex)
+    for lex.current_char != "" {
+        if lex.current_char == '*' && frontend_lexer_peek_char(lex) == '/' {
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
             break
         }
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     }
 }
 
-func lexer_next_token(lexer* lex) token {
-    lexer_skip_whitespace(lex)
+func frontend_lexer_next_token(lexer* lex) token {
+    frontend_lexer_skip_whitespace(lex)
 
     lex.start_column = lex.column
     line := lex.line
@@ -261,242 +256,244 @@ func lexer_next_token(lexer* lex) token {
     tok_value := ""
 
     switch lex.current_char {
-    case '\0' :
+    case "" :
         tok_type = token_eof
         tok_value = ""
     case '\n' :
         tok_type = token_newline
         tok_value = "\n"
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case '(' :
         tok_type = token_lparen
         tok_value = "("
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case ')' :
         tok_type = token_rparen
         tok_value = ")"
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case '{' :
         tok_type = token_lbrace
         tok_value = "{"
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case '}' :
         tok_type = token_rbrace
         tok_value = "}"
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case '[' :
         tok_type = token_lbracket
         tok_value = "["
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case ']' :
         tok_type = token_rbracket
         tok_value = "]"
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case ',' :
         tok_type = token_comma
         tok_value = ","
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case '.' :
         tok_type = token_dot
         tok_value = "."
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case ':' :
-        if lexer_peek_char(lex) == '=' {
+        if frontend_lexer_peek_char(lex) == '=' {
             tok_type = token_colon_assign
             tok_value = ":="
-            lexer_read_char(lex)
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         } else {
             tok_type = token_colon
             tok_value = ":"
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     case ';' :
         tok_type = token_semicolon
         tok_value = ";"
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case '?' :
         tok_type = token_question
         tok_value = "?"
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case '!' :
-        if lexer_peek_char(lex) == '=' {
+        if frontend_lexer_peek_char(lex) == '=' {
             tok_type = token_ne
             tok_value = "!="
-            lexer_read_char(lex)
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         } else {
             tok_type = token_not
             tok_value = "!"
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     case '=' :
-        if lexer_peek_char(lex) == '=' {
+        if frontend_lexer_peek_char(lex) == '=' {
             tok_type = token_eq
             tok_value = "=="
-            lexer_read_char(lex)
-            lexer_read_char(lex)
-        } else if lexer_peek_char(lex) == '>' {
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+        } else if frontend_lexer_peek_char(lex) == '>' {
             tok_type = token_arrow
             tok_value = "=>"
-            lexer_read_char(lex)
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         } else {
             tok_type = token_assign
             tok_value = "="
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     case '<' :
-        if lexer_peek_char(lex) == '=' {
+        if frontend_lexer_peek_char(lex) == '=' {
             tok_type = token_le
             tok_value = "<="
-            lexer_read_char(lex)
-            lexer_read_char(lex)
-        } else if lexer_peek_char(lex) == '<' {
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+        } else if frontend_lexer_peek_char(lex) == '<' {
             tok_type = token_lshift
             tok_value = "<<"
-            lexer_read_char(lex)
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         } else {
             tok_type = token_lt
             tok_value = "<"
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     case '>' :
-        if lexer_peek_char(lex) == '=' {
+        if frontend_lexer_peek_char(lex) == '=' {
             tok_type = token_ge
             tok_value = ">="
-            lexer_read_char(lex)
-            lexer_read_char(lex)
-        } else if lexer_peek_char(lex) == '>' {
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+        } else if frontend_lexer_peek_char(lex) == '>' {
             tok_type = token_rshift
             tok_value = ">>"
-            lexer_read_char(lex)
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         } else {
             tok_type = token_gt
             tok_value = ">"
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     case '+' :
-        if lexer_peek_char(lex) == '=' {
+        if frontend_lexer_peek_char(lex) == '=' {
             tok_type = token_plus_assign
             tok_value = "+="
-            lexer_read_char(lex)
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         } else {
             tok_type = token_plus
             tok_value = "+"
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     case '-' :
-        if lexer_peek_char(lex) == '=' {
+        if frontend_lexer_peek_char(lex) == '=' {
             tok_type = token_minus_assign
             tok_value = "-="
-            lexer_read_char(lex)
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         } else {
             tok_type = token_minus
             tok_value = "-"
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     case '*' :
-        if lexer_peek_char(lex) == '=' {
+        if frontend_lexer_peek_char(lex) == '=' {
             tok_type = token_star_assign
             tok_value = "*="
-            lexer_read_char(lex)
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         } else {
             tok_type = token_star
             tok_value = "*"
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     case '/' :
-        if lexer_peek_char(lex) == '=' {
+        if frontend_lexer_peek_char(lex) == '=' {
             tok_type = token_slash_assign
             tok_value = "/="
-            lexer_read_char(lex)
-            lexer_read_char(lex)
-        } else if lexer_peek_char(lex) == '/' {
-            lexer_skip_line_comment(lex)
-            return lexer_next_token(lex)
-        } else if lexer_peek_char(lex) == '*' {
-            lexer_skip_block_comment(lex)
-            return lexer_next_token(lex)
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+        } else if frontend_lexer_peek_char(lex) == '/' {
+            frontend_lexer_skip_line_comment(lex)
+            return frontend_lexer_next_token(lex)
+        } else if frontend_lexer_peek_char(lex) == '*' {
+            frontend_lexer_skip_block_comment(lex)
+            return frontend_lexer_next_token(lex)
         } else {
             tok_type = token_slash
             tok_value = "/"
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     case '%' :
         tok_type = token_percent
         tok_value = "%"
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case '&' :
-        if lexer_peek_char(lex) == '=' {
+        if frontend_lexer_peek_char(lex) == '=' {
             tok_type = token_and_assign
             tok_value = "&="
-            lexer_read_char(lex)
-            lexer_read_char(lex)
-        } else if lexer_peek_char(lex) == '&' {
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+        } else if frontend_lexer_peek_char(lex) == '&' {
             tok_type = token_and
             tok_value = "&&"
-            lexer_read_char(lex)
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         } else {
             tok_type = token_bit_and
             tok_value = "&"
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     case '|' :
-        if lexer_peek_char(lex) == '=' {
+        if frontend_lexer_peek_char(lex) == '=' {
             tok_type = token_or_assign
             tok_value = "|="
-            lexer_read_char(lex)
-            lexer_read_char(lex)
-        } else if lexer_peek_char(lex) == '|' {
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+        } else if frontend_lexer_peek_char(lex) == '|' {
             tok_type = token_or
             tok_value = "||"
-            lexer_read_char(lex)
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         } else {
             tok_type = token_bit_or
             tok_value = "|"
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     case '^' :
-        if lexer_peek_char(lex) == '=' {
+        if frontend_lexer_peek_char(lex) == '=' {
             tok_type = token_xor_assign
             tok_value = "^="
-            lexer_read_char(lex)
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         } else {
             tok_type = token_bit_xor
             tok_value = "^"
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     case '~' :
         tok_type = token_bit_not
         tok_value = "~"
-        lexer_read_char(lex)
+        frontend_lexer_read_char(lex)
     case '"' :
         tok_type = token_string
-        tok_value = lexer_read_string(lex, '"')
+        tok_value = frontend_lexer_read_string(lex, '"')
     case '\'' :
         tok_type = token_char
-        tok_value = lexer_read_string(lex, '\'')
+        tok_value = frontend_lexer_read_string(lex, '\'')
     default :
-        if is_letter(lex.current_char) {
-            ident := lexer_read_ident(lex)
-            tok_type = keyword_to_token(ident)
+        if frontend_is_letter(lex.current_char) {
+            ident := frontend_lexer_read_ident(lex)
+            tok_type = frontend_keyword_to_token(ident)
             tok_value = ident
-        } else if is_digit(lex.current_char) {
-            tok_value, tok_type = lexer_read_number(lex)
+        } else if frontend_is_digit(lex.current_char) {
+            number := frontend_lexer_read_number(lex)
+            tok_value = number.value
+            tok_type = number.token_type
         } else {
             tok_type = token_error
             tok_value = ""
             tok_value = tok_value + lex.current_char
-            lexer_read_char(lex)
+            frontend_lexer_read_char(lex)
         }
     }
 
@@ -505,7 +502,7 @@ func lexer_next_token(lexer* lex) token {
     }
 }
 
-func token_type_name(int tok_type) string {
+func frontend_token_type_name(int tok_type) string {
     switch tok_type {
     case token_eof : "EOF"
     case token_error : "ERROR"

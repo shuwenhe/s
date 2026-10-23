@@ -10,6 +10,13 @@ ln -s keep "$work/parent with space/symbolic alias"
 printf keep > "$work/parent with space/different"
 cat > "$work/tools.s" <<'S'
 package main
+struct borrow_probe { int value }
+func native_host_probe_set(target* borrow_probe) { target.value = 42 }
+func native_host_probe() int {
+    value := borrow_probe {}
+    native_host_probe_set(value)
+    return value.value
+}
 extern "intrinsic" func __host_run_argv(string[] args) int
 extern "intrinsic" func __host_make_temp_dir_in(string directory) string
 extern "intrinsic" func __host_write_text_file(string path, string data) int
@@ -61,7 +68,7 @@ func main() int {
     if __host_rename_file(binary, final) != 0 { return 16 }
     if __host_run_argv([final]) != 42 { return 17 }
     if __host_run_argv(["rm", "-rf", "--", first, second]) != 0 { return 18 }
-    return 42
+    return native_host_probe()
 }
 S
 "$root/bin/s_seed" --compile-native-unit "$work/tools.ir" "$work/tools.s"

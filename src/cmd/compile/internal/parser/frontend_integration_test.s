@@ -4,7 +4,7 @@ func test_frontend_simple_function() int {
     source := "func main() int {
     return 0
 }"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
 
@@ -33,7 +33,7 @@ func test_frontend_struct_with_fields() int {
     x: int
     y: int
 }"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
 
@@ -68,7 +68,7 @@ import (
 )
 func test() {
 }"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
 
@@ -100,7 +100,7 @@ func test() {
 func test_frontend_variable_declaration() int {
     source := "x := 10
 y: int = 20"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
 
@@ -126,7 +126,7 @@ func test_frontend_binary_expressions() int {
     b := x * y
     c := a > b
 }"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
 
@@ -145,7 +145,7 @@ func test_frontend_if_statement() int {
         return 0
     }
 }"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
 
@@ -162,7 +162,7 @@ func test_frontend_for_loop() int {
         x := i * 2
     }
 }"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
 
@@ -177,7 +177,7 @@ func test_frontend_method_with_receiver() int {
     source := "func (m: &MyType) name() string {
     return m.name
 }"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
 
@@ -198,7 +198,7 @@ func test_frontend_enum_declaration() int {
     Green,
     Blue
 }"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
 
@@ -228,7 +228,7 @@ func test_frontend_complex_expression() int {
     y := x.field[index]
     z := foo(bar(x))
 }"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
 
@@ -247,7 +247,7 @@ func test_frontend_switch_statement() int {
     default : return 0
     }
 }"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
     p := parser_new(lex)
     prog := parser_parse_program(p*)
 

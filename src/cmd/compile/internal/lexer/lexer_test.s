@@ -1,4 +1,4 @@
-package compile.internal.lexer
+package compile.internal.parser
 
 struct test_case {
     name: string
@@ -22,11 +22,11 @@ func assert_equal_int(int actual, int expected, string test_name) int {
 
 func test_lexer_single_char_tokens() int {
     source := "( ) { } [ ] , . : ; ? ! + - * / % = < > & | ^ ~ "
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
 
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(lex*)
+        tok := frontend_lexer_next_token(lex*)
         if tok.token_type == token_eof {
             break
         }
@@ -44,7 +44,7 @@ func test_lexer_single_char_tokens() int {
 
 func test_lexer_keywords() int {
     source := "package use func struct enum if else for while return break continue switch case default var const true false as new delete"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
 
     expected := vec[int]()
     expected.push(token_package)
@@ -72,7 +72,7 @@ func test_lexer_keywords() int {
 
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(lex*)
+        tok := frontend_lexer_next_token(lex*)
         if tok.token_type == token_eof {
             break
         }
@@ -94,7 +94,7 @@ func test_lexer_keywords() int {
 
 func test_lexer_identifiers() int {
     source := "x foo bar_baz MyVar _private"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
 
     expected := vec[string]()
     expected.push("x")
@@ -105,7 +105,7 @@ func test_lexer_identifiers() int {
 
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(lex*)
+        tok := frontend_lexer_next_token(lex*)
         if tok.token_type == token_eof {
             break
         }
@@ -129,7 +129,7 @@ func test_lexer_identifiers() int {
 
 func test_lexer_integers() int {
     source := "0 123 999 1000000"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
 
     expected := vec[string]()
     expected.push("0")
@@ -139,7 +139,7 @@ func test_lexer_integers() int {
 
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(lex*)
+        tok := frontend_lexer_next_token(lex*)
         if tok.token_type == token_eof {
             break
         }
@@ -157,11 +157,11 @@ func test_lexer_integers() int {
 
 func test_lexer_floats() int {
     source := "1.5 3.14 0.001 999.999"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
 
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(lex*)
+        tok := frontend_lexer_next_token(lex*)
         if tok.token_type == token_eof {
             break
         }
@@ -179,11 +179,11 @@ func test_lexer_floats() int {
 
 func test_lexer_strings() int {
     source := "\"hello\" \"world\" \"test string\""
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
 
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(lex*)
+        tok := frontend_lexer_next_token(lex*)
         if tok.token_type == token_eof {
             break
         }
@@ -201,7 +201,7 @@ func test_lexer_strings() int {
 
 func test_lexer_operators() int {
     source := ":= == != <= >= && || << >> += -= *= /="
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
 
     expected := vec[int]()
     expected.push(token_colon_assign)
@@ -220,7 +220,7 @@ func test_lexer_operators() int {
 
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(lex*)
+        tok := frontend_lexer_next_token(lex*)
         if tok.token_type == token_eof {
             break
         }
@@ -245,11 +245,11 @@ func test_lexer_operators() int {
 func test_lexer_line_comments() int {
     source := "x := 5
 y := 10
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
 
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(lex*)
+        tok := frontend_lexer_next_token(lex*)
         if tok.token_type == TOKEN_EOF {
             break
         }
@@ -269,23 +269,23 @@ func test_lexer_position_tracking() int {
     source := "x
 y
 z"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
 
-    tok1 := lexer_next_token(lex*)
+    tok1 := frontend_lexer_next_token(lex*)
     if tok1.line != 1 {
         return 1
     }
 
-    lexer_next_token(lex*)
+    frontend_lexer_next_token(lex*)
 
-    tok2 := lexer_next_token(lex*)
+    tok2 := frontend_lexer_next_token(lex*)
     if tok2.line != 2 {
         return 1
     }
 
-    lexer_next_token(lex*)
+    frontend_lexer_next_token(lex*)
 
-    tok3 := lexer_next_token(lex*)
+    tok3 := frontend_lexer_next_token(lex*)
     if tok3.line != 3 {
         return 1
     }
@@ -299,11 +299,11 @@ func test_lexer_complex_expression() int {
     y := x * 2
     return y
 }"
-    lex := lexer_new(source)
+    lex := frontend_lexer_new(source)
 
     tokens := vec[token]()
     for {
-        tok := lexer_next_token(lex*)
+        tok := frontend_lexer_next_token(lex*)
         if tok.token_type == token_eof {
             break
         }
