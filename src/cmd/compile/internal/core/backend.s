@@ -17,6 +17,8 @@ import (
     "compile.internal.ssa"
 )
 
+extern "intrinsic" func runtime_env_get(string key, string fallback) string;
+
 struct backend_error {
     string message
 }
@@ -2716,12 +2718,9 @@ func lookup_package_index(string module) option[string] {
 
 func package_index_candidate_paths() string[] {
     paths := string[]()
-    package_index := env_get("s_package_index")
-    if package_index.is_some() {
-        value := package_index.unwrap()
-        if value != "" {
-            append(paths, value)
-        }
+    env_value := runtime_env_get("s_package_index", "")
+    if env_value != "" {
+        append(paths, env_value)
     }
     project := resolve_project_root()
     if project != "" {
@@ -2902,14 +2901,11 @@ func module_search_roots() string[] {
 }
 
 func push_workspace_roots(string[] roots) () {
-    work_path := env_get("s_work_file")
-    if work_path.is_some() {
-        path := work_path.unwrap()
-        if path != "" {
-            work := std.fs.read_to_string(path)
-            if work.is_ok() {
-                append_workspace_roots(roots, work.unwrap())
-            }
+    work_path := runtime_env_get("s_work_file", "")
+    if work_path != "" {
+        work := std.fs.read_to_string(work_path)
+        if work.is_ok() {
+            append_workspace_roots(roots, work.unwrap())
         }
     }
 }
@@ -2931,23 +2927,17 @@ func append_workspace_roots(string[] roots, string text) () {
 }
 
 func resolve_s_root() string {
-    root := env_get("S_ROOT")
-    if root.is_some() {
-        value := root.unwrap()
-        if value != "" {
-            return value
-        }
+    root := runtime_env_get("S_ROOT", "")
+    if root != "" {
+        return root
     }
     "/app/s"
 }
 
 func resolve_project_root() string {
-    root := env_get("S_PROJECT_ROOT")
-    if root.is_some() {
-        value := root.unwrap()
-        if value != "" {
-            return value
-        }
+    root := runtime_env_get("S_PROJECT_ROOT", "")
+    if root != "" {
+        return root
     }
     ""
 }
@@ -3068,19 +3058,13 @@ func build_compiler_runtime_launcher(string output) int {
 }
 
 func resolve_bootstrap_base_compiler() string {
-    base := env_get("s_bootstrap_base_compiler")
-    if base.is_some() {
-        value := base.unwrap()
-        if value != "" {
-            return value
-        }
+    base := runtime_env_get("s_bootstrap_base_compiler", "")
+    if base != "" {
+        return base
     }
-    base = env_get("S_BOOTSTRAP_BASE_COMPILER")
-    if base.is_some() {
-        value := base.unwrap()
-        if value != "" {
-            return value
-        }
+    base = runtime_env_get("S_BOOTSTRAP_BASE_COMPILER", "")
+    if base != "" {
+        return base
     }
     "/app/s/bin/s_arm64"
 }
