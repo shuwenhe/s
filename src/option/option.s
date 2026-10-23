@@ -5,27 +5,30 @@ enum option[t] {
 }
 
 func (option[t] self) is_some() bool {
-        switch self {
-            option::some(_) : true,
-            option::none : false,
-        }
+    return switch self {
+        option::some(_) : true,
+        option::none : false,
     }
+}
 
 func (option[t] self) is_none() bool {
-        !self.is_some()
-    }
+    return !self.is_some()
+}
 
 func (option[t] self) unwrap() t {
-        switch self {
-            option::some(value) : value,
-            option::none : __option_panic_unwrap(),
+    switch self {
+        option::some(value) : return value,
+        option::none : {
+            // Panic path - should never execute normally
+            panic("called unwrap on a none option")
         }
     }
+}
 
 func (option[t] self) unwrap_or(t default) t {
-        switch self {
-            option::some(value) : value,
-            option::none : default,
-        }
+    return switch self {
+        option::some(value) : value,
+        option::none : default,
     }
+}
 extern "intrinsic" func __option_panic_unwrap[t]() t
