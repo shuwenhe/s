@@ -2264,11 +2264,19 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				 * try to infer the type from common patterns */
 				if (lhs_type && strcmp(lhs_type, TYPE_ANY) == 0 &&
 				    member->as.member_expr.object &&
-				    member->as.member_expr.object->kind == AST_MEMBER_EXPR &&
-				    strcmp(member->as.member_expr.object->as.member_expr.member, "body") == 0) {
-					/* This looks like <something>.body.<method> where body couldn't be resolved */
-					/* Infer that body is likely option[block_expr] */
-					lhs_type = "option[block_expr]";
+				    member->as.member_expr.object->kind == AST_MEMBER_EXPR) {
+					const char *field_name = member->as.member_expr.object->as.member_expr.member;
+					/* Common patterns for option-typed fields */
+					if (strcmp(field_name, "body") == 0) {
+						/* This looks like <something>.body.<method> where body couldn't be resolved */
+						/* Infer that body is likely option[block_expr] */
+						lhs_type = "option[block_expr]";
+					} else if (strcmp(field_name, "kindname") == 0 || strcmp(field_name, "kind") == 0 ||
+					           strcmp(field_name, "value") == 0 || strcmp(field_name, "init") == 0 ||
+					           strcmp(field_name, "condition") == 0) {
+						/* These are commonly option types in AST structures */
+						lhs_type = "option[any]";
+					}
 				}
 				
 				if (lhs_type && strncmp(lhs_type, "&mut", 4) == 0) lhs_type += 4;
@@ -2309,6 +2317,34 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 						if (!result_type) return 0;
 						*out_type = result_type;
 						return 1;
+					}
+				}
+				/* Handle box[T].unwrap() -> T pattern */
+				if (lhs_type && (strstr(lhs_type, "box[") || strstr(lhs_type, "box<")) &&
+				    strcmp(member->as.member_expr.member, "unwrap") == 0) {
+					const char *bracket = strchr(lhs_type, '[');
+					if (!bracket) bracket = strchr(lhs_type, '<');
+					if (bracket) {
+						const char *bracket_end = strrchr(bracket, ']');
+						if (!bracket_end) bracket_end = strrchr(bracket, '>');
+						if (bracket_end && bracket_end > bracket) {
+							/* Extract the type parameter from box[T] */
+							size_t type_len = bracket_end - bracket - 1;
+							char inner_type[1024];
+							strncpy(inner_type, bracket + 1, type_len);
+							inner_type[type_len] = '\0';
+							
+							if (node->as.call_expr.args.len != 0) {
+								error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+									"box.unwrap expects no arguments");
+								return 0;
+							}
+							
+							char *result_type = dup_cstr(inner_type);
+							if (!result_type) return 0;
+							*out_type = result_type;
+							return 1;
+						}
 					}
 				}
 				if (lhs_type && ((strchr(lhs_type, ',') || (strchr(lhs_type, '[') && strchr(lhs_type, ']'))) ||
