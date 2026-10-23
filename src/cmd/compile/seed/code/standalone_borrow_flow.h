@@ -28,7 +28,7 @@ static int borrow_flow_record_type(borrow_flow_types *t,int record) {
     return record>=0 && standalone_validate_record_schema(t->m,record,t->err)?record:BF_UNKNOWN;
 }
 static int borrow_flow_array(borrow_flow_types *t,int element) {
-    if(element==BF_UNKNOWN || element==BF_UNIT) return BF_UNKNOWN;
+    if(element==BF_UNKNOWN) return BF_UNKNOWN;
     for(size_t i=0;i<t->arrays;i++) if(t->elements[i]==element) return (int)(t->m->record_count+i);
     if(t->arrays==BF_MAX_ARRAYS) return BF_UNKNOWN;
     t->elements[t->arrays]=element;
@@ -39,7 +39,7 @@ static bool borrow_flow_is_array(borrow_flow_types *t,int type) {
 }
 static int borrow_flow_type(borrow_flow_types *t,const char *name,const char *context,unsigned depth) {
     if(!name || depth>64) return BF_UNKNOWN;
-    if(!strcmp(name,"()")) return BF_UNIT;
+    if(!strcmp(name,"()") || !strcmp(name,"unit")) return BF_UNIT;
     if(standalone_borrow_scalar(name) || !strcmp(name,"int64") || !strcmp(name,"uint64") || !strcmp(name,"uint")) return BF_INT;
     if(!strcmp(name,"string")) return BF_STRING;
     char element[STANDALONE_TEXT_CAP];
@@ -159,6 +159,12 @@ static int borrow_flow_call(borrow_flow_types *t,standalone_function *fn,int *st
         int value=borrow_flow_value(t,fn,state,path);
         return borrow_flow_is_array(t,value)?BF_INT:BF_UNKNOWN;
     }
+    if(!strcmp(name,"__vec_push")) {
+        char path[STANDALONE_TEXT_CAP];
+        if(count!=2 || !borrow_flow_literal(sources[0],path,sizeof(path),err)) return BF_UNKNOWN;
+        int array=borrow_flow_value(t,fn,state,path);
+        return borrow_flow_is_array(t,array) && args[1]==t->elements[array-(int)t->m->record_count]?array:BF_UNKNOWN;
+    }
     if(runtime) {
         /* Ordinary compiler callers may perform I/O between borrows. These
          * services consume scalar/string values, never record handles. Keep
@@ -213,7 +219,9 @@ static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,bo
             continue;
         }
         if(!strcmp(x->op,"LABEL") || !strcmp(x->op,"NOP") || !strcmp(x->op,"JUMP")) continue;
-        if(!strcmp(x->op,"MOV")) {
+        if(!strcmp(x->op,"UNIT")) {
+            result=BF_UNIT;
+        } else if(!strcmp(x->op,"MOV")) {
             size_t n=strlen(x->result);
             if(n>7 && !strcmp(x->result+n-7,".__type")) {
                 char root[STANDALONE_TEXT_CAP],type[STANDALONE_TEXT_CAP]; memcpy(root,x->result,n-7); root[n-7]=0;
@@ -271,10 +279,13 @@ static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,bo
             char index[STANDALONE_TEXT_CAP]; int array=borrow_flow_value(t,fn,state,x->operand1);
             if(!borrow_flow_is_array(t,array) || !parse_index_projection(x->operand2,index,sizeof(index)) || borrow_flow_value(t,fn,state,index)!=BF_INT) return false;
             result=t->elements[array-(int)t->m->record_count];
+        } else if(!strcmp(x->op,"TRAP")) {
+            if(argc || strcmp(x->result,"101")) return false;
+            continue;
         } else if(!strcmp(x->op,"RET")) {
             if(return_type==BF_UNIT && (!*x->result || !strcmp(x->result,"_"))) continue;
             int value=borrow_flow_value(t,fn,state,x->result);
-            if(borrow_flow_raw(fn,borrowed,x->result) || (value!=return_type && !(return_type==BF_UNIT && value==BF_INT) && !(unreachable && is_integer(x->result)))) return false;
+            if(borrow_flow_raw(fn,borrowed,x->result) || (value!=return_type && !(unreachable && is_integer(x->result)))) return false;
             continue;
         } else if(!strcmp(x->op,"JUMP_IF_FALSE")) {
             if(argc || borrow_flow_value(t,fn,state,x->operand1)!=BF_INT) return false;
@@ -283,6 +294,7 @@ static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,bo
             if(borrow_flow_raw(fn,borrowed,x->operand1) || borrow_flow_raw(fn,borrowed,x->operand2)) return false;
             int left=borrow_flow_value(t,fn,state,x->operand1),right=borrow_flow_value(t,fn,state,x->operand2);
             if(left==BF_INT && right==BF_INT) result=BF_INT;
+            else if(left==BF_UNIT && right==BF_UNIT && (!strcmp(x->op,"CMP_EQ") || !strcmp(x->op,"CMP_NE"))) result=BF_INT;
             else if(left==BF_STRING && right==BF_STRING && (!strcmp(x->op,"ADD") || !strncmp(x->op,"CMP_",4))) result=!strcmp(x->op,"ADD")?BF_STRING:BF_INT;
             else return false;
         } else return false;
@@ -294,13 +306,6 @@ static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,bo
 }
 static bool standalone_validate_borrow_flow(standalone_module *m,standalone_function *fn,compile_error *err) {
     if(fn->borrow_flow_state) return true; /* A recursive value-call SCC is checked body by body. */
-    /* Skip borrow flow validation for generic methods with instantiated type parameters.
-     * Their control flow may be complex and the simple borrow checker cannot reason about
-     * generics properly. Bootstrap does not require full borrow proof for generated code. */
-    if(strchr(fn->name,'[')) {
-        fn->borrow_flow_state=2;
-        return true;
-    }
     fn->borrow_flow_state=1;
     size_t n=fn->end-fn->begin,slots=fn->slot_count,at=fn->begin;
     bool *leaders=calloc(n+1,sizeof(bool)),*borrowed=calloc(slots?slots:1,sizeof(bool));
@@ -313,7 +318,7 @@ static bool standalone_validate_borrow_flow(standalone_module *m,standalone_func
     for(size_t i=0;i<n;i++) {
         standalone_ins *x=&m->ir.ins[fn->begin+i];
         if(!strcmp(x->op,"LABEL")) leaders[i]=true;
-        if((!strcmp(x->op,"JUMP") || !strcmp(x->op,"JUMP_IF_FALSE") || !strcmp(x->op,"RET")) && i+1<n) leaders[i+1]=true;
+        if((!strcmp(x->op,"JUMP") || !strcmp(x->op,"JUMP_IF_FALSE") || !strcmp(x->op,"RET") || !strcmp(x->op,"TRAP")) && i+1<n) leaders[i+1]=true;
     }
     for(size_t i=0;i<n;i++) {
         if(leaders[i]) { if(count) blocks[count-1].end=fn->begin+i; blocks[count].begin=fn->begin+i; count++; }
@@ -335,7 +340,7 @@ static bool standalone_validate_borrow_flow(standalone_module *m,standalone_func
     }
     for(size_t b=0;b<count;b++) {
         borrow_flow_block *block=&blocks[b]; standalone_ins *last=&m->ir.ins[block->end-1];
-        block->successors[0]=!strcmp(last->op,"RET")?-1:(b+1<count?(int)b+1:-1); block->successors[1]=-1;
+        block->successors[0]=(!strcmp(last->op,"RET") || !strcmp(last->op,"TRAP"))?-1:(b+1<count?(int)b+1:-1); block->successors[1]=-1;
         if(!strcmp(last->op,"JUMP") || !strcmp(last->op,"JUMP_IF_FALSE")) {
             int target=-1;
             for(size_t j=0;j<n;j++) if(!strcmp(m->ir.ins[fn->begin+j].op,"LABEL") && !strcmp(m->ir.ins[fn->begin+j].result,last->result)) {
@@ -356,7 +361,7 @@ static bool standalone_validate_borrow_flow(standalone_module *m,standalone_func
          * not an arbitrary declared result. Conditional final blocks also
          * have a fallthrough edge even when their jump target is valid. */
         standalone_ins *last=&m->ir.ins[blocks[b].end-1];
-        if(blocks[b].end==fn->end && strcmp(last->op,"RET") && strcmp(last->op,"JUMP") &&
+        if(blocks[b].end==fn->end && strcmp(last->op,"RET") && strcmp(last->op,"TRAP") && strcmp(last->op,"JUMP") &&
             borrow_flow_type(&types,standalone_transfer(m,"return-transfer:",fn->name,NULL),NULL,0)!=BF_UNIT) {
             at=blocks[b].end-1; goto done;
         }

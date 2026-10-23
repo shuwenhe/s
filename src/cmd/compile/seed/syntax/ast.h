@@ -4,6 +4,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "../lexical/token.h"
+/* Hexadecimal e/E digits do not make an integer literal floating point. */
+static inline bool ast_number_is_float(const char *text) {
+    if(!text || (text[0]=='0' && (text[1]=='x' || text[1]=='X'))) return false;
+    for(const char *p=text;*p;p++) if(*p=='.' || *p=='e' || *p=='E') return true;
+    return false;
+}
 typedef enum ast_kind {
 	AST_PROGRAM = 0,
 	AST_BLOCK,
@@ -38,6 +44,8 @@ typedef enum ast_kind {
 	AST_INDEX_EXPR,
 	AST_SLICE_EXPR,
 	AST_CALL_EXPR,
+    AST_TRAP_STMT,
+    AST_UNIT_EXPR,
 } ast_kind;
 typedef struct ast_node ast_node;
 typedef struct ast_vec {
@@ -63,6 +71,7 @@ struct ast_node {
 	ast_kind kind;
 	source_pos pos;
 	bool native_template;
+    bool native_enum;
 	char *generic_parameters;
 	union {
 		struct {
@@ -71,6 +80,7 @@ struct ast_node {
 		struct {
 			ast_vec statements;
 			bool transparent_scope;
+            bool tuple_binding;
 		} block;
 		struct {
 			char *name;
@@ -130,6 +140,8 @@ struct ast_node {
 			char *variant_name;
 			pattern_kind payload_kind;
 			char *payload_binding_name;
+            char *native_variant_field;
+            int64_t native_variant_tag;
 		} if_stmt;
 		struct {
 			ast_node *condition;
@@ -197,6 +209,8 @@ struct ast_node {
 		} string_expr;
 		struct {
 			ast_vec items;
+            char *resolved_array_type;
+            char *explicit_type;
 		} array_expr;
 		struct {
 			char *type_name;
@@ -209,6 +223,7 @@ struct ast_node {
 			char *member;
 			char *resolved_method;
 			char *resolved_enum_type;
+            char *native_owner_name;
 		} member_expr;
 		struct {
 			ast_node *object;
@@ -223,6 +238,8 @@ struct ast_node {
 			ast_node *callee;
 			ast_vec args;
 			char *resolved_array_type;
+            char *resolved_return_type; /* Owned semantic return-type cache. */
+            char *native_imports; /* Newline-separated imports from the original source file. */
             char *native_callee_name; /* Original file's import/package candidate. */
             unsigned long long native_borrow_mask;
 		} call_expr;

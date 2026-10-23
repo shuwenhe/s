@@ -26,6 +26,9 @@ typedef struct ng_scope {
     ng_text actuals[NG_ARGS];
     struct { const char *name; ng_text type; } bindings[512];
     size_t count;
+    const char *expected;
+    const ast_node *active_pattern; /* Diagnostics: nearest validated pattern arm. */
+    ng_text return_type;
 } ng_scope;
 static bool ng_fail(ng_state *s,source_pos pos,const char *message) {
     if(!s->err->code) error_set(s->err,ERR_SEMANTIC,pos.line,pos.column,"native generic specialization: %s",message);
@@ -89,6 +92,12 @@ static ng_decl *ng_register(ng_state *s,ast_node *n,const char *package) {
     if(snprintf(d->name,sizeof(d->name),"%s%s%s",package,*package?".":"",name)>=(int)sizeof(d->name) ||
        !ng_parameters(s,d,n->generic_parameters)) { free(d); return NULL; }
     n->native_template=d->count!=0;
+    if(n->kind==AST_ENUM_DECL) {
+        if(n->as.enum_decl.generic_count>NG_ARGS) { free(d); return NULL; }
+        d->count=n->as.enum_decl.generic_count;
+        for(size_t i=0;i<d->count;i++) snprintf(d->parameters[i],sizeof(ng_text),"%s",n->as.enum_decl.generic_params[i]);
+        n->native_template=d->count!=0;
+    }
     s->decls[s->count++]=d; return d;
 }
 static ng_decl *ng_find(ng_state *s,const char *name,const char *package,bool function) {
@@ -144,11 +153,12 @@ static bool ng_clone_vec(ng_state *s,ast_vec *out,const ast_vec *in) {
 static ast_node *ng_clone(ng_state *s,const ast_node *n) {
     if(!n) return NULL;
     ast_node *r=ast_new(n->kind,n->pos); if(!r) return NULL;
+    r->native_enum=n->native_enum;
 #define STR(f) do { if(n->as.f && !(r->as.f=ng_dup(n->as.f))) goto bad; } while(0)
 #define NODE(f) do { if(n->as.f && !(r->as.f=ng_clone(s,n->as.f))) goto bad; } while(0)
 #define VEC(f) do { if(!ng_clone_vec(s,&r->as.f,&n->as.f)) goto bad; } while(0)
     switch(n->kind) {
-    case AST_BLOCK: VEC(block.statements); r->as.block.transparent_scope=n->as.block.transparent_scope; break;
+    case AST_BLOCK: VEC(block.statements); r->as.block.transparent_scope=n->as.block.transparent_scope; r->as.block.tuple_binding=n->as.block.tuple_binding; break;
     case AST_LET_STMT: STR(let_stmt.name); STR(let_stmt.type_name); NODE(let_stmt.value); r->as.let_stmt.mutable=n->as.let_stmt.mutable; break;
     case AST_CONST_DECL: case AST_VAR_DECL: STR(var_decl.name); STR(var_decl.type_name); NODE(var_decl.value); break;
     case AST_EXPR_STMT: NODE(expr_stmt.expr); break;
@@ -163,7 +173,7 @@ static ast_node *ng_clone(ng_state *s,const ast_node *n) {
     case AST_NUMBER_EXPR: STR(number_expr.literal); break;
     case AST_STRING_EXPR: STR(string_expr.literal); r->as.string_expr.is_type_name=n->as.string_expr.is_type_name; break;
     case AST_BOOL_EXPR: r->as.bool_expr.value=n->as.bool_expr.value; break;
-    case AST_ARRAY_EXPR: VEC(array_expr.items); break;
+    case AST_ARRAY_EXPR: STR(array_expr.explicit_type); VEC(array_expr.items); break;
     case AST_STRUCT_EXPR:
         STR(struct_expr.type_name);
         r->as.struct_expr.field_count=n->as.struct_expr.field_count;
@@ -171,10 +181,10 @@ static ast_node *ng_clone(ng_state *s,const ast_node *n) {
         if(!r->as.struct_expr.field_names) goto bad;
         for(size_t i=0;i<n->as.struct_expr.field_count;i++) if(!(r->as.struct_expr.field_names[i]=ng_dup(n->as.struct_expr.field_names[i]))) goto bad;
         VEC(struct_expr.field_values); break;
-    case AST_MEMBER_EXPR: NODE(member_expr.object); STR(member_expr.member); break;
+    case AST_MEMBER_EXPR: NODE(member_expr.object); STR(member_expr.member); STR(member_expr.native_owner_name); break;
     case AST_INDEX_EXPR: NODE(index_expr.object); NODE(index_expr.index); break;
     case AST_SLICE_EXPR: NODE(slice_expr.object); NODE(slice_expr.start); NODE(slice_expr.end); break;
-    case AST_CALL_EXPR: NODE(call_expr.callee); VEC(call_expr.args); STR(call_expr.native_callee_name); break;
+    case AST_CALL_EXPR: NODE(call_expr.callee); VEC(call_expr.args); STR(call_expr.native_callee_name); STR(call_expr.native_imports); break;
     case AST_UNARY_EXPR: NODE(unary_expr.operand); r->as.unary_expr.op=n->as.unary_expr.op; break;
     case AST_BINARY_EXPR: NODE(binary_expr.left); NODE(binary_expr.right); r->as.binary_expr.op=n->as.binary_expr.op; break;
     case AST_ASSIGN_STMT: STR(assign_stmt.name); NODE(assign_stmt.value); break;
@@ -182,11 +192,12 @@ static ast_node *ng_clone(ng_state *s,const ast_node *n) {
     case AST_IF_STMT:
         NODE(if_stmt.condition); NODE(if_stmt.then_branch); NODE(if_stmt.else_branch); NODE(if_stmt.pattern_subject);
         STR(if_stmt.binding_name); STR(if_stmt.payload_binding_name); STR(if_stmt.variant_owner); STR(if_stmt.variant_name);
+        STR(if_stmt.native_variant_field); r->as.if_stmt.native_variant_tag=n->as.if_stmt.native_variant_tag;
         r->as.if_stmt.is_switch_arm=n->as.if_stmt.is_switch_arm; r->as.if_stmt.is_pattern_arm=n->as.if_stmt.is_pattern_arm;
         r->as.if_stmt.pattern_kind=n->as.if_stmt.pattern_kind; r->as.if_stmt.payload_kind=n->as.if_stmt.payload_kind; break;
     case AST_WHILE_STMT: NODE(while_stmt.condition); NODE(while_stmt.body); break;
     case AST_FOR_STMT: NODE(for_stmt.init); NODE(for_stmt.condition); NODE(for_stmt.post); NODE(for_stmt.iterable); NODE(for_stmt.body); STR(for_stmt.iter_name); break;
-    case AST_BREAK_STMT: case AST_CONTINUE_STMT: break;
+    case AST_BREAK_STMT: case AST_CONTINUE_STMT: case AST_TRAP_STMT: case AST_UNIT_EXPR: break;
     case AST_FN_STMT:
         STR(fn_stmt.name); STR(fn_stmt.receiver_type); STR(fn_stmt.return_type);
         r->as.fn_stmt.param_count=n->as.fn_stmt.param_count;
@@ -217,12 +228,18 @@ static ng_decl *ng_append(ng_state *s,ast_node *n,const char *package) {
 static bool ng_type(ng_scope *,const char *,ng_text,unsigned);
 static bool ng_node(ng_scope *,ast_node *,ng_text);
 static bool ng_function(ng_scope *,ast_node *);
+static bool ng_enum_schema(ng_scope *,ng_decl *,ng_text *,size_t,const char *,unsigned);
+static bool ng_expect(ng_scope *c,ast_node *n,const char *expected,ng_text out) {
+    c->expected=expected;
+    return ng_node(c,n,out);
+}
 static bool ng_known(ng_scope *c,const char *type) {
     static const char *const scalar[]={"int","bool","string","byte","int64","uint64","uint","float","()"};
     for(size_t i=0;i<sizeof(scalar)/sizeof(*scalar);i++) if(!strcmp(type,scalar[i])) return true;
     ng_text element,base,args[NG_ARGS];
     if(seed_array_element(type,element,sizeof(element))) return ng_known(c,element);
-    if(ng_find(c->state,type,c->package,false)) return true;
+    ng_decl *exact=ng_find(c->state,type,c->package,false);
+    if(exact && !exact->count) return true;
     int n=ng_split(type,base,args);
     ng_decl *d=n>0?ng_find(c->state,base,c->package,false):NULL;
     if(!d) return false;
@@ -244,6 +261,19 @@ static bool ng_type(ng_scope *c,const char *raw,ng_text out,unsigned depth) {
     ng_state *s=c->state; ng_text text,element,base,args[NG_ARGS];
     if(depth>64) return ng_fail(s,(source_pos){0,0},"recursive type expansion");
     if(!ng_substitute(c,raw?raw:"",text)) return false;
+    if(!strcmp(text,"unit")) strcpy(text,"()");
+    /* The parser stores result return lists as T,E, without parentheses. */
+    int nesting=0; bool tuple=false;
+    for(const char *p=text;*p;p++) {
+        if(*p=='[' || *p=='(') nesting++;
+        else if(*p==']' || *p==')') nesting--;
+        else if(*p==',' && !nesting) tuple=true;
+    }
+    if(tuple && ng_find(s,"std.result.result",c->package,false)) {
+        ng_text application;
+        if(snprintf(application,sizeof(application),"std.result.result[%s]",text)>=(int)sizeof(application)) return ng_fail(s,(source_pos){0,0},"result type too long");
+        return ng_type(c,application,out,depth+1);
+    }
     size_t len=strlen(text);
     if(seed_array_element(text,element,sizeof(element))) {
         ng_text item; if(!ng_type(c,element,item,depth+1)) return false;
@@ -267,6 +297,8 @@ static bool ng_type(ng_scope *c,const char *raw,ng_text out,unsigned depth) {
         strcpy(args[i],resolved); concrete=concrete && ng_known(c,resolved);
     }
     if(!ng_application(s,d->name,args,(size_t)count,out,d->node->pos)) return false;
+    if(concrete && d->node->kind==AST_ENUM_DECL && !ng_find(s,out,c->package,false))
+        return ng_enum_schema(c,d,args,(size_t)count,out,depth);
     if(!concrete || !ng_record(d->node) || ng_find(s,out,c->package,false)) return true;
     ast_node *copy=ng_clone(s,d->node); if(!copy) return false;
     ng_text local; if(!ng_application(s,d->node->as.let_stmt.name,args,(size_t)count,local,d->node->pos) ||
@@ -311,6 +343,7 @@ static bool ng_unify(ng_scope *c,ng_decl *d,const char *pattern,const char *actu
     ng_text expected; bool ok=ng_type(declaration,pattern,expected,0) && !strcmp(expected,actual);
     free(declaration); return ok;
 }
+#include "native_enums.h"
 static ng_decl *ng_instantiate(ng_scope *caller,ng_decl *d,ng_text *arguments,size_t count,source_pos pos) {
     ng_state *s=caller->state; ng_text actuals[NG_ARGS]={{0}},local,name;
     if(count!=d->node->as.fn_stmt.param_count) { ng_fail(s,d->node->pos,"generic function argument count mismatch"); return NULL; }
@@ -355,14 +388,54 @@ static ng_decl *ng_method(ng_scope *c,const char *type,const char *member) {
     }
     return found;
 }
+/* Empty brackets in a constructor are type syntax, not a value read. */
+static bool ng_array_constructor_type(ng_scope *c,ast_node *n,ng_text out) {
+    ng_text element,spelling;
+    if(n && n->kind==AST_INDEX_EXPR && !n->as.index_expr.index) {
+        if(!ng_array_constructor_type(c,n->as.index_expr.object,element)) return false;
+        if(snprintf(out,sizeof(ng_text),"%s[]",element)>=(int)sizeof(ng_text)) return ng_fail(c->state,n->pos,"array type name too long");
+        return true;
+    }
+    if(!n || !native_record_type_spelling(n,spelling,sizeof(spelling))) return ng_fail(c->state,n?n->pos:(source_pos){0,0},"invalid array element type");
+    snprintf(element,sizeof(element),"%s",spelling); char *dot=strchr(element,'.'); if(dot) *dot=0;
+    if(ng_bound(c,element)) return ng_fail(c->state,n->pos,"array constructor requires a type, not a value");
+    if(!ng_type(c,spelling,out,0) || !ng_known(c,out)) return ng_fail(c->state,n->pos,"unknown array element type");
+    /* Later semantic analysis and lowering must see the same concrete identity. */
+    if(n->kind==AST_IDENT_EXPR && !ng_put(c->state,&n->as.ident_expr.name,out,n->pos)) return false;
+    return true;
+}
+/* Optional boundary diagnostics; never used to authorize a projection. */
+static void ng_trace_payload_access(ng_scope *c,ast_node *n,const char *object_type) {
+    if(!getenv("S_NATIVE_TYPE_TRACE")) return;
+    ng_text expression="<expression>",root_type="";
+    const char *field_owner="<unresolved>",*field_name="<unresolved>",*field_type="<unresolved>";
+    native_record_type_spelling(n,expression,sizeof(expression));
+    ast_node *object=n->as.member_expr.object;
+    if(object && object->kind==AST_MEMBER_EXPR && object->as.member_expr.object && object->as.member_expr.object->kind==AST_IDENT_EXPR) {
+        const char *root=object->as.member_expr.object->as.ident_expr.name;
+        snprintf(root_type,sizeof(root_type),"%s",ng_binding(c,root));
+        ng_decl *record=ng_find(c->state,root_type,c->package,false);
+        if(record && ng_record(record->node)) {
+            ast_node *schema=record->node->as.let_stmt.value;
+            for(size_t i=0;i<schema->as.struct_expr.field_count;i++) if(!strcmp(schema->as.struct_expr.field_names[i],object->as.member_expr.member)) {
+                field_owner=record->name; field_name=object->as.member_expr.member; field_type=schema->as.struct_expr.field_values.data[i]->as.string_expr.literal;
+            }
+        }
+    }
+    const ast_node *arm=c->active_pattern;
+    fprintf(stderr,"native-type-trace package=%s unit-line=%zu column=%zu %s\n  root binding type: %s\n  object type: %s\n  resolved field declaration: %s.%s: %s\n  active validated pattern: %s::%s(%s)\n  target enum payload projection proof: absent\n",c->package,n->pos.line,n->pos.column,expression,*root_type?root_type:"<unresolved>",*object_type?object_type:"<unresolved>",field_owner,field_name,field_type,arm && arm->as.if_stmt.variant_owner?arm->as.if_stmt.variant_owner:"<none>",arm && arm->as.if_stmt.variant_name?arm->as.if_stmt.variant_name:"<none>",arm && arm->as.if_stmt.payload_binding_name?arm->as.if_stmt.payload_binding_name:"_");
+}
 static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
     out[0]=0; if(!n) return true;
     ng_state *s=c->state; ng_text left,right,type;
+    ng_text expected; snprintf(expected,sizeof(expected),"%s",c->expected?c->expected:""); c->expected=NULL;
 #define VISIT(x) do { if(!ng_node(c,(x),type)) return false; } while(0)
     switch(n->kind) {
     case AST_BLOCK: {
+        if(n->as.block.tuple_binding && !ng_result_unpack(c,n)) return false;
         size_t saved=c->count;
-        for(size_t i=0;i<n->as.block.statements.len;i++) if(!ng_node(c,n->as.block.statements.data[i],out)) return false;
+        for(size_t i=0;i<n->as.block.statements.len;i++)
+            if(!ng_expect(c,n->as.block.statements.data[i],i+1==n->as.block.statements.len?expected:"",out)) return false;
         if(!n->as.block.transparent_scope) c->count=saved;
         return true;
     }
@@ -382,15 +455,21 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         }
         return ng_bind(c,n->as.var_decl.name,out);
     case AST_IDENT_EXPR: snprintf(out,sizeof(ng_text),"%s",ng_binding(c,n->as.ident_expr.name)); return true;
-    case AST_NUMBER_EXPR: strcpy(out,"int"); return true;
+    case AST_NUMBER_EXPR: strcpy(out,ast_number_is_float(n->as.number_expr.literal)?"float":"int"); return true;
+    case AST_UNIT_EXPR: strcpy(out,"()"); return true;
     case AST_BOOL_EXPR: strcpy(out,"bool"); return true;
     case AST_STRING_EXPR: strcpy(out,"string"); return true;
     case AST_STRUCT_EXPR: {
         if(!ng_type(c,n->as.struct_expr.type_name,out,0) || !ng_put(s,&n->as.struct_expr.type_name,out,n->pos)) return false;
+        ng_text enum_args[NG_ARGS];
+        if(!n->native_enum && ng_enum_type(c,out,enum_args)) return ng_fail(s,n->pos,"enum values require a variant constructor");
         ng_decl *d=ng_find(s,out,c->package,false);
         ast_node *schema=d && ng_record(d->node) && strchr(d->name,'[')?d->node->as.let_stmt.value:NULL;
         for(size_t i=0;i<n->as.struct_expr.field_values.len;i++) {
-            VISIT(n->as.struct_expr.field_values.data[i]);
+            const char *field_context="";
+            for(size_t f=0;schema && f<schema->as.struct_expr.field_count;f++)
+                if(!strcmp(schema->as.struct_expr.field_names[f],n->as.struct_expr.field_names[i])) field_context=schema->as.struct_expr.field_values.data[f]->as.string_expr.literal;
+            if(!ng_expect(c,n->as.struct_expr.field_values.data[i],field_context,type)) return false;
             for(size_t f=0;schema && f<schema->as.struct_expr.field_count;f++) {
                 if(strcmp(schema->as.struct_expr.field_names[f],n->as.struct_expr.field_names[i])) continue;
                 const char *expected=schema->as.struct_expr.field_values.data[f]->as.string_expr.literal;
@@ -403,6 +482,11 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         return true;
     }
     case AST_ARRAY_EXPR:
+        if(n->as.array_expr.explicit_type) {
+            if(!ng_type(c,n->as.array_expr.explicit_type,out,0) || !ng_known(c,out) || !ng_put(s,&n->as.array_expr.explicit_type,out,n->pos)) return ng_fail(s,n->pos,"unknown array element type");
+            for(size_t i=0;i<n->as.array_expr.items.len;i++) VISIT(n->as.array_expr.items.data[i]);
+            return true;
+        }
         for(size_t i=0;i<n->as.array_expr.items.len;i++) {
             VISIT(n->as.array_expr.items.data[i]); if(i==0) strcpy(left,type);
             else if(strcmp(left,type)) left[0]=0;
@@ -410,7 +494,19 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         if(n->as.array_expr.items.len && left[0]) return snprintf(out,sizeof(ng_text),"%s[]",left)<(int)sizeof(ng_text);
         return true;
     case AST_MEMBER_EXPR: {
+        int constructed=ng_enum_construct(c,n,n,NULL,0,expected,out);
+        if(constructed) return constructed>0;
         if(!ng_node(c,n->as.member_expr.object,left)) return false;
+        ng_text enum_args[NG_ARGS];
+        ng_decl *enum_owner=ng_enum_type(c,left,enum_args);
+        if(!n->native_enum && enum_owner) {
+            const char *member=n->as.member_expr.member;
+            if(!strcmp(enum_owner->name,"std.result.result") && (!strcmp(member,"left") || !strcmp(member,"right"))) {
+                const char *field=!strcmp(member,"left")?"__payload_ok":"__payload_err";
+                if(!ng_put(s,&n->as.member_expr.member,field,n->pos)) return false;
+                n->native_enum=true;
+            } else { ng_trace_payload_access(c,n,left); return ng_fail(s,n->pos,"enum payload access requires a variant pattern"); }
+        }
         size_t len=strlen(left); if(len && left[len-1]=='*') left[len-1]=0;
         ng_decl *d=ng_find(s,left,c->package,false);
         if(d && ng_record(d->node)) {
@@ -426,9 +522,13 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         return true;
     }
     case AST_INDEX_EXPR:
-        if(!ng_node(c,n->as.index_expr.object,left)) return false;
-        VISIT(n->as.index_expr.index);
-        seed_array_element(left,out,sizeof(ng_text)); return true;
+        if(!n->as.index_expr.index) return ng_array_constructor_type(c,n,out);
+        if(!ng_node(c,n->as.index_expr.object,left) || !ng_node(c,n->as.index_expr.index,right)) return false;
+        if(right[0] && strcmp(right,"int")) return ng_fail(s,n->pos,"array index requires int");
+        if(!strcmp(left,"string")) { strcpy(out,"string"); return true; }
+        if(seed_array_element(left,out,sizeof(ng_text))) return true;
+        if(left[0]) { error_set(s->err,ERR_SEMANTIC,n->pos.line,n->pos.column,"native generic specialization: index requires an array or string, got %s",left); return false; }
+        return true;
     case AST_SLICE_EXPR: if(!ng_node(c,n->as.slice_expr.object,out)) return false; VISIT(n->as.slice_expr.start); VISIT(n->as.slice_expr.end); return true;
     case AST_UNARY_EXPR:
         if(!ng_node(c,n->as.unary_expr.operand,out)) return false;
@@ -444,15 +544,32 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         }
         return true;
     case AST_CALL_EXPR: {
+        if(n->as.call_expr.callee && n->as.call_expr.callee->kind==AST_INDEX_EXPR && !n->as.call_expr.callee->as.index_expr.index) {
+            if(n->as.call_expr.args.len) return ng_fail(s,n->pos,"array constructor expects no arguments");
+            return ng_array_constructor_type(c,n->as.call_expr.callee,out);
+        }
         size_t count=n->as.call_expr.args.len;
         ng_text *args=calloc(count+1,sizeof(ng_text)); if(!args) return false;
         for(size_t i=0;i<count;i++) if(!ng_node(c,n->as.call_expr.args.data[i],args[i])) { free(args); return false; }
+        int constructed=ng_enum_construct(c,n,n->as.call_expr.callee,args,count,expected,out);
+        if(constructed) { free(args); return constructed>0; }
         ng_text spelling; spelling[0]=0;
         native_record_type_spelling(n->as.call_expr.callee,spelling,sizeof(spelling));
         strcpy(left,spelling); char *root_end=strchr(left,'.'); if(root_end) *root_end=0;
         bool shadow=ng_bound(c,left);
         const char *candidate=n->as.call_expr.native_callee_name?n->as.call_expr.native_callee_name:spelling;
         ng_decl *d=shadow?NULL:ng_find(s,candidate,c->package,true);
+        if(!d && !shadow && !strchr(spelling,'.') && n->as.call_expr.native_imports) {
+            const char *at=n->as.call_expr.native_imports;
+            while(*at) {
+                const char *end=strchr(at,'\n'); if(!end) end=at+strlen(at);
+                if(snprintf(right,sizeof(right),"%.*s.%s",(int)(end-at),at,spelling)>=(int)sizeof(right)) { free(args); return ng_fail(s,n->pos,"imported function name too long"); }
+                ng_decl *found=ng_find(s,right,c->package,true);
+                if(found && d && found!=d) { free(args); return ng_fail(s,n->pos,"ambiguous imported function"); }
+                if(found) d=found;
+                at=*end?end+1:end;
+            }
+        }
         /* The language prelude is implicit, after local declarations and
          * bindings. This is not a fallback to arbitrary foreign packages. */
         if(!d && !shadow && !strchr(spelling,'.')) {
@@ -476,6 +593,14 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
                 }
                 strcpy(args[0],left); count++; receiver=member->as.member_expr.object;
             }
+        }
+        if(!d && !shadow && !strcmp(spelling,"make") && count==2 && n->as.call_expr.args.data[0]->kind==AST_STRING_EXPR && n->as.call_expr.args.data[0]->as.string_expr.is_type_name) {
+            if(strcmp(args[1],"int") || !ng_type(c,n->as.call_expr.args.data[0]->as.string_expr.literal,out,0) || !seed_array_element(out,type,sizeof(type)) || !ng_known(c,type)) { free(args); return ng_fail(s,n->pos,"invalid array make type or length"); }
+            free(args); return true;
+        }
+        if(!d && !shadow && !strcmp(spelling,"host_args")) {
+            if(count) { free(args); return ng_fail(s,n->pos,"host_args expects no arguments"); }
+            strcpy(out,"string[]"); free(args); return true;
         }
         /* These calls already select the target's length intrinsic, rather
          * than the source wrapper. Its result does not depend on T's layout. */
@@ -509,17 +634,42 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         }
         free(args); return true;
     }
-    case AST_EXPR_STMT: return ng_node(c,n->as.expr_stmt.expr,out);
+    case AST_EXPR_STMT: return ng_expect(c,n->as.expr_stmt.expr,expected,out);
     case AST_RETURN_STMT:
-        if(!ng_node(c,n->as.return_stmt.value,out)) return false;
+        if(!ng_expect(c,n->as.return_stmt.value,c->return_type,out)) return false;
         for(size_t i=0;i<n->as.return_stmt.values.len;i++) if(n->as.return_stmt.values.data[i]!=n->as.return_stmt.value) VISIT(n->as.return_stmt.values.data[i]);
         return true;
     case AST_ASSIGN_STMT: return ng_node(c,n->as.assign_stmt.value,out);
     case AST_ASSIGN_EXPR: VISIT(n->as.assign_expr.target_expr); VISIT(n->as.assign_expr.target_object); VISIT(n->as.assign_expr.target_index); return ng_node(c,n->as.assign_expr.value,out);
     case AST_IF_STMT: {
-        size_t saved=c->count; VISIT(n->as.if_stmt.condition); VISIT(n->as.if_stmt.pattern_subject);
-        if(!ng_node(c,n->as.if_stmt.then_branch,out)) return false;
-        c->count=saved; VISIT(n->as.if_stmt.else_branch); c->count=saved; return true;
+        if(n->as.if_stmt.is_switch_arm && n->as.if_stmt.pattern_subject) {
+            ng_text args[NG_ARGS];
+            if(!ng_node(c,n->as.if_stmt.pattern_subject,left)) return false;
+            if(ng_enum_type(c,left,args)) return ng_enum_switch(c,n,expected,out);
+        }
+        size_t saved=c->count; const ast_node *saved_pattern=c->active_pattern; VISIT(n->as.if_stmt.condition);
+        if(!ng_node(c,n->as.if_stmt.pattern_subject,left)) return false;
+        ng_decl *owner=n->as.if_stmt.is_switch_arm?ng_enum_owner(c,left):NULL;
+        if(owner && !owner->count && n->as.if_stmt.pattern_kind==PATTERN_VARIANT) {
+            if(ng_enum_owner(c,n->as.if_stmt.variant_owner)!=owner) return ng_fail(s,n->pos,"enum pattern owner mismatch");
+            ast_enum_variant *variant=NULL;
+            for(size_t v=0;v<owner->node->as.enum_decl.variant_count;v++)
+                if(!strcmp(owner->node->as.enum_decl.variants[v].name,n->as.if_stmt.variant_name)) variant=&owner->node->as.enum_decl.variants[v];
+            if(!variant) return ng_fail(s,n->pos,"unknown enum pattern");
+            c->active_pattern=n;
+            if(n->as.if_stmt.payload_binding_name) {
+                if(!variant->payload_type) return ng_fail(s,n->pos,"enum pattern has no payload");
+                ng_scope *decl=calloc(1,sizeof(*decl)); if(!decl) return false;
+                decl->state=s; decl->package=owner->package;
+                bool valid=ng_type(decl,variant->payload_type,type,0); free(decl);
+                if(!valid || !ng_bind(c,n->as.if_stmt.payload_binding_name,type)) return false;
+            }
+        }
+        if(n->as.if_stmt.binding_name && left[0] && !ng_bind(c,n->as.if_stmt.binding_name,left)) return false;
+        if(!ng_expect(c,n->as.if_stmt.then_branch,expected,out)) return false;
+        c->count=saved; c->active_pattern=saved_pattern;
+        if(!ng_expect(c,n->as.if_stmt.else_branch,expected,type)) return false;
+        c->count=saved; c->active_pattern=saved_pattern; return true;
     }
     case AST_WHILE_STMT: VISIT(n->as.while_stmt.condition); VISIT(n->as.while_stmt.body); return true;
     case AST_FOR_STMT: {
@@ -531,6 +681,7 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         }
         VISIT(n->as.for_stmt.body); VISIT(n->as.for_stmt.post); c->count=saved; return true;
     }
+    case AST_TRAP_STMT: strcpy(out,"never"); return true;
     default: return true;
     }
 #undef VISIT
@@ -543,7 +694,8 @@ static bool ng_function(ng_scope *c,ast_node *fn) {
     }
     if(fn->as.fn_stmt.return_type &&
        (!ng_type(c,fn->as.fn_stmt.return_type,type,0) || !ng_put(c->state,&fn->as.fn_stmt.return_type,type,fn->pos))) return false;
-    return ng_node(c,fn->as.fn_stmt.body,type);
+    snprintf(c->return_type,sizeof(c->return_type),"%s",fn->as.fn_stmt.return_type?fn->as.fn_stmt.return_type:"");
+    return ng_expect(c,fn->as.fn_stmt.body,c->return_type,type);
 }
 static bool native_specialize_generics(ast_node *unit,compile_error *err) {
     ng_state s={0}; s.unit=unit; s.err=err;

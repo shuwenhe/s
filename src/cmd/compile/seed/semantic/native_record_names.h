@@ -95,6 +95,22 @@ static bool native_function_candidate(ast_node *file, ast_node *call, compile_er
         free(name); name=malloc(strlen(qualified)+1); if(!name) return false;
         strcpy(name,qualified);
     }
+    /* Keep this file's import scope through compilation-unit merging. */
+    size_t imports_len=1;
+    for(size_t i=0;i<file->as.program.statements.len;i++) {
+        ast_node *use=file->as.program.statements.data[i];
+        if(use->kind==AST_USE_DECL && !use->as.use_decl.selector_count && use->as.use_decl.module_path) imports_len+=strlen(use->as.use_decl.module_path)+1;
+    }
+    char *imports=calloc(imports_len,1);
+    if(!imports) { free(name); return false; }
+    size_t used=0;
+    for(size_t i=0;i<file->as.program.statements.len;i++) {
+        ast_node *use=file->as.program.statements.data[i];
+        if(use->kind!=AST_USE_DECL || use->as.use_decl.selector_count || !use->as.use_decl.module_path) continue;
+        size_t len=strlen(use->as.use_decl.module_path);
+        memcpy(imports+used,use->as.use_decl.module_path,len); used+=len; imports[used++]='\n';
+    }
+    free(call->as.call_expr.native_imports); call->as.call_expr.native_imports=imports;
     free(call->as.call_expr.native_callee_name);
     call->as.call_expr.native_callee_name=name; return true;
 }
@@ -114,6 +130,9 @@ static bool native_record_names_node(ast_node *file, ast_node *n, compile_error 
         NAME(n->as.fn_stmt.receiver_type); NAME(n->as.fn_stmt.return_type);
         for(size_t i=0;i<n->as.fn_stmt.param_count;i++) NAME(n->as.fn_stmt.param_types[i]);
         NODE(n->as.fn_stmt.body); break;
+    case AST_ENUM_DECL:
+        for(size_t i=0;i<n->as.enum_decl.variant_count;i++) NAME(n->as.enum_decl.variants[i].payload_type);
+        break;
     case AST_EXTERN_DECL:
         NAME(n->as.extern_decl.return_type);
         for(size_t i=0;i<n->as.extern_decl.param_count;i++) NAME(n->as.extern_decl.param_types[i]);
@@ -140,6 +159,7 @@ static bool native_record_names_node(ast_node *file, ast_node *n, compile_error 
     case AST_EXPR_STMT: NODE(n->as.expr_stmt.expr); break;
     case AST_ASSIGN_STMT: NODE(n->as.assign_stmt.value); break;
     case AST_IF_STMT:
+        NAME(n->as.if_stmt.variant_owner);
         NODE(n->as.if_stmt.condition); NODE(n->as.if_stmt.then_branch); NODE(n->as.if_stmt.else_branch); NODE(n->as.if_stmt.pattern_subject); break;
     case AST_WHILE_STMT: NODE(n->as.while_stmt.condition); NODE(n->as.while_stmt.body); break;
     case AST_FOR_STMT:
@@ -152,8 +172,18 @@ static bool native_record_names_node(ast_node *file, ast_node *n, compile_error 
     case AST_STRING_EXPR:
         if(n->as.string_expr.is_type_name) NAME(n->as.string_expr.literal);
         break;
-    case AST_ARRAY_EXPR: VEC(n->as.array_expr.items); break;
-    case AST_MEMBER_EXPR: NODE(n->as.member_expr.object); break;
+    case AST_ARRAY_EXPR: NAME(n->as.array_expr.explicit_type); VEC(n->as.array_expr.items); break;
+    case AST_MEMBER_EXPR: {
+        char owner[IR_OPERAND_CAP];
+        if(n->as.member_expr.object && native_record_type_spelling(n->as.member_expr.object,owner,sizeof(owner))) {
+            free(n->as.member_expr.native_owner_name);
+            n->as.member_expr.native_owner_name=malloc(strlen(owner)+1);
+            if(!n->as.member_expr.native_owner_name) return false;
+            strcpy(n->as.member_expr.native_owner_name,owner);
+            NAME(n->as.member_expr.native_owner_name);
+        }
+        NODE(n->as.member_expr.object); break;
+    }
     case AST_INDEX_EXPR: NODE(n->as.index_expr.object); NODE(n->as.index_expr.index); break;
     case AST_SLICE_EXPR: NODE(n->as.slice_expr.object); NODE(n->as.slice_expr.start); NODE(n->as.slice_expr.end); break;
     case AST_CALL_EXPR:

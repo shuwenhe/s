@@ -22,84 +22,26 @@ static bool borrow_type(const char *t, char *base) {
 static ast_node *borrow_record(borrow_proof *p, const char *type) {
     const char *pkg = "";
     char full[IR_OPERAND_CAP];
-    char base[IR_OPERAND_CAP];
     if (!type) return NULL;
-    
-    /* Handle generic types like result[t,e] by extracting the base name */
-    const char *bracket = strchr(type, '[');
-    const char *lookup_type = type;
-    if (bracket) {
-        size_t base_len = bracket - type;
-        if (base_len >= sizeof(base)) return NULL;
-        memcpy(base, type, base_len);
-        base[base_len] = 0;
-        lookup_type = base;
-    }
-    
-    /* Also extract unqualified name from qualified type like compile.internal.ast.foo -> foo */
-    const char *unqualified = strrchr(lookup_type, '.');
-    if (unqualified) unqualified++;
-    else unqualified = lookup_type;
-    
     for (size_t i=0; i<p->unit->as.program.statements.len; i++) {
         ast_node *n=p->unit->as.program.statements.data[i];
         if (n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
-        
-        /* Check struct definitions (AST_LET_STMT) */
-        if (n->kind==AST_LET_STMT && n->as.let_stmt.type_name && !strcmp(n->as.let_stmt.type_name,"struct")) {
-            if (snprintf(full,sizeof(full),"%s%s%s",pkg,*pkg?".":"",n->as.let_stmt.name)>=(int)sizeof(full)) return NULL;
-            if (!strcmp(full,lookup_type) || !strcmp(n->as.let_stmt.name,unqualified) ||
-                (!strcmp(pkg,p->package_name) && !strcmp(n->as.let_stmt.name,lookup_type))) return n;
-        }
-        
-        /* Check enum definitions (AST_ENUM_DECL) */
-        if (n->kind==AST_ENUM_DECL) {
-            if (snprintf(full,sizeof(full),"%s%s%s",pkg,*pkg?".":"",n->as.enum_decl.name)>=(int)sizeof(full)) return NULL;
-            if (!strcmp(full,lookup_type) || !strcmp(n->as.enum_decl.name,unqualified) ||
-                (!strcmp(pkg,p->package_name) && !strcmp(n->as.enum_decl.name,lookup_type))) return n;
-        }
+        if (n->kind!=AST_LET_STMT || !n->as.let_stmt.type_name || strcmp(n->as.let_stmt.type_name,"struct")) continue;
+        if (snprintf(full,sizeof(full),"%s%s%s",pkg,*pkg?".":"",n->as.let_stmt.name)>=(int)sizeof(full)) return NULL;
+        if (!strcmp(full,type) || (!strcmp(pkg,p->package_name) && !strcmp(n->as.let_stmt.name,type))) return n;
     }
     return NULL;
 }
 static ast_node *borrow_record_unique_tail(borrow_proof *p,const char *type) {
-    ast_node *found=NULL;
+    ast_node *found=NULL; size_t length=strlen(type);
     const char *pkg="";
-    
-    /* Handle generic types like result[t,e] by extracting the base name */
-    char base[IR_OPERAND_CAP];
-    const char *lookup_type = type;
-    const char *bracket = strchr(type, '[');
-    if (bracket) {
-        size_t base_len = bracket - type;
-        if (base_len >= sizeof(base)) return NULL;
-        memcpy(base, type, base_len);
-        base[base_len] = 0;
-        lookup_type = base;
-    }
-    
     for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
         ast_node *n=p->unit->as.program.statements.data[i];
         if(n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
-        
-        /* Extract unqualified name from qualified type */
-        const char *unqualified = strrchr(lookup_type, '.');
-        if (unqualified) unqualified++;
-        else unqualified = lookup_type;
-        size_t unqual_len = strlen(unqualified);
-        
-        /* Check struct definitions (AST_LET_STMT) */
-        if(n->kind==AST_LET_STMT && n->as.let_stmt.type_name && !strcmp(n->as.let_stmt.type_name,"struct")) {
-            if(strlen(n->as.let_stmt.name)!=unqual_len || strcmp(n->as.let_stmt.name,unqualified)) continue;
-            if(found) return NULL;
-            found=n;
-        }
-        
-        /* Check enum definitions (AST_ENUM_DECL) */
-        if(n->kind==AST_ENUM_DECL) {
-            if(strlen(n->as.enum_decl.name)!=unqual_len || strcmp(n->as.enum_decl.name,unqualified)) continue;
-            if(found) return NULL;
-            found=n;
-        }
+        if(n->kind!=AST_LET_STMT || !n->as.let_stmt.type_name || strcmp(n->as.let_stmt.type_name,"struct")) continue;
+        if(strlen(n->as.let_stmt.name)!=length || strcmp(n->as.let_stmt.name,type)) continue;
+        if(found) return NULL;
+        found=n;
     }
     (void)pkg;
     return found;
@@ -123,16 +65,10 @@ static ast_node *borrow_function(borrow_proof *p, const char *name) {
 }
 static bool borrow_record_name(borrow_proof *p,ast_node *record,char *out,size_t cap) {
     const char *pkg="";
-    const char *name=NULL;
     for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
         ast_node *n=p->unit->as.program.statements.data[i];
         if(n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
-        if(n==record) {
-            if(record->kind==AST_ENUM_DECL) name=record->as.enum_decl.name;
-            else if(record->kind==AST_LET_STMT) name=record->as.let_stmt.name;
-            if(!name) return false;
-            return snprintf(out,cap,"%s%s%s",pkg,*pkg?".":"",name)<(int)cap;
-        }
+        if(n==record) return snprintf(out,cap,"%s%s%s",pkg,*pkg?".":"",n->as.let_stmt.name)<(int)cap;
     }
     return false;
 }
@@ -182,40 +118,6 @@ static int borrow_param(borrow_proof *p, const char *name) {
     for(size_t i=0; f && i<f->as.fn_stmt.param_count && i<64;i++)
         if((f->as.fn_stmt.native_borrow_mask & (1ULL<<i)) && !strcmp(name,f->as.fn_stmt.params[i])) return (int)i;
     return -1;
-}
-/* Look up the receiver record for a method with a borrowed receiver. */
-static ast_node *borrow_receiver_record(borrow_proof *p, ast_node *function) {
-    if (!function->as.fn_stmt.receiver_type) return NULL;
-    
-    char base[IR_OPERAND_CAP];
-    const char *type = function->as.fn_stmt.receiver_type;
-    
-    /* Extract base type from pointers and generics */
-    const char *lookup_type = type;
-    
-    /* Strip trailing * for pointer types */
-    size_t len = strlen(type);
-    char temp[IR_OPERAND_CAP];
-    if (len > 0 && type[len-1] == '*') {
-        if (len-1 >= sizeof(temp)) return NULL;
-        memcpy(temp, type, len-1);
-        temp[len-1] = 0;
-        lookup_type = temp;
-    }
-    
-    /* Now handle generic types by extracting base name */
-    const char *bracket = strchr(lookup_type, '[');
-    if (bracket) {
-        size_t base_len = bracket - lookup_type;
-        if (base_len >= sizeof(base)) return NULL;
-        memcpy(base, lookup_type, base_len);
-        base[base_len] = 0;
-        lookup_type = base;
-    }
-    
-    ast_node *record = borrow_record(p, lookup_type);
-    if (!record) record = borrow_record_unique_tail(p, lookup_type);
-    return record;
 }
 /* Resolve a signature in its declaration package, not the caller's package. */
 static ast_node *borrow_signature_record(borrow_proof *p, ast_node *function, size_t index) {
@@ -350,7 +252,7 @@ static bool borrow_read_expr(borrow_proof *,ast_node *,bool);
 static bool borrow_argument_effect_free(ast_node *n) {
     if(!n) return false;
     switch(n->kind) {
-    case AST_NUMBER_EXPR: case AST_BOOL_EXPR: case AST_STRING_EXPR: case AST_IDENT_EXPR: return true;
+    case AST_NUMBER_EXPR: case AST_BOOL_EXPR: case AST_STRING_EXPR: case AST_IDENT_EXPR: case AST_UNIT_EXPR: return true;
     case AST_MEMBER_EXPR: return borrow_argument_effect_free(n->as.member_expr.object);
     case AST_INDEX_EXPR:
         return borrow_argument_effect_free(n->as.index_expr.object) && borrow_argument_effect_free(n->as.index_expr.index);
@@ -371,17 +273,12 @@ static bool borrow_argument_effect_free(ast_node *n) {
 static bool borrow_reborrow_call(borrow_proof *p,ast_node *call,ast_node *target) {
     if(!target->as.fn_stmt.native_borrow_mask) {
         for(size_t k=0;k<target->as.fn_stmt.param_count && k<64;k++) {
-            /* If parameter resolution fails for qualified types in multi-file closure,
-             * skip marking this parameter as borrowed and continue validation. */
-            if(!borrow_resolve_parameter(p,target,k)) continue;
+            if(!borrow_resolve_parameter(p,target,k)) return false;
             char base[IR_OPERAND_CAP];
             if(borrow_type(target->as.fn_stmt.param_types[k],base) &&
                (borrow_record(p,base)||borrow_record_unique_tail(p,base)))
                 target->as.fn_stmt.native_borrow_mask|=1ULL<<k;
         }
-        /* If we couldn't identify any borrowed parameters due to type resolution issues,
-         * conservatively allow the call - we can't prove it's unsafe. */
-        if(!target->as.fn_stmt.native_borrow_mask) return true;
     }
     if(target->as.fn_stmt.export_abi || call->as.call_expr.args.len!=target->as.fn_stmt.param_count) return false;
     for(size_t i=0;i<call->as.call_expr.args.len;i++) {
@@ -393,20 +290,13 @@ static bool borrow_reborrow_call(borrow_proof *p,ast_node *call,ast_node *target
                 place=place->as.unary_expr.operand;
             const char *root_name=borrow_root_name(arg);
             int root=root_name?borrow_param(p,root_name):-1;
-            /* If we can't resolve the argument's root or expected record type,
-             * conservatively allow the call - we can't prove it's unsafe. */
-            if(!root_name) continue;
-            if(root<0 && !borrow_binding_record(p,root_name)) continue;
-            
+            if(!root_name || (root<0 && !borrow_binding_record(p,root_name))) return false;
             ast_node *record=borrow_expr_record(p,place);
-            ast_node *expected=borrow_signature_record(p,target,i);
-            /* Compare records by pointer equality if both are found. If either is NULL
-             * (unresolved qualified type), allow the call - we can't prove the records mismatch. */
-            if(record != expected && record != NULL && expected != NULL) {
-                error_set(p->err,ERR_SEMANTIC,arg->pos.line,arg->pos.column,
-                    "unproven field reborrow argument %zu to %s",i,target->as.fn_stmt.name);
-                return false;
-            }
+                if(!record || record!=borrow_signature_record(p,target,i)) {
+                    error_set(p->err,ERR_SEMANTIC,arg->pos.line,arg->pos.column,
+                        "unproven field reborrow argument %zu to %s",i,target->as.fn_stmt.name);
+                    return false;
+                }
             for(size_t j=0;j<call->as.call_expr.args.len;j++) {
                 ast_node *other=call->as.call_expr.args.data[j];
                 const char *other_root=borrow_root_name(other);
@@ -424,7 +314,7 @@ static bool borrow_read_expr(borrow_proof *p, ast_node *n, bool unused) {
     (void)unused;
     if(!n) return true;
     switch(n->kind) {
-    case AST_NUMBER_EXPR: case AST_BOOL_EXPR: case AST_STRING_EXPR: return true;
+    case AST_NUMBER_EXPR: case AST_BOOL_EXPR: case AST_STRING_EXPR: case AST_UNIT_EXPR: return true;
     case AST_IDENT_EXPR: return borrow_param(p,n->as.ident_expr.name)<0;
     case AST_ARRAY_EXPR:
         for(size_t i=0;i<n->as.array_expr.items.len;i++) if(!borrow_read_expr(p,n->as.array_expr.items.data[i],false)) return false;
@@ -432,15 +322,6 @@ static bool borrow_read_expr(borrow_proof *p, ast_node *n, bool unused) {
     case AST_STRUCT_EXPR:
         for(size_t i=0;i<n->as.struct_expr.field_values.len;i++) if(!borrow_read_expr(p,n->as.struct_expr.field_values.data[i],false)) return false;
         return true;
-    case AST_IF_STMT:
-        /* Handle switch expressions (if-then-else chains with is_switch_arm=true).
-           Switch arms have value expressions in then_branch and else_branch, not statements. */
-        if(n->as.if_stmt.is_switch_arm) {
-            return borrow_read_expr(p,n->as.if_stmt.condition,false) &&
-                   borrow_read_expr(p,n->as.if_stmt.then_branch,false) &&
-                   borrow_read_expr(p,n->as.if_stmt.else_branch,false);
-        }
-        return false;
     case AST_MEMBER_EXPR:
         if(n->as.member_expr.object && n->as.member_expr.object->kind==AST_IDENT_EXPR && borrow_param(p,n->as.member_expr.object->as.ident_expr.name)>=0) return true;
         return borrow_read_expr(p,n->as.member_expr.object,false);
@@ -511,31 +392,10 @@ static bool borrow_leaf_inner(borrow_proof *p, ast_node *n) {
     case AST_EXPR_STMT: return borrow_read_expr(p,n->as.expr_stmt.expr,false);
     case AST_ASSIGN_STMT: return borrow_param(p,n->as.assign_stmt.name)<0 && borrow_read_expr(p,n->as.assign_stmt.value,false);
     case AST_ASSIGN_EXPR: return borrow_read_expr(p,n,false);
-    case AST_IF_STMT:
-        /* Switch expressions (is_switch_arm=true) have value expressions in branches.
-           Control flow statements (is_switch_arm=false) have statement blocks in branches. */
-        if(n->as.if_stmt.is_switch_arm) {
-            ast_node *then_br = n->as.if_stmt.then_branch;
-            ast_node *else_br = n->as.if_stmt.else_branch;
-            /* Branches might be BLOCK, EXPR_STMT, or raw expressions */
-            bool then_ok;
-            if (!then_br) then_ok = true;
-            else if (then_br->kind == AST_BLOCK) then_ok = borrow_leaf(p, then_br);
-            else if (then_br->kind == AST_EXPR_STMT) then_ok = borrow_read_expr(p, then_br->as.expr_stmt.expr, false);
-            else then_ok = borrow_read_expr(p, then_br, false);
-            
-            bool else_ok;
-            if (!else_br) else_ok = true;
-            else if (else_br->kind == AST_BLOCK) else_ok = borrow_leaf(p, else_br);
-            else if (else_br->kind == AST_EXPR_STMT) else_ok = borrow_read_expr(p, else_br->as.expr_stmt.expr, false);
-            else else_ok = borrow_read_expr(p, else_br, false);
-            
-            return borrow_read_expr(p,n->as.if_stmt.condition,false) && then_ok && else_ok;
-        }
-        return borrow_read_expr(p,n->as.if_stmt.condition,false) && borrow_leaf(p,n->as.if_stmt.then_branch) && borrow_leaf(p,n->as.if_stmt.else_branch);
+    case AST_IF_STMT: return borrow_read_expr(p,n->as.if_stmt.condition,false) && borrow_leaf(p,n->as.if_stmt.then_branch) && borrow_leaf(p,n->as.if_stmt.else_branch);
     case AST_WHILE_STMT: return borrow_read_expr(p,n->as.while_stmt.condition,false) && borrow_leaf(p,n->as.while_stmt.body);
     case AST_FOR_STMT: return !n->as.for_stmt.iterable && borrow_leaf(p,n->as.for_stmt.init) && borrow_read_expr(p,n->as.for_stmt.condition,false) && borrow_leaf(p,n->as.for_stmt.post) && borrow_leaf(p,n->as.for_stmt.body);
-    case AST_BREAK_STMT: case AST_CONTINUE_STMT: return true;
+    case AST_BREAK_STMT: case AST_CONTINUE_STMT: case AST_TRAP_STMT: return true;
     default: return false;
     }
 }
@@ -672,15 +532,11 @@ static bool borrow_prove_unit(ast_node *unit,compile_error *err) {
             char base[IR_OPERAND_CAP];
             if(!borrow_resolve_parameter(&p,n,j)) return false;
             if(!borrow_type(n->as.fn_stmt.param_types[j],base)) continue;
-            if(j>=64) goto bad;
-            /* Skip unresolvable records in multi-file closures.
-             * The borrow checker is AST-based and can't handle qualified types
-             * from imported modules correctly. This is a temporary workaround. */
-            if(!borrow_record(&p,base) && !borrow_record_unique_tail(&p,base)) continue;
+            if(j>=64 || (!borrow_record(&p,base) && !borrow_record_unique_tail(&p,base))) goto bad;
             n->as.fn_stmt.native_borrow_mask|=1ULL<<j;
         }
         if(n->as.fn_stmt.receiver_type && n->as.fn_stmt.native_borrow_mask) {
-            ast_node *record=borrow_receiver_record(&p,n);
+            ast_node *record=borrow_signature_record(&p,n,0);
             char full[IR_OPERAND_CAP],symbol[IR_OPERAND_CAP];
             const char *tail=strrchr(n->as.fn_stmt.name,'.');
             if(!record || !tail || !borrow_record_name(&p,record,full,sizeof(full)) ||
@@ -700,12 +556,11 @@ bad: error_set(err,ERR_SEMANTIC,n->pos.line,n->pos.column,"unproven record borro
         p.function=n; p.count=0;
         for(size_t j=0;j<n->as.fn_stmt.param_count;j++)
             if(!borrow_bind(&p,n->as.fn_stmt.params[j],borrow_signature_record(&p,n,j))) return false;
-        /* Skip body validation in multi-file closures where types can't be resolved.
-         * The borrow checker is AST-based and designed for single-file compilation. */
-        borrow_leaf(&p,n->as.fn_stmt.body);
+        if(!borrow_leaf(&p,n->as.fn_stmt.body)) {
+            return false;
+        }
     }
     p.package_name=""; p.function=NULL; p.count=0;
-    borrow_walk(&p,unit);
-    return true;
+    return borrow_walk(&p,unit);
 }
 #endif

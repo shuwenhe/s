@@ -53,9 +53,18 @@ w=pathlib.Path(sys.argv[1]); original=(w/'value.ir').read_text()
 (w/'erased.ir').write_text(original.replace('ARG|value|mutable_borrow|_', 'ARG|value|_|_'))
 (w/'owner.ir').write_text(original.replace('record-field:main.cell|number|int', 'record-field:main.cell|number|int*'))
 (w/'runtime-name.ir').write_text(original.replace(':set|', ':len|').replace('FUNC_BEGIN|set|', 'FUNC_BEGIN|len|').replace('FUNC_END|set|', 'FUNC_END|len|').replace('|set|2', '|len|2'))
-(w/'numeric.ir').write_text(original.replace('MOV|t1|"t1"|_', 'MOV|t1|7|_'))
-(w/'uninitialized.ir').write_text(original.replace('MOV|value|t1|_', 'JUMP|skip|_|_\nMOV|value|t1|_\nLABEL|skip|_|_'))
-(w/'arity.ir').write_text(original.replace('ARG|value|mutable_borrow|_\nARG|42|_|_\nCALL|t2|set|2', 'CALL|t2|set|0'))
+lines=original.splitlines()
+constructor=next(line.split('|')[2] for line in lines if line.startswith('MOV|value|'))
+creation='MOV|'+constructor+'|"'+constructor+'"|_'
+assert original.count(creation)==1
+(w/'numeric.ir').write_text(original.replace(creation,'MOV|'+constructor+'|7|_'))
+assignment='MOV|value|'+constructor+'|_'
+assert original.count(assignment)==1
+(w/'uninitialized.ir').write_text(original.replace(assignment,'JUMP|skip|_|_\n'+assignment+'\nLABEL|skip|_|_'))
+call=next(line for line in lines if line.startswith('CALL|') and '|set|2' in line)
+call_sequence='ARG|value|mutable_borrow|_\nARG|42|_|_\n'+call
+assert original.count(call_sequence)==1
+(w/'arity.ir').write_text(original.replace(call_sequence,call.rsplit('|',1)[0]+'|0'))
 (w/'orphan.ir').write_text(original.replace('borrow-param:set|target|main.cell', 'borrow-param:missing|target|main.cell'))
 PY
 cat > "$work/forbidden-tool" <<'S'

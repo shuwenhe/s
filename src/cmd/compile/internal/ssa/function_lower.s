@@ -71,10 +71,10 @@ func function_mir_input_error(mir_program program) string {
         if len(input_function.result_types) > 1 { return "unsupported multi-result function: " + input_function.symbol }
         p := 0
         for p < len(input_function.params) {
-            if input_function.params[p].type_name != "int" { return "unsupported parameter type: " + input_function.symbol }
+            if input_function.params[p].type_name != "int" && input_function.params[p].type_name != "()" { return "unsupported parameter type: " + input_function.symbol }
             p = p + 1
         }
-        if len(input_function.result_types) == 1 && input_function.result_types[0] != "int" {
+        if len(input_function.result_types) == 1 && input_function.result_types[0] != "int" && input_function.result_types[0] != "()" {
             return "unsupported result type: " + input_function.symbol
         }
         i = i + 1

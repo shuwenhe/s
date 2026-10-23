@@ -22,6 +22,7 @@ typedef struct ir_builder {
 	size_t extern_count;
 	ast_node *constants[128];
 	size_t constant_count;
+	const char *current_func_return_type;  /* For context when lowering expressions */
 } ir_builder;
 static bool ir_bind_local(ir_builder *b,const char *name,source_pos pos) {
     if(b->local_count==4096) { error_set(b->err,ERR_SEMANTIC,pos.line,pos.column,"too many IR local bindings"); return false; }
@@ -117,6 +118,8 @@ bool ir_emit(IR *ir, ir_op type, const char *result, const char *operand1, const
 const char *ir_op_name(ir_op op) {
 	switch (op) {
 		case IR_ARRAY_NEW: return "ARRAY_NEW";
+        case IR_TRAP: return "TRAP";
+        case IR_UNIT: return "UNIT";
 	case IR_NOP: return "NOP";
 		case IR_EXPORT: return "EXPORT";
 		case IR_FUNC_BEGIN: return "FUNC_BEGIN";
@@ -283,7 +286,11 @@ static bool lower_record_defaults_impl(ir_builder *b, ast_node *expr, const char
         const char *type = schema->as.struct_expr.field_values.data[f]->as.string_expr.literal;
         char dest[IR_OPERAND_CAP], value[IR_OPERAND_CAP];
         if (snprintf(dest, sizeof(dest), "%s.%s", root, name) >= (int)sizeof(dest)) return false;
-        if (!strcmp(type, "string")) copy_str(value, "\"\"");
+        if(!strcmp(type,"()") || !strcmp(type,"unit")) {
+            next_temp(b,value);
+            if(!emit_ins(b,IR_UNIT,value,"","",expr->pos)) return false;
+        }
+        else if (!strcmp(type, "string")) copy_str(value, "\"\"");
         else if (strlen(type) >= 2 && !strcmp(type + strlen(type) - 2, "[]")) {
             char array_type[IR_OPERAND_CAP];
             next_temp(b, value);
@@ -359,7 +366,7 @@ static bool lower_struct_literal(ir_builder *b, ast_node *expr, char out[IR_OPER
 }
 static bool lower_stmt(ir_builder *b, ast_node *stmt);
 static bool lower_enum_construct(ir_builder *b, ast_node *decl, ast_enum_variant *variant,
-	ast_node *payload, source_pos pos, char out[IR_OPERAND_CAP]) {
+	ast_node *payload, source_pos pos, char out[IR_OPERAND_CAP], const char *resolved_enum_type) {
 	char tag[IR_OPERAND_CAP];
 	snprintf(tag, sizeof(tag), "%lld", (long long)variant->resolved_value);
 	if (!seed_enum_has_payload(decl)) {
@@ -372,7 +379,19 @@ static bool lower_enum_construct(ir_builder *b, ast_node *decl, ast_enum_variant
 		snprintf(alias, sizeof(alias), "\"%s\"", out);
 		if (!emit_ins(b, IR_MOV, out, alias, "", pos)) return false;
 		if (snprintf(field, sizeof(field), "%s.__type", out) >= (int)sizeof(field)) return false;
-		snprintf(value, sizeof(value), "\"%s\"", decl->as.enum_decl.name);
+		/* Use resolved_enum_type if provided (for generic instantiations), otherwise use base name */
+		const char *type_name = resolved_enum_type ? resolved_enum_type : decl->as.enum_decl.name;
+		/* If type_name is just the base name and we have a current function return type that's parameterized,
+		 * check if it matches this enum and use the full parameterized type */
+		if (b->current_func_return_type && type_name && !strchr(type_name, '[')) {
+			/* Check if return type starts with this type name */
+			size_t type_len = strlen(type_name);
+			if (strncmp(b->current_func_return_type, type_name, type_len) == 0 &&
+				(b->current_func_return_type[type_len] == '[' || b->current_func_return_type[type_len] == '.' || b->current_func_return_type[type_len] == 0)) {
+				type_name = b->current_func_return_type;
+			}
+		}
+		snprintf(value, sizeof(value), "\"%s\"", type_name);
 		if (!emit_ins(b, IR_MOV, field, value, "", pos)) return false;
 		if (snprintf(field, sizeof(field), "%s.__variant", out) >= (int)sizeof(field) ||
 			!emit_ins(b, IR_MOV, field, tag, "", pos)) return false;
@@ -401,6 +420,7 @@ static bool lower_value_branch_inner(ir_builder *b, ast_node *node, char out[IR_
 	if (node->kind == AST_RETURN_STMT || node->kind == AST_BREAK_STMT ||
 		node->kind == AST_CONTINUE_STMT) return lower_stmt(b, node);
 	if (node->kind == AST_EXPR_STMT) node = node->as.expr_stmt.expr;
+    if(node->kind==AST_TRAP_STMT) return emit_ins(b,IR_TRAP,"101","","",node->pos);
 	if (!lower_expr(b, node, out)) return false;
 	*has_value = true;
 	return true;
@@ -425,8 +445,11 @@ static bool lower_if_value(ir_builder *b, ast_node *node, char out[IR_OPERAND_CA
 		char value[IR_OPERAND_CAP];
 		if (!lower_expr(b, node->as.if_stmt.pattern_subject, value)) return false;
 		/* Snapshot the subject, even when it is a mutable variable. */
-		next_temp(b, subject);
-		if (!emit_ins(b, IR_MOV, subject, value, "", node->pos)) return false;
+        if(node->as.if_stmt.native_variant_field) copy_str(subject,value);
+        else {
+            next_temp(b,subject);
+            if(!emit_ins(b,IR_MOV,subject,value,"",node->pos)) return false;
+        }
 	}
 	while (arm && arm->kind == AST_IF_STMT) {
 		char cond[IR_OPERAND_CAP] = "1";
@@ -443,7 +466,7 @@ static bool lower_if_value(ir_builder *b, ast_node *node, char out[IR_OPERAND_CA
 					error_set(b->err, ERR_SEMANTIC, arm->pos.line, arm->pos.column, "unknown enum variant in pattern");
 					return false;
 				}
-				snprintf(tag, sizeof(tag), "%lld", (long long)variant->resolved_value);
+				snprintf(tag, sizeof(tag), "%lld", (long long)(arm->as.if_stmt.native_variant_field?arm->as.if_stmt.native_variant_tag:variant->resolved_value));
 				if (snprintf(field, sizeof(field), "%s%s", subject,
 					seed_enum_has_payload(decl) ? ".__variant" : "") >= (int)sizeof(field)) return false;
 				next_temp(b, cond);
@@ -461,7 +484,7 @@ static bool lower_if_value(ir_builder *b, ast_node *node, char out[IR_OPERAND_CA
 		if (strcmp(cond, "1") && !emit_ins(b, IR_JUMP_IF_FALSE, next_arm, cond, "", arm->pos)) return false;
 		if (arm->as.if_stmt.payload_binding_name) {
 			char field[IR_OPERAND_CAP];
-			if (snprintf(field, sizeof(field), "%s.value", subject) >= (int)sizeof(field) ||
+			if (snprintf(field, sizeof(field), "%s.%s", subject,arm->as.if_stmt.native_variant_field?arm->as.if_stmt.native_variant_field:"value") >= (int)sizeof(field) ||
 				!emit_ins(b, IR_MOV, arm->as.if_stmt.payload_binding_name, field, "", arm->pos)) return false;
 		}
 		if (arm->as.if_stmt.binding_name &&
@@ -538,7 +561,7 @@ static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERA
 	return true;
 }
 static bool is_non_unit_return_type(const char *return_type) {
-	return return_type && return_type[0] != '\0' && strcmp(return_type, "()") != 0;
+	return return_type && return_type[0] != '\0' && strcmp(return_type, "()") != 0 && strcmp(return_type,"unit") != 0;
 }
 static const char *fallback_return_literal(const char *return_type) {
 	if (!return_type) {
@@ -736,6 +759,9 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 		return true;
 	}
 	switch (expr->kind) {
+        case AST_UNIT_EXPR:
+            next_temp(b,out); return emit_ins(b,IR_UNIT,out,"","",expr->pos);
+        case AST_TRAP_STMT: copy_str(out,"0"); return emit_ins(b,IR_TRAP,"101","","",expr->pos);
 		case AST_IF_STMT:
 			return lower_if_value(b, expr, out);
 		case AST_NUMBER_EXPR:
@@ -756,6 +782,9 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			snprintf(out, IR_OPERAND_CAP, "\"%s\"", expr->as.string_expr.literal);
 			return true;
 		case AST_ARRAY_EXPR:
+            if(!expr->as.array_expr.items.len && expr->as.array_expr.explicit_type) {
+                next_temp(b,out); return emit_ins(b,IR_ARRAY_NEW,out,expr->as.array_expr.explicit_type,"0",expr->pos);
+            }
 			return lower_array_literal(b, expr, out);
 		case AST_STRUCT_EXPR:
 			return lower_struct_literal(b, expr, out);
@@ -779,7 +808,7 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 				ast_node *decl = seed_find_enum(b->root, object_name);
 				ast_enum_variant *variant = seed_find_variant(decl, expr->as.member_expr.member);
 				if (variant && !variant->payload_type)
-					return lower_enum_construct(b, decl, variant, NULL, expr->pos, out);
+					return lower_enum_construct(b, decl, variant, NULL, expr->pos, out, expr->as.member_expr.resolved_enum_type);
 			}
 			if (!lower_expr(b, expr->as.member_expr.object, object_name)) {
 				return false;
@@ -871,7 +900,8 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 				ast_node *decl = seed_find_enum(b->root, callee);
 				ast_enum_variant *variant = seed_find_variant(decl, member->as.member_expr.member);
 				if (variant) return lower_enum_construct(b, decl, variant,
-					expr->as.call_expr.args.len ? expr->as.call_expr.args.data[0] : NULL, expr->pos, out);
+						expr->as.call_expr.args.len ? expr->as.call_expr.args.data[0] : NULL, expr->pos, out,
+						member->as.member_expr.resolved_enum_type);
 			}
 			if (expr->as.call_expr.resolved_array_type) {
                 char array_type[IR_OPERAND_CAP];
@@ -1161,6 +1191,8 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
     }
     /* PARAM records stay contiguous for the existing hosted function loader. */
     if (!emit_ins(b, IR_FUNC_BEGIN, stmt->as.fn_stmt.name, "", "", stmt->pos)) return false;
+    /* Store the function's return type so enum constructors within it can access it */
+    b->current_func_return_type = stmt->as.fn_stmt.return_type ? stmt->as.fn_stmt.return_type : "()";
     for (i = 0; i < stmt->as.fn_stmt.param_count; i++) {
         if (!emit_ins(b, IR_PARAM, stmt->as.fn_stmt.params[i], i < 64 && (stmt->as.fn_stmt.native_borrow_mask & (1ULL << i)) ? "mutable_borrow" : "", "", stmt->pos)) return false;
     }
@@ -1195,7 +1227,12 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
 			return false;
 		}
 	}
+    if(!non_unit) {
+        char unit[IR_OPERAND_CAP]; next_temp(b,unit);
+        if(!emit_ins(b,IR_UNIT,unit,"","",stmt->pos) || !emit_ins(b,IR_RET,unit,"","",stmt->pos)) return false;
+    }
     b->local_count=0;
+    b->current_func_return_type = NULL;  /* Clear function context after processing */
 	return emit_ins(b, IR_FUNC_END, stmt->as.fn_stmt.name, "", "", stmt->pos);
 }
 static bool lower_stmt(ir_builder *b, ast_node *stmt) {
@@ -1204,6 +1241,7 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 		return true;
 	}
 	switch (stmt->kind) {
+        case AST_TRAP_STMT: return emit_ins(b,IR_TRAP,"101","","",stmt->pos);
 		case AST_PACKAGE_DECL:
 			b->package_name = stmt->as.package_decl.name;
 			return true;
@@ -1229,6 +1267,10 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 			}
 			return emit_ins(b, IR_MOV, stmt->as.assign_stmt.name, value, "", stmt->pos);
 		case AST_RETURN_STMT:
+            if(!stmt->as.return_stmt.value) {
+                next_temp(b,value);
+                return emit_ins(b,IR_UNIT,value,"","",stmt->pos) && emit_ins(b,IR_RET,value,"","",stmt->pos);
+            }
 			if (!lower_expr(b, stmt->as.return_stmt.value, value)) {
 				return false;
 			}
@@ -1286,6 +1328,7 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 		case AST_IDENT_EXPR: case AST_MEMBER_EXPR: case AST_INDEX_EXPR:
 		case AST_CALL_EXPR: case AST_SLICE_EXPR: case AST_NUMBER_EXPR:
 		case AST_BOOL_EXPR: case AST_STRING_EXPR: case AST_ARRAY_EXPR: case AST_STRUCT_EXPR:
+        case AST_UNIT_EXPR:
 			return lower_expr(b, stmt, value);
 		default:
 			error_set(b->err, ERR_SEMANTIC, stmt->pos.line, stmt->pos.column, "unsupported statement in IR lowering");

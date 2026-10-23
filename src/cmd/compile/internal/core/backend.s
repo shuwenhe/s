@@ -3,6 +3,7 @@ import (
     "std.result"
     "std.process"
     "compile.internal.ir.lower"
+    "compile.internal.ir.ast"
     "compile.internal.abi"
     "compile.internal.semantic"
     "compile.internal.mono"
@@ -228,7 +229,7 @@ func build_object_interpreted_legacy(string path, string output, string ssa_marg
             return report_failure("safety proof failed: " + safety.summary)
         }
     }
-    graph, lowering_error := compile.internal.ir.lower.lower_main_to_mir(parsed)
+    graph, lowering_error := compile.internal.ir.ast.lower_main_to_mir(parsed)
     if lowering_error != "" {
         return report_failure("mir lowering failed: " + lowering_error)
     }
@@ -316,7 +317,7 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
             return report_failure("safety proof failed: " + safety.summary)
         }
     }
-    graph, lowering_error := compile.internal.ir.lower.lower_main_to_mir(parsed)
+    graph, lowering_error := compile.internal.ir.ast.lower_main_to_mir(parsed)
     if lowering_error != "" {
         return report_failure("mir lowering failed: " + lowering_error)
     }
@@ -2544,7 +2545,7 @@ func ends_with_local(string text, string suffix) bool {
 }
 
 func load_source_graph(string path, string source) result[source_file, backend_error] {
-    combined, parse_err := compile.internal.parser.syntax.parse_source(source)
+    combined, parse_err := compile.internal.syntax.parse_source(source)
     if parse_err.message != "" {
         return result.err(backend_error { message: "parse failed: " + parse_err.message })
     }
@@ -2633,7 +2634,7 @@ func append_dependency_items(source_file combined, use_decl[] uses, string[] vis
             if dep_source_result.is_err() {
                 return result.err(backend_error { message: "failed to read module " + uses[i].path + " at " + dep_path + ": " + dep_source_result.unwrap_err().message })
             }
-            dep_combined, dep_parse_err := compile.internal.parser.syntax.parse_source(dep_source_result.unwrap())
+            dep_combined, dep_parse_err := compile.internal.syntax.parse_source(dep_source_result.unwrap())
             if dep_parse_err.message != "" {
                 return result.err(backend_error { message: "parse failed in module " + uses[i].path + ": " + dep_parse_err.message })
             }
@@ -3295,6 +3296,90 @@ func exit_result_value(result[int, backend_error] value) int {
     }
 }
 
+func function_result_is_err(result[function_decl, backend_error] value) bool {
+    switch value {
+        result::ok(_) : false,
+        result::err(_) : true,
+    }
+}
+
+func function_result_error(result[function_decl, backend_error] value) backend_error {
+    switch value {
+        result::ok(_) : backend_error { message: "" },
+        result::err(err) : err,
+    }
+}
+
+func function_result_value(result[function_decl, backend_error] value) function_decl {
+    switch value {
+        result::ok(func_decl) : func_decl,
+        result::err(_) : panic("function_result_value called on error result"),
+    }
+}
+
+func binding_result_is_err(result[binding[], backend_error] value) bool {
+    switch value {
+        result::ok(_) : false,
+        result::err(_) : true,
+    }
+}
+
+func binding_result_error(result[binding[], backend_error] value) backend_error {
+    switch value {
+        result::ok(_) : backend_error { message: "" },
+        result::err(err) : err,
+    }
+}
+
+func binding_result_value(result[binding[], backend_error] value) binding[] {
+    switch value {
+        result::ok(bindings) : bindings,
+        result::err(_) : binding[](),
+    }
+}
+
+func value_result_is_err(result[value, backend_error] value) bool {
+    switch value {
+        result::ok(_) : false,
+        result::err(_) : true,
+    }
+}
+
+func value_result_error(result[value, backend_error] value) backend_error {
+    switch value {
+        result::ok(_) : backend_error { message: "" },
+        result::err(err) : err,
+    }
+}
+
+func value_result_value(result[value, backend_error] value) value {
+    switch value {
+        result::ok(val) : val,
+        result::err(_) : panic("value_result_value called on error result"),
+    }
+}
+
+func int_result_is_err(result[int, backend_error] value) bool {
+    switch value {
+        result::ok(_) : false,
+        result::err(_) : true,
+    }
+}
+
+func int_result_error(result[int, backend_error] value) backend_error {
+    switch value {
+        result::ok(_) : backend_error { message: "" },
+        result::err(err) : err,
+    }
+}
+
+func int_result_value(result[int, backend_error] value) int {
+    switch value {
+        result::ok(i) : i,
+        result::err(_) : panic("int_result_value called on error result"),
+    }
+}
+
 func compile_runtime_metrics(source_file source, mir_graph graph) result[runtime_metrics, backend_error] {
     if std.prelude.len(graph.blocks) == 0 {
         return result.err(backend_error { message: "backend error: mir graph has no blocks" })
@@ -3429,7 +3514,7 @@ func block_result_error(result[mir_basic_block, backend_error] value) backend_er
 func block_result_value(result[mir_basic_block, backend_error] value) mir_basic_block {
     switch value {
         result::ok(block) : block,
-        result::err(_) : mir_basic_block { id: -1, statements: mir_statement[](), terminator: mir_terminator { kind: "", edges: mir_edge[]() } },
+        result::err(_) : panic("block_result_value called on error result"),
     }
 }
 
@@ -3884,12 +3969,12 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
             result.ok(())
         }
         stmt.defer(_) : result.ok(())
-        stmt.sroutine(value) : execute_sroutine_stmt_result(value, source, env, writes, runtime)
+        stmt.sroutine(sroutine_stmt) : execute_sroutine_stmt_result(sroutine_stmt, source, env, writes, runtime)
     }
 }
 
-func execute_sroutine_stmt(sroutine_stmt value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[(), backend_error] {
-    return switch value.expr {
+func execute_sroutine_stmt(sroutine_stmt stmt, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[(), backend_error] {
+    return switch stmt.expr {
         expr.call(call_expr) : {
             callee_result := eval_expr(call_expr.callee.value, source, env, writes, runtime)
             if value_result_is_err(callee_result) {
@@ -4052,13 +4137,13 @@ func eval_binary(binary_expr value, source_file source, binding[] env, write_op[
     }
 }
 
-func eval_call(call_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
-    switch value.resolved_callee {
+func eval_call(call_expr expr, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
+    switch expr.resolved_callee {
         option.some(resolved) : {
             arg_values := value[]()
             ai := 0
-            for ai < std.prelude.len(value.args) {
-                arg_result := eval_expr(value.args[ai], source, env, writes, runtime)
+            for ai < std.prelude.len(expr.args) {
+                arg_result := eval_expr(expr.args[ai], source, env, writes, runtime)
                 if value_result_is_err(arg_result) {
                     return result.err(value_result_error(arg_result))
                 }
@@ -4069,70 +4154,70 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
         },
         option.none : (),
     }
-    switch value.callee.value {
+    switch expr.callee.value {
         expr.name(callee_name) : {
             if callee_name.name == "println" || callee_name.name == "eprintln" {
-                return eval_print_call(callee_name.name, value.args, source, env, writes, runtime)
+                return eval_print_call(callee_name.name, expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "panic" {
-                return eval_panic_call(value.args, source, env, writes, runtime)
+                return eval_panic_call(expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "recover" {
                 return eval_recover_call(env, runtime)
             }
             if callee_name.name == "box" || callee_name.name == "box_new" {
-                return eval_box_new_call(value.args, source, env, writes, runtime)
+                return eval_box_new_call(expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "copy" {
-                return eval_copy_call(value.args, source, env, writes, runtime)
+                return eval_copy_call(expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "box_free" {
-                return eval_box_free_call(value.args, source, env, writes, runtime)
+                return eval_box_free_call(expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "chan_make" {
-                return eval_chan_make_call(value.args, source, env, writes, runtime)
+                return eval_chan_make_call(expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "chan_send" {
-                return eval_chan_send_call(value.args, source, env, writes, runtime)
+                return eval_chan_send_call(expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "chan_recv" {
-                return eval_chan_recv_call(value.args, source, env, writes, runtime, false)
+                return eval_chan_recv_call(expr.args, source, env, writes, runtime, false)
             }
             if callee_name.name == "select_recv" {
-                return eval_chan_recv_call(value.args, source, env, writes, runtime, true)
+                return eval_chan_recv_call(expr.args, source, env, writes, runtime, true)
             }
             if callee_name.name == "select_recv_weighted" {
-                return eval_select_recv_weighted_call(value.args, source, env, writes, runtime)
+                return eval_select_recv_weighted_call(expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "select_recv_default" {
-                return eval_select_recv_default_call(value.args, source, env, writes, runtime)
+                return eval_select_recv_default_call(expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "select_recv_timeout" {
-                return eval_select_recv_timeout_call(value.args, source, env, writes, runtime)
+                return eval_select_recv_timeout_call(expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "select_send" {
-                return eval_select_send_call(value.args, source, env, writes, runtime)
+                return eval_select_send_call(expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "select_send_default" {
-                return eval_select_send_default_call(value.args, source, env, writes, runtime)
+                return eval_select_send_default_call(expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "select_send_timeout" {
-                return eval_select_send_timeout_call(value.args, source, env, writes, runtime)
+                return eval_select_send_timeout_call(expr.args, source, env, writes, runtime)
             }
             if callee_name.name == "chan_close" {
-                return eval_chan_close_call(value.args, source, env, writes, runtime)
+                return eval_chan_close_call(expr.args, source, env, writes, runtime)
             }
         }
         _ : (),
     }
-    callee_result := eval_expr(value.callee.value, source, env, writes, runtime)
+    callee_result := eval_expr(expr.callee.value, source, env, writes, runtime)
     if value_result_is_err(callee_result) {
         return result.err(value_result_error(callee_result))
     }
     arg_values := value[]()
     ai := 0
-    for ai < std.prelude.len(value.args) {
-        arg_result := eval_expr(value.args[ai], source, env, writes, runtime)
+    for ai < std.prelude.len(expr.args) {
+        arg_result := eval_expr(expr.args[ai], source, env, writes, runtime)
         if value_result_is_err(arg_result) {
             return result.err(value_result_error(arg_result))
         }
@@ -4143,8 +4228,8 @@ func eval_call(call_expr value, source_file source, binding[] env, write_op[] wr
     if target_name == "" {
         return result.err(backend_error { message: "backend error: unsupported call target" })
     }
-    if value.resolved_callee.is_some() {
-        target_name = value.resolved_callee.unwrap()
+    if expr.resolved_callee.is_some() {
+        target_name = expr.resolved_callee.unwrap()
     }
     return call_function(source, target_name, arg_values, env, writes, runtime)
 }
@@ -4885,7 +4970,7 @@ func load_source_graph_for_use(string module_path) result[source_file, backend_e
     if dep_source_result.is_err() {
         return result.err(backend_error { message: "backend error: failed to read module " + module_path + ": " + dep_source_result.unwrap_err().message })
     }
-    dep_combined, dep_parse_err := compile.internal.parser.syntax.parse_source(dep_source_result.unwrap())
+    dep_combined, dep_parse_err := compile.internal.syntax.parse_source(dep_source_result.unwrap())
     if dep_parse_err.message != "" {
         return result.err(backend_error { message: "backend error: parse failed in module " + module_path + ": " + dep_parse_err.message })
     }

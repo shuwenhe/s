@@ -139,19 +139,6 @@ static type_field_info *find_type_info(const char *type_name) {
 		if (t->type_name && strcmp(t->type_name, type_name) == 0) return t;
 		t = t->next;
 	}
-	/* Try unqualified name if type_name is qualified (e.g., package.type)
-	 * This handles multi-file merging where types appear with different qualifications */
-	if (type_name) {
-		const char *unqualified = strrchr(type_name, '.');
-		if (unqualified) {
-			unqualified++;  /* skip the dot */
-			t = type_registry;
-			while (t) {
-				if (t->type_name && strcmp(t->type_name, unqualified) == 0) return t;
-				t = t->next;
-			}
-		}
-	}
 	return NULL;
 }
 static int register_type_fields(const char *type_name, char **field_names, char **field_types, size_t field_count) {
@@ -704,6 +691,7 @@ static int is_numeric_type(const char *type_name) {
 }
 static void normalized_type_span(const char *type_name, const char **start, size_t *len) {
 	const char *value = type_name ? type_name : "";
+    if(!strcmp(value,"unit")) value="()";
 	size_t n;
 	if (strncmp(value, "&mut", 4) == 0) value += 4;
 	else if (*value == '&') value++;
@@ -712,47 +700,14 @@ static void normalized_type_span(const char *type_name, const char **start, size
 	*start = value;
 	*len = n;
 }
-/* Helper to extract unqualified name (e.g., "std.option.option" -> "option") */
-static const char *get_unqualified_name(const char *name) {
-	const char *dot = strrchr(name, '.');
-	return dot ? dot + 1 : name;
-}
-
 static int normalized_type_equal(const char *left, const char *right) {
 	const char *left_start;
 	const char *right_start;
 	size_t left_len;
 	size_t right_len;
-	
 	normalized_type_span(left, &left_start, &left_len);
 	normalized_type_span(right, &right_start, &right_len);
-	if (left_len == right_len && strncmp(left_start, right_start, left_len) == 0) return 1;
-	
-	/* For generic types, try matching with unqualified base names.
-	 * e.g., std.option.option[A,B] might match option[A,B]
-	 *       std.result.result[compile.internal.A,compile.internal.B] might match result[A,B] */
-	if (left_start && right_start) {
-		const char *left_bracket = strchr(left_start, '[');
-		const char *right_bracket = strchr(right_start, '[');
-		
-		if (left_bracket && right_bracket) {
-			/* Both have generic parameters - get unqualified names */
-			const char *left_unqual = get_unqualified_name(left_start);
-			const char *right_unqual = get_unqualified_name(right_start);
-			
-			/* If unqualified names match, consider types equal (lenient matching) */
-			size_t left_unqual_len = strlen(left_unqual);
-			size_t right_unqual_len = strlen(right_unqual);
-			
-			if (left_unqual_len == right_unqual_len &&
-				strncmp(left_unqual, right_unqual, left_unqual_len) == 0) {
-				/* Bases match when unqualified - allow match */
-				return 1;
-			}
-		}
-	}
-	
-	return 0;
+	return left_len == right_len && strncmp(left_start, right_start, left_len) == 0;
 }
 static int equivalent_array_type(const char *left, const char *right) {
 	size_t left_len = left ? strlen(left) : 0;
@@ -771,88 +726,8 @@ static int equivalent_array_type(const char *left, const char *right) {
 	}
 	return 0;
 }
-/* Strip package qualifications from a type string.
- * E.g., "std.result.result[compile.internal.A,compile.internal.B]*" 
- *    -> "result[A,B]*" */
-static void strip_qualifications(const char *input, char *output, size_t output_size) {
-	if (!input || !output || output_size == 0) return;
-	
-	char *out = output;
-	const char *p = input;
-	
-	while (*p && out < output + output_size - 1) {
-		if (*p == '[') {
-			/* Start of generic parameters */
-			*out++ = '[';
-			p++;
-			
-			/* Process content inside brackets, stripping qualifications */
-			while (*p && *p != ']' && out < output + output_size - 1) {
-				if (*p == ',' || *p == ' ') {
-					*out++ = *p++;
-				} else {
-					/* This is a type name - skip qualifications */
-					const char *name_start = p;
-					while (*p && *p != ',' && *p != ']') p++;
-					
-					/* Find the last unqualified component (after last dot) */
-					const char *last_dot = name_start - 1;
-					for (const char *q = name_start; q < p; q++) {
-						if (*q == '.') last_dot = q;
-					}
-					last_dot++;
-					
-					/* Copy unqualified name */
-					while (last_dot < p && out < output + output_size - 1) {
-						*out++ = *last_dot++;
-					}
-				}
-			}
-			
-			if (*p == ']' && out < output + output_size - 1) *out++ = *p++;
-		} else if (*p == '*' || *p == '&') {
-			/* Pointer/reference markers */
-			*out++ = *p++;
-		} else if (*p == '.') {
-			/* Skip dot and find next unqualified component */
-			p++;
-			/* Find the next component (until dot, bracket, or end) */
-			const char *comp_start = p;
-			while (*p && *p != '.' && *p != '[' && *p != '*') p++;
-			
-			/* Check if there's a dot after this (if so, skip this component) */
-			if (*p == '.') {
-				/* This was a qualified prefix, skip it */
-				continue;
-			} else {
-				/* This is the final component, output it */
-				while (comp_start < p && out < output + output_size - 1) {
-					*out++ = *comp_start++;
-				}
-			}
-		} else {
-			/* Regular character */
-			const char *start = p;
-			while (*p && *p != '.' && *p != '[' && *p != '*') p++;
-			
-			/* Check if followed by dot (meaning this is qualified) */
-			if (*p == '.') {
-				/* Skip this component (it's a qualified prefix) */
-				p++;
-				continue;
-			} else {
-				/* Output this unqualified name */
-				while (start < p && out < output + output_size - 1) {
-					*out++ = *start++;
-				}
-			}
-		}
-	}
-	
-	*out = '\0';
-}
-
 static int is_type_assignable(const char *expected, const char *actual) {
+    if(actual && !strcmp(actual,"never")) return 1;
 	if (is_type_any(expected) || is_type_any(actual)) {
 		return 1;
 	}
@@ -879,46 +754,6 @@ static int is_type_assignable(const char *expected, const char *actual) {
 		(strcmp(expected, TYPE_INT) == 0 && strcmp(actual, TYPE_FLOAT) == 0)) {
 		return 1;
 	}
-	
-	/* Try lenient matching: strip qualifications from both types and compare */
-	if (strcmp(expected, actual) != 0 && expected && actual) {
-		char exp_unqual[1024];
-		char act_unqual[1024];
-		strip_qualifications(expected, exp_unqual, sizeof(exp_unqual));
-		strip_qualifications(actual, act_unqual, sizeof(act_unqual));
-		if (strcmp(exp_unqual, act_unqual) == 0) return 1;
-	}
-	
-	/* Allow qualified and unqualified type names to match in multi-package closures.
-	 * The semantic analyzer merges files without preserving package qualifications,
-	 * so types can appear as both "package.type" and just "type" in the same unit. */
-	if (strcmp(expected, actual) != 0) {
-		const char *exp_dot = strrchr(expected, '.');
-		const char *act_dot = strrchr(actual, '.');
-		if (exp_dot && !act_dot) {
-			/* expected is qualified, actual is not: compare unqualified parts */
-			if (strcmp(exp_dot + 1, actual) == 0) return 1;
-		} else if (act_dot && !exp_dot) {
-			/* actual is qualified, expected is not: compare unqualified parts */
-			if (strcmp(act_dot + 1, expected) == 0) return 1;
-		}
-	}
-	
-	/* For generic result and option types with different qualifications,
-	 * accept them as compatible to work around monomorphization parameter mismatches
-	 * in multi-package merged compilation. */
-	if (expected && actual &&
-	    (strstr(expected, "result") || strstr(expected, "option")) &&
-	    (strstr(actual, "result") || strstr(actual, "option"))) {
-		return 1;
-	}
-	
-	/* Allow enum-to-int comparisons for qualified enums */
-	if ((strcmp(expected, TYPE_INT) == 0 && actual && strchr(actual, '.') && !strchr(actual, '[')) ||
-	    (strcmp(actual, TYPE_INT) == 0 && expected && strchr(expected, '.') && !strchr(expected, '['))) {
-		return 1;
-	}
-	
 	return strcmp(expected, actual) == 0;
 }
 static ast_node *find_trait_decl(semantic_ctx *ctx, const char *name) {
@@ -932,16 +767,21 @@ static ast_node *find_trait_decl(semantic_ctx *ctx, const char *name) {
 	return NULL;
 }
 static ast_node *find_struct_literal(semantic_ctx *ctx, const char *type_name) {
-	size_t i;
-	if (!ctx || !ctx->root || ctx->root->kind != AST_PROGRAM || !type_name) return NULL;
-	for (i = 0; i < ctx->root->as.program.statements.len; i++) {
-		ast_node *decl = ctx->root->as.program.statements.data[i];
-		if (decl->kind == AST_LET_STMT && decl->as.let_stmt.value && decl->as.let_stmt.value->kind == AST_STRUCT_EXPR) {
-			ast_node *se = decl->as.let_stmt.value;
-			if (se->as.struct_expr.type_name && strcmp(se->as.struct_expr.type_name, type_name) == 0) return se;
-		}
-	}
-	return NULL;
+    if(!ctx || !ctx->root || ctx->root->kind!=AST_PROGRAM || !type_name) return NULL;
+    const char *package=""; ast_node *unqualified=NULL; bool ambiguous=false;
+    for(size_t i=0;i<ctx->root->as.program.statements.len;i++) {
+        ast_node *decl=ctx->root->as.program.statements.data[i];
+        if(decl->kind==AST_PACKAGE_DECL) package=decl->as.package_decl.name;
+        if(decl->kind!=AST_LET_STMT || !decl->as.let_stmt.type_name || strcmp(decl->as.let_stmt.type_name,"struct") || !decl->as.let_stmt.value || decl->as.let_stmt.value->kind!=AST_STRUCT_EXPR) continue;
+        ast_node *schema=decl->as.let_stmt.value;
+        char qualified[1024];
+        if(snprintf(qualified,sizeof(qualified),"%s%s%s",package,*package?".":"",decl->as.let_stmt.name)>=(int)sizeof(qualified)) continue;
+        if(!strcmp(qualified,type_name)) return schema;
+        if(schema->as.struct_expr.type_name && !strcmp(schema->as.struct_expr.type_name,type_name)) {
+            if(unqualified) ambiguous=true; else unqualified=schema;
+        }
+    }
+    return ambiguous?NULL:unqualified;
 }
 static ast_node *find_trait_method(ast_node *trait_decl, const char *name) {
 	size_t i;
@@ -972,6 +812,10 @@ static int type_implements_trait(semantic_ctx *ctx, const char *actual, ast_node
 static int is_type_assignable_ctx(semantic_ctx *ctx, const char *expected, const char *actual) {
 	ast_node *trait_decl;
 	if (is_type_assignable(expected, actual)) return 1;
+    /* Different spellings are equal only when they resolve to the same
+     * authoritative record declaration, never merely the same leaf name. */
+    ast_node *expected_record=find_struct_literal(ctx,expected);
+    if(expected_record && expected_record==find_struct_literal(ctx,actual)) return 1;
 	trait_decl = find_trait_decl(ctx, expected);
 	return trait_decl ? type_implements_trait(ctx, actual, trait_decl) : 0;
 }
@@ -1047,75 +891,6 @@ static int split_result_tuple_type(const char *type_name, char **ok_type, char *
 	end = start + strlen(start);
 	while (start < end && isspace((unsigned char)*start)) start++;
 	while (end > start && isspace((unsigned char)end[-1])) end--;
-	
-	/* For types like std.result.result[A,B]* or std.result.result[compile.internal.A,compile.internal.B]*,
-	 * we need to find the [...] part and split on the comma at depth 0 WITHIN that bracket section. */
-	
-	const char *bracket_start = strchr(start, '[');
-	const char *bracket_end = NULL;
-	
-	if (bracket_start) {
-		/* Find the matching closing bracket */
-		depth = 0;
-		for (p = bracket_start; p < end; p++) {
-			if (*p == '[') depth++;
-			else if (*p == ']') {
-				depth--;
-				if (depth == 0) {
-					bracket_end = p;
-					break;
-				}
-			}
-		}
-	}
-	
-	if (bracket_start && bracket_end && bracket_start < bracket_end) {
-		/* Process inside brackets to find the comma at depth 0 within them */
-		depth = 0;
-		comma = NULL;
-		for (p = bracket_start + 1; p < bracket_end; p++) {
-			if (*p == '[') depth++;
-			else if (*p == ']') depth--;
-			else if (*p == ',' && depth == 0) {
-				if (comma) return 0; /* Multiple commas at top level */
-				comma = p;
-			}
-			if (depth < 0) return 0;
-		}
-		
-		/* If we found a comma at depth 0 inside the brackets, use it */
-		if (comma) {
-			ok_len = (size_t)(comma - (bracket_start + 1));
-			err_len = (size_t)(bracket_end - comma - 1);
-			if (!ok_len || !err_len) return 0;
-			
-			*ok_type = (char *)malloc(ok_len + 1);
-			*err_type = (char *)malloc(err_len + 1);
-			if (!*ok_type || !*err_type) {
-				free(*ok_type);
-				free(*err_type);
-				*ok_type = NULL;
-				*err_type = NULL;
-				return 0;
-			}
-			
-			memcpy(*ok_type, bracket_start + 1, ok_len);
-			(*ok_type)[ok_len] = '\0';
-			memcpy(*err_type, comma + 1, err_len);
-			(*err_type)[err_len] = '\0';
-			
-			/* Trim whitespace */
-			{
-				char *trimmed_ok = trim_inplace(*ok_type);
-				char *trimmed_err = trim_inplace(*err_type);
-				if (trimmed_ok != *ok_type) memmove(*ok_type, trimmed_ok, strlen(trimmed_ok) + 1);
-				if (trimmed_err != *err_type) memmove(*err_type, trimmed_err, strlen(trimmed_err) + 1);
-			}
-			return 1;
-		}
-	}
-	
-	/* Fallback: try original logic for non-generic result types */
 	/* The parser stores return lists as T,E; metadata may spell (T,E).
 	 * Remove only a pair enclosing the entire list, not the unit type in
 	 * (),E or parentheses belonging to a nested tuple. */
@@ -1127,7 +902,6 @@ static int split_result_tuple_type(const char *type_name, char **ok_type, char *
 		if (p == end - 1) { start++; end--; }
 	}
 	depth = 0;
-	comma = NULL;
 	for (p = start; p < end; p++) {
 		if (*p == '(' || *p == '[') depth++;
 		else if (*p == ')' || *p == ']') depth--;
@@ -1210,6 +984,54 @@ static int analyze_enum_member(semantic_ctx *ctx, ast_node *member, ast_vec *arg
 	if (!member->as.member_expr.resolved_enum_type) return 0;
 	*out_type = member->as.member_expr.resolved_enum_type;
 	return 1;
+}
+/* Preserve the declared payload type when a result/option unwrap feeds an
+ * array or record expression. This is a type query, not a layout operation. */
+static bool standard_payload_owner(semantic_ctx *ctx,const char *type,size_t len,const char *package,const char *name) {
+    char qualified[128];
+    int size=snprintf(qualified,sizeof(qualified),"%s.%s",package,name);
+    if(size>0 && (size_t)size==len && !strncmp(type,qualified,len)) return true;
+    if(strlen(name)!=len || strncmp(type,name,len)) return false;
+    if(!ctx || !ctx->root || ctx->root->kind!=AST_PROGRAM) return false;
+    const char *owner=""; bool found=false;
+    for(size_t i=0;i<ctx->root->as.program.statements.len;i++) {
+        ast_node *decl=ctx->root->as.program.statements.data[i]; const char *decl_name=NULL;
+        if(decl->kind==AST_PACKAGE_DECL) owner=decl->as.package_decl.name;
+        if(decl->kind==AST_ENUM_DECL) decl_name=decl->as.enum_decl.name;
+        else if(decl->kind==AST_LET_STMT && decl->as.let_stmt.type_name && !strcmp(decl->as.let_stmt.type_name,"struct")) decl_name=decl->as.let_stmt.name;
+        if(!decl_name || strcmp(decl_name,name)) continue;
+        if(found || strcmp(owner,package)) return false;
+        found=true;
+    }
+    return found;
+}
+static char *unwrap_payload_type(semantic_ctx *ctx,const char *type,size_t index) {
+    char *left=NULL,*right=NULL;
+    if(split_result_tuple_type(type,&left,&right)) {
+        char *answer=index?right:left; free(index?left:right); return answer;
+    }
+    if(!type) return NULL;
+    const char *open=strchr(type,'['),*close=strrchr(type,']');
+    if(!open || !close || close[1]) return NULL;
+    size_t owner_len=(size_t)(open-type);
+    bool result=standard_payload_owner(ctx,type,owner_len,"std.result","result");
+    bool single=standard_payload_owner(ctx,type,owner_len,"std.option","option") || standard_payload_owner(ctx,type,owner_len,"std.prelude","box");
+    if(!result && !single) return NULL;
+    if(single && index) return NULL;
+    const char *start=open+1; size_t current=0; int depth=0;
+    for(const char *at=start;at<=close;at++) {
+        if(at==close || (*at==',' && !depth)) {
+            if(current==index) {
+                while(start<at && isspace((unsigned char)*start)) start++;
+                const char *end=at; while(end>start && isspace((unsigned char)end[-1])) end--;
+                size_t len=(size_t)(end-start); if(!len) return NULL; char *answer=malloc(len+1);
+                if(answer) { memcpy(answer,start,len); answer[len]=0; } return answer;
+            }
+            current++; start=at+1;
+        } else if(*at=='[' || *at=='(') depth++;
+        else if(*at==']' || *at==')') depth--;
+    }
+    return NULL;
 }
 static int enter_child_scope(semantic_ctx *ctx, scope **old_scope);
 static void leave_child_scope(semantic_ctx *ctx, scope *old_scope);
@@ -1305,7 +1127,7 @@ static int analyze_switch_expr(semantic_ctx *ctx, ast_node *node, const char **o
 			}
 		}
 		leave_child_scope(ctx, old_scope);
-		if (!arm_type) {
+		if (!arm_type || !strcmp(arm_type,"never")) {
 			arm = arm->as.if_stmt.else_branch;
 			continue;
 		}
@@ -1342,6 +1164,7 @@ static flow_exit_kind stmt_exit_kind(ast_node *node) {
 	switch (node->kind) {
 		case AST_RETURN_STMT:
 			return FLOW_EXIT_RETURN;
+        case AST_TRAP_STMT: return FLOW_EXIT_RETURN;
 		case AST_BREAK_STMT:
 			return FLOW_EXIT_BREAK;
 		case AST_CONTINUE_STMT:
@@ -1389,12 +1212,17 @@ static void leave_child_scope(semantic_ctx *ctx, scope *old_scope) {
 	ctx->current_scope = old_scope;
 	scope_free(child);
 }
+static const char *number_literal_type(const char *text) {
+    if(ast_number_is_float(text)) return TYPE_FLOAT;
+    return TYPE_INT;
+}
 static const char *literal_node_type(ast_node *node) {
 	if (!node) {
 		return NULL;
 	}
 	switch (node->kind) {
-		case AST_NUMBER_EXPR: return TYPE_INT;
+		case AST_NUMBER_EXPR: return number_literal_type(node->as.number_expr.literal);
+        case AST_UNIT_EXPR: return TYPE_UNIT;
 		case AST_STRING_EXPR: return TYPE_STRING;
 		case AST_BOOL_EXPR: return TYPE_BOOL;
 		default: return NULL;
@@ -1590,6 +1418,7 @@ static int pattern_arm_value_type(semantic_ctx *ctx, ast_node *body, const char 
 		return is_type_assignable_ctx(ctx, return_type, tail->as.expr_stmt.inferred_type);
 	}
 	switch (tail->kind) {
+        case AST_UNIT_EXPR: return is_type_assignable_ctx(ctx,return_type,TYPE_UNIT);
 		case AST_IF_STMT:
 			return stmt_guarantees_return(ctx, tail, return_type);
 		case AST_BINARY_EXPR:
@@ -1629,6 +1458,7 @@ static int stmt_guarantees_return(semantic_ctx *ctx, ast_node *node, const char 
 		return 0;
 	}
 	switch (node->kind) {
+        case AST_TRAP_STMT: return 1;
 		case AST_RETURN_STMT:
 			return 1;
 		case AST_BLOCK:
@@ -1689,23 +1519,40 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 		return 1;
 	}
 	switch (node->kind) {
+        case AST_TRAP_STMT: *out_type="never"; return 1;
 		case AST_NUMBER_EXPR:
-			*out_type = TYPE_INT;
+			*out_type = number_literal_type(node->as.number_expr.literal);
 			return 1;
+        case AST_UNIT_EXPR: *out_type=TYPE_UNIT; return 1;
 		case AST_BOOL_EXPR:
 			*out_type = TYPE_BOOL;
 			return 1;
 		case AST_STRING_EXPR:
 			*out_type = TYPE_STRING;
 			return 1;
-		case AST_ARRAY_EXPR:
-			for (i = 0; i < node->as.array_expr.items.len; i++) {
-				if (!analyze_expr(ctx, node->as.array_expr.items.data[i], &rhs_type)) {
-					return 0;
-				}
-			}
-			*out_type = TYPE_ARRAY;
-			return 1;
+        case AST_ARRAY_EXPR: {
+            char element[1024]=""; bool homogeneous=true;
+            bool explicit_type=node->as.array_expr.explicit_type!=NULL;
+            if(explicit_type && !seed_array_element(node->as.array_expr.explicit_type,element,sizeof(element))) return 0;
+            for(i=0;i<node->as.array_expr.items.len;i++) {
+                if(!analyze_expr(ctx,node->as.array_expr.items.data[i],&rhs_type)) return 0;
+                if(!rhs_type || is_type_any(rhs_type) || !strcmp(rhs_type,TYPE_ARRAY)) homogeneous=false;
+                else if(explicit_type) {
+                    if(!is_type_assignable_ctx(ctx,element,rhs_type)) { error_set(ctx->err,ERR_SEMANTIC,node->pos.line,node->pos.column,"array element type mismatch: expected '%s', got '%s'",element,rhs_type); return 0; }
+                } else if(i==0) {
+                    if(strlen(rhs_type)>=sizeof(element)) return 0;
+                    strcpy(element,rhs_type);
+                } else if(strcmp(element,rhs_type)) homogeneous=false;
+            }
+            if(homogeneous && element[0]) {
+                size_t len=strlen(element); char *type=malloc(len+3);
+                if(!type) { error_set(ctx->err,ERR_OUT_OF_MEMORY,node->pos.line,node->pos.column,"out of memory"); return 0; }
+                memcpy(type,element,len); memcpy(type+len,"[]",3);
+                free(node->as.array_expr.resolved_array_type); node->as.array_expr.resolved_array_type=type;
+                *out_type=type;
+            } else *out_type=TYPE_ARRAY;
+            return 1;
+        }
 		case AST_STRUCT_EXPR:
 			if (node->as.struct_expr.type_name) {
 				char **f_types = NULL;
@@ -1840,19 +1687,6 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					if (resolved) { *out_type = resolved; return 1; }
 				}
 			}
-			/* For imported structs from other packages, try to infer the field type
-			 * from common patterns when normal lookup fails. */
-			if (lookup_type && node->as.member_expr.member) {
-				/* Check if this is a function_decl struct field access */
-				const char *base_name = lookup_type;
-				const char *dot = strrchr(lookup_type, '.');
-				if (dot) base_name = dot + 1;
-				
-				if (strcmp(base_name, "function_decl") == 0 && strcmp(node->as.member_expr.member, "body") == 0) {
-					*out_type = "option[block_expr]";
-					return 1;
-				}
-			}
 			*out_type = TYPE_ANY;
 			return 1;
 		case AST_INDEX_EXPR:
@@ -1869,7 +1703,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			if (!analyze_expr(ctx, node->as.index_expr.index, &rhs_type)) {
 				return 0;
 			}
-			if (!is_type_assignable(TYPE_INT, rhs_type)) {
+			if (!rhs_type || strcmp(TYPE_INT, rhs_type)) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"index expression expects int index, got '%s'", rhs_type ? rhs_type : TYPE_ANY);
 				return 0;
@@ -1890,8 +1724,8 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					return 1;
 				}
 			}
-			*out_type = TYPE_ANY;
-			return 1;
+            error_set(ctx->err,ERR_SEMANTIC,node->pos.line,node->pos.column,"index expression requires array or string, got '%s'",lhs_type?lhs_type:"unknown");
+            return 0;
 		case AST_SLICE_EXPR:
 			error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 				"slice expressions are not supported by the seed semantic analyzer");
@@ -2205,13 +2039,15 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					*out_type = TYPE_BOOL;
 					return 1;
 				}
-				/* Don't handle unwrap early - let it fall through to proper result type checking */
-				/* The old code:
-				if (strcmp(member->as.member_expr.member, "unwrap") == 0) {
-					*out_type = TYPE_ANY;
-					return 1;
-				}
-				*/
+                if(!strcmp(member->as.member_expr.member,"unwrap") || !strcmp(member->as.member_expr.member,"unwrap_err")) {
+                    if(!analyze_expr(ctx,member->as.member_expr.object,&lhs_type)) return 0;
+                    char *payload=unwrap_payload_type(ctx,lhs_type,!strcmp(member->as.member_expr.member,"unwrap_err"));
+                    if(payload) {
+                        if(node->as.call_expr.args.len) { free(payload); error_set(ctx->err,ERR_SEMANTIC,node->pos.line,node->pos.column,"unwrap expects no arguments"); return 0; }
+                        free(node->as.call_expr.resolved_return_type); node->as.call_expr.resolved_return_type=payload; *out_type=payload; return 1;
+                    }
+                    if(!strcmp(member->as.member_expr.member,"unwrap")) { *out_type=TYPE_ANY; return 1; }
+                }
 				
 				// NEW: Check for qualified import function call (e.g., std.io.eprintln)
 				{
@@ -2222,11 +2058,6 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					if (construct_qualified_name(member, full_qualified_name, sizeof(full_qualified_name)) &&
 						strstr(full_qualified_name, "canonical_type") != NULL) {
 						*out_type = TYPE_ANY;
-						return 1;
-					}
-					if (construct_qualified_name(member, full_qualified_name, sizeof(full_qualified_name)) &&
-						strstr(full_qualified_name, "legacy_parse_source") != NULL) {
-						*out_type = "(any,any)";
 						return 1;
 					}
 					if (resolve_qualified_import_call(ctx, member, full_qualified_name, sizeof(full_qualified_name),
@@ -2265,26 +2096,6 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				if (!analyze_expr(ctx, member->as.member_expr.object, &lhs_type)) {
 					return 0;
 				}
-				
-				/* Special case: if lhs_type is 'any' but the object is a member expression,
-				 * try to infer the type from common patterns */
-				if (lhs_type && strcmp(lhs_type, TYPE_ANY) == 0 &&
-				    member->as.member_expr.object &&
-				    member->as.member_expr.object->kind == AST_MEMBER_EXPR) {
-					const char *field_name = member->as.member_expr.object->as.member_expr.member;
-					/* Common patterns for option-typed fields */
-					if (strcmp(field_name, "body") == 0) {
-						/* This looks like <something>.body.<method> where body couldn't be resolved */
-						/* Infer that body is likely option[block_expr] */
-						lhs_type = "option[block_expr]";
-					} else if (strcmp(field_name, "kindname") == 0 || strcmp(field_name, "kind") == 0 ||
-					           strcmp(field_name, "value") == 0 || strcmp(field_name, "init") == 0 ||
-					           strcmp(field_name, "condition") == 0 || strcmp(field_name, "declared_ref") == 0) {
-						/* These are commonly option types in AST structures */
-						lhs_type = "option[any]";
-					}
-				}
-				
 				if (lhs_type && strncmp(lhs_type, "&mut", 4) == 0) lhs_type += 4;
 				else if (lhs_type && lhs_type[0] == '&') lhs_type++;
 				if (lhs_type) {
@@ -2307,139 +2118,49 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					*out_type = TYPE_INT;
 					return 1;
 				}
-				/* Handle array.get(index) -> option[element] pattern */
-				if (lhs_type && strcmp(member->as.member_expr.member, "get") == 0 &&
-				    lhs_type[0] != '\0') {
-					size_t lhs_len = strlen(lhs_type);
-					if (lhs_len > 1 && lhs_type[lhs_len - 2] == '[' && lhs_type[lhs_len - 1] == ']') {
-						/* This is an array type like "T[]", return option[T] */
-						char elem_type[1024];
-						strncpy(elem_type, lhs_type, lhs_len - 2);
-						elem_type[lhs_len - 2] = '\0';
-						
-						char option_type[1100];
-						snprintf(option_type, sizeof(option_type), "option[%s]", elem_type);
-						char *result_type = dup_cstr(option_type);
-						if (!result_type) return 0;
-						*out_type = result_type;
-						return 1;
-					}
-				}
-				/* Handle box[T].unwrap() -> T pattern */
-				if (lhs_type && (strstr(lhs_type, "box[") || strstr(lhs_type, "box<")) &&
-				    strcmp(member->as.member_expr.member, "unwrap") == 0) {
-					const char *bracket = strchr(lhs_type, '[');
-					if (!bracket) bracket = strchr(lhs_type, '<');
-					if (bracket) {
-						const char *bracket_end = strrchr(bracket, ']');
-						if (!bracket_end) bracket_end = strrchr(bracket, '>');
-						if (bracket_end && bracket_end > bracket) {
-							/* Extract the type parameter from box[T] */
-							size_t type_len = bracket_end - bracket - 1;
-							char inner_type[1024];
-							strncpy(inner_type, bracket + 1, type_len);
-							inner_type[type_len] = '\0';
-							
+				if (lhs_type && strchr(lhs_type, ',')) {
+					char *ok_type = NULL;
+					char *err_type = NULL;
+					const char *result_method = member->as.member_expr.member;
+					const char *resolved_result_method = NULL;
+					const char *result_return_type = NULL;
+					if (split_result_tuple_type(lhs_type, &ok_type, &err_type)) {
+						if (strcmp(result_method, "is_ok") == 0) {
+							resolved_result_method = "__result_is_ok";
+							result_return_type = TYPE_BOOL;
+						} else if (strcmp(result_method, "is_err") == 0) {
+							resolved_result_method = "__result_is_err";
+							result_return_type = TYPE_BOOL;
+						} else if (strcmp(result_method, "unwrap") == 0) {
+							resolved_result_method = "__result_unwrap";
+							result_return_type = ok_type;
+						} else if (strcmp(result_method, "unwrap_err") == 0) {
+							resolved_result_method = "__result_unwrap_err";
+							result_return_type = err_type;
+						}
+						if (resolved_result_method) {
 							if (node->as.call_expr.args.len != 0) {
 								error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
-									"box.unwrap expects no arguments");
+									"result.%s expects no arguments", result_method);
+								free(ok_type);
+								free(err_type);
 								return 0;
 							}
-							
-							char *result_type = dup_cstr(inner_type);
-							if (!result_type) return 0;
-							*out_type = result_type;
+							free(member->as.member_expr.resolved_method);
+							member->as.member_expr.resolved_method = dup_cstr(resolved_result_method);
+							if (!member->as.member_expr.resolved_method) {
+								free(ok_type);
+								free(err_type);
+								error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+								return 0;
+							}
+							if (result_return_type != ok_type) free(ok_type);
+							if (result_return_type != err_type) free(err_type);
+							*out_type = result_return_type;
 							return 1;
-						}
-					}
-				}
-				if (lhs_type && ((strchr(lhs_type, ',') || (strchr(lhs_type, '[') && strchr(lhs_type, ']'))) ||
-				                 strstr(lhs_type, "result") || strstr(lhs_type, "option"))) {
-					const char *result_method = member->as.member_expr.member;
-					
-					/* If this is a known result/option method, try special handling */
-					if (strcmp(result_method, "is_ok") == 0 || strcmp(result_method, "is_err") == 0 ||
-					    strcmp(result_method, "unwrap") == 0 || strcmp(result_method, "unwrap_err") == 0) {
-						
-						char *ok_type = NULL;
-						char *err_type = NULL;
-						const char *resolved_result_method = NULL;
-						const char *result_return_type = NULL;
-						
-						if (split_result_tuple_type(lhs_type, &ok_type, &err_type)) {
-							if (strcmp(result_method, "is_ok") == 0) {
-								resolved_result_method = "__result_is_ok";
-								result_return_type = TYPE_BOOL;
-							} else if (strcmp(result_method, "is_err") == 0) {
-								resolved_result_method = "__result_is_err";
-								result_return_type = TYPE_BOOL;
-							} else if (strcmp(result_method, "unwrap") == 0) {
-								resolved_result_method = "__result_unwrap";
-								result_return_type = ok_type;
-							} else if (strcmp(result_method, "unwrap_err") == 0) {
-								resolved_result_method = "__result_unwrap_err";
-								result_return_type = err_type;
-							}
-							
-							if (resolved_result_method) {
-								if (node->as.call_expr.args.len != 0) {
-									error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
-										"result.%s expects no arguments", result_method);
-									free(ok_type);
-									free(err_type);
-									return 0;
-								}
-								free(member->as.member_expr.resolved_method);
-								member->as.member_expr.resolved_method = dup_cstr(resolved_result_method);
-								if (!member->as.member_expr.resolved_method) {
-									free(ok_type);
-									free(err_type);
-									error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
-									return 0;
-								}
-								if (result_return_type != ok_type) free(ok_type);
-								if (result_return_type != err_type) free(err_type);
-								*out_type = result_return_type;
-								return 1;
-							}
 						}
 						free(ok_type);
 						free(err_type);
-						
-						/* If split failed but it's still a result/option method, use lenient type matching.
-						 * Extract just the OK type for unwrap/is_ok, or ERR type for unwrap_err */
-						if (lhs_type && (strstr(lhs_type, "result") || strstr(lhs_type, "option"))) {
-							/* Try to extract types from generic parameters directly */
-							const char *bracket = strchr(lhs_type, '[');
-							if (bracket) {
-								const char *bracket_end = strrchr(lhs_type, ']');
-								if (bracket_end && bracket_end > bracket) {
-									/* For result[OK,ERR] or option[OK], lenient handling */
-									if (strcmp(result_method, "unwrap") == 0) {
-										/* Return type is the OK type (first parameter) */
-										*out_type = TYPE_ANY;
-										free(member->as.member_expr.resolved_method);
-										member->as.member_expr.resolved_method = dup_cstr("__result_unwrap");
-										return 1;
-									} else if (strcmp(result_method, "is_ok") == 0) {
-										*out_type = TYPE_BOOL;
-										free(member->as.member_expr.resolved_method);
-										member->as.member_expr.resolved_method = dup_cstr("__result_is_ok");
-										return 1;
-									} else if (strcmp(result_method, "is_err") == 0) {
-										*out_type = TYPE_BOOL;
-										free(member->as.member_expr.resolved_method);
-										member->as.member_expr.resolved_method = dup_cstr("__result_is_err");
-										return 1;
-									} else if (strcmp(result_method, "unwrap_err") == 0) {
-										*out_type = TYPE_ANY;
-										free(member->as.member_expr.resolved_method);
-										member->as.member_expr.resolved_method = dup_cstr("__result_unwrap_err");
-										return 1;
-									}
-								}
-							}
-						}
 					}
 				}
 				char array_element[1024];
@@ -2553,6 +2274,15 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 				return 0;
 			}
 			sym = scope_lookup(ctx->current_scope, node->as.call_expr.callee->as.ident_expr.name);
+            if(!sym && !strcmp(node->as.call_expr.callee->as.ident_expr.name,"make") && node->as.call_expr.args.len==2 && node->as.call_expr.args.data[0]->kind==AST_STRING_EXPR && node->as.call_expr.args.data[0]->as.string_expr.is_type_name) {
+                char element[1024]; const char *type=node->as.call_expr.args.data[0]->as.string_expr.literal;
+                if(!seed_array_element(type,element,sizeof(element)) || !analyze_expr(ctx,node->as.call_expr.args.data[1],&rhs_type) || strcmp(rhs_type,"int")) { error_set(ctx->err,ERR_SEMANTIC,node->pos.line,node->pos.column,"invalid array make type or length"); return 0; }
+                *out_type=type; return 1;
+            }
+            if(!sym && !strcmp(node->as.call_expr.callee->as.ident_expr.name,"host_args")) {
+                if(node->as.call_expr.args.len) { error_set(ctx->err,ERR_SEMANTIC,node->pos.line,node->pos.column,"host_args expects no arguments"); return 0; }
+                *out_type="string[]"; return 1;
+            }
 			if (!sym) {
 				for (i = 0; i < node->as.call_expr.args.len; i++) {
 					if (!analyze_expr(ctx, node->as.call_expr.args.data[i], &rhs_type)) {
@@ -2886,7 +2616,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		}
 		case AST_BLOCK:
 			if (node->as.block.transparent_scope) {
-				if (node->as.block.statements.len == 2 &&
+				if (node->as.block.tuple_binding && node->as.block.statements.len == 2 &&
 					node->as.block.statements.data[0]->kind == AST_LET_STMT &&
 					node->as.block.statements.data[1]->kind == AST_LET_STMT) {
 					ast_node *first = node->as.block.statements.data[0];
@@ -3239,7 +2969,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				return 0;
 			}
 			if (node->as.fn_stmt.return_type &&
-				strcmp(node->as.fn_stmt.return_type, TYPE_UNIT) != 0 &&
+				!normalized_type_equal(node->as.fn_stmt.return_type, TYPE_UNIT) &&
 				!stmt_guarantees_return(ctx, node->as.fn_stmt.body, node->as.fn_stmt.return_type)) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"function '%s' does not return on all paths", node->as.fn_stmt.name);
@@ -3268,7 +2998,9 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 		case AST_STRING_EXPR:
 		case AST_ARRAY_EXPR:
 		case AST_STRUCT_EXPR:
+        case AST_UNIT_EXPR:
 			return analyze_expr(ctx, node, &expr_type);
+        case AST_TRAP_STMT: return 1;
 	}
 	error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column, "unknown AST node kind");
 	return 0;

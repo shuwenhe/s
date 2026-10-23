@@ -573,19 +573,7 @@ func dump_expr(expr expr) string {
         expr.call(value) : "call " + dump_expr(value.callee.value) + "(" + join_exprs(value.args) + ")",
         expr.switch(value) : "switch " + dump_expr(value.subject.value) + " { " + join_switch_arms(value.arms) + " }",
         expr.if(value) : dump_if_expr(value),
-        expr.for(value) : {
-            names := ""
-            i := 0
-            for i < len(value.names) {
-                if i > 0 {
-                    names = names + ", "
-                }
-                names = names + value.names[i]
-                i = i + 1
-            }
-            decl := if value.declare { " := " } else { " in " }
-            "for " + names + decl + dump_expr(value.iterable.value) + " {...}"
-        }
+        expr.for(value) : dump_for_expr(value),
         expr.block(_) : "{...}",
         expr.while(value) : "while " + dump_expr(value.condition.value) + " {...}",
         expr.array(value) : {
@@ -600,6 +588,16 @@ func dump_expr(expr expr) string {
             for _en < len(value.entries) { entry := value.entries[_en]; parts = append(parts, dump_expr(entry.key) + ": " + dump_expr(entry.value)); _en = _en + 1 }
             "{" + join_with(parts, ", ") + "}"
         }
+    }
+}
+
+func dump_for_expr(for_expr value) string {
+    return switch value.iterable {
+        option.some(iterable) : {
+            names := join_with(value.names, ", ")
+            "for " + names + " in " + dump_expr(iterable.value) + " {...}"
+        }
+        option.none : "for (...) {...}",
     }
 }
 

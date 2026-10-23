@@ -20,6 +20,7 @@ struct native_parser {
     int[] body_scopes
     string[] binding_names
     int[] binding_values
+    string[] binding_types
     mir_program_instruction[] instructions
     int next_value
     int expression_value
@@ -64,7 +65,7 @@ func native_identifier(string token) bool {
     if token == "struct" || token == "enum" || token == "trait" || token == "for" || token == "if" || token == "else" || token == "while" { return false }
     if token == "switch" || token == "select" || token == "case" || token == "default" || token == "return" || token == "break" || token == "continue" || token == "sroutine" { return false }
     if token == "true" || token == "false" || token == "nil" || token == "unsafe" || token == "extern" || token == "where" || token == "in" { return false }
-    if token == "int" || token == "bool" || token == "string" || token == "import" || token == "defer" { return false }
+    if token == "int" || token == "unit" || token == "bool" || token == "string" || token == "import" || token == "defer" { return false }
     return true
 }
 
@@ -194,9 +195,9 @@ func native_imports_error(native_parser state) string {
     return ""
 }
 
-func native_append_parameter(mir_program_parameter[] initial, string name) mir_program_parameter[] {
+func native_append_parameter(mir_program_parameter[] initial, string name, string type_name) mir_program_parameter[] {
     params := initial
-    params.push(mir_program_parameter { value_id: len(params), name: name, type_name: "int" })
+    params.push(mir_program_parameter { value_id: len(params), name: name, type_name: type_name })
     return params
 }
 
@@ -211,8 +212,15 @@ func native_parse_signature(native_parser initial) native_parser {
     params := mir_program_parameter[]()
     for state.error == "" && state.lex.token != ")" && state.lex.token != "" {
         if len(params) > 0 { state = native_expect(state, ",") }
-        if state.lex.token != "int" { return native_fail(state, "native parameters require int") }
-        state = native_advance(state)
+        parameter_type := state.lex.token
+        if parameter_type == "(" {
+            state = native_expect(native_advance(state), ")")
+            parameter_type = "()"
+        } else {
+            if parameter_type != "int" && parameter_type != "unit" { return native_fail(state, "native parameters require int or unit") }
+            if parameter_type == "unit" { parameter_type = "()" }
+            state = native_advance(state)
+        }
         if !native_identifier(state.lex.token) { return native_fail(state, "expected parameter name") }
         parameter_name := state.lex.token
         previous := 0
@@ -220,7 +228,7 @@ func native_parse_signature(native_parser initial) native_parser {
             if params[previous].name == parameter_name { return native_fail(state, "duplicate parameter: " + parameter_name) }
             previous = previous + 1
         }
-        params = native_append_parameter(params, parameter_name)
+        params = native_append_parameter(params, parameter_name, parameter_type)
         state = native_advance(state)
     }
     state = native_expect(state, ")")
@@ -230,6 +238,10 @@ func native_parse_signature(native_parser initial) native_parser {
         state = native_advance(state)
     } else if state.lex.token == "(" {
         state = native_expect(native_advance(state), ")")
+        results.push("()")
+    } else if state.lex.token == "unit" {
+        results.push("()")
+        state = native_advance(state)
     }
     if state.error != "" { return state }
     if state.lex.token != "{" { return native_fail(state, "native function requires a body and int or void result") }
@@ -260,6 +272,20 @@ func native_binding_index(native_parser initial, string name) int {
         i = i + 1
     }
     return -1
+}
+
+// Unit has a typed SSA identity but no payload. The ABI carrier is zero.
+func native_emit_unit(native_parser initial) native_parser {
+    state := initial
+    id := state.next_value
+    state.next_value = id + 1
+    state.instructions.push(mir_program_instruction {
+        op: "const_unit", result_ids: int[]{id}, result_types: string[]{"()"},
+        operands: int[](), integer_value: 0, symbol: "",
+    })
+    state.expression_value = id
+    state.expression_type = "()"
+    return state
 }
 
 func native_emit_integer(native_parser initial, int value) native_parser {
@@ -410,7 +436,8 @@ func native_call(native_parser initial, string path) native_parser {
         if len(operands) > 0 { state = native_expect(state, ",") }
         state = native_expression(state, 1)
         if state.error != "" { return state }
-        if state.expression_type != "int" { return native_fail(state, "call argument requires int: " + symbol) }
+        if len(operands) >= len(signature.params) { return native_fail(state, "call argument count: " + symbol) }
+        if state.expression_type != signature.params[len(operands)].type_name { return native_fail(state, "call argument type: " + symbol) }
         operands.push(state.expression_value)
     }
     state = native_expect(state, ")")
@@ -422,13 +449,14 @@ func native_call(native_parser initial, string path) native_parser {
     if len(signature.result_types) > 0 {
         results.push(state.next_value)
         state.expression_value = state.next_value
-        state.expression_type = "int"
+        state.expression_type = signature.result_types[0]
         state.next_value = state.next_value + 1
     }
     state.instructions.push(mir_program_instruction {
         op: "call", result_ids: results, result_types: signature.result_types,
         operands: operands, integer_value: 0, symbol: symbol,
     })
+    if len(signature.result_types) == 0 { return native_emit_unit(state) }
     return state
 }
 
@@ -455,7 +483,9 @@ func native_atom(native_parser initial) native_parser {
         return native_emit_binary(state, "sub", zero, state.expression_value)
     }
     if token == "(" {
-        state = native_expression(native_advance(state), 1)
+        state = native_advance(state)
+        if state.lex.token == ")" { return native_emit_unit(native_advance(state)) }
+        state = native_expression(state, 1)
         return native_expect(state, ")")
     }
     if compiler_digit(__host_char_at(token, 0)) { return native_parse_integer(state, false) }
@@ -477,7 +507,7 @@ func native_atom(native_parser initial) native_parser {
     slot := native_binding_index(state, path)
     if slot < 0 { return native_fail(state, "unknown binding: " + path) }
     state.expression_value = state.binding_values[slot]
-    state.expression_type = "int"
+    state.expression_type = state.binding_types[slot]
     return state
 }
 
@@ -518,10 +548,12 @@ func native_binding_statement(native_parser initial, string name, bool declarati
     if !declaration && slot < 0 { return native_fail(state, "assignment to unknown binding: " + name) }
     state = native_expression(state, 1)
     if state.error != "" { return state }
-    if state.expression_type != "int" { return native_fail(state, "binding requires int: " + name) }
+    if state.expression_type != "int" && state.expression_type != "()" { return native_fail(state, "binding requires a value: " + name) }
+    if !declaration && state.expression_type != state.binding_types[slot] { return native_fail(state, "assignment type mismatch: " + name) }
     if declaration {
         state.binding_names.push(name)
         state.binding_values.push(state.expression_value)
+        state.binding_types.push(state.expression_type)
     } else {
         state.binding_values[slot] = state.expression_value
     }
@@ -538,20 +570,31 @@ func native_statement(native_parser initial) native_parser {
             if state.lex.token == "(" { state = native_expect(native_advance(state), ")") }
             if state.lex.token != ";" && state.lex.token != "}" { return native_fail(state, "void function cannot return a value") }
         } else {
-            state = native_expression(state, 1)
+            if signature.result_types[0] == "()" && (state.lex.token == ";" || state.lex.token == "}") {
+                state = native_emit_unit(state)
+            } else { state = native_expression(state, 1) }
             if state.error != "" { return state }
-            if state.expression_type != "int" { return native_fail(state, "integer function must return int") }
+            if state.expression_type != signature.result_types[0] { return native_fail(state, "function return type mismatch") }
             state.return_values.push(state.expression_value)
         }
         state.returned = true
         return native_semicolon(state)
     }
-    if token == "int" {
+    if token == "int" || token == "unit" || token == "(" {
+        declared_type := token
+        if declared_type == "unit" { declared_type = "()" }
         state = native_advance(state)
+        if token == "(" {
+            state = native_expect(state, ")")
+            declared_type = "()"
+            if state.lex.token == ";" || state.lex.token == "}" { return native_semicolon(state) }
+        }
         if !native_identifier(state.lex.token) { return native_fail(state, "expected binding name") }
         name := state.lex.token
         state = native_expect(native_advance(state), "=")
-        return native_binding_statement(state, name, true)
+        state = native_binding_statement(state, name, true)
+        if state.error == "" && state.expression_type != declared_type { return native_fail(state, "typed binding type mismatch") }
+        return state
     }
     if !native_identifier(token) { return native_fail(state, "unsupported native statement: " + token) }
     after_name := native_advance(state)
@@ -578,6 +621,7 @@ func native_parse_body(native_parser initial, int index) native_parser {
     }
     state.binding_names = string[]()
     state.binding_values = int[]()
+    state.binding_types = string[]()
     state.instructions = mir_program_instruction[]()
     state.return_values = int[]()
     state.returned = false
@@ -588,6 +632,7 @@ func native_parse_body(native_parser initial, int index) native_parser {
     for p < len(signature.params) {
         state.binding_names.push(signature.params[p].name)
         state.binding_values.push(signature.params[p].value_id)
+        state.binding_types.push(signature.params[p].type_name)
         p = p + 1
     }
     state = native_expect(state, "{")
@@ -597,7 +642,11 @@ func native_parse_body(native_parser initial, int index) native_parser {
     }
     state = native_expect(state, "}")
     if state.error != "" { return state }
-    if !state.returned && len(signature.result_types) > 0 { return native_fail(state, "integer function requires return: " + signature.symbol) }
+    if !state.returned && len(signature.result_types) > 0 {
+        if signature.result_types[0] != "()" { return native_fail(state, "integer function requires return: " + signature.symbol) }
+        state = native_emit_unit(state)
+        state.return_values.push(state.expression_value)
+    }
     block := mir_program_block {
         id: 0, instructions: state.instructions, terminator: "return", return_values: state.return_values,
     }
@@ -614,7 +663,7 @@ func native_source_to_mir(string source) mir_program_result {
         package_name: "", functions: mir_program_function[](),
         body_positions: int[](), body_lines: int[](), binding_names: string[](),
         scopes: native_file_scope[](), scope_index: 0, body_scopes: int[](),
-        binding_values: int[](), instructions: mir_program_instruction[](),
+        binding_values: int[](), binding_types: string[](), instructions: mir_program_instruction[](),
         next_value: 0, expression_value: -1, expression_type: "", return_values: int[](),
         returned: false, function_index: 0, error: "",
     }

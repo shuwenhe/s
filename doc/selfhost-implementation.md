@@ -236,3 +236,132 @@ logs, assembly artifacts, ELF files, comparison results, and smoke-test
 statuses under its bootstrap output directory. Update project status from
 those artifacts. Historical self-hosting reports describe different source
 and backend states and do not substitute for the current acceptance run.
+
+## Native unit implementation (2026-10-23)
+
+`()` is an explicit unit literal, and `unit` is its type alias. Seed lowering
+emits UNIT; the S frontend emits typed const_unit through MIR and SSA. Native
+unit has no allocated payload and uses a zero ABI carrier, including parameter
+registers, stack arguments, return values, record fields and array elements.
+Integer zero retains its distinct tagged carrier. Independent validators reject
+integer/unit substitutions, malformed constants, mismatched calls and returns.
+
+Run `make selfhost-native-unit-check` for source positives/negatives, real
+result.ok(()) and generic payloads, unit defaults, array mutation, independent IR
+array defaults, the S frontend/MIR/SSA/amd64 ELF path, and SSA boundary tests.
+
+The fresh bootstrap clears result.ok(()). Two legacy qualified calls now use
+their actual declared packages, and the missing ir.ast import adds the required
+source dependencies (255 files). Public result left/right projections map to
+the same typed slots as destructuring. The imported monomorphize_file return type now propagates through the call,
+local binding and nested file field. The array element propagation repair is
+described below. No stage1 ELF or three-stage convergence is established.
+
+## Imported function return types (2026-10-23)
+
+The native specialization pass previously retained only the current-package
+candidate for unqualified calls without explicit selectors. Calls to ordinary
+imported functions consequently lost their result types before generic payload
+inference. Each call now retains the original file's imports, including through
+AST cloning. Lookup checks lexical bindings and local declarations first, then
+only that file's imported packages, rejects ambiguous imports, and resolves the
+complete return type in the function declaration's package. Record field lookup
+continues to use canonical type identities; no field type is hardcoded.
+
+`make selfhost-native-import-return-check` executes a cross-package returned
+record with a nested record field under both source orders, including foreign
+records with identical short names. It rejects unimported functions, imports
+that belong only to a sibling file and ambiguous imported functions, preserving
+existing output artifacts on rejection. The full 255-source build passes the
+former backend.s:2596 frontier. The subsequent array propagation repair is
+described below; Stage1 generation and three-stage byte convergence remain
+unproven.
+
+## Array element propagation (2026-10-23)
+
+The backend.s:2709 expression candidates[i] lost its type at the initializer,
+not at native element loading: candidates was initialized with string[](),
+but the native specialization pass treated the empty-bracket constructor as
+an ordinary unresolved function call. Array constructors now produce canonical
+T[] bindings before indexing, and indexing extracts T. Integer index checks
+preserve floating literal identity and reject non-integer indices and
+non-indexable values. Known element types are not replaced with any.
+
+Explicit prefix/suffix array literals retain their type annotation through
+parsing, alias resolution and generic cloning; empty annotated literals lower
+to typed ARRAY_NEW. Homogeneous nonempty literals infer T[], and make(T[], n)
+preserves its type operand. The host_args runtime intrinsic returns string[].
+The compatibility source checker retains known tuple/std payload types through
+unwrap, with standard generic payload queries restricted to standard type
+identities. File-local alias resolution also runs for hosted compilation, and
+record equality uses actual declaration identity. Concrete enum pattern payload
+bindings retain their declaration-package types before querying array fields.
+
+Nested-array execution exposed an existing vec-push emission issue: loading
+the element literal again could allocate and overwrite the receiver register.
+Emission now consumes the ARG snapshot, preserving single evaluation and the
+receiver. Borrow validation and the prohibition on unsupported element reborrows
+remain enabled.
+
+`make selfhost-native-array-element-check` executes int/string/record arrays,
+imported record-array returns, record fields, typed and nested literals, make,
+generic array construction/indexing, and isolated record snapshots. It runs
+with both source orders and same-short-name foreign records. It rejects string,
+bool and float indices, non-indexable values, wrong element uses, and unsupported
+direct mutable element borrows, preserving existing output files. Additional
+checks for concrete-enum array fields, tuple unwrap and foreign box identity
+validate source types only; they do not claim additional native enum/runtime
+capabilities.
+
+At the array milestone, the strict 255-source bootstrap stopped at ast/ast.s:587,
+where value.iterable.value accessed an option payload without a variant pattern.
+The subsequent repair is described below. Stage1 remains unproven. Verification uses a
+fixed source snapshot when concurrent editing is detected, and compares that
+snapshot against the delivered source files.
+
+The older seed-array-constructor contract suite retains three pre-existing
+source-validation failures: nested_braces_unknown, unknown_type and
+value_not_type. Its previously failing typed nested-brace construction and
+indexing cases now pass. These remaining failures are not counted as passing
+checks or evidence of self-hosting.
+
+## Option payload proof at the former ast.s:587 (2026-10-23)
+
+The optional S_NATIVE_TYPE_TRACE diagnostic established all four facts before
+the source repair:
+
+```text
+Type(value): compile.internal.ast.for_expr
+Type(value.iterable): std.option.option[std.prelude.box[compile.internal.ast.expr]]
+Resolved declaration: compile.internal.ast.for_expr.iterable
+Active validated pattern: expr::for(value); option payload proof: absent
+```
+
+Thus neither the outer enum binding nor the record field type was missing.
+The outer expr.for pattern does not prove that iterable contains Some. The
+for-expression formatter now delegates to dump_for_expr, which explicitly
+matches Some/None and only reads the boxed expression inside Some. Range
+headers use names and `in`, as represented by the canonical for_expr schema;
+the old declare field access did not name a declared field. None retains the
+existing C-for placeholder convention, `for (...) {...}`.
+
+The enum payload access rejection remains enabled. The previous best-effort
+pattern-binding fallback for unknown subjects has been removed: a pattern's
+spelling cannot establish the subject's type. The active_pattern trace pointer
+records only validated branch context, is restored on branch exit, and is not
+consulted by authorization or type-checking decisions.
+
+`make selfhost-native-option-payload-check` executes the exact production helper
+in a small harness for Some and None. The harness uses a simple record for expr
+to isolate the option/box behavior; it does not claim the complete compiler AST
+enum ABI works. It also rejects direct unproven payload access, payload use in
+None, escaped branch bindings, and guessed payload types for unknown subjects.
+These negative tests preserve existing artifacts and must fail semantically,
+not merely fail to parse. The full bootstrap still includes all 255 files and
+all their declarations.
+
+The new full-build frontier is core/backend.s:3331:
+result.err(function_result_error(main_result)) has an unresolved payload type.
+Stage1 ELF generation/execution and three-stage byte-identical convergence have
+not been achieved. The three old Seed constructor failures remain unchanged
+and are recorded separately from the passing option regression.

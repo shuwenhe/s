@@ -356,6 +356,20 @@ s_value_add:
 .global s_value_cmp
 .type s_value_cmp, @function
 s_value_cmp:
+    # Unit has no payload and uses the zero carrier, distinct from tagged int 0.
+    test %rdi, %rdi
+    jnz .Lvalue_cmp_nonunit_left
+    xor %eax, %eax
+    test %rsi, %rsi
+    jz .Lvalue_cmp_done
+    mov $-1, %rax
+    ret
+.Lvalue_cmp_nonunit_left:
+    test %rsi, %rsi
+    jnz .Lvalue_cmp_nonunit
+    mov $1, %rax
+    ret
+.Lvalue_cmp_nonunit:
     test $1, %rdi
     jz .Lvalue_cmp_left_string
     test $1, %rsi
@@ -660,7 +674,7 @@ s_eprintln_value:
     lea .Lnewline(%rip), %rsi
     mov $1, %rdx
     call s_write
-    mov $1, %rax
+    xor %eax, %eax
     pop %rbx
     ret
 .size s_eprintln_value, .-s_eprintln_value
@@ -1624,6 +1638,8 @@ s_record_new_impl:
     je .Lrecord_default_string
     cmpq $2, 8(%rbx)
     je .Lrecord_default_array
+    cmpq $4, 8(%rbx)
+    je .Lrecord_default_unit
     cmpq $3, 8(%rbx)
     jne .Lrecord_new_invalid
     mov 16(%rbx), %rdi
@@ -1633,6 +1649,9 @@ s_record_new_impl:
     jmp .Lrecord_default_store
 .Lrecord_default_scalar:
     mov $1, %eax
+    jmp .Lrecord_default_store
+.Lrecord_default_unit:
+    xor %eax, %eax
     jmp .Lrecord_default_store
 .Lrecord_default_string:
     lea .L_empty_string(%rip), %rax

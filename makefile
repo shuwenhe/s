@@ -345,6 +345,9 @@ help:
 .PHONY: selfhost-native-record-check
 selfhost-native-record-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/native_generic_record_check.sh
+	@bash test/native-bootstrap-diagnostic/native_generic_enum_check.sh
+	@bash test/native-bootstrap-diagnostic/native_option_payload_check.sh
+	@bash test/native-bootstrap-diagnostic/native_unit_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_parameter_order_check.sh
 	@bash test/native-bootstrap-diagnostic/native_field_reborrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_switch_default_check.sh
@@ -356,5 +359,25 @@ selfhost-native-record-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/native_record_loop_borrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_recursive_ast_borrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_import_check.sh
+	@bash test/native-bootstrap-diagnostic/native_import_return_check.sh
+	@bash test/native-bootstrap-diagnostic/native_array_element_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_receiver_check.sh
 	@bash test/native-bootstrap-diagnostic/native_syntax_lexer_check.sh
+
+.PHONY: selfhost-native-unit-check
+selfhost-native-unit-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_unit_check.sh
+	@bash test/native-bootstrap-diagnostic/native_unit_pipeline_check.sh
+	@bash test/native-bootstrap-diagnostic/native_unit_ssa_check.sh
+
+.PHONY: selfhost-native-import-return-check
+selfhost-native-import-return-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_import_return_check.sh
+
+.PHONY: selfhost-native-array-element-check
+selfhost-native-array-element-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_array_element_check.sh
+
+.PHONY: selfhost-native-option-payload-check
+selfhost-native-option-payload-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_option_payload_check.sh
