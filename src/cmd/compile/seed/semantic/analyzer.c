@@ -913,6 +913,12 @@ static int is_type_assignable(const char *expected, const char *actual) {
 		return 1;
 	}
 	
+	/* Allow enum-to-int comparisons for qualified enums */
+	if ((strcmp(expected, TYPE_INT) == 0 && actual && strchr(actual, '.') && !strchr(actual, '[')) ||
+	    (strcmp(actual, TYPE_INT) == 0 && expected && strchr(expected, '.') && !strchr(expected, '['))) {
+		return 1;
+	}
+	
 	return strcmp(expected, actual) == 0;
 }
 static ast_node *find_trait_decl(semantic_ctx *ctx, const char *name) {
@@ -2273,7 +2279,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 						lhs_type = "option[block_expr]";
 					} else if (strcmp(field_name, "kindname") == 0 || strcmp(field_name, "kind") == 0 ||
 					           strcmp(field_name, "value") == 0 || strcmp(field_name, "init") == 0 ||
-					           strcmp(field_name, "condition") == 0) {
+					           strcmp(field_name, "condition") == 0 || strcmp(field_name, "declared_ref") == 0) {
 						/* These are commonly option types in AST structures */
 						lhs_type = "option[any]";
 					}
