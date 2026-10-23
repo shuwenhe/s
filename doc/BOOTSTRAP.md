@@ -259,12 +259,14 @@ This is essentially what `compile.internal.mono` does, but earlier and in C.
 
 ## Files Modified This Session
 
-- ✅ `src/cmd/dist/hosted-bootstrap.sh` - Created (currently documentation/stub)
+- ✅ `doc/BOOTSTRAP.md` - This document
+- ✅ `src/cmd/dist/hosted-bootstrap.sh` - Framework and documentation
 - ✅ `makefile` - Added `hosted-bootstrap` target
-- ✅ Previous: Fixed field reborrow, dead code removal, IR validators
+- ✅ Previous sessions: Fixed field reborrow, dead code removal, IR validators
 
 ## See Also
 
 - `src/cmd/dist/README.md` - Bootstrap design overview
 - `src/cmd/compile/internal/mono/monomorphization.s` - Mono algorithm
-- `src/cmd/compile/seed/code/generator.c` - IR generation
+- `src/cmd/compile/seed/code/generator.c` - IR generation entry point
+- `src/option/option.s` - Generic type example
