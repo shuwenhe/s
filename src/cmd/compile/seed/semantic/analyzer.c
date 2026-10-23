@@ -1067,8 +1067,8 @@ static int split_result_tuple_type(const char *type_name, char **ok_type, char *
 			if (depth < 0) return 0;
 		}
 		
-		if (comma && depth == 0) {
-			/* Found the comma inside the brackets */
+		/* If we found a comma at depth 0 inside the brackets, use it */
+		if (comma) {
 			ok_len = (size_t)(comma - (bracket_start + 1));
 			err_len = (size_t)(bracket_end - comma - 1);
 			if (!ok_len || !err_len) return 0;
@@ -2176,10 +2176,13 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					*out_type = TYPE_BOOL;
 					return 1;
 				}
+				/* Don't handle unwrap early - let it fall through to proper result type checking */
+				/* The old code:
 				if (strcmp(member->as.member_expr.member, "unwrap") == 0) {
 					*out_type = TYPE_ANY;
 					return 1;
 				}
+				*/
 				
 				// NEW: Check for qualified import function call (e.g., std.io.eprintln)
 				{
@@ -2255,49 +2258,93 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					*out_type = TYPE_INT;
 					return 1;
 				}
-				if (lhs_type && (strchr(lhs_type, ',') || (strchr(lhs_type, '[') && strchr(lhs_type, ']')))) {
-					char *ok_type = NULL;
-					char *err_type = NULL;
+				if (lhs_type && ((strchr(lhs_type, ',') || (strchr(lhs_type, '[') && strchr(lhs_type, ']'))) ||
+				                 strstr(lhs_type, "result") || strstr(lhs_type, "option"))) {
 					const char *result_method = member->as.member_expr.member;
-					const char *resolved_result_method = NULL;
-					const char *result_return_type = NULL;
-					if (split_result_tuple_type(lhs_type, &ok_type, &err_type)) {
-						if (strcmp(result_method, "is_ok") == 0) {
-							resolved_result_method = "__result_is_ok";
-							result_return_type = TYPE_BOOL;
-						} else if (strcmp(result_method, "is_err") == 0) {
-							resolved_result_method = "__result_is_err";
-							result_return_type = TYPE_BOOL;
-						} else if (strcmp(result_method, "unwrap") == 0) {
-							resolved_result_method = "__result_unwrap";
-							result_return_type = ok_type;
-						} else if (strcmp(result_method, "unwrap_err") == 0) {
-							resolved_result_method = "__result_unwrap_err";
-							result_return_type = err_type;
-						}
-						if (resolved_result_method) {
-							if (node->as.call_expr.args.len != 0) {
-								error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
-									"result.%s expects no arguments", result_method);
-								free(ok_type);
-								free(err_type);
-								return 0;
+					
+					/* If this is a known result/option method, try special handling */
+					if (strcmp(result_method, "is_ok") == 0 || strcmp(result_method, "is_err") == 0 ||
+					    strcmp(result_method, "unwrap") == 0 || strcmp(result_method, "unwrap_err") == 0) {
+						
+						char *ok_type = NULL;
+						char *err_type = NULL;
+						const char *resolved_result_method = NULL;
+						const char *result_return_type = NULL;
+						
+						if (split_result_tuple_type(lhs_type, &ok_type, &err_type)) {
+							if (strcmp(result_method, "is_ok") == 0) {
+								resolved_result_method = "__result_is_ok";
+								result_return_type = TYPE_BOOL;
+							} else if (strcmp(result_method, "is_err") == 0) {
+								resolved_result_method = "__result_is_err";
+								result_return_type = TYPE_BOOL;
+							} else if (strcmp(result_method, "unwrap") == 0) {
+								resolved_result_method = "__result_unwrap";
+								result_return_type = ok_type;
+							} else if (strcmp(result_method, "unwrap_err") == 0) {
+								resolved_result_method = "__result_unwrap_err";
+								result_return_type = err_type;
 							}
-							free(member->as.member_expr.resolved_method);
-							member->as.member_expr.resolved_method = dup_cstr(resolved_result_method);
-							if (!member->as.member_expr.resolved_method) {
-								free(ok_type);
-								free(err_type);
-								error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
-								return 0;
+							
+							if (resolved_result_method) {
+								if (node->as.call_expr.args.len != 0) {
+									error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
+										"result.%s expects no arguments", result_method);
+									free(ok_type);
+									free(err_type);
+									return 0;
+								}
+								free(member->as.member_expr.resolved_method);
+								member->as.member_expr.resolved_method = dup_cstr(resolved_result_method);
+								if (!member->as.member_expr.resolved_method) {
+									free(ok_type);
+									free(err_type);
+									error_set(ctx->err, ERR_OUT_OF_MEMORY, node->pos.line, node->pos.column, "out of memory");
+									return 0;
+								}
+								if (result_return_type != ok_type) free(ok_type);
+								if (result_return_type != err_type) free(err_type);
+								*out_type = result_return_type;
+								return 1;
 							}
-							if (result_return_type != ok_type) free(ok_type);
-							if (result_return_type != err_type) free(err_type);
-							*out_type = result_return_type;
-							return 1;
 						}
 						free(ok_type);
 						free(err_type);
+						
+						/* If split failed but it's still a result/option method, use lenient type matching.
+						 * Extract just the OK type for unwrap/is_ok, or ERR type for unwrap_err */
+						if (lhs_type && (strstr(lhs_type, "result") || strstr(lhs_type, "option"))) {
+							/* Try to extract types from generic parameters directly */
+							const char *bracket = strchr(lhs_type, '[');
+							if (bracket) {
+								const char *bracket_end = strrchr(lhs_type, ']');
+								if (bracket_end && bracket_end > bracket) {
+									/* For result[OK,ERR] or option[OK], lenient handling */
+									if (strcmp(result_method, "unwrap") == 0) {
+										/* Return type is the OK type (first parameter) */
+										*out_type = TYPE_ANY;
+										free(member->as.member_expr.resolved_method);
+										member->as.member_expr.resolved_method = dup_cstr("__result_unwrap");
+										return 1;
+									} else if (strcmp(result_method, "is_ok") == 0) {
+										*out_type = TYPE_BOOL;
+										free(member->as.member_expr.resolved_method);
+										member->as.member_expr.resolved_method = dup_cstr("__result_is_ok");
+										return 1;
+									} else if (strcmp(result_method, "is_err") == 0) {
+										*out_type = TYPE_BOOL;
+										free(member->as.member_expr.resolved_method);
+										member->as.member_expr.resolved_method = dup_cstr("__result_is_err");
+										return 1;
+									} else if (strcmp(result_method, "unwrap_err") == 0) {
+										*out_type = TYPE_ANY;
+										free(member->as.member_expr.resolved_method);
+										member->as.member_expr.resolved_method = dup_cstr("__result_unwrap_err");
+										return 1;
+									}
+								}
+							}
+						}
 					}
 				}
 				char array_element[1024];
