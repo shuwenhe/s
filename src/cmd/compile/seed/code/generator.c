@@ -143,6 +143,12 @@ void generate_code(IR *ir, FILE *output) {
             case IR_ARRAY_NEW:
                 emit_record(output, "ARRAY_NEW", instr->result, instr->operand1, instr->operand2);
                 break;
+            case IR_TRAP:
+                emit_record(output,"TRAP",instr->result,"","");
+                break;
+            case IR_UNIT:
+                emit_record(output,"UNIT",instr->result,"","");
+                break;
             case IR_RET:
                 emit_record(output, "RET", instr->result, "", "");
                 break;

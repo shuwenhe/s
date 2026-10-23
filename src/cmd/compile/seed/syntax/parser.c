@@ -155,6 +155,8 @@ const char *ast_kind_name(ast_kind kind) {
 		case AST_INDEX_EXPR: return "INDEX_EXPR";
 		case AST_SLICE_EXPR: return "SLICE_EXPR";
 		case AST_CALL_EXPR: return "CALL_EXPR";
+        case AST_TRAP_STMT: return "TRAP_STMT";
+        case AST_UNIT_EXPR: return "UNIT_EXPR";
 		default: return "UNKNOWN_AST";
 	}
 }
@@ -218,6 +220,8 @@ void ast_free(ast_node *node) {
 			break;
 			case AST_BREAK_STMT:
 			case AST_CONTINUE_STMT:
+            case AST_TRAP_STMT:
+            case AST_UNIT_EXPR:
 				break;
 		case AST_SROUTINE_STMT:
 			ast_free(node->as.sroutine_stmt.call);
@@ -265,6 +269,7 @@ void ast_free(ast_node *node) {
 			free(node->as.if_stmt.variant_owner);
 			free(node->as.if_stmt.variant_name);
 			free(node->as.if_stmt.payload_binding_name);
+            free(node->as.if_stmt.native_variant_field);
 			break;
 		case AST_WHILE_STMT:
 			ast_free(node->as.while_stmt.condition);
@@ -338,6 +343,8 @@ void ast_free(ast_node *node) {
 				ast_free(node->as.array_expr.items.data[i]);
 			}
 			ast_vec_free(&node->as.array_expr.items);
+            free(node->as.array_expr.resolved_array_type);
+            free(node->as.array_expr.explicit_type);
 			break;
 		case AST_STRUCT_EXPR:
 			free(node->as.struct_expr.type_name);
@@ -357,6 +364,7 @@ void ast_free(ast_node *node) {
 			free(node->as.member_expr.member);
 			free(node->as.member_expr.resolved_method);
 			free(node->as.member_expr.resolved_enum_type);
+            free(node->as.member_expr.native_owner_name);
 			break;
 		case AST_INDEX_EXPR:
 			ast_free(node->as.index_expr.object);
@@ -371,6 +379,8 @@ void ast_free(ast_node *node) {
 			ast_free(node->as.call_expr.callee);
 			free(node->as.call_expr.resolved_array_type);
             free(node->as.call_expr.native_callee_name);
+            free(node->as.call_expr.native_imports);
+            free(node->as.call_expr.resolved_return_type);
 			for (i = 0; i < node->as.call_expr.args.len; i++) {
 				ast_free(node->as.call_expr.args.data[i]);
 			}
@@ -474,6 +484,20 @@ static ast_node *parse_expression(parser *p);
 static ast_node *parse_assignment(parser *p);
 static ast_node *parse_term(parser *p);
 static ast_node *parse_equality(parser *p);
+static int array_type_spelling(ast_node *n,char *out,size_t cap) {
+    if(!n) return 0;
+    if(n->kind==AST_IDENT_EXPR) { int size=snprintf(out,cap,"%s",n->as.ident_expr.name); return size>=0 && (size_t)size<cap; }
+    if(n->kind==AST_UNIT_EXPR) { if(cap<3) return 0; memcpy(out,"()",3); return 1; }
+    if(n->kind==AST_INDEX_EXPR && !n->as.index_expr.index) {
+        if(!array_type_spelling(n->as.index_expr.object,out,cap)) return 0;
+        size_t len=strlen(out); if(len+3>cap) return 0; memcpy(out+len,"[]",3); return 1;
+    }
+    if(n->kind==AST_MEMBER_EXPR) {
+        if(!array_type_spelling(n->as.member_expr.object,out,cap)) return 0;
+        size_t len=strlen(out); int count=snprintf(out+len,cap-len,".%s",n->as.member_expr.member); return count>=0 && (size_t)count<cap-len;
+    }
+    return 0;
+}
 static ast_node *parse_statement(parser *p);
 static ast_node *parse_var_binding_statement(parser *p);
 static ast_node *parse_struct_decl(parser *p);
@@ -611,6 +635,10 @@ static ast_node *parse_primary(parser *p) {
 			}
 		}
 		if (is_typed) {
+            const char *element=p->tokens->data[p->current-1].lexeme;
+            size_t len=strlen(element); node->as.array_expr.explicit_type=malloc(len+3);
+            if(!node->as.array_expr.explicit_type) { ast_free(node); return NULL; }
+            memcpy(node->as.array_expr.explicit_type,element,len); memcpy(node->as.array_expr.explicit_type+len,"[]",3);
 			if (!match(p, TOKEN_LBRACE)) {
 				ast_free(node);
 				return NULL;
@@ -724,14 +752,7 @@ static ast_node *parse_primary(parser *p) {
 	}
 	if (match(p, TOKEN_LPAREN)) {
 		if (match(p, TOKEN_RPAREN)) {
-			node = ast_new(AST_NUMBER_EXPR, tok->pos);
-			if (!node) return NULL;
-			node->as.number_expr.literal = dup_cstr("0");
-			if (!node->as.number_expr.literal) {
-				ast_free(node);
-				return NULL;
-			}
-			return node;
+            return ast_new(AST_UNIT_EXPR,tok->pos);
 		}
 		node = parse_assignment(p);
 		if (!node) {
@@ -749,6 +770,9 @@ static ast_node *parse_primary(parser *p) {
 static ast_node *parse_typed_array_literal(parser *p, const token *type_tok) {
 	ast_node *node = ast_new(AST_ARRAY_EXPR, type_tok->pos);
 	if (!node) return NULL;
+    size_t len=strlen(type_tok->lexeme); node->as.array_expr.explicit_type=malloc(len+3);
+    if(!node->as.array_expr.explicit_type) { ast_free(node); return NULL; }
+    memcpy(node->as.array_expr.explicit_type,type_tok->lexeme,len); memcpy(node->as.array_expr.explicit_type+len,"[]",3);
 	advance_tok(p);
 	advance_tok(p);
 	if (!expect(p, TOKEN_LBRACE, "{")) {
@@ -1145,6 +1169,10 @@ static ast_node *parse_call(parser *p) {
 						ast_free(indexed);
 						return NULL;
 					}
+                    char array_type[1024];
+                    if(!array_type_spelling(indexed,array_type,sizeof(array_type))) { ast_free(indexed); ast_free(array_expr); return NULL; }
+                    array_expr->as.array_expr.explicit_type=dup_cstr(array_type);
+                    if(!array_expr->as.array_expr.explicit_type) { ast_free(indexed); ast_free(array_expr); return NULL; }
 					ast_free(indexed);
 					expr = array_expr;
 					continue;
@@ -1603,6 +1631,7 @@ static ast_node *parse_tuple_assign_declare_statement(parser *p) {
 	ast_node *value;
 	if (!block) return NULL;
 	block->as.block.transparent_scope = true;
+    block->as.block.tuple_binding = true;
 	if (!expect(p, TOKEN_IDENTIFIER, "first identifier")) goto fail;
 	first_name = dup_cstr(prev(p)->lexeme);
 	if (!expect(p, TOKEN_COMMA, "',' in multiple assignment")) goto fail_name1;
@@ -2103,6 +2132,17 @@ static ast_node *parse_for_statement(parser *p) {
 static int try_parse_type_annotation(parser *p, char **out_type) {
 	char *parsed = NULL;
 	size_t saved = p->current;
+    if(check(p,TOKEN_LPAREN) && peek_ahead(p,1) && peek_ahead(p,1)->type==TOKEN_RPAREN) {
+        advance_tok(p); advance_tok(p); parsed=dup_cstr("()");
+        if(!parsed) return 0;
+        while(check(p,TOKEN_LBRACKET) && peek_ahead(p,1) && peek_ahead(p,1)->type==TOKEN_RBRACKET) {
+            advance_tok(p); advance_tok(p);
+            size_t size=strlen(parsed)+3; char *next=malloc(size);
+            if(!next) { free(parsed); return 0; }
+            snprintf(next,size,"%s[]",parsed); free(parsed); parsed=next;
+        }
+        *out_type=parsed; return 1;
+    }
 	if (check(p, TOKEN_LBRACKET)) {
 		size_t inner_start;
 		char *inner = NULL;
@@ -2514,7 +2554,7 @@ static int try_parse_typed_name(parser *p, token_type terminator, char **out_typ
 		}
 		if (lt > 0) {
 			char last = (*out_type)[lt - 1];
-			if (!(isalnum((unsigned char)last) || last == '_' || last == ']' ||
+			if (strcmp(*out_type,"()") && !(isalnum((unsigned char)last) || last == '_' || last == ']' ||
 				last == '*' || last == '&')) {
 				free(*out_type);
 				free(*out_name);
@@ -3178,6 +3218,7 @@ static ast_node *parse_array_decl_statement(parser *p) {
 }
 static ast_node *parse_statement(parser *p) {
 	(void)p;
+    if (check(p, TOKEN_LPAREN) && peek_ahead(p,1) && peek_ahead(p,1)->type == TOKEN_RPAREN && peek_ahead(p,2) && peek_ahead(p,2)->type == TOKEN_IDENTIFIER) return parse_typed_binding_statement(p,1);
 	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) &&
 		peek_ahead(p, 1)->type == TOKEN_COMMA && peek_ahead(p, 2) &&
 		peek_ahead(p, 2)->type == TOKEN_IDENTIFIER && peek_ahead(p, 3) &&
@@ -3234,6 +3275,7 @@ static ast_node *clone_expr(const ast_node *node) {
 	copy = ast_new(node->kind, node->pos);
 	if (!copy) return NULL;
 	switch (node->kind) {
+        case AST_UNIT_EXPR: break;
 		case AST_IDENT_EXPR:
 			copy->as.ident_expr.name = dup_cstr(node->as.ident_expr.name);
 			break;

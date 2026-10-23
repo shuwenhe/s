@@ -320,6 +320,19 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 			if (is_string_literal(values[v]) && literal_index(module, values[v], err) < 0) return false;
 		}
 		if (!current) continue;
+        if(!strcmp(ins->op,"UNIT")) {
+            if(!is_value_variable(ins->result) || strchr(ins->result,'.') || strcmp(ins->operand1,"_") || strcmp(ins->operand2,"_")) {
+                error_set(err,ERR_SEMANTIC,0,0,"invalid native unit constant at IR record %zu",i+2); return false;
+            }
+            if(!collect_operand(current,ins->result,err)) return false;
+            continue;
+        }
+        if(!strcmp(ins->op,"TRAP")) {
+            if(strcmp(ins->result,"101") || strcmp(ins->operand1,"_") || strcmp(ins->operand2,"_")) {
+                error_set(err,ERR_SEMANTIC,0,0,"invalid native trap at IR record %zu",i+2); return false;
+            }
+            continue;
+        }
 		if (strcmp(ins->op, "LABEL") == 0 || strcmp(ins->op, "JUMP") == 0 ||
 			strcmp(ins->op, "EXPORT") == 0 || strcmp(ins->op, "NOP") == 0) continue;
 		if (strcmp(ins->op, "JUMP_IF_FALSE") == 0) {
@@ -744,9 +757,30 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
                 pending_count=first_arg;
                 continue;
             }
+            if (!strcmp(ins->operand1,"__vec_push") && call_arg_count==2) {
+                standalone_literal path;
+                if(!decode_literal(pending[first_arg],&path,err) || memchr(path.bytes,0,path.len)) return false;
+                path.bytes[path.len]=0;
+                if(!emit_load(out,module,fn,(char*)path.bytes,"%rdi",err)) return false;
+                /* ARG already evaluated and snapshotted the item. Reloading a
+                 * literal here could allocate and clobber the receiver in rdi. */
+                fprintf(out,"    mov -%zu(%%rbp), %%rsi\n    call s_array_append\n",(fn->slot_count+4+first_arg+2)*8);
+                if(!emit_store(out,module,fn,(char*)path.bytes,"%rax",err) || !emit_store(out,module,fn,ins->result,"%rax",err)) return false;
+                pending_count=first_arg;
+                continue;
+            }
 			if (strcmp(ins->operand1, "make") == 0 && call_arg_count == 2) {
 				if (!emit_load(out, module, fn, pending[first_arg + 1], "%rdi", err)) return false;
 				fprintf(out, "    call s_array_new\n");
+                standalone_literal array_type;
+                if(!decode_literal(pending[first_arg],&array_type,err)) return false;
+                char element_type[STANDALONE_TEXT_CAP];
+                if(array_type.len >= sizeof(array_type.bytes)) return false;
+                array_type.bytes[array_type.len]=0;
+                if (seed_array_element((char*)array_type.bytes,element_type,sizeof(element_type)) && (!strcmp(element_type,"()") || !strcmp(element_type,"unit"))) {
+                    fprintf(out,"    xor %%ecx, %%ecx\n.Lunit_array_%zu:\n    cmp 8(%%rax), %%rcx\n    jae .Lunit_array_done_%zu\n    movq $0, 16(%%rax,%%rcx,8)\n    inc %%rcx\n    jmp .Lunit_array_%zu\n.Lunit_array_done_%zu:\n",i,i,i,i);
+                }
+
 				if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
 				pending_count = first_arg;
 				continue;
@@ -941,6 +975,11 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				!emit_load(out, module, fn, index_value, "%rsi", err)) return false;
 			fprintf(out, "    call s_index_get\n");
 			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
+		} else if(!strcmp(ins->op,"UNIT")) {
+            fprintf(out,"    xor %%eax, %%eax\n");
+            if(!emit_store(out,module,fn,ins->result,"%rax",err)) return false;
+		} else if(!strcmp(ins->op,"TRAP")) {
+            fprintf(out,"    mov $101, %%edi\n    mov $60, %%eax\n    syscall\n    ud2\n");
 		} else if (strcmp(ins->op, "RET") == 0) {
             if (!emit_load(out, module, fn, ins->result, "%rdi", err)) return false;
             fprintf(out, "    call s_value_snapshot\n    jmp .Ls_%s_return\n", symbol);

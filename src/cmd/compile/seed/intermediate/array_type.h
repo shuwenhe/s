@@ -26,6 +26,7 @@ static inline int seed_array_new_valid(const char *type, const char *length) {
     n = strlen(type);
     if (n < 3 || type[n - 2] != '[' || type[n - 1] != ']') return 0;
     while (n >= 2 && type[n - 2] == '[' && type[n - 1] == ']') n -= 2;
+    if(n==2 && type[0]=='(' && type[1]==')') return 1;
     if (n == 0 || !(isalpha((unsigned char)type[0]) || type[0] == '_')) return 0;
     for (i = 1; i < n; i++) {
         if (!(isalnum((unsigned char)type[i]) || type[i] == '_' || type[i] == '.')) return 0;

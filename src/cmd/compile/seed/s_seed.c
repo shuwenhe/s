@@ -230,9 +230,8 @@ static bool seed_compile_files_mode(int input_count, char **input_paths, const c
 		}
 	}
     /* Resolve aliases before merging files, preserving each lexical scope. */
-    if (native_records) {
-        for (i = 0; i < input_count; i++)
-            if (!native_record_names_node(files[i].root, files[i].root, err)) goto done;
+    for (i = 0; i < input_count; i++) {
+        if (!native_record_names_node(files[i].root, files[i].root, err)) goto done;
     }
 	/* Package and import declarations remain in the unit.  The original
 	 * bootstrap path rejected them before semantic analysis, which made an

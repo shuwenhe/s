@@ -8,7 +8,7 @@ sources=(
     "$root/src/cmd/compile/internal/ssa/program.s"
     "$root/src/cmd/compile/internal/ssa/function_lower.s"
 )
-for name in mir_call_metadata_test lower_test; do
+for name in unit_test mir_call_metadata_test lower_test; do
     timeout 30s "$root/bin/s_seed" --compile-unit "$work/$name.ir" \
         "${sources[@]}" "$root/test/function-ssa/$name.s"
     timeout 30s "$root/bin/s_seed" --emit-bin "$work/$name.ir" "$work/$name"

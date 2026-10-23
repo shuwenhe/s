@@ -130,6 +130,10 @@ func mir_program_instruction_error(mir_program_function function_data, mir_progr
         if len(ins.operands) != 0 || ins.result_types[0] != "int" { return "invalid integer constant" }
         return ""
     }
+    if ins.op == "const_unit" {
+        if len(ins.operands) != 0 || ins.result_types[0] != "()" || ins.integer_value != 0 { return "invalid unit constant" }
+        return ""
+    }
     if ins.op == "copy" {
         if len(ins.operands) != 1 { return "copy operand count" }
         if ins.result_types[0] != mir_program_value_type(function_data, ins.operands[0], index) { return "copy type mismatch" }

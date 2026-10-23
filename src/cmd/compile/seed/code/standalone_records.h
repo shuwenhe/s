@@ -71,6 +71,7 @@ static bool standalone_validate_record_schema(standalone_module *m, int index, c
         const char *t = f->type;
         if (!strcmp(t, "int") || !strcmp(t, "bool") || !strcmp(t, "byte") ||
             !strcmp(t, "int64") || !strcmp(t, "uint64") || !strcmp(t, "uint")) f->kind = 0;
+        else if (!strcmp(t,"()") || !strcmp(t,"unit")) f->kind=4;
         else if (!strcmp(t, "string")) f->kind = 1;
         else if (strchr(t, '*') || strchr(t, '&') || !strncmp(t, "own ", 4) || !strcmp(t, "box") || !strncmp(t, "box[", 4) || !strncmp(t, "ref ", 4) || !strncmp(t, "mutref ", 7)) {
             error_set(err, ERR_SEMANTIC, 0, 0, "native record transfer unsupported_owner or unproven borrow: %s.%s (%s)", r->name, f->name, t); return false;
@@ -89,7 +90,7 @@ static bool standalone_validate_record_schema(standalone_module *m, int index, c
                     f->nested = standalone_record_index(m, qualified);
             }
             if (array) {
-                if (f->nested < 0 && strcmp(base, "int") && strcmp(base, "bool") && strcmp(base, "string") && strcmp(base, "byte")) {
+                if (f->nested < 0 && strcmp(base, "int") && strcmp(base, "bool") && strcmp(base, "string") && strcmp(base, "byte") && strcmp(base,"()") && strcmp(base,"unit")) {
                     error_set(err, ERR_SEMANTIC, 0, 0, "unknown native array transfer type: %s", t); return false;
                 }
                 f->kind = 2;

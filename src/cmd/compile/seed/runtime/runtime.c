@@ -64,6 +64,7 @@ typedef enum runtime_value_kind {
 	RUNTIME_FLOAT,
 	RUNTIME_STRING,
 	RUNTIME_ARRAY,
+    RUNTIME_UNIT,
 } runtime_value_kind;
 typedef struct runtime_data_value runtime_data_value;
 typedef struct runtime_data_value {
@@ -178,6 +179,11 @@ static runtime_data_value value_make_int(long v) {
 	out.array_len = 0;
 	return out;
 }
+static runtime_data_value value_make_unit(void) {
+    runtime_data_value out=value_make_int(0);
+    out.kind=RUNTIME_UNIT;
+    return out;
+}
 static runtime_data_value value_make_float(double v) {
 	runtime_data_value out;
 	out.record_alias = 0;
@@ -251,6 +257,7 @@ static void value_clear(runtime_data_value *v) {
 }
 static int value_copy(runtime_data_value *dst, const runtime_data_value *src) {
 	size_t i;
+	if (src->kind == RUNTIME_UNIT) { *dst=value_make_unit(); return 1; }
 	if (src->kind == RUNTIME_INT) {
 		*dst = value_make_int(src->int_value);
 		return 1;
@@ -337,6 +344,7 @@ static int value_truthy(const runtime_data_value *v) {
 }
 static int value_render(const runtime_data_value *v, char **out);
 static int value_as_cstr(const runtime_data_value *v, char *tmp, size_t tmp_size, const char **out) {
+    if(v->kind==RUNTIME_UNIT) { *out="()"; return 1; }
 	if (v->kind == RUNTIME_STRING) {
 		*out = v->str_value ? v->str_value : "";
 		return 1;
@@ -3313,6 +3321,7 @@ static int value_equals(const runtime_data_value *a, const runtime_data_value *b
 		}
 		return 0;
 	}
+	if (a->kind == RUNTIME_UNIT) return 1;
 	if (a->kind == RUNTIME_INT) {
 		return a->int_value == b->int_value;
 	}
@@ -3881,6 +3890,12 @@ static int execute_function(
 			value_clear(&a);
 			continue;
 		}
+        if (strcmp(ins->op,"UNIT")==0) {
+            if(ins->op1[0] || ins->op2[0]) { error_set(err,ERR_SEMANTIC,0,0,"invalid unit constant"); values_free(&vals); return 0; }
+            a=value_make_unit();
+            if(!values_set(&vals,ins->result,&a)) { error_set(err,ERR_OUT_OF_MEMORY,0,0,"unit allocation failed"); values_free(&vals); return 0; }
+            pc++; continue;
+        }
 		if (strcmp(ins->op, "ARRAY_NEW") == 0) {
 			if (!seed_array_new_valid(ins->op1, ins->op2)) {
 				error_set(err, ERR_SEMANTIC, 0, 0, "invalid ARRAY_NEW type or length");
