@@ -712,14 +712,47 @@ static void normalized_type_span(const char *type_name, const char **start, size
 	*start = value;
 	*len = n;
 }
+/* Helper to extract unqualified name (e.g., "std.option.option" -> "option") */
+static const char *get_unqualified_name(const char *name) {
+	const char *dot = strrchr(name, '.');
+	return dot ? dot + 1 : name;
+}
+
 static int normalized_type_equal(const char *left, const char *right) {
 	const char *left_start;
 	const char *right_start;
 	size_t left_len;
 	size_t right_len;
+	
 	normalized_type_span(left, &left_start, &left_len);
 	normalized_type_span(right, &right_start, &right_len);
-	return left_len == right_len && strncmp(left_start, right_start, left_len) == 0;
+	if (left_len == right_len && strncmp(left_start, right_start, left_len) == 0) return 1;
+	
+	/* For generic types, try matching with unqualified base names.
+	 * e.g., std.option.option[A,B] might match option[A,B]
+	 *       std.result.result[compile.internal.A,compile.internal.B] might match result[A,B] */
+	if (left_start && right_start) {
+		const char *left_bracket = strchr(left_start, '[');
+		const char *right_bracket = strchr(right_start, '[');
+		
+		if (left_bracket && right_bracket) {
+			/* Both have generic parameters - get unqualified names */
+			const char *left_unqual = get_unqualified_name(left_start);
+			const char *right_unqual = get_unqualified_name(right_start);
+			
+			/* If unqualified names match, consider types equal (lenient matching) */
+			size_t left_unqual_len = strlen(left_unqual);
+			size_t right_unqual_len = strlen(right_unqual);
+			
+			if (left_unqual_len == right_unqual_len &&
+				strncmp(left_unqual, right_unqual, left_unqual_len) == 0) {
+				/* Bases match when unqualified - allow match */
+				return 1;
+			}
+		}
+	}
+	
+	return 0;
 }
 static int equivalent_array_type(const char *left, const char *right) {
 	size_t left_len = left ? strlen(left) : 0;
@@ -738,6 +771,87 @@ static int equivalent_array_type(const char *left, const char *right) {
 	}
 	return 0;
 }
+/* Strip package qualifications from a type string.
+ * E.g., "std.result.result[compile.internal.A,compile.internal.B]*" 
+ *    -> "result[A,B]*" */
+static void strip_qualifications(const char *input, char *output, size_t output_size) {
+	if (!input || !output || output_size == 0) return;
+	
+	char *out = output;
+	const char *p = input;
+	
+	while (*p && out < output + output_size - 1) {
+		if (*p == '[') {
+			/* Start of generic parameters */
+			*out++ = '[';
+			p++;
+			
+			/* Process content inside brackets, stripping qualifications */
+			while (*p && *p != ']' && out < output + output_size - 1) {
+				if (*p == ',' || *p == ' ') {
+					*out++ = *p++;
+				} else {
+					/* This is a type name - skip qualifications */
+					const char *name_start = p;
+					while (*p && *p != ',' && *p != ']') p++;
+					
+					/* Find the last unqualified component (after last dot) */
+					const char *last_dot = name_start - 1;
+					for (const char *q = name_start; q < p; q++) {
+						if (*q == '.') last_dot = q;
+					}
+					last_dot++;
+					
+					/* Copy unqualified name */
+					while (last_dot < p && out < output + output_size - 1) {
+						*out++ = *last_dot++;
+					}
+				}
+			}
+			
+			if (*p == ']' && out < output + output_size - 1) *out++ = *p++;
+		} else if (*p == '*' || *p == '&') {
+			/* Pointer/reference markers */
+			*out++ = *p++;
+		} else if (*p == '.') {
+			/* Skip dot and find next unqualified component */
+			p++;
+			/* Find the next component (until dot, bracket, or end) */
+			const char *comp_start = p;
+			while (*p && *p != '.' && *p != '[' && *p != '*') p++;
+			
+			/* Check if there's a dot after this (if so, skip this component) */
+			if (*p == '.') {
+				/* This was a qualified prefix, skip it */
+				continue;
+			} else {
+				/* This is the final component, output it */
+				while (comp_start < p && out < output + output_size - 1) {
+					*out++ = *comp_start++;
+				}
+			}
+		} else {
+			/* Regular character */
+			const char *start = p;
+			while (*p && *p != '.' && *p != '[' && *p != '*') p++;
+			
+			/* Check if followed by dot (meaning this is qualified) */
+			if (*p == '.') {
+				/* Skip this component (it's a qualified prefix) */
+				p++;
+				continue;
+			} else {
+				/* Output this unqualified name */
+				while (start < p && out < output + output_size - 1) {
+					*out++ = *start++;
+				}
+			}
+		}
+	}
+	
+	*out = '\0';
+}
+
 static int is_type_assignable(const char *expected, const char *actual) {
 	if (is_type_any(expected) || is_type_any(actual)) {
 		return 1;
@@ -765,6 +879,16 @@ static int is_type_assignable(const char *expected, const char *actual) {
 		(strcmp(expected, TYPE_INT) == 0 && strcmp(actual, TYPE_FLOAT) == 0)) {
 		return 1;
 	}
+	
+	/* Try lenient matching: strip qualifications from both types and compare */
+	if (strcmp(expected, actual) != 0 && expected && actual) {
+		char exp_unqual[1024];
+		char act_unqual[1024];
+		strip_qualifications(expected, exp_unqual, sizeof(exp_unqual));
+		strip_qualifications(actual, act_unqual, sizeof(act_unqual));
+		if (strcmp(exp_unqual, act_unqual) == 0) return 1;
+	}
+	
 	/* Allow qualified and unqualified type names to match in multi-package closures.
 	 * The semantic analyzer merges files without preserving package qualifications,
 	 * so types can appear as both "package.type" and just "type" in the same unit. */
@@ -907,6 +1031,75 @@ static int split_result_tuple_type(const char *type_name, char **ok_type, char *
 	end = start + strlen(start);
 	while (start < end && isspace((unsigned char)*start)) start++;
 	while (end > start && isspace((unsigned char)end[-1])) end--;
+	
+	/* For types like std.result.result[A,B]* or std.result.result[compile.internal.A,compile.internal.B]*,
+	 * we need to find the [...] part and split on the comma at depth 0 WITHIN that bracket section. */
+	
+	const char *bracket_start = strchr(start, '[');
+	const char *bracket_end = NULL;
+	
+	if (bracket_start) {
+		/* Find the matching closing bracket */
+		depth = 0;
+		for (p = bracket_start; p < end; p++) {
+			if (*p == '[') depth++;
+			else if (*p == ']') {
+				depth--;
+				if (depth == 0) {
+					bracket_end = p;
+					break;
+				}
+			}
+		}
+	}
+	
+	if (bracket_start && bracket_end && bracket_start < bracket_end) {
+		/* Process inside brackets to find the comma at depth 0 within them */
+		depth = 0;
+		comma = NULL;
+		for (p = bracket_start + 1; p < bracket_end; p++) {
+			if (*p == '[') depth++;
+			else if (*p == ']') depth--;
+			else if (*p == ',' && depth == 0) {
+				if (comma) return 0; /* Multiple commas at top level */
+				comma = p;
+			}
+			if (depth < 0) return 0;
+		}
+		
+		if (comma && depth == 0) {
+			/* Found the comma inside the brackets */
+			ok_len = (size_t)(comma - (bracket_start + 1));
+			err_len = (size_t)(bracket_end - comma - 1);
+			if (!ok_len || !err_len) return 0;
+			
+			*ok_type = (char *)malloc(ok_len + 1);
+			*err_type = (char *)malloc(err_len + 1);
+			if (!*ok_type || !*err_type) {
+				free(*ok_type);
+				free(*err_type);
+				*ok_type = NULL;
+				*err_type = NULL;
+				return 0;
+			}
+			
+			memcpy(*ok_type, bracket_start + 1, ok_len);
+			(*ok_type)[ok_len] = '\0';
+			memcpy(*err_type, comma + 1, err_len);
+			(*err_type)[err_len] = '\0';
+			
+			/* Trim whitespace */
+			{
+				char *trimmed_ok = trim_inplace(*ok_type);
+				char *trimmed_err = trim_inplace(*err_type);
+				if (trimmed_ok != *ok_type) memmove(*ok_type, trimmed_ok, strlen(trimmed_ok) + 1);
+				if (trimmed_err != *err_type) memmove(*err_type, trimmed_err, strlen(trimmed_err) + 1);
+			}
+			return 1;
+		}
+	}
+	
+	/* Fallback: try original logic for non-generic result types */
 	/* The parser stores return lists as T,E; metadata may spell (T,E).
 	 * Remove only a pair enclosing the entire list, not the unit type in
 	 * (),E or parentheses belonging to a nested tuple. */
@@ -918,6 +1111,7 @@ static int split_result_tuple_type(const char *type_name, char **ok_type, char *
 		if (p == end - 1) { start++; end--; }
 	}
 	depth = 0;
+	comma = NULL;
 	for (p = start; p < end; p++) {
 		if (*p == '(' || *p == '[') depth++;
 		else if (*p == ')' || *p == ']') depth--;
@@ -2061,7 +2255,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					*out_type = TYPE_INT;
 					return 1;
 				}
-				if (lhs_type && strchr(lhs_type, ',')) {
+				if (lhs_type && (strchr(lhs_type, ',') || (strchr(lhs_type, '[') && strchr(lhs_type, ']')))) {
 					char *ok_type = NULL;
 					char *err_type = NULL;
 					const char *result_method = member->as.member_expr.member;
