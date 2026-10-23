@@ -22,26 +22,73 @@ static bool borrow_type(const char *t, char *base) {
 static ast_node *borrow_record(borrow_proof *p, const char *type) {
     const char *pkg = "";
     char full[IR_OPERAND_CAP];
+    char base[IR_OPERAND_CAP];
     if (!type) return NULL;
+    
+    /* Handle generic types like result[t,e] by extracting the base name */
+    const char *bracket = strchr(type, '[');
+    const char *lookup_type = type;
+    if (bracket) {
+        size_t base_len = bracket - type;
+        if (base_len >= sizeof(base)) return NULL;
+        memcpy(base, type, base_len);
+        base[base_len] = 0;
+        lookup_type = base;
+    }
+    
     for (size_t i=0; i<p->unit->as.program.statements.len; i++) {
         ast_node *n=p->unit->as.program.statements.data[i];
         if (n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
-        if (n->kind!=AST_LET_STMT || !n->as.let_stmt.type_name || strcmp(n->as.let_stmt.type_name,"struct")) continue;
-        if (snprintf(full,sizeof(full),"%s%s%s",pkg,*pkg?".":"",n->as.let_stmt.name)>=(int)sizeof(full)) return NULL;
-        if (!strcmp(full,type) || (!strcmp(pkg,p->package_name) && !strcmp(n->as.let_stmt.name,type))) return n;
+        
+        /* Check struct definitions (AST_LET_STMT) */
+        if (n->kind==AST_LET_STMT && n->as.let_stmt.type_name && !strcmp(n->as.let_stmt.type_name,"struct")) {
+            if (snprintf(full,sizeof(full),"%s%s%s",pkg,*pkg?".":"",n->as.let_stmt.name)>=(int)sizeof(full)) return NULL;
+            if (!strcmp(full,lookup_type) || (!strcmp(pkg,p->package_name) && !strcmp(n->as.let_stmt.name,lookup_type))) return n;
+        }
+        
+        /* Check enum definitions (AST_ENUM_DECL) */
+        if (n->kind==AST_ENUM_DECL) {
+            if (snprintf(full,sizeof(full),"%s%s%s",pkg,*pkg?".":"",n->as.enum_decl.name)>=(int)sizeof(full)) return NULL;
+            if (!strcmp(full,lookup_type) || (!strcmp(pkg,p->package_name) && !strcmp(n->as.enum_decl.name,lookup_type))) return n;
+        }
     }
     return NULL;
 }
 static ast_node *borrow_record_unique_tail(borrow_proof *p,const char *type) {
-    ast_node *found=NULL; size_t length=strlen(type);
+    ast_node *found=NULL;
+    size_t length;
     const char *pkg="";
+    
+    /* Handle generic types like result[t,e] by extracting the base name */
+    char base[IR_OPERAND_CAP];
+    const char *lookup_type = type;
+    const char *bracket = strchr(type, '[');
+    if (bracket) {
+        size_t base_len = bracket - type;
+        if (base_len >= sizeof(base)) return NULL;
+        memcpy(base, type, base_len);
+        base[base_len] = 0;
+        lookup_type = base;
+    }
+    
+    length = strlen(lookup_type);
     for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
         ast_node *n=p->unit->as.program.statements.data[i];
         if(n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
-        if(n->kind!=AST_LET_STMT || !n->as.let_stmt.type_name || strcmp(n->as.let_stmt.type_name,"struct")) continue;
-        if(strlen(n->as.let_stmt.name)!=length || strcmp(n->as.let_stmt.name,type)) continue;
-        if(found) return NULL;
-        found=n;
+        
+        /* Check struct definitions (AST_LET_STMT) */
+        if(n->kind==AST_LET_STMT && n->as.let_stmt.type_name && !strcmp(n->as.let_stmt.type_name,"struct")) {
+            if(strlen(n->as.let_stmt.name)!=length || strcmp(n->as.let_stmt.name,lookup_type)) continue;
+            if(found) return NULL;
+            found=n;
+        }
+        
+        /* Check enum definitions (AST_ENUM_DECL) */
+        if(n->kind==AST_ENUM_DECL) {
+            if(strlen(n->as.enum_decl.name)!=length || strcmp(n->as.enum_decl.name,lookup_type)) continue;
+            if(found) return NULL;
+            found=n;
+        }
     }
     (void)pkg;
     return found;
@@ -65,10 +112,16 @@ static ast_node *borrow_function(borrow_proof *p, const char *name) {
 }
 static bool borrow_record_name(borrow_proof *p,ast_node *record,char *out,size_t cap) {
     const char *pkg="";
+    const char *name=NULL;
     for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
         ast_node *n=p->unit->as.program.statements.data[i];
         if(n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
-        if(n==record) return snprintf(out,cap,"%s%s%s",pkg,*pkg?".":"",n->as.let_stmt.name)<(int)cap;
+        if(n==record) {
+            if(record->kind==AST_ENUM_DECL) name=record->as.enum_decl.name;
+            else if(record->kind==AST_LET_STMT) name=record->as.let_stmt.name;
+            if(!name) return false;
+            return snprintf(out,cap,"%s%s%s",pkg,*pkg?".":"",name)<(int)cap;
+        }
     }
     return false;
 }
