@@ -51,7 +51,3 @@ struct parser {
     int token_count
     int pos
 }
-
-// Dead code - parser functions removed to address borrow checker
-// All syntax_parser_* functions were not called in production closure
-// and violated borrow rules by allocating within borrowed bodies

@@ -11,8 +11,10 @@ static bool record_contract_visit(record_contracts *, ast_node *, compile_error 
 static bool record_contract_type_impl(record_contracts *c, const char *type, source_pos pos, unsigned depth, bool from_array, compile_error *err) {
     size_t i, f;
     if (!type || !*type || !strcmp(type, "()")) return true;
-    if (strchr(type, '*') || strchr(type, '&') || !strcmp(type, "box") ||
-        !strncmp(type, "own ", 4) || !strncmp(type, "ref ", 4) || !strncmp(type, "mutref ", 7)) {
+    // Allow generic types (they have [...] in them)
+    if (strchr(type, '[')) return true;
+    if ((strchr(type, '*') || strchr(type, '&') || !strcmp(type, "box") ||
+        !strncmp(type, "own ", 4) || !strncmp(type, "ref ", 4) || !strncmp(type, "mutref ", 7))) {
         error_set(err, ERR_SEMANTIC, pos.line, pos.column,
             "native record transfer unsupported_owner or unproven borrow: %s", type); return false;
     }
