@@ -213,6 +213,11 @@ static bool borrow_expr_type(borrow_proof *p,ast_node *n,char *out,size_t cap) {
             return snprintf(out,cap,"%s",type)<(int)cap;
         }
         return false;
+    } else if(n->kind==AST_UNARY_EXPR && n->as.unary_expr.op==TOKEN_STAR) {
+        if(!borrow_expr_type(p,n->as.unary_expr.operand,out,cap)) return false;
+        size_t len=strlen(out);
+        if(len<1 || out[len-1]!='*') return false;
+        out[len-1]=0; return true;
     } else if(n->kind==AST_CALL_EXPR && n->as.call_expr.callee && n->as.call_expr.callee->kind==AST_IDENT_EXPR) {
         ast_node *f=borrow_function(p,n->as.call_expr.callee->as.ident_expr.name);
         if(!f) return false;
