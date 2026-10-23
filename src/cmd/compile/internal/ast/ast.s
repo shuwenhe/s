@@ -274,13 +274,13 @@ struct var_decl {
     option[expr] value
 }
 enum item {
-    function(function_decl),
-    const(const_decl),
-    var(var_decl),
-    struct(struct_decl),
-    enum(enum_decl),
-    trait(trait_decl),
-    method(receiver_method_decl),
+    function(compile.internal.ast.function_decl),
+    const(compile.internal.ast.const_decl),
+    var(compile.internal.ast.var_decl),
+    struct(compile.internal.ast.struct_decl),
+    enum(compile.internal.ast.enum_decl),
+    trait(compile.internal.ast.trait_decl),
+    method(compile.internal.ast.receiver_method_decl),
 }
 
 struct source_file {

@@ -10,13 +10,13 @@ struct at_exit_entry {
     string name
 }
 
-at_exit_funcs := at_exit_entry[]()
+at_exit_funcs := compile.internal.base.at_exit_entry[]()
 
 func at_exit(string name) () {
     if name == "" {
         return
     }
-    at_exit_funcs = append(at_exit_funcs, at_exit_entry { name: name })
+    at_exit_funcs = append(at_exit_funcs, compile.internal.base.at_exit_entry { name: name })
 }
 
 func run_at_exit() string[] {
@@ -26,7 +26,7 @@ func run_at_exit() string[] {
         i = i - 1
         out = append(out, at_exit_funcs[i].name)
     }
-    at_exit_funcs = at_exit_entry[]()
+    at_exit_funcs = compile.internal.base.at_exit_entry[]()
     out
 }
 
