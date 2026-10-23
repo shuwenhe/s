@@ -337,11 +337,11 @@ func call_callee_name(expr e) string {
         expr.array(_) : "<expr-callee>",
         expr.map(_) : "<expr-callee>",
         expr.borrow(_) : "<expr-callee>",
-        expr.deref(_) : "<expr-callee>",
         expr.member(_) : "<expr-callee>",
         expr.index(_) : "<expr-callee>",
         expr.for(_) : "<expr-callee>",
         expr.while(_) : "<expr-callee>",
+        expr.switch(_) : "<expr-callee>",
     }
     return "<expr-callee>"
 }
