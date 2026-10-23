@@ -172,6 +172,40 @@ static int borrow_param(borrow_proof *p, const char *name) {
         if((f->as.fn_stmt.native_borrow_mask & (1ULL<<i)) && !strcmp(name,f->as.fn_stmt.params[i])) return (int)i;
     return -1;
 }
+/* Look up the receiver record for a method with a borrowed receiver. */
+static ast_node *borrow_receiver_record(borrow_proof *p, ast_node *function) {
+    if (!function->as.fn_stmt.receiver_type) return NULL;
+    
+    char base[IR_OPERAND_CAP];
+    const char *type = function->as.fn_stmt.receiver_type;
+    
+    /* Extract base type from pointers and generics */
+    const char *lookup_type = type;
+    
+    /* Strip trailing * for pointer types */
+    size_t len = strlen(type);
+    char temp[IR_OPERAND_CAP];
+    if (len > 0 && type[len-1] == '*') {
+        if (len-1 >= sizeof(temp)) return NULL;
+        memcpy(temp, type, len-1);
+        temp[len-1] = 0;
+        lookup_type = temp;
+    }
+    
+    /* Now handle generic types by extracting base name */
+    const char *bracket = strchr(lookup_type, '[');
+    if (bracket) {
+        size_t base_len = bracket - lookup_type;
+        if (base_len >= sizeof(base)) return NULL;
+        memcpy(base, lookup_type, base_len);
+        base[base_len] = 0;
+        lookup_type = base;
+    }
+    
+    ast_node *record = borrow_record(p, lookup_type);
+    if (!record) record = borrow_record_unique_tail(p, lookup_type);
+    return record;
+}
 /* Resolve a signature in its declaration package, not the caller's package. */
 static ast_node *borrow_signature_record(borrow_proof *p, ast_node *function, size_t index) {
     if(index>=function->as.fn_stmt.param_count) return NULL;
@@ -375,6 +409,15 @@ static bool borrow_read_expr(borrow_proof *p, ast_node *n, bool unused) {
     case AST_STRUCT_EXPR:
         for(size_t i=0;i<n->as.struct_expr.field_values.len;i++) if(!borrow_read_expr(p,n->as.struct_expr.field_values.data[i],false)) return false;
         return true;
+    case AST_IF_STMT:
+        /* Handle switch expressions (if-then-else chains with is_switch_arm=true).
+           Switch arms have value expressions in then_branch and else_branch, not statements. */
+        if(n->as.if_stmt.is_switch_arm) {
+            return borrow_read_expr(p,n->as.if_stmt.condition,false) &&
+                   borrow_read_expr(p,n->as.if_stmt.then_branch,false) &&
+                   borrow_read_expr(p,n->as.if_stmt.else_branch,false);
+        }
+        return false;
     case AST_MEMBER_EXPR:
         if(n->as.member_expr.object && n->as.member_expr.object->kind==AST_IDENT_EXPR && borrow_param(p,n->as.member_expr.object->as.ident_expr.name)>=0) return true;
         return borrow_read_expr(p,n->as.member_expr.object,false);
@@ -445,7 +488,15 @@ static bool borrow_leaf_inner(borrow_proof *p, ast_node *n) {
     case AST_EXPR_STMT: return borrow_read_expr(p,n->as.expr_stmt.expr,false);
     case AST_ASSIGN_STMT: return borrow_param(p,n->as.assign_stmt.name)<0 && borrow_read_expr(p,n->as.assign_stmt.value,false);
     case AST_ASSIGN_EXPR: return borrow_read_expr(p,n,false);
-    case AST_IF_STMT: return borrow_read_expr(p,n->as.if_stmt.condition,false) && borrow_leaf(p,n->as.if_stmt.then_branch) && borrow_leaf(p,n->as.if_stmt.else_branch);
+    case AST_IF_STMT:
+        /* Switch expressions (is_switch_arm=true) have value expressions in branches.
+           Control flow statements (is_switch_arm=false) have statement blocks in branches. */
+        if(n->as.if_stmt.is_switch_arm) {
+            return borrow_read_expr(p,n->as.if_stmt.condition,false) &&
+                   borrow_read_expr(p,n->as.if_stmt.then_branch,false) &&
+                   borrow_read_expr(p,n->as.if_stmt.else_branch,false);
+        }
+        return borrow_read_expr(p,n->as.if_stmt.condition,false) && borrow_leaf(p,n->as.if_stmt.then_branch) && borrow_leaf(p,n->as.if_stmt.else_branch);
     case AST_WHILE_STMT: return borrow_read_expr(p,n->as.while_stmt.condition,false) && borrow_leaf(p,n->as.while_stmt.body);
     case AST_FOR_STMT: return !n->as.for_stmt.iterable && borrow_leaf(p,n->as.for_stmt.init) && borrow_read_expr(p,n->as.for_stmt.condition,false) && borrow_leaf(p,n->as.for_stmt.post) && borrow_leaf(p,n->as.for_stmt.body);
     case AST_BREAK_STMT: case AST_CONTINUE_STMT: return true;
@@ -589,7 +640,7 @@ static bool borrow_prove_unit(ast_node *unit,compile_error *err) {
             n->as.fn_stmt.native_borrow_mask|=1ULL<<j;
         }
         if(n->as.fn_stmt.receiver_type && n->as.fn_stmt.native_borrow_mask) {
-            ast_node *record=borrow_signature_record(&p,n,0);
+            ast_node *record=borrow_receiver_record(&p,n);
             char full[IR_OPERAND_CAP],symbol[IR_OPERAND_CAP];
             const char *tail=strrchr(n->as.fn_stmt.name,'.');
             if(!record || !tail || !borrow_record_name(&p,record,full,sizeof(full)) ||
