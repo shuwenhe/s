@@ -72,6 +72,7 @@ struct ast_node {
 	source_pos pos;
 	bool native_template;
     bool native_enum;
+    bool native_unit;
 	char *generic_parameters;
 	union {
 		struct {
@@ -81,6 +82,7 @@ struct ast_node {
 			ast_vec statements;
 			bool transparent_scope;
             bool tuple_binding;
+            char *inferred_type;
 		} block;
 		struct {
 			char *name;
@@ -142,6 +144,7 @@ struct ast_node {
 			char *payload_binding_name;
             char *native_variant_field;
             int64_t native_variant_tag;
+            bool native_variant_array;
 		} if_stmt;
 		struct {
 			ast_node *condition;

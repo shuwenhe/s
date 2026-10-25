@@ -52,7 +52,10 @@ static ast_node *borrow_function(borrow_proof *p, const char *name) {
     for (size_t i=0;i<p->unit->as.program.statements.len;i++) {
         ast_node *n=p->unit->as.program.statements.data[i];
         if(n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
-        if(n->kind!=AST_FN_STMT || strcmp(n->as.fn_stmt.name,name)) continue;
+        if(n->kind!=AST_FN_STMT) continue;
+        char full[IR_OPERAND_CAP];
+        if(strcmp(n->as.fn_stmt.name,name) &&
+           (snprintf(full,sizeof(full),"%s%s%s",pkg,*pkg?".":"",n->as.fn_stmt.name)>=(int)sizeof(full) || strcmp(full,name))) continue;
         /* A merged native closure may call a uniquely named helper from an
          * imported package without an explicit source import. Keep ordinary
          * ambiguity rejection, but do not make the caller package a hidden
@@ -218,8 +221,10 @@ static bool borrow_expr_type(borrow_proof *p,ast_node *n,char *out,size_t cap) {
         size_t len=strlen(out);
         if(len<1 || out[len-1]!='*') return false;
         out[len-1]=0; return true;
-    } else if(n->kind==AST_CALL_EXPR && n->as.call_expr.callee && n->as.call_expr.callee->kind==AST_IDENT_EXPR) {
-        ast_node *f=borrow_function(p,n->as.call_expr.callee->as.ident_expr.name);
+    } else if(n->kind==AST_CALL_EXPR && n->as.call_expr.callee) {
+        char name[IR_OPERAND_CAP];
+        if(!native_record_type_spelling(n->as.call_expr.callee,name,sizeof(name))) return false;
+        ast_node *f=borrow_function(p,name);
         if(!f) return false;
         const char *saved=p->package_name,*pkg="";
         for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
@@ -435,9 +440,8 @@ static bool borrow_walk(borrow_proof *p,ast_node *n) {
     case AST_PACKAGE_DECL: p->package_name=n->as.package_decl.name; return true;
     case AST_FN_STMT: {
         if(n->native_template) return true;
-        /* For top-level borrow walk, skip functions without native_borrow_mask
-           They are checked separately in borrow_prove_unit with borrow_leaf */
-        if(!n->as.fn_stmt.native_borrow_mask) return true;
+        /* Owned callers also need call-site borrow proofs. borrow_leaf checks
+         * borrowed callee bodies; it does not visit these callers. */
         
         p->count=0; p->function=n;
         p->has_borrow_call=false; p->has_control_flow=false;

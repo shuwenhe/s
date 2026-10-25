@@ -212,7 +212,7 @@ func run_mir_suite() int {
         function_name: "facts", blocks fact_blocks, locals mir_local_slot[](), string trace[](), entry 0, exit 0,
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
-    expected_facts := "PointCount = 4 | Ref(_2) = R0 | Ref(_3) = R1 | Loan0 issued = {P0} place=_1 | RefLoan(R0) = L0 | RefLoan(R1) = L0 | Outlives(R0,R1) | RegionPoint(R0) = {P0} | RegionPoint(R1) = {P2}"
+    expected_facts := "PointCount: = 4 | Ref(_2) = R0: | Ref(_3) = R1 | Loan0 issued = {P0} place=_1 | RefLoan(R0) = L0: | RefLoan(R1) = L0: | Outlives(R0,R1) | RegionPoint(R0) = {P0} | RegionPoint(R1) = {P2}"
     if mir.dump_ownership_analysis_input_from_mir(fact_graph) != expected_facts {
         return 1
     }

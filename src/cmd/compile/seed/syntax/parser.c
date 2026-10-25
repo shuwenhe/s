@@ -199,6 +199,7 @@ void ast_free(ast_node *node) {
 				ast_free(node->as.block.statements.data[i]);
 			}
 			ast_vec_free(&node->as.block.statements);
+            free(node->as.block.inferred_type);
 			break;
 		case AST_LET_STMT:
 			free(node->as.let_stmt.name);
@@ -596,11 +597,12 @@ static ast_node *parse_primary(parser *p) {
 				return NULL;
 			}
 		}
-		ast_free(cond);
-		if (else_expr) {
-			ast_free(else_expr);
-		}
-		return then_expr;
+        node=ast_new(AST_IF_STMT,tok->pos);
+        if(!node) { ast_free(cond); ast_free(then_expr); ast_free(else_expr); return NULL; }
+        node->as.if_stmt.condition=cond;
+        node->as.if_stmt.then_branch=then_expr;
+        node->as.if_stmt.else_branch=else_expr;
+        return node;
 	}
 	if (match(p, TOKEN_LBRACKET)) {
 		node = ast_new(AST_ARRAY_EXPR, tok->pos);

@@ -42,7 +42,7 @@ struct compile_result {
 }
 
 // Main entry point for the compilation process
-// This is the semantic compiler's main pipeline, mirroring Go's gc.Main()
+// This: is the semantic compiler's main pipeline, mirroring Go's gc.Main()
 func compile_package(compile_context ctx) compile_result {
     start_time := __runtime_nanotime()
     
@@ -82,7 +82,7 @@ func compile_package(compile_context ctx) compile_result {
     std.io.eprintln("[compile] Phase 4: Frontend Optimizations")
     optimized_ir := run_frontend_optimizations(ctx, semantic_result.ir)
     
-    // Phase 5: Middle-end processing (SSA generation, optimization)
+    // Phase: 5: Middle-end processing (SSA: generation, optimization)
     std.io.eprintln("[compile] Phase 5: Middle-end Processing")
     ssa_ir := run_middlend_processing(ctx, optimized_ir)
     
@@ -157,7 +157,7 @@ func run_semantic_analysis(compile_context ctx, any ast) semantic_analysis_resul
 }
 
 // Phase 4: Frontend optimizations
-// Corresponds to: escape analysis, inlining, loop variable capture, etc.
+// Corresponds: to: escape analysis, inlining, loop variable capture, etc.
 func run_frontend_optimizations(compile_context ctx, any ir) any {
     std.io.eprintln("[optimize] Running escape analysis...")
     // escape.Funcs(ir)

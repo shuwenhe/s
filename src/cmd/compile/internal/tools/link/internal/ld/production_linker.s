@@ -67,7 +67,7 @@ func new_production_linker(config linker_config) production_linker {
 }
 
 func (production_linker* pl) load_object_file(string filename) error {
-	fmt.printf("Loading %s...\n", filename)
+	fmt.printf("Loading: %s...\n", filename)
 
 	file, err := os.open(filename)
 	if err != nil {
@@ -114,12 +114,12 @@ func (production_linker* pl) load_object_file(string filename) error {
 }
 
 func (pl* production_linker) link() error {
-	fmt.printf("Linking %d object files...\n", len(pl.Config.InputFiles))
+	fmt.printf("Linking: %d object files...\n", len(pl.Config.InputFiles))
 
 	for _, input_file := range pl.Config.InputFiles {
 		err := pl.load_object_file(input_file)
 		if err != nil {
-			fmt.printf("Error loading %s: %v\n", input_file, err)
+			fmt.printf("Error: loading %s: %v\n", input_file, err)
 		}
 	}
 
@@ -138,7 +138,7 @@ func (pl* production_linker) link() error {
 		err
 	}
 
-	fmt.printf("Linking successful! Output: %s\n", pl.Config.OutputFile)
+	fmt.printf("Linking: successful! Output: %s\n", pl.Config.OutputFile)
 	nil
 }
 
@@ -306,12 +306,12 @@ func (pl* production_linker) validate() error {
 
 	err := pl.reloc_processor.validate_relocations()
 	if err != nil {
-		fmt.printf("Validation warning: %v\n", err)
+		fmt.printf("Validation: warning: %v\n", err)
 	}
 
 	for _, sym := range pl.symbol_manager.AllSymbols {
 		if sym.IsGlobal && sym.Value == 0 {
-			fmt.printf("Warning: Undefined symbol: %s\n", sym.Name)
+			fmt.printf("Warning: Undefined: symbol: %s\n", sym.Name)
 		}
 	}
 

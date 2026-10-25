@@ -129,7 +129,7 @@ func generate_x86_64(ir_program program) (string, error) {
     return asm, nil
 }
 
-func generate_instruction(Instruction instr) (string, error) {
+func generate_instruction(Instruction: instr) (string, error) {
     switch instr.opcode {
         case "mov":
             return "    mov " + instr.src1 + ", " + instr.dest + "\n", nil

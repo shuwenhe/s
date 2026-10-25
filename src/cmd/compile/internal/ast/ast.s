@@ -23,7 +23,7 @@ struct param {
 struct function_sig {
     string name
     string[] generics
-    param[] params
+    compile.internal.ast.param[] params
     option[string] return_type
 }
 
@@ -114,7 +114,7 @@ struct switch_expr {
 
 struct if_expr {
     box[expr] condition
-    then_branch block_expr
+    block_expr then_branch
     option[box[expr]] else_branch
     option[string] inferred_type
 }
@@ -238,7 +238,7 @@ struct struct_decl {
 struct enum_variant {
     string name
     option[string] payload
-    i64 explicit_value
+    int explicit_value
     bool has_explicit_value
 }
 
@@ -334,7 +334,7 @@ func dump_const(const_decl item) string[] {
 
 func dump_var(var_decl item) string[] {
     decl := "var " + item.name
-    switch item.kindname {
+    switch item.type_name {
         option.some(t) : decl = decl + " " + t,
         option.none : {},
     }
@@ -357,7 +357,7 @@ func dump_function(function_decl item, string indent) string[] {
     _pi := 0
     for _pi < len(item.sig.params) {
         param := item.sig.params[_pi]
-        params = append(params, param.kindname + " " + param.name)
+        params = append(params, param.type_name + " " + param.name)
         _pi = _pi + 1
     }
     ret :=
@@ -392,7 +392,7 @@ func dump_struct(struct_decl item) string[] {
     for _fi < len(item.fields) {
         field := item.fields[_fi]
         fp := if field.is_public { "pub " } else { "" }
-        lines = append(lines, "  " + fp + field.kindname + " " + field.name)
+        lines = append(lines, "  " + fp + field.type_name + " " + field.name)
         _fi = _fi + 1
     }
     lines
@@ -424,7 +424,7 @@ func dump_trait(trait_decl item) string[] {
         _mpi := 0
         for _mpi < len(method.params) {
             param := method.params[_mpi]
-            params = append(params, param.kindname + " " + param.name)
+            params = append(params, param.type_name + " " + param.name)
             _mpi = _mpi + 1
         }
         ret :=
@@ -451,7 +451,7 @@ func dump_receiver_method(receiver_method_decl item) string[] {
     _mi2 := 0
     for _mi2 < len(method.sig.params) {
         param := method.sig.params[_mi2]
-        params = append(params, param.kindname + " " + param.name)
+        params = append(params, param.type_name + " " + param.name)
         _mi2 = _mi2 + 1
     }
     ret :=
@@ -498,7 +498,7 @@ func dump_stmt(stmt stmt, string indent) string[] {
     switch stmt {
         stmt.let(value) : {
             text :=
-                switch value.kindname {
+                switch value.type_name {
                     option.some(type_name) : indent + type_name + " " + value.name + " = " + dump_expr(value.value),
                     option.none : indent + "" + value.name + " := " + dump_expr(value.value),
             }
@@ -542,7 +542,7 @@ func dump_stmt(stmt stmt, string indent) string[] {
 func dump_for_clause(stmt stmt) string {
     return switch stmt {
         stmt.let(value) : {
-            return switch value.kindname {
+            return switch value.type_name {
                 option.some(type_name) : type_name + " " + value.name + " = " + dump_expr(value.value),
                 option.none : "" + value.name + " := " + dump_expr(value.value),
             }

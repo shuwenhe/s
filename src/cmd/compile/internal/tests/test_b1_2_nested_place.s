@@ -52,13 +52,13 @@ func test_b1_2_borrow_place_preservation() bool {
 
     
     if facts.input.loan_count != 1 {
-        s.println("FAIL: Expected 1 loan, got " + std.prelude.to_string(facts.input.loan_count))
+        s.println("FAIL: Expected: 1 loan, got " + std.prelude.to_string(facts.input.loan_count))
         return false
     }
 
     
     if len(facts.loan_borrowed_places) != 1 {
-        s.println("FAIL: Expected 1 loan_borrowed_place, got " + std.prelude.to_string(len(facts.loan_borrowed_places)))
+        s.println("FAIL: Expected: 1 loan_borrowed_place, got " + std.prelude.to_string(len(facts.loan_borrowed_places)))
         return false
     }
 
@@ -77,7 +77,7 @@ func test_b1_2_borrow_place_preservation() bool {
 
     
     if len(actual_place.projections) != 2 {
-        s.println("FAIL: Expected 2 projections, got " + std.prelude.to_string(len(actual_place.projections)))
+        s.println("FAIL: Expected: 2 projections, got " + std.prelude.to_string(len(actual_place.projections)))
         return false
     }
 
@@ -87,7 +87,7 @@ func test_b1_2_borrow_place_preservation() bool {
         return false
     }
     if actual_place.projections[0].value != "inner" {
-        s.println("FAIL: Projection 0 value is not 'inner', got: " + actual_place.projections[0].value)
+        s.println("FAIL: Projection: 0 value is not 'inner', got: " + actual_place.projections[0].value)
         return false
     }
 
@@ -97,13 +97,13 @@ func test_b1_2_borrow_place_preservation() bool {
         return false
     }
     if actual_place.projections[1].value != "value" {
-        s.println("FAIL: Projection 1 value is not 'value', got: " + actual_place.projections[1].value)
+        s.println("FAIL: Projection: 1 value is not 'value', got: " + actual_place.projections[1].value)
         return false
     }
 
     
     if len(facts.loan_places) != 1 {
-        s.println("FAIL: Expected 1 legacy loan_place string, got " + std.prelude.to_string(len(facts.loan_places)))
+        s.println("FAIL: Expected: 1 legacy loan_place string, got " + std.prelude.to_string(len(facts.loan_places)))
         return false
     }
 

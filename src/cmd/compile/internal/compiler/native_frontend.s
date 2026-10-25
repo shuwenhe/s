@@ -1,7 +1,7 @@
 package compile.internal
 
 // The executable frontend accepts the documented straight-line integer subset.
-// It shares the compiler's token scanner, then constructs structured MIR from
+// It: shares the compiler's token scanner, then constructs structured MIR from
 // tokens. The legacy C frontend and canonical AST adapter remain separate.
 struct native_file_scope {
     string package_name

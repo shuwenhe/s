@@ -27,7 +27,7 @@ func native_program_assembly(mir_program program, bool executable) amd64_program
 }
 
 func native_emit_asm_file(string input, string output, bool executable) int {
-    if !native_target_supported() { eprintln("native compiler: P0 supports Linux/amd64"); return 2 }
+    if !native_target_supported() { eprintln("native compiler: P0: supports Linux/amd64"); return 2 }
     if input == output || __host_same_file(input, output) {
         eprintln("native compiler: output must not overwrite input source")
         return 2
@@ -138,7 +138,7 @@ func native_install_assembly(string assembly, string input, string output, bool 
 }
 
 func native_build_program(mir_program program, string input, string output, string ssa_margin_override, bool nostdlib) int {
-    // P0 executable startup is always libc-free, including without nostdlib.
+    // P0: executable startup is always libc-free, including without nostdlib.
     return native_install_program(program, input, output, ssa_margin_override, true)
 }
 

@@ -28,7 +28,7 @@ output="$work/output.txt"
 set +e
 (
   cd "$work"
-  PATH="$work/bin:$PATH" S_SOURCE_ROOT="$work" bash "$repo_root/scripts/compile-pipeline-check.sh"
+  PATH="$work/bin:$PATH" S_SOURCE_ROOT="$work" bash "$repo_root/script/compile-pipeline-check.sh"
 ) >"$output" 2>&1
 status=$?
 set -e
@@ -48,5 +48,16 @@ fi
 grep -q 'Name/Import Resolution.*PLACEHOLDER.*UNPROVEN' "$output"
 grep -q 'CURRENT BLOCKER = Stage 5 Name/Import Resolution' "$output"
 grep -q 'PIPELINE COMPLETE = NO' "$output"
+
+mkdir -p "$work/script"
+printf '#!/bin/sh\nexit 1\n' > "$work/script/canonical-parser-closure-check.sh"
+chmod +x "$work/script/canonical-parser-closure-check.sh"
+status=0
+PATH="$work/bin:$PATH" S_SOURCE_ROOT="$work" \
+    bash "$repo_root/script/compile-pipeline-check.sh" > "$output" 2>&1 || status=$?
+test "$status" -eq 3
+grep -q 'EXECUTION FRONTIER = STAGE 3$' "$output"
+grep -q 'Current blocker: Stage 3 Parser' "$work/.bootstrap/pipeline/compile-pipeline-check.txt"
+grep -q '^Self-hosting: NOT_PROVEN$' "$work/.bootstrap/pipeline/compile-pipeline-check.txt"
 
 echo "compile pipeline harness regression passed"

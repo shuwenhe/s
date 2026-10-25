@@ -285,7 +285,7 @@ func parser_parse_parameters(p* parser) ast_node {
         if parser_current_token_is(p, token_comma) {
             parser_next_token(p)
         } else if !parser_current_token_is(p, token_rparen) {
-            parser_add_error(p, "Expected ',' or ')'")
+            parser_add_error(p, "Expected: ',' or ')'")
         }
     }
 

@@ -24,19 +24,41 @@ static inline int seed_enum_owner_name(const ast_node *node, char *out, size_t c
 	return 0;
 }
 
-static inline ast_node *seed_find_enum(ast_node *root, const char *owner) {
-	size_t i, n;
-	const char *leaf;
-	if (!root || root->kind != AST_PROGRAM || !owner) return NULL;
-	leaf = strrchr(owner, '.');
-	leaf = leaf ? leaf + 1 : owner;
-	n = strcspn(leaf, "[*");
-	for (i = 0; i < root->as.program.statements.len; i++) {
-		ast_node *decl = root->as.program.statements.data[i];
-		if (decl->kind == AST_ENUM_DECL && strlen(decl->as.enum_decl.name) == n &&
-			strncmp(decl->as.enum_decl.name, leaf, n) == 0) return decl;
+static inline int seed_enum_decl_name(ast_node *root, const ast_node *decl, char *out, size_t cap) {
+	const char *package = "";
+	if (!root || root->kind != AST_PROGRAM || !decl || decl->kind != AST_ENUM_DECL) return 0;
+	for (size_t i = 0; i < root->as.program.statements.len; i++) {
+		ast_node *node = root->as.program.statements.data[i];
+		if (node->kind == AST_PACKAGE_DECL) package = node->as.package_decl.name;
+		if (node == decl) {
+			int n = snprintf(out, cap, "%s%s%s", package, *package ? "." : "", decl->as.enum_decl.name);
+			return n >= 0 && (size_t)n < cap;
+		}
 	}
-	return NULL;
+	return 0;
+}
+
+static inline ast_node *seed_find_enum(ast_node *root, const char *owner) {
+	size_t n;
+	ast_node *short_match = NULL;
+	int ambiguous = 0;
+	const char *package = "";
+	if (!root || root->kind != AST_PROGRAM || !owner) return NULL;
+	n = strcspn(owner, "[*");
+	for (size_t i = 0; i < root->as.program.statements.len; i++) {
+		ast_node *decl = root->as.program.statements.data[i];
+		char qualified[1024];
+		if (decl->kind == AST_PACKAGE_DECL) package = decl->as.package_decl.name;
+		if (decl->kind != AST_ENUM_DECL) continue;
+		int size = snprintf(qualified, sizeof(qualified), "%s%s%s", package, *package ? "." : "", decl->as.enum_decl.name);
+		if (size >= 0 && (size_t)size < sizeof(qualified) && strlen(qualified) == n &&
+			!strncmp(qualified, owner, n)) return decl;
+		if (strlen(decl->as.enum_decl.name) == n && !strncmp(decl->as.enum_decl.name, owner, n)) {
+			if (short_match) ambiguous = 1;
+			else short_match = decl;
+		}
+	}
+	return ambiguous ? NULL : short_match;
 }
 
 static inline ast_enum_variant *seed_find_variant(ast_node *decl, const char *name) {

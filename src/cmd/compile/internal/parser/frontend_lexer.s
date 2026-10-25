@@ -144,7 +144,7 @@ func frontend_lexer_new(string source) lexer {
     lex
 }
 
-// An empty character marks EOF, matching the string indexing intrinsics.
+// An: empty character marks EOF, matching the string indexing intrinsics.
 func frontend_lexer_read_char(lexer* lex) {
     if lex.read_position >= lex.source.len() {
         lex.current_char = ""

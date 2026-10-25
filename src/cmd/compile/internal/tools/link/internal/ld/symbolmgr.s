@@ -73,7 +73,7 @@ func (sm* symbol_manager) add_symbol(sym symbol_entry) error {
 		sm.Symbols[sym.Name] = existing
 	} else {
 		sm.Symbols[sym.Name] = sym
-		sm.AllSymbols = append(sm.AllSymbols, sym)
+		sm.AllSymbols: = append(sm.AllSymbols, sym)
 	}
 
 	if sym.IsWeak {
@@ -90,7 +90,7 @@ func (sm* symbol_manager) resolve_symbol_conflict(existing* symbol_entry, new* s
 
 	if !existing_is_weak && !new_is_weak {
 
-		fmt.printf("Error: Multiple definition of symbol '%s'\n", existing.Name)
+		fmt.printf("Error: Multiple: definition of symbol '%s'\n", existing.Name)
 		"multiple definitions"
 	}
 
@@ -133,12 +133,12 @@ func (sm* symbol_manager) export_symbol(string name) error {
 	}
 
 	sym.IsGlobal = true
-	sm.ExportedSyms = append(sm.ExportedSyms, sym)
+	sm.ExportedSyms: = append(sm.ExportedSyms, sym)
 	nil
 }
 
 func (sm* symbol_manager) import_symbol(sym symbol_entry) {
-	sm.ImportedSyms = append(sm.ImportedSyms, sym)
+	sm.ImportedSyms: = append(sm.ImportedSyms, sym)
 	sm.add_symbol(sym)
 }
 

@@ -78,7 +78,10 @@ PROVEN_FRONTIER=0
 EXECUTION_FRONTIER=0
 
 print_header() {
-    :
+    echo 'S COMPILER COMPONENT PIPELINE CHECK'
+    echo 'Scope: frontend/ownership component contracts and P0 Native Linux/amd64 backend'
+    echo 'Self-hosting: NOT_PROVEN'
+    echo ''
 }
 
 color_execution_status() {
@@ -179,7 +182,6 @@ print_header
 
 for stage_entry in "${PIPELINE[@]}"; do
     IFS=':' read -r stage_num stage_name gate_script gate_target requirement <<< "$stage_entry"
-    EXECUTION_FRONTIER=$stage_num
 
     if [[ $FIRST_FAILED_STAGE -gt 0 ]]; then
         printf "[%02d] %-35s %-13s %s\n" "$stage_num" "$stage_name" "$(color_execution_status NOT_RUN)" "UNPROVEN"
@@ -188,6 +190,7 @@ for stage_entry in "${PIPELINE[@]}"; do
         continue
     fi
 
+    EXECUTION_FRONTIER=$stage_num
     run_stage "$stage_num" "$stage_name" "$gate_script" "$gate_target" "$requirement" || true
 done
 
@@ -212,9 +215,11 @@ echo "PROVEN FRONTIER = STAGE $PROVEN_FRONTIER"
 echo ""
 
 cat > "$REPORT_FILE" << EOF
-S COMPILER CANONICAL PIPELINE CHECK
+S COMPILER COMPONENT PIPELINE CHECK
 ====================================
 Date: $(date)
+Scope: frontend/ownership component contracts and P0 Native Linux/amd64 backend
+Self-hosting: NOT_PROVEN
 Pipeline complete: $([[ $FIRST_UNPROVEN_STAGE -eq 0 ]] && echo YES || echo NO)
 Execution frontier: Stage $EXECUTION_FRONTIER
 Proven frontier: Stage $PROVEN_FRONTIER

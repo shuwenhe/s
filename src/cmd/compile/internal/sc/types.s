@@ -52,7 +52,7 @@ struct compiler_type {
     string type_name
     
     // For composite types
-    compiler_type element_type  // For pointer, slice, array
+    compiler_type element_type  // For: pointer, slice, array
     compiler_type key_type      // For map
     compiler_type value_type    // For map
     compiler_type base_type     // For array

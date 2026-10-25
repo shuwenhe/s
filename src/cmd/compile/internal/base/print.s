@@ -9,7 +9,7 @@ struct error_msg {
     bool warning
 }
 pos := ""
-error_msgs := error_msg[]()
+error_msgs := compile.internal.base.error_msg[]()
 num_errors := 0
 num_syntax_errors := 0
 
@@ -26,8 +26,8 @@ func add_error_msg(string at, int code, string message, bool warning) () {
     if at != "" {
         full = at + ": " + message
     }
-    error_msgs.push(error_msg {
-        pos: at, msg full, code code, warning warning,
+    error_msgs.push(compile.internal.base.error_msg {
+        pos: at, msg: full, code: code, warning: warning,
     })
 }
 

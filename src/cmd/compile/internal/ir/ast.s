@@ -68,14 +68,14 @@ enum expr_ir {
     string(string),
     bool(bool),
     name(string),
-    binary(binary_expr),
-    call(call_expr),
-    borrow(borrow_expr),
-    member(member_expr),
-    index(index_expr),
-    array(array_expr),
-    map(map_expr),
-    block(block_ir),
+    binary(compile.internal.ir.ast.binary_expr),
+    call(compile.internal.ir.ast.call_expr),
+    borrow(compile.internal.ir.ast.borrow_expr),
+    member(compile.internal.ir.ast.member_expr),
+    index(compile.internal.ir.ast.index_expr),
+    array(compile.internal.ir.ast.array_expr),
+    map(compile.internal.ir.ast.map_expr),
+    block(compile.internal.ir.ast.block_ir),
 }
 
 struct binary_expr { string op, expr_ir left, expr_ir right }

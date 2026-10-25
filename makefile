@@ -278,6 +278,10 @@ COMPILER_SOURCES := \
 # consumer from the source graph so the production artifact carries one AST.
 COMPILER_SOURCES += $(shell mkdir -p .bootstrap/compiler; canonical_closure=$$(mktemp .bootstrap/compiler/p1-canonical-closure.XXXXXX) || exit 1; trap 'rm -f "$$canonical_closure"' EXIT; ./src/cmd/dist/source_closure.sh src/cmd/compile/internal/canonical/canonical_ast_check.s "$$canonical_closure" >/dev/null && cat "$$canonical_closure")
 
+.PHONY: compiler-source-list
+compiler-source-list:
+	@printf '%s\n' $(COMPILER_SOURCES)
+
 compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
 	@echo "compiler-entry=$(CURDIR)/src/cmd/compile/main.s"
@@ -344,6 +348,19 @@ help:
 
 .PHONY: selfhost-native-record-check
 selfhost-native-record-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_ast_param_type_check.sh
+	@bash test/native-bootstrap-diagnostic/native_recursive_enum_check.sh
+	@bash test/native-bootstrap-diagnostic/native_tuple_return_check.sh
+	@bash test/native-bootstrap-diagnostic/native_canonical_type_tree_check.sh
+	@bash test/native-bootstrap-diagnostic/native_canonical_type_schema_check.sh
+	@bash test/native-bootstrap-diagnostic/native_extern_result_return_check.sh
+	@bash test/native-bootstrap-diagnostic/native_alias_return_identity_check.sh
+	@bash test/native-bootstrap-diagnostic/native_mono_type_args_check.sh
+	@bash test/native-bootstrap-diagnostic/native_pattern_payload_identity_check.sh
+	@bash test/native-bootstrap-diagnostic/native_backend_bool_boundary_check.sh
+	@bash test/native-bootstrap-diagnostic/native_enum_identity_check.sh
+	@bash test/native-bootstrap-diagnostic/native_array_record_identity_check.sh
+	@bash test/native-bootstrap-diagnostic/native_generic_caller_borrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_generic_record_check.sh
 	@bash test/native-bootstrap-diagnostic/native_generic_enum_check.sh
 	@bash test/native-bootstrap-diagnostic/native_option_payload_check.sh

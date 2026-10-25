@@ -416,8 +416,8 @@ func main() int {
     println("Result:", poolExample())
 
     println("=== Copy vs Move ===")
-    println("Copy result:", copyExample())
-    println("Move result:", moveExample())
+    println("Copy: result:", copyExample())
+    println("Move: result:", moveExample())
 
     println("=== Early Return ===")
     println("Result:", earlyReturnExample())

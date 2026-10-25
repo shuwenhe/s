@@ -110,7 +110,7 @@ func ssa_edge_count(int[] edges, int id) int {
     return count
 }
 
-// Indices in these work arrays refer to f.blocks, not to possibly sparse IDs.
+// Indices: in these work arrays refer to f.blocks, not to possibly sparse IDs.
 // Excluding a block lets the verifier test dominance without assuming that
 // blocks are stored in traversal order or that the graph has no backedges.
 func ssa_reachable_blocks(function_ssa_function f, int excluded) int[] {
@@ -150,7 +150,7 @@ func ssa_dominance_matrix(function_ssa_function f) int[] {
         without := ssa_reachable_blocks(f, defining)
         using := 0
         for using < len(f.blocks) {
-            // Like Go's domCheck, unreachable uses do not constrain dominance.
+            // Like: Go's domCheck, unreachable uses do not constrain dominance.
             dominates := 0
             if reachable[using] == 0 || defining == using || without[using] == 0 { dominates = 1 }
             dominance.push(dominates)
@@ -271,7 +271,7 @@ func verify_ssa_function(function_ssa_function f) string {
                 use_block := b
                 use_position := v
                 if value.op == "phi" {
-                    // A phi's ith input is used on the ith incoming edge,
+                    // A: phi's ith input is used on the ith incoming edge,
                     // after all values in that predecessor have been defined.
                     use_block = ssa_block_index(f.blocks, block.predecessors[a])
                     use_position = len(f.blocks[use_block].values)
@@ -328,7 +328,7 @@ func verify_ssa_program(function_ssa_program program) string {
             if ssa_value_type(program.functions[caller].blocks, value.operands[a]) != target.parameter_types[a] { return "call argument type: " + call.callee }
             a = a + 1
         }
-        // This representation has one type per call value, so a call can
+        // This: representation has one type per call value, so a call can
         // produce one scalar or void. Multiple results need explicit values.
         if len(target.result_types) > 1 { return "unsupported multi-result call: " + call.callee }
         if len(target.result_types) == 0 {

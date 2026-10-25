@@ -243,49 +243,49 @@ func main() int {
     println("=== Ownership Transfer ===")
     r := newResource(5)
     value := moveOwnership(r)
-    println("Moved value: ", value)
+    println("Moved: value: ", value)
 
     println("\n=== Return Ownership ===")
     r2 := returnOwnership()
-    println("Returned value: ", *r2.ptr)
+    println("Returned: value: ", *r2.ptr)
 
     println("\n=== Shared Borrow ===")
     r3 := newResource(15)
     sum := borrowMultipleShared(&r3)
-    println("Sum of multiple borrows: ", sum)
+    println("Sum: of multiple borrows: ", sum)
 
     println("\n=== Scope-based Cleanup ===")
     scope_total := demonstrateScope()
-    println("Scope cleanup total: ", scope_total)
+    println("Scope: cleanup total: ", scope_total)
 
     println("\n=== Mutable Borrow ===")
     r4 := newResource(20) borrow_mutable(&r4)
-    println("After mutable borrow: ", *r4.ptr)
+    println("After: mutable borrow: ", *r4.ptr)
 
     println("\n=== Lifetime Validity ===")
     lt_val := demonstrateLifetimeValid()
-    println("Lifetime valid value: ", lt_val)
+    println("Lifetime: valid value: ", lt_val)
 
     println("\n=== Boxed Resource ===")
     br := createBoxedResource(88)
     box_val := consumeBoxed(br)
-    println("Boxed value: ", box_val)
+    println("Boxed: value: ", box_val)
 
     println("\n=== Move Semantics ===")
     move_val := demonstrateMoveSemantics()
-    println("After move: ", move_val)
+    println("After: move: ", move_val)
 
     println("\n=== Copy Semantics ===")
     copy_val := demonstrateCopySemantics()
-    println("Copy result: ", copy_val)
+    println("Copy: result: ", copy_val)
 
     println("\n=== Loop Ownership ===")
     loop_total := ownershipWithLoop(5)
-    println("Loop total: ", loop_total)
+    println("Loop: total: ", loop_total)
 
     println("\n=== Conditional Ownership ===")
     cr := ownershipWithReturn(true)
-    println("Conditional return: ", *cr.ptr)
+    println("Conditional: return: ", *cr.ptr)
 
     return 0
 }

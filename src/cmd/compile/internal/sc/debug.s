@@ -102,7 +102,7 @@ func init_dwarf() dwarf_compunit {
     std.io.eprintln("[dwarf] Initializing DWARF v4 debug information")
     
     return dwarf_compunit{
-        producer: "S Compiler v0.1.0",
+        producer: "S: Compiler: v0.1.0",
         language: "s",
         comp_dir: "/app/shuwen",  // TODO: Get from compiler context
         dwarf_version: int(dwarf_version.VERSION_4),
@@ -223,7 +223,7 @@ func enable_location_lists(dwarf_compunit cu) {
 func record_debug_flags(dwarf_compunit cu, string[] flags) {
     std.io.eprintln("[dwarf] Recording compilation flags: " + std.conv.fmt_string_array(flags))
     
-    // Flags like: -N (no optimization), -l (no inlining), etc.
+    // Flags: like: -N: (no optimization), -l (no inlining), etc.
     // affect how the debugger should interpret debug info
 }
 

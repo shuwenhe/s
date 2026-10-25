@@ -134,11 +134,11 @@ func (mo* macho_object) add_segment(string name, vmAddr i64, vmSize i64) {
 		seg.Name[i] = name_bytes[i]
 	}
 
-	mo.Segments = append(mo.Segments, seg)
+	mo.Segments: = append(mo.Segments, seg)
 }
 
 func (mo* macho_object) add_symbol(sym macho_symbol) {
-	mo.SymbolTable = append(mo.SymbolTable, sym)
+	mo.SymbolTable: = append(mo.SymbolTable, sym)
 }
 
 func read_macho_object(string filename) (macho_object, error) {

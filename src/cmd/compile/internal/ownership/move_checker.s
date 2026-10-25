@@ -39,20 +39,20 @@ func (move_checker* mc) check_assignment(int pc, assign* assignment_stmt) {
     if assign.is_move {
         rhs_state := mc.ctx.get_state_at(pc, assign.rhs.string())
         if rhs_state != state_owned {
-            mc.ctx.add_error(errorf("move %s from %s state at PC %d",
+            mc.ctx.add_error(errorf("move %s from %s state at PC: %d",
                 assign.rhs, rhs_state, pc))
             return
         }
         mc.ctx.set_state_at(pc, assign.rhs.string(), state_moved)
         if mc.has_borrow(assign.rhs.string()) {
-            mc.ctx.add_error(errorf("move %s while borrowed at PC %d",
+            mc.ctx.add_error(errorf("move %s while borrowed at PC: %d",
                 assign.rhs, pc))
         }
     } else if assign.is_copy {
         rhs_state := mc.ctx.get_state_at(pc, assign.rhs.string())
         type_class := mc.ctx.classify_type(assign.rhs.string())
         if !type_class.is_copy && rhs_state != state_owned {
-            mc.ctx.add_error(errorf("copy %s (%s type) from %s state at PC %d",
+            mc.ctx.add_error(errorf("copy %s (%s type) from %s state at PC: %d",
                 assign.rhs, "non-Copy", rhs_state, pc))
             return
         }
@@ -64,10 +64,10 @@ func (move_checker* mc) check_function_call(int pc, call* call_stmt) {
     for i, arg := range call.args {
         arg_state := mc.ctx.get_state_at(pc, arg.string())
         if arg_state == state_moved {
-            mc.ctx.add_error(errorf("use-after-move: argument %d (%s) at PC %d",
+            mc.ctx.add_error(errorf("use-after-move: argument %d (%s) at PC: %d",
                 i, arg, pc))
         } else if arg_state == state_undefined {
-            mc.ctx.add_error(errorf("use-before-init: argument %d (%s) at PC %d",
+            mc.ctx.add_error(errorf("use-before-init: argument %d (%s) at PC: %d",
                 i, arg, pc))
         }
     }
@@ -79,10 +79,10 @@ func (move_checker* mc) check_return(int pc, ret* return_stmt) {
     }
     return_state := mc.ctx.get_state_at(pc, ret.value.string())
     if return_state == state_moved {
-        mc.ctx.add_error(errorf("return-after-move: %s at PC %d",
+        mc.ctx.add_error(errorf("return-after-move: %s at PC: %d",
             ret.value, pc))
     } else if return_state == state_undefined {
-        mc.ctx.add_error(errorf("return-uninitialized: %s at PC %d",
+        mc.ctx.add_error(errorf("return-uninitialized: %s at PC: %d",
             ret.value, pc))
     }
 }
@@ -130,15 +130,15 @@ func (move_checker* mc) check_use(int pc, expr interface{}, string use_kind) {
     switch use_kind {
     case "read":
         if state == state_moved {
-            mc.ctx.add_error(errorf("use-after-move: reading %s at PC %d", expr_str, pc))
+            mc.ctx.add_error(errorf("use-after-move: reading %s at PC: %d", expr_str, pc))
         } else if state == state_dropped {
-            mc.ctx.add_error(errorf("use-after-drop: reading %s at PC %d", expr_str, pc))
+            mc.ctx.add_error(errorf("use-after-drop: reading %s at PC: %d", expr_str, pc))
         } else if state == state_undefined {
-            mc.ctx.add_error(errorf("use-before-init: reading %s at PC %d", expr_str, pc))
+            mc.ctx.add_error(errorf("use-before-init: reading %s at PC: %d", expr_str, pc))
         }
     case "move":
         if state != state_owned {
-            mc.ctx.add_error(errorf("cannot move %s from %s state at PC %d",
+            mc.ctx.add_error(errorf("cannot move %s from %s state at PC: %d",
                 expr_str, state, pc))
         }
     }
@@ -162,15 +162,15 @@ struct assignment_stmt {
 
 struct call_stmt {
     string func
-    Args interface{}[]
+    Args: interface{}[]
 }
 
 struct return_stmt {
-    Value interface{}
+    Value: interface{}
 }
 
 struct if_stmt {
-    Condition interface{}
+    Condition: interface{}
     then_body  interface{}[]
     else_body  interface{}[]
 }

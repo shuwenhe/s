@@ -330,7 +330,7 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
     if compiler_find_struct(s, struct_name) >= 0 { return compiler_fail(s, "duplicate struct: " + struct_name) }
     if s.struct_count >= 32 { return compiler_fail(s, "too many structs") }
     struct_id := s.struct_count
-    // Register the nominal identity before reading fields, so a pointer field
+    // Register: the nominal identity before reading fields, so a pointer field
     // can refer to its enclosing struct without a second AST/type authority.
     s.struct_names[struct_id] = struct_name
     s.struct_count = s.struct_count + 1
@@ -349,7 +349,7 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
         s = compiler_next(s)
         is_pointer := s.token == "*"
         if is_pointer { s = compiler_next(s) }
-        // Handle array type syntax: if next token is [], consume it as part of type
+        // Handle: array type syntax: if next token is [], consume it as part of type
         is_array := s.token == "["
         if is_array {
             s = compiler_next(s)  // skip '['
@@ -401,7 +401,7 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
         s.struct_field_pointers[index] = 0
         if is_pointer { s.struct_field_pointers[index] = 1 }
         ctype := compiler_c_type_for_kind(s, field_kind, field_struct)
-        // For array types, use pointer representation
+        // For: array types, use pointer representation
         if field_kind == 7 { ctype = "void*" }
         typedef_code = typedef_code + "    " + ctype + field_name + ";\n"
         if field_count > 0 { make_params = make_params + ", "; make_args = make_args + "," }
@@ -447,7 +447,7 @@ func compiler_parse_struct_decl(compiler_state initial) compiler_state {
 }
 
 // alloc consumes a type operand, not an expression or a runtime type-name
-// string. Reuse the existing owner constructors, moves and drop glue.
+// string. Reuse: the existing owner constructors, moves and drop glue.
 func compiler_parse_owned_allocation(compiler_state initial) compiler_state {
     s := compiler_expect(compiler_next(initial), "(")
     if !compiler_ident(s.token) { return compiler_fail(s, "alloc requires a known type") }
@@ -1896,7 +1896,7 @@ func compiler_atom_inner(compiler_state initial) compiler_state {
         if s.kinds[slot] == 15 || s.kinds[slot] == 16 { data = compiler_var(slot); length = compiler_var(slot) + "_len" }
         if s.kinds[slot] == 18 { data = compiler_var(slot); length = compiler_var(slot) + "_len" }
         s.value = data + "[compiler_index(" + length + "," + index + ")]"
-        // For string array indexing (kind=18), element type is string (kind=2)
+        // For: string array indexing (kind=18), element type is string (kind=2)
         if s.kinds[slot] == 18 {
             s.value_kind = 2
         } else {
@@ -2888,7 +2888,7 @@ func compiler_register_generated_function(compiler_state initial, string name, i
 func compiler_parse_extern_decl(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "extern")
-    if !compiler_is_string_literal(s.token) { return compiler_fail(s, "extern declaration requires ABI string") }
+    if !compiler_is_string_literal(s.token) { return compiler_fail(s, "extern declaration requires ABI: string") }
     s = compiler_next(s)
     s = compiler_expect(s, "func")
     name := s.token
@@ -2978,15 +2978,15 @@ func compiler_parse_generic_identity_helper(compiler_state initial, string name)
     if !compiler_ident(type_param) { return compiler_fail(s, "expected generic type parameter") }
     s = compiler_expect(compiler_next(s), "]")
     s = compiler_expect(s, "(")
-    if s.token != type_param { return compiler_fail(s, "generic function P0 requires parameter type T") }
+    if s.token != type_param { return compiler_fail(s, "generic function P0: requires parameter type T") }
     s = compiler_next(s)
     param_name := s.token
     if !compiler_ident(param_name) { return compiler_fail(s, "expected generic parameter name") }
     s = compiler_expect(compiler_next(s), ")")
-    if s.token != type_param { return compiler_fail(s, "generic function P0 requires return type T") }
+    if s.token != type_param { return compiler_fail(s, "generic function P0: requires return type T") }
     s = compiler_expect(compiler_next(s), "{")
     s = compiler_expect(s, "return")
-    if s.token != param_name { return compiler_fail(s, "generic function P0 body must return its parameter") }
+    if s.token != param_name { return compiler_fail(s, "generic function P0: body must return its parameter") }
     s = compiler_next(s)
     s = compiler_optional_semicolon(s)
     s = compiler_expect(s, "}")
@@ -3097,7 +3097,7 @@ func compiler_parse_drop_method(compiler_state initial) compiler_state {
     if !compiler_ident(receiver) { return compiler_fail(s, "expected drop receiver name") }
     s = compiler_next(s)
     s = compiler_expect(s, ")")
-    if s.token != "drop" { return compiler_fail(s, "only drop receiver methods are supported in no-GC compiler subset") }
+    if s.token != "drop" { return compiler_fail(s, "only drop receiver methods are supported in no-GC: compiler subset") }
     if s.struct_custom_drops[struct_id] != 0 { return compiler_fail(s, "duplicate drop method for type: " + type_name) }
     s = compiler_next(s)
     s = compiler_expect(s, "(")
@@ -3110,21 +3110,21 @@ func compiler_parse_drop_method(compiler_state initial) compiler_state {
 func compiler_parse_drop_impl(compiler_state initial) compiler_state {
     s := initial
     s = compiler_expect(s, "impl")
-    if s.token != "Drop" { return compiler_fail(s, "only Drop impl blocks are supported in no-GC compiler subset") }
+    if s.token != "Drop" { return compiler_fail(s, "only Drop: impl blocks are supported in no-GC: compiler subset") }
     s = compiler_next(s)
     s = compiler_expect(s, "for")
-    if !compiler_is_declared_struct_type(s, s.token) { return compiler_fail(s, "Drop impl type must be an owned struct") }
+    if !compiler_is_declared_struct_type(s, s.token) { return compiler_fail(s, "Drop: impl type must be an owned struct") }
     type_name := s.token
     struct_id := compiler_find_struct(s, type_name)
-    if struct_id < 0 { return compiler_fail(s, "Drop impl type is not declared: " + type_name) }
+    if struct_id < 0 { return compiler_fail(s, "Drop: impl type is not declared: " + type_name) }
     if s.struct_custom_drops[struct_id] != 0 { return compiler_fail(s, "duplicate drop method for type: " + type_name) }
     s = compiler_next(s)
     s = compiler_expect(s, "{")
     s = compiler_expect(s, "func")
-    if s.token != "drop" { return compiler_fail(s, "Drop impl must define func drop") }
+    if s.token != "drop" { return compiler_fail(s, "Drop: impl must define func drop") }
     s = compiler_next(s)
     s = compiler_expect(s, "(")
-    if s.token != type_name { return compiler_fail(s, "Drop impl receiver type mismatch") }
+    if s.token != type_name { return compiler_fail(s, "Drop: impl receiver type mismatch") }
     s = compiler_next(s)
     s = compiler_expect(s, "*")
     receiver := s.token

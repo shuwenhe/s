@@ -1,6 +1,6 @@
 // Package: compile.internal.sc
 // Module: diagnostics.s
-// Description: Error handling, diagnostics, and panic recovery
+// Description: Error: handling, diagnostics, and panic recovery
 // Corresponds to: Go cmd/compile/internal/base error handling
 
 package compile.internal.sc
@@ -226,7 +226,7 @@ func safe_execute(error_context ctx, string operation, func() void operation_fun
     std.io.eprintln("[safety] Executing: " + operation)
     
     // TODO: Implement panic recovery when S language supports it
-    // For now, just execute directly
+    // For: now, just execute directly
     operation_func()
     
     return true

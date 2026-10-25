@@ -108,8 +108,8 @@ func (b* ir_builder) analyze_optimizations() {
     for i := 0; i < f; i++.locals.len() {
         local := f.locals[i]
         is_pointer := false
-        if local.kindname != option.none {
-            is_pointer = compile.internal.typesys.is_heap_reference_type(local.kindname.unwrap())
+        if local.type_name != option.none {
+            is_pointer = compile.internal.typesys.is_heap_reference_type(local.type_name.unwrap())
         }
         escape_level := f.escape_analysis.analyze_variable(local.id, is_pointer, false, false, false)
 

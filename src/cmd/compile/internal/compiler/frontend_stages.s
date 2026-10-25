@@ -554,7 +554,7 @@ func compiler_emit_stage7_type_checking_proof(string source) string {
                                             out = out + "S7.8.layout-computed=no\n"
                                             out = out + "S7.8.abi-classified=no\n"
                                             out = out + "S7.8.codegen-performed=no\n"
-                                            out = out + "S7.8.evidence=canonical Stage 7 emits DeclarationRef-keyed type facts that distinguish every semantic type form expressible by the current grammar, without claiming later-stage authority\n"
+                                            out = out + "S7.8.evidence=canonical Stage: 7 emits DeclarationRef-keyed type facts that distinguish every semantic type form expressible by the current grammar, without claiming later-stage authority\n"
                                         } else {
                                             out = out + "S7.8=FAIL\n"
                                             out = out + "S7.8.reason=type facts do not distinguish between distinct semantic type forms expressible by the current grammar\n"

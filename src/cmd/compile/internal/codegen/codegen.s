@@ -127,8 +127,8 @@ func (builder* object_file_builder) write_to_file(string path, int8[] data) stri
         contents = contents + __host_byte_string((data[i] as int) & 255)
         i = i + 1
     }
-    if __host_write_text_file(path, contents) != 0 { return "cannot write ELF output" }
-    if __host_make_executable(path) != 0 { return "cannot mark ELF output executable" }
+    if __host_write_text_file(path, contents) != 0 { return "cannot write ELF: output" }
+    if __host_make_executable(path) != 0 { return "cannot mark ELF: output executable" }
     ""
 }
 

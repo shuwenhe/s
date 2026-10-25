@@ -2586,11 +2586,18 @@ static int host_dispatch_call(
 typedef struct runtime_value {
 	char name[64];
 	runtime_data_value value;
+	size_t next_prefix;
 } runtime_value;
 typedef struct runtime_values {
 	runtime_value *data;
 	size_t len;
 	size_t cap;
+	/* Indices are one-based so zero denotes an empty slot/link. Keep rows
+	 * in insertion order: same-table snapshots may append while iterating. */
+	size_t *name_slots;
+	size_t *prefix_heads;
+	size_t *prefix_tails;
+	size_t index_cap;
 } runtime_values;
 typedef struct runtime_label {
 	char name[64];
@@ -2704,36 +2711,127 @@ static void values_free(runtime_values *vals) {
 		value_clear(&vals->data[i].value);
 	}
 	free(vals->data);
+	free(vals->name_slots);
+	free(vals->prefix_heads);
+	free(vals->prefix_tails);
 	vals->data = NULL;
 	vals->len = 0;
 	vals->cap = 0;
+	vals->name_slots = NULL;
+	vals->prefix_heads = NULL;
+	vals->prefix_tails = NULL;
+	vals->index_cap = 0;
+}
+static size_t values_name_hash(const char *name, size_t len) {
+	uint64_t hash = UINT64_C(14695981039346656037);
+	size_t i;
+	for (i = 0; i < len; i++) {
+		hash ^= (unsigned char)name[i];
+		hash *= UINT64_C(1099511628211);
+	}
+	return (size_t)hash;
+}
+static size_t values_prefix_slot(const runtime_values *vals, const char *name) {
+	size_t root_len = strcspn(name, ".");
+	return values_name_hash(name, root_len) & (vals->index_cap - 1);
+}
+static size_t values_find(const runtime_values *vals, const char *name) {
+	size_t slot;
+	if (vals->index_cap == 0) {
+		return 0;
+	}
+	slot = values_name_hash(name, strlen(name)) & (vals->index_cap - 1);
+	while (vals->name_slots[slot] != 0) {
+		size_t row = vals->name_slots[slot];
+		if (strcmp(vals->data[row - 1].name, name) == 0) {
+			return row;
+		}
+		slot = (slot + 1) & (vals->index_cap - 1);
+	}
+	return 0;
+}
+static void values_index_row(runtime_values *vals, size_t i) {
+	const char *name = vals->data[i].name;
+	size_t slot = values_name_hash(name, strlen(name)) & (vals->index_cap - 1);
+	/* Do not replace duplicate truncated keys: lookup historically returns
+	 * their first row. Rebuilding also inserts rows in their original order. */
+	while (vals->name_slots[slot] != 0) {
+		slot = (slot + 1) & (vals->index_cap - 1);
+	}
+	vals->name_slots[slot] = i + 1;
+	vals->data[i].next_prefix = 0;
+	if (strchr(name, '.') != NULL) {
+		slot = values_prefix_slot(vals, name);
+		if (vals->prefix_tails[slot] != 0) {
+			vals->data[vals->prefix_tails[slot] - 1].next_prefix = i + 1;
+		} else {
+			vals->prefix_heads[slot] = i + 1;
+		}
+		vals->prefix_tails[slot] = i + 1;
+	}
+}
+static int values_reserve_index(runtime_values *vals) {
+	size_t next_cap;
+	size_t *names;
+	size_t *heads;
+	size_t *tails;
+	size_t i;
+	if (vals->len + 1 <= vals->index_cap / 2) {
+		return 1;
+	}
+	next_cap = vals->index_cap == 0 ? 64 : vals->index_cap * 2;
+	names = (size_t *)calloc(next_cap, sizeof(size_t));
+	heads = (size_t *)calloc(next_cap, sizeof(size_t));
+	tails = (size_t *)calloc(next_cap, sizeof(size_t));
+	if (!names || !heads || !tails) {
+		free(names);
+		free(heads);
+		free(tails);
+		return 0;
+	}
+	free(vals->name_slots);
+	free(vals->prefix_heads);
+	free(vals->prefix_tails);
+	vals->name_slots = names;
+	vals->prefix_heads = heads;
+	vals->prefix_tails = tails;
+	vals->index_cap = next_cap;
+	for (i = 0; i < vals->len; i++) {
+		values_index_row(vals, i);
+	}
+	return 1;
 }
 static int values_set(runtime_values *vals, const char *name, const runtime_data_value *value) {
-	size_t i;
-	for (i = 0; i < vals->len; i++) {
-		if (strcmp(vals->data[i].name, name) == 0) {
-			runtime_data_value tmp;
-			if (!value_copy(&tmp, value)) {
-				return 0;
-			}
-			value_clear(&vals->data[i].value);
-			vals->data[i].value = tmp;
-			return 1;
-		}
+	size_t row = values_find(vals, name);
+	runtime_data_value tmp;
+	char stored_name[64];
+	if (!value_copy(&tmp, value)) {
+		return 0;
+	}
+	if (row != 0) {
+		value_clear(&vals->data[row - 1].value);
+		vals->data[row - 1].value = tmp;
+		return 1;
+	}
+	/* Copy before reallocating: name/value may refer to an existing row. */
+	snprintf(stored_name, sizeof(stored_name), "%s", name);
+	if (!values_reserve_index(vals)) {
+		value_clear(&tmp);
+		return 0;
 	}
 	if (vals->len == vals->cap) {
 		size_t next_cap = vals->cap == 0 ? 32 : vals->cap * 2;
 		runtime_value *next = (runtime_value *)realloc(vals->data, next_cap * sizeof(runtime_value));
 		if (!next) {
+			value_clear(&tmp);
 			return 0;
 		}
 		vals->data = next;
 		vals->cap = next_cap;
 	}
-	snprintf(vals->data[vals->len].name, sizeof(vals->data[vals->len].name), "%s", name);
-	if (!value_copy(&vals->data[vals->len].value, value)) {
-		return 0;
-	}
+	strcpy(vals->data[vals->len].name, stored_name);
+	vals->data[vals->len].value = tmp;
+	values_index_row(vals, vals->len);
 	vals->len++;
 	return 1;
 }
@@ -2778,22 +2876,12 @@ static int values_set_runtime_command_result(
 	return 1;
 }
 static int values_get(const runtime_values *vals, const char *name, runtime_data_value *out) {
-	size_t i;
-	for (i = 0; i < vals->len; i++) {
-		if (strcmp(vals->data[i].name, name) == 0) {
-			return value_copy(out, &vals->data[i].value);
-		}
-	}
-	return 0;
+	size_t row = values_find(vals, name);
+	return row != 0 && value_copy(out, &vals->data[row - 1].value);
 }
 static runtime_data_value *values_get_ref(runtime_values *vals, const char *name) {
-	size_t i;
-	for (i = 0; i < vals->len; i++) {
-		if (strcmp(vals->data[i].name, name) == 0) {
-			return &vals->data[i].value;
-		}
-	}
-	return NULL;
+	size_t row = values_find(vals, name);
+	return row != 0 ? &vals->data[row - 1].value : NULL;
 }
 static int name_has_dotted_prefix(const char *name, const char *prefix) {
 	size_t prefix_len;
@@ -2819,16 +2907,20 @@ static int values_copy_prefixed_depth(const runtime_values *src, const char *old
 
 	source_len = src->len;
 	old_len = strlen(old_prefix);
-	for (i = 0; i < source_len; i++) {
-		if (!name_has_dotted_prefix(src->data[i].name, old_prefix)) {
+	/* Root buckets include hash collisions and all nested descendants. Keep
+	 * prefix filtering and insertion order, and exclude rows appended by
+	 * this copy when src == dst. Re-read links after recursive growth. */
+	for (i = src->index_cap ? src->prefix_heads[values_prefix_slot(src, old_prefix)] : 0;
+	     i != 0 && i <= source_len; i = src->data[i - 1].next_prefix) {
+		if (!name_has_dotted_prefix(src->data[i - 1].name, old_prefix)) {
 			continue;
 		}
-		if (snprintf(mapped_name, sizeof(mapped_name), "%s%s", new_prefix, src->data[i].name + old_len) >= (int)sizeof(mapped_name)) {
+		if (snprintf(mapped_name, sizeof(mapped_name), "%s%s", new_prefix, src->data[i - 1].name + old_len) >= (int)sizeof(mapped_name)) {
 			return 0;
 		}
 
 
-		if (!value_copy(&field_value, &src->data[i].value)) {
+		if (!value_copy(&field_value, &src->data[i - 1].value)) {
 			return 0;
 		}
 		if (!values_set(dst, mapped_name, &field_value)) {
@@ -2845,11 +2937,11 @@ static int values_copy_prefixed_depth(const runtime_values *src, const char *old
 			return 0;
 		}
 		value_clear(&field_value);
-		if (src->data[i].value.record_alias && src->data[i].value.kind == RUNTIME_STRING &&
-		    src->data[i].value.str_value &&
-		    src->data[i].value.str_value[0] != '\0' &&
-		    values_have_prefixed(src, src->data[i].value.str_value) &&
-		    !values_copy_prefixed_depth(src, src->data[i].value.str_value, dst, mapped_name, depth + 1)) {
+		if (src->data[i - 1].value.record_alias && src->data[i - 1].value.kind == RUNTIME_STRING &&
+		    src->data[i - 1].value.str_value &&
+		    src->data[i - 1].value.str_value[0] != '\0' &&
+		    values_have_prefixed(src, src->data[i - 1].value.str_value) &&
+		    !values_copy_prefixed_depth(src, src->data[i - 1].value.str_value, dst, mapped_name, depth + 1)) {
 			return 0;
 		}
 	}
@@ -2899,8 +2991,9 @@ static int values_have_prefixed(const runtime_values *vals, const char *prefix) 
 	if (!vals || !prefix || !*prefix) {
 		return 0;
 	}
-	for (i = 0; i < vals->len; i++) {
-		if (name_has_dotted_prefix(vals->data[i].name, prefix)) {
+	for (i = vals->index_cap ? vals->prefix_heads[values_prefix_slot(vals, prefix)] : 0;
+	     i != 0; i = vals->data[i - 1].next_prefix) {
+		if (name_has_dotted_prefix(vals->data[i - 1].name, prefix)) {
 			return 1;
 		}
 	}

@@ -584,7 +584,7 @@ func compiler_stage12_consume_verified_mir(compiler_stage11_mir_verification_res
     if consumed {
         authority = "stage11-verified-canonical-mir"
         reconstruction = "no"
-        evidence = "Stage12 input boundary directly consumes the verified canonical MIR carrier from Stage11 without re-reading source, AST, or invoking MIR reconstruction"
+        evidence = "Stage12: input boundary directly consumes the verified canonical MIR: carrier from Stage11 without re-reading source, AST, or invoking MIR reconstruction"
     }
     return compiler_stage12_mir_input_boundary {
         consumed: consumed,
@@ -689,7 +689,7 @@ func compiler_emit_stage12_ownership_proof(string source) string {
                                 out = out + "S12.8.layout-claim=no\n"
                                 out = out + "S12.8.abi-claim=no\n"
                                 out = out + "S12.8.codegen-claim=no\n"
-                                out = out + "S12.8.evidence=Stage 12 output boundary verified: canonical ownership facts extracted from Stage 11 MIR, no re-typechecking or re-parsing, ready for Stage 13\n"
+                                out = out + "S12.8.evidence=Stage: 12 output boundary verified: canonical ownership facts extracted from Stage: 11 MIR, no re-typechecking or re-parsing, ready for Stage 13\n"
                                 out = out + "first-unmet-contract=NONE\n"
                                 out = out + "stage12-ownership=CLOSED\n"
                             } else {
@@ -780,7 +780,7 @@ func compiler_stage13_resolve_generic_types_from_stage12(string source) compiler
     facts := build_ownership_facts_from_mir(graph_result.graph, points)
     consumed := facts.move_count > 0 || facts.loan_count > 0 || facts.ref_use_count > 0
     if !consumed {
-        return compiler_stage13_generic_resolution_result { consumed: false, input_authority: "stage12-ownership-facts", producer: "", data_structure: "", consumer: "", observable: "no", evidence: "Stage12 ownership facts were empty for Stage13 proof fixture" }
+        return compiler_stage13_generic_resolution_result { consumed: false, input_authority: "stage12-ownership-facts", producer: "", data_structure: "", consumer: "", observable: "no", evidence: "Stage12: ownership facts were empty for Stage13: proof fixture" }
     }
     return compiler_stage13_generic_resolution_result {
         consumed: true,
@@ -802,7 +802,7 @@ func compiler_stage14_observe_optimization_authority(string source) compiler_sta
     facts := build_ownership_facts_from_mir(graph_result.graph, points)
     consumed := facts.move_count > 0 || facts.loan_count > 0 || facts.ref_use_count > 0
     if !consumed {
-        return compiler_stage14_optimization_result { consumed: false, input_authority: "production-full-mir-authority", reconstruction: "yes", producer: "", artifact: "", data_structure: "", output_artifact: "", consumer: "", proof_representation: "stage12_mir_graph-summary", proof_summary_is_production_mir: "no", evidence: "Stage14 proof fixture did not expose Stage14 observable facts" }
+        return compiler_stage14_optimization_result { consumed: false, input_authority: "production-full-mir-authority", reconstruction: "yes", producer: "", artifact: "", data_structure: "", output_artifact: "", consumer: "", proof_representation: "stage12_mir_graph-summary", proof_summary_is_production_mir: "no", evidence: "Stage14: proof fixture did not expose Stage14: observable facts" }
     }
     return compiler_stage14_optimization_result {
         consumed: true,
@@ -945,7 +945,7 @@ func compiler_stage16_observe_abi_authority(string source) compiler_stage16_abi_
         param6_location: "stack+0",
         return_location: "%rax",
         stack_alignment: 16,
-        evidence: "backend_elf64 maps amd64 ABI params/returns through abi_param_location and abi_emit_ret_plan, writes .abi/.abi.emit artifacts, and validates ABI contracts before object emission",
+        evidence: "backend_elf64 maps amd64 ABI: params/returns through abi_param_location and abi_emit_ret_plan, writes .abi/.abi.emit artifacts, and validates ABI: contracts before object emission",
     }
 }
 
@@ -1212,7 +1212,7 @@ func compiler_stage18_observe_regalloc_authority(string source, string goarch) c
             fact_virtual_register "none",
             fact_physical_register_or_spill "none",
             evidence "",
-            error "Stage 17 codegen did not produce canonical output",
+            error "Stage: 17 codegen did not produce canonical output",
         }
     }
     
@@ -1234,7 +1234,7 @@ func compiler_stage18_observe_regalloc_authority(string source, string goarch) c
             fact_virtual_register "none",
             fact_physical_register_or_spill "none",
             evidence "",
-            error "Stage 10 lowering failed: " + graph_result.error,
+            error "Stage: 10 lowering failed: " + graph_result.error,
         }
     }
     
@@ -1259,7 +1259,7 @@ func compiler_stage18_observe_regalloc_authority(string source, string goarch) c
     evidence_text = evidence_text + "Allocated registers: " + int_to_string(allocation.allocated_reg_count) + ". "
     evidence_text = evidence_text + "Spill count: " + int_to_string(allocation.spill_count) + ". "
     evidence_text = evidence_text + "Reuse events: " + int_to_string(allocation.reuse_count) + ". "
-    evidence_text = evidence_text + "Quality scores - spill_cost: " + int_to_string(regalloc_quality.spill_cost_score) + ", split_quality: " + int_to_string(regalloc_quality.split_quality_score) + "."
+    evidence_text = evidence_text + "Quality: scores - spill_cost: " + int_to_string(regalloc_quality.spill_cost_score) + ", split_quality: " + int_to_string(regalloc_quality.split_quality_score) + "."
     
     return compiler_stage18_regalloc_result{
         consumed true,

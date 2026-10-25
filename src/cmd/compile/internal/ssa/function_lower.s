@@ -54,7 +54,7 @@ func function_mir_input_error(mir_program program) string {
     if program.package_name == "" || program.entry_symbol == "" { return "invalid program identity" }
     validated := lower_mir_program(program.package_name, program.entry_symbol, program.functions)
     if validated.error != "" { return validated.error }
-    if len(program.calls) != len(validated.program.calls) { return "MIR call edge count" }
+    if len(program.calls) != len(validated.program.calls) { return "MIR: call edge count" }
     i := 0
     for i < len(program.calls) {
         supplied := program.calls[i]

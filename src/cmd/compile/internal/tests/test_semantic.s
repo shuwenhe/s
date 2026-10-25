@@ -211,38 +211,38 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(non_comparable_eq_diags, "e3039") {
         return 1
     }
-    implicit_trait_ok := "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc ( c Calc) add(int a, int b) int {\n  a + b\n}\nfunc use_adder(Adder a) int {\n  a.add(1, 2)\n}\nfunc main() {\n  use_adder(Calc {})\n}"
+    implicit_trait_ok := "package demo.iface\nstruct Calc: {}\ntrait Adder: {\n  func add(int a, int b) int;\n}\nfunc ( c Calc) add(int a, int b) int {\n  a + b\n}\nfunc use_adder(Adder: a) int {\n  a.add(1, 2)\n}\nfunc main() {\n  use_adder(Calc: {})\n}"
     if compile.internal.semantic.check_text(implicit_trait_ok) != 0 {
         return 1
     }
-    implicit_trait_missing := "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc ( c Calc) sub(int a, int b) int {\n  a - b\n}\nfunc use_adder(Adder a) int {\n  0\n}\nfunc main() {\n  use_adder(Calc {})\n}"
+    implicit_trait_missing := "package demo.iface\nstruct Calc: {}\ntrait Adder: {\n  func add(int a, int b) int;\n}\nfunc ( c Calc) sub(int a, int b) int {\n  a - b\n}\nfunc use_adder(Adder: a) int {\n  0\n}\nfunc main() {\n  use_adder(Calc: {})\n}"
     implicit_trait_missing_diags := compile.internal.semantic.check_detailed(implicit_trait_missing)
     if !has_code(implicit_trait_missing_diags, "e1002") {
         return 1
     }
-    implicit_trait_sig_mismatch := "package demo.iface\nstruct Calc {}\ntrait Adder {\n  func add(int a, int b) int;\n}\nfunc ( c Calc) add(bool a, int b) int {\n  b\n}\nfunc use_adder(Adder a) int {\n  0\n}\nfunc main() {\n  use_adder(Calc {})\n}"
+    implicit_trait_sig_mismatch := "package demo.iface\nstruct Calc: {}\ntrait Adder: {\n  func add(int a, int b) int;\n}\nfunc ( c Calc) add(bool a, int b) int {\n  b\n}\nfunc use_adder(Adder: a) int {\n  0\n}\nfunc main() {\n  use_adder(Calc: {})\n}"
     implicit_trait_sig_diags := compile.internal.semantic.check_detailed(implicit_trait_sig_mismatch)
     if !has_code(implicit_trait_sig_diags, "e1002") {
         return 1
     }
-    method_call_ok := "package demo.method\nstruct Point {\n  int x\n}\ntrait Measure {\n  func size() int;\n}\nfunc ( p Point) size() int {\n  p.x\n}\nfunc main() {\n  p := Point { x: 4 }\n  p.size()\n}"
+    method_call_ok := "package demo.method\nstruct Point: {\n  int x\n}\ntrait Measure: {\n  func size() int;\n}\nfunc ( p Point) size() int {\n  p.x\n}\nfunc main() {\n  p := Point: { x: 4 }\n  p.size()\n}"
     if compile.internal.semantic.check_text(method_call_ok) != 0 {
         return 1
     }
-    method_ref_ok := "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek() int;\n}\nfunc (Reader* reader) peek() int {\n  reader.count\n}\nfunc main() {\n  reader := Reader { count: 2 }\n  reader.peek()\n}"
+    method_ref_ok := "package demo.method\nstruct Reader: {\n  int count\n}\ntrait Peek: {\n  func peek() int;\n}\nfunc (Reader* reader) peek() int {\n  reader.count\n}\nfunc main() {\n  reader := Reader: { count: 2 }\n  reader.peek()\n}"
     if compile.internal.semantic.check_text(method_ref_ok) != 0 {
         return 1
     }
-    method_temp_ref_fail := "package demo.method\nstruct Reader {\n  int count\n}\ntrait Peek {\n  func peek() int;\n}\nfunc (Reader* reader) peek() int {\n  reader.count\n}\nfunc make_reader() Reader {\n  Reader { count: 2 }\n}\nfunc main() {\n  make_reader().peek()\n}"
+    method_temp_ref_fail := "package demo.method\nstruct Reader: {\n  int count\n}\ntrait Peek: {\n  func peek() int;\n}\nfunc (Reader* reader) peek() int {\n  reader.count\n}\nfunc make_reader() Reader: {\n  Reader: { count: 2 }\n}\nfunc main() {\n  make_reader().peek()\n}"
     method_temp_ref_diags := compile.internal.semantic.check_detailed(method_temp_ref_fail)
     if !has_code(method_temp_ref_diags, "e3051") {
         return 1
     }
-    method_mut_ref_ok := "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (Counter* counter) bump() int {\n  counter.count\n}\nfunc main() {\n  counter := Counter { count: 2 }\n  counter.bump()\n}"
+    method_mut_ref_ok := "package demo.method\nstruct Counter: {\n  int count\n}\ntrait Bump: {\n  func bump() int;\n}\nfunc (Counter* counter) bump() int {\n  counter.count\n}\nfunc main() {\n  counter := Counter: { count: 2 }\n  counter.bump()\n}"
     if compile.internal.semantic.check_text(method_mut_ref_ok) != 0 {
         return 1
     }
-    method_temp_mut_ref_fail := "package demo.method\nstruct Counter {\n  int count\n}\ntrait Bump {\n  func bump() int;\n}\nfunc (Counter* counter) bump() int {\n  counter.count\n}\nfunc make_counter() Counter {\n  Counter { count: 2 }\n}\nfunc main() {\n  make_counter().bump()\n}"
+    method_temp_mut_ref_fail := "package demo.method\nstruct Counter: {\n  int count\n}\ntrait Bump: {\n  func bump() int;\n}\nfunc (Counter* counter) bump() int {\n  counter.count\n}\nfunc make_counter() Counter: {\n  Counter: { count: 2 }\n}\nfunc main() {\n  make_counter().bump()\n}"
     method_temp_mut_ref_diags := compile.internal.semantic.check_detailed(method_temp_mut_ref_fail)
     if !has_code(method_temp_mut_ref_diags, "e3051") {
         return 1
@@ -255,7 +255,7 @@ func run_semantic_suite(string fixtures_root) int {
     if compile.internal.semantic.check_text(copy_integer_ok) != 0 {
         return 1
     }
-    move_after_move_fail := "package demo.move\nstruct Box {\n  int n\n}\nfunc take(Box b) int {\n  b.n\n}\nfunc main() {\n  b := Box { n: 1 }\n  take(b)\n  b.n\n}"
+    move_after_move_fail := "package demo.move\nstruct Box: {\n  int n\n}\nfunc take(Box: b) int {\n  b.n\n}\nfunc main() {\n  b := Box: { n: 1 }\n  take(b)\n  b.n\n}"
     move_after_move_diags := compile.internal.semantic.check_detailed(move_after_move_fail)
     if !has_code(move_after_move_diags, "e3059") {
         return 1
@@ -282,31 +282,31 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(return_local_reference_diags, "e3069") {
         return 1
     }
-    disjoint_field_borrows_ok := "package demo.fields\nstruct Pair {\n  int left\n  int right\n}\nfunc use_fields(&int left, &mut int right) int {\n  left\n}\nfunc main() {\n  pair := Pair { left: 1, right: 2 }\n  use_fields(&pair.left, &mut pair.right)\n}"
+    disjoint_field_borrows_ok := "package demo.fields\nstruct Pair: {\n  int left\n  int right\n}\nfunc use_fields(&int left, &mut int right) int {\n  left\n}\nfunc main() {\n  pair := Pair: { left: 1, right: 2 }\n  use_fields(&pair.left, &mut pair.right)\n}"
     if compile.internal.semantic.check_text(disjoint_field_borrows_ok) != 0 {
         return 1
     }
-    same_field_borrow_fail := "package demo.fields\nstruct Pair {\n  int left\n  int right\n}\nfunc use_fields(&int left, &mut int right) int {\n  left\n}\nfunc main() {\n  pair := Pair { left: 1, right: 2 }\n  use_fields(&pair.left, &mut pair.left)\n}"
+    same_field_borrow_fail := "package demo.fields\nstruct Pair: {\n  int left\n  int right\n}\nfunc use_fields(&int left, &mut int right) int {\n  left\n}\nfunc main() {\n  pair := Pair: { left: 1, right: 2 }\n  use_fields(&pair.left, &mut pair.left)\n}"
     same_field_borrow_diags := compile.internal.semantic.check_detailed(same_field_borrow_fail)
     if !has_code(same_field_borrow_diags, "e3057") {
         return 1
     }
-    whole_struct_field_borrow_fail := "package demo.fields\nstruct Pair {\n  int left\n  int right\n}\nfunc use_pair(&Pair whole, &mut int field) int {\n  field\n}\nfunc main() {\n  pair := Pair { left: 1, right: 2 }\n  use_pair(&pair, &mut pair.left)\n}"
+    whole_struct_field_borrow_fail := "package demo.fields\nstruct Pair: {\n  int left\n  int right\n}\nfunc use_pair(&Pair: whole, &mut int field) int {\n  field\n}\nfunc main() {\n  pair := Pair: { left: 1, right: 2 }\n  use_pair(&pair, &mut pair.left)\n}"
     whole_struct_field_borrow_diags := compile.internal.semantic.check_detailed(whole_struct_field_borrow_fail)
     if !has_code(whole_struct_field_borrow_diags, "e3057") {
         return 1
     }
-    field_borrow_then_move_fail := "package demo.fields\nstruct Pair {\n  int left\n  int right\n}\nfunc consume(&int field, Pair value) {\n  field\n}\nfunc main() {\n  pair := Pair { left: 1, right: 2 }\n  consume(&pair.left, pair)\n}"
+    field_borrow_then_move_fail := "package demo.fields\nstruct Pair: {\n  int left\n  int right\n}\nfunc consume(&int field, Pair: value) {\n  field\n}\nfunc main() {\n  pair := Pair: { left: 1, right: 2 }\n  consume(&pair.left, pair)\n}"
     field_borrow_then_move_diags := compile.internal.semantic.check_detailed(field_borrow_then_move_fail)
     if !has_code(field_borrow_then_move_diags, "e3057") {
         return 1
     }
-    branch_move_fail := "package demo.flow\nstruct Box {\n  int n\n}\nfunc take(Box value) int {\n  value.n\n}\nfunc main() {\n  box := Box { n: 1 }\n  if true {\n    take(box)\n  }\n  box.n\n}"
+    branch_move_fail := "package demo.flow\nstruct Box: {\n  int n\n}\nfunc take(Box: value) int {\n  value.n\n}\nfunc main() {\n  box := Box: { n: 1 }\n  if true {\n    take(box)\n  }\n  box.n\n}"
     branch_move_diags := compile.internal.semantic.check_detailed(branch_move_fail)
     if !has_code(branch_move_diags, "e3059") {
         return 1
     }
-    loop_move_fail := "package demo.flow\nstruct Box {\n  int n\n}\nfunc take(Box value) int {\n  value.n\n}\nfunc main() {\n  box := Box { n: 1 }\n  while true {\n    take(box)\n  }\n  box.n\n}"
+    loop_move_fail := "package demo.flow\nstruct Box: {\n  int n\n}\nfunc take(Box: value) int {\n  value.n\n}\nfunc main() {\n  box := Box: { n: 1 }\n  while true {\n    take(box)\n  }\n  box.n\n}"
     loop_move_diags := compile.internal.semantic.check_detailed(loop_move_fail)
     if !has_code(loop_move_diags, "e3059") {
         return 1
@@ -321,16 +321,16 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(unsafe_asm_diags, "e3061") {
         return 1
     }
-    duplicate_receiver_method := "package demo.iface\nstruct Calc {}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc main() {\n  0\n}"
+    duplicate_receiver_method := "package demo.iface\nstruct Calc: {}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc ( c Calc) add(int a) int {\n  a\n}\nfunc main() {\n  0\n}"
     duplicate_receiver_diags := compile.internal.semantic.check_detailed(duplicate_receiver_method)
     if !has_code(duplicate_receiver_diags, "e3042") {
         return 1
     }
-    const_iota_ok := "package demo.consts\nconst A = iota\nconst B = iota\nfunc main() {\n  A + B\n}"
+    const_iota_ok := "package demo.consts\nconst A: = iota\nconst B: = iota\nfunc main() {\n  A + B\n}"
     if compile.internal.semantic.check_text(const_iota_ok) != 0 {
         return 1
     }
-    const_ref_ok := "package demo.consts\nconst Base = 3\nconst Sum = Base + 2\nfunc main() {\n  Sum\n}"
+    const_ref_ok := "package demo.consts\nconst Base: = 3\nconst Sum: = Base + 2\nfunc main() {\n  Sum\n}"
     if compile.internal.semantic.check_text(const_ref_ok) != 0 {
         return 1
     }
@@ -338,12 +338,12 @@ func run_semantic_suite(string fixtures_root) int {
     if compile.internal.semantic.check_text(iota_outside_const_fail) == 0 {
         return 1
     }
-    duplicate_const_fail := "package demo.consts\nconst A = 1\nconst A = 2\nfunc main() {\n  A\n}"
+    duplicate_const_fail := "package demo.consts\nconst A: = 1\nconst A: = 2\nfunc main() {\n  A\n}"
     duplicate_const_diags := compile.internal.semantic.check_detailed(duplicate_const_fail)
     if !has_code(duplicate_const_diags, "e3044") {
         return 1
     }
-    const_group_ok := "package demo.consts\nconst (\n  A = iota\n  B\n  C = A + 1\n)\nfunc main() {\n  C\n}"
+    const_group_ok := "package demo.consts\nconst (\n  A: = iota\n  B\n  C: = A + 1\n)\nfunc main() {\n  C\n}"
     if compile.internal.semantic.check_text(const_group_ok) != 0 {
         return 1
     }
@@ -352,11 +352,11 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(const_group_missing_diags, "e3045") {
         return 1
     }
-    const_iota_increment_value_ok := "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() {\n  C\n}"
+    const_iota_increment_value_ok := "package demo.consts\nconst (\n  A: = iota\n  B\n)\nconst C: = 10 / B\nfunc main() {\n  C\n}"
     if compile.internal.semantic.check_text(const_iota_increment_value_ok) != 0 {
         return 1
     }
-    const_iota_div_zero_fail := "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() {\n  0\n}"
+    const_iota_div_zero_fail := "package demo.consts\nconst (\n  A: = iota\n  B: = 10 / A\n)\nfunc main() {\n  0\n}"
     const_iota_div_zero_diags := compile.internal.semantic.check_detailed(const_iota_div_zero_fail)
     if !has_code(const_iota_div_zero_diags, "e3046") {
         return 1
@@ -379,7 +379,7 @@ func run_semantic_suite(string fixtures_root) int {
     if !has_code(compile_time_mod_zero_diags, "e3065") {
         return 1
     }
-    compile_time_type_fail := "package demo.types\nfunc main() {\n  value: missing.Type = 0\n  value\n}"
+    compile_time_type_fail := "package demo.types\nfunc main() {\n  value: missing.Type: = 0\n  value\n}"
     compile_time_type_diags := compile.internal.semantic.check_detailed(compile_time_type_fail)
     if !has_code(compile_time_type_diags, "e3063") {
         return 1

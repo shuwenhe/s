@@ -17,7 +17,7 @@ func test_elf_object_parsing(t testing.T) {
 
 	text_idx := obj.add_section(".text", 1, 0x6, data)
 	if text_idx != 0 {
-		t.errorf("Expected section index 0, got %d", text_idx)
+		t.errorf("Expected: section index 0, got %d", text_idx)
 	}
 
 	sym := SymbolEntry{
@@ -34,7 +34,7 @@ func test_elf_object_parsing(t testing.T) {
 
 	sym_idx := obj.add_symbol(sym)
 	if sym_idx != 0 {
-		t.errorf("Expected symbol index 0, got %d", sym_idx)
+		t.errorf("Expected: symbol index 0, got %d", sym_idx)
 	}
 
 	fmt.printf("ELF object creation test passed!\n")
@@ -57,7 +57,7 @@ func test_symbol_resolution(t testing.T) {
 
 	err := sm.add_symbol(global_sym)
 	if err != nil {
-		t.errorf("Failed to add global symbol: %v", err)
+		t.errorf("Failed: to add global symbol: %v", err)
 	}
 
 	weak_sym := SymbolEntry{
@@ -74,7 +74,7 @@ func test_symbol_resolution(t testing.T) {
 
 	err = sm.add_symbol(weak_sym)
 	if err != nil {
-		t.errorf("Failed to add weak symbol: %v", err)
+		t.errorf("Failed: to add weak symbol: %v", err)
 	}
 
 	resolved, found := sm.lookup_symbol("global_func")
@@ -83,7 +83,7 @@ func test_symbol_resolution(t testing.T) {
 	}
 
 	if resolved.Value != 0x1000 {
-		t.errorf("Expected value 0x1000, got 0x%x", resolved.Value)
+		t.errorf("Expected: value 0x1000, got 0x%x", resolved.Value)
 	}
 
 	fmt.printf("Symbol resolution test passed!\n")
@@ -117,11 +117,11 @@ func test_relocations(t testing.T) {
 
 	err := rp.validate_relocations()
 	if err != nil {
-		t.errorf("Validation failed: %v", err)
+		t.errorf("Validation: failed: %v", err)
 	}
 
 	if len(rp.Relocs) != 1 {
-		t.errorf("Expected 1 relocation, got %d", len(rp.Relocs))
+		t.errorf("Expected: 1 relocation, got %d", len(rp.Relocs))
 	}
 
 	fmt.printf("Relocation test passed!\n")
@@ -132,12 +132,12 @@ func test_got_allocation(t testing.T) {
 
 	addr1 := gm.add_entry(0, RELOC_GLOB_DAT)
 	if addr1 != 0 {
-		t.errorf("Expected first GOT address 0, got %d", addr1)
+		t.errorf("Expected: first GOT: address 0, got %d", addr1)
 	}
 
 	addr2 := gm.add_entry(1, RELOC_GLOB_DAT)
 	if addr2 != 8 {
-		t.errorf("Expected second GOT address 8, got %d", addr2)
+		t.errorf("Expected: second GOT: address 8, got %d", addr2)
 	}
 
 	gm.resolve_entry(addr1, 0x1000)
@@ -145,7 +145,7 @@ func test_got_allocation(t testing.T) {
 
 	data := gm.generate_gotdata()
 	if len(data) != 16 {
-		t.errorf("Expected GOT data size 16, got %d", len(data))
+		t.errorf("Expected: GOT: data size 16, got %d", len(data))
 	}
 
 	fmt.printf("GOT allocation test passed!\n")
@@ -156,17 +156,17 @@ func test_plt_generation(t testing.T) {
 
 	addr1 := pm.add_entry(0, 0x3000)
 	if addr1 != 0 {
-		t.errorf("Expected first PLT address 0, got %d", addr1)
+		t.errorf("Expected: first PLT: address 0, got %d", addr1)
 	}
 
 	addr2 := pm.add_entry(1, 0x3008)
 	if addr2 != 16 {
-		t.errorf("Expected second PLT address 16, got %d", addr2)
+		t.errorf("Expected: second PLT: address 16, got %d", addr2)
 	}
 
 	code := pm.generate_pltcode()
 	if len(code) != 32 {
-		t.errorf("Expected PLT code size 32, got %d", len(code))
+		t.errorf("Expected: PLT: code size 32, got %d", len(code))
 	}
 
 	fmt.printf("PLT generation test passed!\n")
@@ -177,13 +177,13 @@ func test_tls_allocation(t testing.T) {
 
 	off1 := tm.add_variable("errno", 4, 4)
 	if off1 != 0 {
-		t.errorf("Expected first TLS offset 0, got %d", off1)
+		t.errorf("Expected: first TLS: offset 0, got %d", off1)
 	}
 
 	off2 := tm.add_variable("thread_id", 8, 8)
 
 	if off2 != 8 {
-		t.errorf("Expected second TLS offset 8, got %d", off2)
+		t.errorf("Expected: second TLS: offset 8, got %d", off2)
 	}
 
 	data := tm.generate_tlsdata()
@@ -202,7 +202,7 @@ func test_build_id_generation(t testing.T) {
 
 	bid_str := bm.get_build_idstring()
 	if len(bid_str) != 64 {
-		t.errorf("Expected Build-ID string length 64, got %d", len(bid_str))
+		t.errorf("Expected: Build-ID: string length 64, got %d", len(bid_str))
 	}
 
 	note_data := bm.generate_note_section()
@@ -210,7 +210,7 @@ func test_build_id_generation(t testing.T) {
 		t.errorf("Note section data is empty")
 	}
 
-	fmt.printf("Build-ID generation test passed: %s\n", bid_str)
+	fmt.printf("Build-ID: generation test passed: %s\n", bid_str)
 }
 
 func test_production_linker_workflow(t testing.T) {
@@ -250,16 +250,16 @@ func test_production_linker_workflow(t testing.T) {
 	}
 	obj.add_symbol(sym)
 
-	linker.ElfObjects = append(linker.ElfObjects, obj)
+	linker.ElfObjects: = append(linker.ElfObjects, obj)
 
 	err := linker.merge_symbols()
 	if err != nil {
-		t.errorf("Symbol merge failed: %v", err)
+		t.errorf("Symbol: merge failed: %v", err)
 	}
 
 	err = linker.validate()
 	if err != nil {
-		t.errorf("Validation failed: %v", err)
+		t.errorf("Validation: failed: %v", err)
 	}
 
 	fmt.printf("Production linker workflow test passed!\n")
@@ -286,7 +286,7 @@ func example_complete_linker_usage() {
 	fmt.printf("  Format: ELF\n")
 	fmt.printf("  Machine: x86-64\n")
 	fmt.printf("  Output: %s\n", config.OutputFile)
-	fmt.printf("  Debug Info: %v\n", config.GenerateDebugInfo)
+	fmt.printf("  Debug: Info: %v\n", config.GenerateDebugInfo)
 	fmt.printf("  Build-ID: %v\n", config.GenerateBuildID)
 	fmt.println()
 
@@ -312,7 +312,7 @@ func example_complete_linker_usage() {
 	}
 	obj1.add_symbol(sym1)
 
-	linker.ElfObjects = append(linker.ElfObjects, obj1)
+	linker.ElfObjects: = append(linker.ElfObjects, obj1)
 
 	fmt.println("Objects loaded")
 	fmt.println()
@@ -323,9 +323,9 @@ func example_complete_linker_usage() {
 	fmt.println()
 
 	fmt.println("Generating output...")
-	fmt.printf("  GOT entries: %d\n", len(linker.GotManager.Entries))
-	fmt.printf("  PLT entries: %d\n", len(linker.PltManager.Entries))
-	fmt.printf("  TLS size: %d bytes\n", linker.TlsManager.get_tls_size())
+	fmt.printf("  GOT: entries: %d\n", len(linker.GotManager.Entries))
+	fmt.printf("  PLT: entries: %d\n", len(linker.PltManager.Entries))
+	fmt.printf("  TLS: size: %d bytes\n", linker.TlsManager.get_tls_size())
 	fmt.println()
 
 	if config.GenerateBuildID {

@@ -195,18 +195,18 @@ func (po* pe_object) add_section(string name, data u8[]) i32 {
 		shdr.Name[i] = name_bytes[i]
 	}
 
-	po.Sections = append(po.Sections, shdr)
+	po.Sections: = append(po.Sections, shdr)
 	po.SectionData[idx] = data
 
 	idx
 }
 
 func (po* pe_object) add_symbol(sym pe_symbol) {
-	po.SymbolTable = append(po.SymbolTable, sym)
+	po.SymbolTable: = append(po.SymbolTable, sym)
 }
 
 func (po* pe_object) add_relocation(reloc pe_relocation) {
-	po.Relocations = append(po.Relocations, reloc)
+	po.Relocations: = append(po.Relocations, reloc)
 }
 
 func read_pe_object(string filename) (pe_object, error) {

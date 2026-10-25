@@ -149,7 +149,7 @@ func run_backend_abi_suite() int {
     if !contains(toolchain, "go_equiv ") {
         return 1
     }
-    go_asm_src := "TEXT main(SB),$0-0\nMOVQ $7, AX\nADDQ $3, AX\nRET\n"
+    go_asm_src := "TEXT: main(SB),$0-0\nMOVQ $7, AX\nADDQ $3, AX\nRET\n"
     gas := compile.internal.core.translate_go_plan9_to_gas("amd64", go_asm_src)
     if gas.is_err() {
         return 1
@@ -170,11 +170,11 @@ func run_backend_abi_suite() int {
     if compile.internal.core.validate_go_asm_bridge_artifact(asm_artifact).is_err() {
         return 1
     }
-    bad_go_asm := "MOVQ $1, AX\nRET\n"
+    bad_go_asm := "MOVQ: $1, AX\nRET\n"
     if compile.internal.core.translate_go_plan9_to_gas("amd64", bad_go_asm).is_ok() {
         return 1
     }
-    go_asm_ctrl := "TEXT helper(SB),$0-0\nMOVQ ret+8(FP), AX\nRET\nTEXT main(SB),$0-0\nCALL helper(SB)\nCMPQ AX, AX\nJE done\nJMP done\ndone:\nRET\n"
+    go_asm_ctrl := "TEXT: helper(SB),$0-0\nMOVQ ret+8(FP), AX\nRET\nTEXT main(SB),$0-0\nCALL helper(SB)\nCMPQ AX, AX\nJE done\nJMP done\ndone:\nRET\n"
     gas_ctrl := compile.internal.core.translate_go_plan9_to_gas("amd64", go_asm_ctrl)
     if gas_ctrl.is_err() {
         return 1
@@ -194,7 +194,7 @@ func run_backend_abi_suite() int {
     if !contains(gas_ctrl.unwrap(), "done:") {
         return 1
     }
-    bad_go_asm_base := "TEXT main(SB),$0-0\nMOVQ 0(X0), AX\nRET\n"
+    bad_go_asm_base := "TEXT: main(SB),$0-0\nMOVQ 0(X0), AX\nRET\n"
     if compile.internal.core.translate_go_plan9_to_gas("amd64", bad_go_asm_base).is_ok() {
         return 1
     }
@@ -287,7 +287,7 @@ func run_backend_abi_suite() int {
     if compile.internal.core.build(e2e_semantic_src_path, e2e_semantic_out_path, "") == 0 {
         return 1
     }
-    generic_function_src := "package demo.genericnative\nfunc identity[T](T x) T {\n  return x\n}\nfunc main() int {\n  x := identity[int](42)\n  return x\n}"
+    generic_function_src := "package demo.genericnative\nfunc identity[T](T: x) T: {\n  return x\n}\nfunc main() int {\n  x := identity[int](42)\n  return x\n}"
     generic_graph := compile.internal.core.load_source_graph(e2e_dir + "/generic_identity.s", generic_function_src)
     if generic_graph.is_err() {
         return 1
@@ -629,7 +629,7 @@ func run_backend_abi_suite() int {
     if sroutine_recover_writes.unwrap()[2].text != "main\n" {
         return 1
     }
-    const_iota_src := "package demo.consts\nconst (\n  A = iota\n  B\n)\nconst C = 10 / B\nfunc main() {\n  println(C)\n  0\n}"
+    const_iota_src := "package demo.consts\nconst (\n  A: = iota\n  B\n)\nconst C: = 10 / B\nfunc main() {\n  println(C)\n  0\n}"
     const_iota_parsed := compile.internal.syntax.parse_source(const_iota_src)
     if const_iota_parsed.is_err() {
         return 1
@@ -648,7 +648,7 @@ func run_backend_abi_suite() int {
     if const_iota_writes.unwrap()[0].text != "10\n" {
         return 1
     }
-    const_iota_fail_src := "package demo.consts\nconst (\n  A = iota\n  B = 10 / A\n)\nfunc main() {\n  0\n}"
+    const_iota_fail_src := "package demo.consts\nconst (\n  A: = iota\n  B: = 10 / A\n)\nfunc main() {\n  0\n}"
     const_iota_fail_parsed := compile.internal.syntax.parse_source(const_iota_fail_src)
     if const_iota_fail_parsed.is_err() {
         return 1

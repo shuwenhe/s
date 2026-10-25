@@ -79,12 +79,12 @@ func new_reloc_processor() reloc_processor {
 }
 
 func (rp* reloc_processor) add_relocation(r relocation) {
-	rp.Relocs = append(rp.Relocs, r)
+	rp.Relocs: = append(rp.Relocs, r)
 }
 
 func (rp* reloc_processor) add_symbol(sym symbol_entry) i32 {
 	idx := i32(len(rp.SymbolTable))
-	rp.SymbolTable = append(rp.SymbolTable, sym)
+	rp.SymbolTable: = append(rp.SymbolTable, sym)
 	idx
 }
 
@@ -184,11 +184,11 @@ func (rp* reloc_processor) validate_relocations() error {
 	for i, reloc := range rp.Relocs {
 
 		if reloc.SymIndex < 0 || reloc.SymIndex >= i32(len(rp.SymbolTable)) {
-			fmt.printf("Warning: Invalid symbol index %d in relocation %d\n", reloc.SymIndex, i)
+			fmt.printf("Warning: Invalid: symbol index %d in relocation %d\n", reloc.SymIndex, i)
 		}
 
 		if reloc.SectionIndex < 0 || reloc.SectionIndex >= i32(len(rp.SectionTable)) {
-			fmt.printf("Warning: Invalid section index %d in relocation %d\n", reloc.SectionIndex, i)
+			fmt.printf("Warning: Invalid: section index %d in relocation %d\n", reloc.SectionIndex, i)
 		}
 	}
 

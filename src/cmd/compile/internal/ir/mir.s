@@ -196,8 +196,8 @@ func (f* ir_function) analyze_escapes() {
     for i := 0; i < n; i++ {
         local := f.locals[i]
         is_pointer := false
-        if local.kindname != option.none {
-            is_pointer = compile.internal.typesys.is_heap_reference_type(local.kindname.unwrap())
+        if local.type_name != option.none {
+            is_pointer = compile.internal.typesys.is_heap_reference_type(local.type_name.unwrap())
         }
 
         _ = f.escape_analysis.analyze_variable(local.id, is_pointer, false, false, false)
@@ -250,8 +250,8 @@ func (f* ir_function) analyze_write_barriers() {
                 mir_statement.assign(a): {
                     if a.op == "store" && a.args.len() > 0 {
                         target_type := "value"
-                        if a.target >= 0 && a.target < len(f.locals) && f.locals[a.target].kindname != option.none {
-                            if compile.internal.typesys.is_explicit_owned_type(f.locals[a.target].kindname.unwrap()) {
+                        if a.target >= 0 && a.target < len(f.locals) && f.locals[a.target].type_name != option.none {
+                            if compile.internal.typesys.is_explicit_owned_type(f.locals[a.target].type_name.unwrap()) {
                                 target_type = "pointer"
                             }
                         }

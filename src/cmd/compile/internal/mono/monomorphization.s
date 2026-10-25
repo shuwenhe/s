@@ -166,7 +166,7 @@ func mono_cache_lookup_item(mono_cache cache, string item_kind, string receiver_
     i := 0
     for i < len(cache.instances) {
         instance := cache.instances[i]
-        if instance.item_kind == item_kind && instance.receiver_type == receiver_type && instance.generic_name == generic_name && same_type_args(instance.kindargs, type_args) {
+        if instance.item_kind == item_kind && instance.receiver_type == receiver_type && instance.generic_name == generic_name && same_type_args(instance.type_args, type_args) {
             return instance.instance_name
         }
         i = i + 1
@@ -175,7 +175,7 @@ func mono_cache_lookup_item(mono_cache cache, string item_kind, string receiver_
 }
 
 func mono_cache_lookup_key(mono_cache cache, generic_instance_key key) string {
-    mono_cache_lookup(cache, key.function_name, key.kindargs)
+    mono_cache_lookup(cache, key.function_name, key.type_args)
 }
 
 func mono_cache_get_or_create(mono_cache cache, string generic_name, string[] type_args) mono_cache_result {
@@ -197,7 +197,7 @@ func mono_cache_get_or_create_item(mono_cache cache, string item_kind, string re
 }
 
 func mono_cache_get_or_create_key(mono_cache cache, generic_instance_key key) mono_cache_result {
-    mono_cache_get_or_create(cache, key.function_name, key.kindargs)
+    mono_cache_get_or_create(cache, key.function_name, key.type_args)
 }
 
 func mono_cache_count(mono_cache cache) int {
@@ -310,17 +310,17 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
         work := ctx.worklist[cursor]
         cursor = cursor + 1
 
-        if is_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.kindargs) {
+        if is_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.type_args) {
             continue
         }
-        ctx = mark_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.kindargs)
+        ctx = mark_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.type_args)
 
         if work.item_kind == "method" {
             method_source := find_generic_method(file.items, work.receiver_type, work.generic_name)
             if method_source.method.sig.name == "" {
                 continue
             }
-            method_instance := specialize_method(method_source, work.kindargs)
+            method_instance := specialize_method(method_source, work.type_args)
             ctx.generated = append(ctx.generated, method_instance.method)
             ctx = collect_item_instances_ctx(item.method(method_instance), file.items, ctx)
             extra_items = append(extra_items, item.method(finalize_monomorphized_method(method_instance)))
@@ -330,7 +330,7 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
                 continue
             }
 
-            instance := specialize_function(source, work.kindargs)
+            instance := specialize_function(source, work.type_args)
             ctx.generated = append(ctx.generated, instance)
 
             ctx = collect_item_instances_ctx(item.function(instance), file.items, ctx)
@@ -486,8 +486,8 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) 
     }
 }
 
-func collect_call_instance_ctx(call_expr call, item[] all_items, mono_context ctx) mono_context {
-    if len(call.kindargs) == 0 {
+func collect_call_instance_ctx(compile.internal.ast.call_expr call, item[] all_items, mono_context ctx) mono_context {
+    if len(call.type_args) == 0 {
         return ctx
     }
 
@@ -508,20 +508,20 @@ func collect_call_instance_ctx(call_expr call, item[] all_items, mono_context ct
         return ctx
     }
 
-    existing := mono_cache_lookup_item(ctx.cache, "function", "", generic_name, call.kindargs)
-    result := mono_cache_get_or_create_item(ctx.cache, "function", "", generic_name, call.kindargs)
+    existing := mono_cache_lookup_item(ctx.cache, "function", "", generic_name, call.type_args)
+    result := mono_cache_get_or_create_item(ctx.cache, "function", "", generic_name, call.type_args)
     ctx.cache = result.cache
 
     if existing == "" {
         decl_ref := find_declaration_ref_for_item(ctx, "function", generic_name)
-        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.kindargs, declaration_ref: decl_ref })
+        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.type_args, declaration_ref: decl_ref })
     }
 
     ctx
 }
 
-func collect_method_call_instance_ctx(call_expr call, item[] all_items, mono_context ctx) mono_context {
-    if len(call.kindargs) == 0 {
+func collect_method_call_instance_ctx(compile.internal.ast.call_expr call, item[] all_items, mono_context ctx) mono_context {
+    if len(call.type_args) == 0 {
         return ctx
     }
 
@@ -558,13 +558,13 @@ func collect_method_call_instance_ctx(call_expr call, item[] all_items, mono_con
         return ctx
     }
 
-    existing := mono_cache_lookup_item(ctx.cache, "method", source.receiver_type, method_name, call.kindargs)
-    result := mono_cache_get_or_create_item(ctx.cache, "method", source.receiver_type, method_name, call.kindargs)
+    existing := mono_cache_lookup_item(ctx.cache, "method", source.receiver_type, method_name, call.type_args)
+    result := mono_cache_get_or_create_item(ctx.cache, "method", source.receiver_type, method_name, call.type_args)
     ctx.cache = result.cache
 
     if existing == "" {
         decl_ref := find_declaration_ref_for_item(ctx, "method", method_name)
-        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "method", receiver_type: source.receiver_type, generic_name: method_name, type_args: call.kindargs, declaration_ref: decl_ref })
+        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "method", receiver_type: source.receiver_type, generic_name: method_name, type_args: call.type_args, declaration_ref: decl_ref })
     }
 
     ctx
@@ -708,9 +708,9 @@ func collect_expr_instances(expr value, item[] all_items, mono_cache cache, mono
     }
 }
 
-func collect_call_instance(call_expr call, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
+func collect_call_instance(compile.internal.ast.call_expr call, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
 	out := cache
-    if len(call.kindargs) == 0 {
+    if len(call.type_args) == 0 {
         return cache
     }
     resolved := ""
@@ -727,8 +727,8 @@ func collect_call_instance(call_expr call, item[] all_items, mono_cache cache, m
     if source.sig.name == "" {
         return cache
     }
-    existing := mono_cache_lookup(out, generic_name, call.kindargs)
-    result := mono_cache_get_or_create(out, generic_name, call.kindargs)
+    existing := mono_cache_lookup(out, generic_name, call.type_args)
+    result := mono_cache_get_or_create(out, generic_name, call.type_args)
     out = result.cache
     /* Work items are appended by the context-aware collector. */
     out
@@ -840,24 +840,24 @@ func finalize_block(block_expr block) block_expr {
         option.some(value) : final_expr = option.some(finalize_expr(value)),
         option.none : (),
     }
-    block_expr { statements: stmts, final_expr final_expr, inferred_type block.inferred_type }
+    block_expr { statements: stmts, final_expr: final_expr, inferred_type: block.inferred_type }
 }
 
 func finalize_stmt(stmt value) stmt {
     switch value {
-        stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name v.type_name, value finalize_expr(v.value) }),
-        stmt.assign(v) : stmt.assign(assign_stmt { name: v.name, value finalize_expr(v.value) }),
+        stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name: v.type_name, value: finalize_expr(v.value) }),
+        stmt.assign(v) : stmt.assign(compile.internal.ast.assign_stmt { name: v.name, value: finalize_expr(v.value) }),
         stmt.increment(v) : stmt.increment(v),
-        stmt.c_for(v) : stmt.c_for(c_for_stmt { init: std.prelude.box(finalize_stmt(v.init.value)), condition finalize_expr(v.condition), step std.prelude.box(finalize_stmt(v.step.value)), body finalize_block(v.body) }),
+        stmt.c_for(v) : stmt.c_for(c_for_stmt { init: std.prelude.box(finalize_stmt(v.init.value)), condition: finalize_expr(v.condition), step: std.prelude.box(finalize_stmt(v.step.value)), body: finalize_block(v.body) }),
         stmt.return(v) : {
             ret := option.none
             switch v.value {
                 option.some(e) : ret = option.some(finalize_expr(e)),
                 option.none : (),
             }
-            stmt.return(return_stmt { value: ret })
+            stmt.return(compile.internal.ast.return_stmt { value: ret })
         }
-        stmt.expr(v) : stmt.expr(expr_stmt { expr: finalize_expr(v.expr) }),
+        stmt.expr(v) : stmt.expr(compile.internal.ast.expr_stmt { expr: finalize_expr(v.expr) }),
         stmt.defer(v) : stmt.defer(defer_stmt { expr: finalize_expr(v.expr) }),
         stmt.sroutine(v) : stmt.sroutine(sroutine_stmt { expr: finalize_expr(v.expr) }),
     }
@@ -869,10 +869,10 @@ func finalize_expr(expr value) expr {
         expr.string(v) : expr.string(v),
         expr.bool(v) : expr.bool(v),
         expr.name(v) : expr.name(v),
-        expr.borrow(v) : expr.borrow(borrow_expr { target: std.prelude.box(finalize_expr(v.target.value)), mutable v.mutable, inferred_type v.inferred_type }),
-        expr.binary(v) : expr.binary(binary_expr { left: std.prelude.box(finalize_expr(v.left.value)), op v.op, right std.prelude.box(finalize_expr(v.right.value)), inferred_type v.inferred_type }),
-        expr.member(v) : expr.member(member_expr { target: std.prelude.box(finalize_expr(v.target.value)), member v.member, inferred_type v.inferred_type }),
-        expr.index(v) : expr.index(index_expr { target: std.prelude.box(finalize_expr(v.target.value)), index std.prelude.box(finalize_expr(v.index.value)), inferred_type v.inferred_type }),
+        expr.borrow(v) : expr.borrow(compile.internal.ast.borrow_expr { target: std.prelude.box(finalize_expr(v.target.value)), mutable v.mutable, inferred_type v.inferred_type }),
+        expr.binary(v) : expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(finalize_expr(v.left.value)), op v.op, right std.prelude.box(finalize_expr(v.right.value)), inferred_type v.inferred_type }),
+        expr.member(v) : expr.member(compile.internal.ast.member_expr { target: std.prelude.box(finalize_expr(v.target.value)), member v.member, inferred_type v.inferred_type }),
+        expr.index(v) : expr.index(compile.internal.ast.index_expr { target: std.prelude.box(finalize_expr(v.target.value)), index std.prelude.box(finalize_expr(v.index.value)), inferred_type v.inferred_type }),
         expr.call(v) : {
             args := expr[]()
             i := 0
@@ -880,7 +880,7 @@ func finalize_expr(expr value) expr {
                 args = append(args, finalize_expr(v.args[i]))
                 i = i + 1
             }
-            expr.call(call_expr { callee: std.prelude.box(finalize_expr(v.callee.value)), args args, inferred_type v.inferred_type, resolved_callee v.resolved_callee, type_args string[]() })
+            expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(finalize_expr(v.callee.value)), args args, inferred_type v.inferred_type, resolved_callee v.resolved_callee, type_args string[]() })
         }
         expr.if(v) : {
             else_branch := option.none
@@ -944,14 +944,14 @@ func finalize_for_expr(for_expr v) expr {
         option.some(e) : iterable = option.some(std.prelude.box(finalize_expr(e.value))),
         option.none : (),
     }
-    expr.for(for_expr { init: init, condition condition, post post, names v.names, iterable iterable, body finalize_block(v.body), inferred_type v.inferred_type })
+    expr.for(for_expr { init: init, condition: condition, post: post, names: v.names, iterable: iterable, body: finalize_block(v.body), inferred_type: v.inferred_type })
 }
 
 func verify_function_no_generics(function_decl function_value) int {
     errors := 0
     i := 0
     for i < len(function_value.sig.params) {
-        if looks_like_generic_residue(function_value.sig.params[i].kindname) {
+        if looks_like_generic_residue(function_value.sig.params[i].type_name) {
             errors = errors + 1
         }
         i = i + 1
@@ -1057,9 +1057,9 @@ func verify_expr_no_generics(expr value) int {
     }
 }
 
-func verify_call_no_generics(call_expr v) int {
+func verify_call_no_generics(compile.internal.ast.call_expr v) int {
     errors := verify_optional_type_no_generics(v.inferred_type)
-    if len(v.kindargs) > 0 {
+    if len(v.type_args) > 0 {
         errors = errors + 1
     }
     errors = errors + verify_expr_no_generics(v.callee.value)
@@ -1210,13 +1210,13 @@ func specialize_function(function_decl source, string[] type_args) function_decl
 }
 
 func specialize_function_with_names(function_decl source, string[] type_args, string[] generic_names) function_decl {
-    params := param[] {}
+    params := compile.internal.ast.param[] {}
     i := 0
     for i < len(source.sig.params) {
         original := source.sig.params[i]
-        params = append(params, param {
+        params = append(params, compile.internal.ast.param {
             name: original.name,
-            type_name: substitute_type(original.kindname, generic_names, type_args),
+            type_name: substitute_type(original.type_name, generic_names, type_args),
         })
         i = i + 1
     }
@@ -1259,14 +1259,14 @@ func substitute_block(block_expr block, string[] generic_names, string[] type_ar
         option.some(value) : final_expr = option.some(substitute_expr(value, generic_names, type_args)),
         option.none : (),
     }
-    block_expr { statements: stmts, final_expr final_expr, inferred_type substitute_optional_type(block.inferred_type, generic_names, type_args) }
+    block_expr { statements: stmts, final_expr: final_expr, inferred_type: substitute_optional_type(block.inferred_type, generic_names, type_args) }
 }
 
 func substitute_stmt(stmt value, string[] generic_names, string[] type_args) stmt {
     switch value {
         stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name substitute_optional_type(v.type_name, generic_names, type_args), value substitute_expr(v.value, generic_names, type_args) }),
-        stmt.assign(v) : stmt.assign(assign_stmt { name: v.name, value substitute_expr(v.value, generic_names, type_args) }),
-        stmt.increment(v) : stmt.increment(increment_stmt { name: v.name }),
+        stmt.assign(v) : stmt.assign(compile.internal.ast.assign_stmt { name: v.name, value substitute_expr(v.value, generic_names, type_args) }),
+        stmt.increment(v) : stmt.increment(compile.internal.ast.increment_stmt { name: v.name }),
         stmt.c_for(v) : stmt.c_for(c_for_stmt { init: std.prelude.box(substitute_stmt(v.init.value, generic_names, type_args)), condition substitute_expr(v.condition, generic_names, type_args), step std.prelude.box(substitute_stmt(v.step.value, generic_names, type_args)), body substitute_block(v.body, generic_names, type_args) }),
         stmt.return(v) : {
             ret := option.none
@@ -1274,9 +1274,9 @@ func substitute_stmt(stmt value, string[] generic_names, string[] type_args) stm
                 option.some(e) : ret = option.some(substitute_expr(e, generic_names, type_args)),
                 option.none : (),
             }
-            stmt.return(return_stmt { value: ret })
+            stmt.return(compile.internal.ast.return_stmt { value: ret })
         }
-        stmt.expr(v) : stmt.expr(expr_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
+        stmt.expr(v) : stmt.expr(compile.internal.ast.expr_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
         stmt.defer(v) : stmt.defer(defer_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
         stmt.sroutine(v) : stmt.sroutine(sroutine_stmt { expr: substitute_expr(v.expr, generic_names, type_args) }),
     }
@@ -1288,10 +1288,10 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
         expr.string(v) : expr.string(v),
         expr.bool(v) : expr.bool(v),
         expr.name(v) : expr.name(v),
-        expr.borrow(v) : expr.borrow(borrow_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), mutable v.mutable, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
-        expr.binary(v) : expr.binary(binary_expr { left: std.prelude.box(substitute_expr(v.left.value, generic_names, type_args)), op v.op, right std.prelude.box(substitute_expr(v.right.value, generic_names, type_args)), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
-        expr.member(v) : expr.member(member_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), member v.member, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
-        expr.index(v) : expr.index(index_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), index std.prelude.box(substitute_expr(v.index.value, generic_names, type_args)), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
+        expr.borrow(v) : expr.borrow(compile.internal.ast.borrow_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), mutable v.mutable, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
+        expr.binary(v) : expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(substitute_expr(v.left.value, generic_names, type_args)), op v.op, right std.prelude.box(substitute_expr(v.right.value, generic_names, type_args)), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
+        expr.member(v) : expr.member(compile.internal.ast.member_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), member v.member, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
+        expr.index(v) : expr.index(compile.internal.ast.index_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), index std.prelude.box(substitute_expr(v.index.value, generic_names, type_args)), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
         expr.call(v) : {
             args := expr[]()
             i := 0
@@ -1301,8 +1301,8 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
             }
             call_type_args := string[]()
             i = 0
-            for i < len(v.kindargs) {
-                call_type_args = append(call_type_args, substitute_type(v.kindargs[i], generic_names, type_args))
+            for i < len(v.type_args) {
+                call_type_args = append(call_type_args, substitute_type(v.type_args[i], generic_names, type_args))
                 i = i + 1
             }
             resolved := v.resolved_callee
@@ -1319,7 +1319,7 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
                 }
                 _ : (),
             }
-            expr.call(call_expr { callee: std.prelude.box(substitute_expr(v.callee.value, generic_names, type_args)), args args, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args), resolved_callee resolved, type_args call_type_args })
+            expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(substitute_expr(v.callee.value, generic_names, type_args)), args args, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args), resolved_callee resolved, type_args call_type_args })
         }
         expr.if(v) : {
             else_branch := option.none
@@ -1359,7 +1359,7 @@ func substitute_for_expr(for_expr v, string[] generic_names, string[] type_args)
         option.some(e) : iterable = option.some(std.prelude.box(substitute_expr(e.value, generic_names, type_args))),
         option.none : (),
     }
-    expr.for(for_expr { init: init, condition condition, post post, names v.names, iterable iterable, body substitute_block(v.body, generic_names, type_args), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) })
+    expr.for(for_expr { init: init, condition: condition, post: post, names: v.names, iterable: iterable, body: substitute_block(v.body, generic_names, type_args), inferred_type: substitute_optional_type(v.inferred_type, generic_names, type_args) })
 }
 
 func substitute_switch(switch_expr v, string[] generic_names, string[] type_args) switch_expr {
@@ -1405,7 +1405,7 @@ func summarize_instance(function_decl instance) mono_function_summary {
     params := mono_ownership_summary[] {}
     i := 0
     for i < len(instance.sig.params) {
-        params = append(params, summarize_type(instance.sig.params[i].kindname))
+        params = append(params, summarize_type(instance.sig.params[i].type_name))
         i = i + 1
     }
     result := summarize_type("()")
@@ -1481,7 +1481,7 @@ func verify_expr_resolved_calls(expr value) int {
         expr.call(v) : {
             errors := 0
 
-            if len(v.kindargs) == 0 {
+            if len(v.type_args) == 0 {
                 switch v.resolved_callee {
                     option.some(_) : (),
                     option.none : errors = 1,

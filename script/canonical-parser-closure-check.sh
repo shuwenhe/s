@@ -1,220 +1,74 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Check lexer -> parser -> AST for the sources used by make compiler.
+# Name resolution, semantic analysis and lowering belong to later gates.
+set -euo pipefail
 
-###############################################################################
-# canonical-parser-closure-check.sh
-#
-# PURPOSE:
-#   Verify that the S compiler's Parser can successfully parse the entire
-#   canonical Stage1 reachable source closure without errors.
-#
-# OUTPUT:
-#   Binary result: PASS / FAIL
-#   With detailed reporting of:
-#   - Files required vs parsed
-#   - Parse errors (with locations)
-#   - Unsupported syntax
-#   - Regressions
-#
-# USAGE:
-#   ./script/canonical-parser-closure-check.sh [source-root]
-#
-# GATE EXIT CODE:
-#   0 = PASS (all files parsed, 0 errors)
-#   1 = FAIL (errors detected)
-#
-###############################################################################
+SOURCE_ROOT=$(cd "${1:-${S_SOURCE_ROOT:-.}}" && pwd)
+COMPILER="$SOURCE_ROOT/bin/s_seed"
+CLOSURE_FILE="$SOURCE_ROOT/.parser-closure-manifest"
+TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/s-parser-closure.XXXXXXXX")
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
-set -e
+echo 'PARSER CANONICAL CLOSURE CHECK'
+echo 'Scope: compiler build sources; lexer -> parser -> AST only'
 
-# Configuration
-SOURCE_ROOT="${1:-.}"
-COMPILER="${SOURCE_ROOT}/bin/s_seed"
-TEMP_DIR="/tmp/parser-closure-check-$$"
-CLOSURE_FILE="${SOURCE_ROOT}/.parser-closure-manifest"
-
-# Color output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# State tracking
-PARSE_ERRORS=()
-UNSUPPORTED_SYNTAX=()
-REQUIRED_FILES=()
-PARSED_FILES=()
-FAILED_FILES=()
-REGRESSIONS=()
-
-cleanup() {
-    rm -rf "$TEMP_DIR"
-}
-trap cleanup EXIT
-
-mkdir -p "$TEMP_DIR"
-
-###############################################################################
-# STEP 1: Identify canonical closure files
-###############################################################################
-
-echo "========================================"
-echo "PARSER CANONICAL CLOSURE CHECK"
-echo "========================================"
-echo ""
-echo "[1/4] Identifying canonical closure..."
-
-# Find all *.s files that make up the canonical no-GC compiler closure.
-# This matches the makefile's COMPILER_SOURCES and proves the seed front end can
-# parse the exact sources used to build bin/s_compiler.
-if [[ ! -f "$COMPILER" ]]; then
-    echo -e "${RED}ERROR: s_seed not found at $COMPILER${NC}"
-    echo "Build the compiler first: make"
+if [[ ! -x "$COMPILER" ]]; then
+    echo "ERROR: seed compiler not executable: $COMPILER" >&2
     exit 1
 fi
 
-REQUIRED_FILES=(
-    "src/cmd/compile/internal/core.s"
-    "src/cmd/compile/internal/frontend.s"
-    "src/cmd/compile/internal/stages.s"
-    "src/cmd/compile/internal/mir/compiler_emit.s"
-    "src/cmd/compile/internal/compiler/stages.s"
-    "src/cmd/compile/pipeline/compiler_main.s"
-)
-
-# Alternative: auto-discover from canonical closure file
+# Keep the optional explicit manifest, but derive the default from the build
+# definition instead of maintaining a second, easily stale source list.
 if [[ -f "$CLOSURE_FILE" ]]; then
-    REQUIRED_FILES=($(cat "$CLOSURE_FILE"))
+    cp "$CLOSURE_FILE" "$TEMP_DIR/sources"
+elif ! make --no-print-directory -s -C "$SOURCE_ROOT" compiler-source-list > "$TEMP_DIR/sources"; then
+    echo 'ERROR: cannot determine compiler build sources' >&2
+    exit 1
 fi
 
-echo "Found ${#REQUIRED_FILES[@]} files to parse:"
-for f in "${REQUIRED_FILES[@]}"; do
-    echo "  - $f"
-done
-echo ""
+REQUIRED_FILES=()
+while IFS= read -r entry || [[ -n "$entry" ]]; do
+    case "$entry" in
+        ''|'#'*) continue ;;
+    esac
+    REQUIRED_FILES+=("$entry")
+done < "$TEMP_DIR/sources"
 
-###############################################################################
-# STEP 2: Parse each file and collect errors
-###############################################################################
+if [[ ${#REQUIRED_FILES[@]} -eq 0 ]]; then
+    echo 'RESULT: FAIL (empty compiler source closure)' >&2
+    exit 1
+fi
 
-echo "[2/4] Parsing files..."
-echo ""
-
-ERROR_COUNT=0
-PARSE_ERROR_DETAILS=""
-
+parsed=0
+errors=0
 for srcfile in "${REQUIRED_FILES[@]}"; do
-    fullpath="${SOURCE_ROOT}/${srcfile}"
-    
+    case "$srcfile" in
+        /*) fullpath="$srcfile" ;;
+        *) fullpath="$SOURCE_ROOT/$srcfile" ;;
+    esac
     if [[ ! -f "$fullpath" ]]; then
-        echo -e "${YELLOW}⚠ SKIP:${NC} $srcfile (file not found)"
+        echo "FAIL: $srcfile (required source not found)"
+        errors=$((errors + 1))
         continue
     fi
-    
-    # Compile each file as a one-file unit. The seed compiler's compile-unit
-    # path runs lexer+parser before later stages; parse failures are reported
-    # with locations and make this gate fail.
-    output_ast="${TEMP_DIR}/$(basename "$srcfile").ir"
 
-    if "$COMPILER" --compile-unit "$output_ast" "$fullpath" > "${output_ast}.log" 2>&1; then
-        PARSED_FILES+=("$srcfile")
-        echo -e "${GREEN}✓${NC} $srcfile"
+    # AST dumping stops after parsing. Compiling a file alone would instead
+    # report semantic errors for types declared in other files of its package.
+    if "$COMPILER" --dump-ast "$fullpath" "$TEMP_DIR/source.ast" > "$TEMP_DIR/parser.log" 2>&1; then
+        echo "PASS: $srcfile"
+        parsed=$((parsed + 1))
     else
-        FAILED_FILES+=("$srcfile")
-        ERROR_COUNT=$((ERROR_COUNT + 1))
-        
-        # Extract error details
-        error_output=$(<"${output_ast}.log")
-        PARSE_ERROR_DETAILS+="
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: $srcfile
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-$error_output
-"
-        echo -e "${RED}✗${NC} $srcfile"
+        echo "FAIL: $srcfile"
+        cat "$TEMP_DIR/parser.log"
+        errors=$((errors + 1))
     fi
 done
 
-echo ""
-
-###############################################################################
-# STEP 3: Regression test (if previous baseline exists)
-###############################################################################
-
-echo "[3/4] Checking for regressions..."
-
-REGRESSION_FILE="${TEMP_DIR}/regression-baseline.txt"
-REGRESSION_COUNT=0
-
-# For now, skip regression check (would need baseline file)
-if [[ -f "$REGRESSION_FILE" ]]; then
-    echo "⚠ Regression check not yet implemented"
-else
-    echo "ℹ No regression baseline. Creating baseline for next run:"
-    {
-        echo "# Parser Closure Baseline"
-        echo "# Generated: $(date)"
-        echo "# Files parsed: ${#PARSED_FILES[@]}"
-        echo "# Parse errors: $ERROR_COUNT"
-        echo ""
-        for f in "${PARSED_FILES[@]}"; do
-            echo "PASS: $f"
-        done
-        for f in "${FAILED_FILES[@]}"; do
-            echo "FAIL: $f"
-        done
-    } > "$REGRESSION_FILE"
-fi
-
-echo ""
-
-###############################################################################
-# STEP 4: Report results
-###############################################################################
-
-echo "[4/4] Results"
-echo ""
-echo "========================================"
-echo "CANONICAL PARSER CLOSURE RESULTS"
-echo "========================================"
-echo ""
-echo "Files required:    ${#REQUIRED_FILES[@]}"
-echo "Files parsed:      ${#PARSED_FILES[@]}"
-echo "Parse errors:      $ERROR_COUNT"
-echo "Unsupported:       ${#UNSUPPORTED_SYNTAX[@]}"
-echo "Regressions:       $REGRESSION_COUNT"
-echo ""
-
-if [[ $ERROR_COUNT -eq 0 ]]; then
-    echo -e "${GREEN}RESULT: PASS${NC}"
-    echo ""
-    echo "✓ Parser can successfully handle canonical Stage1 closure"
-    echo "✓ All required files parse without errors"
-    echo "✓ Ready to FREEZE Parser and move to: Name/Import Resolution"
-    echo ""
-    echo "NEXT STEPS:"
-    echo "  1. Mark P0 (Parser) as FROZEN"
-    echo "  2. Begin P1: Name/Import Resolution + DeclarationRef"
-    echo "  3. Do NOT add new Parser features"
-    echo "  4. Do NOT modify Parser code"
-    echo ""
-    exit 0
-else
-    echo -e "${RED}RESULT: FAIL${NC}"
-    echo ""
-    echo "✗ Parser cannot complete canonical closure"
-    echo "✗ First errors:"
-    echo "$PARSE_ERROR_DETAILS"
-    echo ""
-    echo "ATTRIBUTION:"
-    echo "  Analyze first error above and classify as:"
-    echo "    - source defect (fix source file)"
-    echo "    - parser capability gap (extend parser)"
-    echo "    - unreachable code (exclude from closure)"
-    echo ""
-    echo "NEXT STEPS:"
-    echo "  1. Fix first blocker"
-    echo "  2. Re-run: $0"
-    echo "  3. Iterate until: RESULT: PASS"
-    echo ""
+echo "Files required: ${#REQUIRED_FILES[@]}"
+echo "Files parsed: $parsed"
+echo "Parse errors: $errors"
+if [[ $errors -ne 0 ]]; then
+    echo 'RESULT: FAIL'
     exit 1
 fi
+echo 'RESULT: PASS'

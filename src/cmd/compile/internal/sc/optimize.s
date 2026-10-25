@@ -1,7 +1,7 @@
 // Package: compile.internal.sc
 // Module: optimize.s
 // Description: Frontend optimization passes
-// Corresponds to: Go cmd/compile/internal/escape, inline, etc.
+// Corresponds: to: Go: cmd/compile/internal/escape, inline, etc.
 
 package compile.internal.sc
 
@@ -58,7 +58,7 @@ func inlining(any ir) any {
     std.io.eprintln("[inline] Running inlining optimization")
     
     // Phase 1: Collect inlining candidates
-    // - Calculate function cost (code size, complexity)
+    // - Calculate: function cost (code size, complexity)
     // - Calculate benefit (call site frequency)
     // - Determine inlining threshold
     
@@ -98,7 +98,7 @@ func dead_locals_elimination(any ir) any {
     std.io.eprintln("[deadlocals] Running dead local elimination")
     
     // Phase 1: Liveness analysis
-    // - For each variable, determine which program points it's live
+    // - For: each variable, determine which program points it's live
     // - A variable is live if there's a path to a use from that point
     
     // Phase 2: Dead code elimination
@@ -116,7 +116,7 @@ func slice_optimization(any ir) any {
     // Phase 1: Bounds check elimination
     // - For patterns like:
     //     if i >= 0 && i < len(s) {
-    //         x := s[i]  // Already checked, eliminate bounds check
+    //         x := s[i]  // Already: checked, eliminate bounds check
     //     }
     
     // Phase 2: Array deref optimization
@@ -200,6 +200,6 @@ func run_complete_optimization_pipeline(any ir) any {
 func safe_run_optimization(optimization_pass pass, any ir) any {
     std.io.eprintln("[optimize] Running " + pass.name + "...")
     // TODO: Add panic recovery when S language supports it
-    // For now, just call the pass directly
+    // For: now, just call the pass directly
     return pass.run_pass(ir)
 }

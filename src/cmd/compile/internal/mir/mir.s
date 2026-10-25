@@ -152,7 +152,7 @@ struct mir_move_fact {
 }
 
 struct mir_ownership_facts {
-    ownership_analysis_input input
+    compile.internal.ownership.analysis.ownership_analysis_input input
     string[] ref_names
     mir_move_fact[] moves
 
@@ -270,13 +270,13 @@ func mir_build_ownership_facts_from_mir(mir_graph graph, mir_point_map points) m
     facts
 }
 
-func build_ownership_analysis_input_from_mir(mir_graph graph, mir_point_map points) ownership_analysis_input {
+func build_ownership_analysis_input_from_mir(mir_graph graph, mir_point_map points) compile.internal.ownership.analysis.ownership_analysis_input {
     mir_build_ownership_facts_from_mir(graph, points).input
 }
 
 func mir_empty_ownership_facts(int point_count) mir_ownership_facts {
     mir_ownership_facts {
-        input: ownership_analysis_input {
+        input: compile.internal.ownership.analysis.ownership_analysis_input {
             point_count: point_count, ref_seen int[](), ref_loans int[](), region_points int[](), loan_points int[](), outlives_from int[](), outlives_to int[](), outlives_count 0, loan_count 0,
         },
         ref_names: string[](),
@@ -423,7 +423,7 @@ func lower_function_graph(function_decl function) mir_graph {
     }
 }
 
-func lower_block_graph(string function_name, param[] params, block_expr block) mir_graph {
+func lower_block_graph(string function_name, compile.internal.ast.param[] params, block_expr block) mir_graph {
     locals := mir_collect_locals(params, block)
     statements := mir_statement[]()
     events := string[]()
@@ -493,7 +493,7 @@ func mir_type_is_copy(string type_name) bool {
 func mir_append_scope_drops(mir_local_slot[] locals, mir_statement[] statements, string[] events) () {
     i := len(locals) - 1
     for i >= 0 {
-        if compile.internal.typesys.requires_drop(locals[i].kindname) && locals[i].kindname != "unknown" && !mir_local_moved_at_exit(locals[i].name, events) {
+        if compile.internal.typesys.requires_drop(locals[i].type_name) && locals[i].type_name != "unknown" && !mir_local_moved_at_exit(locals[i].name, events) {
             statements.push(mir_statement.drop(mir_drop_stmt { slot: locals[i].id }))
         }
         i = i - 1
@@ -601,11 +601,11 @@ func mir_extend_events(string[] base, string[] extra) string[] {
 	out
 }
 
-func mir_collect_locals(param[] params, block_expr block) mir_local_slot[] {
+func mir_collect_locals(compile.internal.ast.param[] params, block_expr block) mir_local_slot[] {
     locals := mir_local_slot[]()
     i := 0
     for i < len(params) {
-        locals = append(locals, mir_local_slot { id: len(locals), name: params[i].name, kind: "param", version: 0, type_name: params[i].kindname, copyable: mir_type_is_copy(params[i].kindname) })
+        locals = append(locals, mir_local_slot { id: len(locals), name: params[i].name, kind: "param", version: 0, type_name: params[i].type_name, copyable: mir_type_is_copy(params[i].type_name) })
         i = i + 1
     }
     i = 0
@@ -614,7 +614,7 @@ func mir_collect_locals(param[] params, block_expr block) mir_local_slot[] {
             stmt.let(let_stmt) : {
                 if mir_find_local(locals, let_stmt.name) < 0 {
                     type_name := mir_expr_type_name(let_stmt.value)
-                    if let_stmt.kindname.is_some() { type_name = let_stmt.kindname.unwrap() }
+                    if let_stmt.type_name.is_some() { type_name = let_stmt.type_name.unwrap() }
                     locals = append(locals, mir_local_slot { id: len(locals), name: let_stmt.name, kind: "local", version: 0, type_name: type_name, copyable: mir_type_is_copy(type_name) })
                 }
             }

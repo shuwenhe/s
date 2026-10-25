@@ -51,7 +51,7 @@ func test_b1_3_loan_borrowed_place_query() bool {
 
     
     if facts.input.loan_count != 2 {
-        s.println("FAIL: Expected 2 loans, got " + std.prelude.to_string(facts.input.loan_count))
+        s.println("FAIL: Expected: 2 loans, got " + std.prelude.to_string(facts.input.loan_count))
         return false
     }
 

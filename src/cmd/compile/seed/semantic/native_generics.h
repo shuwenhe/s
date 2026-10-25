@@ -3,6 +3,7 @@
 /* Concrete native specializations. Templates remain in the semantic unit;
  * only checked concrete functions/record layouts enter executable IR. */
 #include <ctype.h>
+#include "../syntax/enum_type.h"
 #include "../intermediate/array_type.h"
 #define NG_ARGS 16
 #define NG_LIMIT 4096
@@ -12,6 +13,7 @@ typedef struct ng_decl {
     const char *package;
     ng_text name, parameters[NG_ARGS];
     size_t count;
+    struct ng_decl *enum_layout;
 } ng_decl;
 typedef struct ng_state {
     ast_node *unit;
@@ -29,6 +31,8 @@ typedef struct ng_scope {
     const char *expected;
     const ast_node *active_pattern; /* Diagnostics: nearest validated pattern arm. */
     ng_text return_type;
+    bool tuple_return;
+    bool return_position;
 } ng_scope;
 static bool ng_fail(ng_state *s,source_pos pos,const char *message) {
     if(!s->err->code) error_set(s->err,ERR_SEMANTIC,pos.line,pos.column,"native generic specialization: %s",message);
@@ -104,6 +108,9 @@ static ng_decl *ng_find(ng_state *s,const char *name,const char *package,bool fu
     ng_decl *local=NULL,*unique=NULL; bool ambiguous=false;
     for(size_t i=0;i<s->count;i++) {
         ng_decl *d=s->decls[i];
+        /* A nongeneric enum's synthetic layout shares its declaration name.
+         * Type lookup keeps the declaration identity; layouts use enum_layout. */
+        if(ng_record(d->node) && d->node->native_enum && !strchr(d->node->as.let_stmt.name,'[')) continue;
         if((d->node->kind==AST_FN_STMT)!=function) continue;
         if(!strcmp(d->name,name)) return d;
         if(!strcmp(ng_decl_name(d->node),name)) {
@@ -158,7 +165,7 @@ static ast_node *ng_clone(ng_state *s,const ast_node *n) {
 #define NODE(f) do { if(n->as.f && !(r->as.f=ng_clone(s,n->as.f))) goto bad; } while(0)
 #define VEC(f) do { if(!ng_clone_vec(s,&r->as.f,&n->as.f)) goto bad; } while(0)
     switch(n->kind) {
-    case AST_BLOCK: VEC(block.statements); r->as.block.transparent_scope=n->as.block.transparent_scope; r->as.block.tuple_binding=n->as.block.tuple_binding; break;
+    case AST_BLOCK: STR(block.inferred_type); VEC(block.statements); r->as.block.transparent_scope=n->as.block.transparent_scope; r->as.block.tuple_binding=n->as.block.tuple_binding; break;
     case AST_LET_STMT: STR(let_stmt.name); STR(let_stmt.type_name); NODE(let_stmt.value); r->as.let_stmt.mutable=n->as.let_stmt.mutable; break;
     case AST_CONST_DECL: case AST_VAR_DECL: STR(var_decl.name); STR(var_decl.type_name); NODE(var_decl.value); break;
     case AST_EXPR_STMT: NODE(expr_stmt.expr); break;
@@ -192,7 +199,7 @@ static ast_node *ng_clone(ng_state *s,const ast_node *n) {
     case AST_IF_STMT:
         NODE(if_stmt.condition); NODE(if_stmt.then_branch); NODE(if_stmt.else_branch); NODE(if_stmt.pattern_subject);
         STR(if_stmt.binding_name); STR(if_stmt.payload_binding_name); STR(if_stmt.variant_owner); STR(if_stmt.variant_name);
-        STR(if_stmt.native_variant_field); r->as.if_stmt.native_variant_tag=n->as.if_stmt.native_variant_tag;
+        STR(if_stmt.native_variant_field); r->as.if_stmt.native_variant_tag=n->as.if_stmt.native_variant_tag; r->as.if_stmt.native_variant_array=n->as.if_stmt.native_variant_array;
         r->as.if_stmt.is_switch_arm=n->as.if_stmt.is_switch_arm; r->as.if_stmt.is_pattern_arm=n->as.if_stmt.is_pattern_arm;
         r->as.if_stmt.pattern_kind=n->as.if_stmt.pattern_kind; r->as.if_stmt.payload_kind=n->as.if_stmt.payload_kind; break;
     case AST_WHILE_STMT: NODE(while_stmt.condition); NODE(while_stmt.body); break;
@@ -229,9 +236,29 @@ static bool ng_type(ng_scope *,const char *,ng_text,unsigned);
 static bool ng_node(ng_scope *,ast_node *,ng_text);
 static bool ng_function(ng_scope *,ast_node *);
 static bool ng_enum_schema(ng_scope *,ng_decl *,ng_text *,size_t,const char *,unsigned);
-static bool ng_expect(ng_scope *c,ast_node *n,const char *expected,ng_text out) {
+static bool ng_expect(ng_scope *c,ast_node *n,const char *expected,ng_text out,bool return_position) {
+    c->return_position=return_position;
     c->expected=expected;
-    return ng_node(c,n,out);
+    if(!ng_node(c,n,out)) return false;
+    if(!n || !return_position || !c->tuple_return || !expected || strcmp(expected,c->return_type) || !strcmp(out,expected) || !strcmp(out,"never")) return true;
+    /* Tuple return syntax selects the success/error slot by declared type.
+     * Only expression values are wrapped; blocks and returns wrap their leaves. */
+    if(n->kind!=AST_CALL_EXPR && n->kind!=AST_STRUCT_EXPR && n->kind!=AST_IDENT_EXPR &&
+       n->kind!=AST_MEMBER_EXPR && n->kind!=AST_NUMBER_EXPR && n->kind!=AST_STRING_EXPR &&
+       n->kind!=AST_BOOL_EXPR && n->kind!=AST_UNIT_EXPR && n->kind!=AST_INDEX_EXPR) return true;
+    ng_text base,args[NG_ARGS];
+    if(ng_split(expected,base,args)!=2 || strcmp(base,"std.result.result")) return true;
+    const char *variant=!strcmp(out,args[0])?"ok":!strcmp(out,args[1])?"err":NULL;
+    if(!variant) return ng_fail(c->state,n->pos,"tuple return value matches neither success nor error type");
+    ast_node *call=ast_new(AST_CALL_EXPR,n->pos),*member=ast_new(AST_MEMBER_EXPR,n->pos),*owner=ast_new(AST_IDENT_EXPR,n->pos),*value=ng_clone(c->state,n);
+    if(!call || !member || !owner || !value) { ast_free(call); ast_free(member); ast_free(owner); ast_free(value); return false; }
+    owner->as.ident_expr.name=ng_dup("std.result.result"); member->as.member_expr.object=owner;
+    member->as.member_expr.member=ng_dup(variant); call->as.call_expr.callee=member;
+    if(!owner->as.ident_expr.name || !member->as.member_expr.member || !ast_vec_push(&call->as.call_expr.args,value)) { ast_free(call); ast_free(value); return false; }
+    c->expected=expected; c->return_position=false;
+    if(!ng_node(c,call,out)) { ast_free(call); return false; }
+    ast_node old=*n; *n=*call; *call=old; ast_free(call);
+    return true;
 }
 static bool ng_known(ng_scope *c,const char *type) {
     static const char *const scalar[]={"int","bool","string","byte","int64","uint64","uint","float","()"};
@@ -285,7 +312,12 @@ static bool ng_type(ng_scope *c,const char *raw,ng_text out,unsigned depth) {
         return snprintf(out,sizeof(ng_text),"%s*",item)<(int)sizeof(ng_text);
     }
     ng_decl *exact=ng_find(s,text,c->package,false);
-    if(exact && !exact->count) { strcpy(out,exact->name); return true; }
+    if(exact && !exact->count) {
+        strcpy(out,exact->name);
+        if(exact->node->kind==AST_ENUM_DECL && seed_enum_has_payload(exact->node) && !exact->enum_layout)
+            return ng_enum_schema(c,exact,NULL,0,exact->name,depth);
+        return true;
+    }
     int count=ng_split(text,base,args);
     ng_decl *d=count>0?ng_find(s,base,c->package,false):NULL;
     if(!d) { strcpy(out,text); return true; }
@@ -435,6 +467,7 @@ static void ng_trace_payload_access(ng_scope *c,ast_node *n,const char *object_t
 }
 static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
     out[0]=0; if(!n) return true;
+    bool return_position=c->return_position; c->return_position=false;
     ng_state *s=c->state; ng_text left,right,type;
     ng_text expected; snprintf(expected,sizeof(expected),"%s",c->expected?c->expected:""); c->expected=NULL;
 #define VISIT(x) do { if(!ng_node(c,(x),type)) return false; } while(0)
@@ -443,7 +476,7 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         if(n->as.block.tuple_binding && !ng_result_unpack(c,n)) return false;
         size_t saved=c->count;
         for(size_t i=0;i<n->as.block.statements.len;i++)
-            if(!ng_expect(c,n->as.block.statements.data[i],i+1==n->as.block.statements.len?expected:"",out)) return false;
+            if(!ng_expect(c,n->as.block.statements.data[i],i+1==n->as.block.statements.len?expected:"",out,return_position && i+1==n->as.block.statements.len)) return false;
         if(!n->as.block.transparent_scope) c->count=saved;
         return true;
     }
@@ -472,12 +505,12 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         ng_text enum_args[NG_ARGS];
         if(!n->native_enum && ng_enum_type(c,out,enum_args)) return ng_fail(s,n->pos,"enum values require a variant constructor");
         ng_decl *d=ng_find(s,out,c->package,false);
-        ast_node *schema=d && ng_record(d->node) && strchr(d->name,'[')?d->node->as.let_stmt.value:NULL;
+        ast_node *schema=d && ng_record(d->node)?d->node->as.let_stmt.value:NULL;
         for(size_t i=0;i<n->as.struct_expr.field_values.len;i++) {
             const char *field_context="";
             for(size_t f=0;schema && f<schema->as.struct_expr.field_count;f++)
                 if(!strcmp(schema->as.struct_expr.field_names[f],n->as.struct_expr.field_names[i])) field_context=schema->as.struct_expr.field_values.data[f]->as.string_expr.literal;
-            if(!ng_expect(c,n->as.struct_expr.field_values.data[i],field_context,type)) return false;
+            if(!ng_expect(c,n->as.struct_expr.field_values.data[i],field_context,type,false)) return false;
             for(size_t f=0;schema && f<schema->as.struct_expr.field_count;f++) {
                 if(strcmp(schema->as.struct_expr.field_names[f],n->as.struct_expr.field_names[i])) continue;
                 const char *expected=schema->as.struct_expr.field_values.data[f]->as.string_expr.literal;
@@ -509,7 +542,7 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         if(n->as.array_expr.items.len && left[0]) return snprintf(out,sizeof(ng_text),"%s[]",left)<(int)sizeof(ng_text);
         return true;
     case AST_MEMBER_EXPR: {
-        int constructed=ng_enum_construct(c,n,n,NULL,0,expected,out);
+        int constructed=ng_enum_construct(c,n,n,NULL,0,expected,out,return_position);
         if(constructed) return constructed>0;
         if(!ng_node(c,n->as.member_expr.object,left)) return false;
         ng_text enum_args[NG_ARGS];
@@ -521,11 +554,8 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
                 if(!ng_put(s,&n->as.member_expr.member,field,n->pos)) return false;
                 n->native_enum=true;
             } else {
-                /* For other enum member access that native_generics doesn't recognize,
-                   be lenient - assume it's valid and return the left type (member access may narrow it) */
                 ng_trace_payload_access(c,n,left);
-                strcpy(out,left);
-                return true;
+                return ng_fail(s,n->pos,"enum payload access requires a variant pattern");
             }
         }
         size_t len=strlen(left); if(len && left[len-1]=='*') left[len-1]=0;
@@ -576,7 +606,7 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         size_t count=n->as.call_expr.args.len;
         ng_text *args=calloc(count+1,sizeof(ng_text)); if(!args) return false;
         for(size_t i=0;i<count;i++) if(!ng_node(c,n->as.call_expr.args.data[i],args[i])) { free(args); return false; }
-        int constructed=ng_enum_construct(c,n,n->as.call_expr.callee,args,count,expected,out);
+        int constructed=ng_enum_construct(c,n,n->as.call_expr.callee,args,count,expected,out,return_position);
         if(constructed) { free(args); return constructed>0; }
         ng_text spelling; spelling[0]=0;
         native_record_type_spelling(n->as.call_expr.callee,spelling,sizeof(spelling));
@@ -652,6 +682,20 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
             decl->state=s; decl->package=d->package;
             bool ok=ng_type(decl,d->node->as.fn_stmt.return_type,out,0); free(decl); free(args); return ok;
         }
+        if(!shadow) {
+            const char *package="";
+            for(size_t i=0;i<s->unit->as.program.statements.len;i++) {
+                ast_node *external=s->unit->as.program.statements.data[i];
+                if(external->kind==AST_PACKAGE_DECL) package=external->as.package_decl.name;
+                if(external->kind!=AST_EXTERN_DECL) continue;
+                ng_text full;
+                snprintf(full,sizeof(full),"%s%s%s",package,*package?".":"",external->as.extern_decl.name);
+                if(strcmp(full,candidate) && (strcmp(package,c->package) || strcmp(external->as.extern_decl.name,spelling))) continue;
+                ng_scope *decl=calloc(1,sizeof(*decl)); if(!decl) { free(args); return false; }
+                decl->state=s; decl->package=package;
+                bool ok=ng_type(decl,external->as.extern_decl.return_type,out,0); free(decl); free(args); return ok;
+            }
+        }
         const char *dot=strrchr(spelling,'.');
         if(dot) {
             size_t len=(size_t)(dot-spelling); memcpy(left,spelling,len); left[len]=0;
@@ -660,9 +704,9 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         }
         free(args); return true;
     }
-    case AST_EXPR_STMT: return ng_expect(c,n->as.expr_stmt.expr,expected,out);
+    case AST_EXPR_STMT: return ng_expect(c,n->as.expr_stmt.expr,expected,out,return_position);
     case AST_RETURN_STMT:
-        if(!ng_expect(c,n->as.return_stmt.value,c->return_type,out)) return false;
+        if(!ng_expect(c,n->as.return_stmt.value,c->return_type,out,true)) return false;
         for(size_t i=0;i<n->as.return_stmt.values.len;i++) if(n->as.return_stmt.values.data[i]!=n->as.return_stmt.value) VISIT(n->as.return_stmt.values.data[i]);
         return true;
     case AST_ASSIGN_STMT: return ng_node(c,n->as.assign_stmt.value,out);
@@ -671,7 +715,10 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         if(n->as.if_stmt.is_switch_arm && n->as.if_stmt.pattern_subject) {
             ng_text args[NG_ARGS];
             if(!ng_node(c,n->as.if_stmt.pattern_subject,left)) return false;
-            if(ng_enum_type(c,left,args)) return ng_enum_switch(c,n,expected,out);
+            if(ng_enum_type(c,left,args)) return ng_enum_switch(c,n,expected,out,return_position);
+            ng_decl *pattern_owner=n->as.if_stmt.pattern_kind==PATTERN_VARIANT?ng_enum_owner(c,n->as.if_stmt.variant_owner):NULL;
+            if(pattern_owner && seed_enum_has_payload(pattern_owner->node))
+                return ng_fail(s,n->pos,"unresolved enum subject type");
         }
         size_t saved=c->count; const ast_node *saved_pattern=c->active_pattern; VISIT(n->as.if_stmt.condition);
         if(!ng_node(c,n->as.if_stmt.pattern_subject,left)) return false;
@@ -692,9 +739,9 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
             }
         }
         if(n->as.if_stmt.binding_name && left[0] && !ng_bind(c,n->as.if_stmt.binding_name,left)) return false;
-        if(!ng_expect(c,n->as.if_stmt.then_branch,expected,out)) return false;
+        if(!ng_expect(c,n->as.if_stmt.then_branch,expected,out,return_position)) return false;
         c->count=saved; c->active_pattern=saved_pattern;
-        if(!ng_expect(c,n->as.if_stmt.else_branch,expected,type)) return false;
+        if(!ng_expect(c,n->as.if_stmt.else_branch,expected,type,return_position)) return false;
         c->count=saved; c->active_pattern=saved_pattern; return true;
     }
     case AST_WHILE_STMT: VISIT(n->as.while_stmt.condition); VISIT(n->as.while_stmt.body); return true;
@@ -714,6 +761,12 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
 }
 static bool ng_function(ng_scope *c,ast_node *fn) {
     ng_text type;
+    int nesting=0;
+    for(const char *at=fn->as.fn_stmt.return_type;at && *at;at++) {
+        if(*at=='[' || *at=='(') nesting++;
+        else if(*at==']' || *at==')') nesting--;
+        else if(*at==',' && !nesting) c->tuple_return=true;
+    }
     for(size_t i=0;i<fn->as.fn_stmt.param_count;i++) {
         if(!ng_type(c,fn->as.fn_stmt.param_types[i],type,0) || !ng_put(c->state,&fn->as.fn_stmt.param_types[i],type,fn->pos) ||
            !ng_bind(c,fn->as.fn_stmt.params[i],type)) return false;
@@ -721,7 +774,7 @@ static bool ng_function(ng_scope *c,ast_node *fn) {
     if(fn->as.fn_stmt.return_type &&
        (!ng_type(c,fn->as.fn_stmt.return_type,type,0) || !ng_put(c->state,&fn->as.fn_stmt.return_type,type,fn->pos))) return false;
     snprintf(c->return_type,sizeof(c->return_type),"%s",fn->as.fn_stmt.return_type?fn->as.fn_stmt.return_type:"");
-    return ng_expect(c,fn->as.fn_stmt.body,c->return_type,type);
+    return ng_expect(c,fn->as.fn_stmt.body,c->return_type,type,true);
 }
 static bool native_specialize_generics(ast_node *unit,compile_error *err) {
     ng_state s={0}; s.unit=unit; s.err=err;
@@ -759,8 +812,27 @@ static bool native_specialize_generics(ast_node *unit,compile_error *err) {
         }
     }
     bool templates=false;
-    for(size_t i=0;i<s.count;i++) templates=templates || s.decls[i]->count!=0;
+    for(size_t i=0;i<s.count;i++) templates=templates || s.decls[i]->count!=0 || (s.decls[i]->node->kind==AST_ENUM_DECL && seed_enum_has_payload(s.decls[i]->node));
     if(!templates) { ok=true; goto done; }
+    /* Extern signatures cross the same concrete type boundary as wrappers.
+     * In particular, tuple results must use the canonical result layout on
+     * both sides before semantic return and argument checking. */
+    package="";
+    for(size_t i=0;i<original;i++) {
+        ast_node *n=unit->as.program.statements.data[i];
+        if(n->kind==AST_PACKAGE_DECL) package=n->as.package_decl.name;
+        if(n->kind!=AST_EXTERN_DECL) continue;
+        ng_scope *c=calloc(1,sizeof(*c)); if(!c) goto done;
+        c->state=&s; c->package=package;
+        ng_text type; bool valid=true;
+        for(size_t p=0;p<n->as.extern_decl.param_count && valid;p++)
+            valid=ng_type(c,n->as.extern_decl.param_types[p],type,0) &&
+                ng_put(&s,&n->as.extern_decl.param_types[p],type,n->pos);
+        if(valid && n->as.extern_decl.return_type)
+            valid=ng_type(c,n->as.extern_decl.return_type,type,0) &&
+                ng_put(&s,&n->as.extern_decl.return_type,type,n->pos);
+        free(c); if(!valid) goto done;
+    }
     /* Resolve the old two parameter orders before collecting local types. */
     borrow_proof proof={0}; proof.unit=unit; proof.err=err;
     for(size_t i=0;i<s.count;i++) if(s.decls[i]->node->kind==AST_FN_STMT) {
@@ -769,8 +841,11 @@ static bool native_specialize_generics(ast_node *unit,compile_error *err) {
         for(size_t p=0;p<d->node->as.fn_stmt.param_count;p++) if(!borrow_resolve_parameter(&proof,d->node,p)) goto done;
     }
     size_t declarations=s.count;
-    for(size_t i=0;i<declarations;i++) {
+    /* Canonicalize field annotations before any function can use a record
+     * as contextual type information, including forward declarations. */
+    for(int pass=0;pass<2;pass++) for(size_t i=0;i<declarations;i++) {
         ng_decl *d=s.decls[i]; if(d->node->native_template) continue;
+        if((d->node->kind==AST_FN_STMT)!=(pass==1)) continue;
         ng_scope *c=calloc(1,sizeof(*c)); if(!c) goto done;
         c->state=&s; c->package=d->package;
         bool valid=true;

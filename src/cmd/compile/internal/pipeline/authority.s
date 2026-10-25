@@ -20,7 +20,7 @@ func authority_frontend() authority_marker {
     return authority_marker {
         stage: "frontend",
         module: "compile.compiler.native_source_to_mir",
-        checkpoint: "Source → Structured function MIR",
+        checkpoint: "Source: → Structured: function MIR",
         timestamp: 0,
     }
 }
@@ -29,7 +29,7 @@ func authority_middlend() authority_marker {
     return authority_marker {
         stage: "middlend",
         module: "compile.internal.ssa.function_lower",
-        checkpoint: "Function MIR → Verified function SSA",
+        checkpoint: "Function: MIR: → Verified function SSA",
         timestamp: 1,
     }
 }
@@ -37,8 +37,8 @@ func authority_middlend() authority_marker {
 func authority_backend() authority_marker {
     return authority_marker {
         stage: "backend",
-        module: "compile.internal.codegen.amd64_program + GNU as/ld",
-        checkpoint: "Function SSA → amd64 instructions → ELF",
+        module: "compile.internal.codegen.amd64_program + GNU: as/ld",
+        checkpoint: "Function: SSA: → amd64 instructions → ELF",
         timestamp: 2,
     }
 }

@@ -121,7 +121,7 @@ func (static_single_assignment* ssa) insert_phi_nodes(int[] dominance_frontier) 
                     }
 
                     if !already_has {
-                        new_phi := ssa.create_phi(df, phi.incoming_blocks, phi.incoming_values, phi.kindname)
+                        new_phi := ssa.create_phi(df, phi.incoming_blocks, phi.incoming_values, phi.type_name)
                         ssa.blocks[df].phis.push(new_phi)
 
                         in_list := false

@@ -148,19 +148,19 @@ func assignment_string(abi_param_assignment assignment, abi_config config, bool 
     if extra {
         regs = regs + " | #I=" + to_string(config.reg_amounts.int_regs) + " #F=" + to_string(config.reg_amounts.float_regs)
     }
-    regs + " } " + offname + ": " + to_string(assignment.offset) + " typ: " + assignment.kindname
+    regs + " } " + offname + ": " + to_string(assignment.offset) + " typ: " + assignment.type_name
 }
 
 func info_string(abi_param_result_info info) string {
     out := ""
     i := 0
     for i < len(info.inparams) {
-        out = out + "IN " + to_string(i) + ": " + assignment_string(info.inparams[i], info.config, false) + "\n"
+        out = out + "IN: " + to_string(i) + ": " + assignment_string(info.inparams[i], info.config, false) + "\n"
         i = i + 1
     }
     i = 0
     for i < len(info.outparams) {
-        out = out + "OUT " + to_string(i) + ": " + assignment_string(info.outparams[i], info.config, false) + "\n"
+        out = out + "OUT: " + to_string(i) + ": " + assignment_string(info.outparams[i], info.config, false) + "\n"
         i = i + 1
     }
     out + "offsetToSpillArea: " + to_string(info.offset_to_spill_area) + " spillAreaSize: " + to_string(info.spill_area_size)
@@ -203,7 +203,7 @@ func register_types(abi_param_assignment[] assignments) string[] {
     i := 0
     for i < len(assignments) {
         if assignments[i]len(.registers) > 0 {
-            rts = append_param_types(rts, assignments[i].kindname)
+            rts = append_param_types(rts, assignments[i].type_name)
         }
         i = i + 1
     }
@@ -216,8 +216,8 @@ func register_types_and_offsets(abi_param_assignment assignment) register_layout
             types: string[](), offsets int[](),
         }
     }
-    types := append_param_types(string[](), assignment.kindname)
-    pair := append_param_offsets(int[](), 0, assignment.kindname)
+    types := append_param_types(string[](), assignment.type_name)
+    pair := append_param_offsets(int[](), 0, assignment.type_name)
     register_layout {
         types: types, offsets pair.offsets,
     }
@@ -259,11 +259,11 @@ func append_param_offsets(int[] offsets, int at, string type_name) offset_result
     }
     if is_complex_type(type_name) || size > reg_size() {
         half := size / 2
-        append(offsets, at)
-        append(offsets, at + half)
+        offsets = append(offsets, at)
+        offsets = append(offsets, at + half)
         return offset_result { offsets: offsets, next at + size }
     }
-    append(offsets, at)
+    offsets = append(offsets, at)
     offset_result { offsets: offsets, next at + size }
 }
 
@@ -273,36 +273,36 @@ func append_param_types(string[] initial_rts, string type_name) string[] {
         return rts
     }
     if is_complex_type(type_name) {
-        append(rts, "float")
-        append(rts, "float")
+        rts = append(rts, "float")
+        rts = append(rts, "float")
         return rts
     }
     if is_float_type(type_name) {
-        append(rts, "float")
+        rts = append(rts, "float")
         return rts
     }
     if is_string_type(type_name) {
-        append(rts, "ptr")
-        append(rts, "int")
+        rts = append(rts, "ptr")
+        rts = append(rts, "int")
         return rts
     }
     if is_slice_type(type_name) {
-        append(rts, "ptr")
-        append(rts, "int")
-        append(rts, "int")
+        rts = append(rts, "ptr")
+        rts = append(rts, "int")
+        rts = append(rts, "int")
         return rts
     }
     if is_interface_type(type_name) {
-        append(rts, "ptr")
-        append(rts, "ptr")
+        rts = append(rts, "ptr")
+        rts = append(rts, "ptr")
         return rts
     }
     if type_size(type_name) > reg_size() {
-        append(rts, "uint32")
-        append(rts, "uint32")
+        rts = append(rts, "uint32")
+        rts = append(rts, "uint32")
         return rts
     }
-    append(rts, type_name)
+    rts = append(rts, type_name)
     rts
 }
 

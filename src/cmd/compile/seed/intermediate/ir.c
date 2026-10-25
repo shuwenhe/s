@@ -231,6 +231,19 @@ static bool record_type_name(ir_builder *b, const char *raw, char out[IR_OPERAND
             return snprintf(out,IR_OPERAND_CAP,"%s%s%s",pkg,*pkg?".":"",raw)<IR_OPERAND_CAP;
         }
     }
+    /* Payload-free enum values already lower to integer tags. Their field,
+     * array and transfer metadata must use that same runtime representation. */
+    if(length<IR_OPERAND_CAP && !memchr(raw,'[',length) && !strchr(raw+length,'*')) {
+        char base[IR_OPERAND_CAP],qualified[IR_OPERAND_CAP];
+        memcpy(base,raw,length); base[length]=0;
+        ast_node *decl=NULL;
+        if(!strchr(base,'.') && *b->package_name &&
+           snprintf(qualified,sizeof(qualified),"%s.%s",b->package_name,base)<(int)sizeof(qualified))
+            decl=seed_find_enum(b->root,qualified);
+        if(!decl) decl=seed_find_enum(b->root,base);
+        if(decl && !decl->as.enum_decl.generic_count && !seed_enum_has_payload(decl))
+            return snprintf(out,IR_OPERAND_CAP,"int%s",raw+length)<IR_OPERAND_CAP;
+    }
     return snprintf(out, IR_OPERAND_CAP, "%s", raw) < IR_OPERAND_CAP;
 }
 static bool emit_record_schemas(ir_builder *b) {
@@ -421,8 +434,10 @@ static bool lower_value_branch_inner(ir_builder *b, ast_node *node, char out[IR_
 		node->kind == AST_CONTINUE_STMT) return lower_stmt(b, node);
 	if (node->kind == AST_EXPR_STMT) node = node->as.expr_stmt.expr;
     if(node->kind==AST_TRAP_STMT) return emit_ins(b,IR_TRAP,"101","","",node->pos);
+	if(b->root->native_unit && node->kind==AST_CALL_EXPR && node->as.call_expr.resolved_return_type &&
+	   !strcmp(node->as.call_expr.resolved_return_type,"never")) return lower_expr(b,node,out);
 	if (!lower_expr(b, node, out)) return false;
-	*has_value = true;
+	*has_value = !(b->root->native_unit && node->kind==AST_IF_STMT && !strcmp(out,"0"));
 	return true;
 }
 
@@ -437,6 +452,7 @@ static bool lower_if_value(ir_builder *b, ast_node *node, char out[IR_OPERAND_CA
 	ast_node *arm = node;
 	char subject[IR_OPERAND_CAP] = "";
 	char end_label[IR_OPERAND_CAP];
+	bool value_join=false;
 	/* A statement switch evaluates its arms for effects only. Do not invent
 	 * a result join between discarded values of unrelated types. */
 	if (out) next_temp(b, out);
@@ -484,13 +500,17 @@ static bool lower_if_value(ir_builder *b, ast_node *node, char out[IR_OPERAND_CA
 		if (strcmp(cond, "1") && !emit_ins(b, IR_JUMP_IF_FALSE, next_arm, cond, "", arm->pos)) return false;
 		if (arm->as.if_stmt.payload_binding_name) {
 			char field[IR_OPERAND_CAP];
-			if (snprintf(field, sizeof(field), "%s.%s", subject,arm->as.if_stmt.native_variant_field?arm->as.if_stmt.native_variant_field:"value") >= (int)sizeof(field) ||
-				!emit_ins(b, IR_MOV, arm->as.if_stmt.payload_binding_name, field, "", arm->pos)) return false;
+			if (snprintf(field, sizeof(field), "%s.%s", subject,arm->as.if_stmt.native_variant_field?arm->as.if_stmt.native_variant_field:"value") >= (int)sizeof(field)) return false;
+            if(arm->as.if_stmt.native_variant_array) {
+                if(!emit_ins(b,IR_ARG,field,"","",arm->pos) || !emit_ins(b,IR_ARG,"0","","",arm->pos) ||
+                   !emit_ins(b,IR_CALL,arm->as.if_stmt.payload_binding_name,"__index_get","2",arm->pos)) return false;
+            } else if(!emit_ins(b,IR_MOV,arm->as.if_stmt.payload_binding_name,field,"",arm->pos)) return false;
 		}
 		if (arm->as.if_stmt.binding_name &&
 			!emit_ins(b, IR_MOV, arm->as.if_stmt.binding_name, subject, "", arm->pos)) return false;
 		if (out) {
 			if (!lower_value_branch(b, arm->as.if_stmt.then_branch, value, &has_value)) return false;
+			value_join=value_join || has_value;
 			if (has_value && !emit_ins(b, IR_MOV, out, value, "", arm->pos)) return false;
 		} else if (!lower_stmt(b, arm->as.if_stmt.then_branch)) return false;
 		if (!emit_ins(b, IR_JUMP, end_label, "", "", arm->pos) ||
@@ -502,10 +522,16 @@ static bool lower_if_value(ir_builder *b, ast_node *node, char out[IR_OPERAND_CA
 		bool has_value;
 		if (out) {
 			if (!lower_value_branch(b, arm, value, &has_value)) return false;
+			value_join=value_join || has_value;
 			if (has_value && !emit_ins(b, IR_MOV, out, value, "", arm->pos)) return false;
 		} else if (!lower_stmt(b, arm)) return false;
 	}
-	return emit_ins(b, IR_LABEL, end_label, "", "", node->pos);
+	if(!emit_ins(b, IR_LABEL, end_label, "", "", node->pos)) return false;
+    if(b->root->native_unit && out && !value_join) {
+        copy_str(out,"0");
+        return emit_ins(b,IR_TRAP,"101","","",node->pos);
+    }
+    return true;
 }
 
 static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) {
@@ -541,6 +567,10 @@ static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERA
 				snprintf(item_text, sizeof(item_text), "%s", item->as.ident_expr.name);
 				break;
 			default:
+                if(expr->native_enum) {
+                    if(!lower_expr(b,item,item_text)) return false;
+                    break;
+                }
 				error_set(b->err, ERR_SEMANTIC, item->pos.line, item->pos.column,
 					"array literal currently supports number/bool/string/identifier items in IR lowering");
 				return false;
@@ -805,7 +835,7 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
             }
 			if (expr->as.member_expr.resolved_enum_type &&
 				seed_enum_owner_name(expr->as.member_expr.object, object_name, sizeof(object_name))) {
-				ast_node *decl = seed_find_enum(b->root, object_name);
+				ast_node *decl = seed_find_enum(b->root, expr->as.member_expr.resolved_enum_type);
 				ast_enum_variant *variant = seed_find_variant(decl, expr->as.member_expr.member);
 				if (variant && !variant->payload_type)
 					return lower_enum_construct(b, decl, variant, NULL, expr->pos, out, expr->as.member_expr.resolved_enum_type);
@@ -891,13 +921,24 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			return true;
 		case AST_CALL_EXPR: {
 			size_t i;
+            if(b->root->native_unit && expr->as.call_expr.resolved_return_type &&
+               !strcmp(expr->as.call_expr.resolved_return_type,"never") &&
+               expr->as.call_expr.callee && expr->as.call_expr.callee->kind==AST_IDENT_EXPR &&
+               !strcmp(expr->as.call_expr.callee->as.ident_expr.name,"panic")) {
+                for(i=0;i<expr->as.call_expr.args.len;i++) {
+                    char ignored[IR_OPERAND_CAP];
+                    if(!lower_expr(b,expr->as.call_expr.args.data[i],ignored)) return false;
+                }
+                copy_str(out,"0");
+                return emit_ins(b,IR_TRAP,"101","","",expr->pos);
+            }
 			size_t argc = expr->as.call_expr.args.len;
 			char callee[IR_OPERAND_CAP] = "call";
 			char argc_text[IR_OPERAND_CAP];
 			ast_node *member = expr->as.call_expr.callee;
 			if (member && member->kind == AST_MEMBER_EXPR && member->as.member_expr.resolved_enum_type &&
 				seed_enum_owner_name(member->as.member_expr.object, callee, sizeof(callee))) {
-				ast_node *decl = seed_find_enum(b->root, callee);
+				ast_node *decl = seed_find_enum(b->root, member->as.member_expr.resolved_enum_type);
 				ast_enum_variant *variant = seed_find_variant(decl, member->as.member_expr.member);
 				if (variant) return lower_enum_construct(b, decl, variant,
 						expr->as.call_expr.args.len ? expr->as.call_expr.args.data[0] : NULL, expr->pos, out,

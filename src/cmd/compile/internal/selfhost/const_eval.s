@@ -14,7 +14,7 @@ func init_const_eval() {
 // Returns: (value, is_valid)
 func evaluate_const_expr(expr_text str) (str, bool) {
     // Basic constant evaluation
-    // For now, just validate the expression is not empty
+    // For: now, just validate the expression is not empty
     if len(expr_text) == 0 {
         return "", false
     }
@@ -39,7 +39,7 @@ func eval_int_const(text str) (int, bool) {
         i = i + 1
     }
     
-    // For now, return success without actual parsing
+    // For: now, return success without actual parsing
     // Real implementation would parse the string
     return 0, true
 }

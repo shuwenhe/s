@@ -575,7 +575,7 @@ func edit_expr(expr value, bool in_bloop) expr {
                 i = i + 1
             }
             expr.call(call_expr {
-                callee: std.prelude.box(edit_expr(call_value.callee.value, in_bloop)), args out_args, inferred_type call_value.inferred_type, resolved_callee call_value.resolved_callee, type_args call_value.kindargs,
+                callee: std.prelude.box(edit_expr(call_value.callee.value, in_bloop)), args out_args, inferred_type call_value.inferred_type, resolved_callee call_value.resolved_callee, type_args call_value.type_args,
             })
         }
         expr.if(if_value) : {
@@ -594,12 +594,23 @@ func edit_expr(expr value, bool in_bloop) expr {
         expr.while(while_value) : {
             loop_flag := in_bloop || is_testing_bloop_expr(while_value.condition.value)
             expr.while(while_expr {
-                condition: std.prelude.box(edit_expr(while_value.condition.value, in_bloop)), body edit_block(while_value.body, loop_flag), inferred_type while_value.inferred_type,
+                condition: std.prelude.box(edit_expr(while_value.condition.value, in_bloop)), body: edit_block(while_value.body, loop_flag), inferred_type: while_value.inferred_type,
             })
         }
-        expr.for(for_value) : expr.for(for_expr {
-            names: for_value.names, declare for_value.declare, iterable std.prelude.box(edit_expr(for_value.iterable.value, in_bloop)), body edit_block(for_value.body, in_bloop), inferred_type for_value.inferred_type,
-        }),
+        expr.for(for_value) : {
+            init := for_value.init
+            condition := for_value.condition
+            post := for_value.post
+            iterable := for_value.iterable
+            if init.is_some() { init = option.some(std.prelude.box(edit_stmt(init.unwrap().value, in_bloop))) }
+            if condition.is_some() { condition = option.some(std.prelude.box(edit_expr(condition.unwrap().value, in_bloop))) }
+            if post.is_some() { post = option.some(std.prelude.box(edit_stmt(post.unwrap().value, in_bloop))) }
+            if iterable.is_some() { iterable = option.some(std.prelude.box(edit_expr(iterable.unwrap().value, in_bloop))) }
+            expr.for(for_expr {
+                init: init, condition: condition, post: post, names: for_value.names,
+                iterable: iterable, body: edit_block(for_value.body, in_bloop), inferred_type: for_value.inferred_type,
+            })
+        }
         expr.block(block_value) : expr.block(edit_block(block_value, in_bloop)),
         expr.switch(switch_value) : {
             arms := switch_arm[]()
@@ -627,7 +638,7 @@ func edit_stmt(stmt value, bool in_bloop) stmt {
             })
         }
         stmt.let(var_value) : stmt.let(var_stmt {
-            name: var_value.name, type_name var_value.kindname, value edit_expr(var_value.value, in_bloop),
+            name: var_value.name, type_name var_value.type_name, value edit_expr(var_value.value, in_bloop),
         }),
         stmt.expr(expr_value) : stmt.s.expr(expr_stmt {
             expr: edit_expr(expr_value.expr, in_bloop),

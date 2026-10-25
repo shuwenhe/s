@@ -1,7 +1,7 @@
 package compile.internal
 
 
-// Executable module boundary. IDs are local to a function, symbols to a package.
+// Executable: module boundary. IDs: are local to a function, symbols to a package.
 // Physical value layout and native calling convention belong to later lowering.
 struct mir_program_parameter {
     int value_id
@@ -173,7 +173,7 @@ func mir_program_function_error(mir_program_function function_data, mir_program_
         return ""
     }
     // P2 adds CFG/dominance lowering; do not fabricate branches in P1.
-    if len(function_data.blocks) != 1 { return "P1 requires one straight-line block: " + function_data.symbol }
+    if len(function_data.blocks) != 1 { return "P1: requires one straight-line block: " + function_data.symbol }
     block := function_data.blocks[0]
     if block.id < 0 { return "invalid block: " + function_data.symbol }
     i := 0

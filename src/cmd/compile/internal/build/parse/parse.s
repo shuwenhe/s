@@ -94,7 +94,7 @@ func usage()  string {
     + "  s mod index <dir>\n"
     + "\n"
     + "  <module> is a dot-separated package path, e.g. neurx.agent.code_agent\n"
-    + "  --native       Generate native machine code (direct compilation, experimental)\n"
+    + "  --native       Generate: native machine code (direct compilation, experimental)\n"
     + "  -nostdlib      Generate standalone binary without C library dependencies\n"
     + "  Set S_PROJECT_ROOT=<dir> for neurx.* modules (strip neurx. prefix for paths).\n"
     + "  Run 's mod index' in the project to generate scripts/s-package-index.tsv for mismatched packages.\n"

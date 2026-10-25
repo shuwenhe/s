@@ -10,7 +10,7 @@ func test_elf64_header_creation() linker_test_result {
     header := elf64_header_new()
 
     result := linker_test_result {
-        test_name: "ELF64 Header Creation",
+        test_name: "ELF64: Header: Creation",
         passed: 1,
         error_message: ""
     }
@@ -40,7 +40,7 @@ func test_elf64_section_creation() linker_test_result {
     section := elf64_section_new(1, sht_progbits, shf_alloc | shf_execinstr)
 
     result := linker_test_result {
-        test_name: "ELF64 Section Creation",
+        test_name: "ELF64: Section: Creation",
         passed: 1,
         error_message: ""
     }
@@ -64,7 +64,7 @@ func test_elf64_symbol_creation() linker_test_result {
     symbol := elf64_symbol_new(0, stb_global, stt_func, 1)
 
     result := linker_test_result {
-        test_name: "ELF64 Symbol Creation",
+        test_name: "ELF64: Symbol: Creation",
         passed: 1,
         error_message: ""
     }
@@ -89,7 +89,7 @@ func test_relocation_creation() linker_test_result {
     reloc := elf64_relocation_new(0x1000, r_x86_64_64, 5)
 
     result := linker_test_result {
-        test_name: "Relocation Creation",
+        test_name: "Relocation: Creation",
         passed: 1,
         error_message: ""
     }
@@ -122,7 +122,7 @@ func test_relocation_resolve_64() linker_test_result {
     result_val := relocation_resolve(&ctx, 0x1000, 0x400000)
 
     result := linker_test_result {
-        test_name: "Relocation Resolve R_X86_64_64",
+        test_name: "Relocation: Resolve: R_X86_64_64",
         passed: 1,
         error_message: ""
     }
@@ -155,7 +155,7 @@ func test_relocation_resolve_pc32() linker_test_result {
     result_val := relocation_resolve(&ctx, 0x1000, 0x400000)
 
     result := linker_test_result {
-        test_name: "Relocation Resolve R_X86_64_PC32",
+        test_name: "Relocation: Resolve: R_X86_64_PC32",
         passed: 1,
         error_message: ""
     }
@@ -181,7 +181,7 @@ func test_linker_context_creation() linker_test_result {
     ctx := linker_context_new("output.o")
 
     result := linker_test_result {
-        test_name: "Linker Context Creation",
+        test_name: "Linker: Context: Creation",
         passed: 1,
         error_message: ""
     }
@@ -206,7 +206,7 @@ func test_linker_add_object_file() linker_test_result {
     linker_add_object_file(&ctx, "test.o")
 
     result := linker_test_result {
-        test_name: "Linker Add Object File",
+        test_name: "Linker: Add: Object File",
         passed: 1,
         error_message: ""
     }

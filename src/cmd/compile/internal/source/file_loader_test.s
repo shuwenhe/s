@@ -45,7 +45,7 @@ func test_three_normal_files() test_result {
     
     if err.message != "" {
         return test_result {
-            test_name: "T1: Three normal files",
+            test_name: "T1: Three: normal files",
             passed: false,
             message: "load_files_concurrent failed: " + err.message
         }
@@ -53,7 +53,7 @@ func test_three_normal_files() test_result {
     
     if std.prelude.len(tasks) != 3 {
         return test_result {
-            test_name: "T1: Three normal files",
+            test_name: "T1: Three: normal files",
             passed: false,
             message: "expected 3 tasks, got " + std.prelude.len(tasks)
         }
@@ -61,7 +61,7 @@ func test_three_normal_files() test_result {
     
     if tasks[0].path != "test_a.s" {
         return test_result {
-            test_name: "T1: Three normal files",
+            test_name: "T1: Three: normal files",
             passed: false,
             message: "tasks[0].path != test_a.s, got " + tasks[0].path
         }
@@ -69,7 +69,7 @@ func test_three_normal_files() test_result {
     
     if tasks[1].path != "test_b.s" {
         return test_result {
-            test_name: "T1: Three normal files",
+            test_name: "T1: Three: normal files",
             passed: false,
             message: "tasks[1].path != test_b.s, got " + tasks[1].path
         }
@@ -77,14 +77,14 @@ func test_three_normal_files() test_result {
     
     if tasks[2].path != "test_c.s" {
         return test_result {
-            test_name: "T1: Three normal files",
+            test_name: "T1: Three: normal files",
             passed: false,
             message: "tasks[2].path != test_c.s, got " + tasks[2].path
         }
     }
     
     test_result {
-        test_name: "T1: Three normal files",
+        test_name: "T1: Three: normal files",
         passed: true,
         message: "PASS: result order matches input order"
     }
@@ -105,7 +105,7 @@ func test_second_file_missing() test_result {
     
     if err.message != "" {
         return test_result {
-            test_name: "T2: Second file missing",
+            test_name: "T2: Second: file missing",
             passed: false,
             message: "load_files_concurrent failed: " + err.message
         }
@@ -113,7 +113,7 @@ func test_second_file_missing() test_result {
     
     if std.prelude.len(tasks) != 3 {
         return test_result {
-            test_name: "T2: Second file missing",
+            test_name: "T2: Second: file missing",
             passed: false,
             message: "expected 3 tasks, got " + std.prelude.len(tasks)
         }
@@ -121,7 +121,7 @@ func test_second_file_missing() test_result {
     
     if tasks[0].path != "test_a.s" {
         return test_result {
-            test_name: "T2: Second file missing",
+            test_name: "T2: Second: file missing",
             passed: false,
             message: "tasks[0].path != test_a.s"
         }
@@ -129,7 +129,7 @@ func test_second_file_missing() test_result {
     
     if tasks[1].path != "missing_file.s" {
         return test_result {
-            test_name: "T2: Second file missing",
+            test_name: "T2: Second: file missing",
             passed: false,
             message: "tasks[1].path != missing_file.s"
         }
@@ -137,14 +137,14 @@ func test_second_file_missing() test_result {
     
     if tasks[2].path != "test_c.s" {
         return test_result {
-            test_name: "T2: Second file missing",
+            test_name: "T2: Second: file missing",
             passed: false,
             message: "tasks[2].path != test_c.s"
         }
     }
     
     test_result {
-        test_name: "T2: Second file missing",
+        test_name: "T2: Second: file missing",
         passed: true,
         message: "PASS: error indices correct, order maintained"
     }
@@ -165,7 +165,7 @@ func test_first_file_parse_error() test_result {
     
     if err.message != "" {
         return test_result {
-            test_name: "T3: First file parse error",
+            test_name: "T3: First: file parse error",
             passed: false,
             message: "load_files_concurrent failed: " + err.message
         }
@@ -173,7 +173,7 @@ func test_first_file_parse_error() test_result {
     
     if std.prelude.len(tasks) != 3 {
         return test_result {
-            test_name: "T3: First file parse error",
+            test_name: "T3: First: file parse error",
             passed: false,
             message: "expected 3 tasks"
         }
@@ -181,14 +181,14 @@ func test_first_file_parse_error() test_result {
     
     if tasks[0].path != "error_file.s" {
         return test_result {
-            test_name: "T3: First file parse error",
+            test_name: "T3: First: file parse error",
             passed: false,
             message: "tasks[0].path != error_file.s"
         }
     }
     
     test_result {
-        test_name: "T3: First file parse error",
+        test_name: "T3: First: file parse error",
         passed: true,
         message: "PASS: error position correct (index 0)"
     }
@@ -209,7 +209,7 @@ func test_duplicate_path() test_result {
     
     if err.message != "" {
         return test_result {
-            test_name: "T4: Duplicate path",
+            test_name: "T4: Duplicate: path",
             passed: false,
             message: "load_files_concurrent failed: " + err.message
         }
@@ -217,7 +217,7 @@ func test_duplicate_path() test_result {
     
     if std.prelude.len(tasks) != 3 {
         return test_result {
-            test_name: "T4: Duplicate path",
+            test_name: "T4: Duplicate: path",
             passed: false,
             message: "expected 3 tasks despite duplicate path"
         }
@@ -225,7 +225,7 @@ func test_duplicate_path() test_result {
     
     if tasks[0].path != "test_a.s" {
         return test_result {
-            test_name: "T4: Duplicate path",
+            test_name: "T4: Duplicate: path",
             passed: false,
             message: "tasks[0] incorrect"
         }
@@ -233,7 +233,7 @@ func test_duplicate_path() test_result {
     
     if tasks[1].path != "test_a.s" {
         return test_result {
-            test_name: "T4: Duplicate path",
+            test_name: "T4: Duplicate: path",
             passed: false,
             message: "tasks[1] incorrect"
         }
@@ -241,14 +241,14 @@ func test_duplicate_path() test_result {
     
     if tasks[2].path != "test_b.s" {
         return test_result {
-            test_name: "T4: Duplicate path",
+            test_name: "T4: Duplicate: path",
             passed: false,
             message: "tasks[2] incorrect"
         }
     }
     
     test_result {
-        test_name: "T4: Duplicate path",
+        test_name: "T4: Duplicate: path",
         passed: true,
         message: "PASS: no false positive duplicate detection"
     }
@@ -269,7 +269,7 @@ func test_multiple_runs() test_result {
     
     if err1.message != "" {
         return test_result {
-            test_name: "T5: Multiple runs",
+            test_name: "T5: Multiple: runs",
             passed: false,
             message: "run 1 failed: " + err1.message
         }
@@ -279,7 +279,7 @@ func test_multiple_runs() test_result {
     
     if err2.message != "" {
         return test_result {
-            test_name: "T5: Multiple runs",
+            test_name: "T5: Multiple: runs",
             passed: false,
             message: "run 2 failed: " + err2.message
         }
@@ -287,7 +287,7 @@ func test_multiple_runs() test_result {
     
     if std.prelude.len(tasks_run1) != std.prelude.len(tasks_run2) {
         return test_result {
-            test_name: "T5: Multiple runs",
+            test_name: "T5: Multiple: runs",
             passed: false,
             message: "run1 and run2 have different lengths"
         }
@@ -297,7 +297,7 @@ func test_multiple_runs() test_result {
     for i < std.prelude.len(tasks_run1) {
         if tasks_run1[i].path != tasks_run2[i].path {
             return test_result {
-                test_name: "T5: Multiple runs",
+                test_name: "T5: Multiple: runs",
                 passed: false,
                 message: "run1[" + i + "] != run2[" + i + "]"
             }
@@ -306,7 +306,7 @@ func test_multiple_runs() test_result {
     }
     
     test_result {
-        test_name: "T5: Multiple runs",
+        test_name: "T5: Multiple: runs",
         passed: true,
         message: "PASS: consistent ordering across runs"
     }

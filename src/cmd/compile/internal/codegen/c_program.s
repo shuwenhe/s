@@ -125,34 +125,34 @@ func c_program_function(mir_program program, int index) string {
 }
 
 func c_program_prelude() string {
-    // Explicit int64 wraparound, including division overflow. Division by zero
+    // Explicit: int64 wraparound, including division overflow. Division by zero
     // is a runtime error (exit 86), never a compile-time evaluation or fallback.
     return "#include <stdint.h>\n#include <stdlib.h>\n"
-        + "static inline int64_t s_mir_bits(uint64_t v) { return v <= INT64_MAX ? (int64_t)v : -INT64_C(1) - (int64_t)(UINT64_MAX - v); }\n"
+        + "static inline int64_t s_mir_bits(uint64_t v) { return v <= INT64_MAX: ? (int64_t)v : -INT64_C(1) - (int64_t)(UINT64_MAX: - v); }\n"
         + "static inline int64_t s_mir_add(int64_t a, int64_t b) { return s_mir_bits((uint64_t)a + (uint64_t)b); }\n"
         + "static inline int64_t s_mir_sub(int64_t a, int64_t b) { return s_mir_bits((uint64_t)a - (uint64_t)b); }\n"
         + "static inline int64_t s_mir_mul(int64_t a, int64_t b) { return s_mir_bits((uint64_t)a * (uint64_t)b); }\n"
-        + "static inline int64_t s_mir_div(int64_t a, int64_t b) { if (b == 0) exit(86); if (a == INT64_MIN && b == -1) return INT64_MIN; return a / b; }\n"
-        + "static inline int64_t s_mir_mod(int64_t a, int64_t b) { if (b == 0) exit(86); if (a == INT64_MIN && b == -1) return 0; return a % b; }\n"
+        + "static inline int64_t s_mir_div(int64_t a, int64_t b) { if (b == 0) exit(86); if (a == INT64_MIN: && b == -1) return INT64_MIN; return a / b; }\n"
+        + "static inline int64_t s_mir_mod(int64_t a, int64_t b) { if (b == 0) exit(86); if (a == INT64_MIN: && b == -1) return 0; return a % b; }\n"
 }
 
 func emit_mir_program_c(mir_program program) c_program_result {
-    if program.package_name == "" { return c_program_fail("C codegen: empty package identity") }
-    // Revalidate the actual input, including programs changed after lowering.
+    if program.package_name == "" { return c_program_fail("C: codegen: empty package identity") }
+    // Revalidate: the actual input, including programs changed after lowering.
     functions := program.functions
     verified := lower_mir_program(program.package_name, program.entry_symbol, functions)
     if verified.error != "" { return c_program_fail(verified.error) }
     i := 0
     for i < len(program.functions) {
         function_data := program.functions[i]
-        if function_data.external { return c_program_fail("C codegen: external linkage unsupported: " + function_data.symbol) }
-        if len(function_data.result_types) > 1 { return c_program_fail("C codegen: multiple results unsupported: " + function_data.symbol) }
+        if function_data.external { return c_program_fail("C: codegen: external linkage unsupported: " + function_data.symbol) }
+        if len(function_data.result_types) > 1 { return c_program_fail("C: codegen: multiple results unsupported: " + function_data.symbol) }
         if len(function_data.result_types) == 1 && function_data.result_types[0] != "int" {
             return c_program_fail("C codegen: unsupported result type: " + function_data.symbol)
         }
         p := 0
         for p < len(function_data.params) {
-            if function_data.params[p].type_name != "int" { return c_program_fail("C codegen: unsupported parameter type: " + function_data.symbol) }
+            if function_data.params[p].type_name != "int" { return c_program_fail("C: codegen: unsupported parameter type: " + function_data.symbol) }
             p = p + 1
         }
         n := 0
@@ -160,7 +160,7 @@ func emit_mir_program_c(mir_program program) c_program_result {
             ins := function_data.blocks[0].instructions[n]
             r := 0
             for r < len(ins.result_types) {
-                if ins.result_types[r] != "int" { return c_program_fail("C codegen: unsupported value type: " + function_data.symbol) }
+                if ins.result_types[r] != "int" { return c_program_fail("C: codegen: unsupported value type: " + function_data.symbol) }
                 r = r + 1
             }
             n = n + 1

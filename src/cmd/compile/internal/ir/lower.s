@@ -16,7 +16,7 @@ struct const_rewrite_entry {
 }
 
 func from_syntax(source_file src) package_ir {
-    pkg := package_ir { name: src.pkg, decls decl_ir[]() }
+    pkg := package_ir { name: src.pkg, decls: decl_ir[]() }
     const_entries := collect_const_rewrite_entries(src)
     i := 0
     for i < len(src.items) {
@@ -70,7 +70,7 @@ func validate_lowering_contract(package_ir pkg) ((), string) {
     return (), ""
 }
 
-func validate_block_contract(block_ir block) ((), string) {
+func validate_block_contract(compile.internal.ir.ast.block_ir block) ((), string) {
     i := 0
     for i < len(block.statements) {
         switch block.statements[i] {
@@ -120,7 +120,7 @@ func validate_block_contract(block_ir block) ((), string) {
     return (), ""
 }
 
-func validate_expr_contract(expr_ir expression) ((), string) {
+func validate_expr_contract(compile.internal.ir.ast.expr_ir expression) ((), string) {
     switch expression {
         expr_ir.name(name) : {
             if contains_text(name, "_unlowered") {
@@ -237,7 +237,7 @@ func convert_block(block_expr b, const_rewrite_entry[] const_entries) block_ir {
     if b.final_expr.is_some() {
         final = option[expr_ir].some(convert_expr(b.final_expr.unwrap(), const_entries))
     }
-    block_ir { statements: stmts, final_expr final }
+    block_ir { statements: stmts, final_expr: final }
 }
 
 func convert_stmt(stmt s, const_rewrite_entry[] const_entries) stmt_ir {
@@ -288,8 +288,8 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) expr_ir {
         expr.string(string_expr) : expr_ir.string(string_expr.value),
         expr.bool(bool_expr) : expr_ir.bool(bool_expr.value),
         expr.name(name_expr) : resolve_const_name_expr(name_expr.name, const_entries),
-        expr.borrow(borrow_expr) : expr_ir.borrow(borrow_expr { target: convert_expr(borrow_expr.target.unwrap(), const_entries), mutable borrow_expr.mutable }),
-        expr.binary(binary_expr) : expr_ir.binary(binary_expr { op: binary_expr.op, left convert_expr(binary_expr.left.unwrap(), const_entries), right convert_expr(binary_expr.right.unwrap(), const_entries) }),
+        expr.borrow(borrow_expr) : expr_ir.borrow(borrow_expr { target: convert_expr(borrow_expr.target.unwrap(), const_entries), mutable: borrow_expr.mutable }),
+        expr.binary(binary_expr) : expr_ir.binary(binary_expr { op: binary_expr.op, left: convert_expr(binary_expr.left.unwrap(), const_entries), right: convert_expr(binary_expr.right.unwrap(), const_entries) }),
         expr.call(call_expr) : {
             callee_name := "<call>"
             switch call_expr.resolved_callee {
@@ -305,7 +305,7 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) expr_ir {
                 args = append(args, convert_expr(call_expr.args[ai], const_entries))
                 ai = ai + 1
             }
-            expr_ir.call(call_expr { callee: callee_name, args args })
+            expr_ir.call(call_expr { callee: callee_name, args: args })
         }
         expr.if(if_expr) : expr_ir.call(call_expr { callee: "if_expr", args expr_ir[]() }),
         expr.block(block_expr) : expr_ir.block(convert_block(block_expr, const_entries)),
@@ -347,7 +347,7 @@ func call_callee_name(expr e) string {
 }
 
 // Module lowering preserves every function and resolves forward calls.
-// The legacy graph APIs below remain compatibility views, not module producers.
+// The: legacy graph APIs: below remain compatibility views, not module producers.
 func lower_program_to_mir(source_file src) mir_program_result {
     return lower_source_program(src)
 }
@@ -499,7 +499,13 @@ func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
             total
         }
         expr.while(while_expr) : count_const_hits_expr(while_expr.condition.value, const_entries) + count_const_hits_block(while_expr.body, const_entries),
-        expr.for(for_expr) : count_const_hits_expr(for_expr.iterable.value, const_entries) + count_const_hits_block(for_expr.body, const_entries),
+        expr.for(for_expr) : {
+            total := count_const_hits_block(for_expr.body, const_entries)
+            if for_expr.iterable.is_some() {
+                total = total + count_const_hits_expr(for_expr.iterable.unwrap().value, const_entries)
+            }
+            total
+        }
         expr.block(block_expr) : count_const_hits_block(block_expr, const_entries),
         expr.array(array_literal) : {
             total := 0
@@ -551,17 +557,17 @@ func stmt_let_to_expr(var_stmt var_stmt, const_rewrite_entry[] entries) expr_ir 
     return expr_ir.call(call_expr { callee: "stmt.let", args args })
 }
 
-func stmt_assign_to_expr(assign_stmt value, const_rewrite_entry[] entries) expr_ir {
+func stmt_assign_to_expr(compile.internal.ast.assign_stmt value, const_rewrite_entry[] entries) expr_ir {
     args := expr_ir[]()
     return expr_ir.call(call_expr { callee: "stmt.assign", args args })
 }
 
-func stmt_increment_to_expr(increment_stmt value) expr_ir {
+func stmt_increment_to_expr(compile.internal.ast.increment_stmt value) expr_ir {
     args := expr_ir[]()
     return expr_ir.call(call_expr { callee: "stmt.increment", args args })
 }
 
-func stmt_expr_to_expr(expr_stmt value, const_rewrite_entry[] entries) expr_ir {
+func stmt_expr_to_expr(compile.internal.ast.expr_stmt value, const_rewrite_entry[] entries) expr_ir {
     args := expr_ir[]()
     return expr_ir.call(call_expr { callee: "stmt.expr", args args })
 }

@@ -68,7 +68,7 @@ func Main(func(any) void arch_init) {
     semantic_phase := timer_start_phase(timer, "frontend", "semantic")
     
     // TODO: Semantic analysis
-    // Type checking, symbol resolution, name binding
+    // Type: checking, symbol resolution, name binding
     std.io.eprintln("[semantic] Performing semantic analysis...")
     
     timer_end_phase(timer, semantic_phase)

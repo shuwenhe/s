@@ -254,6 +254,7 @@ static bool seed_compile_files_mode(int input_count, char **input_paths, const c
 			statements->data[j] = NULL; /* Transfer ownership exactly once. */
 		}
 	}
+    unit->native_unit = native_records;
 	if (native_records && !native_specialize_generics(unit, err)) goto done;
 	if (native_records && !borrow_prove_unit(unit, err)) goto done;
 	if (!semantic_analyze(unit, err)) goto done;

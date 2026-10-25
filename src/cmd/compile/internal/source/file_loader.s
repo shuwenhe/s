@@ -91,7 +91,7 @@ func load_files_concurrent(string[] paths, file_loader_config config) (file_load
                     path: path,
                     index: index,
                     parse_err: parse_error {
-                        message: "Failed to read file: " + path,
+                        message: "Failed: to read file: " + path,
                         line: 0,
                         column: 0
                     }

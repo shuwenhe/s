@@ -92,7 +92,7 @@ struct channel_handle_value {
 
 struct owned_box_value {
     int id
-    payload value
+    compile.internal.value payload
     bool live
 }
 
@@ -152,11 +152,11 @@ enum value {
     int(int),
     string(string),
     bool(bool),
-    unit(unit_value),
-    channel(channel_handle_value),
+    unit(compile.internal.unit_value),
+    channel(compile.internal.channel_handle_value),
     fn_ref(string),
-    fn_map(fn_map_entry_value[]),
-    owned_box(owned_box_value),
+    fn_map(compile.internal.fn_map_entry_value[]),
+    owned_box(compile.internal.owned_box_value),
 }
 
 struct binding {
@@ -754,7 +754,7 @@ func remove_unreachable_blocks_pass(mir_graph graph) graph_pass_count_result {
     if !contains_int32(reachable, rewritten.exit) {
         rewritten.exit = rewritten.entry
     }
-    graph_pass_count_result { graph: rewritten, count removed }
+    graph_pass_count_result { graph: rewritten, count: removed }
 }
 
 func simplify_redundant_branch_pass(mir_graph graph) graph_pass_count_result {
@@ -833,12 +833,12 @@ func trim_unit_line_pass(mir_graph graph) graph_pass_count_result {
     i := 0
     for i < std.prelude.len(rewritten.blocks) {
         if rewritten.blocks[i].terminator.kind == "return" {
-            filtered := mir_statement[]()
+            filtered := compile.internal.mir.mir_statement[]()
             j := 0
             for j < std.prelude.len(rewritten.blocks[i].statements) {
                 keep := true
                 switch rewritten.blocks[i].statements[j] {
-                    mir_statement.eval(eval_stmt) : {
+                    compile.internal.mir.mir_statement.eval(eval_stmt) : {
                         if eval_stmt.op == "line" && std.prelude.len(eval_stmt.args) > 0 && eval_stmt.args[0] == "yield unit" {
                             keep = false
                             changed = changed + 1
@@ -863,13 +863,13 @@ func dedup_eval_line_pass(mir_graph graph) graph_pass_count_result {
     changed := 0
     i := 0
     for i < std.prelude.len(rewritten.blocks) {
-        filtered := mir_statement[]()
+        filtered := compile.internal.mir.mir_statement[]()
         last_line := ""
         j := 0
         for j < std.prelude.len(rewritten.blocks[i].statements) {
             push_stmt := true
             switch rewritten.blocks[i].statements[j] {
-                mir_statement.eval(eval_stmt) : {
+                compile.internal.mir.mir_statement.eval(eval_stmt) : {
                     if eval_stmt.op == "line" && std.prelude.len(eval_stmt.args) > 0 {
                         current := eval_stmt.args[0]
                         if current == last_line {
@@ -917,7 +917,7 @@ func validate_ssa_abi_contracts(string arch, string ssa_text) backend_error {
     if pressure > 0 {
         budget := abi_caller_saved_count(arch) * 4
         if budget > 0 && pressure > budget {
-            return backend_error { message: "backend error: call pressure exceeds ABI budget" }
+            return backend_error { message: "backend error: call pressure exceeds ABI: budget" }
         }
     }
     if has_substring(ssa_text, "tailcall") {
@@ -999,12 +999,12 @@ func estimate_const_prop_sites_graph(mir_graph graph) int {
         j := 0
         for j < std.prelude.len(block.statements) {
             switch block.statements[j] {
-                mir_statement.assign(assign_stmt) : {
+                compile.internal.mir.mir_statement.assign(assign_stmt) : {
                     if assign_stmt.op == "const" || assign_stmt.op == "literal" {
                         constants = constants + 1
                     }
                 }
-                mir_statement.eval(eval_stmt) : {
+                compile.internal.mir.mir_statement.eval(eval_stmt) : {
                     if std.prelude.len(eval_stmt.args) > 0 {
                         constants = constants + count_occurrences(eval_stmt.args[0], "const")
                         constants = constants + count_occurrences(eval_stmt.args[0], "literal")
@@ -1184,19 +1184,19 @@ func abi_cross_arch_consistency_status(string arch, int spills, int functions) s
 
 func validate_abi_machine_matrix(string payload) backend_error {
     if !has_substring(payload, "abi-matrix version=1") {
-        return backend_error { message: "backend error: ABI matrix header missing" }
+        return backend_error { message: "backend error: ABI: matrix header missing" }
     }
     if !has_substring(payload, "axis caller_saved=") {
-        return backend_error { message: "backend error: ABI matrix caller/callee axis missing" }
+        return backend_error { message: "backend error: ABI: matrix caller/callee axis missing" }
     }
     if !has_substring(payload, "matrix callseq=") {
-        return backend_error { message: "backend error: ABI matrix call sequence axis missing" }
+        return backend_error { message: "backend error: ABI: matrix call sequence axis missing" }
     }
     if !has_substring(payload, "matrix ret=") {
-        return backend_error { message: "backend error: ABI matrix return axis missing" }
+        return backend_error { message: "backend error: ABI: matrix return axis missing" }
     }
     if !has_substring(payload, "cross_arch_consistency=") {
-        return backend_error { message: "backend error: ABI matrix cross-arch consistency missing" }
+        return backend_error { message: "backend error: ABI: matrix cross-arch consistency missing" }
     }
     backend_error { message: "" }
 }
@@ -1312,7 +1312,7 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
             continue
         }
         if !saw_text_directive {
-            return backend_error { message: "go asm translation error: missing TEXT directive" }
+            return backend_error { message: "go asm translation error: missing TEXT: directive" }
         }
         if starts_with_local(cleaned, "RET") {
             output_lines = append(output_lines, "    ret")
@@ -1327,7 +1327,7 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
         i = i + 1
     }
     if !saw_text_directive {
-        return backend_error { message: "go asm translation error: no TEXT directive found" }
+        return backend_error { message: "go asm translation error: no TEXT: directive found" }
     }
     return backend_join_lines(output_lines), backend_error { message: "" }
 }
@@ -1337,18 +1337,18 @@ func text_backend_pair_is_err(string value, backend_error err) bool {
 }
 
 func parse_go_text_symbol(string line) (string, backend_error) {
-    after := trim_spaces(std.prelude.prelude_slice(line, std.prelude.len("TEXT "), std.prelude.len(line)))
+    after := trim_spaces(std.prelude.prelude_slice(line, std.prelude.len("TEXT: "), std.prelude.len(line)))
     comma := index_of(after, ",")
     if comma < 0 {
-        return backend_error { message: "go asm translation error: malformed TEXT directive" }
+        return backend_error { message: "go asm translation error: malformed TEXT: directive" }
     }
     symbol_ref := trim_spaces(std.prelude.prelude_slice(after, 0, comma))
     if !ends_with_local(symbol_ref, "(SB)") {
-        return backend_error { message: "go asm translation error: TEXT symbol must use (SB)" }
+        return backend_error { message: "go asm translation error: TEXT: symbol must use (SB)" }
     }
     symbol := normalize_go_symbol(std.prelude.prelude_slice(symbol_ref, 0, std.prelude.len(symbol_ref) - std.prelude.len("(SB)")))
     if symbol == "" {
-        return backend_error { message: "go asm translation error: empty TEXT symbol" }
+        return backend_error { message: "go asm translation error: empty TEXT: symbol" }
     }
     return symbol, backend_error { message: "" }
 }
@@ -1663,7 +1663,7 @@ func collect_function_stackmaps(string arch, source_file source, string ssa_text
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
-            item.function(fn_decl) : {
+            compile.internal.ast.item.function(fn_decl) : {
                 if fn_decl.body.is_some() {
                     slots := estimate_function_stack_slots(fn_decl, ssa_text)
                     out.push(stackmap_function_entry {
@@ -1748,7 +1748,7 @@ func build_abi_emit_plan(string arch, source_file source) string {
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
-            item.function(fn_decl) : {
+            compile.internal.ast.item.function(fn_decl) : {
                 line := "fn " + fn_decl.sig.name
                 abi_info := abi_analyze_types(
                     new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
@@ -1954,7 +1954,7 @@ func collect_abi_behavior(string arch, source_file source) abi_behavior_entry[] 
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
-            item.function(fn_decl) : {
+            compile.internal.ast.item.function(fn_decl) : {
                 abi_info := abi_analyze_types(
                     new_abi_config(abi_variadic_gp_limit(arch), abi_float_param_reg_limit(arch), abi_stack_alignment(arch), 1),
                     collect_fn_param_types(fn_decl),
@@ -1978,7 +1978,7 @@ func collect_fn_param_types(function_decl fn_decl) string[] {
     out := string[]()
     i := 0
     for i < std.prelude.len(fn_decl.sig.params) {
-        out = append(out, trim_spaces(fn_decl.sig.params[i].kindname))
+        out = append(out, trim_spaces(fn_decl.sig.params[i].type_name))
         i = i + 1
     }
     out
@@ -2082,7 +2082,7 @@ func build_dwarf_like_artifact(source_file source, string ssa_text, string debug
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
-            item.function(fn_decl) : lines = append(lines, "  fn=" + fn_decl.sig.name + " inline_depth=" + std.prelude.to_string(dwarf_inline_depth_hint(fn_decl.sig.name, ssa_text))),
+            compile.internal.ast.item.function(fn_decl) : lines = append(lines, "  fn=" + fn_decl.sig.name + " inline_depth=" + std.prelude.to_string(dwarf_inline_depth_hint(fn_decl.sig.name, ssa_text))),
             _ : (),
         }
         i = i + 1
@@ -2187,7 +2187,7 @@ func append_debug_ranges_section(string[] lines, source_file source, string ssa_
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
-            item.function(fn_decl) : {
+            compile.internal.ast.item.function(fn_decl) : {
                 lo := 0x1000 + fn_idx * range_span
                 hi := lo + range_span
                 updated_lines = append(updated_lines, "  fn=" + fn_decl.sig.name + " range=[" + std.prelude.to_string(lo) + "," + std.prelude.to_string(hi) + ")")
@@ -2233,7 +2233,7 @@ func build_drop_metadata_artifact(string arch, source_file source, string ssa_te
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
-            item.function(fn_decl) : {
+            compile.internal.ast.item.function(fn_decl) : {
                 slots := estimate_function_stack_slots(fn_decl, ssa_text)
                 lines.push(
                     "fn " + fn_decl.sig.name
@@ -2424,7 +2424,7 @@ func function_item_count(source_file source) int {
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
-            item.function(_) : out = out + 1,
+            compile.internal.ast.item.function(_) : out = out + 1,
             _ : (),
         }
         i = i + 1
@@ -2449,12 +2449,12 @@ func build_export_data_artifact(source_file source, string arch) string {
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
-            item.function(fn_decl) : {
+            compile.internal.ast.item.function(fn_decl) : {
                 signature := ""
                 p := 0
                 for p < std.prelude.len(fn_decl.sig.params) {
                     if p > 0 { signature = signature + "," }
-                    signature = signature + fn_decl.sig.params[p].name + ":" + fn_decl.sig.params[p].kindname
+                    signature = signature + fn_decl.sig.params[p].name + ":" + fn_decl.sig.params[p].type_name
                     p = p + 1
                 }
                 result_type := ""
@@ -2470,18 +2470,18 @@ func build_export_data_artifact(source_file source, string arch) string {
                         + " returns=" + result_type
                 )
             }
-            item.struct(st) : {
+            compile.internal.ast.item.struct(st) : {
                 fields := ""
                 f := 0
                 for f < std.prelude.len(st.fields) {
                     if f > 0 { fields = fields + "," }
-                    fields = fields + st.fields[f].name + ":" + st.fields[f].kindname
+                    fields = fields + st.fields[f].name + ":" + st.fields[f].type_name
                     f = f + 1
                 }
                 lines.push("struct " + st.name + " public=" + std.prelude.to_string(st.is_public as int)
                     + " generics=" + backend_join_with(st.generics, ",") + " fields=" + fields)
             }
-            item.enum(en) : {
+            compile.internal.ast.item.enum(en) : {
                 variants := ""
                 v := 0
                 for v < std.prelude.len(en.variants) {
@@ -2496,7 +2496,7 @@ func build_export_data_artifact(source_file source, string arch) string {
                 lines.push("enum " + en.name + " public=" + std.prelude.to_string(en.is_public as int)
                     + " generics=" + backend_join_with(en.generics, ",") + " variants=" + variants)
             }
-            item.trait(tr) : {
+            compile.internal.ast.item.trait(tr) : {
                 methods := ""
                 m := 0
                 for m < std.prelude.len(tr.methods) {
@@ -2507,17 +2507,17 @@ func build_export_data_artifact(source_file source, string arch) string {
                 lines.push("trait " + tr.name + " public=" + std.prelude.to_string(tr.is_public as int)
                     + " generics=" + backend_join_with(tr.generics, ",") + " methods=" + methods)
             }
-            item.method(method) : {
+            compile.internal.ast.item.method(method) : {
                 fn_decl := method.method
                 lines.push("method " + method.receiver_type + "." + fn_decl.sig.name
                     + " public=" + std.prelude.to_string(fn_decl.is_public as int)
                     + " params=" + std.prelude.to_string(std.prelude.len(fn_decl.sig.params))
                     + " generics=" + backend_join_with(fn_decl.sig.generics, ","))
             }
-            item.const(cn) : lines.push("const " + cn.name + " iota=" + std.prelude.to_string(cn.iota_index)),
-            item.var(vr) : {
+            compile.internal.ast.item.const(cn) : lines.push("const " + cn.name + " iota=" + std.prelude.to_string(cn.iota_index)),
+            compile.internal.ast.item.var(vr) : {
                 type_name := ""
-                switch vr.kindname {
+                switch vr.type_name {
                     option.some(value) : type_name = value,
                     option.none : (),
                 }
@@ -2568,29 +2568,29 @@ func load_source_graph(string path, string source) result[source_file, backend_e
         
         
         if !mono_result.m1_gate.declarations_received {
-            return result.err(backend_error { message: "M1 gate FAILED: no declarations received from semantic phase" })
+            return result.err(backend_error { message: "M1: gate FAILED: no declarations received from semantic phase" })
         }
         if mono_result.m1_gate.declarations_count == 0 {
-            return result.err(backend_error { message: "M1 gate WARNING: semantic phase produced no declarations (may be expected for simple programs)" })
+            return result.err(backend_error { message: "M1: gate WARNING: semantic phase produced no declarations (may be expected for simple programs)" })
         }
         if mono_result.m1_gate.work_items_without_ref_count > 0 {
-            return result.err(backend_error { message: "M1 gate FAILED: work_items exist without declaration_ref - indicates uninitialized refs" })
+            return result.err(backend_error { message: "M1: gate FAILED: work_items exist without declaration_ref - indicates uninitialized refs" })
         }
         if !mono_result.m1_gate.all_refs_have_valid_package_path {
-            return result.err(backend_error { message: "M1 gate FAILED: some declaration_refs missing package_path" })
+            return result.err(backend_error { message: "M1: gate FAILED: some declaration_refs missing package_path" })
         }
         if !mono_result.m1_gate.all_refs_have_valid_path {
-            return result.err(backend_error { message: "M1 gate FAILED: some declaration_refs missing path" })
+            return result.err(backend_error { message: "M1: gate FAILED: some declaration_refs missing path" })
         }
         
         
         
         
         if !mono_result.m1_gate.all_refs_traced_to_semantic {
-            return result.err(backend_error { message: "M1 gate FAILED: PROVENANCE - some work_item refs not found in semantic declarations - indicates reconstruction or re-lookup" })
+            return result.err(backend_error { message: "M1: gate FAILED: PROVENANCE: - some work_item refs not found in semantic declarations - indicates reconstruction or re-lookup" })
         }
         if mono_result.m1_gate.work_items_with_untraced_source > 0 {
-            return result.err(backend_error { message: "M1 gate FAILED: PROVENANCE - untraced refs indicate Mono did not use semantic declarations" })
+            return result.err(backend_error { message: "M1: gate FAILED: PROVENANCE: - untraced refs indicate Mono did not use semantic declarations" })
         }
         
         return result.ok(mono_result.file)
@@ -3187,7 +3187,7 @@ func snapshot_captured_bindings(binding[] env) captured_binding[] {
     out := captured_binding[]()
     i := 0
     for i < std.prelude.len(env) {
-        out = append(out, captured_binding { name: env[i].name, value env[i].value })
+        out = append(out, captured_binding { name: env[i].name, value: env[i].value })
         i = i + 1
     }
     out
@@ -3197,7 +3197,7 @@ func restore_captured_bindings(captured_binding[] captured) binding[] {
     out := binding[]()
     i := 0
     for i < std.prelude.len(captured) {
-        out = append(out, binding { name: captured[i].name, value captured[i].value })
+        out = append(out, binding { name: captured[i].name, value: captured[i].value })
         i = i + 1
     }
     out
@@ -3518,9 +3518,9 @@ func block_result_value(result[mir_basic_block, backend_error] value) mir_basic_
     }
 }
 
-func execute_mir_statement(mir_statement statement, write_op[] writes) result[(), backend_error] {
+func execute_mir_statement(compile.internal.mir.mir_statement statement, write_op[] writes) result[(), backend_error] {
     return switch statement {
-        mir_statement.eval(eval_stmt) : {
+        compile.internal.mir.mir_statement.eval(eval_stmt) : {
             if std.prelude.len(eval_stmt.args) > 0 {
                 emit_print_from_line(eval_stmt.args[0], writes)
             }
@@ -3666,7 +3666,7 @@ func find_main(source_file source) result[function_decl, backend_error] {
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
-            item.function(value) : {
+            compile.internal.ast.item.function(value) : {
                 if value.body.is_some() && (value.sig.name == "main" || value.sig.name == "main") {
                     ok_function(value)
                 }
@@ -3759,7 +3759,7 @@ func find_function_in_source_graph(source_file source, string name, string[] vis
             pkg = source.item_packages[i]
         }
         switch source.items[i] {
-            item.function(value) : {
+            compile.internal.ast.item.function(value) : {
                 if value.sig.name == name || pkg + "." + value.sig.name == name {
                     return result.ok(value)
                 }
@@ -3787,9 +3787,9 @@ func execute_block(block_expr block, source_file source, binding[] env, write_op
     local_env := copy_bindings(env)
     result := execute_block_in_place(block, source, local_env, writes, runtime)
     if value_result_is_err(result) {
-        value_result_error(result)
+        return value_result_error(result)
     }
-    value_result_value(result)
+    return value_result_value(result)
 }
 
 func execute_block_in_place(block_expr block, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
@@ -3798,7 +3798,7 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
     si := 0
     for si < std.prelude.len(block.statements) {
         switch block.statements[si] {
-            stmt.defer(value) : {
+            compile.internal.ast.stmt.defer(value) : {
                 deferred = append(deferred, value.expr);
                 si = si + 1
                 continue
@@ -3892,7 +3892,7 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
 
 func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[(), backend_error] {
     return switch stmt {
-        stmt.let(value) : {
+        compile.internal.ast.stmt.let(value) : {
             expr_result := eval_expr(value.value, source, env, writes, runtime)
             if value_result_is_err(expr_result) {
                 return result.err(value_result_error(expr_result))
@@ -3902,7 +3902,7 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
             })
             result.ok(())
         }
-        stmt.assign(value) : {
+        compile.internal.ast.stmt.assign(value) : {
             expr_result := eval_expr(value.value, source, env, writes, runtime)
             if value_result_is_err(expr_result) {
                 return result.err(value_result_error(expr_result))
@@ -3917,18 +3917,18 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
                 value.owned_box(handle) : replacement_id = handle.id,
                 _ : { }
             }
-            release_owned_value(env.get(index).unwrap().value, runtime, replacement_id)
+            release_owned_value(env[index].value, runtime, replacement_id)
             env.set(index, binding {
                 name: value.name, value: replacement
             })
             result.ok(())
         }
-        stmt.increment(inc) : {
+        compile.internal.ast.stmt.increment(inc) : {
             index := find_binding_index(env, inc.name)
             if index < 0 {
                 return result.err(backend_error { message: "backend error: unknown name " + inc.name })
             }
-            switch env.get(index).unwrap().value {
+            switch env[index].value {
                 value.int(number) : {
                     env.set(find_binding_index(env, inc.name), binding {
                         name: inc.name, value: value.int(number + 1)
@@ -3938,14 +3938,14 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
                 _ : result.err(backend_error { message: "backend error: increment expects int for " + inc.name })
             }
         }
-        stmt.c_for(value) : {
+        compile.internal.ast.stmt.c_for(value) : {
             c_for_result := execute_c_for_result(value, source, env, writes, runtime)
             if unit_result_is_err(c_for_result) {
                 return result.err(unit_result_error(c_for_result))
             }
             result.ok(())
         }
-        stmt.return(ret_stmt) : {
+        compile.internal.ast.stmt.return(ret_stmt) : {
             returned := value.unit(unit_value {})
             switch ret_stmt.value {
                 option.some(expr_value) : {
@@ -3961,15 +3961,15 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
             set_control(env, control_return_value, returned)
             result.ok(())
         }
-        stmt.expr(value) : {
+        compile.internal.ast.stmt.expr(value) : {
             expr_result := eval_expr(value.expr, source, env, writes, runtime)
             if value_result_is_err(expr_result) {
                 return result.err(value_result_error(expr_result))
             }
             result.ok(())
         }
-        stmt.defer(_) : result.ok(())
-        stmt.sroutine(sroutine_stmt) : execute_sroutine_stmt_result(sroutine_stmt, source, env, writes, runtime)
+        compile.internal.ast.stmt.defer(_) : result.ok(())
+        compile.internal.ast.stmt.sroutine(sroutine_stmt) : execute_sroutine_stmt_result(sroutine_stmt, source, env, writes, runtime)
     }
 }
 
@@ -4108,7 +4108,7 @@ func eval_expr(expr expr, source_file source, binding[] env, write_op[] writes, 
     }
 }
 
-func eval_binary(binary_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
+func eval_binary(compile.internal.ast.binary_expr value, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     left_result := eval_expr(value.left.value, source, env, writes, runtime)
     if value_result_is_err(left_result) {
         return result.err(value_result_error(left_result))
@@ -4137,7 +4137,7 @@ func eval_binary(binary_expr value, source_file source, binding[] env, write_op[
     }
 }
 
-func eval_call(call_expr expr, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
+func eval_call(compile.internal.ast.call_expr expr, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     switch expr.resolved_callee {
         option.some(resolved) : {
             arg_values := value[]()
@@ -4244,7 +4244,7 @@ func eval_box_new_call(expr[] args, source_file source, binding[] env, write_op[
     }
     id := runtime.next_owned_box_id
     runtime.next_owned_box_id = runtime.next_owned_box_id + 1
-    owned := owned_box_value { id: id, payload value_result_value(payload_result), live true }
+    owned := owned_box_value { id: id, payload: value_result_value(payload_result), live: true }
     runtime.owned_boxes.push(owned)
     return result.ok(value.owned_box(owned))
 }
@@ -4314,7 +4314,7 @@ func release_owned_value(value candidate, runtime_state runtime, int keep_id) ()
     return
 }
 
-func eval_member_expr_result(member_expr member, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
+func eval_member_expr_result(compile.internal.ast.member_expr member, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     target_result := eval_expr(member.target.value, source, env, writes, runtime)
     if value_result_is_err(target_result) {
         return result.err(value_result_error(target_result))
@@ -4841,10 +4841,10 @@ func copy_control_binding(binding[] from_env, binding[] to_env, string name) () 
 func set_control(binding[] env, string name, value v) () {
     index := find_binding_index(env, name)
     if index >= 0 {
-        env.set(index, binding { name: name, value v })
+        env.set(index, binding { name: name, value: v })
         return
     }
-    append(env, binding { name: name, value v });
+    append(env, binding { name: name, value: v });
 }
 
 func control_in_defer_mode(binding[] env) bool {
@@ -4920,7 +4920,7 @@ func collect_const_bindings_in_source(source_file source, binding[] out, string[
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
-            item.const(const_decl) : {
+            compile.internal.ast.item.const(const_decl) : {
                 if find_binding_index(out, const_decl.name) >= 0 {
                     return result.err(backend_error { message: "backend error: duplicate const declaration " + const_decl.name })
                 }
@@ -4992,7 +4992,7 @@ func eval_const_value_expr(expr const_expr, binding[] const_env, int iota_value)
             if value_result_is_err(const_value) {
                 return result.err(backend_error { message: "unknown const name " + name_expr.name })
             }
-            value_result_value(const_value)
+            result.ok(value_result_value(const_value))
         }
         expr.binary(binary_expr) : {
             left := eval_const_value_expr(binary_expr.left.value, const_env, iota_value)
@@ -5040,7 +5040,7 @@ func lookup_name_or_function(binding[] env, source_file source, string name) res
 }
 
 func eval_map_literal(map_literal literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
-    entries := fn_map_entry_value[]()
+    entries := compile.internal.fn_map_entry_value[]()
     i := 0
     for i < std.prelude.len(literal.entries) {
         key_result := eval_expr(literal.entries[i].key, source, env, writes, runtime)
@@ -5055,15 +5055,15 @@ func eval_map_literal(map_literal literal, source_file source, binding[] env, wr
         if mapped_name == "" {
             return backend_error { message: "backend error: map literal currently supports function values only" }
         }
-        entries.push(fn_map_entry_value {
-            key: stringify_value(value_result_value(key_result)), func_name mapped_name,
+        entries.push(compile.internal.fn_map_entry_value {
+            key: stringify_value(value_result_value(key_result)), func_name: mapped_name,
         })
         i = i + 1
     }
     return value.fn_map(entries)
 }
 
-func eval_index_expr(index_expr literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_index_expr(compile.internal.ast.index_expr literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     target_result := eval_expr(literal.target.value, source, env, writes, runtime)
     if value_result_is_err(target_result) {
         return value_result_error(target_result)
@@ -5115,9 +5115,9 @@ func eval_print_call(string name, expr[] args, source_file source, binding[] env
     }
     op_text := text + "\n"
     if name == "println" {
-        append(writes, write_op { fd: 1, text op_text });
+        append(writes, write_op { fd: 1, text: op_text });
     } else {
-        append(writes, write_op { fd: 2, text op_text });
+        append(writes, write_op { fd: 2, text: op_text });
     }
     return value.unit(unit_value {})
 }
@@ -5152,6 +5152,7 @@ func bool_from_value(value input) option[bool] {
         value.fn_map(_) : option.none,
         value.owned_box(_) : option.none,
     }
+}
 
 func eval_while_expr(while_expr literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
     for true {
@@ -5496,36 +5497,36 @@ func validate_abi_coverage(string arch) backend_error {
     i := 0
     for i < 8 {
         if abi_int_arg_reg(arch, i) == "" {
-            return backend_error { message: "backend error: missing integer argument ABI mapping for arg " + std.prelude.to_string(i) + " on " + arch }
+            return backend_error { message: "backend error: missing integer argument ABI: mapping for arg " + std.prelude.to_string(i) + " on " + arch }
         }
         if abi_float_arg_reg(arch, i) == "" {
-            return backend_error { message: "backend error: missing float argument ABI mapping for arg " + std.prelude.to_string(i) + " on " + arch }
+            return backend_error { message: "backend error: missing float argument ABI: mapping for arg " + std.prelude.to_string(i) + " on " + arch }
         }
         i = i + 1
     }
     if abi_int_ret_reg(arch) == "" {
-        return backend_error { message: "backend error: missing integer return ABI mapping on " + arch }
+        return backend_error { message: "backend error: missing integer return ABI: mapping on " + arch }
     }
     if abi_float_ret_reg(arch) == "" {
-        return backend_error { message: "backend error: missing float return ABI mapping on " + arch }
+        return backend_error { message: "backend error: missing float return ABI: mapping on " + arch }
     }
     if abi_callee_saved_count(arch) == 0 {
-        return backend_error { message: "backend error: missing callee-saved ABI set on " + arch }
+        return backend_error { message: "backend error: missing callee-saved ABI: set on " + arch }
     }
     if abi_caller_saved_count(arch) == 0 {
-        return backend_error { message: "backend error: missing caller-saved ABI set on " + arch }
+        return backend_error { message: "backend error: missing caller-saved ABI: set on " + arch }
     }
     if abi_stack_alignment(arch) <= 0 {
-        return backend_error { message: "backend error: missing stack alignment ABI rule on " + arch }
+        return backend_error { message: "backend error: missing stack alignment ABI: rule on " + arch }
     }
     if abi_sret_reg(arch) == "" {
-        return backend_error { message: "backend error: missing aggregate return (sret) ABI register on " + arch }
+        return backend_error { message: "backend error: missing aggregate return (sret) ABI: register on " + arch }
     }
     if abi_variadic_gp_limit(arch) <= 0 {
-        return backend_error { message: "backend error: missing variadic GP ABI budget on " + arch }
+        return backend_error { message: "backend error: missing variadic GP: ABI: budget on " + arch }
     }
     if abi_variadic_fp_limit(arch) <= 0 {
-        return backend_error { message: "backend error: missing variadic FP ABI budget on " + arch }
+        return backend_error { message: "backend error: missing variadic FP: ABI: budget on " + arch }
     }
     if abi_aggregate_pass_mode(arch, 8) == "" {
         return backend_error { message: "backend error: missing aggregate pass mode for small aggregates on " + arch }
@@ -6031,6 +6032,4 @@ func backend_join_with(string[] values, string sep) string {
 func report_failure(string message) int {
     std.io.eprintln("backend error: " + message)
     return 1
-}
-
 }

@@ -3,11 +3,10 @@ import (
     "std.fs"
 )
 func map_file_read(string path, int offset, int length) (string, string) {
-    full_result := std.fs.read_to_string(path)
-    if full_result.is_err() {
-        return "", "read file failed"
+    full, read_err := std.fs.read_to_string(path)
+    if read_err.message != "" {
+        return "", "read file failed: " + read_err.message
     }
-    full := full_result.unwrap()
     if offset < 0 || length < 0 {
         return "", "invalid map range"
     }

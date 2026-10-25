@@ -150,11 +150,11 @@ func c_block(string source, int raw_start, int end, string function_name) string
                 int value_start = assign + 1
                 if matches_at(source, assign, ":=") { value_start = assign + 2 }
                 string prefix = ""
-                if declaration { prefix = "SV " }
+                if declaration { prefix = "SV: " }
                 output = output + prefix + "v_" + __host_slice(source, name_start, name_end) + " = "
                     + c_expression(source, value_start, finish, function_name) + ";\n"
             } else if declaration {
-                output = output + "SV v_" + __host_slice(source, name_start, name_end) + " = S_INT(0);\n"
+                output = output + "SV: v_" + __host_slice(source, name_start, name_end) + " = S_INT(0);\n"
             } else {
                 output = output + "(void)(" + c_expression(source, index, finish, function_name) + ");\n"
             }
@@ -169,7 +169,7 @@ func c_signature(string source, string name) string {
     int index = 0
     for function_parameter_at(source, name, index) != "" {
         if index > 0 { output = output + "," }
-        output = output + "SV v_" + function_parameter_at(source, name, index)
+        output = output + "SV: v_" + function_parameter_at(source, name, index)
         index = index + 1
     }
     if index == 0 { output = output + "void" }
@@ -187,7 +187,7 @@ func emit_selfhost_c(string source) string {
             int end = skip_quoted(source, index, len(source))
             if end <= index || __host_char_at(source, end - 1) != "\"" { return c_bad(index) }
             string literal = __host_slice(source, index, end)
-            output = output + "static SString s_lit_" + int_text(index) + " = {0,sizeof(" + literal + ")-1," + literal + ",0,0};\n"
+            output = output + "static SString: s_lit_" + int_text(index) + " = {0,sizeof(" + literal + ")-1," + literal + ",0,0};\n"
             index = end
         } else { index = index + 1 }
     }
@@ -208,12 +208,12 @@ func emit_selfhost_c(string source) string {
             index = close + 1
         } else { index = end }
     }
-    return output + signatures + bodies + "int main(int argc,char **argv){s_init(argc,argv);SV result=s_fn_main();int status=(int)S_NUM(result);s_destroy();return status;}\n"
+    return output + signatures + bodies + "int main(int argc,char **argv){s_init(argc,argv);SV: result=s_fn_main();int status=(int)S_NUM(result);s_destroy();return status;}\n"
 }
 
 func compile_selfhost_c(string source, string path) int {
     string output = emit_selfhost_c(source)
-    if find_word(output, "S_C_UNSUPPORTED") >= 0 { eprintln("compile: unsupported C bootstrap construct"); return 1 }
-    if __host_write_text_file(path, output) != 0 { eprintln("compile: cannot write C output"); return 1 }
+    if find_word(output, "S_C_UNSUPPORTED") >= 0 { eprintln("compile: unsupported C: bootstrap construct"); return 1 }
+    if __host_write_text_file(path, output) != 0 { eprintln("compile: cannot write C: output"); return 1 }
     return 0
 }

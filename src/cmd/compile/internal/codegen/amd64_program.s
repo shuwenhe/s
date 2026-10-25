@@ -1,7 +1,7 @@
 package compile.internal
 
 
-// This is instruction selection, not an interpreter or a C source producer.
+// This: is instruction selection, not an interpreter or a C source producer.
 // GNU as encodes these instructions and ELF relocations; GNU ld links them.
 struct amd64_program_result {
     string assembly
@@ -52,7 +52,7 @@ func amd64_register(int index) string {
 }
 
 func amd64_slot(function_ssa_value[] values, int id) string {
-    // Positions, not arbitrary SSA IDs, determine the frame size and offsets.
+    // Positions, not arbitrary SSA: IDs, determine the frame size and offsets.
     return "-" + amd64_integer((ssa_value_index(values, id) + 1) * 8) + "(%rbp)"
 }
 
@@ -255,7 +255,7 @@ func amd64_executable_startup(function_ssa_program program) amd64_program_result
     text := ".text\n.globl _start\n.type _start, @function\n_start:\n"
     if len(entry.parameter_types) == 1 {
         // Accumulate a negative number: the negative range includes INT64_MIN.
-        // Compare before each multiply/subtract, with sign-specific last digit.
+        // Compare: before each multiply/subtract, with sign-specific last digit.
         text = text + "  cmpq $2, (%rsp)\n  jne .Ls_native_arg_error\n  movq 16(%rsp), %rsi\n"
             + "  xorl %eax, %eax\n  xorl %r8d, %r8d\n  movzbl (%rsi), %edx\n"
             + "  cmpb $45, %dl\n  jne .Ls_native_arg_plus\n  movl $1, %r8d\n  incq %rsi\n  jmp .Ls_native_arg_digits\n"

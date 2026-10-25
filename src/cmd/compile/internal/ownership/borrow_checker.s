@@ -33,17 +33,17 @@ func (borrow_checker* bc) check_borrow_creation(int pc, borrow* borrow_stmt) {
     is_mutable := borrow.is_mutable
     source_state := bc.ctx.get_state_at(pc, var_name)
     if source_state == state_undefined {
-        bc.ctx.add_error(errorf("borrow of uninitialized variable %s at PC %d",
+        bc.ctx.add_error(errorf("borrow of uninitialized variable %s at PC: %d",
             var_name, pc))
         return
     }
     if source_state == state_dropped {
-        bc.ctx.add_error(errorf("borrow of dropped variable %s at PC %d (dangling borrow)",
+        bc.ctx.add_error(errorf("borrow of dropped variable %s at PC: %d (dangling borrow)",
             var_name, pc))
         return
     }
     if source_state == state_moved {
-        bc.ctx.add_error(errorf("borrow of moved variable %s at PC %d",
+        bc.ctx.add_error(errorf("borrow of moved variable %s at PC: %d",
             var_name, pc))
         return
     }
@@ -52,7 +52,7 @@ func (borrow_checker* bc) check_borrow_creation(int pc, borrow* borrow_stmt) {
         if is_mutable {
             if len(existing_borrows) > 0 {
                 bc.ctx.add_error(errorf(
-                    "cannot create mutable borrow of %s: %d existing borrow(s) at PC %d",
+                    "cannot create mutable borrow of %s: %d existing borrow(s) at PC: %d",
                     var_name, len(existing_borrows), pc))
                 return
             }
@@ -60,7 +60,7 @@ func (borrow_checker* bc) check_borrow_creation(int pc, borrow* borrow_stmt) {
             for _, existing := range existing_borrows {
                 if existing.is_mutable {
                     bc.ctx.add_error(errorf(
-                        "cannot create shared borrow of %s: mutable borrow active at PC %d",
+                        "cannot create shared borrow of %s: mutable borrow active at PC: %d",
                         var_name, pc))
                     return
                 }
@@ -83,7 +83,7 @@ func (borrow_checker* bc) check_borrow_creation(int pc, borrow* borrow_stmt) {
 func (borrow_checker* bc) check_borrow_end(int pc, borrow_end* borrow_end_stmt) {
     var_name := borrow_end.source
     if !bc.has_borrows(var_name) {
-        bc.ctx.add_error(errorf("borrow end: no active borrow of %s at PC %d",
+        bc.ctx.add_error(errorf("borrow end: no active borrow of %s at PC: %d",
             var_name, pc))
         return
     }
@@ -97,13 +97,13 @@ func (borrow_checker* bc) check_use_with_borrows(int pc, use* use_stmt) {
     if state == state_borrowed_mut {
         if !use.through_borrow {
             bc.ctx.add_error(errorf(
-                "use of mutably-borrowed %s without borrow reference at PC %d",
+                "use of mutably-borrowed %s without borrow reference at PC: %d",
                 var_name, pc))
         }
     } else if state == state_borrowed_shared {
         if !use.through_borrow {
             bc.ctx.add_error(errorf(
-                "use of shared-borrowed %s without borrow reference at PC %d",
+                "use of shared-borrowed %s without borrow reference at PC: %d",
                 var_name, pc))
         }
     }
@@ -114,7 +114,7 @@ func (borrow_checker* bc) check_move_with_borrows(int pc, move* move_stmt) {
     if bc.has_borrows(var_name) {
         borrows := bc.get_borrows(var_name)
         bc.ctx.add_error(errorf(
-            "cannot move %s: %d borrow(es) still active at PC %d",
+            "cannot move %s: %d borrow(es) still active at PC: %d",
             var_name, len(borrows), pc))
     }
 }

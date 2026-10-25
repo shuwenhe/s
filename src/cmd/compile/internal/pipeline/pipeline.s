@@ -38,24 +38,24 @@ func pipeline_compile(pipeline_context context) int {
     
     checkpoint_emit(compilation_checkpoint {
         stage_name: "FRONTEND",
-        input_type: "Source code (S language)",
-        output_type: "Structured function MIR",
+        input_type: "Source: code (S: language)",
+        output_type: "Structured: function MIR",
         authority: authority_frontend(),
         phase: "parse + signatures + function bodies",
     })
     
     checkpoint_emit(compilation_checkpoint {
         stage_name: "MIDDLEND",
-        input_type: "Structured function MIR",
-        output_type: "Structured function SSA",
+        input_type: "Structured: function MIR",
+        output_type: "Structured: function SSA",
         authority: authority_middlend(),
         phase: "verify-mir + lower-to-ssa + verify-ssa",
     })
     
     checkpoint_emit(compilation_checkpoint {
         stage_name: "BACKEND",
-        input_type: "SSA program",
-        output_type: "Machine code (ELF64)",
+        input_type: "SSA: program",
+        output_type: "Machine: code (ELF64)",
         authority: authority_backend(),
         phase: "codegen + emit-binary",
     })

@@ -264,7 +264,7 @@ func handle_compile_unit(string[] args) int {
     }
     output := args[2]
     if output == "" { eprintln("compiler: empty output path"); return 2 }
-    if !native_target_supported() { eprintln("native compiler: P0 supports Linux/amd64"); return 2 }
+    if !native_target_supported() { eprintln("native compiler: P0: supports Linux/amd64"); return 2 }
     source := ""
     i := 3
     for i < len(args) {
@@ -288,7 +288,7 @@ func handle_compile_unit(string[] args) int {
     if mirrored.error != "" { eprintln(mirrored.error); return 1 }
     emitted := native_program_assembly(mirrored.program, true)
     if emitted.error != "" { eprintln(emitted.error); return 1 }
-    // This is target assembly, not seed IR or the legacy C backend's output.
+    // This: is target assembly, not seed IR or the legacy C backend's output.
     artifact := "# S-NATIVE-AMD64-V1\n" + emitted.assembly
     if __host_write_text_file(output, artifact) != 0 { eprintln("compiler: cannot write output"); return 1 }
     return 0

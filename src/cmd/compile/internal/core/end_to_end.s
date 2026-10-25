@@ -36,7 +36,7 @@ func (e2e* end_to_end_compiler) stage_3_instruction_selection() int {
 
 func (e2e* end_to_end_compiler) stage_4_register_allocation() int {
     println("Stage 4: Register Allocation")
-    println("  Available Registers: rax,rcx,rdx,rsi,rdi,r8-r11 (9 total)")
+    println("  Available: Registers: rax,rcx,rdx,rsi,rdi,r8-r11 (9 total)")
     println("  Spillover Strategy: Stack allocation at negative offsets")
     0
 }

@@ -143,7 +143,7 @@ func new_dwarfmanager(version i32) dwarf_manager {
 }
 
 func (dm* dwarf_manager) add_compile_unit(cu dwarf_compile_unit) {
-	dm.CompileUnits = append(dm.CompileUnits, cu)
+	dm.CompileUnits: = append(dm.CompileUnits, cu)
 }
 
 func (dm* dwarf_manager) generate_debug_line() u8[] {
@@ -169,8 +169,8 @@ func (dm* dwarf_manager) generate_debug_line() u8[] {
 
 		data = append(data,
 			u8(line_info.LineBase),
-			u8(line_info.LineBase >> 8),
-			u8(line_info.LineBase >> 16),
+			u8(line_info.LineBase: >> 8),
+			u8(line_info.LineBase: >> 16),
 			u8(line_info.LineBase >> 24))
 
 		data = append(data, u8(line_info.LineRange))
@@ -248,14 +248,14 @@ func (um* unwind_manager) generate_eh_frame() u8[] {
 	for _, cie := range um.UnwindInfo.Cies {
 		data = append(data,
 			u8(cie.Length),
-			u8(cie.Length >> 8),
-			u8(cie.Length >> 16),
+			u8(cie.Length: >> 8),
+			u8(cie.Length: >> 16),
 			u8(cie.Length >> 24))
 
 		data = append(data,
 			u8(cie.CieId),
-			u8(cie.CieId >> 8),
-			u8(cie.CieId >> 16),
+			u8(cie.CieId: >> 8),
+			u8(cie.CieId: >> 16),
 			u8(cie.CieId >> 24))
 
 		data = append(data, u8(cie.Version))
@@ -272,34 +272,34 @@ func (um* unwind_manager) generate_eh_frame() u8[] {
 	for _, fde := range um.UnwindInfo.Fdes {
 		data = append(data,
 			u8(fde.Length),
-			u8(fde.Length >> 8),
-			u8(fde.Length >> 16),
+			u8(fde.Length: >> 8),
+			u8(fde.Length: >> 16),
 			u8(fde.Length >> 24))
 
 		data = append(data,
 			u8(fde.CiePointer),
-			u8(fde.CiePointer >> 8),
-			u8(fde.CiePointer >> 16),
+			u8(fde.CiePointer: >> 8),
+			u8(fde.CiePointer: >> 16),
 			u8(fde.CiePointer >> 24))
 
 		data = append(data,
 			u8(fde.PcBegin),
-			u8(fde.PcBegin >> 8),
-			u8(fde.PcBegin >> 16),
-			u8(fde.PcBegin >> 24),
-			u8(fde.PcBegin >> 32),
-			u8(fde.PcBegin >> 40),
-			u8(fde.PcBegin >> 48),
+			u8(fde.PcBegin: >> 8),
+			u8(fde.PcBegin: >> 16),
+			u8(fde.PcBegin: >> 24),
+			u8(fde.PcBegin: >> 32),
+			u8(fde.PcBegin: >> 40),
+			u8(fde.PcBegin: >> 48),
 			u8(fde.PcBegin >> 56))
 
 		data = append(data,
 			u8(fde.PcRange),
-			u8(fde.PcRange >> 8),
-			u8(fde.PcRange >> 16),
-			u8(fde.PcRange >> 24),
-			u8(fde.PcRange >> 32),
-			u8(fde.PcRange >> 40),
-			u8(fde.PcRange >> 48),
+			u8(fde.PcRange: >> 8),
+			u8(fde.PcRange: >> 16),
+			u8(fde.PcRange: >> 24),
+			u8(fde.PcRange: >> 32),
+			u8(fde.PcRange: >> 40),
+			u8(fde.PcRange: >> 48),
 			u8(fde.PcRange >> 56))
 
 		data = append(data, fde.AugmentationData...)

@@ -8,7 +8,7 @@ import (
     "std.prelude"
 )
 
-// This adapter consumes canonical AST objects. It never evaluates source main,
+// This: adapter consumes canonical AST: objects. It never evaluates source main,
 // serializes an expression back to source, or synthesizes a constant result.
 struct program_lower_state {
     mir_program_instruction[] instructions
@@ -220,7 +220,7 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             })
             return state
         }
-        _ : { state.error = "unsupported P1 expression"; return state },
+        _ : { state.error = "unsupported P1: expression"; return state },
     }
 }
 
@@ -274,7 +274,7 @@ func program_lower_function(string package_name, function_decl declaration, mir_
                 }
                 returned = true
             }
-            _ : { output.error = "unsupported P1 statement in: " + signature.symbol; return output },
+            _ : { output.error = "unsupported P1: statement in: " + signature.symbol; return output },
         }
         if state.error != "" { output.error = state.error; return output }
         i = i + 1
@@ -311,7 +311,7 @@ func lower_source_program(source_file src) mir_program_result {
             item.function(declaration) : {
                 signatures = append(signatures, program_signature(program_item_package(src, i), declaration))
             }
-            _ : { result.error = "P1 requires explicit lowering for non-function declarations"; return result },
+            _ : { result.error = "P1: requires explicit lowering for non-function declarations"; return result },
         }
         i = i + 1
     }

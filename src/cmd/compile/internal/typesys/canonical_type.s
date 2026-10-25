@@ -9,11 +9,11 @@ import (
 struct canonical_type {
     string kind
     
-    primitive_name string
+    string primitive_name
     
-    declared_ref option[semantic.declaration_ref]
+    std.option.option[compile.internal.semantic.declaration_ref] declared_ref
     
-    child option[canonical_type]
+    canonical_type[] child
 }
 
 func primitive(string name) canonical_type {
@@ -21,7 +21,7 @@ func primitive(string name) canonical_type {
         kind: "primitive",
         primitive_name: name,
         declared_ref: std.option.none,
-        child: std.option.none,
+        child: canonical_type[](),
     }
 }
 
@@ -30,7 +30,7 @@ func declared(semantic.declaration_ref ref) canonical_type {
         kind: "declared",
         primitive_name: "",
         declared_ref: std.option.some(ref),
-        child: std.option.none,
+        child: canonical_type[](),
     }
 }
 
@@ -39,7 +39,7 @@ func pointer(canonical_type inner) canonical_type {
         kind: "pointer",
         primitive_name: "",
         declared_ref: std.option.none,
-        child: std.option.some(inner),
+        child: [inner],
     }
 }
 
@@ -66,12 +66,12 @@ func canonical_same_type(canonical_type left, canonical_type right) bool {
         }
         "pointer" : {
             
-            if left.child.is_none() || right.child.is_none() {
-                return left.child.is_none() && right.child.is_none()
+            if len(left.child) == 0 || len(right.child) == 0 {
+                return len(left.child) == 0 && len(right.child) == 0
             }
             return canonical_same_type(
-                left.child.unwrap(),
-                right.child.unwrap()
+                left.child[0],
+                right.child[0]
             )
         }
     }
@@ -91,10 +91,10 @@ func canonical_type_to_string(canonical_type t) string {
             return semantic.declaration_ref_display(t.declared_ref.unwrap())
         }
         "pointer" : {
-            if t.child.is_none() {
+            if len(t.child) == 0 {
                 return "*unknown"
             }
-            return "*" + canonical_type_to_string(t.child.unwrap())
+            return "*" + canonical_type_to_string(t.child[0])
         }
     }
     "invalid"
@@ -115,7 +115,7 @@ func construct_canonical_from_string(string type_str, semantic.declaration_ref[]
         kind: "primitive",
         primitive_name: "",
         declared_ref: std.option.none,
-        child: std.option.none,
+        child: canonical_type[](),
     }
     
     if base_name == "int" || base_name == "bool" || base_name == "string" {
@@ -138,5 +138,5 @@ func construct_canonical_from_string(string type_str, semantic.declaration_ref[]
         j = j + 1
     }
     
-    result
+    return result
 }

@@ -28,7 +28,7 @@ func (engine* rules_engine) register_const_fold_rules() void {
 
     engine.add_rule(rule {
         id: "const_add_fold",
-        name: "Constant addition folding",
+        name: "Constant: addition folding",
         matcher: func(node IR) bool {
             return node.opcode == "Add" &&
                    node.left.opcode == "Const64" &&
@@ -48,7 +48,7 @@ func (engine* rules_engine) register_const_fold_rules() void {
 
     engine.add_rule(rule {
         id: "const_mul_fold",
-        name: "Constant multiplication folding",
+        name: "Constant: multiplication folding",
         matcher: func(node IR) bool {
             return node.opcode == "Mul" &&
                    node.left.opcode == "Const64" &&
@@ -68,7 +68,7 @@ func (engine* rules_engine) register_const_fold_rules() void {
 
     engine.add_rule(rule {
         id: "const_sub_fold",
-        name: "Constant subtraction folding",
+        name: "Constant: subtraction folding",
         matcher: func(node IR) bool {
             return node.opcode == "Sub" &&
                    node.left.opcode == "Const64" &&
@@ -92,7 +92,7 @@ func (engine* rules_engine) register_algebraic_rules() void {
 
     engine.add_rule(rule {
         id: "mul_by_zero",
-        name: "Multiplication by zero",
+        name: "Multiplication: by zero",
         matcher: func(node IR) bool {
             return node.opcode == "Mul" && (
                 (node.left.opcode == "Const64" && node.left.value == 0) ||
@@ -111,7 +111,7 @@ func (engine* rules_engine) register_algebraic_rules() void {
 
     engine.add_rule(rule {
         id: "mul_by_one",
-        name: "Multiplication by one",
+        name: "Multiplication: by one",
         matcher: func(node IR) bool {
             if node.opcode != "Mul" {
                 return false
@@ -130,7 +130,7 @@ func (engine* rules_engine) register_algebraic_rules() void {
 
     engine.add_rule(rule {
         id: "add_zero",
-        name: "Addition by zero",
+        name: "Addition: by zero",
         matcher: func(node IR) bool {
             return node.opcode == "Add" && (
                 (node.left.opcode == "Const64" && node.left.value == 0) ||
@@ -148,7 +148,7 @@ func (engine* rules_engine) register_algebraic_rules() void {
 
     engine.add_rule(rule {
         id: "mul_by_two_to_lsh",
-        name: "Multiplication by two to left shift",
+        name: "Multiplication: by two to left shift",
         matcher: func(node IR) bool {
             if node.opcode != "Mul" {
                 return false
@@ -161,7 +161,7 @@ func (engine* rules_engine) register_algebraic_rules() void {
             return IR {
                 opcode: "Lsh",
                 left: x,
-                right: IR { opcode: "Const64", value: 1 },
+                right: IR: { opcode: "Const64", value: 1 },
                 pos: node.pos
             }
         },
@@ -174,7 +174,7 @@ func (engine* rules_engine) register_expr_rules() void {
 
     engine.add_rule(rule {
         id: "and_self",
-        name: "AND with self",
+        name: "AND: with self",
         matcher: func(node IR) bool {
             return node.opcode == "And" &&
                    ir_equals(node.left, node.right)
@@ -187,7 +187,7 @@ func (engine* rules_engine) register_expr_rules() void {
 
     engine.add_rule(rule {
         id: "or_self",
-        name: "OR with self",
+        name: "OR: with self",
         matcher: func(node IR) bool {
             return node.opcode == "Or" &&
                    ir_equals(node.left, node.right)
@@ -200,7 +200,7 @@ func (engine* rules_engine) register_expr_rules() void {
 
     engine.add_rule(rule {
         id: "xor_self",
-        name: "XOR with self",
+        name: "XOR: with self",
         matcher: func(node IR) bool {
             return node.opcode == "Xor" &&
                    ir_equals(node.left, node.right)
@@ -301,8 +301,8 @@ func main() void {
 
     let ir := IR {
         opcode: "Add",
-        left: IR { opcode: "Const64", value: 5 },
-        right: IR { opcode: "Const64", value: 3 },
+        left: IR: { opcode: "Const64", value: 5 },
+        right: IR: { opcode: "Const64", value: 3 },
         pos: 0
     }
 
