@@ -52,7 +52,7 @@ func function_mir_value_id_reserved(int[] reserved, int id) bool {
 // previously lowered module, so its saved call metadata is checked as well.
 func function_mir_input_error(mir_program program) string {
     if program.package_name == "" || program.entry_symbol == "" { return "invalid program identity" }
-    validated := lower_mir_program(program.package_name, program.entry_symbol, program.functions)
+    validated := lower_mir_program_with_enums(program.package_name, program.entry_symbol, program.functions, program.enums)
     if validated.error != "" { return validated.error }
     if len(program.calls) != len(validated.program.calls) { return "MIR: call edge count" }
     i := 0
@@ -71,10 +71,10 @@ func function_mir_input_error(mir_program program) string {
         if len(input_function.result_types) > 1 { return "unsupported multi-result function: " + input_function.symbol }
         p := 0
         for p < len(input_function.params) {
-            if input_function.params[p].type_name != "int" && input_function.params[p].type_name != "()" { return "unsupported parameter type: " + input_function.symbol }
+            if input_function.params[p].type_name != "int" && input_function.params[p].type_name != "()" && mir_program_enum_index(program.enums, input_function.params[p].type_name) < 0 { return "unsupported parameter type: " + input_function.symbol }
             p = p + 1
         }
-        if len(input_function.result_types) == 1 && input_function.result_types[0] != "int" && input_function.result_types[0] != "()" {
+        if len(input_function.result_types) == 1 && input_function.result_types[0] != "int" && input_function.result_types[0] != "()" && mir_program_enum_index(program.enums, input_function.result_types[0]) < 0 {
             return "unsupported result type: " + input_function.symbol
         }
         i = i + 1
@@ -103,6 +103,7 @@ func lower_function_mir_to_ssa(mir_program program) function_ssa_result {
         p := 0
         for p < len(input_function.params) {
             input_parameter := input_function.params[p]
+            input_parameter.type_name = mir_program_physical_type(input_parameter.type_name, program.enums)
             parameter_types.push(input_parameter.type_name)
             reserved.push(input_parameter.value_id)
             output_values = function_ssa_append_value(output_values, input_parameter.value_id, "param", int[]{}, input_block.id, input_parameter.type_name, 0, p)
@@ -134,7 +135,11 @@ func lower_function_mir_to_ssa(mir_program program) function_ssa_result {
                 value_id = input_instruction.result_ids[0]
                 value_type = input_instruction.result_types[0]
             }
-            output_values = function_ssa_append_value(output_values, value_id, input_instruction.op, input_instruction.operands, input_block.id, value_type, input_instruction.integer_value, -1)
+            physical_op := input_instruction.op
+            if physical_op == "const_enum" { physical_op = "const_int" }
+            if physical_op == "enum_to_int" { physical_op = "copy" }
+            value_type = mir_program_physical_type(value_type, program.enums)
+            output_values = function_ssa_append_value(output_values, value_id, physical_op, input_instruction.operands, input_block.id, value_type, input_instruction.integer_value, -1)
             if input_instruction.op == "call" {
                 output_calls = function_ssa_append_call(output_calls, input_function.symbol, input_instruction.symbol, input_block.id, value_id)
             }
@@ -142,6 +147,8 @@ func lower_function_mir_to_ssa(mir_program program) function_ssa_result {
         }
         output_blocks := []function_ssa_block{}
         output_blocks = function_ssa_append_block(output_blocks, input_block, output_values)
+        r := 0
+        for r < len(input_function.result_types) { input_function.result_types[r] = mir_program_physical_type(input_function.result_types[r], program.enums); r = r + 1 }
         output_functions = function_ssa_append_function(output_functions, input_function, parameter_types, output_blocks)
         f = f + 1
     }

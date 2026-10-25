@@ -32,7 +32,7 @@ func run_mir_suite() int {
         },
     })
     graph := mir_graph {
-        function_name: "main", blocks blocks, locals mir_local_slot[](), string trace[](), entry 0, exit 0,
+        function_name: "main", blocks blocks, locals mir_local_slot[](), trace: string[](), entry 0, exit 0,
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
     if mir.block_count(graph) != 1 {
@@ -59,7 +59,7 @@ func run_mir_suite() int {
     gate_locals.push(mir_local_slot { id: 0, name: "_1", kind: "local", version: 0, type_name: "box[int]", copyable: false })
     gate_locals.push(mir_local_slot { id: 1, name: "_2", kind: "local", version: 0, type_name: "box[int]", copyable: false })
     gate := mir_graph {
-        function_name: "ownership_borrow_drop_gate", blocks gate_blocks, locals gate_locals, string trace[](), entry 0, exit 0,
+        function_name: "ownership_borrow_drop_gate", blocks gate_blocks, locals gate_locals, trace: string[](), entry 0, exit 0,
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
     if count_mir_moves(gate) != 1 {
@@ -101,7 +101,7 @@ func run_mir_suite() int {
         },
     })
     read_graph := mir_graph {
-        function_name: "read_place", blocks read_blocks, locals mir_local_slot[](), string trace[](), entry 0, exit 0,
+        function_name: "read_place", blocks read_blocks, locals mir_local_slot[](), trace: string[](), entry 0, exit 0,
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
     if count_mir_reads(read_graph) != 1 {
@@ -168,7 +168,7 @@ func run_mir_suite() int {
         },
     })
     diamond := mir_graph {
-        function_name: "diamond", blocks diamond_blocks, locals mir_local_slot[](), string trace[](), entry 0, exit 3,
+        function_name: "diamond", blocks diamond_blocks, locals mir_local_slot[](), trace: string[](), entry 0, exit 3,
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
     point_map := mir.build_mir_point_map(diamond)
@@ -209,7 +209,7 @@ func run_mir_suite() int {
         },
     })
     fact_graph := mir_graph {
-        function_name: "facts", blocks fact_blocks, locals mir_local_slot[](), string trace[](), entry 0, exit 0,
+        function_name: "facts", blocks fact_blocks, locals mir_local_slot[](), trace: string[](), entry 0, exit 0,
         borrow_ok: true, borrow_errors: 0, borrow_message: "",
     }
     expected_facts := "PointCount: = 4 | Ref(_2) = R0: | Ref(_3) = R1 | Loan0 issued = {P0} place=_1 | RefLoan(R0) = L0: | RefLoan(R1) = L0: | Outlives(R0,R1) | RegionPoint(R0) = {P0} | RegionPoint(R1) = {P2}"

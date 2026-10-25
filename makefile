@@ -142,6 +142,11 @@ selfhost-protocol-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/standalone_reachability_check.sh
 	@bash test/native-bootstrap-diagnostic/native_source_reader_check.sh
 	@bash test/native-bootstrap-diagnostic/native_host_tools_check.sh
+	@bash test/native-bootstrap-diagnostic/native_global_state_check.sh
+	@bash test/native-bootstrap-diagnostic/native_fs_result_check.sh
+	@bash test/native-bootstrap-diagnostic/native_string_index_check.sh
+	@bash test/native-bootstrap-diagnostic/native_contains_text_check.sh
+	@bash test/native-bootstrap-diagnostic/native_stdout_bridge_check.sh
 
 .PHONY: selfhost-native-stage1-check
 selfhost-native-stage1-check: seed-compiler-bin
@@ -218,6 +223,10 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/compiler/frontend.s \
 	src/cmd/compile/internal/compiler/native_frontend.s \
 	src/cmd/compile/internal/mir/program.s \
+	src/cmd/compile/internal/mir/program_enum.s \
+	src/cmd/compile/internal/ir/program_lower.s \
+	src/cmd/compile/internal/ir/program_enum.s \
+	src/cmd/compile/internal/compiler/canonical_source.s \
 	src/cmd/compile/internal/ssa/program.s \
 	src/cmd/compile/internal/ssa/function_lower.s \
 	src/cmd/compile/internal/codegen/amd64_program.s \
@@ -226,6 +235,8 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/mir/compiler_emit.s \
 	src/cmd/compile/internal/compiler/stages.s \
 	src/cmd/compile/internal/compiler/main.s \
+	src/cmd/compile/internal/compiler/compiler.s \
+	src/cmd/compile/internal/compiler/bridge.s \
 	src/cmd/compile/internal/rewriteresults/rewriteresults.s \
 	src/cmd/compile/internal/slice/slice.s \
 	src/cmd/compile/internal/walk/assign.s \
@@ -286,10 +297,10 @@ compiler: seed-compiler-bin
 	@mkdir -p .bootstrap/compiler bin
 	@echo "compiler-entry=$(CURDIR)/src/cmd/compile/main.s"
 	@for src in $(COMPILER_SOURCES); do echo "compiler-source=$$src"; done
-	@./bin/s_seed --compile-unit .bootstrap/compiler/compiler.ir $(COMPILER_SOURCES)
+	@./bin/s_seed --compile-native-unit .bootstrap/compiler/compiler.ir $(COMPILER_SOURCES)
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$$(uname -s | tr '[:upper:]' '[:lower:]') \
 	  S_TARGET_ARCH=$$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/') \
-	  ./bin/s_seed --emit-hosted-program .bootstrap/compiler/compiler.ir ./bin/s_compiler
+	  ./bin/s_seed --emit-standalone-amd64 .bootstrap/compiler/compiler.ir ./bin/s_compiler
 	@cp misc/scripts/s-driver.sh ./bin/s
 	@chmod +x ./bin/s
 
@@ -348,9 +359,31 @@ help:
 
 .PHONY: selfhost-native-record-check
 selfhost-native-record-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_semantic_closure_check.sh
+	@bash test/native-bootstrap-diagnostic/native_stage5_ast_check.sh
 	@bash test/native-bootstrap-diagnostic/native_ast_param_type_check.sh
+	@bash test/native-bootstrap-diagnostic/native_const_option_check.sh
+	@bash test/native-bootstrap-diagnostic/native_generic_pattern_ref_check.sh
+	@bash test/native-bootstrap-diagnostic/native_declaration_kind_check.sh
+	@bash test/native-bootstrap-diagnostic/native_mono_literal_type_check.sh
+	@bash test/native-bootstrap-diagnostic/native_mono_body_option_check.sh
+	@bash test/native-bootstrap-diagnostic/native_lower_entry_check.sh
+	@bash test/native-bootstrap-diagnostic/native_call_option_context_check.sh
+	@bash test/native-bootstrap-diagnostic/native_explicit_option_check.sh
+	@bash test/native-bootstrap-diagnostic/native_ir_stmt_constructor_check.sh
+	@bash test/native-bootstrap-diagnostic/native_schedule_id_check.sh
+	@bash test/native-bootstrap-diagnostic/native_empty_mir_graph_check.sh
+	@bash test/native-bootstrap-diagnostic/native_mir_box_projection_check.sh
+	@bash test/native-bootstrap-diagnostic/native_borrow_report_check.sh
+	@bash test/native-bootstrap-diagnostic/native_buildcfg_contract_check.sh
+	@bash test/native-bootstrap-diagnostic/native_escape_sites_check.sh
+	@bash test/native-bootstrap-diagnostic/native_vec_set_check.sh
+	@bash test/native-bootstrap-diagnostic/native_bool_payload_check.sh
+	@bash test/native-bootstrap-diagnostic/native_hex_integer_check.sh
+	@bash test/native-bootstrap-diagnostic/native_qualified_array_literal_check.sh
 	@bash test/native-bootstrap-diagnostic/native_recursive_enum_check.sh
 	@bash test/native-bootstrap-diagnostic/native_tuple_return_check.sh
+	@bash test/native-bootstrap-diagnostic/native_tuple_expression_check.sh
 	@bash test/native-bootstrap-diagnostic/native_canonical_type_tree_check.sh
 	@bash test/native-bootstrap-diagnostic/native_canonical_type_schema_check.sh
 	@bash test/native-bootstrap-diagnostic/native_extern_result_return_check.sh
@@ -374,6 +407,7 @@ selfhost-native-record-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/native_record_rollback_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_borrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_loop_borrow_check.sh
+	@bash test/native-bootstrap-diagnostic/native_discard_borrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_recursive_ast_borrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_import_check.sh
 	@bash test/native-bootstrap-diagnostic/native_import_return_check.sh
@@ -398,3 +432,37 @@ selfhost-native-array-element-check: seed-compiler-bin
 .PHONY: selfhost-native-option-payload-check
 selfhost-native-option-payload-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/native_option_payload_check.sh
+
+.PHONY: selfhost-native-global-check selfhost-native-fs-check
+selfhost-native-global-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_global_state_check.sh
+
+selfhost-native-fs-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_fs_result_check.sh
+
+.PHONY: selfhost-native-string-check
+selfhost-native-string-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_string_index_check.sh
+
+.PHONY: selfhost-canonical-mir-check
+selfhost-canonical-mir-check: compiler
+	@bash test/native-bootstrap-diagnostic/canonical_mir_public_check.sh
+
+.PHONY: selfhost-native-discard-check
+selfhost-native-discard-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_discard_borrow_check.sh
+
+.PHONY: selfhost-native-contains-check
+selfhost-native-contains-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_contains_text_check.sh
+
+.PHONY: selfhost-canonical-production-check
+selfhost-canonical-production-check: compiler
+	@bash test/native-bootstrap-diagnostic/canonical_parser_ast_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_typesys_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_diagnostics_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_semantic_ast_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_enum_mir_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_semantic_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_mir_public_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_enum_production_check.sh

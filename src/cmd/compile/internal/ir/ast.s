@@ -97,3 +97,27 @@ struct map_expr { option[string] type_name, map_entry_expr[] entries }
 func make_empty_package(string name) package_ir {
     package_ir { name: name, decls: decl_ir[]() }
 }
+
+func make_let_stmt(string name, option[string] type_name, expr_ir value) stmt_ir {
+    stmt_ir.let(var_stmt_ir { name: name, type_name: type_name, value: value })
+}
+
+func make_assign_stmt(string name, expr_ir value) stmt_ir {
+    stmt_ir.assign(assign_stmt { name: name, value: value })
+}
+
+func make_increment_stmt(string name) stmt_ir {
+    stmt_ir.increment(increment_stmt { name: name })
+}
+
+func make_cfor_stmt(stmt_ir init, expr_ir condition, stmt_ir step, block_ir body) stmt_ir {
+    stmt_ir.cfor(c_for_stmt_ir { init: init, condition: condition, step: step, body: body })
+}
+
+func make_return_stmt(option[expr_ir] value) stmt_ir {
+    stmt_ir.return_stmt(return_stmt { value: value })
+}
+
+func make_expr_stmt(expr_ir value) stmt_ir {
+    stmt_ir.expr(expr_stmt { expr: value })
+}

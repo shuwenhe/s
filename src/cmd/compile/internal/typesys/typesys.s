@@ -17,24 +17,24 @@ struct type_ref {
 }
 
 func parse_type(string text) string {
-    clean := typesys_normalize_type_text(trim_text(text))
+    clean := typesys_normalize_type_text(typesys_trim_text(text))
     if clean == "" {
         return "unknown"
     }
     if is_builtin_primitive(clean) {
         return clean
     }
-    if starts_with(clean, "&mut") {
+    if typesys_starts_with(clean, "&mut") {
         return "&mut" + parse_type(std.prelude.prelude_slice(clean, 4, std.prelude.len(clean)))
     }
-    if starts_with(clean, "&") {
+    if typesys_starts_with(clean, "&") {
         return "&" + parse_type(std.prelude.prelude_slice(clean, 1, std.prelude.len(clean)))
     }
-    if starts_with(clean, "[]") {
+    if typesys_starts_with(clean, "[]") {
         return "[]" + parse_type(std.prelude.prelude_slice(clean, 2, std.prelude.len(clean)))
     }
-    if starts_with(clean, "[") {
-        close := find_char(clean, "]")
+    if typesys_starts_with(clean, "[") {
+        close := typesys_find_char(clean, "]")
         if close > 0 {
             return std.prelude.prelude_slice(clean, 0, close + 1) + parse_type(std.prelude.prelude_slice(clean, close + 1, std.prelude.len(clean)))
         }
@@ -50,23 +50,37 @@ func parse_type_ref(string text) type_ref {
     is_slice := false
     is_array := false
     string array_len = ""
-    if starts_with(rest, "&mut") {
+    if typesys_starts_with(rest, "&mut") {
         is_ref = true
         is_mut_ref = true
         rest = parse_type(std.prelude.prelude_slice(rest, 4, std.prelude.len(rest)))
-    } else if starts_with(rest, "&") {
+    } else if typesys_starts_with(rest, "&") {
         is_ref = true
         rest = parse_type(std.prelude.prelude_slice(rest, 1, std.prelude.len(rest)))
     }
-    if starts_with(rest, "[]") {
+    if typesys_starts_with(rest, "[]") {
         is_slice = true
         rest = parse_type(std.prelude.prelude_slice(rest, 2, std.prelude.len(rest)))
-    } else if starts_with(rest, "[") {
-        close := find_char(rest, "]")
+    } else if typesys_starts_with(rest, "[") {
+        close := typesys_find_char(rest, "]")
         if close > 0 {
             is_array = true
-            array_len = trim_text(std.prelude.prelude_slice(rest, 1, close))
+            array_len = typesys_trim_text(std.prelude.prelude_slice(rest, 1, close))
             rest = parse_type(std.prelude.prelude_slice(rest, close + 1, std.prelude.len(rest)))
+        }
+    }
+    // S spells owned array/slice types after the element type as well.
+    close := typesys_find_last_char(rest, "]")
+    open := typesys_find_last_char(rest, "[")
+    if open > 0 && close == std.prelude.len(rest) - 1 {
+        length := typesys_trim_text(std.prelude.prelude_slice(rest, open + 1, close))
+        if length == "" {
+            is_slice = true
+            rest = parse_type(std.prelude.prelude_slice(rest, 0, open))
+        } else if is_array_length(length) {
+            is_array = true
+            array_len = length
+            rest = parse_type(std.prelude.prelude_slice(rest, 0, open))
         }
     }
     type_ref {
@@ -157,32 +171,33 @@ func dump_type(string ty) string {
 
 func base_type_name(string ty) string {
     clean := parse_type(ty)
-    if starts_with(clean, "&mut") {
+    if typesys_starts_with(clean, "&mut") {
         return base_type_name(std.prelude.prelude_slice(clean, 4, std.prelude.len(clean)))
     }
-    if starts_with(clean, "&") {
+    if typesys_starts_with(clean, "&") {
         return base_type_name(std.prelude.prelude_slice(clean, 1, std.prelude.len(clean)))
     }
-    if starts_with(clean, "[]") {
+    if typesys_starts_with(clean, "[]") {
         return base_type_name(std.prelude.prelude_slice(clean, 2, std.prelude.len(clean)))
     }
-    if starts_with(clean, "[") {
-        close := find_char(clean, "]")
+    if typesys_starts_with(clean, "[") {
+        close := typesys_find_char(clean, "]")
         if close > 0 {
             return base_type_name(std.prelude.prelude_slice(clean, close + 1, std.prelude.len(clean)))
         }
     }
-    bracket := find_char(clean, "[")
+    bracket := typesys_find_char(clean, "[")
     if bracket >= 0 {
-        return trim_text(std.prelude.prelude_slice(clean, 0, bracket))
+        return typesys_trim_text(std.prelude.prelude_slice(clean, 0, bracket))
     }
-    angle := find_char(clean, "<")
+    angle := typesys_find_char(clean, "<")
     if angle >= 0 {
-        return trim_text(std.prelude.prelude_slice(clean, 0, angle))
+        return typesys_trim_text(std.prelude.prelude_slice(clean, 0, angle))
     }
-    paren := find_char(clean, "(")
+    if is_tuple_type(clean) { return "result" }
+    paren := typesys_find_char(clean, "(")
     if paren >= 0 {
-        return trim_text(std.prelude.prelude_slice(clean, 0, paren))
+        return typesys_trim_text(std.prelude.prelude_slice(clean, 0, paren))
     }
     return clean
 }
@@ -190,14 +205,15 @@ func base_type_name(string ty) string {
 func extract_type_args(string type_name) string[] {
     out := string[]()
     clean := parse_type(type_name)
-    if starts_with(clean, "[") && !starts_with(clean, "[]") {
-        close := find_char(clean, "]")
+    if is_tuple_type(clean) { return extract_tuple_args(clean) }
+    if typesys_starts_with(clean, "[") && !typesys_starts_with(clean, "[]") {
+        close := typesys_find_char(clean, "]")
         if close > 0 {
             return extract_type_args(std.prelude.prelude_slice(clean, close + 1, std.prelude.len(clean)))
         }
     }
-    open := find_char(clean, "[")
-    close := find_last_char(clean, "]")
+    open := typesys_find_char(clean, "[")
+    close := typesys_find_last_char(clean, "]")
     if open < 0 || close <= open + 1 {
         return out
     }
@@ -212,13 +228,13 @@ func extract_type_args(string type_name) string[] {
         } else if ch == "]" {
             depth = depth - 1
         } else if ch == "," && depth == 0 {
-            out = append(out, trim_text(std.prelude.prelude_slice(inner, start, i)))
+            out = append(out, typesys_trim_text(std.prelude.prelude_slice(inner, start, i)))
             start = i + 1
         }
         i = i + 1
     }
     if start < std.prelude.len(inner) {
-        out = append(out, trim_text(std.prelude.prelude_slice(inner, start, std.prelude.len(inner))))
+        out = append(out, typesys_trim_text(std.prelude.prelude_slice(inner, start, std.prelude.len(inner))))
     }
     out
 }
@@ -274,13 +290,13 @@ func comparable_type(string ty) bool {
     if is_builtin_primitive(clean) {
         return true
     }
-    if starts_with(clean, "&") || (std.prelude.len(clean) > 0 && std.prelude.char_at(clean, std.prelude.len(clean) - 1) == "*") {
+    if typesys_starts_with(clean, "&") || (std.prelude.len(clean) > 0 && std.prelude.char_at(clean, std.prelude.len(clean) - 1) == "*") {
         return true
     }
-    if starts_with(clean, "[]") {
+    if typesys_starts_with(clean, "[]") {
         return false
     }
-    if starts_with(clean, "[") {
+    if typesys_starts_with(clean, "[") {
         return false
     }
     if is_tuple_type(clean) {
@@ -341,7 +357,7 @@ func typesys_is_nilable_type(string ty) bool {
     if clean == "map" || clean == "fn" {
         return true
     }
-    if starts_with(clean, "[]") || starts_with(clean, "&") {
+    if typesys_starts_with(clean, "[]") || typesys_starts_with(clean, "&") {
         return true
     }
     base := base_type_name(clean)
@@ -395,7 +411,7 @@ func is_tuple_type(string ty) bool {
     if std.prelude.len(clean) < 2 {
         return false
     }
-    return starts_with(clean, "(") && ends_with(clean, ")")
+    return typesys_starts_with(clean, "(") && typesys_ends_with(clean, ")")
 }
 
 func extract_tuple_args(string type_name) string[] {
@@ -415,13 +431,13 @@ func extract_tuple_args(string type_name) string[] {
         } else if ch == ")" || ch == "]" {
             depth = depth - 1
         } else if ch == "," && depth == 0 {
-            out = append(out, trim_text(std.prelude.prelude_slice(inner, start, i)))
+            out = append(out, typesys_trim_text(std.prelude.prelude_slice(inner, start, i)))
             start = i + 1
         }
         i = i + 1
     }
     if start < std.prelude.len(inner) {
-        out = append(out, trim_text(std.prelude.prelude_slice(inner, start, std.prelude.len(inner))))
+        out = append(out, typesys_trim_text(std.prelude.prelude_slice(inner, start, std.prelude.len(inner))))
     }
     out
 }
@@ -460,7 +476,8 @@ func numeric_rank(string ty) int {
 }
 
 func is_builtin_primitive(string ty) bool {
-    clean := parse_type(ty)
+    // Primitive classification is the base case of parse_type.
+    clean := typesys_normalize_type_text(typesys_trim_text(ty))
     return clean == "()"
         || clean == "never"
         || clean == "bool"
@@ -501,11 +518,11 @@ func is_copy_type(string ty) bool {
         || clean == "f64" {
         return true
     }
-    if starts_with(clean, "&") {
+    if typesys_starts_with(clean, "&") {
         return true
     }
-    open := find_char(clean, "[")
-    close := find_char(clean, "]")
+    open := typesys_find_char(clean, "[")
+    close := typesys_find_char(clean, "]")
     if open > 0 && close == std.prelude.len(clean) - 1 && is_array_length(std.prelude.prelude_slice(clean, open + 1, close)) {
         return is_copy_type(std.prelude.prelude_slice(clean, 0, open))
     }
@@ -533,7 +550,7 @@ func is_explicit_owned_type(string ty) bool {
 
 func ownership_mode(string ty) string {
     clean := parse_type(ty)
-    if starts_with(clean, "&") {
+    if typesys_starts_with(clean, "&") {
         return "borrow"
     }
     if is_copy_type(clean) {
@@ -554,7 +571,7 @@ func is_heap_reference_type(string ty) bool {
     if is_explicit_owned_type(clean) {
         return true
     }
-    if starts_with(clean, "&") || starts_with(clean, "[]") {
+    if typesys_starts_with(clean, "&") || typesys_starts_with(clean, "[]") {
         return true
     }
     base := base_type_name(clean)
@@ -562,29 +579,29 @@ func is_heap_reference_type(string ty) bool {
 }
 
 func is_reference_type(string ty) bool {
-    return starts_with(trim_text(ty), "&")
+    return typesys_starts_with(typesys_trim_text(ty), "&")
 }
 
 func typesys_is_slice_type(string ty) bool {
-    return starts_with(trim_text(ty), "[]")
+    return typesys_starts_with(typesys_trim_text(ty), "[]")
 }
 
 func is_generic_type(string ty) bool {
-    clean := trim_text(ty)
-    return find_char(clean, "[") >= 0 || find_char(clean, "<") >= 0
+    clean := typesys_trim_text(ty)
+    return typesys_find_char(clean, "[") >= 0 || typesys_find_char(clean, "<") >= 0
 }
 
 func typesys_normalize_type_text(string text) string {
-    return trim_text(text)
+    return typesys_trim_text(text)
 }
 
 func typesys_trim_text(string text) string {
     start := 0
     end := std.prelude.len(text)
-    for start < end && is_space(std.prelude.char_at(text, start)) {
+    for start < end && typesys_is_space(std.prelude.char_at(text, start)) {
         start = start + 1
     }
-    for end > start && is_space(std.prelude.char_at(text, end - 1)) {
+    for end > start && typesys_is_space(std.prelude.char_at(text, end - 1)) {
         end = end - 1
     }
     return std.prelude.prelude_slice(text, start, end)
@@ -634,7 +651,7 @@ func typesys_find_last_char(string text, string needle) int {
 }
 
 func extract_section(string text, string open, string close) string {
-    start := find_char(text, open)
+    start := typesys_find_char(text, open)
     if start < 0 {
         return ""
     }

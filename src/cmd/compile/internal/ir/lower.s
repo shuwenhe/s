@@ -288,8 +288,8 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) expr_ir {
         expr.string(string_expr) : expr_ir.string(string_expr.value),
         expr.bool(bool_expr) : expr_ir.bool(bool_expr.value),
         expr.name(name_expr) : resolve_const_name_expr(name_expr.name, const_entries),
-        expr.borrow(borrow_expr) : expr_ir.borrow(borrow_expr { target: convert_expr(borrow_expr.target.unwrap(), const_entries), mutable: borrow_expr.mutable }),
-        expr.binary(binary_expr) : expr_ir.binary(binary_expr { op: binary_expr.op, left: convert_expr(binary_expr.left.unwrap(), const_entries), right: convert_expr(binary_expr.right.unwrap(), const_entries) }),
+        expr.borrow(borrow_expr) : expr_ir.borrow(borrow_expr { target: convert_expr(borrow_expr.target.value, const_entries), mutable: borrow_expr.mutable }),
+        expr.binary(binary_expr) : expr_ir.binary(binary_expr { op: binary_expr.op, left: convert_expr(binary_expr.left.value, const_entries), right: convert_expr(binary_expr.right.value, const_entries) }),
         expr.call(call_expr) : {
             callee_name := "<call>"
             switch call_expr.resolved_callee {
@@ -297,7 +297,7 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) expr_ir {
                 option.none : (),
             }
             if callee_name == "<call>" {
-                callee_name = call_callee_name(call_expr.callee.unwrap())
+                callee_name = call_callee_name(call_expr.callee.value)
             }
             args := expr_ir[]()
             ai := 0
@@ -356,6 +356,10 @@ func lower_main_to_mir(source_file src) (mir_graph, string) {
     return lower_package_to_mir(src)
 }
 
+func no_lower_function() option[function_decl] {
+    return option.none
+}
+
 func lower_package_to_mir(source_file src) (mir_graph, string) {
     const_entries := collect_const_rewrite_entries(src)
     fn_count := 0
@@ -374,18 +378,18 @@ func lower_package_to_mir(source_file src) (mir_graph, string) {
     if fn_count == 0 {
         return mir_graph {}, "entry function not found: package has no function body"
     }
-    picked := option[function_decl].none
-    fallback := option[function_decl].none
+    picked := no_lower_function()
+    fallback := no_lower_function()
     i := 0
     for i < len(src.items) {
         switch src.items[i] {
             item.function(function_decl) : {
                 if function_decl.body.is_some() {
                     if fallback.is_none() {
-                        fallback = option[function_decl].some(function_decl)
+                        fallback = option.some(function_decl)
                     }
                     if function_decl.sig.name == "main" {
-                        picked = option[function_decl].some(function_decl)
+                        picked = option.some(function_decl)
                     }
                 }
             }
@@ -623,7 +627,7 @@ func lower_function_to_mir(function_decl fd, const_rewrite_entry[] const_entries
         empty_blocks := mir_basic_block[]()
         empty_blocks = append(empty_blocks, ir_make_block(0, "entry", string[](), "return", mir_control_edge[]()))
         return mir_graph {
-            function_name: fd.sig.name, blocks empty_blocks, locals mir_local_slot[](), string trace[](), entry 0, exit 0,
+            function_name: fd.sig.name, blocks empty_blocks, locals mir_local_slot[](), trace: string[](), entry 0, exit 0,
             borrow_ok: true, borrow_errors: 0, borrow_message: "",
         }
     }

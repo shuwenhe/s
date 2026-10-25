@@ -68,22 +68,6 @@ resolve_module_fallback() {
 
     case "$module" in
 
-        compile.internal.semantic)
-
-            printf 'src/cmd/compile/internal/semantic/semantic.s\n'
-
-            return 0
-
-            ;;
-
-        compile.internal.syntax)
-
-            printf 'src/cmd/compile/internal/parser/syntax/syntax.s\n'
-
-            return 0
-
-            ;;
-
         compile.internal)
 
             printf 'src/cmd/compile/internal/stage5_gate.s\n'

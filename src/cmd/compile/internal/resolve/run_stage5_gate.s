@@ -12,8 +12,8 @@ func run_stage5_gate_on_file(string filepath) semantic.name_resolution_gate_resu
     
     read_result := std.fs.read_to_string(filepath)
     source := switch read_result {
-        source : source,
-        err : {
+        result.ok(source) : source,
+        result.err(err) : {
             
             return semantic.name_resolution_gate_result {
                 total_identifiers: 0,

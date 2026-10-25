@@ -1,7 +1,9 @@
 package compile.internal.semantic
 
 import (
-    "s"
+    "compile.internal.ast"
+    "std.option"
+    "std.io"
     "std"
     "std.prelude"
 )
@@ -31,7 +33,7 @@ struct name_resolution_gate_result {
     int gate_pass  
 }
 
-func canonical_name_resolution_check(source_file file, function_binding[] functions, trait_binding[] traits, const_binding[] consts, struct_binding[] structs) name_resolution_gate_result {
+func canonical_name_resolution_check(compile.internal.ast.source_file file, function_binding[] functions, trait_binding[] traits, const_binding[] consts, struct_binding[] structs) name_resolution_gate_result {
     result := name_resolution_gate_result {
         total_identifiers: 0,
         resolved_exact: 0,
@@ -81,7 +83,7 @@ struct identifier_info {
     bool is_qualified
 }
 
-func collect_all_identifiers_from_items(item[] items) identifier_info[] {
+func collect_all_identifiers_from_items(compile.internal.ast.item[] items) identifier_info[] {
     identifiers := identifier_info[]()
     
     i := 0
@@ -98,7 +100,7 @@ func collect_all_identifiers_from_items(item[] items) identifier_info[] {
     identifiers
 }
 
-func collect_identifiers_from_item(item it) identifier_info[] {
+func collect_identifiers_from_item(compile.internal.ast.item it) identifier_info[] {
     identifiers := identifier_info[]()
     
     switch it {
@@ -110,10 +112,10 @@ func collect_identifiers_from_item(item it) identifier_info[] {
         }
         item.const(const_decl) : {
             switch const_decl.value {
-                s.option.some(expr_val) : {
+                option.some(expr_val) : {
                     identifiers = append_from_expr(identifiers, expr_val)
                 }
-                s.option.none : {}
+                option.none : {}
             }
         }
         _ : {}
@@ -122,153 +124,128 @@ func collect_identifiers_from_item(item it) identifier_info[] {
     identifiers
 }
 
-func append_from_function_body(identifier_info[] acc, s.option[s.block] body) identifier_info[] {
+func append_from_function_body(identifier_info[] initial_values, option[block_expr] body) identifier_info[] {
+    acc := initial_values
     switch body {
-        s.option.some(block_val) : {
-            return append_from_block(acc, block_val)
-        }
-        s.option.none : {}
+        option.some(value): return append_from_block(acc, value),
+        option.none: (),
     }
     acc
 }
 
-func append_from_block(identifier_info[] acc, s.block blk) identifier_info[] {
+func append_from_block(identifier_info[] initial_values, compile.internal.ast.block_expr block) identifier_info[] {
+    acc := initial_values
     i := 0
-    for i < std.prelude.len(blk.statements) {
-        acc = append_from_stmt(acc, blk.statements[i])
+    for i < len(block.statements) {
+        acc = append_from_stmt(acc, block.statements[i])
         i = i + 1
     }
-    
-    switch blk.final_expr {
-        s.option.some(expr_val) : {
-            acc = append_from_expr(acc, expr_val)
-        }
-        s.option.none : {}
+    switch block.final_expr {
+        option.some(value): acc = append_from_expr(acc, value),
+        option.none: (),
     }
-    
     acc
 }
 
-func append_from_stmt(identifier_info[] acc, s.stmt st) identifier_info[] {
-    switch st {
-        s.stmt.let(let_val) : {
-            switch let_val.value {
-                s.option.some(expr_val) : {
-                    acc = append_from_expr(acc, expr_val)
-                }
-                s.option.none : {}
+func append_from_stmt(identifier_info[] initial_values, compile.internal.ast.stmt statement) identifier_info[] {
+    acc := initial_values
+    switch statement {
+        stmt.let(value): acc = append_from_expr(acc, value.value),
+        stmt.assign(value): {
+            acc = append(acc, identifier_info { identifier_text: value.name, is_qualified: false })
+            acc = append_from_expr(acc, value.value)
+        }
+        stmt.increment(value): acc = append(acc, identifier_info { identifier_text: value.name, is_qualified: false }),
+        stmt.c_for(value): {
+            acc = append_from_stmt(acc, value.init.value)
+            acc = append_from_expr(acc, value.condition)
+            acc = append_from_stmt(acc, value.step.value)
+            acc = append_from_block(acc, value.body)
+        }
+        stmt.return(value): {
+            switch value.value {
+                option.some(expression): acc = append_from_expr(acc, expression),
+                option.none: (),
             }
         }
-        s.stmt.assign(assign_val) : {
-            acc = append_from_expr(acc, assign_val.target)
-            acc = append_from_expr(acc, assign_val.value)
-        }
-        s.stmt.if_stmt(if_val) : {
-            acc = append_from_expr(acc, if_val.condition)
-            acc = append_from_block(acc, if_val.then_block)
-            switch if_val.else_block {
-                s.option.some(else_blk) : {
-                    acc = append_from_block(acc, else_blk)
-                }
-                s.option.none : {}
-            }
-        }
-        s.stmt.while_stmt(while_val) : {
-            acc = append_from_expr(acc, while_val.condition)
-            acc = append_from_block(acc, while_val.body)
-        }
-        s.stmt.for_stmt(for_val) : {
-            acc = append_from_expr(acc, for_val.iterable)
-            acc = append_from_block(acc, for_val.body)
-        }
-        s.stmt.return_stmt(return_val) : {
-            switch return_val.value {
-                s.option.some(expr_val) : {
-                    acc = append_from_expr(acc, expr_val)
-                }
-                s.option.none : {}
-            }
-        }
-        s.stmt.switch_stmt(switch_val) : {
-            acc = append_from_expr(acc, switch_val.target)
-            i := 0
-            for i < std.prelude.len(switch_val.arms) {
-                acc = append_from_expr(acc, switch_val.arms[i].pattern_expr)
-                acc = append_from_block(acc, switch_val.arms[i].body)
-                i = i + 1
-            }
-        }
-        _ : {}
+        stmt.expr(value): acc = append_from_expr(acc, value.expr),
+        stmt.defer(value): acc = append_from_expr(acc, value.expr),
+        stmt.sroutine(value): acc = append_from_expr(acc, value.expr),
     }
-    
     acc
 }
 
-func append_from_expr(identifier_info[] acc, s.expr e) identifier_info[] {
-    switch e {
-        s.expr.name(name_val) : {
-            
-            acc = append(acc, identifier_info {
-                identifier_text: name_val.name,
-                is_qualified: false,
-            })
+func append_from_expr(identifier_info[] initial_values, compile.internal.ast.expr expression) identifier_info[] {
+    acc := initial_values
+    switch expression {
+        expr.name(value): acc = append(acc, identifier_info { identifier_text: value.name, is_qualified: false }),
+        expr.member(value): {
+            path := qualified_expr_path_gate(value)
+            if path != "" { acc = append(acc, identifier_info { identifier_text: path, is_qualified: true }) }
+            acc = append_from_expr(acc, value.target.value)
         }
-        s.expr.member(member_val) : {
-            
-            path := qualified_expr_path_gate(member_val)
-            if path != "" {
-                acc = append(acc, identifier_info {
-                    identifier_text: path,
-                    is_qualified: true,
-                })
-            }
-            acc = append_from_expr(acc, member_val.target.value)
-        }
-        s.expr.call(call_val) : {
-            acc = append_from_expr(acc, call_val.callee.value)
+        expr.call(value): {
+            acc = append_from_expr(acc, value.callee.value)
             i := 0
-            for i < std.prelude.len(call_val.args) {
-                acc = append_from_expr(acc, call_val.args[i])
+            for i < len(value.args) {
+                acc = append_from_expr(acc, value.args[i])
                 i = i + 1
             }
         }
-        s.expr.binary(binary_val) : {
-            acc = append_from_expr(acc, binary_val.left.value)
-            acc = append_from_expr(acc, binary_val.right.value)
+        expr.binary(value): {
+            acc = append_from_expr(acc, value.left.value)
+            acc = append_from_expr(acc, value.right.value)
         }
-        s.expr.unary(unary_val) : {
-            acc = append_from_expr(acc, unary_val.operand.value)
+        expr.borrow(value): acc = append_from_expr(acc, value.target.value),
+        expr.index(value): {
+            acc = append_from_expr(acc, value.target.value)
+            acc = append_from_expr(acc, value.index.value)
         }
-        s.expr.index(index_val) : {
-            acc = append_from_expr(acc, index_val.target.value)
-            acc = append_from_expr(acc, index_val.index.value)
+        expr.block(value): acc = append_from_block(acc, value),
+        expr.if(value): {
+            acc = append_from_expr(acc, value.condition.value)
+            acc = append_from_block(acc, value.then_branch)
+            switch value.else_branch {
+                option.some(other): acc = append_from_expr(acc, other.value),
+                option.none: (),
+            }
         }
-        s.expr.borrow(borrow_val) : {
-            acc = append_from_expr(acc, borrow_val.target.value)
+        expr.while(value): {
+            acc = append_from_expr(acc, value.condition.value)
+            acc = append_from_block(acc, value.body)
         }
-        s.expr.dereference(deref_val) : {
-            acc = append_from_expr(acc, deref_val.target.value)
+        expr.for(value): {
+            switch value.init { option.some(initial): acc = append_from_stmt(acc, initial.value), option.none: (), }
+            switch value.condition { option.some(condition): acc = append_from_expr(acc, condition.value), option.none: (), }
+            switch value.post { option.some(post): acc = append_from_stmt(acc, post.value), option.none: (), }
+            switch value.iterable { option.some(iterable): acc = append_from_expr(acc, iterable.value), option.none: (), }
+            acc = append_from_block(acc, value.body)
         }
-        s.expr.cast(cast_val) : {
-            acc = append_from_expr(acc, cast_val.target.value)
-        }
-        s.expr.struct_literal(struct_val) : {
+        expr.switch(value): {
+            acc = append_from_expr(acc, value.subject.value)
             i := 0
-            for i < std.prelude.len(struct_val.fields) {
-                acc = append_from_expr(acc, struct_val.fields[i].value)
+            for i < len(value.arms) {
+                acc = append_from_expr(acc, value.arms[i].expr)
                 i = i + 1
             }
         }
-        s.expr.array_literal(array_val) : {
+        expr.array(value): {
             i := 0
-            for i < std.prelude.len(array_val.elements) {
-                acc = append_from_expr(acc, array_val.elements[i])
+            for i < len(value.items) {
+                acc = append_from_expr(acc, value.items[i])
                 i = i + 1
             }
         }
-        _ : {}
+        expr.map(value): {
+            i := 0
+            for i < len(value.entries) {
+                acc = append_from_expr(acc, value.entries[i].key)
+                acc = append_from_expr(acc, value.entries[i].value)
+                i = i + 1
+            }
+        }
+        _ : (),
     }
-    
     acc
 }
 
@@ -365,9 +342,12 @@ func resolve_identifier_to_candidates(string identifier, bool is_qualified, stri
         }
     }
     
-    status := if std.prelude.len(candidates) == 0 { "unresolved" 
-              } else if std.prelude.len(candidates) == 1 { "resolved_exact" 
-              } else { "resolved_ambiguous" }
+    status := "resolved_ambiguous"
+    if std.prelude.len(candidates) == 0 {
+        status = "unresolved"
+    } else if std.prelude.len(candidates) == 1 {
+        status = "resolved_exact"
+    }
     
     identifier_resolution {
         identifier_text: identifier,
@@ -379,23 +359,23 @@ func resolve_identifier_to_candidates(string identifier, bool is_qualified, stri
 }
 
 func print_name_resolution_gate_result(name_resolution_gate_result result) {
-    std.prelude.println("canonical-name-resolution-check")
-    std.prelude.println("  total-identifiers       = " + to_string(result.total_identifiers))
-    std.prelude.println("  resolved-exact          = " + to_string(result.resolved_exact))
-    std.prelude.println("  resolved-ambiguous      = " + to_string(result.resolved_ambiguous))
-    std.prelude.println("  unresolved              = " + to_string(result.unresolved))
-    std.prelude.println("  qualified-multi-match   = " + to_string(result.qualified_with_multiple_matches))
+    std.io.println("canonical-name-resolution-check")
+    std.io.println("  total-identifiers       = " + to_string(result.total_identifiers))
+    std.io.println("  resolved-exact          = " + to_string(result.resolved_exact))
+    std.io.println("  resolved-ambiguous      = " + to_string(result.resolved_ambiguous))
+    std.io.println("  unresolved              = " + to_string(result.unresolved))
+    std.io.println("  qualified-multi-match   = " + to_string(result.qualified_with_multiple_matches))
     
     if result.gate_pass == 1 {
-        std.prelude.println("  result                  = PASS")
+        std.io.println("  result                  = PASS")
     } else {
-        std.prelude.println("  result                  = FAIL")
+        std.io.println("  result                  = FAIL")
         
         
         i := 0
         for i < std.prelude.len(result.details) {
             if result.details[i].resolution_status != "resolved_exact" {
-                std.prelude.println("  first-blocker           = " + result.details[i].identifier_text + " (" + result.details[i].resolution_status + ")")
+                std.io.println("  first-blocker           = " + result.details[i].identifier_text + " (" + result.details[i].resolution_status + ")")
                 break
             }
             i = i + 1
@@ -403,12 +383,12 @@ func print_name_resolution_gate_result(name_resolution_gate_result result) {
     }
 }
 
-func qualified_expr_path_gate(s.expr_member member_val) string {
+func qualified_expr_path_gate(compile.internal.ast.member_expr member_val) string {
     switch member_val.target.value {
-        s.expr.name(name_val) : {
+        expr.name(name_val) : {
             return name_val.name + "." + member_val.member
         }
-        s.expr.member(nested_member) : {
+        expr.member(nested_member) : {
             prefix := qualified_expr_path_gate(nested_member)
             if prefix != "" {
                 return prefix + "." + member_val.member

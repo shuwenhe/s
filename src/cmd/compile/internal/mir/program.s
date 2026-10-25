@@ -41,6 +41,7 @@ struct mir_program_call {
 }
 
 struct mir_program {
+    mir_program_enum[] enums
     string package_name
     string entry_symbol
     mir_program_function[] functions
@@ -83,7 +84,7 @@ func mir_program_value_type(mir_program_function function_data, int id, int limi
     return ""
 }
 
-func mir_program_instruction_error(mir_program_function function_data, mir_program_function[] functions, mir_program_instruction ins, int index) string {
+func mir_program_instruction_error_with_enums(mir_program_function function_data, mir_program_function[] functions, mir_program_instruction ins, int index, mir_program_enum[] enums) string {
     if len(ins.result_ids) != len(ins.result_types) { return "result type count in: " + function_data.symbol }
     r := 0
     for r < len(ins.result_ids) {
@@ -126,6 +127,7 @@ func mir_program_instruction_error(mir_program_function function_data, mir_progr
         return ""
     }
     if len(ins.result_ids) != 1 { return "instruction result count: " + ins.op }
+    if ins.op == "const_enum" || ins.op == "enum_to_int" { return mir_program_enum_instruction_error(function_data, ins, index, enums) }
     if ins.op == "const_int" {
         if len(ins.operands) != 0 || ins.result_types[0] != "int" { return "invalid integer constant" }
         return ""
@@ -150,7 +152,7 @@ func mir_program_instruction_error(mir_program_function function_data, mir_progr
     return "unsupported instruction: " + ins.op
 }
 
-func mir_program_function_error(mir_program_function function_data, mir_program_function[] functions) string {
+func mir_program_function_error_with_enums(mir_program_function function_data, mir_program_function[] functions, mir_program_enum[] enums) string {
     if function_data.symbol == "" { return "empty function symbol" }
     p := 0
     for p < len(function_data.params) {
@@ -178,7 +180,7 @@ func mir_program_function_error(mir_program_function function_data, mir_program_
     if block.id < 0 { return "invalid block: " + function_data.symbol }
     i := 0
     for i < len(block.instructions) {
-        error := mir_program_instruction_error(function_data, functions, block.instructions[i], i)
+        error := mir_program_instruction_error_with_enums(function_data, functions, block.instructions[i], i, enums)
         if error != "" { return error }
         i = i + 1
     }
@@ -202,12 +204,13 @@ func mir_program_append_call(mir_program_call[] calls, string caller, string cal
     return calls
 }
 
-func lower_mir_program(string package_name, string entry_symbol, mir_program_function[] functions) mir_program_result {
+func lower_mir_program_with_enums(string package_name, string entry_symbol, mir_program_function[] functions, mir_program_enum[] enums) mir_program_result {
     empty := mir_program {
         package_name: package_name, entry_symbol: entry_symbol,
         functions: mir_program_function[]{}, calls: mir_program_call[]{},
     }
-    result := mir_program_result { program: empty, error: "" }
+    result := mir_program_result { program: empty, error: mir_program_enums_error(enums) }
+    if result.error != "" { return result }
     i := 0
     for i < len(functions) {
         previous := 0
@@ -226,7 +229,7 @@ func lower_mir_program(string package_name, string entry_symbol, mir_program_fun
     calls := []mir_program_call{}
     i = 0
     for i < len(functions) {
-        error := mir_program_function_error(functions[i], functions)
+        error := mir_program_function_error_with_enums(functions[i], functions, enums)
         if error != "" { result.error = error; return result }
         b := 0
         for b < len(functions[i].blocks) {
@@ -243,7 +246,19 @@ func lower_mir_program(string package_name, string entry_symbol, mir_program_fun
         i = i + 1
     }
     result.program = mir_program {
-        package_name: package_name, entry_symbol: entry_symbol, functions: functions, calls: calls,
+        package_name: package_name, entry_symbol: entry_symbol, functions: functions, calls: calls, enums: enums,
     }
     return result
+}
+
+func lower_mir_program(string package_name, string entry_symbol, mir_program_function[] functions) mir_program_result {
+    return lower_mir_program_with_enums(package_name, entry_symbol, functions, mir_program_enum[]())
+}
+
+func mir_program_instruction_error(mir_program_function function_data, mir_program_function[] functions, mir_program_instruction instruction, int index) string {
+    return mir_program_instruction_error_with_enums(function_data, functions, instruction, index, mir_program_enum[]())
+}
+
+func mir_program_function_error(mir_program_function function_data, mir_program_function[] functions) string {
+    return mir_program_function_error_with_enums(function_data, functions, mir_program_enum[]())
 }

@@ -55,6 +55,10 @@ func compiler_main(string[] args) int {
         source := __host_read_to_string(args[1])
         if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
         ir := emit_canonical_mir_public(source)
+        if compiler_starts_with_trimmed(ir, "mir-error:") {
+            eprintln(ir)
+            return 1
+        }
         if __host_write_text_file(args[2], ir) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
@@ -284,7 +288,7 @@ func handle_compile_unit(string[] args) int {
         eprintln("compiler: empty compile unit")
         return 1
     }
-    mirrored := native_source_to_mir(source)
+    mirrored := canonical_source_to_mir(source)
     if mirrored.error != "" { eprintln(mirrored.error); return 1 }
     emitted := native_program_assembly(mirrored.program, true)
     if emitted.error != "" { eprintln(emitted.error); return 1 }

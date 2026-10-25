@@ -2176,6 +2176,24 @@ static int host_dispatch_call(
 		}
 		return 1;
 	}
+    if (strcmp(name, "append") == 0) {
+        if (argc != 2 || args[0].kind != RUNTIME_ARRAY) {
+            error_set(err, ERR_SEMANTIC, 0, 0, "append expects an array and one value");
+            return 0;
+        }
+        if (!value_copy(out, &args[0])) {
+            error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0;
+        }
+        runtime_data_value *items = realloc(out->array_items, (out->array_len + 1) * sizeof(*items));
+        if (!items) { value_clear(out); error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0; }
+        out->array_items = items;
+        memset(&items[out->array_len], 0, sizeof(*items));
+        if (!value_copy(&items[out->array_len], &args[1])) {
+            value_clear(out); error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory"); return 0;
+        }
+        out->array_len++;
+        return 1;
+    }
 	if (strcmp(name, "__index_get") == 0) {
 		if (argc != 2) {
 			error_set(err, ERR_SEMANTIC, 0, 0, "__index_get expects 2 args");

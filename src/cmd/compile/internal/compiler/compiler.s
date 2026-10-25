@@ -1,4 +1,4 @@
-package compile.internal.compiler
+package compile.internal
 import (
     "std"
 )

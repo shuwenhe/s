@@ -34,7 +34,7 @@ func native_emit_asm_file(string input, string output, bool executable) int {
     }
     source := __host_read_source(input)
     if source == "" { eprintln("native compiler: empty or unreadable input"); return 1 }
-    mirrored := native_source_to_mir(source)
+    mirrored := canonical_source_to_mir(source)
     if mirrored.error != "" { eprintln(mirrored.error); return 1 }
     emitted := native_program_assembly(mirrored.program, executable)
     if emitted.error != "" { eprintln(emitted.error); return 1 }
@@ -153,7 +153,7 @@ func native_build_object(string input, string output) int {
     }
     source := __host_read_source(input)
     if source == "" { eprintln("native compiler: empty or unreadable input"); return 1 }
-    mirrored := native_source_to_mir(source)
+    mirrored := canonical_source_to_mir(source)
     if mirrored.error != "" { eprintln(mirrored.error); return 1 }
     return native_build_object_program(mirrored.program, input, output, "")
 }
@@ -165,7 +165,7 @@ func native_build(string input, string output, string ssa_margin_override, bool 
     }
     source := __host_read_source(input)
     if source == "" { eprintln("native compiler: empty or unreadable input"); return 1 }
-    mirrored := native_source_to_mir(source)
+    mirrored := canonical_source_to_mir(source)
     if mirrored.error != "" { eprintln(mirrored.error); return 1 }
     return native_build_program(mirrored.program, input, output, ssa_margin_override, nostdlib)
 }

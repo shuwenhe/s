@@ -13,6 +13,7 @@ typedef struct ir_builder {
     unsigned constant_depth;
     const char *locals[4096];
     size_t local_count;
+    size_t file_begin,file_end;
 	int temp_counter;
 	int label_counter;
 	char break_labels[64][IR_OPERAND_CAP];
@@ -211,6 +212,39 @@ static bool record_declaration(ast_node *node) {
     return node && node->kind == AST_LET_STMT && node->as.let_stmt.type_name &&
         strcmp(node->as.let_stmt.type_name, "struct") == 0 &&
         node->as.let_stmt.value && node->as.let_stmt.value->kind == AST_STRUCT_EXPR;
+}
+/* Native globals have names outside the source identifier alphabet. Resolve
+ * against package declarations before flattening IR, retaining lexical shadowing. */
+static ast_node *ir_global(ir_builder *b,const char *name,char out[IR_OPERAND_CAP]) {
+    if(!b->root->native_unit || ir_local_root(b,name)) return NULL;
+    char canonical[IR_OPERAND_CAP]; copy_str(canonical,name);
+    for(size_t i=b->file_begin;i<b->file_end;i++) {
+        ast_node *use=b->root->as.program.statements.data[i];
+        if(use->kind!=AST_USE_DECL || !use->as.use_decl.alias || !use->as.use_decl.module_path) continue;
+        size_t n=strlen(use->as.use_decl.alias);
+        if(!strncmp(name,use->as.use_decl.alias,n) && name[n]=='.') {
+            if(snprintf(canonical,sizeof(canonical),"%s%s",use->as.use_decl.module_path,name+n)>=(int)sizeof(canonical)) return NULL;
+            break;
+        }
+    }
+    name=canonical;
+    const char *pkg="";
+    for(size_t i=0;i<b->root->as.program.statements.len;i++) {
+        ast_node *n=b->root->as.program.statements.data[i];
+        if(n->kind==AST_PACKAGE_DECL) pkg=n->as.package_decl.name;
+        if(n->kind!=AST_LET_STMT || record_declaration(n) || n->native_template) continue;
+        char full[IR_OPERAND_CAP];
+        if(snprintf(full,sizeof(full),"%s%s%s",pkg,*pkg?".":"",n->as.let_stmt.name)>=(int)sizeof(full)) continue;
+        size_t full_len=strlen(full),short_len=strlen(n->as.let_stmt.name);
+        const char *tail=NULL;
+        if(!strncmp(name,full,full_len) && (!name[full_len] || name[full_len]=='.')) tail=name+full_len;
+        else if(!strcmp(pkg,b->package_name) && !strncmp(name,n->as.let_stmt.name,short_len) && (!name[short_len] || name[short_len]=='.')) tail=name+short_len;
+        if(tail && snprintf(out,IR_OPERAND_CAP,"$global%zu%s",i,tail)<IR_OPERAND_CAP) return n;
+    }
+    return NULL;
+}
+static void ir_value_name(ir_builder *b,const char *name,char out[IR_OPERAND_CAP]) {
+    if(!ir_global(b,name,out)) copy_str(out,name);
 }
 static bool record_type_name(ir_builder *b, const char *raw, char out[IR_OPERAND_CAP]) {
     const char *pkg = "";
@@ -564,7 +598,7 @@ static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERA
 				snprintf(item_text, sizeof(item_text), "\"%s\"", item->as.string_expr.literal);
 				break;
 			case AST_IDENT_EXPR:
-				snprintf(item_text, sizeof(item_text), "%s", item->as.ident_expr.name);
+				if(!lower_expr(b,item,item_text)) return false;
 				break;
 			default:
                 if(expr->native_enum) {
@@ -713,10 +747,11 @@ static bool lower_binary(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]
 static bool lower_place_assignment(ir_builder *b, ast_node *target, const char *value, char out[IR_OPERAND_CAP]) {
 	if (!target) return false;
 	if (target->kind == AST_IDENT_EXPR) {
-		if (!emit_ins(b, IR_MOV, target->as.ident_expr.name, value, "", target->pos)) {
+		char name[IR_OPERAND_CAP]; ir_value_name(b,target->as.ident_expr.name,name);
+		if (!emit_ins(b, IR_MOV, name, value, "", target->pos)) {
 			return false;
 		}
-		snprintf(out, IR_OPERAND_CAP, "%s", target->as.ident_expr.name);
+		copy_str(out,name);
 		return true;
 	}
 	if (target->kind == AST_MEMBER_EXPR) {
@@ -824,7 +859,7 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
                 ast_node *constant_value = find_constant(b, expr->as.ident_expr.name,&package);
 				if (constant_value) return lower_constant(b,constant_value,package,out);
 			}
-			snprintf(out, IR_OPERAND_CAP, "%s", expr->as.ident_expr.name);
+			ir_value_name(b,expr->as.ident_expr.name,out);
 			return true;
 		case AST_MEMBER_EXPR: {
 			char object_name[IR_OPERAND_CAP],constant_name[IR_OPERAND_CAP];
@@ -843,10 +878,12 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			if (!lower_expr(b, expr->as.member_expr.object, object_name)) {
 				return false;
 			}
-			if (snprintf(out, IR_OPERAND_CAP, "%s.%s", object_name, expr->as.member_expr.member) >= IR_OPERAND_CAP) {
+			char path[IR_OPERAND_CAP];
+			if (snprintf(path, sizeof(path), "%s.%s", object_name, expr->as.member_expr.member) >= IR_OPERAND_CAP) {
 				error_set(b->err, ERR_SEMANTIC, expr->pos.line, expr->pos.column, "member expression too long for IR operand");
 				return false;
 			}
+            ir_value_name(b,path,out);
 			return true;
 		}
 		case AST_INDEX_EXPR: {
@@ -914,10 +951,11 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			if (!lower_expr(b, expr->as.assign_expr.value, out)) {
 				return false;
 			}
-			if (!emit_ins(b, IR_MOV, expr->as.assign_expr.name, out, "", expr->pos)) {
+			char destination[IR_OPERAND_CAP]; ir_value_name(b,expr->as.assign_expr.name,destination);
+			if (!emit_ins(b, IR_MOV, destination, out, "", expr->pos)) {
 				return false;
 			}
-			snprintf(out, IR_OPERAND_CAP, "%s", expr->as.assign_expr.name);
+			copy_str(out,destination);
 			return true;
 		case AST_CALL_EXPR: {
 			size_t i;
@@ -1276,6 +1314,55 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
     b->current_func_return_type = NULL;  /* Clear function context after processing */
 	return emit_ins(b, IR_FUNC_END, stmt->as.fn_stmt.name, "", "", stmt->pos);
 }
+static bool ir_global_type(ir_builder *b,ast_node *n,char out[IR_OPERAND_CAP],unsigned depth) {
+    if(!n || depth>64) return false;
+    const char *type=NULL;
+    switch(n->kind) {
+    case AST_NUMBER_EXPR: type="int"; break;
+    case AST_BOOL_EXPR: type="bool"; break;
+    case AST_STRING_EXPR: type="string"; break;
+    case AST_STRUCT_EXPR: type=n->as.struct_expr.type_name; break;
+    case AST_CALL_EXPR:
+        type=n->as.call_expr.resolved_array_type?n->as.call_expr.resolved_array_type:n->as.call_expr.resolved_return_type;
+        if(!type && n->as.call_expr.callee && n->as.call_expr.callee->kind==AST_IDENT_EXPR) {
+            const char *name=n->as.call_expr.callee->as.ident_expr.name,*pkg="";
+            for(size_t i=0;i<b->root->as.program.statements.len;i++) {
+                ast_node *fn=b->root->as.program.statements.data[i];
+                if(fn->kind==AST_PACKAGE_DECL) pkg=fn->as.package_decl.name;
+                if(fn->kind==AST_FN_STMT && !strcmp(name,fn->as.fn_stmt.name) && !strcmp(pkg,b->package_name)) {
+                    type=fn->as.fn_stmt.return_type; break;
+                }
+            }
+        }
+        break;
+    case AST_ARRAY_EXPR:
+        type=n->as.array_expr.resolved_array_type?n->as.array_expr.resolved_array_type:n->as.array_expr.explicit_type;
+        if(!type && n->as.array_expr.items.len) {
+            char element[IR_OPERAND_CAP];
+            if(!ir_global_type(b,n->as.array_expr.items.data[0],element,depth+1)) return false;
+            return snprintf(out,IR_OPERAND_CAP,"%s[]",element)<IR_OPERAND_CAP;
+        }
+        break;
+    default: break;
+    }
+    return type && *type && record_type_name(b,type,out);
+}
+static bool lower_native_global(ir_builder *b,ast_node *n) {
+    char slot[IR_OPERAND_CAP],init[IR_OPERAND_CAP],key[IR_OPERAND_CAP],type[IR_OPERAND_CAP],value[IR_OPERAND_CAP];
+    b->local_count=0;
+    if(!ir_global(b,n->as.let_stmt.name,slot) || !ir_global_type(b,n->as.let_stmt.value,type,0)) {
+        error_set(b->err,ERR_SEMANTIC,n->pos.line,n->pos.column,"unsupported native global initializer type: %s",n->as.let_stmt.name); return false;
+    }
+    if(snprintf(init,sizeof(init),"$init%s",slot)>=(int)sizeof(init)) return false;
+    if(snprintf(key,sizeof(key),"global-slot:%s",slot)>=(int)sizeof(key)) return false;
+    if(!emit_ins(b,IR_NOP,key,type,init,n->pos)) return false;
+    if(snprintf(key,sizeof(key),"return-transfer:%s",init)>=(int)sizeof(key)) return false;
+    if(!emit_ins(b,IR_NOP,key,"",type,n->pos) || !emit_ins(b,IR_FUNC_BEGIN,init,"","",n->pos) ||
+       !lower_expr(b,n->as.let_stmt.value,value) || !emit_ins(b,IR_RET,value,"","",n->pos) ||
+       !emit_ins(b,IR_FUNC_END,init,"","",n->pos)) return false;
+    b->local_count=0;
+    return true;
+}
 static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 	char value[IR_OPERAND_CAP];
 	if (!stmt) {
@@ -1296,7 +1383,7 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 		case AST_BLOCK:
 			return lower_block(b, stmt);
 		case AST_LET_STMT:
-            if(stmt->native_template) return true;
+            if(stmt->native_template || (b->root->native_unit && record_declaration(stmt))) return true;
 			if (!lower_expr(b, stmt->as.let_stmt.value, value)) {
 				return false;
 			}
@@ -1306,7 +1393,8 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 			if (!lower_expr(b, stmt->as.assign_stmt.value, value)) {
 				return false;
 			}
-			return emit_ins(b, IR_MOV, stmt->as.assign_stmt.name, value, "", stmt->pos);
+			{ char name[IR_OPERAND_CAP]; ir_value_name(b,stmt->as.assign_stmt.name,name);
+            return emit_ins(b, IR_MOV, name, value, "", stmt->pos); }
 		case AST_RETURN_STMT:
             if(!stmt->as.return_stmt.value) {
                 next_temp(b,value);
@@ -1359,7 +1447,16 @@ static bool lower_stmt(ir_builder *b, ast_node *stmt) {
 		case AST_PROGRAM: {
 			size_t i;
 			for (i = 0; i < stmt->as.program.statements.len; i++) {
-				if (!lower_stmt(b, stmt->as.program.statements.data[i])) {
+				ast_node *n=stmt->as.program.statements.data[i];
+                if(n->kind==AST_PACKAGE_DECL) {
+                    b->file_begin=i; b->file_end=i+1;
+                    while(b->file_end<stmt->as.program.statements.len && stmt->as.program.statements.data[b->file_end]->kind!=AST_PACKAGE_DECL) b->file_end++;
+                }
+                if(b->root->native_unit && n->kind==AST_LET_STMT && !record_declaration(n) && !n->native_template) {
+                    if(!lower_native_global(b,n)) return false;
+                    continue;
+                }
+				if (!lower_stmt(b, n)) {
 					return false;
 				}
 			}
@@ -1389,6 +1486,7 @@ bool ir_generate_from_ast(ast_node *root, IR *ir, compile_error *err) {
 	b.record_depth = 0;
     b.constant_depth = 0;
     b.local_count = 0;
+    b.file_begin=0; b.file_end=0;
 	b.temp_counter = 0;
 	b.label_counter = 0;
 	b.loop_depth = 0;

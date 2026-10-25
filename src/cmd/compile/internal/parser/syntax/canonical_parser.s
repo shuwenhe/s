@@ -1,0 +1,403 @@
+package compile.internal.syntax
+import (
+    "compile.internal.ast"
+    "std.option"
+    "std.prelude"
+)
+
+extern "intrinsic" func __host_byte_at(string text, int index) int
+
+// Canonical parsing owns source positions and produces the shared syntax AST.
+// Value states make progress/error propagation explicit across recursive calls.
+struct canonical_parser {
+    string source
+    int position
+    int line
+    int token_line
+    string token
+    string error
+    expr expression
+    stmt statement
+    block_expr block
+    enum_decl enumeration
+    function_decl function
+    string text
+}
+
+func canonical_char(string source, int index) string {
+    if index < 0 || index >= len(source) { return "" }
+    return std.prelude.char_at(source, index)
+}
+
+func canonical_ident_start(string ch) bool {
+    return ch == "_" || (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z")
+}
+
+func canonical_ident(string text) bool {
+    if text == "" || !canonical_ident_start(canonical_char(text, 0)) { return false }
+    i := 1
+    for i < len(text) {
+        ch := canonical_char(text, i)
+        if !canonical_ident_start(ch) && !(ch >= "0" && ch <= "9") { return false }
+        i = i + 1
+    }
+    return true
+}
+
+func canonical_fail(canonical_parser initial, string message) canonical_parser {
+    state := initial
+    if state.error == "" { state.error = message }
+    return state
+}
+
+func canonical_advance(canonical_parser initial) canonical_parser {
+    state := initial
+    if state.error != "" { return state }
+    n := len(state.source)
+    ignored := true
+    for ignored && state.position < n {
+        ignored = false
+        ch := canonical_char(state.source, state.position)
+        if ch == " " || ch == "\t" || ch == "\r" || ch == "\n" {
+            if ch == "\n" { state.line = state.line + 1 }
+            state.position = state.position + 1
+            ignored = true
+        } else if ch == "/" && canonical_char(state.source, state.position + 1) == "/" {
+            for state.position < n && canonical_char(state.source, state.position) != "\n" { state.position = state.position + 1 }
+            ignored = true
+        } else if ch == "/" && canonical_char(state.source, state.position + 1) == "*" {
+            state.position = state.position + 2
+            depth := 1
+            for state.position < n && depth > 0 {
+                a := canonical_char(state.source, state.position)
+                b := canonical_char(state.source, state.position + 1)
+                if a == "/" && b == "*" { depth = depth + 1; state.position = state.position + 2 }
+                else if a == "*" && b == "/" { depth = depth - 1; state.position = state.position + 2 }
+                else {
+                    if a == "\n" { state.line = state.line + 1 }
+                    state.position = state.position + 1
+                }
+            }
+            if depth != 0 { return canonical_fail(state, "unterminated block comment") }
+            ignored = true
+        }
+    }
+    state.token_line = state.line
+    state.token = ""
+    if state.position >= n { return state }
+    start := state.position
+    ch := canonical_char(state.source, start)
+    if canonical_ident_start(ch) || (ch >= "0" && ch <= "9") {
+        state.position = state.position + 1
+        for state.position < n {
+            next := canonical_char(state.source, state.position)
+            if !canonical_ident_start(next) && !(next >= "0" && next <= "9") { break }
+            state.position = state.position + 1
+        }
+    } else if ch == "\"" || ch == "'" {
+        quote := ch
+        state.position = state.position + 1
+        closed := false
+        for state.position < n {
+            current := canonical_char(state.source, state.position)
+            if current == quote { state.position = state.position + 1; closed = true; break }
+            if current == "\n" { state.line = state.line + 1 }
+            if current == "\\" { state.position = state.position + 1 }
+            state.position = state.position + 1
+        }
+        if !closed { return canonical_fail(state, "unterminated quoted literal") }
+    } else {
+        state.position = state.position + 1
+        pair := ch + canonical_char(state.source, state.position)
+        if pair == ":=" || pair == "==" || pair == "!=" || pair == "<=" || pair == ">=" || pair == "&&" || pair == "||" || pair == "<<" || pair == ">>" || pair == "::" {
+            state.position = state.position + 1
+        } else if ch != "(" && ch != ")" && ch != "{" && ch != "}" && ch != "[" && ch != "]" && ch != "," && ch != ";" && ch != "." && ch != ":" && ch != "+" && ch != "-" && ch != "*" && ch != "/" && ch != "%" && ch != "=" && ch != "!" && ch != "&" && ch != "|" && ch != "^" {
+            return canonical_fail(state, "illegal character: " + ch)
+        }
+    }
+    state.token = std.prelude.prelude_slice(state.source, start, state.position)
+    return state
+}
+
+func canonical_expect(canonical_parser initial, string token) canonical_parser {
+    state := initial
+    if state.error != "" { return state }
+    if state.token != token { return canonical_fail(state, "expected '" + token + "', found '" + state.token + "'") }
+    return canonical_advance(state)
+}
+
+func canonical_separators(canonical_parser initial) canonical_parser {
+    state := initial
+    for state.error == "" && (state.token == ";" || state.token == ",") { state = canonical_advance(state) }
+    return state
+}
+
+func canonical_path(canonical_parser initial) canonical_parser {
+    state := initial
+    if !canonical_ident(state.token) { return canonical_fail(state, "expected identifier") }
+    path := state.token
+    state = canonical_advance(state)
+    for state.error == "" && state.token == "." {
+        state = canonical_advance(state)
+        if !canonical_ident(state.token) { return canonical_fail(state, "expected path component") }
+        path = path + "." + state.token
+        state = canonical_advance(state)
+    }
+    state.text = path
+    return state
+}
+
+func canonical_parse_type(canonical_parser initial) canonical_parser {
+    state := initial
+    if state.token == "(" {
+        state = canonical_expect(canonical_advance(state), ")")
+        state.text = "()"
+        return state
+    }
+    state = canonical_path(state)
+    text := state.text
+    for state.error == "" && state.token == "[" {
+        depth := 0
+        for state.error == "" {
+            token := state.token
+            if token == "[" { depth = depth + 1 }
+            if token == "]" { depth = depth - 1 }
+            if token == "" { return canonical_fail(state, "unterminated type application") }
+            text = text + token
+            state = canonical_advance(state)
+            if depth == 0 { break }
+        }
+    }
+    state.text = text
+    return state
+}
+
+func canonical_precedence(string token) int {
+    if token == "*" || token == "/" || token == "%" { return 20 }
+    if token == "+" || token == "-" { return 10 }
+    return 0
+}
+
+func canonical_expression(canonical_parser initial, int minimum) canonical_parser {
+    state := initial
+    if state.error != "" { return state }
+    value := expr.name(compile.internal.ast.name_expr { name: "unit", inferred_type: option.some("()") })
+    token := state.token
+    if token == "-" || token == "+" {
+        state = canonical_expression(canonical_advance(state), 30)
+        value = state.expression
+        if token == "-" { value = expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(expr.int(compile.internal.ast.int_expr { value: "0", inferred_type: option.none })), op: "-", right: std.prelude.box(value), inferred_type: option.none }) }
+    } else if token == "(" {
+        state = canonical_advance(state)
+        if state.token != ")" { state = canonical_expression(state, 1); value = state.expression }
+        state = canonical_expect(state, ")")
+    } else if token == "true" || token == "false" {
+        value = expr.bool(compile.internal.ast.bool_expr { value: token == "true", inferred_type: option.none })
+        state = canonical_advance(state)
+    } else if canonical_char(token, 0) >= "0" && canonical_char(token, 0) <= "9" {
+        value = expr.int(compile.internal.ast.int_expr { value: token, inferred_type: option.none })
+        state = canonical_advance(state)
+    } else if canonical_ident(token) {
+        value = expr.name(compile.internal.ast.name_expr { name: token, inferred_type: option.none })
+        state = canonical_advance(state)
+    } else {
+        return canonical_fail(state, "expected expression, found '" + token + "'")
+    }
+    for state.error == "" {
+        if state.token == "." || state.token == "::" {
+            state = canonical_advance(state)
+            if !canonical_ident(state.token) { return canonical_fail(state, "expected member name") }
+            value = expr.member(compile.internal.ast.member_expr { target: std.prelude.box(value), member: state.token, inferred_type: option.none })
+            state = canonical_advance(state)
+        } else if state.token == "(" {
+            args := compile.internal.ast.expr[]()
+            state = canonical_advance(state)
+            for state.error == "" && state.token != ")" {
+                if len(args) > 0 { state = canonical_expect(state, ",") }
+                state = canonical_expression(state, 1)
+                if state.error != "" { return state }
+                args = append(args, state.expression)
+                if state.token == "" { return canonical_fail(state, "unterminated call") }
+            }
+            state = canonical_expect(state, ")")
+            value = expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(value), args: args, inferred_type: option.none, resolved_callee: option.none, type_args: string[]() })
+        } else {
+            precedence := canonical_precedence(state.token)
+            if precedence < minimum { break }
+            operator := state.token
+            state = canonical_expression(canonical_advance(state), precedence + 1)
+            value = expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(value), op: operator, right: std.prelude.box(state.expression), inferred_type: option.none })
+        }
+    }
+    state.expression = value
+    return state
+}
+
+func canonical_block(canonical_parser initial) canonical_parser {
+    state := canonical_expect(initial, "{")
+    statements := compile.internal.ast.stmt[]()
+    final := option[expr].none
+    for state.error == "" && state.token != "}" && state.token != "" {
+        if state.token == ";" { state = canonical_advance(state); continue }
+        if state.token == "return" {
+            return_line := state.token_line
+            state = canonical_advance(state)
+            value := option[expr].none
+            if state.token != ";" && state.token != "}" && state.token_line == return_line {
+                state = canonical_expression(state, 1)
+                value = option.some(state.expression)
+            }
+            statements = append(statements, stmt.return(compile.internal.ast.return_stmt { value: value }))
+        } else {
+            state = canonical_expression(state, 1)
+            left := state.expression
+            if state.token == ":=" || state.token == "=" {
+                operator := state.token
+                name := ""
+                switch left { expr.name(identifier): name = identifier.name, _ : state = canonical_fail(state, "assignment requires a local name"), }
+                state = canonical_expression(canonical_advance(state), 1)
+                if operator == ":=" { statements = append(statements, stmt.let(compile.internal.ast.var_stmt { name: name, type_name: option.none, value: state.expression })) }
+                else { statements = append(statements, stmt.assign(compile.internal.ast.assign_stmt { name: name, value: state.expression })) }
+            } else if state.token == "}" {
+                final = option.some(left)
+            } else {
+                statements = append(statements, stmt.expr(compile.internal.ast.expr_stmt { expr: left }))
+            }
+        }
+        if state.token == ";" { state = canonical_advance(state) }
+    }
+    state = canonical_expect(state, "}")
+    state.block = compile.internal.ast.block_expr { statements: statements, final_expr: final, inferred_type: option.none }
+    return state
+}
+
+func canonical_function(canonical_parser initial) canonical_parser {
+    state := canonical_advance(initial)
+    if !canonical_ident(state.token) { return canonical_fail(state, "expected function name") }
+    name := state.token
+    state = canonical_advance(state)
+    generics := string[]()
+    if state.token == "[" {
+        state = canonical_advance(state)
+        for state.error == "" && state.token != "]" {
+            if len(generics) > 0 { state = canonical_expect(state, ",") }
+            if !canonical_ident(state.token) { return canonical_fail(state, "expected generic parameter") }
+            generics = append(generics, state.token)
+            state = canonical_advance(state)
+        }
+        state = canonical_expect(state, "]")
+    }
+    state = canonical_expect(state, "(")
+    params := compile.internal.ast.param[]()
+    for state.error == "" && state.token != ")" {
+        if len(params) > 0 { state = canonical_expect(state, ",") }
+        state = canonical_parse_type(state)
+        type_name := state.text
+        if !canonical_ident(state.token) { return canonical_fail(state, "expected parameter name") }
+        params = append(params, compile.internal.ast.param { name: state.token, type_name: type_name })
+        state = canonical_advance(state)
+    }
+    state = canonical_expect(state, ")")
+    returns := option[string].none
+    if state.token != "{" { state = canonical_parse_type(state); returns = option.some(state.text) }
+    state = canonical_block(state)
+    state.function = compile.internal.ast.function_decl { sig: compile.internal.ast.function_sig { name: name, generics: generics, params: params, return_type: returns }, body: option.some(state.block), is_public: false }
+    return state
+}
+
+func canonical_enum(canonical_parser initial) canonical_parser {
+    state := canonical_advance(initial)
+    if !canonical_ident(state.token) { return canonical_fail(state, "expected enum name") }
+    name := state.token
+    state = canonical_advance(state)
+    generics := string[]()
+    if state.token == "[" {
+        state = canonical_advance(state)
+        for state.error == "" && state.token != "]" {
+            if len(generics) > 0 { state = canonical_expect(state, ",") }
+            if !canonical_ident(state.token) { return canonical_fail(state, "expected enum type parameter") }
+            generics = append(generics, state.token)
+            state = canonical_advance(state)
+        }
+        state = canonical_expect(state, "]")
+    }
+    state = canonical_expect(state, "{")
+    variants := compile.internal.ast.enum_variant[]()
+    for state.error == "" && state.token != "}" {
+        if !canonical_ident(state.token) { return canonical_fail(state, "expected enum variant") }
+        variant_name := state.token
+        state = canonical_advance(state)
+        payload := option[string].none
+        if state.token == "(" {
+            state = canonical_parse_type(canonical_advance(state))
+            payload = option.some(state.text)
+            state = canonical_expect(state, ")")
+        }
+        explicit := false
+        tag := 0
+        if state.token == "=" {
+            explicit = true
+            state = canonical_advance(state)
+            sign := 1
+            if state.token == "-" { sign = -1; state = canonical_advance(state) }
+            if state.token == "" { return canonical_fail(state, "missing enum discriminant") }
+            i := 0
+            for i < len(state.token) {
+                ch := canonical_char(state.token, i)
+                if ch < "0" || ch > "9" { return canonical_fail(state, "enum discriminant requires a decimal integer") }
+                digit := __host_byte_at(ch, 0) - 48
+                if tag > 461168601842738790 || (tag == 461168601842738790 && digit > 3) { return canonical_fail(state, "enum discriminant overflow") }
+                tag = tag * 10 + digit
+                i = i + 1
+            }
+            tag = tag * sign
+            state = canonical_advance(state)
+        }
+        variants = append(variants, compile.internal.ast.enum_variant { name: variant_name, payload: payload, explicit_value: tag, has_explicit_value: explicit })
+        if state.token != "}" { state = canonical_expect(state, ",") }
+    }
+    state = canonical_expect(state, "}")
+    state.enumeration = compile.internal.ast.enum_decl { name: name, generics: generics, variants: variants, is_public: false }
+    return state
+}
+
+func canonical_parse(string source) (source_file, syntax_error) {
+    state := canonical_advance(canonical_parser { source: source, position: 0, line: 1, token_line: 1, token: "", error: "" })
+    output := compile.internal.ast.source_file { pkg: "", uses: compile.internal.ast.use_decl[](), items: compile.internal.ast.item[](), item_packages: string[]() }
+    package_name := ""
+    for state.error == "" && state.token != "" {
+        if state.token == ";" { state = canonical_advance(state) }
+        else if state.token == "package" {
+            state = canonical_path(canonical_advance(state))
+            package_name = state.text
+            if output.pkg == "" { output.pkg = package_name }
+        } else if package_name == "" { state = canonical_fail(state, "expected package declaration") }
+        else if state.token == "import" || state.token == "use" {
+            state = canonical_advance(state)
+            group := state.token == "("
+            if group { state = canonical_advance(state) }
+            for state.error == "" {
+                if group && state.token == ")" { state = canonical_advance(state); break }
+                if state.token == ";" { state = canonical_advance(state); continue }
+                path := state.token
+                if canonical_char(path, 0) == "\"" {
+                    path = std.prelude.prelude_slice(path, 1, len(path) - 1)
+                    state = canonical_advance(state)
+                } else { state = canonical_path(state); path = state.text }
+                output.uses = append(output.uses, compile.internal.ast.use_decl { path: path, alias: option.none })
+                if !group { break }
+            }
+        } else if state.token == "enum" {
+            state = canonical_enum(state)
+            output.items = append(output.items, item.enum(state.enumeration))
+            output.item_packages = append(output.item_packages, package_name)
+        } else if state.token == "func" {
+            state = canonical_function(state)
+            output.items = append(output.items, item.function(state.function))
+            output.item_packages = append(output.item_packages, package_name)
+        } else { state = canonical_fail(state, "unsupported top-level declaration: " + state.token) }
+    }
+    if state.error != "" { return syntax_error { message: state.error, line: state.token_line, column: 1 } }
+    if output.pkg == "" { return syntax_error { message: "expected package declaration", line: 1, column: 1 } }
+    return output
+}

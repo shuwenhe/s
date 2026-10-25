@@ -8,7 +8,7 @@ func run_schedule(ssa_func f) int {
         for i < len(vals) {
             j := i + 1
             for j < len(vals) {
-                if vals[j].id < vals[i].id {
+                if vals[j] < vals[i] {
                     t := vals[i]
                     vals[i] = vals[j]
                     vals[j] = t

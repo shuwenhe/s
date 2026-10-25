@@ -245,7 +245,8 @@ static bool ng_expect(ng_scope *c,ast_node *n,const char *expected,ng_text out,b
      * Only expression values are wrapped; blocks and returns wrap their leaves. */
     if(n->kind!=AST_CALL_EXPR && n->kind!=AST_STRUCT_EXPR && n->kind!=AST_IDENT_EXPR &&
        n->kind!=AST_MEMBER_EXPR && n->kind!=AST_NUMBER_EXPR && n->kind!=AST_STRING_EXPR &&
-       n->kind!=AST_BOOL_EXPR && n->kind!=AST_UNIT_EXPR && n->kind!=AST_INDEX_EXPR) return true;
+       n->kind!=AST_BOOL_EXPR && n->kind!=AST_UNIT_EXPR && n->kind!=AST_INDEX_EXPR &&
+       n->kind!=AST_BINARY_EXPR && n->kind!=AST_UNARY_EXPR) return true;
     ng_text base,args[NG_ARGS];
     if(ng_split(expected,base,args)!=2 || strcmp(base,"std.result.result")) return true;
     const char *variant=!strcmp(out,args[0])?"ok":!strcmp(out,args[1])?"err":NULL;
@@ -605,9 +606,6 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         }
         size_t count=n->as.call_expr.args.len;
         ng_text *args=calloc(count+1,sizeof(ng_text)); if(!args) return false;
-        for(size_t i=0;i<count;i++) if(!ng_node(c,n->as.call_expr.args.data[i],args[i])) { free(args); return false; }
-        int constructed=ng_enum_construct(c,n,n->as.call_expr.callee,args,count,expected,out,return_position);
-        if(constructed) { free(args); return constructed>0; }
         ng_text spelling; spelling[0]=0;
         native_record_type_spelling(n->as.call_expr.callee,spelling,sizeof(spelling));
         strcpy(left,spelling); char *root_end=strchr(left,'.'); if(root_end) *root_end=0;
@@ -634,6 +632,27 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
                 d=ng_find(s,right,c->package,true);
             }
         }
+        /* Resolve concrete parameter types before rewriting argument enums.
+         * Payload-free variants need the same context as record fields. */
+        ng_scope *parameters=NULL;
+        if(d && !d->count) {
+            parameters=calloc(1,sizeof(*parameters));
+            if(!parameters) { free(args); return false; }
+            parameters->state=s; parameters->package=d->package;
+        }
+        for(size_t i=0;i<count;i++) {
+            ng_text parameter={0};
+            if(parameters && i<d->node->as.fn_stmt.param_count &&
+               !ng_type(parameters,d->node->as.fn_stmt.param_types[i],parameter,0)) {
+                free(parameters); free(args); return false;
+            }
+            if(!ng_expect(c,n->as.call_expr.args.data[i],parameter,args[i],false)) {
+                free(parameters); free(args); return false;
+            }
+        }
+        free(parameters);
+        int constructed=ng_enum_construct(c,n,n->as.call_expr.callee,args,count,expected,out,return_position);
+        if(constructed) { free(args); return constructed>0; }
         ast_node *member=n->as.call_expr.callee,*receiver=NULL;
         if(!d && member && member->kind==AST_MEMBER_EXPR && member->as.member_expr.object) {
             if(!ng_node(c,member->as.member_expr.object,left)) { free(args); return false; }

@@ -63,7 +63,14 @@ typedef struct standalone_record_schema {
     size_t count;
     int type_literal, state, default_state;
 } standalone_record_schema;
+typedef struct standalone_global {
+    char name[STANDALONE_TEXT_CAP],type[STANDALONE_TEXT_CAP],initializer[STANDALONE_TEXT_CAP];
+} standalone_global;
 typedef struct standalone_module {
+    standalone_global *globals;
+    size_t global_count;
+    size_t global_order[STANDALONE_MAX_SLOTS], global_order_count;
+    bool fs_bridges[3];
 	standalone_record_schema *records;
 	size_t record_count;
 	standalone_ir ir;
@@ -155,11 +162,16 @@ static bool load_ir(const char *path, standalone_ir *ir, compile_error *err) {
 	}
 	return true;
 }
+static int standalone_integer_base(const char *text) {
+    const char *digits=text;
+    if(*digits=='+' || *digits=='-') digits++;
+    return digits[0]=='0' && (digits[1]=='x' || digits[1]=='X')?16:10;
+}
 static bool is_integer(const char *text) {
 	char *end = NULL;
 	if (!text || !*text) return false;
 	errno = 0;
-	(void)strtoll(text, &end, 10);
+	(void)strtoll(text, &end, standalone_integer_base(text));
 	return errno == 0 && end && *end == '\0';
 }
 static bool is_string_literal(const char *text) {
@@ -209,16 +221,25 @@ static bool parse_index_projection(const char *projection, char *index_out, size
 	index_out[n - 7] = '\0';
 	return index_out[0] != '\0';
 }
-static void assign_local_registers(standalone_function *fn) {
+static void assign_local_registers(standalone_module *m,standalone_function *fn) {
 	static const char *regs[] = {"%r12", "%r13", "%r14", "%r15"};
 	size_t i;
-	for (i = 0; i < fn->slot_count && i < sizeof(regs) / sizeof(regs[0]); i++) {
-		copy_text(fn->slots[i].reg, sizeof(fn->slots[i].reg), regs[i]);
+	size_t r=0;
+	for (i = 0; i < fn->slot_count && r < sizeof(regs) / sizeof(regs[0]); i++) {
+        bool global=false;
+        for(size_t g=0;g<m->global_count;g++) if(!strcmp(m->globals[g].name,fn->slots[i].name)) global=true;
+        if(global) continue;
+		copy_text(fn->slots[i].reg, sizeof(fn->slots[i].reg), regs[r++]);
 	}
 }
 static void detect_integer_only(standalone_module *module, standalone_function *fn) {
 	size_t i;
 	fn->integer_only = true;
+    for(size_t g=0;g<module->global_count;g++) {
+        for(size_t slot=0;slot<fn->slot_count;slot++) {
+            if(!strcmp(module->globals[g].name,fn->slots[slot].name)) { fn->integer_only=false; return; }
+        }
+    }
 	for (i = fn->begin; i < fn->end; i++) {
 		standalone_ins *ins = &module->ir.ins[i];
 		if (strcmp(ins->op, "PARAM") == 0 || strcmp(ins->op, "CALL") == 0 ||
@@ -282,14 +303,153 @@ static int literal_index(standalone_module *module, const char *encoded, compile
 }
 static const char *runtime_callee(const char *name);
 static const char *defined_function_name(const standalone_module *,const char *);
+static int standalone_global_index(standalone_module *m,const char *name) {
+    for(size_t i=0;i<m->global_count;i++) if(!strcmp(m->globals[i].name,name)) return (int)i;
+    return -1;
+}
+/* Walk value operands, including array literals, without interpreting quoted
+ * text as identifiers. Unknown names in the reserved namespace fail closed. */
+static int standalone_next_global(standalone_module *m,const char **cursor) {
+    bool quoted=false,escaped=false;
+    for(const char *p=*cursor;*p;p++) {
+        if(quoted) {
+            if(escaped) escaped=false;
+            else if(*p=='\\') escaped=true;
+            else if(*p=='"') quoted=false;
+            continue;
+        }
+        if(*p=='"') { quoted=true; continue; }
+        if(*p!='$') continue;
+        char name[STANDALONE_TEXT_CAP]; size_t n=strcspn(p,".[], ");
+        if(n>=sizeof(name)) { *cursor=p+strlen(p); return -2; }
+        memcpy(name,p,n); name[n]=0;
+        if(!strncmp(name,"$global",7)) {
+            *cursor=p+n;
+            int g=standalone_global_index(m,name);
+            return g<0?-2:g;
+        }
+        if(n) p+=n-1;
+    }
+    *cursor+=strlen(*cursor); return -1;
+}
+static bool standalone_collect_globals(standalone_module *m,compile_error *err) {
+    bool inside=false;
+    for(size_t i=0;i<m->ir.len;i++) {
+        standalone_ins *x=&m->ir.ins[i];
+        if(!strcmp(x->op,"FUNC_BEGIN")) inside=true;
+        if(!strcmp(x->op,"FUNC_END")) inside=false;
+        if(strcmp(x->op,"NOP") || strncmp(x->result,"global-slot:",12)) continue;
+        const char *name=x->result+12;
+        char initializer[STANDALONE_TEXT_CAP];
+        if(inside || strncmp(name,"$global",7) || !name[7] || strspn(name+7,"0123456789")!=strlen(name+7) ||
+           snprintf(initializer,sizeof(initializer),"$init%s",name)>=(int)sizeof(initializer) || strcmp(initializer,x->operand2) ||
+           standalone_global_index(m,name)>=0 || m->global_count>=STANDALONE_MAX_SLOTS) {
+            error_set(err,ERR_SEMANTIC,0,0,"invalid or duplicate native global at IR record %zu",i+2); return false;
+        }
+        standalone_global *next=realloc(m->globals,(m->global_count+1)*sizeof(*next));
+        if(!next) { error_set(err,ERR_OUT_OF_MEMORY,0,0,"native global allocation failed"); return false; }
+        m->globals=next;
+        standalone_global *g=&m->globals[m->global_count++];
+        copy_text(g->name,sizeof(g->name),name);
+        copy_text(g->type,sizeof(g->type),x->operand1);
+        copy_text(g->initializer,sizeof(g->initializer),x->operand2);
+    }
+    return true;
+}
 #include "standalone_records.h"
+/* The legacy result helpers return an untyped two-word tuple. Native S
+ * results are schema-bearing records and require an actual representation
+ * bridge, not merely a declared return-type annotation. */
+static int standalone_fs_bridge_kind(const char *runtime) {
+    if(!runtime) return -1;
+    if(!strcmp(runtime,"s_read_result")) return 0;
+    if(!strcmp(runtime,"s_write_result")) return 1;
+    if(!strcmp(runtime,"s_temp_result")) return 2;
+    return -1;
+}
+static int standalone_fs_bridge_schema(standalone_module *m,int kind,compile_error *err) {
+    const char *ok=kind==1?"()":"string";
+    const char *name=kind==1?"std.result.result[(),std.fs.fs_error]":"std.result.result[string,std.fs.fs_error]";
+    int result=standalone_record_index(m,name),error=standalone_record_index(m,"std.fs.fs_error");
+    if(result<0 || error<0) return -1;
+    standalone_record_schema *r=&m->records[result],*e=&m->records[error];
+    if(r->count!=3 || e->count!=1 || strcmp(e->fields[0].name,"message") || strcmp(e->fields[0].type,"string")) return -1;
+    const char *fields[]={"__variant","__payload_ok","__payload_err"};
+    const char *types[]={"int",ok,"std.fs.fs_error"};
+    for(size_t f=0;f<3;f++) {
+        bool found=false;
+        for(size_t j=0;j<r->count;j++) if(!strcmp(r->fields[j].name,fields[f]) && !strcmp(r->fields[j].type,types[f])) found=true;
+        if(!found) return -1;
+    }
+    return standalone_validate_record_schema(m,result,err)?result:-1;
+}
 #include "standalone_borrows.h"
+/* Initializers follow dependency order, including globals accessed through
+ * helper calls. Cycles fail before assembly or output replacement. */
+static bool standalone_order_global(standalone_module *,size_t,unsigned char *,unsigned char *,compile_error *);
+static bool standalone_global_dependency(standalone_module *m,const char *value,unsigned char *states,unsigned char *seen,compile_error *err) {
+    const char *cursor=value;
+    for(;;) {
+        int g=standalone_next_global(m,&cursor);
+        if(g==-1) break;
+        if(g<0) { error_set(err,ERR_SEMANTIC,0,0,"unknown native global operand"); return false; }
+        if(!standalone_order_global(m,(size_t)g,states,seen,err)) return false;
+    }
+    return true;
+}
+static bool standalone_initializer_dependencies(standalone_module *m,standalone_function *fn,size_t owner,unsigned char *states,unsigned char *seen,compile_error *err) {
+    size_t index=owner*m->func_count+(size_t)(fn-m->funcs);
+    if(seen[index]) return true;
+    seen[index]=1;
+    const char *pending[64]; size_t argc=0;
+    for(size_t i=fn->begin;i<fn->end;i++) {
+        standalone_ins *x=&m->ir.ins[i];
+        if(!strcmp(x->op,"NOP") || !strcmp(x->op,"LABEL") || !strcmp(x->op,"JUMP")) continue;
+        const char *values[]={x->result,x->operand1,x->operand2};
+        for(size_t v=0;v<3;v++) if(!standalone_global_dependency(m,values[v],states,seen,err)) return false;
+        if(!strcmp(x->op,"ARG")) {
+            if(argc==64) { error_set(err,ERR_SEMANTIC,0,0,"too many native initializer arguments"); return false; }
+            pending[argc++]=x->result;
+        }
+        if(!strcmp(x->op,"CALL")) {
+            char *end; long count=strtol(x->operand2,&end,10);
+            if(*end || count<0 || (size_t)count>argc) { error_set(err,ERR_SEMANTIC,0,0,"invalid native initializer call"); return false; }
+            size_t first=argc-(size_t)count;
+            if(!strcmp(x->operand1,"__vec_len") || !strcmp(x->operand1,"__vec_push") || !strcmp(x->operand1,"__vec_set")) {
+                char path[STANDALONE_TEXT_CAP];
+                if(!count || !borrow_flow_literal(pending[first],path,sizeof(path),err) ||
+                   !standalone_global_dependency(m,path,states,seen,err)) return false;
+            }
+            argc=first;
+            standalone_function *callee=standalone_borrow_callee(m,x->operand1);
+            if(callee && !standalone_initializer_dependencies(m,callee,owner,states,seen,err)) return false;
+        }
+    }
+    return true;
+}
+static bool standalone_order_global(standalone_module *m,size_t g,unsigned char *states,unsigned char *all_seen,compile_error *err) {
+    if(states[g]==2) return true;
+    if(states[g]==1) { error_set(err,ERR_SEMANTIC,0,0,"cyclic native global initializer: %s",m->globals[g].name); return false; }
+    states[g]=1;
+    standalone_function *init=standalone_borrow_function(m,m->globals[g].initializer);
+    if(!init || !standalone_initializer_dependencies(m,init,g,states,all_seen,err)) return false;
+    states[g]=2; m->global_order[m->global_order_count++]=g;
+    return true;
+}
+static bool standalone_order_globals(standalone_module *m,compile_error *err) {
+    if(!m->global_count) return true;
+    unsigned char *states=calloc(m->global_count,1),*seen=calloc(m->global_count*m->func_count,1);
+    bool ok=states && seen;
+    if(!ok) error_set(err,ERR_OUT_OF_MEMORY,0,0,"native initializer dependency allocation failed");
+    for(size_t g=0;ok && g<m->global_count;g++) ok=standalone_order_global(m,g,states,seen,err);
+    free(states); free(seen); return ok;
+}
 static bool analyze_module(standalone_module *module, compile_error *err) {
 	size_t i;
 	standalone_function *current = NULL;
 	module->func_count = 0;
 	module->literal_count = 0;
-	if (!standalone_collect_record_schemas(module, err)) return false;
+	if (!standalone_collect_record_schemas(module, err) || !standalone_collect_globals(module,err)) return false;
 	for (i = 0; i < module->ir.len; i++) {
 		standalone_ins *ins = &module->ir.ins[i];
 		const char *values[3] = {ins->result, ins->operand1, ins->operand2};
@@ -310,7 +470,7 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 				continue;
 			}
 			current->end = i;
-			assign_local_registers(current);
+			assign_local_registers(module,current);
 			detect_integer_only(module, current);
 			current->frame_size = (int)((((current->slot_count + 4) * 8 + STANDALONE_MAX_PENDING_ARGS * 8 + 15) / 16) * 16);
 			current = NULL;
@@ -320,6 +480,15 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 			if (is_string_literal(values[v]) && literal_index(module, values[v], err) < 0) return false;
 		}
 		if (!current) continue;
+        for(v=0;v<3;v++) {
+            const char *cursor=values[v];
+            for(;;) {
+                int g=standalone_next_global(module,&cursor);
+                if(g==-1) break;
+                if(g<0) { error_set(err,ERR_SEMANTIC,0,0,"unknown native global at IR record %zu",i+2); return false; }
+                if(!collect_operand(current,module->globals[g].name,err)) return false;
+            }
+        }
         if(!strcmp(ins->op,"UNIT")) {
             if(!is_value_variable(ins->result) || strchr(ins->result,'.') || strcmp(ins->operand1,"_") || strcmp(ins->operand2,"_")) {
                 error_set(err,ERR_SEMANTIC,0,0,"invalid native unit constant at IR record %zu",i+2); return false;
@@ -374,7 +543,7 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "unterminated standalone function: %s", current->name);
 		return false;
 	}
-	return module->func_count > 0 && standalone_validate_borrows(module, err) && standalone_validate_record_contracts(module, err);
+	return module->func_count > 0 && standalone_validate_borrows(module, err) && standalone_validate_record_contracts(module, err) && standalone_order_globals(module,err);
 }
 static int find_literal(const standalone_module *module, const char *encoded) {
 	size_t i;
@@ -475,13 +644,12 @@ static bool emit_record_projection(FILE *out, standalone_module *m, standalone_f
     size_t n = (size_t)(dot - path);
     memcpy(root, path, n); root[n] = 0;
     int slot = slot_index(fn, root, false);
-    if (slot < 0) return false;
+    if (slot < 0 && standalone_global_index(m,root)<0) return false;
     int saved = -1, k;
     for (k = 0; k < 9; k++) if (!strcmp(reg, record_saved_regs[k])) saved = k;
     if (saved < 0) return false;
     emit_record_save(out);
-    if (fn->slots[slot].reg[0]) fprintf(out, "    mov %s, %%rdi\n", fn->slots[slot].reg);
-    else fprintf(out, "    mov %d(%%rbp), %%rdi\n", fn->slots[slot].offset);
+    if(!emit_load(out,m,fn,root,"%rdi",err)) return false;
     const char *start = dot + 1;
     for (;;) {
         const char *next = strchr(start, '.');
@@ -501,18 +669,20 @@ static bool emit_record_projection(FILE *out, standalone_module *m, standalone_f
     }
     return emit_record_restore(out, store ? NULL : reg, err);
 }
-static bool record_local_projection(standalone_function *fn, const char *path) {
+static bool record_local_projection(standalone_module *m,standalone_function *fn, const char *path) {
     const char *dot = strchr(path, '.');
     char root[STANDALONE_TEXT_CAP];
     if (!dot || dot == path || (size_t)(dot-path) >= sizeof(root)) return false;
     memcpy(root, path, (size_t)(dot-path)); root[dot-path] = 0;
-    return slot_index(fn, root, false) >= 0;
+    return slot_index(fn, root, false) >= 0 || standalone_global_index(m,root)>=0;
 }
 static bool emit_load(FILE *out, standalone_module *module, standalone_function *fn,
 	const char *value, const char *reg, compile_error *err) {
 	int slot;
+    int global=standalone_global_index(module,value);
+    if(global>=0) { fprintf(out,"    mov .Ls_global_%d(%%rip), %s\n",global,reg); return true; }
 	const char *dot;
-	if (record_local_projection(fn, value)) return emit_record_projection(out, module, fn, value, reg, false, err);
+	if (record_local_projection(module,fn, value)) return emit_record_projection(out, module, fn, value, reg, false, err);
 	if (!value || !*value || strcmp(value, "_") == 0) {
 		fprintf(out, "    mov $1, %s\n", reg);
 		return true;
@@ -527,7 +697,7 @@ static bool emit_load(FILE *out, standalone_module *module, standalone_function 
 	}
 	if (is_array_literal(value)) return emit_array_literal(out, module, fn, value, reg, err);
 	if (is_integer(value)) {
-		long long raw = strtoll(value, NULL, 10);
+		long long raw = strtoll(value, NULL, standalone_integer_base(value));
 		fprintf(out, "    mov $%lld, %s\n", raw * 2 + 1, reg);
 		return true;
 	}
@@ -578,7 +748,9 @@ static bool emit_load(FILE *out, standalone_module *module, standalone_function 
 static bool emit_store(FILE *out, standalone_module *module, standalone_function *fn, const char *name, const char *reg, compile_error *err) {
 	int slot;
 	if (!name || !*name || strcmp(name, "_") == 0) return true;
-	if (record_local_projection(fn, name)) return emit_record_projection(out, module, fn, name, reg, true, err);
+	int global=standalone_global_index(module,name);
+    if(global>=0) { fprintf(out,"    mov %s, .Ls_global_%d(%%rip)\n",reg,global); return true; }
+	if (record_local_projection(module,fn, name)) return emit_record_projection(out, module, fn, name, reg, true, err);
 	slot = slot_index(fn, name, false);
 	if (slot < 0) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "unknown standalone destination %s in %s", name, fn->name);
@@ -597,7 +769,8 @@ static const char *runtime_callee(const char *name) {
 	if (tail != NULL) name = tail + 1;
 	if (strcmp(name, "len") == 0 || strcmp(name, "__string_len") == 0 || strcmp(name, "__vec_len") == 0) return "s_value_len";
 	if (strcmp(name, "host_args") == 0) return "s_host_args_value";
-	if (strcmp(name, "eprintln") == 0) return "s_eprintln_value";
+	if (strcmp(name, "__host_println") == 0) return "s_println_value";
+	if (strcmp(name, "eprintln") == 0 || strcmp(name, "__host_eprintln") == 0) return "s_eprintln_value";
 	if (strcmp(name, "char_at") == 0 || strcmp(name, "__host_char_at") == 0) return "s_string_char_at";
 	if (strcmp(name, "byte_at") == 0 || strcmp(name, "__host_byte_at") == 0) return "s_string_byte_at";
 	if (strcmp(name, "slice") == 0 || strcmp(name, "__host_slice") == 0) return "s_string_slice";
@@ -622,8 +795,6 @@ static const char *runtime_callee(const char *name) {
 	if (strcmp(name, "__host_rename_file") == 0) return "s_host_rename_file";
 	if (strcmp(name, "string") == 0) return "s_value_to_string";
 	if (strcmp(name, "contains_text") == 0) return "s_contains_text";
-	if (strcmp(name, "analyze_borrow_function") == 0) return "s_empty_string";
-	if (strcmp(name, "estimate_escape_sites_graph") == 0) return "s_zero_value";
 	if (strcmp(name, "make") == 0) return "s_make_generic";
 	return NULL;
 }
@@ -729,6 +900,11 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
             pending[pending_count++] = ins->result;
 		} else if (strcmp(ins->op, "CALL") == 0) {
 			const char *callee = runtime_callee(ins->operand1);
+            char fs_callee[64]; int fs_kind=standalone_fs_bridge_kind(callee);
+            if(fs_kind>=0 && standalone_fs_bridge_schema(module,fs_kind,err)>=0) {
+                snprintf(fs_callee,sizeof(fs_callee),".Ls_fs_bridge_%d",fs_kind);
+                callee=fs_callee; module->fs_bridges[fs_kind]=true;
+            }
 			const char *defined = NULL;
 			char local_callee[STANDALONE_TEXT_CAP];
 			char *count_end = NULL;
@@ -753,6 +929,17 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
                 path.bytes[path.len]=0;
                 if(!emit_load(out,module,fn,(char*)path.bytes,"%rdi",err)) return false;
                 fprintf(out,"    call s_value_len\n");
+                if(!emit_store(out,module,fn,ins->result,"%rax",err)) return false;
+                pending_count=first_arg;
+                continue;
+            }
+            if (!strcmp(ins->operand1,"__vec_set") && call_arg_count==3) {
+                standalone_literal path;
+                if(!decode_literal(pending[first_arg],&path,err) || memchr(path.bytes,0,path.len)) return false;
+                path.bytes[path.len]=0;
+                if(!emit_load(out,module,fn,(char*)path.bytes,"%rdi",err)) return false;
+                fprintf(out,"    mov -%zu(%%rbp), %%rsi\n    mov -%zu(%%rbp), %%rdx\n    call s_index_set\n    mov $1, %%rax\n",
+                    (fn->slot_count+4+first_arg+2)*8,(fn->slot_count+4+first_arg+3)*8);
                 if(!emit_store(out,module,fn,ins->result,"%rax",err)) return false;
                 pending_count=first_arg;
                 continue;
@@ -994,12 +1181,54 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 	fprintf(out, "    leave\n    ret\n.size s_fn_%s, .-s_fn_%s\n\n", symbol, symbol);
 	return true;
 }
+static bool emit_fs_bridges(FILE *out,standalone_module *m,compile_error *err) {
+    const char *services[]={"s_read_file_value","s_write_file_value","s_make_temp_dir_value"};
+    for(int kind=0;kind<3;kind++) {
+        if(!m->fs_bridges[kind]) continue;
+        int schema=standalone_fs_bridge_schema(m,kind,err);
+        int variant=standalone_record_literal(m,"__variant",err),ok=standalone_record_literal(m,"__payload_ok",err);
+        int failure=standalone_record_literal(m,"__payload_err",err),message=standalone_record_literal(m,"message",err);
+        int text=standalone_record_literal(m,"native filesystem operation failed",err);
+        if(schema<0 || variant<0 || ok<0 || failure<0 || message<0 || text<0) return false;
+        fprintf(out,".section .text.s_fs_bridge_%d,\"ax\",@progbits\n.Ls_fs_bridge_%d:\n    push %%r12\n    push %%r13\n    push %%r14\n    call %s\n    mov %%rax, %%r12\n    lea .Ls_record_schema_%d(%%rip), %%rdi\n    call s_record_new\n",kind,kind,services[kind],schema);
+        emit_record_status(out);
+        fprintf(out,"    mov %%rax, %%r13\n");
+        if(kind==1) fprintf(out,"    cmp $1, %%r12\n    jne .Ls_fs_failed_%d\n",kind);
+        else fprintf(out,"    test %%r12, %%r12\n    jz .Ls_fs_failed_%d\n",kind);
+        if(kind==2) fprintf(out,"    cmpq $0, 8(%%r12)\n    je .Ls_fs_failed_%d\n",kind);
+        if(kind!=1) {
+            fprintf(out,"    mov %%r13, %%rdi\n    lea .Ls_literal_%d(%%rip), %%rsi\n    mov %%r12, %%rdx\n    call s_record_set\n",ok);
+            emit_record_status(out);
+        }
+        fprintf(out,"    jmp .Ls_fs_done_%d\n.Ls_fs_failed_%d:\n    mov %%r13, %%rdi\n    lea .Ls_literal_%d(%%rip), %%rsi\n    mov $3, %%rdx\n    call s_record_set\n",kind,kind,variant);
+        emit_record_status(out);
+        fprintf(out,"    mov %%r13, %%rdi\n    lea .Ls_literal_%d(%%rip), %%rsi\n    call s_record_get\n",failure);
+        emit_record_status(out);
+        fprintf(out,"    mov %%rax, %%rdi\n    lea .Ls_literal_%d(%%rip), %%rsi\n    lea .Ls_literal_%d(%%rip), %%rdx\n    call s_record_set\n",message,text);
+        emit_record_status(out);
+        fprintf(out,".Ls_fs_done_%d:\n    mov %%r13, %%rax\n    pop %%r14\n    pop %%r13\n    pop %%r12\n    ret\n",kind);
+    }
+    return true;
+}
 static bool emit_assembly(FILE *out, standalone_module *module, compile_error *err) {
 	size_t i;
-	fprintf(out, ".section .text\n.global s_main\n.type s_main, @function\ns_main:\n    jmp s_fn_main\n.size s_main, .-s_main\n\n");
+	fprintf(out, ".section .text\n.global s_main\n.type s_main, @function\ns_main:\n");
+    if(module->global_count) {
+        /* Preserve the startup argc/argv ABI and keep SysV call alignment. */
+        fprintf(out,"    push %%rdi\n    push %%rsi\n    sub $8, %%rsp\n");
+        for(size_t order=0;order<module->global_order_count;order++) {
+            size_t g=module->global_order[order];
+            char init[STANDALONE_TEXT_CAP]; symbol_text(module->globals[g].initializer,init,sizeof(init));
+            fprintf(out,"    call s_fn_%s\n    mov %%rax, .Ls_global_%zu(%%rip)\n",init,g);
+        }
+        fprintf(out,"    add $8, %%rsp\n    pop %%rsi\n    pop %%rdi\n");
+    }
+    fprintf(out,"    jmp s_fn_main\n.size s_main, .-s_main\n");
+    for(size_t g=0;g<module->global_count;g++) fprintf(out,".section .bss\n.p2align 3\n.Ls_global_%zu: .zero 8\n",g);
 	for (i = 0; i < module->func_count; i++) {
 		if (!emit_function(out, module, &module->funcs[i], err)) return false;
 	}
+    if(!emit_fs_bridges(out,module,err)) return false;
     for (i = 0; i < module->record_count; i++) {
         standalone_record_schema *r = &module->records[i];
         size_t j;
@@ -1070,6 +1299,7 @@ bool emit_standalone_amd64_assembly_from_ir_file(const char *input_ir_path, cons
 	ok = true;
 done:
 	if (out) fclose(out);
+	free(module->globals);
 	standalone_free_record_schemas(module);
 	free(module);
 	return ok;
@@ -1131,6 +1361,7 @@ done:
 	unlink(obj_path);
 	unlink(runtime_obj_path);
 	rmdir(temp_dir);
+	free(module->globals);
 	standalone_free_record_schemas(module);
 	free(module);
 	return ok;
@@ -1177,6 +1408,7 @@ done:
 	if (out) fclose(out);
 	unlink(asm_path);
 	rmdir(temp_dir);
+	free(module->globals);
 	standalone_free_record_schemas(module);
 	free(module);
 	return ok;

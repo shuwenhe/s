@@ -3,6 +3,8 @@ import (
     "compile.internal.ast"
     "std"
     "std.fs"
+    "std.result"
+    "std.prelude"
 )
 struct syntax_error {
     string message
@@ -11,79 +13,52 @@ struct syntax_error {
 }
 
 func read_source(string path) string {
-    ""
+    value := std.fs.read_to_string(path)
+    switch value { std.result.result.ok(text): text, std.result.result.err(_): "", }
 }
 
 func tokenize(string source) (string[], syntax_error) {
-    empty := string[]()
-    return empty, syntax_error { message: "tokenizer not connected", line: 0, column: 0 }
+    state := canonical_advance(canonical_parser { source: source, position: 0, line: 1, token_line: 1, token: "", error: "" })
+    tokens := string[]()
+    for state.error == "" && state.token != "" {
+        tokens = append(tokens, state.token)
+        state = canonical_advance(state)
+    }
+    if state.error != "" { return syntax_error { message: state.error, line: state.token_line, column: 1 } }
+    return tokens
 }
 
 func parse_source(string source) (source_file, syntax_error) {
-    if len(source) < 8 || __host_slice(source, 0, 7) != "package" {
-        empty := source_file {}
-        return empty, syntax_error { message: "expected package declaration", line: 1, column: 1 }
-    }
-    line_end := 0
-    for line_end < len(source) && __host_char_at(source, line_end) != "\n" {
-        line_end = line_end + 1
-    }
-    header := __host_slice(source, 0, line_end)
-    if len(header) < 9 || __host_slice(header, 7, 8) != " " {
-        empty := source_file {}
-        return empty, syntax_error { message: "expected package name", line: 1, column: 8 }
-    }
-    package_name := __host_slice(header, 8, len(header))
-    if package_name == "" {
-        empty := source_file {}
-        return empty, syntax_error { message: "expected package name", line: 1, column: 9 }
-    }
-    return source_file {
-        pkg: package_name,
-        uses: use_decl[](),
-        items: item[](),
-        item_packages: string[](),
-    }, syntax_error {}
+    return canonical_parse(source)
 }
 
 func parse_source_status(string source) int {
-    if len(source) < 8 || __host_slice(source, 0, 7) != "package" { return 1 }
-    i := 0
-    limit := len(source) - 6
-    found_func := false
-    for i <= limit {
-        if __host_slice(source, i, i + 6) == "return" {
-            j := i + 6
-            for j < len(source) && __host_char_at(source, j) == " " { j = j + 1 }
-            if j >= len(source) || __host_char_at(source, j) == "\n" { return 1 }
-        }
-        if __host_slice(source, i, i + 4) == "func" { found_func = true }
-        i = i + 1
-    }
-    if found_func { return 0 }
-    1
+    parsed, error := parse_source(source)
+    if error.message != "" { return 1 }
+    return 0
 }
 
 func contains_source_text(string source, string needle) bool {
     if needle == "" { return true }
-    limit := len(source) - len(needle)
     i := 0
-    for i <= limit {
-        if __host_slice(source, i, i + len(needle)) == needle { return true }
+    for i + len(needle) <= len(source) {
+        if std.prelude.prelude_slice(source, i, i + len(needle)) == needle { return true }
         i = i + 1
     }
-    false
+    return false
 }
 
 func parse_tokens(string[] tokens) (source_file, syntax_error) {
-    empty := source_file {}
-    return empty, syntax_error { message: "parser not connected", line: 0, column: 0 }
+    return parse_source(dump_tokens_text(tokens))
 }
 
 func dump_tokens_text(string[] tokens) string {
-    ""
+    output := ""
+    i := 0
+    for i < len(tokens) { output = output + tokens[i] + " "; i = i + 1 }
+    return output
 }
 
 func dump_source_text(ast.source_file source) string {
-    ""
+    return compile.internal.ast.dump_source_file(source)
 }

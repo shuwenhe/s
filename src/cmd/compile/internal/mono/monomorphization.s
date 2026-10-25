@@ -209,11 +209,11 @@ func find_declaration_ref_for_item(mono_context ctx, string item_kind, string ge
     for i < len(ctx.declarations) {
         decl := ctx.declarations[i]
         
-        expected_kind := compile.internal.semantic.function_kind
+        expected_kind := compile.internal.semantic.declaration_kind.function_kind
         if item_kind == "method" {
-            expected_kind = compile.internal.semantic.method_kind
+            expected_kind = compile.internal.semantic.declaration_kind.method_kind
         } else if item_kind == "struct" {
-            expected_kind = compile.internal.semantic.struct_kind
+            expected_kind = compile.internal.semantic.declaration_kind.struct_kind
         }
         
         if decl.kind == expected_kind && decl.path == generic_name {
@@ -224,7 +224,7 @@ func find_declaration_ref_for_item(mono_context ctx, string item_kind, string ge
     
     compile.internal.semantic.declaration_ref {
         package_path: "",
-        kind: compile.internal.semantic.function_kind,
+        kind: compile.internal.semantic.declaration_kind.function_kind,
         path: generic_name,
     }
 }
@@ -811,8 +811,24 @@ func verify_monomorphized_file(source_file file) int {
     errors
 }
 
+func no_mono_expr() option[expr] {
+    return option.none
+}
+
+func no_mono_box_expr() option[box[expr]] {
+    return option.none
+}
+
+func no_mono_box_stmt() option[box[stmt]] {
+    return option.none
+}
+
+func no_mono_body() option[block_expr] {
+    return option.none
+}
+
 func finalize_monomorphized_function(function_decl function_value) function_decl {
-    body := option.none
+    body := no_mono_body()
     switch function_value.body {
         option.some(value) : body = option.some(finalize_block(value)),
         option.none : (),
@@ -835,7 +851,7 @@ func finalize_block(block_expr block) block_expr {
         stmts = append(stmts, finalize_stmt(block.statements[i]))
         i = i + 1
     }
-    final_expr := option.none
+    final_expr := no_mono_expr()
     switch block.final_expr {
         option.some(value) : final_expr = option.some(finalize_expr(value)),
         option.none : (),
@@ -850,7 +866,7 @@ func finalize_stmt(stmt value) stmt {
         stmt.increment(v) : stmt.increment(v),
         stmt.c_for(v) : stmt.c_for(c_for_stmt { init: std.prelude.box(finalize_stmt(v.init.value)), condition: finalize_expr(v.condition), step: std.prelude.box(finalize_stmt(v.step.value)), body: finalize_block(v.body) }),
         stmt.return(v) : {
-            ret := option.none
+            ret := no_mono_expr()
             switch v.value {
                 option.some(e) : ret = option.some(finalize_expr(e)),
                 option.none : (),
@@ -883,7 +899,7 @@ func finalize_expr(expr value) expr {
             expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(finalize_expr(v.callee.value)), args args, inferred_type v.inferred_type, resolved_callee v.resolved_callee, type_args string[]() })
         }
         expr.if(v) : {
-            else_branch := option.none
+            else_branch := no_mono_box_expr()
             switch v.else_branch {
                 option.some(e) : else_branch = option.some(std.prelude.box(finalize_expr(e.value))),
                 option.none : (),
@@ -909,7 +925,7 @@ func finalize_expr(expr value) expr {
                 items = append(items, finalize_expr(v.items[i]))
                 i = i + 1
             }
-            expr.array(array_literal { type_text: v.kindtext, items items })
+            expr.array(array_literal { type_text: v.type_text, items items })
         }
         expr.map(v) : {
             entries := map_entry[]()
@@ -918,28 +934,28 @@ func finalize_expr(expr value) expr {
                 entries = append(entries, map_entry { key: finalize_expr(v.entries[i].key), value finalize_expr(v.entries[i].value) })
                 i = i + 1
             }
-            expr.map(map_literal { type_text: v.kindtext, entries entries })
+            expr.map(map_literal { type_text: v.type_text, entries entries })
         }
     }
 }
 
 func finalize_for_expr(for_expr v) expr {
-    init := option.none
+    init := no_mono_box_stmt()
     switch v.init {
         option.some(s) : init = option.some(std.prelude.box(finalize_stmt(s.value))),
         option.none : (),
     }
-    condition := option.none
+    condition := no_mono_box_expr()
     switch v.condition {
         option.some(e) : condition = option.some(std.prelude.box(finalize_expr(e.value))),
         option.none : (),
     }
-    post := option.none
+    post := no_mono_box_stmt()
     switch v.post {
         option.some(s) : post = option.some(std.prelude.box(finalize_stmt(s.value))),
         option.none : (),
     }
-    iterable := option.none
+    iterable := no_mono_box_expr()
     switch v.iterable {
         option.some(e) : iterable = option.some(std.prelude.box(finalize_expr(e.value))),
         option.none : (),
@@ -1036,7 +1052,7 @@ func verify_expr_no_generics(expr value) int {
             errors
         }
         expr.array(v) : {
-            errors := verify_optional_type_no_generics(v.kindtext)
+            errors := verify_optional_type_no_generics(v.type_text)
             i := 0
             for i < len(v.items) {
                 errors = errors + verify_expr_no_generics(v.items[i])
@@ -1045,7 +1061,7 @@ func verify_expr_no_generics(expr value) int {
             errors
         }
         expr.map(v) : {
-            errors := verify_optional_type_no_generics(v.kindtext)
+            errors := verify_optional_type_no_generics(v.type_text)
             i := 0
             for i < len(v.entries) {
                 errors = errors + verify_expr_no_generics(v.entries[i].key)
@@ -1221,7 +1237,7 @@ func specialize_function_with_names(function_decl source, string[] type_args, st
         i = i + 1
     }
     return_type := substitute_optional_type(source.sig.return_type, generic_names, type_args)
-    body := option.none
+    body := no_mono_body()
     switch source.body {
         option.some(value) : body = option.some(substitute_block(value, generic_names, type_args)),
         option.none : (),
@@ -1254,7 +1270,7 @@ func substitute_block(block_expr block, string[] generic_names, string[] type_ar
         stmts = append(stmts, substitute_stmt(block.statements[i], generic_names, type_args))
         i = i + 1
     }
-    final_expr := option.none
+    final_expr := no_mono_expr()
     switch block.final_expr {
         option.some(value) : final_expr = option.some(substitute_expr(value, generic_names, type_args)),
         option.none : (),
@@ -1269,7 +1285,7 @@ func substitute_stmt(stmt value, string[] generic_names, string[] type_args) stm
         stmt.increment(v) : stmt.increment(compile.internal.ast.increment_stmt { name: v.name }),
         stmt.c_for(v) : stmt.c_for(c_for_stmt { init: std.prelude.box(substitute_stmt(v.init.value, generic_names, type_args)), condition substitute_expr(v.condition, generic_names, type_args), step std.prelude.box(substitute_stmt(v.step.value, generic_names, type_args)), body substitute_block(v.body, generic_names, type_args) }),
         stmt.return(v) : {
-            ret := option.none
+            ret := no_mono_expr()
             switch v.value {
                 option.some(e) : ret = option.some(substitute_expr(e, generic_names, type_args)),
                 option.none : (),
@@ -1322,7 +1338,7 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
             expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(substitute_expr(v.callee.value, generic_names, type_args)), args args, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args), resolved_callee resolved, type_args call_type_args })
         }
         expr.if(v) : {
-            else_branch := option.none
+            else_branch := no_mono_box_expr()
             switch v.else_branch {
                 option.some(e) : else_branch = option.some(std.prelude.box(substitute_expr(e.value, generic_names, type_args))),
                 option.none : (),
@@ -1339,22 +1355,22 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
 }
 
 func substitute_for_expr(for_expr v, string[] generic_names, string[] type_args) expr {
-    init := option.none
+    init := no_mono_box_stmt()
     switch v.init {
         option.some(s) : init = option.some(std.prelude.box(substitute_stmt(s.value, generic_names, type_args))),
         option.none : (),
     }
-    condition := option.none
+    condition := no_mono_box_expr()
     switch v.condition {
         option.some(e) : condition = option.some(std.prelude.box(substitute_expr(e.value, generic_names, type_args))),
         option.none : (),
     }
-    post := option.none
+    post := no_mono_box_stmt()
     switch v.post {
         option.some(s) : post = option.some(std.prelude.box(substitute_stmt(s.value, generic_names, type_args))),
         option.none : (),
     }
-    iterable := option.none
+    iterable := no_mono_box_expr()
     switch v.iterable {
         option.some(e) : iterable = option.some(std.prelude.box(substitute_expr(e.value, generic_names, type_args))),
         option.none : (),
@@ -1379,7 +1395,7 @@ func substitute_array_expr(array_literal v, string[] generic_names, string[] typ
         items = append(items, substitute_expr(v.items[i], generic_names, type_args))
         i = i + 1
     }
-    expr.array(array_literal { type_text: substitute_optional_type(v.kindtext, generic_names, type_args), items items })
+    expr.array(array_literal { type_text: substitute_optional_type(v.type_text, generic_names, type_args), items items })
 }
 
 func substitute_map_expr(map_literal v, string[] generic_names, string[] type_args) expr {
@@ -1389,7 +1405,7 @@ func substitute_map_expr(map_literal v, string[] generic_names, string[] type_ar
         entries = append(entries, map_entry { key: substitute_expr(v.entries[i].key, generic_names, type_args), value substitute_expr(v.entries[i].value, generic_names, type_args) })
         i = i + 1
     }
-    expr.map(map_literal { type_text: substitute_optional_type(v.kindtext, generic_names, type_args), entries entries })
+    expr.map(map_literal { type_text: substitute_optional_type(v.type_text, generic_names, type_args), entries entries })
 }
 
 func summarize_type(string type_name) mono_ownership_summary {

@@ -11,6 +11,8 @@ import (
 // This: adapter consumes canonical AST: objects. It never evaluates source main,
 // serializes an expression back to source, or synthesizes a constant result.
 struct program_lower_state {
+    mir_program_enum[] enums
+    mir_program_function signature
     mir_program_instruction[] instructions
     string[] binding_names
     int[] binding_values
@@ -31,20 +33,20 @@ func program_item_package(source_file src, int index) string {
     return src.pkg
 }
 
-func program_signature(string package_name, function_decl declaration) mir_program_function {
+func program_signature_with_enums(string package_name, function_decl declaration, mir_program_enum[] enums) mir_program_function {
     params := mir_program_parameter[]()
     i := 0
     for i < len(declaration.sig.params) {
         parameter := declaration.sig.params[i]
         params = append(params, mir_program_parameter {
-            value_id: i, name: parameter.name, type_name: parameter.type_name,
+            value_id: i, name: parameter.name, type_name: program_enum_type(parameter.type_name, package_name, enums),
         })
         i = i + 1
     }
     results := string[]()
     if declaration.sig.return_type.is_some() {
         result_type := declaration.sig.return_type.unwrap()
-        if result_type != "" && result_type != "()" { results = append(results, result_type) }
+        if result_type != "" { results = append(results, program_enum_type(result_type, package_name, enums)) }
     }
     return mir_program_function {
         symbol: package_name + "." + declaration.sig.name, params: params,
@@ -82,7 +84,7 @@ func program_expression_type(program_lower_state state, mir_program_function sig
 
 func program_callee_path(expr callee) string {
     switch callee {
-        expr.name(name) : { return name.name }
+        expr.name(name): { return name.name }
         expr.member(member) : {
             root := program_callee_path(member.target.value)
             if root == "" { return "" }
@@ -152,7 +154,15 @@ func program_lower_expression(expr expression, string package_name, mir_program_
     if state.error != "" { return state }
     switch expression {
         expr.int(literal) : { return program_emit_integer(state, literal.value) }
+        expr.member(member): { return program_enum_constant(state, package_name, program_callee_path(expression)) }
         expr.name(name) : {
+            if name.name == "unit" {
+                id := state.next_value
+                state.next_value = id + 1
+                state.instructions = append(state.instructions, mir_program_instruction { op: "const_unit", result_ids: [id], result_types: ["()"], operands: int[](), integer_value: 0, symbol: "" })
+                state.expression_value = id
+                return state
+            }
             binding := program_binding_index(state, name.name)
             if binding < 0 { state.error = "undefined binding: " + name.name; return state }
             state.expression_value = state.binding_values[binding]
@@ -180,6 +190,20 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             if len(call.type_args) != 0 { state.error = "generic call requires monomorphization"; return state }
             path := program_callee_path(call.callee.value)
             if path == "" { state.error = "call requires a resolved direct callee"; return state }
+            if path == "int" {
+                if len(call.args) != 1 { state.error = "int conversion expects one argument"; return state }
+                state = program_lower_expression(call.args[0], package_name, signatures, state)
+                if state.error != "" { return state }
+                source_id := state.expression_value
+                source_type := program_expression_type(state, state.signature, source_id)
+                if source_type == "int" { return state }
+                if mir_program_enum_index(state.enums, source_type) < 0 { state.error = "int conversion requires a scalar enum"; return state }
+                id := state.next_value
+                state.next_value = id + 1
+                state.instructions = append(state.instructions, mir_program_instruction { op: "enum_to_int", result_ids: [id], result_types: ["int"], operands: [source_id], integer_value: 0, symbol: "" })
+                state.expression_value = id
+                return state
+            }
             symbol := ""
             if call.resolved_callee.is_some() { symbol = call.resolved_callee.unwrap() }
             if program_is_qualified(path) {
@@ -224,7 +248,7 @@ func program_lower_expression(expr expression, string package_name, mir_program_
     }
 }
 
-func program_lower_function(string package_name, function_decl declaration, mir_program_function signature, mir_program_function[] signatures) program_function_lower_result {
+func program_lower_function_with_enums(string package_name, function_decl declaration, mir_program_function signature, mir_program_function[] signatures, mir_program_enum[] enums) program_function_lower_result {
     output := program_function_lower_result { function_value: signature, error: "" }
     if len(declaration.sig.generics) != 0 { output.error = "generic function requires monomorphization: " + signature.symbol; return output }
     if declaration.sig.return_type.is_some() {
@@ -236,7 +260,7 @@ func program_lower_function(string package_name, function_decl declaration, mir_
     }
     if declaration.body.is_none() { return output }
     state := program_lower_state {
-        instructions: mir_program_instruction[](), binding_names: string[](), binding_values: int[](),
+        instructions: mir_program_instruction[](), binding_names: string[](), binding_values: int[](), enums: enums, signature: signature,
         next_value: len(signature.params), expression_value: -1, error: "",
     }
     i := 0
@@ -274,6 +298,17 @@ func program_lower_function(string package_name, function_decl declaration, mir_
                 }
                 returned = true
             }
+            stmt.expr(statement): {
+                state = program_lower_expression(statement.expr, package_name, signatures, state)
+            }
+            stmt.assign(statement): {
+                index := program_binding_index(state, statement.name)
+                if index < 0 { output.error = "assignment to undefined binding"; return output }
+                previous_type := program_expression_type(state, signature, state.binding_values[index])
+                state = program_lower_expression(statement.value, package_name, signatures, state)
+                if program_expression_type(state, signature, state.expression_value) != previous_type { output.error = "assignment type mismatch"; return output }
+                state.binding_values[index] = state.expression_value
+            }
             _ : { output.error = "unsupported P1: statement in: " + signature.symbol; return output },
         }
         if state.error != "" { output.error = state.error; return output }
@@ -287,6 +322,10 @@ func program_lower_function(string package_name, function_decl declaration, mir_
         state = program_lower_expression(body.final_expr.unwrap(), package_name, signatures, state)
         if state.error != "" { output.error = state.error; return output }
         if state.expression_value >= 0 { returns = append(returns, state.expression_value) }
+    }
+    if len(signature.result_types) == 1 && signature.result_types[0] == "()" && len(returns) == 0 {
+        state = program_lower_expression(expr.name(name_expr { name: "unit", inferred_type: option.none }), package_name, signatures, state)
+        returns = append(returns, state.expression_value)
     }
     blocks := mir_program_block[]()
     block := mir_program_block{
@@ -304,14 +343,18 @@ func lower_source_program(source_file src) mir_program_result {
         result.error = "source item package count mismatch"
         return result
     }
+    enumeration_result := program_collect_enums(src)
+    if enumeration_result.error != "" { result.error = enumeration_result.error; return result }
+    enums := enumeration_result.enums
     signatures := mir_program_function[]()
     i := 0
     for i < len(src.items) {
         switch src.items[i] {
             item.function(declaration) : {
-                signatures = append(signatures, program_signature(program_item_package(src, i), declaration))
+                signatures = append(signatures, program_signature_with_enums(program_item_package(src, i), declaration, enums))
             }
-            _ : { result.error = "P1: requires explicit lowering for non-function declarations"; return result },
+            item.enum(_): (),
+            _ : { result.error = "requires explicit lowering for this declaration"; return result },
         }
         i = i + 1
     }
@@ -320,7 +363,7 @@ func lower_source_program(source_file src) mir_program_result {
     for i < len(src.items) {
         switch src.items[i] {
             item.function(declaration) : {
-                lowered := program_lower_function(program_item_package(src, i), declaration, signatures[i], signatures)
+                lowered := program_lower_function_with_enums(program_item_package(src, i), declaration, signatures[len(functions)], signatures, enums)
                 if lowered.error != "" { result.error = lowered.error; return result }
                 functions = append(functions, lowered.function_value)
             }
@@ -328,5 +371,13 @@ func lower_source_program(source_file src) mir_program_result {
         }
         i = i + 1
     }
-    return lower_mir_program(src.pkg, src.pkg + ".main", functions)
+    return lower_mir_program_with_enums(src.pkg, src.pkg + ".main", functions, enums)
+}
+
+func program_signature(string package_name, function_decl declaration) mir_program_function {
+    return program_signature_with_enums(package_name, declaration, mir_program_enum[]())
+}
+
+func program_lower_function(string package_name, function_decl declaration, mir_program_function signature, mir_program_function[] signatures) program_function_lower_result {
+    return program_lower_function_with_enums(package_name, declaration, signature, signatures, mir_program_enum[]())
 }

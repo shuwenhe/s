@@ -105,14 +105,18 @@ static int borrow_flow_array_value(borrow_flow_types *t,standalone_function *fn,
 static int borrow_flow_value_depth(borrow_flow_types *t,standalone_function *fn,int *state,const char *value,unsigned nesting) {
     if(nesting>64) return BF_UNKNOWN;
     if(value[0]=='[') return borrow_flow_array_value(t,fn,state,value,nesting);
-    if(is_integer(value)) return BF_INT;
+    if(is_integer(value) || !strcmp(value,"true") || !strcmp(value,"false")) return BF_INT;
     if(is_string_literal(value)) return BF_STRING;
     const char *dot=strchr(value,'.');
-    if(!dot) { int s=slot_index(fn,value,false); return s<0?BF_UNKNOWN:borrow_flow_base(state[s]); }
+    if(!dot) {
+        int s=slot_index(fn,value,false),g=standalone_global_index(t->m,value);
+        return s>=0?borrow_flow_base(state[s]):g>=0?borrow_flow_type(t,t->m->globals[g].type,NULL,0):BF_UNKNOWN;
+    }
     char root[STANDALONE_TEXT_CAP]; size_t n=(size_t)(dot-value);
     if(n>=sizeof(root)) return BF_UNKNOWN;
     memcpy(root,value,n); root[n]=0;
-    int slot=slot_index(fn,root,false), type=slot<0?BF_UNKNOWN:borrow_flow_base(state[slot]);
+    int slot=slot_index(fn,root,false),g=standalone_global_index(t->m,root);
+    int type=slot>=0?borrow_flow_base(state[slot]):g>=0?borrow_flow_type(t,t->m->globals[g].type,NULL,0):BF_UNKNOWN;
     while(dot) {
         const char *next=strchr(dot+1,'.'); size_t len=next?(size_t)(next-dot-1):strlen(dot+1);
         type=borrow_flow_field(t,type,dot+1,len); dot=next;
@@ -157,7 +161,13 @@ static int borrow_flow_call(borrow_flow_types *t,standalone_function *fn,int *st
         char path[STANDALONE_TEXT_CAP];
         if(count!=1 || !borrow_flow_literal(sources[0],path,sizeof(path),err)) return BF_UNKNOWN;
         int value=borrow_flow_value(t,fn,state,path);
-        return borrow_flow_is_array(t,value)?BF_INT:BF_UNKNOWN;
+        return (value==BF_STRING || borrow_flow_is_array(t,value))?BF_INT:BF_UNKNOWN;
+    }
+    if(!strcmp(name,"__vec_set")) {
+        char path[STANDALONE_TEXT_CAP];
+        if(count!=3 || args[1]!=BF_INT || !borrow_flow_literal(sources[0],path,sizeof(path),err)) return BF_UNKNOWN;
+        int array=borrow_flow_value(t,fn,state,path);
+        return borrow_flow_is_array(t,array) && args[2]==t->elements[array-(int)t->m->record_count]?BF_UNIT:BF_UNKNOWN;
     }
     if(!strcmp(name,"__vec_push")) {
         char path[STANDALONE_TEXT_CAP];
@@ -166,12 +176,19 @@ static int borrow_flow_call(borrow_flow_types *t,standalone_function *fn,int *st
         return borrow_flow_is_array(t,array) && args[1]==t->elements[array-(int)t->m->record_count]?array:BF_UNKNOWN;
     }
     if(runtime) {
+        int fs=standalone_fs_bridge_kind(runtime);
+        if(fs>=0) {
+            if(count!=(fs==1?2:1) || args[0]!=BF_STRING || (fs==1 && args[1]!=BF_STRING)) return BF_UNKNOWN;
+            int schema=standalone_fs_bridge_schema(t->m,fs,err);
+            return schema>=0?schema:BF_UNKNOWN;
+        }
         /* Ordinary compiler callers may perform I/O between borrows. These
          * services consume scalar/string values, never record handles. Keep
          * their concrete ABI facts instead of treating their results as
          * unknown just because the original leaf proof did not need them. */
+        if(!strcmp(runtime,"s_buildcfg_goarch")) return count==0?BF_STRING:BF_UNKNOWN;
         if(!strcmp(runtime,"s_host_args_value")) return count==0?borrow_flow_array(t,BF_STRING):BF_UNKNOWN;
-        if(!strcmp(runtime,"s_eprintln_value")) return count==1 && args[0]==BF_STRING?BF_UNIT:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_eprintln_value") || !strcmp(runtime,"s_println_value")) return count==1 && args[0]==BF_STRING?BF_UNIT:BF_UNKNOWN;
         if(!strcmp(runtime,"s_read_source_value") || !strcmp(runtime,"s_read_file_value") || !strcmp(runtime,"s_make_temp_dir_value"))
             return count==1 && args[0]==BF_STRING?BF_STRING:BF_UNKNOWN;
         if(!strcmp(runtime,"s_runtime_env_get")) return count==2 && args[0]==BF_STRING && args[1]==BF_STRING?BF_STRING:BF_UNKNOWN;
@@ -186,7 +203,13 @@ static int borrow_flow_call(borrow_flow_types *t,standalone_function *fn,int *st
         if(!strcmp(runtime,"s_string_char_at")) return count==2 && args[0]==BF_STRING && args[1]==BF_INT?BF_STRING:BF_UNKNOWN;
         if(!strcmp(runtime,"s_string_slice")) return count==3 && args[0]==BF_STRING && args[1]==BF_INT && args[2]==BF_INT?BF_STRING:BF_UNKNOWN;
         if(!strcmp(runtime,"s_int_text")) return count==1 && args[0]==BF_INT?BF_STRING:BF_UNKNOWN;
-        if(!strcmp(runtime,"s_index_get")) return count==2 && borrow_flow_is_array(t,args[0]) && args[1]==BF_INT?t->elements[args[0]-(int)t->m->record_count]:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_contains_text")) return count==2 && args[0]==BF_STRING && args[1]==BF_STRING?BF_INT:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_value_to_string")) return count==1 && (args[0]==BF_INT || args[0]==BF_STRING)?BF_STRING:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_index_get")) {
+            if(count!=2 || args[1]!=BF_INT) return BF_UNKNOWN;
+            if(args[0]==BF_STRING) return BF_STRING;
+            return borrow_flow_is_array(t,args[0])?t->elements[args[0]-(int)t->m->record_count]:BF_UNKNOWN;
+        }
         if(!strcmp(runtime,"s_array_append")) return count==2 && borrow_flow_is_array(t,args[0]) && args[1]==t->elements[args[0]-(int)t->m->record_count]?args[0]:BF_UNKNOWN;
         return BF_UNKNOWN; /* Unknown/resource-bearing service contracts fail closed. */
     }
@@ -248,11 +271,21 @@ static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,bo
                 if(expected==BF_UNKNOWN || result!=expected) return false;
                 continue;
             }
+            if(!strcmp(x->result,"_")) {
+                /* A discard consumes a checked value, not a writable slot.
+                 * The raw-borrow and constructor/schema checks above still
+                 * apply. It neither defines '_' nor moves its source owner. */
+                if(result==BF_UNKNOWN || (strcmp(x->operand2,"_") && *x->operand2)) return false;
+                continue;
+            }
         } else if(!strcmp(x->op,"ARG")) {
             bool reborrow=!strcmp(x->operand1,"mutable_borrow");
             if(argc==64 || (!reborrow && strcmp(x->operand1,"_") && *x->operand1) ||
                (!reborrow && borrow_flow_raw(fn,borrowed,x->result))) return false;
             if(reborrow) {
+                char root[STANDALONE_TEXT_CAP]; size_t root_len=strcspn(x->result,".");
+                memcpy(root,x->result,root_len); root[root_len]=0;
+                if(standalone_global_index(t->m,root)>=0) return false;
                 if(!borrow_flow_place_owned(fn,state,borrowed,x->result)) return false;
             }
             reborrows[argc]=reborrow;
@@ -298,6 +331,8 @@ static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,bo
             else if(left==BF_STRING && right==BF_STRING && (!strcmp(x->op,"ADD") || !strncmp(x->op,"CMP_",4))) result=!strcmp(x->op,"ADD")?BF_STRING:BF_INT;
             else return false;
         } else return false;
+        int global=standalone_global_index(t->m,x->result);
+        if(global>=0 && result!=borrow_flow_type(t,t->m->globals[global].type,NULL,0)) return false;
         if(result==BF_UNKNOWN || dst<0 || borrowed[dst]) return false;
         state[dst]=(!strcmp(x->op,"MOV") || (!strcmp(x->op,"CALL") && !runtime_callee(x->operand1)))?
             borrow_flow_snapshot(result,t->m->record_count):result;
@@ -328,11 +363,16 @@ static bool standalone_validate_borrow_flow(standalone_module *m,standalone_func
     if(slots && count>16777216/slots) goto done;
     rows=malloc(count*(slots?slots:1)*sizeof(int)); state=malloc((slots?slots:1)*sizeof(int)); queue=malloc((count+1)*sizeof(int));
     if(!rows || !state || !queue) goto done;
-    for(size_t s=0;s<slots;s++) initial[s]=BF_UNKNOWN;
+    for(size_t s=0;s<slots;s++) {
+        int g=standalone_global_index(m,fn->slots[s].name);
+        initial[s]=g<0?BF_UNKNOWN:borrow_flow_type(&types,m->globals[g].type,NULL,0);
+        if(g>=0 && initial[s]==BF_UNKNOWN) goto done;
+        /* A global is shared state, never an exclusive local owner. */
+    }
     size_t p=0;
     for(size_t i=fn->begin;i<fn->end && !strcmp(m->ir.ins[i].op,"PARAM");i++,p++) {
         int slot=slot_index(fn,m->ir.ins[i].result,false); at=i;
-        if(slot<0 || p>=64) goto done;
+        if(slot<0 || p>=64 || standalone_global_index(m,m->ir.ins[i].result)>=0) goto done;
         borrowed[slot]=(fn->borrow_mask&(1ULL<<p))!=0;
         initial[slot]=borrowed[slot]?fn->borrow_schema[p]:borrow_flow_type(&types,standalone_transfer(m,"param-transfer:",fn->name,m->ir.ins[i].result),NULL,0);
         if(initial[slot]==BF_UNKNOWN) goto done;
@@ -383,6 +423,6 @@ static bool standalone_validate_borrow_flow(standalone_module *m,standalone_func
 done:
     free(leaders); free(borrowed); free(mapping); free(initial); free(blocks); free(rows); free(state); free(queue);
     fn->borrow_flow_state=ok?2:0;
-    if(!ok && err->code==0) error_set(err,ERR_SEMANTIC,0,0,"unproven native borrow control flow at IR record %zu",at+2);
+    if(!ok && err->code==0) error_set(err,ERR_SEMANTIC,0,0,"unproven native borrow control flow in %s at IR record %zu (%s %s)",fn->name,at+2,m->ir.ins[at].op,m->ir.ins[at].result);
     return ok;
 }

@@ -5,6 +5,6 @@ import (
 )
 
 // Escape analysis entry point for the current IR pipeline.
-func funcs(ir.func[] all_fns) {
+func funcs(compile.internal.ir.ir_function[] all_fns) {
     return
 }

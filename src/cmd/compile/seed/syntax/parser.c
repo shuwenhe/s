@@ -981,7 +981,15 @@ static ast_node *parse_call(parser *p) {
 			if (!name) { free(base); free(args); ast_free(expr); return NULL; }
 			snprintf(name, size, "%s%s", base, args);
 			token type = {0}; type.type = TOKEN_IDENTIFIER; type.lexeme = name; type.pos = expr->pos;
-			ast_node *literal = parse_struct_literal_expr(p, &type);
+			ast_node *literal;
+			if (!strcmp(args, "[]")) {
+				/* Qualified T[] { ... } is an array, not a record named T[]. */
+				p->current = saved;
+				type.lexeme = base;
+				literal = parse_typed_array_literal(p, &type);
+			} else {
+				literal = parse_struct_literal_expr(p, &type);
+			}
 			free(base); free(args); free(name); ast_free(expr);
 			return literal;
 		}

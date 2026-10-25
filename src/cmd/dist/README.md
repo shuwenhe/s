@@ -1,3 +1,25 @@
+# Current native bootstrap status (2026-10-25)
+
+`make compiler` now builds a native 95-module S production compiler. Its CLI,
+Public MIR producer and native build commands use the canonical syntax AST,
+semantic checker, typed MIR, verified SSA and AMD64 emitter.
+`make selfhost-canonical-production-check` passes eight native regression scripts.
+
+Seed builds the complete 264-module native Stage1. That actual Stage1 compiles,
+links and executes a scalar enum program: inputs 2 -> 42 and 7 -> 47; changing
+the enum tag from 40 to 41 changes input 2's result to 43. Invalid enum programs
+are rejected by Semantic; enum declaration identity and tags survive into MIR.
+
+Full selfhosting is still incomplete. `make selfhost` currently fails in
+Stage1 -> Stage2 at `canonical parser:16: unsupported top-level declaration: struct`
+in `lexer/token/token.s`. Stage2/Stage3 convergence is not proven and `.complete`
+is absent. Struct/receiver syntax, generic payload enum layout and the corresponding
+record/string/array/CFG native lowering remain incomplete; unsupported declarations
+must fail rather than be dropped. See `doc/native-selfhost-evidence-20261025.md`
+for the actual artifacts, call chain, verification results and independent failures.
+
+## Historical component notes (2026-10-22)
+
 Current record ABI status (2026-10-22): `make selfhost-native-record-check`
 checks eligible record values, nested copies, defaults, array recursion,
 argument order, callee-saved registers, and allocation rollback. It is a

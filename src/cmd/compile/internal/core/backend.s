@@ -3969,7 +3969,7 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
             result.ok(())
         }
         compile.internal.ast.stmt.defer(_) : result.ok(())
-        compile.internal.ast.stmt.sroutine(sroutine_stmt) : execute_sroutine_stmt_result(sroutine_stmt, source, env, writes, runtime)
+        compile.internal.ast.stmt.sroutine(sroutine_stmt) : execute_sroutine_stmt(sroutine_stmt, source, env, writes, runtime)
     }
 }
 
@@ -4095,13 +4095,13 @@ func eval_expr(expr expr, source_file source, binding[] env, write_op[] writes, 
             result.ok(value_result_value(member_result))
         }
         expr.index(value) : {
-            index_result := eval_index_expr_result(value, source, env, writes, runtime)
+            index_result := eval_index_expr(value, source, env, writes, runtime)
             if value_result_is_err(index_result) { return result.err(value_result_error(index_result)) }
             result.ok(value_result_value(index_result))
         }
         expr.array(_) : result.err(backend_error { message: "backend error: array literals are not supported in the mvp backend" }),
         expr.map(value) : {
-            map_result := eval_map_literal_result(value, source, env, writes, runtime)
+            map_result := eval_map_literal(value, source, env, writes, runtime)
             if value_result_is_err(map_result) { return result.err(value_result_error(map_result)) }
             result.ok(value_result_value(map_result))
         }
@@ -4916,7 +4916,7 @@ func collect_const_bindings_in_source(source_file source, binding[] out, string[
         return result.ok(())
     }
     append(visited, source.pkg)
-    last_expr := option.none
+    last_expr := compile.internal.semantic.no_const_expr()
     i := 0
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
@@ -4924,7 +4924,7 @@ func collect_const_bindings_in_source(source_file source, binding[] out, string[
                 if find_binding_index(out, const_decl.name) >= 0 {
                     return result.err(backend_error { message: "backend error: duplicate const declaration " + const_decl.name })
                 }
-                expr_to_eval := option.none
+                expr_to_eval := compile.internal.semantic.no_const_expr()
                 switch const_decl.value {
                     option.some(value) : {
                         expr_to_eval = option.some(value)
@@ -4997,11 +4997,11 @@ func eval_const_value_expr(expr const_expr, binding[] const_env, int iota_value)
         expr.binary(binary_expr) : {
             left := eval_const_value_expr(binary_expr.left.value, const_env, iota_value)
             if value_result_is_err(left) {
-                return value_result_error(left)
+                return result.err(value_result_error(left))
             }
             right := eval_const_value_expr(binary_expr.right.value, const_env, iota_value)
             if value_result_is_err(right) {
-                return value_result_error(right)
+                return result.err(value_result_error(right))
             }
             left_value := value_result_value(left)
             right_value := value_result_value(right)

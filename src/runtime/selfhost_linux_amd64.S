@@ -553,6 +553,14 @@ s_string_slice:
 s_index_get:
     test %rdi, %rdi
     jz .Lindex_fail
+    test $1, %rdi
+    jnz .Lindex_fail
+    cmpq $2, (%rdi)
+    je s_string_char_at
+    cmpq $6, (%rdi)
+    je s_string_char_at
+    cmpq $4, (%rdi)
+    jne .Lindex_fail
     sar $1, %rsi
     test %rsi, %rsi
     js .Lindex_fail
@@ -662,6 +670,22 @@ s_write_string_fd:
     pop %rbx
     ret
 .size s_write_string_fd, .-s_write_string_fd
+.global s_println_value
+.type s_println_value, @function
+s_println_value:
+    push %rbx
+    mov %rdi, %rbx
+    mov $1, %rdi
+    mov %rbx, %rsi
+    call s_write_string_fd
+    mov $1, %rdi
+    lea .Lnewline(%rip), %rsi
+    mov $1, %rdx
+    call s_write
+    mov $1, %rax
+    pop %rbx
+    ret
+.size s_println_value, .-s_println_value
 .global s_eprintln_value
 .type s_eprintln_value, @function
 s_eprintln_value:
@@ -1207,36 +1231,61 @@ s_make_generic:
 .global s_contains_text
 .type s_contains_text, @function
 s_contains_text:
-    mov 8(%rdi), %r8
-    mov 8(%rsi), %r9
-    cmp %r8, %r9
+    push %rbx
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    sub $16, %rsp
+    mov %rdi, %r12
+    mov %rsi, %r13
+    call s_value_len
+    sar $1, %rax
+    mov %rax, %rbx
+    mov %r13, %rdi
+    call s_value_len
+    sar $1, %rax
+    mov %rax, %r15
+    test %r15, %r15
+    jz .Lcontains_true
+    cmp %r15, %rbx
     jb .Lcontains_false
-    xor %rcx, %rcx
+    sub %r15, %rbx
+    xor %r14d, %r14d
 .Lcontains_outer:
-    mov %r8, %rax
-    sub %r9, %rax
-    cmp %rax, %rcx
+    cmp %rbx, %r14
     ja .Lcontains_false
-    xor %rdx, %rdx
+    movq $0, (%rsp)
 .Lcontains_inner:
-    cmp %r9, %rdx
+    mov (%rsp), %rsi
+    cmp %r15, %rsi
     jae .Lcontains_true
-    movzbq 16(%rdi,%rcx,1), %rax
-    movzbq 16(%rsi,%rdx,1), %r10
-    cmp %r10, %rax
+    add %r14, %rsi
+    mov %r12, %rdi
+    call s_string_byte_raw
+    mov %rax, 8(%rsp)
+    mov (%rsp), %rsi
+    mov %r13, %rdi
+    call s_string_byte_raw
+    cmp 8(%rsp), %rax
     jne .Lcontains_next
-    inc %rcx
-    inc %rdx
+    incq (%rsp)
     jmp .Lcontains_inner
 .Lcontains_next:
-    sub %rdx, %rcx
-    inc %rcx
+    inc %r14
     jmp .Lcontains_outer
 .Lcontains_true:
     mov $3, %rax
-    ret
+    jmp .Lcontains_done
 .Lcontains_false:
     mov $1, %rax
+.Lcontains_done:
+    add $16, %rsp
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    pop %rbx
     ret
 .size s_contains_text, .-s_contains_text
 .global s_host_same_file

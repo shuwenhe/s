@@ -85,6 +85,18 @@ static bool ng_enum_schema(ng_scope *c,ng_decl *d,ng_text *args,size_t count,con
 static void ng_replace_node(ast_node *place,ast_node *replacement) {
     ast_node old=*place; *place=*replacement; *replacement=old; ast_free(replacement);
 }
+/* Explicit enum owners are parsed as type-shaped index expressions.
+ * Preserve nested applications and array arguments before value lowering. */
+static bool ng_enum_type_spelling(ast_node *node,ng_text out,unsigned depth) {
+    if(!node || depth>64) return false;
+    if(node->kind==AST_INDEX_EXPR) {
+        ng_text owner,argument={0};
+        if(!ng_enum_type_spelling(node->as.index_expr.object,owner,depth+1) ||
+           (node->as.index_expr.index && !ng_enum_type_spelling(node->as.index_expr.index,argument,depth+1))) return false;
+        return snprintf(out,sizeof(ng_text),"%s[%s]",owner,argument)<(int)sizeof(ng_text);
+    }
+    return native_record_type_spelling(node,out,sizeof(ng_text));
+}
 /* Return zero for a value member/method, one for a rewritten enum constructor,
  * and -1 for an invalid constructor. Context fixes phantom type parameters. */
 static int ng_enum_construct(ng_scope *c,ast_node *n,ast_node *member,ng_text *payloads,size_t count,const char *expected,ng_text out,bool return_position) {
@@ -92,10 +104,20 @@ static int ng_enum_construct(ng_scope *c,ast_node *n,ast_node *member,ng_text *p
     ng_state *s=c->state; ng_text spelling,actuals[NG_ARGS]={{0}},base;
     ng_decl *d=NULL;
     if(member->as.member_expr.object) {
-        if(!native_record_type_spelling(member->as.member_expr.object,spelling,sizeof(spelling))) return 0;
+        ast_node *owner=member->as.member_expr.object;
+        bool explicit_argument=owner->kind==AST_INDEX_EXPR && owner->as.index_expr.index;
+        ast_node *name=explicit_argument?owner->as.index_expr.object:owner;
+        if(!native_record_type_spelling(name,spelling,sizeof(spelling))) return 0;
         snprintf(base,sizeof(base),"%s",spelling); char *dot=strchr(base,'.'); if(dot) *dot=0;
         if(ng_bound(c,base)) return 0;
         d=ng_enum_owner(c,member->as.member_expr.native_owner_name?member->as.member_expr.native_owner_name:spelling);
+        if(d && explicit_argument) {
+            ng_text argument;
+            if(d->count!=1 || !ng_enum_type_spelling(owner->as.index_expr.index,argument,0) ||
+               !ng_type(c,argument,actuals[0],0)) {
+                ng_fail(s,n->pos,"invalid explicit enum type argument"); return -1;
+            }
+        }
     } else d=ng_enum_type(c,expected,actuals);
     if(!d || (!d->count && !seed_enum_has_payload(d->node))) return 0;
     ast_enum_variant *variant=NULL; size_t index=0;
@@ -114,7 +136,12 @@ static int ng_enum_construct(ng_scope *c,ast_node *n,ast_node *member,ng_text *p
             }
             want=NULL;
         }
-        if(want) for(size_t i=0;i<d->count;i++) strcpy(actuals[i],context[i]);
+        if(want) for(size_t i=0;i<d->count;i++) {
+            if(actuals[i][0] && strcmp(actuals[i],context[i])) {
+                ng_fail(s,n->pos,"explicit enum type argument disagrees with context"); return -1;
+            }
+            strcpy(actuals[i],context[i]);
+        }
     }
     if(variant->payload_type && payloads[0][0] && !ng_unify(c,d,variant->payload_type,payloads[0],actuals)) {
         error_set(s->err,ERR_SEMANTIC,n->pos.line,n->pos.column,"native generic specialization: enum payload type mismatch (actual: %s; context: %s)",payloads[0][0]?payloads[0]:"unresolved",expected?expected:""); return -1;

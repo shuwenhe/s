@@ -74,6 +74,14 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
             if(!strcmp(x->operand1,m->ir.ins[j].result) && p<64 && (fn->borrow_mask&(1ULL<<p))) found=true;
         if(!found) goto bad;
     }
+    for(size_t g=0;g<m->global_count;g++) {
+        standalone_global *global=&m->globals[g];
+        standalone_function *init=standalone_borrow_function(m,global->initializer);
+        const char *type=init?standalone_transfer(m,"return-transfer:",init->name,NULL):NULL;
+        if(!init || !type || strcmp(type,global->type) ||
+           (init->begin<init->end && !strcmp(m->ir.ins[init->begin].op,"PARAM"))) goto bad;
+        init->borrow_owner_needed=true;
+    }
     /* Every caller of an owner-consuming function must establish its actual
      * parameter types. Propagate backwards to the native entrypoint, rather
      * than trusting an intermediate function's annotations in isolation. */
@@ -82,6 +90,7 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
         changed=false;
         for(size_t f=0;f<m->func_count;f++) {
             standalone_function *fn=&m->funcs[f]; bool needed=fn->borrow_mask!=0;
+            for(size_t s=0;s<fn->slot_count;s++) if(standalone_global_index(m,fn->slots[s].name)>=0) needed=true;
             const char *result=standalone_transfer(m,"return-transfer:",fn->name,NULL);
             if(result && (!strcmp(result,"()") || !strcmp(result,"unit"))) needed=true;
             if(result && strchr(result,'[') && standalone_record_index(m,result)>=0) needed=true;
@@ -97,6 +106,7 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
                 if(!strcmp(x->op,"MOV") && len>7 && !strcmp(x->result+len-7,".__type") && strchr(x->operand1,'[')) needed=true;
                 if(!strcmp(x->op,"ARG") && !strcmp(x->operand1,"mutable_borrow")) needed=true;
                 if(!strcmp(x->op,"CALL")) {
+                    if(!strcmp(x->operand1,"__vec_push") || !strcmp(x->operand1,"__vec_len")) needed=true;
                     standalone_function *target=standalone_borrow_callee(m,x->operand1);
                     if(target && (target->borrow_mask || target->borrow_owner_needed)) needed=true;
                 }

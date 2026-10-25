@@ -561,13 +561,13 @@ func mir_place_from_expr(expr value) mir_place {
             return mir_place { root: name_expr.name, projections: mir_place_projection[]() }
         }
         expr.member(member_expr) : {
-            place := mir_place_from_expr(member_expr.target.unwrap())
+            place := mir_place_from_expr(member_expr.target.value)
             place.projections = append(place.projections, mir_place_projection { kind: mir_projection_kind.field, value: member_expr.member })
             return place
         }
         expr.index(index_expr) : {
-            place := mir_place_from_expr(index_expr.target.unwrap())
-            place.projections = append(place.projections, mir_place_projection { kind: mir_projection_kind.index, value: compile.internal.ast.dump_expr(index_expr.index.unwrap()) })
+            place := mir_place_from_expr(index_expr.target.value)
+            place.projections = append(place.projections, mir_place_projection { kind: mir_projection_kind.index, value: compile.internal.ast.dump_expr(index_expr.index.value) })
             return place
         }
         _ : { return mir_place { root: "", projections: mir_place_projection[]() } }
@@ -631,11 +631,9 @@ func mir_expr_type_name(expr value) string {
         expr.string(_) : return "string"
         expr.bool(_) : return "bool"
         expr.call(call_value) : {
-            if call_value.callee.is_some() {
-                callee_name := mir_callee_name(call_value.callee.unwrap())
-                if callee_name == "box" || callee_name == "box_new" {
-                    return "box[unknown]"
-                }
+            callee_name := mir_callee_name(call_value.callee.value)
+            if callee_name == "box" || callee_name == "box_new" {
+                return "box[unknown]"
             }
             if call_value.inferred_type.is_some() { return call_value.inferred_type.unwrap() }
         }
@@ -681,27 +679,27 @@ func mir_expr_events(expr value, mir_local_slot[] locals, bool consume) string[]
             }
         }
         expr.borrow(borrow_expr) : {
-            target_events := mir_expr_events(borrow_expr.target.unwrap(), locals, false)
+            target_events := mir_expr_events(borrow_expr.target.value, locals, false)
             events = mir_extend_events(events, target_events)
-            target_name := mir_place_name(borrow_expr.target.unwrap())
+            target_name := mir_place_name(borrow_expr.target.value)
             if target_name != "" {
                 if borrow_expr.mutable { events = append(events, "mutable:" + target_name) }
                 else { events = append(events, "shared:" + target_name) }
             }
         }
         expr.binary(binary_expr) : {
-            events = mir_extend_events(events, mir_expr_events(binary_expr.left.unwrap(), locals, false))
-            events = mir_extend_events(events, mir_expr_events(binary_expr.right.unwrap(), locals, false))
+            events = mir_extend_events(events, mir_expr_events(binary_expr.left.value, locals, false))
+            events = mir_extend_events(events, mir_expr_events(binary_expr.right.value, locals, false))
         }
         expr.call(call_expr) : {
-            events = mir_extend_events(events, mir_expr_events(call_expr.callee.unwrap(), locals, false))
+            events = mir_extend_events(events, mir_expr_events(call_expr.callee.value, locals, false))
         }
         expr.member(member_expr) : {
-            events = mir_extend_events(events, mir_expr_events(member_expr.target.unwrap(), locals, consume))
+            events = mir_extend_events(events, mir_expr_events(member_expr.target.value, locals, consume))
         }
         expr.index(index_expr) : {
-            events = mir_extend_events(events, mir_expr_events(index_expr.target.unwrap(), locals, false))
-            events = mir_extend_events(events, mir_expr_events(index_expr.index.unwrap(), locals, false))
+            events = mir_extend_events(events, mir_expr_events(index_expr.target.value, locals, false))
+            events = mir_extend_events(events, mir_expr_events(index_expr.index.value, locals, false))
         }
         expr.block(block_expr) : {
             i := 0
@@ -749,7 +747,7 @@ func mir_append_ownership_semantics_from_stmt(mir_statement[] statements, stmt v
 func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr value, string result_name) () {
     switch value {
         expr.borrow(borrow_expr) : {
-            target := borrow_expr.target.unwrap()
+            target := borrow_expr.target.value
             place := mir_place_from_expr(target)
             if result_name != "" && place.root != "" {
                 statements.push(mir_statement.mir_borrow(mir_borrow_stmt {
@@ -770,11 +768,11 @@ func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr v
             }
         }
         expr.binary(binary_expr) : {
-            mir_append_ownership_semantics_from_expr(statements, binary_expr.left.unwrap(), "")
-            mir_append_ownership_semantics_from_expr(statements, binary_expr.right.unwrap(), "")
+            mir_append_ownership_semantics_from_expr(statements, binary_expr.left.value, "")
+            mir_append_ownership_semantics_from_expr(statements, binary_expr.right.value, "")
         }
         expr.call(call_expr) : {
-            mir_append_ownership_semantics_from_expr(statements, call_expr.callee.unwrap(), "")
+            mir_append_ownership_semantics_from_expr(statements, call_expr.callee.value, "")
         }
         expr.member(member_expr) : {
             place := mir_place_from_expr(value)
@@ -783,7 +781,7 @@ func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr v
                     place: place, result mir_operand { kind: "local", value: result_name, type_name: "unknown" },
                 }))
             }
-            mir_append_ownership_semantics_from_expr(statements, member_expr.target.unwrap(), "")
+            mir_append_ownership_semantics_from_expr(statements, member_expr.target.value, "")
         }
         expr.index(index_expr) : {
             place := mir_place_from_expr(value)
@@ -792,8 +790,8 @@ func mir_append_ownership_semantics_from_expr(mir_statement[] statements, expr v
                     place: place, result mir_operand { kind: "local", value: result_name, type_name: "unknown" },
                 }))
             }
-            mir_append_ownership_semantics_from_expr(statements, index_expr.target.unwrap(), "")
-            mir_append_ownership_semantics_from_expr(statements, index_expr.index.unwrap(), "")
+            mir_append_ownership_semantics_from_expr(statements, index_expr.target.value, "")
+            mir_append_ownership_semantics_from_expr(statements, index_expr.index.value, "")
         }
         expr.block(block_expr) : {
             i := 0
@@ -859,7 +857,7 @@ func block_count(mir_graph graph) int {
 
 func lower_function(function_decl function) string {
     graph := lower_function_graph(function)
-    return analyze_borrow_function(function.sig.name, string[](), dump_graph(graph))
+    return compile.internal.borrow.analyze_function(function.sig.name, string[](), dump_graph(graph))
 }
 
 func lower_block(block_expr block) string {

@@ -4,7 +4,7 @@ root=$(cd "$(dirname "$0")/../.." && pwd)
 work=$(mktemp -d /tmp/s-function-ssa.XXXXXX)
 printf 'function-ssa artifacts=%s\n' "$work"
 sources=(
-    "$root/src/cmd/compile/internal/mir/program.s"
+    "$root/src/cmd/compile/internal/mir/program.s" "$root/src/cmd/compile/internal/mir/program_enum.s"
     "$root/src/cmd/compile/internal/ssa/program.s"
     "$root/src/cmd/compile/internal/ssa/function_lower.s"
 )
