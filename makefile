@@ -489,3 +489,10 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_cfg_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_store_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_tuple_production_check.sh
+
+.PHONY: selfhost-native-memory-check
+selfhost-native-memory-check: compiler
+	@python3 test/native-bootstrap-diagnostic/native_snapshot_cost_check.py
+	@python3 test/native-bootstrap-diagnostic/native_temporary_memory_check.py
+	@bash test/native-bootstrap-diagnostic/native_temporary_values_check.sh
+	@bash test/native-bootstrap-diagnostic/native_temporary_effects_check.sh

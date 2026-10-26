@@ -4,11 +4,13 @@ import (
 )
 struct lsp_handler {
     doc_manager: document_manager
+    cached_keyword_completions: completion_item[]
 }
 
 func new_lsp_handler() lsp_handler {
     lsp_handler {
         doc_manager: new_document_manager(),
+        cached_keyword_completions: get_keyword_completions(),
     }
 }
 
@@ -64,16 +66,20 @@ func (h lsp_handler) get_document_symbols(string uri) document_symbol[] {
 
 func (h lsp_handler) get_completions(string uri, pos position) completion_list {
     completions := completion_item[]()
-    completions.append(get_keyword_completions())
+    i := 0
+    for i < len(h.cached_keyword_completions) {
+        completions.push(h.cached_keyword_completions[i])
+        i = i + 1
+    }
     switch h.doc_manager.get_document_symbols(uri) {
         option.some(symbols) : {
-            i := 0
-            for i < len(symbols) {
-                sym := symbols[i]
+            j := 0
+            for j < len(symbols) {
+                sym := symbols[j]
                 completions.push(completion_item {
                     label: sym.name, kind option.some(symbol_kind_to_completion_kind(sym.kind)), detail option.some(format_symbol_kind(sym.kind)), documentation option.some("Defined in current file"), sort_text option.some("1_" + sym.name), filter_text option.some(sym.name), text_edit_text option.none(), deprecated option.none(), score option.some(50),
                 })
-                i = i + 1
+                j = j + 1
             }
         },
         option.none() : {}

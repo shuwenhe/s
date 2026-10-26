@@ -6,6 +6,7 @@ s_host_argc:
 .global s_host_argv
 s_host_argv:
     .quad 0
+.global s_heap_current
 s_heap_current:
     .quad 0
 s_heap_limit:
@@ -2031,3 +2032,303 @@ s_value_snapshot:
     .ascii "0123456789abcdef"
 .Lrun_default_path:
     .asciz "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+/* Function-scoped temporary arenas. This is deterministic return-value
+ * promotion, not a tracing collector. Only effect-free functions use it.
+ * Evacuation forwards each object once, retaining sharing and cycles. */
+.section .bss
+.align 8
+s_region_scratch: .quad 0
+s_region_capacity: .quad 0
+s_region_low: .quad 0
+s_region_high: .quad 0
+s_region_cursor: .quad 0
+.section .text
+.global s_region_return
+.type s_region_return, @function
+s_region_return:
+    test %rsi, %rsi
+    jz .Lregion_unchanged
+    cmp s_heap_current(%rip), %rsi
+    jae .Lregion_unchanged
+    push %rbx
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    mov %rdi, %rbx
+    mov %rsi, %r12
+    mov s_heap_current(%rip), %r13
+    /* Scalar and pre-existing immutable returns need no evacuation. RET has
+     * already snapshotted aggregate values into this function's arena. */
+    cmp %r12, %rbx
+    jb .Lregion_scalar
+    cmp %r13, %rbx
+    jae .Lregion_scalar
+    test $1, %rbx
+    jnz .Lregion_scalar
+    mov %r13, %r14
+    sub %r12, %r14
+    cmp s_region_capacity(%rip), %r14
+    jbe .Lregion_have_scratch
+    /* mmap a replacement before releasing the old scratch mapping. */
+    mov %r14, %rsi
+    add $65535, %rsi
+    and $-65536, %rsi
+    mov %rsi, %r15
+    xor %edi, %edi
+    mov $3, %edx
+    mov $34, %r10d
+    mov $-1, %r8
+    xor %r9d, %r9d
+    mov $9, %eax
+    syscall
+    cmp $-4095, %rax
+    jae .Lregion_oom
+    push %rax
+    mov s_region_scratch(%rip), %rdi
+    test %rdi, %rdi
+    jz .Lregion_store_scratch
+    mov s_region_capacity(%rip), %rsi
+    mov $11, %eax
+    syscall
+.Lregion_store_scratch:
+    pop %rax
+    mov %rax, s_region_scratch(%rip)
+    mov %r15, s_region_capacity(%rip)
+.Lregion_have_scratch:
+    mov %r12, s_region_low(%rip)
+    mov %r13, s_region_high(%rip)
+    mov s_region_scratch(%rip), %rax
+    mov %rax, s_region_cursor(%rip)
+    mov %rbx, %rdi
+    call s_region_copy
+    mov %rax, %rbx
+    mov s_region_cursor(%rip), %r14
+    sub s_region_scratch(%rip), %r14
+    /* Reserve the compact live graph at the old checkpoint. */
+    mov %r12, s_heap_current(%rip)
+    mov %r14, %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Lregion_oom
+    mov %rax, s_region_cursor(%rip)
+    mov s_region_scratch(%rip), %rax
+    mov %rax, s_region_low(%rip)
+    add %r14, %rax
+    mov %rax, s_region_high(%rip)
+    mov %rbx, %rdi
+    call s_region_copy
+    jmp .Lregion_done
+.Lregion_scalar:
+    mov %r12, s_heap_current(%rip)
+    mov %rbx, %rax
+.Lregion_done:
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    pop %rbx
+    ret
+.Lregion_oom:
+    mov $1, %edi
+    call s_record_error
+    ud2
+.Lregion_unchanged:
+    mov %rdi, %rax
+    ret
+.size s_region_return, .-s_region_return
+
+/* Copy a tagged graph from [low,high) into cursor. Objects outside that
+ * interval are older than the checkpoint or static and remain unchanged.
+ * Forwarding tag 10 occupies only discarded source storage. */
+/* Iterative graph evacuation. A Cheney scan processes copied objects in
+ * allocation order, so arbitrarily deep ropes do not consume the call stack. */
+.type s_region_copy, @function
+s_region_copy:
+    push %rbx
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    mov s_region_cursor(%rip), %r12
+    call s_region_copy_one
+    mov %rax, %rbx
+.Lregion_scan:
+    cmp s_region_cursor(%rip), %r12
+    jae .Lregion_scan_done
+    mov (%r12), %r13
+    mov 8(%r12), %r14
+    cmp $2, %r13
+    je .Lregion_scan_flat
+    cmp $6, %r13
+    je .Lregion_scan_rope
+    cmp $4, %r13
+    je .Lregion_scan_array
+    /* Record field names and schema references are static; only values move. */
+    mov 16(%r12), %r14
+    xor %r15d, %r15d
+.Lregion_scan_fields:
+    cmp %r14, %r15
+    jae .Lregion_scan_record_next
+    mov %r15, %rax
+    shl $4, %rax
+    mov 40(%r12,%rax), %rdi
+    call s_region_copy_one
+    mov %rax, %rcx
+    mov %r15, %rax
+    shl $4, %rax
+    mov %rcx, 40(%r12,%rax)
+    inc %r15
+    jmp .Lregion_scan_fields
+.Lregion_scan_record_next:
+    mov %r14, %rax
+    shl $4, %rax
+    add $32, %rax
+    jmp .Lregion_scan_next
+.Lregion_scan_array:
+    xor %r15d, %r15d
+.Lregion_scan_elements:
+    cmp %r14, %r15
+    jae .Lregion_scan_array_next
+    mov 16(%r12,%r15,8), %rdi
+    call s_region_copy_one
+    mov %rax, 16(%r12,%r15,8)
+    inc %r15
+    jmp .Lregion_scan_elements
+.Lregion_scan_array_next:
+    lea 16(,%r14,8), %rax
+    jmp .Lregion_scan_next
+.Lregion_scan_rope:
+    mov 16(%r12), %rdi
+    call s_region_copy_one
+    mov %rax, 16(%r12)
+    mov 24(%r12), %rdi
+    call s_region_copy_one
+    mov %rax, 24(%r12)
+    mov $32, %eax
+    jmp .Lregion_scan_next
+.Lregion_scan_flat:
+    lea 17(%r14), %rax
+.Lregion_scan_next:
+    add $15, %rax
+    and $-16, %rax
+    add %rax, %r12
+    jmp .Lregion_scan
+.Lregion_scan_done:
+    mov %rbx, %rax
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    pop %rbx
+    ret
+.size s_region_copy, .-s_region_copy
+
+/* Shallow copy one object and install a forwarding address in discarded
+ * source storage. The iterative scan above repairs all outgoing edges. */
+.type s_region_copy_one, @function
+s_region_copy_one:
+    mov %rdi, %rax
+    test $1, %rdi
+    jnz .Lregion_one_return
+    cmp s_region_low(%rip), %rdi
+    jb .Lregion_one_return
+    cmp s_region_high(%rip), %rdi
+    jae .Lregion_one_return
+    cmpq $10, (%rdi)
+    je .Lregion_one_forwarded
+    push %rbx
+    push %r12
+    push %r13
+    mov %rdi, %rbx
+    mov (%rbx), %r12
+    mov 8(%rbx), %rcx
+    cmp $2, %r12
+    je .Lregion_one_flat
+    cmp $6, %r12
+    je .Lregion_one_rope
+    cmp $4, %r12
+    je .Lregion_one_array
+    cmp $8, %r12
+    jne .Lregion_one_invalid
+    mov 16(%rbx), %rdx
+    shl $4, %rdx
+    add $32, %rdx
+    jmp .Lregion_one_bytes
+.Lregion_one_flat:
+    lea 17(%rcx), %rdx
+    jmp .Lregion_one_bytes
+.Lregion_one_rope:
+    mov $32, %edx
+    jmp .Lregion_one_bytes
+.Lregion_one_array:
+    lea 16(,%rcx,8), %rdx
+.Lregion_one_bytes:
+    mov s_region_cursor(%rip), %r13
+    lea 15(%rdx), %rax
+    and $-16, %rax
+    add %r13, %rax
+    mov %rax, s_region_cursor(%rip)
+    mov %r13, %rdi
+    mov %rbx, %rsi
+    call s_memcpy
+    movq $10, (%rbx)
+    mov %r13, 8(%rbx)
+    cmp $8, %r12
+    jne .Lregion_one_done
+    lea 32(%r13), %rax
+    mov %rax, 24(%r13)
+.Lregion_one_done:
+    mov %r13, %rax
+    pop %r13
+    pop %r12
+    pop %rbx
+.Lregion_one_return:
+    ret
+.Lregion_one_forwarded:
+    mov 8(%rdi), %rax
+    ret
+.Lregion_one_invalid:
+    mov $2, %edi
+    call s_record_error
+    ud2
+.size s_region_copy_one, .-s_region_copy_one
+
+.section .note.GNU-stack,"",@progbits
+
+/* Establish a checkpoint without changing the incoming parameter ABI. */
+.section .text
+.global s_region_begin
+.type s_region_begin, @function
+s_region_begin:
+    mov s_heap_current(%rip), %rax
+    test %rax, %rax
+    jnz .Lregion_begin_done
+    push %rdi
+    push %rsi
+    push %rdx
+    push %rcx
+    push %r8
+    push %r9
+    sub $8, %rsp
+    mov $16, %edi
+    call s_alloc
+    test %rax, %rax
+    jz .Lregion_begin_oom
+    mov s_heap_current(%rip), %rax
+    add $8, %rsp
+    pop %r9
+    pop %r8
+    pop %rcx
+    pop %rdx
+    pop %rsi
+    pop %rdi
+.Lregion_begin_done:
+    ret
+.Lregion_begin_oom:
+    mov $1, %edi
+    call s_record_error
+    ud2
+.size s_region_begin, .-s_region_begin
+.section .note.GNU-stack,"",@progbits

@@ -20,6 +20,7 @@
 #define STANDALONE_MAX_PENDING_ARGS 64
 #define STANDALONE_TEXT_CAP 1024
 typedef struct standalone_ins {
+    bool discard_snapshot;
 	char op[32];
 	char result[STANDALONE_TEXT_CAP];
 	char operand1[STANDALONE_TEXT_CAP];
@@ -42,6 +43,8 @@ typedef struct standalone_function {
 	size_t slot_count;
 	int frame_size;
 	bool integer_only;
+    bool region_safe;
+    bool region_loop_safe;
     unsigned long long borrow_mask;
     int borrow_schema[64];
     int borrow_flow_state;
@@ -472,7 +475,7 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 			current->end = i;
 			assign_local_registers(module,current);
 			detect_integer_only(module, current);
-			current->frame_size = (int)((((current->slot_count + 4) * 8 + STANDALONE_MAX_PENDING_ARGS * 8 + 15) / 16) * 16);
+			current->frame_size = (int)((((current->slot_count + 4) * 8 + STANDALONE_MAX_PENDING_ARGS * 8 + 15) / 16) * 16) + 16;
 			current = NULL;
 			continue;
 		}
@@ -861,6 +864,136 @@ static const char *defined_function_name(const standalone_module *module, const 
 		return strstr(name, "result") ? "result[t,e]*.unwrap" : "option[t]*.unwrap";
 	return NULL;
 }
+/* Runtime intrinsics reload operands at CALL emission. Their ARG snapshots
+ * are unused, except vector item/index snapshots and generic stack arguments.
+ * Match pending ARGs exactly as emit_function does, including nested calls. */
+static void standalone_analyze_snapshot_uses(standalone_module *m) {
+    for(size_t f=0;f<m->func_count;f++) {
+        standalone_function *fn=&m->funcs[f];
+        size_t pending[STANDALONE_MAX_PENDING_ARGS],count=0;
+        for(size_t i=fn->begin;i<fn->end;i++) {
+            standalone_ins *x=&m->ir.ins[i];
+            if(!strcmp(x->op,"ARG")) {
+                if(count<STANDALONE_MAX_PENDING_ARGS) pending[count++]=i;
+                continue;
+            }
+            if(strcmp(x->op,"CALL")) continue;
+            char *end; long argc=strtol(x->operand2,&end,10);
+            if(*end || argc<0 || (size_t)argc>count) { count=0; continue; }
+            size_t first=count-(size_t)argc;
+            if(runtime_callee(x->operand1)) for(size_t a=0;a<(size_t)argc;a++) {
+                bool consumed=a>=STANDALONE_MAX_ARGS;
+                if(!strcmp(x->operand1,"__vec_push") && argc==2) consumed=a==1;
+                if(!strcmp(x->operand1,"__vec_set") && argc==3) consumed=a!=0;
+                m->ir.ins[pending[first+a]].discard_snapshot=!consumed;
+            }
+            count=first;
+        }
+    }
+}
+/* Only private value graphs may be reclaimed at return. Borrow/global effects
+ * propagate to callers; unknown external services are conservatively excluded. */
+static void standalone_analyze_regions(standalone_module *m) {
+    for(size_t f=0;f<m->func_count;f++) {
+        standalone_function *fn=&m->funcs[f];
+        fn->region_safe=fn->borrow_mask==0;
+        fn->region_loop_safe=true;
+        /* READ exposes an element without snapshotting. Follow those aliases
+         * conservatively so loop evacuation never strands a younger value in
+         * an older parameter object. MOV, by contrast, snapshots aggregates. */
+        bool older[STANDALONE_MAX_SLOTS]={false};
+        for(size_t p=fn->begin;p<fn->end && !strcmp(m->ir.ins[p].op,"PARAM");p++) {
+            int slot=slot_index(fn,m->ir.ins[p].result,false);
+            if(slot>=0) older[slot]=true;
+        }
+        bool aliases_changed;
+        do {
+            aliases_changed=false;
+            for(size_t i=fn->begin;i<fn->end;i++) {
+                standalone_ins *x=&m->ir.ins[i];
+                bool source_older=false, target_older=false;
+                /* Vector methods encode their receiver as quoted slot text,
+                 * then mutate that slot without an explicit INDEX_SET/MOV. */
+                standalone_literal receiver;
+                const char *receiver_path=NULL;
+                compile_error ignored;
+                if(!strcmp(x->op,"ARG") && is_string_literal(x->result) &&
+                   decode_literal(x->result,&receiver,&ignored) && receiver.len<sizeof(receiver.bytes)) {
+                    receiver.bytes[receiver.len]=0;
+                    receiver_path=(char *)receiver.bytes;
+                    for(size_t g=0;g<m->global_count;g++) {
+                        size_t n=strlen(m->globals[g].name);
+                        if(!strncmp(receiver_path,m->globals[g].name,n) &&
+                           (!receiver_path[n] || receiver_path[n]=='.')) fn->region_safe=false;
+                    }
+                }
+                for(size_t v=0;v<fn->slot_count;v++) if(older[v]) {
+                    size_t n=strlen(fn->slots[v].name);
+                    if(receiver_path && !strncmp(receiver_path,fn->slots[v].name,n) &&
+                       (!receiver_path[n] || receiver_path[n]=='.')) fn->region_loop_safe=false;
+                    if(!strncmp(x->operand1,fn->slots[v].name,n) &&
+                       (!x->operand1[n] || x->operand1[n]=='.')) source_older=true;
+                    if(!strncmp(x->result,fn->slots[v].name,n) &&
+                       (!x->result[n] || x->result[n]=='.')) target_older=true;
+                }
+                if((!strcmp(x->op,"READ") || !strcmp(x->op,"INDEX_GET")) && source_older) {
+                    int slot=slot_index(fn,x->result,false);
+                    if(slot>=0 && !older[slot]) { older[slot]=true; aliases_changed=true; }
+                }
+                if(target_older && ((!strcmp(x->op,"MOV") && strchr(x->result,'.')) ||
+                                    !strcmp(x->op,"INDEX_SET"))) fn->region_loop_safe=false;
+            }
+        } while(aliases_changed);
+        for(size_t s=0;s<fn->slot_count;s++)
+            if(standalone_global_index(m,fn->slots[s].name)>=0) fn->region_safe=false;
+        for(size_t i=fn->begin;i<fn->end;i++) {
+            standalone_ins *x=&m->ir.ins[i];
+            if(!strcmp(x->op,"ARG") && !strcmp(x->operand1,"mutable_borrow")) fn->region_safe=false;
+            if(!strcmp(x->op,"CALL") && !runtime_callee(x->operand1) &&
+               !defined_function_name(m,x->operand1)) fn->region_safe=false;
+        }
+    }
+    bool changed;
+    do {
+        changed=false;
+        for(size_t f=0;f<m->func_count;f++) {
+            standalone_function *fn=&m->funcs[f];
+            if(!fn->region_safe) continue;
+            for(size_t i=fn->begin;i<fn->end;i++) {
+                standalone_ins *x=&m->ir.ins[i];
+                if(strcmp(x->op,"CALL") || runtime_callee(x->operand1)) continue;
+                const char *target=defined_function_name(m,x->operand1);
+                for(size_t c=0;target && c<m->func_count;c++)
+                    if(!strcmp(m->funcs[c].name,target) && !m->funcs[c].region_safe) {
+                        fn->region_safe=false; changed=true; break;
+                    }
+                if(!fn->region_safe) break;
+            }
+        }
+    } while(changed);
+}
+/* Reclaim loop temporaries with the exact language slots as roots. No stack
+ * scanning: only initialized tagged values enter the relocation graph. */
+static void emit_region_loop(FILE *out,standalone_function *fn,const char *symbol,size_t at) {
+    fprintf(out,"    mov s_heap_current(%%rip), %%rax\n");
+    fprintf(out,"    cmp -%d(%%rbp), %%rax\n    jb .Ls_%s_region_%zu\n",fn->frame_size-8,symbol,at);
+    fprintf(out,"    mov $%zu, %%rdi\n    call s_array_new\n    test %%rax, %%rax\n    jnz 1f\n    mov $1, %%edi\n    call s_record_error\n1:\n",fn->slot_count*2+1);
+    for(size_t s=0;s<fn->slot_count;s++) {
+        if(fn->slots[s].reg[0]) fprintf(out,"    mov %s, %%rcx\n",fn->slots[s].reg);
+        else fprintf(out,"    mov %d(%%rbp), %%rcx\n",fn->slots[s].offset);
+        fprintf(out,"    mov %%rcx, %zu(%%rax)\n",16+s*8);
+    }
+    fprintf(out,"    mov %%rax, %%rdi\n    mov -%d(%%rbp), %%rsi\n    call s_region_return\n",fn->frame_size);
+    for(size_t s=0;s<fn->slot_count;s++) {
+        fprintf(out,"    mov %zu(%%rax), %%rcx\n",16+s*8);
+        if(fn->slots[s].reg[0]) fprintf(out,"    mov %%rcx, %s\n",fn->slots[s].reg);
+        else fprintf(out,"    mov %%rcx, %d(%%rbp)\n",fn->slots[s].offset);
+    }
+    /* Amortize evacuation against live size: a large retained graph must not
+     * force another evacuation on every iteration. */
+    fprintf(out,"    mov s_heap_current(%%rip), %%rcx\n    sub -%d(%%rbp), %%rcx\n    cmp $65536, %%rcx\n    jae 1f\n    mov $65536, %%ecx\n1:\n    add s_heap_current(%%rip), %%rcx\n    mov %%rcx, -%d(%%rbp)\n",fn->frame_size,fn->frame_size-8);
+    fprintf(out,".Ls_%s_region_%zu:\n",symbol,at);
+}
 static bool emit_function(FILE *out, standalone_module *module, standalone_function *fn, compile_error *err) {
 	static const char *arg_regs[STANDALONE_MAX_ARGS] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
 	const char *pending[STANDALONE_MAX_PENDING_ARGS];
@@ -877,6 +1010,13 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 	fprintf(out, "    push %%rbp\n    mov %%rsp, %%rbp\n");
 	if (fn->slot_count > 0) fprintf(out, "    push %%r12\n    push %%r13\n    push %%r14\n    push %%r15\n");
 	if (fn->frame_size > 0) fprintf(out, "    sub $%d, %%rsp\n", fn->frame_size);
+    if(fn->region_safe) {
+        fprintf(out,"    call s_region_begin\n    mov %%rax, -%d(%%rbp)\n    add $65536, %%rax\n    mov %%rax, -%d(%%rbp)\n", fn->frame_size,fn->frame_size-8);
+        if(fn->region_loop_safe) for(size_t s=0;s<fn->slot_count;s++) {
+            if(fn->slots[s].reg[0]) fprintf(out,"    xor %s, %s\n",fn->slots[s].reg,fn->slots[s].reg);
+            else fprintf(out,"    movq $0, %d(%%rbp)\n",fn->slots[s].offset);
+        }
+    }
 	for (i = fn->begin; i < fn->end; i++) {
 		standalone_ins *ins = &module->ir.ins[i];
 		if (strcmp(ins->op, "PARAM") == 0) {
@@ -894,7 +1034,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				return false;
 			}
             if (!emit_load(out, module, fn, ins->result, "%rdi", err)) return false;
-            if (!strcmp(ins->operand1,"mutable_borrow")) fprintf(out,"    mov %%rdi, %%rax\n");
+            if (ins->discard_snapshot || !strcmp(ins->operand1,"mutable_borrow")) fprintf(out,"    mov %%rdi, %%rax\n");
             else fprintf(out,"    call s_value_snapshot\n");
             fprintf(out, "    mov %%rax, -%zu(%%rbp)\n", (fn->slot_count + 4 + pending_count + 1)*8);
             pending[pending_count++] = ins->result;
@@ -1140,6 +1280,12 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err)) return false;
 			fprintf(out, "    cmp $1, %%rax\n    je .Ls_%s_%s\n", symbol, label);
 		} else if (strcmp(ins->op, "JUMP") == 0) {
+            if(fn->region_safe && fn->region_loop_safe && !fn->integer_only && !pending_count) {
+                for(size_t j=fn->begin;j<i;j++)
+                    if(!strcmp(module->ir.ins[j].op,"LABEL") && !strcmp(module->ir.ins[j].result,ins->result)) {
+                        emit_region_loop(out,fn,symbol,i); break;
+                    }
+            }
 			char label[STANDALONE_TEXT_CAP];
 			symbol_text(ins->result, label, sizeof(label));
 			fprintf(out, "    jmp .Ls_%s_%s\n", symbol, label);
@@ -1176,6 +1322,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 		}
 	}
 	fprintf(out, "    mov $1, %%rax\n.Ls_%s_return:\n", symbol);
+	if(fn->region_safe) fprintf(out,"    mov %%rax, %%rdi\n    mov -%d(%%rbp), %%rsi\n    call s_region_return\n", fn->frame_size);
 	if (fn->frame_size > 0) fprintf(out, "    add $%d, %%rsp\n", fn->frame_size);
 	if (fn->slot_count > 0) fprintf(out, "    pop %%r15\n    pop %%r14\n    pop %%r13\n    pop %%r12\n");
 	fprintf(out, "    leave\n    ret\n.size s_fn_%s, .-s_fn_%s\n\n", symbol, symbol);
@@ -1212,6 +1359,8 @@ static bool emit_fs_bridges(FILE *out,standalone_module *m,compile_error *err) {
 }
 static bool emit_assembly(FILE *out, standalone_module *module, compile_error *err) {
 	size_t i;
+    standalone_analyze_regions(module);
+    standalone_analyze_snapshot_uses(module);
 	fprintf(out, ".section .text\n.global s_main\n.type s_main, @function\ns_main:\n");
     if(module->global_count) {
         /* Preserve the startup argc/argv ABI and keep SysV call alignment. */
