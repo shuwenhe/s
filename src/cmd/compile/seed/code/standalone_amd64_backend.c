@@ -39,8 +39,9 @@ typedef struct standalone_function {
 	char name[STANDALONE_TEXT_CAP];
 	size_t begin;
 	size_t end;
-	standalone_slot slots[STANDALONE_MAX_SLOTS];
+	standalone_slot *slots;
 	size_t slot_count;
+	size_t slot_capacity;
 	int frame_size;
 	bool integer_only;
     bool region_safe;
@@ -203,13 +204,25 @@ static int slot_index(standalone_function *fn, const char *name, bool create) {
 		if (strcmp(fn->slots[i].name, name) == 0) return (int)i;
 	}
 	if (!create || fn->slot_count >= STANDALONE_MAX_SLOTS) return -1;
+	if (fn->slot_count == fn->slot_capacity) {
+		size_t capacity = fn->slot_capacity ? fn->slot_capacity * 2 : 16;
+		if (capacity > STANDALONE_MAX_SLOTS) capacity = STANDALONE_MAX_SLOTS;
+		standalone_slot *slots = realloc(fn->slots, capacity * sizeof(*slots));
+		if (!slots) return -1;
+		fn->slots = slots;
+		fn->slot_capacity = capacity;
+	}
+	memset(&fn->slots[fn->slot_count], 0, sizeof(*fn->slots));
 	copy_text(fn->slots[fn->slot_count].name, sizeof(fn->slots[fn->slot_count].name), name);
 	fn->slots[fn->slot_count].offset = -(int)((fn->slot_count + 1) * 8);
 	return (int)fn->slot_count++;
 }
 static bool collect_operand(standalone_function *fn, const char *operand, compile_error *err) {
 	if (is_value_variable(operand) && slot_index(fn, operand, true) < 0) {
-		error_set(err, ERR_SEMANTIC, 0, 0, "too many standalone locals in %s", fn->name);
+		if (fn->slot_count >= STANDALONE_MAX_SLOTS)
+			error_set(err, ERR_SEMANTIC, 0, 0, "too many standalone locals in %s", fn->name);
+		else
+			error_set(err, ERR_OUT_OF_MEMORY, 0, 0, "out of memory allocating standalone locals in %s", fn->name);
 		return false;
 	}
 	return true;
@@ -1418,6 +1431,13 @@ static bool run_tool(char *const argv[], compile_error *err) {
 	}
 	return true;
 }
+static void standalone_free_module(standalone_module *module) {
+	if (!module) return;
+	for (size_t i = 0; i < module->func_count; i++) free(module->funcs[i].slots);
+	free(module->globals);
+	standalone_free_record_schemas(module);
+	free(module);
+}
 bool emit_standalone_amd64_assembly_from_ir_file(const char *input_ir_path, const char *output_assembly_path, compile_error *err) {
 	standalone_module *module = NULL;
 	FILE *out = NULL;
@@ -1448,9 +1468,7 @@ bool emit_standalone_amd64_assembly_from_ir_file(const char *input_ir_path, cons
 	ok = true;
 done:
 	if (out) fclose(out);
-	free(module->globals);
-	standalone_free_record_schemas(module);
-	free(module);
+	standalone_free_module(module);
 	return ok;
 }
 bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err) {
@@ -1510,9 +1528,7 @@ done:
 	unlink(obj_path);
 	unlink(runtime_obj_path);
 	rmdir(temp_dir);
-	free(module->globals);
-	standalone_free_record_schemas(module);
-	free(module);
+	standalone_free_module(module);
 	return ok;
 }
 bool emit_standalone_amd64_object_from_ir_file(const char *input_ir_path, const char *output_object_path, compile_error *err) {
@@ -1557,8 +1573,6 @@ done:
 	if (out) fclose(out);
 	unlink(asm_path);
 	rmdir(temp_dir);
-	free(module->globals);
-	standalone_free_record_schemas(module);
-	free(module);
+	standalone_free_module(module);
 	return ok;
 }

@@ -31,6 +31,18 @@ struct canonical_parser {
     bool no_record
 }
 
+// Once a result is stored by its caller, keep only the parsing cursor. Carrying
+// old ASTs through token advances repeatedly copies whole consumed subtrees.
+func canonical_cursor(canonical_parser state) canonical_parser {
+    return canonical_parser {
+        source: state.source, position: state.position, line: state.line,
+        token_line: state.token_line, token: state.token, error: state.error,
+        text: state.text, external_function: state.external_function,
+        extern_library: state.extern_library, receiver_name: state.receiver_name,
+        receiver_type: state.receiver_type, no_record: state.no_record
+    }
+}
+
 func canonical_char(string source, int index) string {
     if index < 0 || index >= len(source) { return "" }
     return std.prelude.char_at(source, index)
@@ -546,6 +558,11 @@ func canonical_expression(canonical_parser initial, int minimum) canonical_parse
             state = canonical_expect(state, ")")
             state.no_record = saved
             value = expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(value), args: args, inferred_type: option.none, resolved_callee: option.none, type_args: string[]() })
+        } else if state.token == "as" {
+            state = canonical_parse_type(canonical_advance(state))
+            if state.error != "" { return state }
+            target := expr.name(compile.internal.ast.name_expr { name: state.text, inferred_type: option.none })
+            value = expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(target), args: [value], inferred_type: option.none, resolved_callee: option.none, type_args: string[]() })
         } else {
             precedence := canonical_precedence(state.token)
             if precedence < minimum { break }
@@ -585,9 +602,11 @@ func canonical_block(canonical_parser initial) canonical_parser {
                 statements = append(statements, stmt.expr(compile.internal.ast.expr_stmt { expr: left }))
             }
         }
+        state = canonical_cursor(state)
         if state.token == ";" { state = canonical_advance(state) }
     }
     state = canonical_expect(state, "}")
+    state = canonical_cursor(state)
     state.block = compile.internal.ast.block_expr { statements: statements, final_expr: final, inferred_type: option.none }
     return state
 }
@@ -638,6 +657,7 @@ func canonical_function(canonical_parser initial) canonical_parser {
         state = canonical_block(state)
         body = option.some(state.block)
     }
+    state = canonical_cursor(state)
     state.function = compile.internal.ast.function_decl { sig: compile.internal.ast.function_sig { name: name, generics: generics, params: params, return_type: returns }, body: body, is_public: false, extern_library: state.extern_library }
     state.external_function = false
     state.extern_library = ""
@@ -839,6 +859,7 @@ func canonical_parse(string source) (source_file, syntax_error) {
             output.item_packages = append(output.item_packages, package_name)
             public = false
         } else { state = canonical_fail(state, "unsupported top-level declaration: " + state.token) }
+        state = canonical_cursor(state)
     }
     if state.error != "" { return syntax_error { message: state.error, line: state.token_line, column: 1 } }
     if output.pkg == "" { return syntax_error { message: "expected package declaration", line: 1, column: 1 } }
