@@ -466,6 +466,7 @@ selfhost-canonical-parser-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/canonical_record_ast_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_array_ast_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_switch_ast_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_tuple_ast_check.sh
 
 .PHONY: selfhost-canonical-production-check
 selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
@@ -474,6 +475,8 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_semantic_ast_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_record_semantic_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_array_semantic_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_switch_semantic_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_tuple_semantic_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_enum_mir_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_aggregate_mir_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_cfg_mir_check.sh
@@ -485,3 +488,4 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_bool_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_cfg_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_store_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_tuple_production_check.sh

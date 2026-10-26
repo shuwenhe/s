@@ -162,7 +162,13 @@ struct record_literal {
     option[string] inferred_type
 }
 
+struct tuple_expr {
+    expr[] items
+    option[string] inferred_type
+}
+
 enum expr {
+    tuple(tuple_expr),
     int(int_expr),
     string(string_expr),
     bool(bool_expr),
@@ -225,7 +231,14 @@ struct defer_stmt {
 struct sroutine_stmt {
     expr expr
 }
+struct multi_assign_stmt {
+    expr[] targets
+    bool declaration
+    expr value
+}
+
 enum stmt {
+    multi(multi_assign_stmt),
     let(var_stmt),
     assign(assign_stmt),
     store(store_stmt),
@@ -512,6 +525,7 @@ func dump_block(block_expr block, string indent) string[] {
 
 func dump_stmt(stmt stmt, string indent) string[] {
     switch stmt {
+        stmt.multi(value): single_line(indent + join_exprs(value.targets) + " = " + dump_expr(value.value)),
         stmt.let(value) : {
             text :=
                 switch value.type_name {
@@ -558,6 +572,7 @@ func dump_stmt(stmt stmt, string indent) string[] {
 
 func dump_for_clause(stmt stmt) string {
     return switch stmt {
+        stmt.multi(value): join_exprs(value.targets) + " = " + dump_expr(value.value),
         stmt.let(value) : {
             return switch value.type_name {
                 option.some(type_name) : type_name + " " + value.name + " = " + dump_expr(value.value),
@@ -594,6 +609,12 @@ func dump_expr(expr expr) string {
         expr.for(value) : dump_for_expr(value),
         expr.block(_) : "{...}",
         expr.while(value) : "while " + dump_expr(value.condition.value) + " {...}",
+        expr.tuple(value): {
+            parts := string[]()
+            i := 0
+            for i < len(value.items) { parts = append(parts, dump_expr(value.items[i])); i = i + 1 }
+            "(" + join_with(parts, ", ") + ")"
+        }
         expr.array(value) : {
             elems := string[]()
             _ei := 0

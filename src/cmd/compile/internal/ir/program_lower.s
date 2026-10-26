@@ -8,8 +8,6 @@ import (
     "std.prelude"
 )
 
-// This: adapter consumes canonical AST: objects. It never evaluates source main,
-// serializes an expression back to source, or synthesizes a constant result.
 struct program_store_step {
     string kind
     int container
@@ -37,6 +35,7 @@ struct program_lower_state {
 }
 
 struct program_function_lower_result {
+    mir_program_record[] records
     mir_program_function function_value
     string error
 }
@@ -133,8 +132,6 @@ func program_is_qualified(string name) bool {
 }
 
 func program_emit_integer(program_lower_state state, string literal) program_lower_state {
-    // Canonical int_expr retains token spelling. Only the implemented decimal
-    // range is accepted here; other spellings require an explicit lowering.
     value := 0
     i := 0
     if literal == "" { state.error = "empty integer literal"; return state }
@@ -188,6 +185,28 @@ func program_lower_expression(expr expression, string package_name, mir_program_
     state := initial_state
     if state.error != "" { return state }
     switch expression {
+        expr.tuple(tuple): {
+            operands := int[]()
+            names := string[]()
+            type_name := "("
+            i := 0
+            for i < len(tuple.items) {
+                state = program_lower_expression(tuple.items[i], package_name, signatures, state)
+                if state.error != "" { return state }
+                operands = append(operands, state.expression_value)
+                names = append(names, "_" + std.prelude.to_string(i))
+                if i > 0 { type_name = type_name + "," }
+                type_name = type_name + program_expression_type(state, state.signature, state.expression_value)
+                i = i + 1
+            }
+            type_name = type_name + ")"
+            state.records = program_add_tuple_record(type_name, state.records)
+            id := state.next_value
+            state.next_value = id + 1
+            state.instructions = append(state.instructions, mir_program_instruction { op: "record_new", result_ids: [id], result_types: [type_name], operands: operands, symbol: type_name, field_names: names })
+            state.expression_value = id
+            return state
+        }
         expr.int(literal) : { return program_emit_integer(state, literal.value) }
         expr.bool(literal): {
             id := state.next_value
@@ -199,7 +218,17 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             return state
         }
         expr.if(value): { return program_lower_if(value, package_name, signatures, state) }
-        expr.block(value): { return program_lower_block(value, package_name, signatures, state) }
+        expr.block(value): {
+            names := state.binding_names
+            count := len(names)
+            state = program_lower_block(value, package_name, signatures, state)
+            values := int[]()
+            i := 0
+            for i < count { values = append(values, state.binding_values[i]); i = i + 1 }
+            state.binding_names = names
+            state.binding_values = values
+            return state
+        }
         expr.while(value): { return program_lower_loop(option.some(value.condition.value), value.body, package_name, signatures, state) }
         expr.for(value): {
             if value.init.is_some() || value.post.is_some() || value.iterable.is_some() || len(value.names) != 0 { state.error = "for form requires explicit lowering"; return state }
@@ -393,15 +422,8 @@ func program_lower_expression(expr expression, string package_name, mir_program_
 }
 
 func program_lower_function_with_records(string package_name, function_decl declaration, mir_program_function signature, mir_program_function[] signatures, mir_program_enum[] enums, mir_program_record[] records) program_function_lower_result {
-    output := program_function_lower_result { function_value: signature, error: "" }
+    output := program_function_lower_result { function_value: signature, records: records, error: "" }
     if len(declaration.sig.generics) != 0 { output.error = "generic function requires monomorphization: " + signature.symbol; return output }
-    if declaration.sig.return_type.is_some() {
-        descriptor := declaration.sig.return_type.unwrap()
-        if descriptor != "()" && len(descriptor) > 0 && std.prelude.char_at(descriptor, 0) == "(" {
-            output.error = "multiple-return signature requires explicit result lowering: " + signature.symbol
-            return output
-        }
-    }
     if declaration.body.is_none() { return output }
     state := program_lower_state {
         instructions: mir_program_instruction[](), binding_names: string[](), binding_values: int[](), enums: enums, records: records, signature: signature,
@@ -426,6 +448,7 @@ func program_lower_function_with_records(string package_name, function_decl decl
         }
         state = program_finish_block(state, "return", returns, int[]())
     }
+    output.records = state.records
     output.function_value.blocks = state.blocks
     return output
 }
@@ -441,6 +464,19 @@ func lower_source_program(source_file src) mir_program_result {
     if enumeration_result.error != "" { result.error = enumeration_result.error; return result }
     enums := enumeration_result.enums
     records := program_collect_records(src, enums)
+    tuple_index := 0
+    for tuple_index < len(src.items) {
+        switch src.items[tuple_index] {
+            item.function(declaration): {
+                package_name := program_item_package(src, tuple_index)
+                if declaration.sig.return_type.is_some() { records = program_add_tuple_record(program_record_type(declaration.sig.return_type.unwrap(), package_name, records, enums), records) }
+                p := 0
+                for p < len(declaration.sig.params) { records = program_add_tuple_record(program_record_type(declaration.sig.params[p].type_name, package_name, records, enums), records); p = p + 1 }
+            }
+            _: (),
+        }
+        tuple_index = tuple_index + 1
+    }
     record_error := mir_program_records_error(records, enums)
     if record_error != "" { result.error = record_error; return result }
     r := 0
@@ -471,6 +507,7 @@ func lower_source_program(source_file src) mir_program_result {
             item.function(declaration) : {
                 lowered := program_lower_function_with_records(program_item_package(src, i), declaration, signatures[len(functions)], signatures, enums, records)
                 if lowered.error != "" { result.error = lowered.error; return result }
+                records = lowered.records
                 functions = append(functions, lowered.function_value)
             }
             _ : (),
@@ -497,6 +534,14 @@ func program_root_name(expr value) string {
 }
 
 func program_record_type(string type_name, string package_name, mir_program_record[] records, mir_program_enum[] enums) string {
+    tuple := program_tuple_types(type_name)
+    if len(tuple) > 1 {
+        result := "("
+        i := 0
+        for i < len(tuple) { if i > 0 { result = result + "," }
+            result = result + program_record_type(tuple[i], package_name, records, enums); i = i + 1 }
+        return result + ")"
+    }
     element := mir_program_array_element(type_name)
     if element != "" { return program_record_type(element, package_name, records, enums) + "[]" }
     if mir_program_record_index(records, package_name + "." + type_name) >= 0 { return package_name + "." + type_name }
@@ -624,6 +669,37 @@ func program_lower_block(block_expr body, string package_name, mir_program_funct
     for i < len(body.statements) {
         if state.terminated { state.error = "statement after terminating control flow"; return state }
         switch body.statements[i] {
+            stmt.multi(binding): {
+                state = program_lower_expression(binding.value, package_name, signatures, state)
+                if state.error != "" { return state }
+                tuple_value := state.expression_value
+                type_name := program_expression_type(state, state.signature, tuple_value)
+                types := program_tuple_types(type_name)
+                if len(types) != len(binding.targets) { state.error = "parallel assignment arity mismatch"; return state }
+                j := 0
+                for j < len(binding.targets) {
+                    name := ""
+                    switch binding.targets[j] { expr.name(identifier): name = identifier.name, _: (), }
+                    if name == "" { state.error = "parallel assignment requires local names"; return state }
+                    if name != "_" {
+                        id := state.next_value
+                        state.next_value = id + 1
+                        field_type := types[j]
+                        state.instructions = append(state.instructions, mir_program_instruction { op: "record_get", result_ids: [id], result_types: [field_type], operands: [tuple_value], symbol: type_name, integer_value: j })
+                        index := program_binding_index(state, name)
+                        if binding.declaration {
+                            if index >= 0 { state.error = "duplicate parallel binding"; return state }
+                            state.binding_names = append(state.binding_names, name)
+                            state.binding_values = append(state.binding_values, id)
+                        } else {
+                            if index < 0 { state.error = "parallel assignment to undefined binding"; return state }
+                            if program_expression_type(state, state.signature, state.binding_values[index]) != field_type { state.error = "parallel assignment type mismatch"; return state }
+                            state.binding_values[index] = id
+                        }
+                    }
+                    j = j + 1
+                }
+            }
             stmt.let(binding): {
                 if program_binding_index(state, binding.name) >= 0 { state.error = "duplicate binding: " + binding.name; return state }
                 state = program_lower_expression(binding.value, package_name, signatures, state)
@@ -750,9 +826,10 @@ func program_lower_loop(option[expr] condition, block_expr body, string package_
     else { state = program_lower_expression(expr.bool(bool_expr { value: true, inferred_type: option.none }), package_name, signatures, state) }
     if state.error != "" { return state }
     condition_value := state.expression_value
+    condition_bindings := program_copy_values(state.binding_values)
     state = program_finish_block(state, "branch", [condition_value], [body_block, exit])
     state = program_open_block(state, body_block)
-    state.binding_values = program_copy_values(phi_values)
+    state.binding_values = program_copy_values(condition_bindings)
     state = program_lower_block(body, package_name, signatures, state)
     if state.error != "" { return state }
     if !state.terminated {
@@ -768,7 +845,7 @@ func program_lower_loop(option[expr] condition, block_expr body, string package_
     }
     state = program_open_block(state, exit)
     state.binding_names = names
-    state.binding_values = program_copy_values(phi_values)
+    state.binding_values = program_copy_values(condition_bindings)
     return program_emit_unit(state)
 }
 
@@ -823,8 +900,12 @@ func program_prepare_store(expr target, string package_name, mir_program_functio
             type_name := program_expression_type(state, state.signature, container)
             element := mir_program_array_element(type_name)
             if element == "" { state.error = "store index target is not an array"; return state }
+            outer_root := state.store_root
+            outer_steps := state.store_steps
             state = program_lower_expression(index.index.value, package_name, signatures, state)
             if state.error != "" { return state }
+            state.store_root = outer_root
+            state.store_steps = outer_steps
             selector := state.expression_value
             state = program_emit_array(state, "array_get", type_name, element, [container, selector])
             state.store_steps = append(state.store_steps, program_store_step { kind: "array", container: container, selector: selector, type_name: type_name, value_type: element })
@@ -878,4 +959,37 @@ func program_lower_store(store_stmt store, string package_name, mir_program_func
     state.binding_values[index] = rhs
     state.expression_value = rhs
     return state
+}
+
+// Tuple values use the same typed aggregate representation and native return
+// convention as records; field order is part of the structural tuple identity.
+func program_tuple_types(string text) string[] {
+    types := string[]()
+    if len(text) < 5 || std.prelude.char_at(text, 0) != "(" || std.prelude.char_at(text, len(text) - 1) != ")" { return types }
+    start := 1
+    depth := 0
+    i := 1
+    for i < len(text) - 1 {
+        ch := std.prelude.char_at(text, i)
+        if ch == "[" || ch == "(" { depth = depth + 1 }
+        else if ch == "]" || ch == ")" { depth = depth - 1 }
+        else if ch == "," && depth == 0 { types = append(types, std.prelude.prelude_slice(text, start, i)); start = i + 1 }
+        i = i + 1
+    }
+    if len(types) > 0 { types = append(types, std.prelude.prelude_slice(text, start, len(text) - 1)) }
+    return types
+}
+
+func program_add_tuple_record(string type_name, mir_program_record[] initial) mir_program_record[] {
+    records := initial
+    types := program_tuple_types(type_name)
+    if len(types) < 2 || mir_program_record_index(records, type_name) >= 0 { return records }
+    names := string[]()
+    i := 0
+    for i < len(types) {
+        records = program_add_tuple_record(types[i], records)
+        names = append(names, "_" + std.prelude.to_string(i))
+        i = i + 1
+    }
+    return append(records, mir_program_record { symbol: type_name, field_names: names, field_types: types })
 }

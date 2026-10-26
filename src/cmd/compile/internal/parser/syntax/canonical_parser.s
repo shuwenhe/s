@@ -433,7 +433,7 @@ func canonical_switch(canonical_parser initial) canonical_parser {
             state = canonical_expression(state, 1)
             arm_value = state.expression
             if canonical_assignment_operator(state.token) || state.token == "++" || state.token == "--" {
-                state = canonical_assignment(state, arm_value)
+                state = canonical_assignment(state, arm_value, false)
                 statement := state.statement
                 arm_value = expr.block(compile.internal.ast.block_expr { statements: [statement], final_expr: option.none, inferred_type: option.none })
             }
@@ -484,7 +484,7 @@ func canonical_expression(canonical_parser initial, int minimum) canonical_parse
         state = canonical_advance(state)
         saved := state.no_record
         state.no_record = false
-        if state.token != ")" { state = canonical_expression(state, 1); value = state.expression }
+        if state.token != ")" { state = canonical_expression_list(state); value = state.expression }
         state.no_record = saved
         state = canonical_expect(state, ")")
     } else if token == "true" || token == "false" {
@@ -569,15 +569,15 @@ func canonical_block(canonical_parser initial) canonical_parser {
             state = canonical_advance(state)
             value := option[expr].none
             if state.token != ";" && state.token != "}" && state.token_line == return_line {
-                state = canonical_expression(state, 1)
+                state = canonical_expression_list(state)
                 value = option.some(state.expression)
             }
             statements = append(statements, stmt.return(compile.internal.ast.return_stmt { value: value }))
         } else {
-            state = canonical_expression(state, 1)
+            state = canonical_expression_list(state)
             left := state.expression
             if canonical_assignment_operator(state.token) || state.token == "++" || state.token == "--" {
-                state = canonical_assignment(state, left)
+                state = canonical_assignment(state, left, true)
                 statements = append(statements, state.statement)
             } else if state.token == "}" {
                 final = option.some(left)
@@ -849,7 +849,7 @@ func canonical_assignment_operator(string token) bool {
     return token == ":=" || token == "=" || token == "+=" || token == "-=" || token == "*=" || token == "/=" || token == "%=" || token == "&=" || token == "|=" || token == "^="
 }
 
-func canonical_assignment(canonical_parser initial, expr left) canonical_parser {
+func canonical_assignment(canonical_parser initial, expr left, bool allow_tuple) canonical_parser {
     state := initial
     operator := state.token
     rhs := expr.int(compile.internal.ast.int_expr { value: "1", inferred_type: option.none })
@@ -857,10 +857,19 @@ func canonical_assignment(canonical_parser initial, expr left) canonical_parser 
         if operator == "++" { operator = "+=" } else { operator = "-=" }
         state = canonical_advance(state)
     } else {
-        state = canonical_expression(canonical_advance(state), 1)
+        state = canonical_advance(state)
+        if allow_tuple { state = canonical_expression_list(state) } else { state = canonical_expression(state, 1) }
         rhs = state.expression
     }
     if state.error != "" { return state }
+    switch left {
+        expr.tuple(tuple): {
+            if operator != "=" && operator != ":=" { return canonical_fail(state, "parallel assignment requires = or :=") }
+            state.statement = stmt.multi(compile.internal.ast.multi_assign_stmt { targets: tuple.items, declaration: operator == ":=", value: rhs })
+            return state
+        }
+        _: (),
+    }
     name := ""
     switch left { expr.name(identifier): name = identifier.name, _ : (), }
     if name != "" {
@@ -878,5 +887,18 @@ func canonical_assignment(canonical_parser initial, expr left) canonical_parser 
     switch left { expr.member(_): valid = true, expr.index(_): valid = true, _ : (), }
     if !valid { return canonical_fail(state, "assignment requires a place") }
     state.statement = stmt.store(compile.internal.ast.store_stmt { target: left, op: operator, value: rhs })
+    return state
+}
+
+func canonical_expression_list(canonical_parser initial) canonical_parser {
+    state := canonical_expression(initial, 1)
+    if state.error != "" || state.token != "," { return state }
+    first := state.expression
+    items := [first]
+    for state.error == "" && state.token == "," {
+        state = canonical_expression(canonical_advance(state), 1)
+        items = append(items, state.expression)
+    }
+    state.expression = expr.tuple(compile.internal.ast.tuple_expr { items: items, inferred_type: option.none })
     return state
 }

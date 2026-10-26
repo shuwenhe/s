@@ -246,7 +246,7 @@ func verify_ssa_function(function_ssa_function f) string {
             }
             if value.block_id != block.id { return "value block mismatch: " + f.symbol }
             if ssa_value_block_index(f.blocks, value.id) != b || ssa_value_index(block.values, value.id) != v { return "duplicate value: " + f.symbol }
-            if value.op == "phi" && len(value.operands) != len(block.predecessors) { return "phi operand count: " + f.symbol }
+            if value.op == "phi" && (len(value.operands) == 0 || len(value.operands) != len(block.predecessors)) { return "phi operand count: " + f.symbol }
             a := 0
             for a < len(value.operands) {
                 if !ssa_value_exists(f.blocks, value.operands[a]) { return "unknown operand: " + f.symbol }

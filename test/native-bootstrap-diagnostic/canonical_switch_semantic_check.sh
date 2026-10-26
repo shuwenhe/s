@@ -29,7 +29,7 @@ cat > "$work/main.s" <<'S'
 package main
 import ("compile.internal.syntax"; "compile.internal.semantic")
 func check(string source, bool valid) () {
-    file, failure := compile.internal.syntax.parse_source(source)
+    file, failure := compile.internal.syntax.parse_source(source + "\nfunc main() int { return 0 }")
     if failure.message != "" { panic(failure.message) }
     result := compile.internal.semantic.check_source_file(file, source)
     if valid && len(result.errors) != 0 { panic(result.errors[0].message) }

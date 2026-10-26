@@ -24,6 +24,11 @@ func validate() () {
     if valid.error != "" { panic(valid.error) }
     ssa := lower_function_mir_to_ssa(valid.program)
     if ssa.error != "" || len(ssa.program.functions[0].blocks) != 4 { panic("valid multi-block MIR did not reach SSA") }
+    empty_phi := function_ssa_value { id: 0, op: "phi", type_name: "int", block_id: 0 }
+    empty_block := function_ssa_block { id: 0, label: "entry", values: [empty_phi], terminator: "return", terminator_values: [0] }
+    empty_function := function_ssa_function { symbol: "main.main", result_types: ["int"], blocks: [empty_block], entry_block: 0, exit_block: 0 }
+    empty_program := function_ssa_program { package_name: "main", entry_symbol: "main.main", functions: [empty_function] }
+    if verify_ssa_program(empty_program) == "" { panic("zero input entry phi accepted") }
     bad_use := diamond().program
     bad_use.functions[0].blocks[3].return_values[0] = 3
     if function_mir_input_error(bad_use) == "" { panic("nondominating return accepted") }

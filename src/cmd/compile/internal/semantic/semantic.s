@@ -1520,6 +1520,27 @@ func infer_block_expr(block_expr block, type_binding[] outer_env, borrow_record[
 
 func check_stmt_with_env(stmt statement, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) stmt_check_result {
     switch statement {
+        stmt.multi(value): {
+            rhs := infer_expr(value.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+            types := compile.internal.typesys.extract_tuple_args(rhs.type_name)
+            errors := rhs.errors
+            if len(types) != len(value.targets) { return stmt_check_result { errors: errors + add_error(source, diagnostics, "e3124", "parallel assignment arity mismatch", ":="), env: env } }
+            updated := clone_env(env)
+            i := 0
+            for i < len(value.targets) {
+                name := ""
+                switch value.targets[i] { expr.name(identifier): name = identifier.name, _: (), }
+                if name == "" { errors = errors + add_error(source, diagnostics, "e3125", "parallel assignment requires local names", "=") }
+                else if name != "_" {
+                    if value.declaration {
+                        if has_duplicate_binding(updated, name) { errors = errors + add_error(source, diagnostics, "e3064", "duplicate local binding in the same scope", name) }
+                        updated = append(updated, type_binding { name: name, type_name: types[i] })
+                    } else if !types_compatible(lookup_name_type(updated, name), types[i]) { errors = errors + add_error(source, diagnostics, "e3001", "parallel assignment type mismatch", name) }
+                }
+                i = i + 1
+            }
+            return stmt_check_result { errors: errors, env: updated }
+        }
         stmt.let(value) : {
             rhs := infer_expr(value.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors := rhs.errors
@@ -1555,6 +1576,7 @@ func check_stmt_with_env(stmt statement, type_binding[] env, borrow_record[] bor
 
 func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) int {
     return switch stmt {
+        stmt.multi(_) : check_stmt_with_env(stmt, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations).errors,
         stmt.let(_) : check_stmt_with_env(stmt, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations).errors,
         stmt.assign(value) : {
             target_type := lookup_name_type(env, value.name)
@@ -1737,6 +1759,19 @@ func canonical_infer_record(record_literal value, type_binding[] env, borrow_rec
 
 func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) check_result {
     return switch expr {
+        expr.tuple(value): {
+            type_name := "("
+            errors := 0
+            i := 0
+            for i < len(value.items) {
+                part := infer_expr(value.items[i], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+                errors = errors + part.errors
+                if i > 0 { type_name = type_name + "," }
+                type_name = type_name + part.type_name
+                i = i + 1
+            }
+            check_result { type_name: type_name + ")", errors: errors }
+        }
         expr.record(value): canonical_infer_record(value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations),
         expr.int(_) : ok_type("int"),
         expr.string(_) : ok_type("string"),
@@ -2097,7 +2132,11 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 pattern_result := check_pattern(arm.pattern, subject.type_name, source, diagnostics)
                 errors = errors + pattern_result.errors
                 arm_env := clone_env(env)
-                append_bindings(arm_env, pattern_result.bindings)
+                binding_index := 0
+                for binding_index < len(pattern_result.bindings) {
+                    arm_env = append(arm_env, pattern_result.bindings[binding_index])
+                    binding_index = binding_index + 1
+                }
                 arm_borrows := borrow_state_clone(arm_base_borrows)
                 arm_result := infer_expr(arm.expr, arm_env, arm_borrows, expected_return, functions, traits, source, diagnostics, declarations)
                 errors = errors + arm_result.errors
@@ -2220,9 +2259,26 @@ func is_borrow_expr(expr value) bool {
 func check_pattern(pattern pattern, string expected_type, string source, semantic_error[] diagnostics) pattern_check_result {
     bindings := type_binding[]()
     errors := bind_pattern(pattern, expected_type, bindings, source, diagnostics)
-    pattern_check_result {
-        bindings: bindings, errors errors,
+    if errors == 0 { bindings = pattern_bindings(pattern, expected_type) }
+    pattern_check_result { bindings: bindings, errors: errors }
+}
+
+func pattern_bindings(pattern value, string expected_type) type_binding[] {
+    bindings := type_binding[]()
+    switch value {
+        pattern.name(name): {
+            if name.name != "_" { bindings = append(bindings, type_binding { name: name.name, type_name: compile.internal.typesys.parse_type(expected_type) }) }
+        }
+        pattern.variant(variant): {
+            if len(variant.args) == 1 {
+                payload_type := first_type_arg(expected_type)
+                if last_path_segment(variant.path) == "err" { payload_type = second_type_arg(expected_type) }
+                bindings = pattern_bindings(variant.args[0], payload_type)
+            }
+        }
+        _: {},
     }
+    return bindings
 }
 
 func bind_pattern(pattern pattern, string expected_type, type_binding[] bindings, string source, semantic_error[] diagnostics) int {
@@ -3021,7 +3077,9 @@ func instantiate_type(string ty, string[] generic_names, type_binding[] generic_
         return clean
     }
     base := compile.internal.typesys.base_type_name(clean)
+    tuple := compile.internal.typesys.is_tuple_type(clean)
     built := base + "["
+    if tuple { built = "(" }
     i := 0
     for i < std.prelude.len(args) {
         if i > 0 {
@@ -3030,6 +3088,7 @@ func instantiate_type(string ty, string[] generic_names, type_binding[] generic_
         built = built + instantiate_type(args[i], generic_names, generic_bindings)
         i = i + 1
     }
+    if tuple { return built + ")" }
     built + "]"
 }
 
