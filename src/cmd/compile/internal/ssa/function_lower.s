@@ -22,19 +22,31 @@ func function_ssa_append_call(function_ssa_call[] calls, string caller, string c
 }
 
 func function_ssa_append_block(function_ssa_block[] blocks, mir_program_block source_block, function_ssa_value[] values) function_ssa_block[] {
+    return function_ssa_append_block_with_edges(blocks, source_block, values, int[]())
+}
+
+func function_ssa_append_block_with_edges(function_ssa_block[] blocks, mir_program_block source_block, function_ssa_value[] values, int[] predecessors) function_ssa_block[] {
     blocks.push(function_ssa_block {
-        id: source_block.id, label: "entry", values: values,
-        predecessors: int[]{}, successors: int[]{}, terminator: source_block.terminator,
+        id: source_block.id, label: "block", values: values,
+        predecessors: predecessors, successors: source_block.successors, terminator: source_block.terminator,
         terminator_values: source_block.return_values,
     })
     return blocks
 }
 
 func function_ssa_append_function(function_ssa_function[] functions, mir_program_function source_function, string[] parameter_types, function_ssa_block[] blocks) function_ssa_function[] {
+    exit := -1
+    count := 0
+    b := 0
+    for b < len(blocks) {
+        if blocks[b].terminator == "return" { exit = blocks[b].id; count = count + 1 }
+        b = b + 1
+    }
+    if count != 1 { exit = -1 }
     functions.push(function_ssa_function {
         symbol: source_function.symbol, parameter_types: parameter_types,
         result_types: source_function.result_types, blocks: blocks,
-        entry_block: source_function.blocks[0].id, exit_block: source_function.blocks[0].id,
+        entry_block: source_function.blocks[0].id, exit_block: exit,
     })
     return functions
 }
@@ -52,7 +64,7 @@ func function_mir_value_id_reserved(int[] reserved, int id) bool {
 // previously lowered module, so its saved call metadata is checked as well.
 func function_mir_input_error(mir_program program) string {
     if program.package_name == "" || program.entry_symbol == "" { return "invalid program identity" }
-    validated := lower_mir_program_with_enums(program.package_name, program.entry_symbol, program.functions, program.enums)
+    validated := lower_mir_program_with_records(program.package_name, program.entry_symbol, program.functions, program.enums, program.records)
     if validated.error != "" { return validated.error }
     if len(program.calls) != len(validated.program.calls) { return "MIR: call edge count" }
     i := 0
@@ -71,10 +83,10 @@ func function_mir_input_error(mir_program program) string {
         if len(input_function.result_types) > 1 { return "unsupported multi-result function: " + input_function.symbol }
         p := 0
         for p < len(input_function.params) {
-            if input_function.params[p].type_name != "int" && input_function.params[p].type_name != "()" && mir_program_enum_index(program.enums, input_function.params[p].type_name) < 0 { return "unsupported parameter type: " + input_function.symbol }
+            if !mir_program_type_supported(input_function.params[p].type_name, program.records, program.enums) { return "unsupported parameter type: " + input_function.symbol }
             p = p + 1
         }
-        if len(input_function.result_types) == 1 && input_function.result_types[0] != "int" && input_function.result_types[0] != "()" && mir_program_enum_index(program.enums, input_function.result_types[0]) < 0 {
+        if len(input_function.result_types) == 1 && !mir_program_type_supported(input_function.result_types[0], program.records, program.enums) {
             return "unsupported result type: " + input_function.symbol
         }
         i = i + 1
@@ -96,64 +108,86 @@ func lower_function_mir_to_ssa(mir_program program) function_ssa_result {
     f := 0
     for f < len(program.functions) {
         input_function := program.functions[f]
-        input_block := input_function.blocks[0]
-        output_values := []function_ssa_value{}
-        parameter_types := string[]{}
-        reserved := int[]{}
+        parameter_types := string[]()
+        reserved := int[]()
         p := 0
         for p < len(input_function.params) {
-            input_parameter := input_function.params[p]
-            input_parameter.type_name = mir_program_physical_type(input_parameter.type_name, program.enums)
-            parameter_types.push(input_parameter.type_name)
-            reserved.push(input_parameter.value_id)
-            output_values = function_ssa_append_value(output_values, input_parameter.value_id, "param", int[]{}, input_block.id, input_parameter.type_name, 0, p)
+            parameter_types = append(parameter_types, mir_program_physical_type(input_function.params[p].type_name, program.enums))
+            reserved = append(reserved, input_function.params[p].value_id)
             p = p + 1
         }
-        // Reserve every original result before allocating void-call values.
-        // Searching for a free gap also handles a sparse INT64_MAX value ID.
-        n := 0
-        for n < len(input_block.instructions) {
-            reservation_instruction := input_block.instructions[n]
-            r := 0
-            for r < len(reservation_instruction.result_ids) {
-                reserved.push(reservation_instruction.result_ids[r])
-                r = r + 1
+        b := 0
+        for b < len(input_function.blocks) {
+            n := 0
+            for n < len(input_function.blocks[b].instructions) {
+                instruction := input_function.blocks[b].instructions[n]
+                r := 0
+                for r < len(instruction.result_ids) { reserved = append(reserved, instruction.result_ids[r]); r = r + 1 }
+                n = n + 1
             }
-            n = n + 1
+            b = b + 1
         }
         next_void_id := 0
-        n = 0
-        for n < len(input_block.instructions) {
-            input_instruction := input_block.instructions[n]
-            value_id := 0
-            value_type := "void"
-            if len(input_instruction.result_ids) == 0 {
-                for function_mir_value_id_reserved(reserved, next_void_id) { next_void_id = next_void_id + 1 }
-                value_id = next_void_id
-                reserved.push(value_id)
-            } else {
-                value_id = input_instruction.result_ids[0]
-                value_type = input_instruction.result_types[0]
+        output_blocks := function_ssa_block[]()
+        b = 0
+        for b < len(input_function.blocks) {
+            input_block := input_function.blocks[b]
+            output_values := function_ssa_value[]()
+            if b == 0 {
+                p = 0
+                for p < len(input_function.params) {
+                    parameter := input_function.params[p]
+                    output_values = function_ssa_append_value(output_values, parameter.value_id, "param", int[](), input_block.id, parameter_types[p], 0, p)
+                    p = p + 1
+                }
             }
-            physical_op := input_instruction.op
-            if physical_op == "const_enum" { physical_op = "const_int" }
-            if physical_op == "enum_to_int" { physical_op = "copy" }
-            value_type = mir_program_physical_type(value_type, program.enums)
-            output_values = function_ssa_append_value(output_values, value_id, physical_op, input_instruction.operands, input_block.id, value_type, input_instruction.integer_value, -1)
-            if input_instruction.op == "call" {
-                output_calls = function_ssa_append_call(output_calls, input_function.symbol, input_instruction.symbol, input_block.id, value_id)
+            n := 0
+            for n < len(input_block.instructions) {
+                instruction := input_block.instructions[n]
+                value_id := 0
+                value_type := "void"
+                if len(instruction.result_ids) == 0 {
+                    for function_mir_value_id_reserved(reserved, next_void_id) { next_void_id = next_void_id + 1 }
+                    value_id = next_void_id
+                    reserved = append(reserved, value_id)
+                } else {
+                    value_id = instruction.result_ids[0]
+                    value_type = instruction.result_types[0]
+                }
+                op := instruction.op
+                if op == "const_enum" { op = "const_int" }
+                if op == "enum_to_int" { op = "copy" }
+                value_type = mir_program_physical_type(value_type, program.enums)
+                output_values = function_ssa_append_value(output_values, value_id, op, instruction.operands, input_block.id, value_type, instruction.integer_value, -1)
+                output_values[len(output_values) - 1].symbol = instruction.symbol
+                output_values[len(output_values) - 1].field_names = instruction.field_names
+                if op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set" { output_values[len(output_values) - 1].symbol = mir_program_physical_type(instruction.symbol, program.enums) }
+                if op == "call" { output_calls = function_ssa_append_call(output_calls, input_function.symbol, instruction.symbol, input_block.id, value_id) }
+                n = n + 1
             }
-            n = n + 1
+            predecessors := mir_program_predecessors(input_function, input_block.id)
+            output_blocks = function_ssa_append_block_with_edges(output_blocks, input_block, output_values, predecessors)
+            b = b + 1
         }
-        output_blocks := []function_ssa_block{}
-        output_blocks = function_ssa_append_block(output_blocks, input_block, output_values)
+        result_types := string[]()
         r := 0
-        for r < len(input_function.result_types) { input_function.result_types[r] = mir_program_physical_type(input_function.result_types[r], program.enums); r = r + 1 }
+        for r < len(input_function.result_types) { result_types = append(result_types, mir_program_physical_type(input_function.result_types[r], program.enums)); r = r + 1 }
+        input_function.result_types = result_types
         output_functions = function_ssa_append_function(output_functions, input_function, parameter_types, output_blocks)
         f = f + 1
     }
+    records := function_ssa_record[]()
+    r := 0
+    for r < len(program.records) {
+        source_record := program.records[r]
+        types := string[]()
+        f := 0
+        for f < len(source_record.field_types) { types = append(types, mir_program_physical_type(source_record.field_types[f], program.enums)); f = f + 1 }
+        records = append(records, function_ssa_record { symbol: source_record.symbol, field_names: source_record.field_names, field_types: types })
+        r = r + 1
+    }
     output_program := function_ssa_program {
-        package_name: program.package_name, entry_symbol: program.entry_symbol,
+        records: records, package_name: program.package_name, entry_symbol: program.entry_symbol,
         functions: output_functions, calls: output_calls,
     }
     result.error = verify_ssa_program(output_program)

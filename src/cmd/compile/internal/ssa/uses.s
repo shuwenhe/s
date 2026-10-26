@@ -9,7 +9,7 @@ func recompute_uses(ssa_func f) {
     for i < len(f.values) {
         if !f.values[i].removed {
             j := 0
-            for j < f.values[i]len(.args) {
+            for j < len(f.values[i].args) {
                 id := f.values[i].args[j]
                 if id >= 0 && id < len(f.values) {
                     f.values[id].uses = f.values[id].uses + 1
@@ -34,7 +34,7 @@ func rewrite_value_references(ssa_func f, int from_id, int to_id) int {
     i := 0
     for i < len(f.values) {
         j := 0
-        for j < f.values[i]len(.args) {
+        for j < len(f.values[i].args) {
             if f.values[i].args[j] == from_id {
                 f.values[i].args[j] = to_id
                 changed = changed + 1

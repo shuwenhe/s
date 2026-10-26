@@ -155,6 +155,13 @@ struct map_literal {
     option[string] type_text
     map_entry[] entries
 }
+struct record_literal {
+    string type_name
+    string[] field_names
+    expr[] field_values
+    option[string] inferred_type
+}
+
 enum expr {
     int(int_expr),
     string(string_expr),
@@ -172,6 +179,7 @@ enum expr {
     block(block_expr),
     array(array_literal),
     map(map_literal),
+    record(record_literal),
 }
 
 struct var_stmt {
@@ -183,6 +191,12 @@ struct var_stmt {
 struct assign_stmt {
     string name
     value expr
+}
+
+struct store_stmt {
+    expr target
+    string op
+    expr value
 }
 
 struct increment_stmt {
@@ -214,6 +228,7 @@ struct sroutine_stmt {
 enum stmt {
     let(var_stmt),
     assign(assign_stmt),
+    store(store_stmt),
     increment(increment_stmt),
     c_for(c_for_stmt),
     return(return_stmt),
@@ -223,6 +238,7 @@ enum stmt {
 }
 
 struct function_decl {
+    string extern_library
     sig function_sig
     option[block_expr] body
     bool is_public
@@ -507,6 +523,7 @@ func dump_stmt(stmt stmt, string indent) string[] {
         stmt.assign(value) : {
             single_line(indent + value.name + " = " + dump_expr(value.value))
         }
+        stmt.store(value): single_line(indent + dump_expr(value.target) + " " + value.op + " " + dump_expr(value.value)),
         stmt.increment(value) : {
             single_line(indent + value.name + "++")
         }
@@ -548,6 +565,7 @@ func dump_for_clause(stmt stmt) string {
             }
         }
         stmt.assign(value) : value.name + " = " + dump_expr(value.value),
+        stmt.store(value): dump_expr(value.target) + " " + value.op + " " + dump_expr(value.value),
         stmt.increment(value) : value.name + "++",
         stmt.expr(value) : dump_expr(value.expr),
         stmt.return(_) : "return",
@@ -581,6 +599,15 @@ func dump_expr(expr expr) string {
             _ei := 0
             for _ei < len(value.items) { elems = append(elems, dump_expr(value.items[_ei])); _ei = _ei + 1 }
             "[" + join_with(elems, ", ") + "]"
+        }
+        expr.record(value) : {
+            parts := string[]()
+            i := 0
+            for i < len(value.field_names) {
+                parts = append(parts, value.field_names[i] + ": " + dump_expr(value.field_values[i]))
+                i = i + 1
+            }
+            value.type_name + " { " + join_with(parts, ", ") + " }"
         }
         expr.map(value) : {
             parts := string[]()

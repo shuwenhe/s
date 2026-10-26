@@ -202,7 +202,7 @@ func register_types(abi_param_assignment[] assignments) string[] {
     rts := string[]()
     i := 0
     for i < len(assignments) {
-        if assignments[i]len(.registers) > 0 {
+        if len(assignments[i].registers) > 0 {
             rts = append_param_types(rts, assignments[i].type_name)
         }
         i = i + 1

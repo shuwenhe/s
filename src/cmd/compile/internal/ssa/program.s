@@ -1,6 +1,16 @@
 package compile.internal
 
+extern "intrinsic" func __host_slice(string text, int start, int end) string
+
+struct function_ssa_record {
+    string symbol
+    string[] field_names
+    string[] field_types
+}
+
 struct function_ssa_value {
+    string symbol
+    string[] field_names
     int id
     string op
     // Phi operands correspond to the owning block's predecessor order.
@@ -39,6 +49,7 @@ struct function_ssa_call {
 }
 
 struct function_ssa_program {
+    function_ssa_record[] records
     string package_name
     string entry_symbol
     function_ssa_function[] functions
@@ -214,6 +225,10 @@ func verify_ssa_function(function_ssa_function f) string {
         for v < len(block.values) {
             value := block.values[v]
             if value.id < 0 || value.op == "" || value.type_name == "" { return "invalid value: " + f.symbol }
+            if ssa_is_scalar_operation(value.op) {
+                scalar_error := ssa_scalar_value_error(f, value)
+                if scalar_error != "" { return scalar_error }
+            }
             if value.op == "const_unit" && (value.type_name != "()" || len(value.operands) != 0 || value.integer_value != 0) { return "invalid unit constant: " + f.symbol }
             if value.op == "const_int" && (value.type_name != "int" || len(value.operands) != 0) { return "invalid integer constant: " + f.symbol }
             if value.op == "copy" {
@@ -221,6 +236,7 @@ func verify_ssa_function(function_ssa_function f) string {
                 if ssa_value_type(f.blocks, value.operands[0]) != value.type_name { return "copy type: " + f.symbol }
             }
             if value.op == "param" {
+                if block.id != f.entry_block { return "parameter outside entry block" }
                 if value.parameter_index < 0 || value.parameter_index >= len(f.parameter_types) { return "parameter index: " + f.symbol }
                 if value.type_name != f.parameter_types[value.parameter_index] || len(value.operands) != 0 { return "parameter type: " + f.symbol }
             }
@@ -246,6 +262,8 @@ func verify_ssa_function(function_ssa_function f) string {
             if len(block.successors) != 1 || len(block.terminator_values) != 0 { return "invalid jump: " + f.symbol }
         } else if block.terminator == "branch" {
             if len(block.successors) != 2 || len(block.terminator_values) != 1 { return "invalid branch: " + f.symbol }
+        } else if block.terminator == "unreachable" {
+            if len(block.successors) != 0 || len(block.terminator_values) != 0 { return "invalid unreachable terminator: " + f.symbol }
         } else {
             return "unsupported terminator: " + f.symbol
         }
@@ -296,11 +314,30 @@ func verify_ssa_function(function_ssa_function f) string {
 func verify_ssa_program(function_ssa_program program) string {
     if program.package_name == "" || program.entry_symbol == "" { return "invalid program identity" }
     if ssa_function_index(program.functions, program.entry_symbol) < 0 { return "missing entry function" }
+    record_error := ssa_records_error(program.records)
+    if record_error != "" { return record_error }
     i := 0
     for i < len(program.functions) {
         if ssa_function_index(program.functions, program.functions[i].symbol) != i { return "duplicate function" }
         error := verify_ssa_function(program.functions[i])
         if error != "" { return error }
+        f := program.functions[i]
+        b := 0
+        for b < len(f.blocks) {
+            v := 0
+            for v < len(f.blocks[b].values) {
+                value := f.blocks[b].values[v]
+                if value.op == "record_new" || value.op == "record_get" || value.op == "record_set" {
+                    error = ssa_record_value_error(f, value, program.records)
+                    if error != "" { return error }
+                } else if value.op == "array_new" || value.op == "array_get" || value.op == "array_len" || value.op == "array_append" || value.op == "array_set" {
+                    error = ssa_array_value_error(f, value, program.records)
+                    if error != "" { return error }
+                } else if len(value.field_names) != 0 { return "unexpected record field metadata" }
+                v = v + 1
+            }
+            b = b + 1
+        }
         i = i + 1
     }
     i = 0
@@ -362,5 +399,141 @@ func verify_ssa_program(function_ssa_program program) string {
         }
         i = i + 1
     }
+    return ""
+}
+
+func ssa_record_value_error(function_ssa_function function_data, function_ssa_value value, function_ssa_record[] records) string {
+    record_index := ssa_record_index(records, value.symbol)
+    if record_index < 0 { return "SSA unknown record identity" }
+    record := records[record_index]
+    if value.op == "record_new" {
+        if value.type_name != record.symbol || value.integer_value != 0 { return "SSA record constructor result type" }
+        if len(value.field_names) != len(value.operands) { return "SSA record constructor field count" }
+        i := 0
+        for i < len(value.operands) {
+            field := ssa_record_field_index(record, value.field_names[i])
+            if field < 0 { return "SSA unknown record constructor field" }
+            j := 0
+            for j < i {
+                if value.field_names[j] == value.field_names[i] { return "SSA duplicate record constructor field" }
+                j = j + 1
+            }
+            if ssa_value_type(function_data.blocks, value.operands[i]) != record.field_types[field] { return "SSA record constructor field type" }
+            i = i + 1
+        }
+        return ""
+    }
+    field := value.integer_value
+    if len(value.field_names) != 0 || field < 0 || field >= len(record.field_types) { return "SSA record field index" }
+    if value.op == "record_set" {
+        if len(value.operands) != 2 || value.type_name != record.symbol { return "SSA record store result type or arity" }
+        if ssa_value_type(function_data.blocks, value.operands[1]) != record.field_types[field] { return "SSA record store field type" }
+    } else if len(value.operands) != 1 || value.type_name != record.field_types[field] { return "SSA record projection result type or arity" }
+    if ssa_value_type(function_data.blocks, value.operands[0]) != record.symbol { return "SSA record target type" }
+    return ""
+}
+
+func ssa_record_index(function_ssa_record[] records, string symbol) int {
+    i := 0
+    for i < len(records) {
+        if records[i].symbol == symbol { return i }
+        i = i + 1
+    }
+    return -1
+}
+
+func ssa_record_field_index(function_ssa_record record, string name) int {
+    i := 0
+    for i < len(record.field_names) {
+        if record.field_names[i] == name { return i }
+        i = i + 1
+    }
+    return -1
+}
+
+func ssa_records_error(function_ssa_record[] records) string {
+    i := 0
+    for i < len(records) {
+        record := records[i]
+        if record.symbol == "" || ssa_record_index(records, record.symbol) != i { return "SSA invalid or duplicate record identity" }
+        if len(record.field_names) != len(record.field_types) { return "SSA record field count" }
+        f := 0
+        for f < len(record.field_names) {
+            if record.field_names[f] == "" || ssa_record_field_index(record, record.field_names[f]) != f { return "SSA invalid or duplicate record field" }
+            field_type := record.field_types[f]
+            if !ssa_type_supported(field_type, records) { return "SSA unsupported record field type" }
+            f = f + 1
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+func ssa_array_element(string type_name) string {
+    if len(type_name) > 2 && __host_slice(type_name, 0, 2) == "[]" { return __host_slice(type_name, 2, len(type_name)) }
+    if len(type_name) > 2 && __host_slice(type_name, len(type_name) - 2, len(type_name)) == "[]" { return __host_slice(type_name, 0, len(type_name) - 2) }
+    return ""
+}
+
+func ssa_type_supported(string type_name, function_ssa_record[] records) bool {
+    if type_name == "int" || type_name == "()" || type_name == "bool" || ssa_record_index(records, type_name) >= 0 { return true }
+    element := ssa_array_element(type_name)
+    if element != "" { return ssa_type_supported(element, records) }
+    return false
+}
+
+func ssa_array_value_error(function_ssa_function function_data, function_ssa_value value, function_ssa_record[] records) string {
+    element := ssa_array_element(value.symbol)
+    if element == "" || !ssa_type_supported(element, records) { return "SSA unknown array element type" }
+    if len(value.field_names) != 0 || value.integer_value != 0 { return "SSA invalid array metadata" }
+    if value.op == "array_new" {
+        if value.type_name != value.symbol { return "SSA array constructor result type" }
+        i := 0
+        for i < len(value.operands) {
+            if ssa_value_type(function_data.blocks, value.operands[i]) != element { return "SSA array constructor element type" }
+            i = i + 1
+        }
+        return ""
+    }
+    if len(value.operands) < 1 || ssa_value_type(function_data.blocks, value.operands[0]) != value.symbol { return "SSA array target type" }
+    if value.op == "array_len" {
+        if len(value.operands) != 1 || value.type_name != "int" { return "SSA array length type or arity" }
+        return ""
+    }
+    if value.op == "array_set" {
+        if len(value.operands) != 3 || value.type_name != value.symbol { return "SSA array store result type or arity" }
+        if ssa_value_type(function_data.blocks, value.operands[1]) != "int" || ssa_value_type(function_data.blocks, value.operands[2]) != element { return "SSA array store index or element type" }
+        return ""
+    }
+    if len(value.operands) != 2 { return "SSA array operation arity" }
+    if value.op == "array_get" {
+        if ssa_value_type(function_data.blocks, value.operands[1]) != "int" || value.type_name != element { return "SSA array index or result type" }
+        return ""
+    }
+    if ssa_value_type(function_data.blocks, value.operands[1]) != element || value.type_name != value.symbol { return "SSA array append element or result type" }
+    return ""
+}
+
+func ssa_is_scalar_operation(string op) bool {
+    return op == "const_bool" || op == "bool_to_int" || op == "cmp_eq" || op == "cmp_ne" || op == "cmp_lt" || op == "cmp_le" || op == "cmp_gt" || op == "cmp_ge"
+}
+
+func ssa_scalar_value_error(function_ssa_function function_data, function_ssa_value value) string {
+    if value.op == "const_bool" {
+        if value.type_name != "bool" || len(value.operands) != 0 || (value.integer_value != 0 && value.integer_value != 1) { return "SSA invalid bool constant" }
+        return ""
+    }
+    if value.op == "bool_to_int" {
+        if value.type_name != "int" || len(value.operands) != 1 { return "SSA invalid bool conversion" }
+        if ssa_value_type(function_data.blocks, value.operands[0]) != "bool" { return "SSA bool conversion source type" }
+        return ""
+    }
+    if value.type_name != "bool" || len(value.operands) != 2 { return "SSA comparison result type or arity" }
+    left := ssa_value_type(function_data.blocks, value.operands[0])
+    right := ssa_value_type(function_data.blocks, value.operands[1])
+    if left != right { return "SSA comparison operand type mismatch" }
+    if value.op == "cmp_eq" || value.op == "cmp_ne" {
+        if left != "int" && left != "bool" { return "SSA comparison requires scalar operands" }
+    } else if left != "int" { return "SSA ordered comparison requires int operands" }
     return ""
 }

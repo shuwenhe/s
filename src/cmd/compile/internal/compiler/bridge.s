@@ -34,6 +34,12 @@ func canonical_mir_types(string[] values) string {
 
 func dump_canonical_mir_program(mir_program program) string {
     out := "mir-program-v1 package=" + program.package_name + " entry=" + program.entry_symbol + "\n"
+    r := 0
+    for r < len(program.records) {
+        record := program.records[r]
+        out = out + "record " + record.symbol + " fields=" + canonical_mir_types(record.field_names) + " types=" + canonical_mir_types(record.field_types) + "\n"
+        r = r + 1
+    }
     e := 0
     for e < len(program.enums) {
         enumeration := program.enums[e]
@@ -73,6 +79,7 @@ func dump_canonical_mir_program(mir_program program) string {
                 i = i + 1
             }
             out = out + "terminator " + block.terminator + " values=" + canonical_mir_ids(block.return_values) + "\n"
+            if len(block.successors) > 0 { out = out + "successors " + canonical_mir_ids(block.successors) + "\n" }
             b = b + 1
         }
         f = f + 1

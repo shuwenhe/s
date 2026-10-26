@@ -75,6 +75,11 @@ struct call_callee_resolution {
     int errors
 }
 
+struct stmt_check_result {
+    int errors
+    type_binding[] env
+}
+
 struct check_result {
     string type_name
     int errors
@@ -116,11 +121,15 @@ enum declaration_kind {
 }
 
 struct struct_binding {
+    compile.internal.ast.field[] fields
+    string[] generics
     string package_path
     string name
 }
 
 struct declaration_ref {
+    compile.internal.ast.field[] fields
+    string[] generics
     string package_path
     declaration_kind kind
     string path
@@ -371,6 +380,7 @@ func borrow_place_name(expr value) string {
             base := borrow_place_name(member_value.target.value)
             if base == "" { "" } else { base + "." + member_value.member }
         }
+        expr.index(value): borrow_place_name(value.target.value),
         _ : "",
     }
 }
@@ -460,7 +470,7 @@ func collect_structs(source_file file) struct_binding[] {
     for i < std.prelude.len(file.items) {
         pkg := item_package_at(file.item_packages, i, file.pkg)
         switch file.items[i] {
-            item.struct(struct_decl) : out = append(out, struct_binding { package_path: pkg, name: struct_decl.name }),
+            item.struct(struct_decl) : out = append(out, struct_binding { package_path: pkg, name: struct_decl.name, fields: struct_decl.fields, generics: struct_decl.generics }),
             _ : {},
         }
         i = i + 1
@@ -503,6 +513,8 @@ func establish_declaration_identities(function_binding[] functions, trait_bindin
             package_path: structs[i].package_path,
             kind: declaration_kind.struct_kind,
             path: structs[i].name,
+            fields: structs[i].fields,
+            generics: structs[i].generics,
         })
         i = i + 1
     }
@@ -991,6 +1003,7 @@ func make_receiver_method_binding(receiver_method_decl method_decl, string packa
 func check_item(item item, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics, declaration_ref[] declarations) int {
     switch item {
         item.function(function_decl) : check_function(function_decl, functions, traits, consts, import_roots, source, diagnostics, declarations),
+        item.struct(declaration): canonical_check_record_declaration(declaration, source, diagnostics),
         item.method(method_decl) : check_receiver_method(method_decl, functions, traits, consts, import_roots, source, diagnostics, declarations),
         _ : 0,
     }
@@ -1480,7 +1493,9 @@ func infer_block_expr(block_expr block, type_binding[] outer_env, borrow_record[
     returns := false
     i := 0
     for i < std.prelude.len(block.statements) {
-        errors = errors + check_stmt(block.statements[i], local_env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+        checked := check_stmt_with_env(block.statements[i], local_env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+        errors = errors + checked.errors
+        local_env = checked.env
         switch block.statements[i] { stmt.return(_) : returns = true, _ : (), }
         borrow_state_clear(borrow_state)
         i = i + 1
@@ -1503,8 +1518,8 @@ func infer_block_expr(block_expr block, type_binding[] outer_env, borrow_record[
     }
 }
 
-func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) int {
-    return switch stmt {
+func check_stmt_with_env(stmt statement, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) stmt_check_result {
+    switch statement {
         stmt.let(value) : {
             rhs := infer_expr(value.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors := rhs.errors
@@ -1525,15 +1540,22 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
             if has_duplicate_binding(env, value.name) {
                 errors = errors + add_error(source, diagnostics, "e3064", "duplicate local binding in the same scope", value.name)
             }
-            env.push(type_binding {
+            updated_env := append(env, type_binding {
                 name: value.name, type_name binding_type,
             })
             switch value.value {
                 expr.name(name_value) : errors = errors + check_move_value(name_value.name, rhs.type_name, borrow_state, source, diagnostics),
                 _ : (),
             }
-            errors
+            return stmt_check_result { errors: errors, env: updated_env }
         }
+        _ : { return stmt_check_result { errors: check_stmt(statement, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations), env: env } },
+    }
+}
+
+func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) int {
+    return switch stmt {
+        stmt.let(_) : check_stmt_with_env(stmt, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations).errors,
         stmt.assign(value) : {
             target_type := lookup_name_type(env, value.name)
             if borrow_state_has_conflict(borrow_state, value.name, true) {
@@ -1553,6 +1575,17 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
             }
             errors
         }
+        stmt.store(value): {
+            target := infer_expr(value.target, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+            rhs := infer_expr(value.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+            errors := target.errors + rhs.errors
+            root := borrow_place_name(value.target)
+            if root == "" { errors = errors + add_error(source, diagnostics, "e3124", "store requires a named place", "=") }
+            if borrow_state_has_conflict(borrow_state, root, true) { errors = errors + add_error(source, diagnostics, "e3056", "cannot assign to a borrowed place", root) }
+            if !types_compatible(target.type_name, rhs.type_name) { errors = errors + add_error(source, diagnostics, "e3003", "store type mismatch", "=") }
+            if value.op != "=" && (!types_compatible("int", target.type_name) || !types_compatible("int", rhs.type_name)) { errors = errors + add_error(source, diagnostics, "e3018", "compound store requires int", value.op) }
+            errors
+        }
         stmt.increment(value) : {
             ty := lookup_name_type(env, value.name)
             if borrow_state_has_conflict(borrow_state, value.name, true) {
@@ -1565,14 +1598,16 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
         }
         stmt.c_for(value) : {
             errors := 0
-            errors = errors + check_stmt(value.init.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
-            cond := infer_expr(value.condition, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+            initialized := check_stmt_with_env(value.init.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+            errors = errors + initialized.errors
+            loop_env := initialized.env
+            cond := infer_expr(value.condition, loop_env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors = errors + cond.errors
             if !types_compatible("bool", cond.type_name) {
                 errors = errors + add_error(source, diagnostics, "e3006", "for condition must be bool", "for")
             }
-            errors = errors + check_stmt(value.step.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
-            body_result := infer_block_expr(value.body, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+            errors = errors + check_stmt(value.step.value, loop_env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+            body_result := infer_block_expr(value.body, loop_env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors = errors + body_result.errors
             errors
         }
@@ -1615,8 +1650,94 @@ func check_stmt(stmt stmt, type_binding[] env, borrow_record[] borrow_state, str
     }
 }
 
+func canonical_array_element(string type_name) string {
+    clean := compile.internal.typesys.parse_type(type_name)
+    if len(clean) >= 2 && std.prelude.prelude_slice(clean, 0, 2) == "[]" { return std.prelude.prelude_slice(clean, 2, len(clean)) }
+    if len(clean) >= 2 && std.prelude.prelude_slice(clean, len(clean) - 2, len(clean)) == "[]" { return std.prelude.prelude_slice(clean, 0, len(clean) - 2) }
+    return ""
+}
+
+func canonical_check_record_declaration(struct_decl declaration, string source, semantic_error[] diagnostics) int {
+    errors := 0
+    i := 0
+    for i < len(declaration.fields) {
+        j := 0
+        for j < i {
+            if declaration.fields[j].name == declaration.fields[i].name { errors = errors + add_error(source, diagnostics, "e3110", "duplicate record field", declaration.fields[i].name) }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    return errors
+}
+
+func canonical_record_index(string type_name, declaration_ref[] declarations) int {
+    name := compile.internal.typesys.base_type_name(type_name)
+    found := -1
+    i := 0
+    for i < len(declarations) {
+        declaration := declarations[i]
+        if declaration.kind == declaration_kind.struct_kind {
+            if name == declaration.package_path + "." + declaration.path { return i }
+            if name == declaration.path {
+                if found >= 0 { return -1 }
+                found = i
+            }
+        }
+        i = i + 1
+    }
+    return found
+}
+
+func canonical_record_field_type(string type_name, string field_name, declaration_ref[] declarations) string {
+    index := canonical_record_index(type_name, declarations)
+    if index < 0 { return "" }
+    declaration := declarations[index]
+    bindings := type_binding[]()
+    arguments := compile.internal.typesys.extract_type_args(type_name)
+    if len(arguments) != len(declaration.generics) { return "" }
+    i := 0
+    for i < len(arguments) {
+        bindings = append(bindings, type_binding { name: declaration.generics[i], type_name: arguments[i] })
+        i = i + 1
+    }
+    i = 0
+    for i < len(declaration.fields) {
+        if declaration.fields[i].name == field_name { return instantiate_type(declaration.fields[i].type_name, declaration.generics, bindings) }
+        i = i + 1
+    }
+    return ""
+}
+
+func canonical_infer_record(record_literal value, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) check_result {
+    errors := 0
+    index := canonical_record_index(value.type_name, declarations)
+    if index < 0 { return check_result { type_name: "unknown", errors: add_error(source, diagnostics, "e3111", "unknown or ambiguous record type", value.type_name) } }
+    declaration := declarations[index]
+    arguments := compile.internal.typesys.extract_type_args(value.type_name)
+    if len(arguments) != len(declaration.generics) { errors = errors + add_error(source, diagnostics, "e3112", "record type argument count", value.type_name) }
+    if len(value.field_names) != len(value.field_values) { return check_result { type_name: "unknown", errors: errors + add_error(source, diagnostics, "e3113", "record initializer field count", value.type_name) } }
+    i := 0
+    for i < len(value.field_names) {
+        name := value.field_names[i]
+        j := 0
+        for j < i {
+            if value.field_names[j] == name { errors = errors + add_error(source, diagnostics, "e3114", "duplicate record initializer field", name) }
+            j = j + 1
+        }
+        expected := canonical_record_field_type(value.type_name, name, declarations)
+        actual := infer_expr(value.field_values[i], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+        errors = errors + actual.errors
+        if expected == "" { errors = errors + add_error(source, diagnostics, "e3115", "unknown record field", name) }
+        else if !types_compatible(expected, actual.type_name) { errors = errors + add_error(source, diagnostics, "e3116", "record field type mismatch", name) }
+        i = i + 1
+    }
+    return check_result { type_name: compile.internal.typesys.parse_type(value.type_name), errors: errors }
+}
+
 func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, string expected_return, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics, declaration_ref[] declarations) check_result {
     return switch expr {
+        expr.record(value): canonical_infer_record(value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations),
         expr.int(_) : ok_type("int"),
         expr.string(_) : ok_type("string"),
         expr.bool(_) : ok_type("bool"),
@@ -1693,7 +1814,8 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             constant_type := lookup_name_type(env, qualified_expr_path(expr))
             if !is_unknown(constant_type) { return ok_type(constant_type) }
             target := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
-            field_type := compile.internal.prelude.lookup_builtin_field_type(target.type_name, value.member)
+            field_type := canonical_record_field_type(target.type_name, value.member, declarations)
+            if field_type == "" { field_type = compile.internal.prelude.lookup_builtin_field_type(target.type_name, value.member) }
             if field_type == "" {
                 return check_result {
                     type_name: "unknown", errors target.errors + add_error(source, diagnostics, "e3011", "unknown member", value.member),
@@ -1707,6 +1829,11 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             target := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             index := infer_expr(value.index.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             errors := target.errors + index.errors
+            element := canonical_array_element(target.type_name)
+            if element != "" {
+                if !types_compatible("int", index.type_name) { errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[") }
+                return check_result { type_name: element, errors: errors }
+            }
             if semantic_starts_with(target.type_name, "[]") {
                 if !types_compatible("int", index.type_name) {
                     errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
@@ -1749,7 +1876,10 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 errors = errors + arg_result.errors
                 arg_types = append(arg_types, arg_result.type_name);
                 switch value.args[i] {
-                    expr.name(name_value) : errors = errors + check_move_value(name_value.name, arg_result.type_name, borrow_state, source, diagnostics),
+                    expr.name(name_value): {
+                        builtin := qualified_expr_path(value.callee.value)
+                        if builtin != "len" && !(builtin == "append" && i == 0) { errors = errors + check_move_value(name_value.name, arg_result.type_name, borrow_state, source, diagnostics) }
+                    }
                     _ : (),
                 }
                 i = i + 1
@@ -1858,9 +1988,25 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                     }
                 }
                 expr.name(callee_name) : {
+                    if callee_name.name == "len" {
+                        if len(arg_types) != 1 { return check_result { type_name: "unknown", errors: errors + add_error(source, diagnostics, "e3120", "len expects one array or string", "len") } }
+                        if arg_types[0] != "string" && canonical_array_element(arg_types[0]) == "" { errors = errors + add_error(source, diagnostics, "e3120", "len expects one array or string", "len") }
+                        return check_result { type_name: "int", errors: errors }
+                    }
+                    if callee_name.name == "append" {
+                        if len(arg_types) < 2 { return check_result { type_name: "unknown", errors: errors + add_error(source, diagnostics, "e3121", "append expects an array and values", "append") } }
+                        element := canonical_array_element(arg_types[0])
+                        if element == "" { errors = errors + add_error(source, diagnostics, "e3121", "append target must be an array", "append") }
+                        j := 1
+                        for j < len(arg_types) {
+                            if !types_compatible(element, arg_types[j]) { errors = errors + add_error(source, diagnostics, "e3122", "append element type mismatch", "append") }
+                            j = j + 1
+                        }
+                        return check_result { type_name: arg_types[0], errors: errors }
+                    }
                     if callee_name.name == "int" {
-                        if len(arg_types) == 1 && (arg_types[0] == "int" || canonical_is_enum_type(arg_types[0], declarations)) { return check_result { type_name: "int", errors: errors } }
-                        return check_result { type_name: "unknown", errors: errors + add_error(source, diagnostics, "e3101", "int conversion requires an integer or scalar enum", "int") }
+                        if len(arg_types) == 1 && (arg_types[0] == "int" || arg_types[0] == "bool" || canonical_is_enum_type(arg_types[0], declarations)) { return check_result { type_name: "int", errors: errors } }
+                        return check_result { type_name: "unknown", errors: errors + add_error(source, diagnostics, "e3101", "int conversion requires an integer, bool or scalar enum", "int") }
                     }
                     if callee_name.name == "copy" {
                         if std.prelude.len(value.args) != 1 {
@@ -2031,23 +2177,23 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             infer_block_expr(value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
         }
         expr.array(value) : {
-            if std.prelude.len(value.items) == 0 {
-                return ok_type("unknown[]")
+            element := "unknown"
+            type_name := "unknown[]"
+            if value.type_text.is_some() {
+                type_name = compile.internal.typesys.parse_type(value.type_text.unwrap())
+                element = canonical_array_element(type_name)
+                if element == "" { return check_result { type_name: "unknown", errors: add_error(source, diagnostics, "e3123", "array literal requires an array type", "[") } }
             }
-            first := infer_expr(value.items[0], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
-            errors := first.errors
-            i := 1
-            for i < std.prelude.len(value.items) {
+            errors := 0
+            i := 0
+            for i < len(value.items) {
                 item := infer_expr(value.items[i], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
                 errors = errors + item.errors
-                if !types_compatible(first.type_name, item.type_name) {
-                    errors = errors + add_error(source, diagnostics, "e3017", "array item type mismatch", "[")
-                }
+                if is_unknown(element) { element = item.type_name; type_name = element + "[]" }
+                else if !types_compatible(element, item.type_name) { errors = errors + add_error(source, diagnostics, "e3017", "array item type mismatch", "[") }
                 i = i + 1
             }
-            check_result {
-                type_name: "[]" + first.type_name, errors errors,
-            }
+            check_result { type_name: type_name, errors: errors }
         }
         expr.map(value) : {
             errors := 0

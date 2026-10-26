@@ -58,5 +58,7 @@ func mir_program_enum_instruction_error(mir_program_function function_data, mir_
 
 func mir_program_physical_type(string type_name, mir_program_enum[] enums) string {
     if mir_program_enum_index(enums, type_name) >= 0 { return "int" }
+    element := mir_program_array_element(type_name)
+    if element != "" { return mir_program_physical_type(element, enums) + "[]" }
     return type_name
 }

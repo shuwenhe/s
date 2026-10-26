@@ -10,7 +10,22 @@ import (
 
 // This: adapter consumes canonical AST: objects. It never evaluates source main,
 // serializes an expression back to source, or synthesizes a constant result.
+struct program_store_step {
+    string kind
+    int container
+    int selector
+    string type_name
+    string value_type
+}
+
 struct program_lower_state {
+    string store_root
+    program_store_step[] store_steps
+    mir_program_block[] blocks
+    int block_id
+    int created_block
+    bool terminated
+    mir_program_record[] records
     mir_program_enum[] enums
     mir_program_function signature
     mir_program_instruction[] instructions
@@ -79,6 +94,20 @@ func program_expression_type(program_lower_state state, mir_program_function sig
         }
         i = i + 1
     }
+    b := 0
+    for b < len(state.blocks) {
+        n := 0
+        for n < len(state.blocks[b].instructions) {
+            instruction := state.blocks[b].instructions[n]
+            r := 0
+            for r < len(instruction.result_ids) {
+                if instruction.result_ids[r] == id { return instruction.result_types[r] }
+                r = r + 1
+            }
+            n = n + 1
+        }
+        b = b + 1
+    }
     return ""
 }
 
@@ -146,6 +175,12 @@ func program_binary_opcode(string op) string {
     if op == "*" { return "mul" }
     if op == "/" { return "div" }
     if op == "%" { return "mod" }
+    if op == "==" { return "cmp_eq" }
+    if op == "!=" { return "cmp_ne" }
+    if op == "<" { return "cmp_lt" }
+    if op == "<=" { return "cmp_le" }
+    if op == ">" { return "cmp_gt" }
+    if op == ">=" { return "cmp_ge" }
     return ""
 }
 
@@ -154,7 +189,87 @@ func program_lower_expression(expr expression, string package_name, mir_program_
     if state.error != "" { return state }
     switch expression {
         expr.int(literal) : { return program_emit_integer(state, literal.value) }
-        expr.member(member): { return program_enum_constant(state, package_name, program_callee_path(expression)) }
+        expr.bool(literal): {
+            id := state.next_value
+            state.next_value = id + 1
+            value := 0
+            if literal.value { value = 1 }
+            state.instructions = append(state.instructions, mir_program_instruction { op: "const_bool", result_ids: [id], result_types: ["bool"], operands: int[](), integer_value: value })
+            state.expression_value = id
+            return state
+        }
+        expr.if(value): { return program_lower_if(value, package_name, signatures, state) }
+        expr.block(value): { return program_lower_block(value, package_name, signatures, state) }
+        expr.while(value): { return program_lower_loop(option.some(value.condition.value), value.body, package_name, signatures, state) }
+        expr.for(value): {
+            if value.init.is_some() || value.post.is_some() || value.iterable.is_some() || len(value.names) != 0 { state.error = "for form requires explicit lowering"; return state }
+            condition := option[expr].none
+            if value.condition.is_some() { condition = option.some(value.condition.unwrap().value) }
+            return program_lower_loop(condition, value.body, package_name, signatures, state)
+        }
+        expr.array(value): {
+            array_type := ""
+            if value.type_text.is_some() { array_type = program_record_type(value.type_text.unwrap(), package_name, state.records, state.enums) }
+            operands := int[]()
+            i := 0
+            for i < len(value.items) {
+                state = program_lower_expression(value.items[i], package_name, signatures, state)
+                if state.error != "" { return state }
+                operands = append(operands, state.expression_value)
+                if array_type == "" { array_type = program_expression_type(state, state.signature, state.expression_value) + "[]" }
+                i = i + 1
+            }
+            if mir_program_array_element(array_type) == "" { state.error = "empty array literal requires an explicit element type"; return state }
+            return program_emit_array(state, "array_new", array_type, array_type, operands)
+        }
+        expr.index(value): {
+            state = program_lower_expression(value.target.value, package_name, signatures, state)
+            if state.error != "" { return state }
+            target := state.expression_value
+            array_type := program_expression_type(state, state.signature, target)
+            element := mir_program_array_element(array_type)
+            if element == "" { state.error = "index requires an array"; return state }
+            state = program_lower_expression(value.index.value, package_name, signatures, state)
+            if state.error != "" { return state }
+            index := state.expression_value
+            return program_emit_array(state, "array_get", array_type, element, [target, index])
+        }
+        expr.record(value): {
+            symbol := program_record_type(value.type_name, package_name, state.records, state.enums)
+            if mir_program_record_index(state.records, symbol) < 0 { state.error = "unknown record type: " + symbol; return state }
+            operands := int[]()
+            i := 0
+            for i < len(value.field_values) {
+                state = program_lower_expression(value.field_values[i], package_name, signatures, state)
+                if state.error != "" { return state }
+                operands = append(operands, state.expression_value)
+                i = i + 1
+            }
+            id := state.next_value
+            state.next_value = id + 1
+            state.instructions = append(state.instructions, mir_program_instruction { op: "record_new", result_ids: [id], result_types: [symbol], operands: operands, symbol: symbol, integer_value: 0, field_names: value.field_names })
+            state.expression_value = id
+            return state
+        }
+        expr.member(member): {
+            root := program_root_name(member.target.value)
+            if root != "" && program_binding_index(state, root) < 0 { return program_enum_constant(state, package_name, program_callee_path(expression)) }
+            state = program_lower_expression(member.target.value, package_name, signatures, state)
+            if state.error != "" { return state }
+            target := state.expression_value
+            target_type := program_expression_type(state, state.signature, target)
+            record_index := mir_program_record_index(state.records, target_type)
+            if record_index < 0 { state.error = "member target is not a record: " + target_type; return state }
+            record := state.records[record_index]
+            field := mir_program_record_field_index(record, member.member)
+            if field < 0 { state.error = "unknown record field: " + member.member; return state }
+            id := state.next_value
+            state.next_value = id + 1
+            field_type := record.field_types[field]
+            state.instructions = append(state.instructions, mir_program_instruction { op: "record_get", result_ids: [id], result_types: [field_type], operands: [target], symbol: target_type, integer_value: field })
+            state.expression_value = id
+            return state
+        }
         expr.name(name) : {
             if name.name == "unit" {
                 id := state.next_value
@@ -169,6 +284,7 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             return state
         }
         expr.binary(binary) : {
+            if binary.op == "&&" || binary.op == "||" { return program_lower_short_circuit(binary, package_name, signatures, state) }
             op := program_binary_opcode(binary.op)
             if op == "" { state.error = "unsupported binary operation: " + binary.op; return state }
             state = program_lower_expression(binary.left.value, package_name, signatures, state)
@@ -179,8 +295,10 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             right := state.expression_value
             id := state.next_value
             state.next_value = id + 1
+            result_type := "int"
+            if op == "cmp_eq" || op == "cmp_ne" || op == "cmp_lt" || op == "cmp_le" || op == "cmp_gt" || op == "cmp_ge" { result_type = "bool" }
             state.instructions = append(state.instructions, mir_program_instruction {
-                op: op, result_ids: int[]{id}, result_types: string[]{"int"},
+                op: op, result_ids: int[]{id}, result_types: string[]{result_type},
                 operands: int[]{left, right}, integer_value: 0, symbol: "",
             })
             state.expression_value = id
@@ -190,6 +308,25 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             if len(call.type_args) != 0 { state.error = "generic call requires monomorphization"; return state }
             path := program_callee_path(call.callee.value)
             if path == "" { state.error = "call requires a resolved direct callee"; return state }
+            if path == "len" || path == "append" {
+                if len(call.args) < 1 || (path == "len" && len(call.args) != 1) || (path == "append" && len(call.args) < 2) { state.error = "array builtin argument count: " + path; return state }
+                state = program_lower_expression(call.args[0], package_name, signatures, state)
+                if state.error != "" { return state }
+                target := state.expression_value
+                array_type := program_expression_type(state, state.signature, target)
+                if mir_program_array_element(array_type) == "" { state.error = "builtin requires an array: " + path; return state }
+                if path == "len" { return program_emit_array(state, "array_len", array_type, "int", [target]) }
+                i := 1
+                for i < len(call.args) {
+                    state = program_lower_expression(call.args[i], package_name, signatures, state)
+                    if state.error != "" { return state }
+                    element := state.expression_value
+                    state = program_emit_array(state, "array_append", array_type, array_type, [target, element])
+                    target = state.expression_value
+                    i = i + 1
+                }
+                return state
+            }
             if path == "int" {
                 if len(call.args) != 1 { state.error = "int conversion expects one argument"; return state }
                 state = program_lower_expression(call.args[0], package_name, signatures, state)
@@ -197,6 +334,13 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                 source_id := state.expression_value
                 source_type := program_expression_type(state, state.signature, source_id)
                 if source_type == "int" { return state }
+                if source_type == "bool" {
+                    id := state.next_value
+                    state.next_value = id + 1
+                    state.instructions = append(state.instructions, mir_program_instruction { op: "bool_to_int", result_ids: [id], result_types: ["int"], operands: [source_id] })
+                    state.expression_value = id
+                    return state
+                }
                 if mir_program_enum_index(state.enums, source_type) < 0 { state.error = "int conversion requires a scalar enum"; return state }
                 id := state.next_value
                 state.next_value = id + 1
@@ -248,7 +392,7 @@ func program_lower_expression(expr expression, string package_name, mir_program_
     }
 }
 
-func program_lower_function_with_enums(string package_name, function_decl declaration, mir_program_function signature, mir_program_function[] signatures, mir_program_enum[] enums) program_function_lower_result {
+func program_lower_function_with_records(string package_name, function_decl declaration, mir_program_function signature, mir_program_function[] signatures, mir_program_enum[] enums, mir_program_record[] records) program_function_lower_result {
     output := program_function_lower_result { function_value: signature, error: "" }
     if len(declaration.sig.generics) != 0 { output.error = "generic function requires monomorphization: " + signature.symbol; return output }
     if declaration.sig.return_type.is_some() {
@@ -260,7 +404,7 @@ func program_lower_function_with_enums(string package_name, function_decl declar
     }
     if declaration.body.is_none() { return output }
     state := program_lower_state {
-        instructions: mir_program_instruction[](), binding_names: string[](), binding_values: int[](), enums: enums, signature: signature,
+        instructions: mir_program_instruction[](), binding_names: string[](), binding_values: int[](), enums: enums, records: records, signature: signature,
         next_value: len(signature.params), expression_value: -1, error: "",
     }
     i := 0
@@ -269,70 +413,20 @@ func program_lower_function_with_enums(string package_name, function_decl declar
         state.binding_values = append(state.binding_values, signature.params[i].value_id)
         i = i + 1
     }
-    body := declaration.body.unwrap()
-    returned := false
-    returns := int[]()
-    i = 0
-    for i < len(body.statements) {
-        if returned { output.error = "statement after return: " + signature.symbol; return output }
-        switch body.statements[i] {
-            stmt.let(binding) : {
-                if program_binding_index(state, binding.name) >= 0 { output.error = "duplicate binding: " + binding.name; return output }
-                state = program_lower_expression(binding.value, package_name, signatures, state)
-                if state.error == "" && state.expression_value < 0 { state.error = "cannot bind a void call" }
-                if state.error == "" && binding.type_name.is_some() {
-                    if binding.type_name.unwrap() != program_expression_type(state, signature, state.expression_value) {
-                        state.error = "local type mismatch: " + binding.name
-                    }
-                }
-                state.binding_names = append(state.binding_names, binding.name)
-                state.binding_values = append(state.binding_values, state.expression_value)
-            }
-            stmt.expr(value) : { state = program_lower_expression(value.expr, package_name, signatures, state) }
-            stmt.return(value) : {
-                if value.value.is_some() {
-                    if len(signature.result_types) == 0 { output.error = "unexpected return value: " + signature.symbol; return output }
-                    state = program_lower_expression(value.value.unwrap(), package_name, signatures, state)
-                    if state.error == "" && state.expression_value < 0 { state.error = "return expression has no value: " + signature.symbol }
-                    returns = append(returns, state.expression_value)
-                }
-                returned = true
-            }
-            stmt.expr(statement): {
-                state = program_lower_expression(statement.expr, package_name, signatures, state)
-            }
-            stmt.assign(statement): {
-                index := program_binding_index(state, statement.name)
-                if index < 0 { output.error = "assignment to undefined binding"; return output }
-                previous_type := program_expression_type(state, signature, state.binding_values[index])
-                state = program_lower_expression(statement.value, package_name, signatures, state)
-                if program_expression_type(state, signature, state.expression_value) != previous_type { output.error = "assignment type mismatch"; return output }
-                state.binding_values[index] = state.expression_value
-            }
-            _ : { output.error = "unsupported P1: statement in: " + signature.symbol; return output },
+    state.blocks = append(state.blocks, mir_program_block { id: 0, instructions: mir_program_instruction[](), terminator: "unreachable", return_values: int[](), successors: int[]() })
+    state.block_id = 0
+    state = program_lower_block(declaration.body.unwrap(), package_name, signatures, state)
+    if state.error != "" { output.error = state.error; return output }
+    if !state.terminated {
+        returns := int[]()
+        if len(signature.result_types) == 1 {
+            if state.expression_value < 0 && signature.result_types[0] == "()" { state = program_emit_unit(state) }
+            if state.expression_value < 0 { output.error = "missing return value: " + signature.symbol; return output }
+            returns = append(returns, state.expression_value)
         }
-        if state.error != "" { output.error = state.error; return output }
-        i = i + 1
+        state = program_finish_block(state, "return", returns, int[]())
     }
-    if returned && body.final_expr.is_some() {
-        output.error = "expression after return: " + signature.symbol
-        return output
-    }
-    if !returned && body.final_expr.is_some() {
-        state = program_lower_expression(body.final_expr.unwrap(), package_name, signatures, state)
-        if state.error != "" { output.error = state.error; return output }
-        if state.expression_value >= 0 { returns = append(returns, state.expression_value) }
-    }
-    if len(signature.result_types) == 1 && signature.result_types[0] == "()" && len(returns) == 0 {
-        state = program_lower_expression(expr.name(name_expr { name: "unit", inferred_type: option.none }), package_name, signatures, state)
-        returns = append(returns, state.expression_value)
-    }
-    blocks := mir_program_block[]()
-    block := mir_program_block{
-        id: 0, instructions: state.instructions, terminator: "return", return_values: returns,
-    }
-    blocks = append(blocks, block)
-    output.function_value.blocks = blocks
+    output.function_value.blocks = state.blocks
     return output
 }
 
@@ -346,14 +440,26 @@ func lower_source_program(source_file src) mir_program_result {
     enumeration_result := program_collect_enums(src)
     if enumeration_result.error != "" { result.error = enumeration_result.error; return result }
     enums := enumeration_result.enums
+    records := program_collect_records(src, enums)
+    record_error := mir_program_records_error(records, enums)
+    if record_error != "" { result.error = record_error; return result }
+    r := 0
+    for r < len(src.items) {
+        switch src.items[r] {
+            item.struct(declaration): { if len(declaration.generics) != 0 { result.error = "generic record requires monomorphization: " + declaration.name; return result } }
+            _ : (),
+        }
+        r = r + 1
+    }
     signatures := mir_program_function[]()
     i := 0
     for i < len(src.items) {
         switch src.items[i] {
             item.function(declaration) : {
-                signatures = append(signatures, program_signature_with_enums(program_item_package(src, i), declaration, enums))
+                signatures = append(signatures, program_signature_with_records(program_item_package(src, i), declaration, enums, records))
             }
             item.enum(_): (),
+            item.struct(_): (),
             _ : { result.error = "requires explicit lowering for this declaration"; return result },
         }
         i = i + 1
@@ -363,7 +469,7 @@ func lower_source_program(source_file src) mir_program_result {
     for i < len(src.items) {
         switch src.items[i] {
             item.function(declaration) : {
-                lowered := program_lower_function_with_enums(program_item_package(src, i), declaration, signatures[len(functions)], signatures, enums)
+                lowered := program_lower_function_with_records(program_item_package(src, i), declaration, signatures[len(functions)], signatures, enums, records)
                 if lowered.error != "" { result.error = lowered.error; return result }
                 functions = append(functions, lowered.function_value)
             }
@@ -371,7 +477,7 @@ func lower_source_program(source_file src) mir_program_result {
         }
         i = i + 1
     }
-    return lower_mir_program_with_enums(src.pkg, src.pkg + ".main", functions, enums)
+    return lower_mir_program_with_records(src.pkg, src.pkg + ".main", functions, enums, records)
 }
 
 func program_signature(string package_name, function_decl declaration) mir_program_function {
@@ -380,4 +486,396 @@ func program_signature(string package_name, function_decl declaration) mir_progr
 
 func program_lower_function(string package_name, function_decl declaration, mir_program_function signature, mir_program_function[] signatures) program_function_lower_result {
     return program_lower_function_with_enums(package_name, declaration, signature, signatures, mir_program_enum[]())
+}
+
+func program_root_name(expr value) string {
+    switch value {
+        expr.name(name): { return name.name }
+        expr.member(member): { return program_root_name(member.target.value) }
+        _ : { return "" },
+    }
+}
+
+func program_record_type(string type_name, string package_name, mir_program_record[] records, mir_program_enum[] enums) string {
+    element := mir_program_array_element(type_name)
+    if element != "" { return program_record_type(element, package_name, records, enums) + "[]" }
+    if mir_program_record_index(records, package_name + "." + type_name) >= 0 { return package_name + "." + type_name }
+    return program_enum_type(type_name, package_name, enums)
+}
+
+func program_collect_records(source_file source, mir_program_enum[] enums) mir_program_record[] {
+    records := mir_program_record[]()
+    i := 0
+    for i < len(source.items) {
+        switch source.items[i] {
+            item.struct(declaration): {
+                names := string[]()
+                types := string[]()
+                f := 0
+                for f < len(declaration.fields) {
+                    names = append(names, declaration.fields[f].name)
+                    types = append(types, declaration.fields[f].type_name)
+                    f = f + 1
+                }
+                records = append(records, mir_program_record { symbol: program_item_package(source, i) + "." + declaration.name, field_names: names, field_types: types })
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    i = 0
+    for i < len(records) {
+        package_name := ""
+        j := 0
+        for j < len(source.items) {
+            switch source.items[j] { item.struct(declaration): { if program_item_package(source, j) + "." + declaration.name == records[i].symbol { package_name = program_item_package(source, j) } }, _ : (), }
+            j = j + 1
+        }
+        f := 0
+        for f < len(records[i].field_types) {
+            records[i].field_types[f] = program_record_type(records[i].field_types[f], package_name, records, enums)
+            f = f + 1
+        }
+        i = i + 1
+    }
+    return records
+}
+
+func program_signature_with_records(string package_name, function_decl declaration, mir_program_enum[] enums, mir_program_record[] records) mir_program_function {
+    signature := program_signature_with_enums(package_name, declaration, enums)
+    i := 0
+    for i < len(signature.params) {
+        signature.params[i].type_name = program_record_type(signature.params[i].type_name, package_name, records, enums)
+        i = i + 1
+    }
+    i = 0
+    for i < len(signature.result_types) {
+        signature.result_types[i] = program_record_type(signature.result_types[i], package_name, records, enums)
+        i = i + 1
+    }
+    return signature
+}
+
+func program_lower_function_with_enums(string package_name, function_decl declaration, mir_program_function signature, mir_program_function[] signatures, mir_program_enum[] enums) program_function_lower_result {
+    return program_lower_function_with_records(package_name, declaration, signature, signatures, enums, mir_program_record[]())
+}
+
+func program_emit_array(program_lower_state initial, string op, string array_type, string result_type, int[] operands) program_lower_state {
+    state := initial
+    id := state.next_value
+    state.next_value = id + 1
+    state.instructions = append(state.instructions, mir_program_instruction { op: op, result_ids: [id], result_types: [result_type], operands: operands, symbol: array_type, integer_value: 0 })
+    state.expression_value = id
+    return state
+}
+
+func program_copy_values(int[] values) int[] {
+    output := int[]()
+    i := 0
+    for i < len(values) { output = append(output, values[i]); i = i + 1 }
+    return output
+}
+
+func program_new_block(program_lower_state initial) program_lower_state {
+    state := initial
+    id := len(state.blocks)
+    state.blocks = append(state.blocks, mir_program_block { id: id, instructions: mir_program_instruction[](), terminator: "unreachable", return_values: int[](), successors: int[]() })
+    state.created_block = id
+    return state
+}
+
+func program_open_block(program_lower_state initial, int id) program_lower_state {
+    state := initial
+    state.block_id = id
+    state.instructions = mir_program_instruction[]()
+    state.terminated = false
+    state.expression_value = -1
+    return state
+}
+
+func program_finish_block(program_lower_state initial, string terminator, int[] values, int[] successors) program_lower_state {
+    state := initial
+    state.blocks[state.block_id] = mir_program_block { id: state.block_id, instructions: state.instructions, terminator: terminator, return_values: values, successors: successors }
+    state.terminated = true
+    return state
+}
+
+func program_emit_unit(program_lower_state state) program_lower_state {
+    return program_lower_expression(expr.name(name_expr { name: "unit", inferred_type: option.none }), "", mir_program_function[](), state)
+}
+
+func program_emit_phi(program_lower_state initial, int first, int second, int first_block, int second_block) program_lower_state {
+    state := initial
+    if first == second { state.expression_value = first; return state }
+    type_name := program_expression_type(state, state.signature, first)
+    if type_name == "" || type_name != program_expression_type(state, state.signature, second) { state.error = "phi input type mismatch"; return state }
+    operands := int[]{first, second}
+    if first_block > second_block { operands = [second, first] }
+    id := state.next_value
+    state.next_value = id + 1
+    state.instructions = append(state.instructions, mir_program_instruction { op: "phi", result_ids: [id], result_types: [type_name], operands: operands })
+    state.expression_value = id
+    return state
+}
+
+func program_lower_block(block_expr body, string package_name, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
+    state := initial
+    i := 0
+    for i < len(body.statements) {
+        if state.terminated { state.error = "statement after terminating control flow"; return state }
+        switch body.statements[i] {
+            stmt.let(binding): {
+                if program_binding_index(state, binding.name) >= 0 { state.error = "duplicate binding: " + binding.name; return state }
+                state = program_lower_expression(binding.value, package_name, signatures, state)
+                if state.error != "" { return state }
+                if state.expression_value < 0 { state.error = "cannot bind a void expression"; return state }
+                if binding.type_name.is_some() && program_record_type(binding.type_name.unwrap(), package_name, state.records, state.enums) != program_expression_type(state, state.signature, state.expression_value) { state.error = "local type mismatch: " + binding.name; return state }
+                state.binding_names = append(state.binding_names, binding.name)
+                state.binding_values = append(state.binding_values, state.expression_value)
+            }
+            stmt.assign(binding): {
+                index := program_binding_index(state, binding.name)
+                if index < 0 { state.error = "assignment to undefined binding"; return state }
+                previous_type := program_expression_type(state, state.signature, state.binding_values[index])
+                state = program_lower_expression(binding.value, package_name, signatures, state)
+                if state.error != "" { return state }
+                if previous_type != program_expression_type(state, state.signature, state.expression_value) { state.error = "assignment type mismatch"; return state }
+                state.binding_values[index] = state.expression_value
+            }
+            stmt.store(value): { state = program_lower_store(value, package_name, signatures, state) }
+            stmt.expr(value): { state = program_lower_expression(value.expr, package_name, signatures, state) }
+            stmt.return(value): {
+                returns := int[]()
+                if value.value.is_some() {
+                    state = program_lower_expression(value.value.unwrap(), package_name, signatures, state)
+                    if state.error != "" { return state }
+                    if state.expression_value < 0 { state.error = "return expression has no value"; return state }
+                    returns = append(returns, state.expression_value)
+                } else if len(state.signature.result_types) == 1 && state.signature.result_types[0] == "()" {
+                    state = program_emit_unit(state)
+                    returns = append(returns, state.expression_value)
+                }
+                state = program_finish_block(state, "return", returns, int[]())
+            }
+            _ : { state.error = "statement requires explicit CFG lowering"; return state },
+        }
+        if state.error != "" { return state }
+        i = i + 1
+    }
+    if body.final_expr.is_some() {
+        if state.terminated { state.error = "expression after terminating control flow"; return state }
+        state = program_lower_expression(body.final_expr.unwrap(), package_name, signatures, state)
+    } else { state.expression_value = -1 }
+    return state
+}
+
+func program_lower_if(if_expr branch, string package_name, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
+    state := program_lower_expression(branch.condition.value, package_name, signatures, initial)
+    if state.error != "" { return state }
+    condition := state.expression_value
+    names := state.binding_names
+    base := program_copy_values(state.binding_values)
+    state = program_new_block(state)
+    then_block := state.created_block
+    state = program_new_block(state)
+    else_block := state.created_block
+    state = program_new_block(state)
+    merge_block := state.created_block
+    state = program_finish_block(state, "branch", [condition], [then_block, else_block])
+    state = program_open_block(state, then_block)
+    state.binding_values = program_copy_values(base)
+    state = program_lower_block(branch.then_branch, package_name, signatures, state)
+    if state.error != "" { return state }
+    then_live := !state.terminated
+    if then_live && state.expression_value < 0 { state = program_emit_unit(state) }
+    then_result := state.expression_value
+    then_values := program_copy_values(state.binding_values)
+    then_end := state.block_id
+    if then_live { state = program_finish_block(state, "jump", int[](), [merge_block]) }
+    state = program_open_block(state, else_block)
+    state.binding_names = names
+    state.binding_values = program_copy_values(base)
+    if branch.else_branch.is_some() { state = program_lower_expression(branch.else_branch.unwrap().value, package_name, signatures, state) }
+    if state.error != "" { return state }
+    else_live := !state.terminated
+    if else_live && state.expression_value < 0 { state = program_emit_unit(state) }
+    else_result := state.expression_value
+    else_values := program_copy_values(state.binding_values)
+    else_end := state.block_id
+    if else_live { state = program_finish_block(state, "jump", int[](), [merge_block]) }
+    state = program_open_block(state, merge_block)
+    state.binding_names = names
+    state.binding_values = program_copy_values(base)
+    if !then_live && !else_live { state.terminated = true; return state }
+    i := 0
+    for i < len(base) {
+        if then_live && else_live { state = program_emit_phi(state, then_values[i], else_values[i], then_end, else_end) }
+        else if then_live { state.expression_value = then_values[i] }
+        else { state.expression_value = else_values[i] }
+        if state.error != "" { return state }
+        state.binding_values[i] = state.expression_value
+        i = i + 1
+    }
+    if then_live && else_live { state = program_emit_phi(state, then_result, else_result, then_end, else_end) }
+    else if then_live { state.expression_value = then_result }
+    else { state.expression_value = else_result }
+    return state
+}
+
+func program_lower_loop(option[expr] condition, block_expr body, string package_name, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
+    state := initial
+    names := state.binding_names
+    base := program_copy_values(state.binding_values)
+    state = program_new_block(state)
+    header := state.created_block
+    state = program_new_block(state)
+    body_block := state.created_block
+    state = program_new_block(state)
+    exit := state.created_block
+    state = program_finish_block(state, "jump", int[](), [header])
+    state = program_open_block(state, header)
+    phi_values := int[]()
+    i := 0
+    for i < len(base) {
+        type_name := program_expression_type(state, state.signature, base[i])
+        id := state.next_value
+        state.next_value = id + 1
+        incoming := base[i]
+        state.instructions = append(state.instructions, mir_program_instruction { op: "phi", result_ids: [id], result_types: [type_name], operands: [incoming] })
+        phi_values = append(phi_values, id)
+        i = i + 1
+    }
+    state.binding_values = program_copy_values(phi_values)
+    if condition.is_some() { state = program_lower_expression(condition.unwrap(), package_name, signatures, state) }
+    else { state = program_lower_expression(expr.bool(bool_expr { value: true, inferred_type: option.none }), package_name, signatures, state) }
+    if state.error != "" { return state }
+    condition_value := state.expression_value
+    state = program_finish_block(state, "branch", [condition_value], [body_block, exit])
+    state = program_open_block(state, body_block)
+    state.binding_values = program_copy_values(phi_values)
+    state = program_lower_block(body, package_name, signatures, state)
+    if state.error != "" { return state }
+    if !state.terminated {
+        back_values := program_copy_values(state.binding_values)
+        state = program_finish_block(state, "jump", int[](), [header])
+        i = 0
+        for i < len(base) {
+            incoming := base[i]
+            back := back_values[i]
+            state.blocks[header] = program_set_phi_operands(state.blocks[header], i, [incoming, back])
+            i = i + 1
+        }
+    }
+    state = program_open_block(state, exit)
+    state.binding_names = names
+    state.binding_values = program_copy_values(phi_values)
+    return program_emit_unit(state)
+}
+
+func program_lower_short_circuit(compile.internal.ast.binary_expr binary, string package_name, mir_program_function[] signatures, program_lower_state state) program_lower_state {
+    then_value := binary.right.value
+    otherwise := expr.bool(bool_expr { value: false, inferred_type: option.none })
+    if binary.op == "||" { then_value = expr.bool(bool_expr { value: true, inferred_type: option.none }); otherwise = binary.right.value }
+    branch := if_expr { condition: binary.left, then_branch: block_expr { statements: stmt[](), final_expr: option.some(then_value), inferred_type: option.none }, else_branch: option.some(std.prelude.box(otherwise)), inferred_type: option.none }
+    return program_lower_if(branch, package_name, signatures, state)
+}
+
+func program_set_phi_operands(mir_program_block initial, int index, int[] operands) mir_program_block {
+    block := initial
+    instruction := block.instructions[index]
+    instruction.operands = operands
+    block.instructions[index] = instruction
+    return block
+}
+
+func program_prepare_store(expr target, string package_name, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
+    state := initial
+    switch target {
+        expr.name(name): {
+            index := program_binding_index(state, name.name)
+            if index < 0 { state.error = "store to undefined binding"; return state }
+            state.store_root = name.name
+            state.expression_value = state.binding_values[index]
+            return state
+        }
+        expr.member(member): {
+            state = program_prepare_store(member.target.value, package_name, signatures, state)
+            if state.error != "" { return state }
+            container := state.expression_value
+            type_name := program_expression_type(state, state.signature, container)
+            record_index := mir_program_record_index(state.records, type_name)
+            if record_index < 0 { state.error = "store member target is not a record"; return state }
+            record := state.records[record_index]
+            field := mir_program_record_field_index(record, member.member)
+            if field < 0 { state.error = "store to unknown record field"; return state }
+            field_type := record.field_types[field]
+            id := state.next_value
+            state.next_value = id + 1
+            state.instructions = append(state.instructions, mir_program_instruction { op: "record_get", result_ids: [id], result_types: [field_type], operands: [container], symbol: type_name, integer_value: field })
+            state.store_steps = append(state.store_steps, program_store_step { kind: "record", container: container, selector: field, type_name: type_name, value_type: field_type })
+            state.expression_value = id
+            return state
+        }
+        expr.index(index): {
+            state = program_prepare_store(index.target.value, package_name, signatures, state)
+            if state.error != "" { return state }
+            container := state.expression_value
+            type_name := program_expression_type(state, state.signature, container)
+            element := mir_program_array_element(type_name)
+            if element == "" { state.error = "store index target is not an array"; return state }
+            state = program_lower_expression(index.index.value, package_name, signatures, state)
+            if state.error != "" { return state }
+            selector := state.expression_value
+            state = program_emit_array(state, "array_get", type_name, element, [container, selector])
+            state.store_steps = append(state.store_steps, program_store_step { kind: "array", container: container, selector: selector, type_name: type_name, value_type: element })
+            return state
+        }
+        _ : { state.error = "store requires a named place"; return state },
+    }
+}
+
+func program_lower_store(store_stmt store, string package_name, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
+    state := initial
+    state.store_root = ""
+    state.store_steps = program_store_step[]()
+    state = program_prepare_store(store.target, package_name, signatures, state)
+    if state.error != "" { return state }
+    root := state.store_root
+    steps := state.store_steps
+    previous := state.expression_value
+    previous_type := program_expression_type(state, state.signature, previous)
+    state = program_lower_expression(store.value, package_name, signatures, state)
+    if state.error != "" { return state }
+    rhs := state.expression_value
+    if store.op != "=" {
+        op := program_binary_opcode(std.prelude.prelude_slice(store.op, 0, len(store.op) - 1))
+        if op == "" { state.error = "unsupported compound store operation"; return state }
+        id := state.next_value
+        state.next_value = id + 1
+        state.instructions = append(state.instructions, mir_program_instruction { op: op, result_ids: [id], result_types: [previous_type], operands: [previous, rhs] })
+        rhs = id
+    }
+    if previous_type != program_expression_type(state, state.signature, rhs) { state.error = "store type mismatch"; return state }
+    i := len(steps)
+    for i > 0 {
+        i = i - 1
+        step := steps[i]
+        if step.kind == "record" {
+            id := state.next_value
+            state.next_value = id + 1
+            container := step.container
+            type_name := step.type_name
+            state.instructions = append(state.instructions, mir_program_instruction { op: "record_set", result_ids: [id], result_types: [type_name], operands: [container, rhs], symbol: type_name, integer_value: step.selector })
+            rhs = id
+        } else {
+            container := step.container
+            selector := step.selector
+            state = program_emit_array(state, "array_set", step.type_name, step.type_name, [container, selector, rhs])
+            rhs = state.expression_value
+        }
+    }
+    index := program_binding_index(state, root)
+    state.binding_values[index] = rhs
+    state.expression_value = rhs
+    return state
 }
