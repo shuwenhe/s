@@ -346,8 +346,6 @@ func call_callee_name(expr e) string {
     return "<expr-callee>"
 }
 
-// Module lowering preserves every function and resolves forward calls.
-// The: legacy graph APIs: below remain compatibility views, not module producers.
 func lower_program_to_mir(source_file src) mir_program_result {
     return lower_source_program(src)
 }
