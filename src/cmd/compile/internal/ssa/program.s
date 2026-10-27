@@ -225,9 +225,17 @@ func verify_ssa_function(function_ssa_function f) string {
         for v < len(block.values) {
             value := block.values[v]
             if value.id < 0 || value.op == "" || value.type_name == "" { return "invalid value: " + f.symbol }
+            if value.op == "native_intrinsic" {
+                intrinsic_error := ssa_native_intrinsic_error(f, value)
+                if intrinsic_error != "" { return intrinsic_error }
+            }
             if ssa_is_scalar_operation(value.op) {
                 scalar_error := ssa_scalar_value_error(f, value)
                 if scalar_error != "" { return scalar_error }
+            }
+            if value.op == "const_string" || value.op == "string_concat" || value.op == "string_byte_at" || value.op == "string_char_at" || value.op == "string_slice" || value.op == "string_len" || value.op == "string_eq" || value.op == "string_ne" || value.op == "string_lt" || value.op == "string_le" || value.op == "string_gt" || value.op == "string_ge" {
+                string_error := ssa_string_value_error(f, value)
+                if string_error != "" { return string_error }
             }
             if value.op == "const_unit" && (value.type_name != "()" || len(value.operands) != 0 || value.integer_value != 0) { return "invalid unit constant: " + f.symbol }
             if value.op == "const_int" && (value.type_name != "int" || len(value.operands) != 0) { return "invalid integer constant: " + f.symbol }
@@ -476,7 +484,7 @@ func ssa_array_element(string type_name) string {
 }
 
 func ssa_type_supported(string type_name, function_ssa_record[] records) bool {
-    if type_name == "int" || type_name == "()" || type_name == "bool" || ssa_record_index(records, type_name) >= 0 { return true }
+    if type_name == "string" || type_name == "int" || type_name == "()" || type_name == "bool" || ssa_record_index(records, type_name) >= 0 { return true }
     element := ssa_array_element(type_name)
     if element != "" { return ssa_type_supported(element, records) }
     return false
@@ -535,5 +543,100 @@ func ssa_scalar_value_error(function_ssa_function function_data, function_ssa_va
     if value.op == "cmp_eq" || value.op == "cmp_ne" {
         if left != "int" && left != "bool" { return "SSA comparison requires scalar operands" }
     } else if left != "int" { return "SSA ordered comparison requires int operands" }
+    return ""
+}
+
+func ssa_string_value_error(function_ssa_function f, function_ssa_value value) string {
+    if len(value.field_names) != 0 || value.integer_value != 0 { return "SSA invalid string metadata" }
+    if value.op == "const_string" {
+        if len(value.operands) != 0 || value.type_name != "string" { return "SSA invalid string constant" }
+        return ""
+    }
+    if value.symbol != "" { return "SSA unexpected string symbol" }
+    if value.op == "string_byte_at" || value.op == "string_char_at" || value.op == "string_slice" {
+        count := 2
+        result := "string"
+        if value.op == "string_slice" { count = 3 }
+        if value.op == "string_byte_at" { result = "int" }
+        if len(value.operands) != count || value.type_name != result { return "string access count or result type" }
+        if ssa_value_type(f.blocks, value.operands[0]) != "string" { return "string access target type" }
+        i := 1
+        for i < count {
+            if ssa_value_type(f.blocks, value.operands[i]) != "int" { return "string access index type" }
+            i = i + 1
+        }
+        return ""
+    }
+    count := 2
+    result := "string"
+    if value.op == "string_eq" || value.op == "string_ne" || value.op == "string_lt" || value.op == "string_le" || value.op == "string_gt" || value.op == "string_ge" { result = "bool" }
+    if value.op == "string_len" { count = 1; result = "int" }
+    if len(value.operands) != count || value.type_name != result { return "SSA string operand count or result type" }
+    i := 0
+    for i < count {
+        if ssa_value_type(f.blocks, value.operands[i]) != "string" { return "SSA string operand type" }
+        i = i + 1
+    }
+    return ""
+}
+
+// Exact signatures form the native runtime boundary; names never become assembler symbols.
+func ssa_native_intrinsic_result(string name) string {
+    if name == "__host_env_get" { return "string" }
+    if name == "__host_run_argv" { return "int" }
+    if name == "__host_same_file" { return "bool" }
+    if name == "__host_rename_file" { return "int" }
+    if name == "__host_make_temp_dir_in" { return "string" }
+    if name == "__host_make_executable" { return "int" }
+    if name == "host_args" { return "string[]" }
+    if name == "__host_read_to_string" { return "string" }
+    if name == "__host_read_source" { return "string" }
+    if name == "__host_write_text_file" { return "int" }
+    if name == "runtime_env_get" { return "string" }
+    if name == "eprintln" { return "void" }
+    if name == "println" { return "void" }
+    if name == "panic" { return "void" }
+    if name == "__int_to_string" { return "string" }
+    if name == "__host_byte_at" { return "int" }
+    if name == "__host_char_at" { return "string" }
+    if name == "__host_slice" { return "string" }
+    if name == "__string_char_at" { return "string" }
+    if name == "__string_slice" { return "string" }
+    return "?"
+}
+func ssa_native_intrinsic_parameters(string name) string[] {
+    if name == "__host_env_get" { return ["string"] }
+    if name == "__host_run_argv" { return ["string[]"] }
+    if name == "__host_same_file" { return ["string","string"] }
+    if name == "__host_rename_file" { return ["string","string"] }
+    if name == "__host_make_temp_dir_in" { return ["string"] }
+    if name == "__host_make_executable" { return ["string"] }
+    if name == "host_args" { return string[]() }
+    if name == "__host_read_to_string" { return ["string"] }
+    if name == "__host_read_source" { return ["string"] }
+    if name == "__host_write_text_file" { return ["string","string"] }
+    if name == "runtime_env_get" { return ["string","string"] }
+    if name == "eprintln" { return ["string"] }
+    if name == "println" { return ["string"] }
+    if name == "panic" { return ["string"] }
+    if name == "__int_to_string" { return ["int"] }
+    if name == "__host_byte_at" { return ["string","int"] }
+    if name == "__host_char_at" { return ["string","int"] }
+    if name == "__host_slice" { return ["string","int","int"] }
+    if name == "__string_char_at" { return ["string","int"] }
+    if name == "__string_slice" { return ["string","int","int"] }
+    return string[]()
+}
+func ssa_native_intrinsic_error(function_ssa_function f, function_ssa_value value) string {
+    result := ssa_native_intrinsic_result(value.symbol)
+    if result == "?" { return "SSA unknown native intrinsic: " + value.symbol }
+    params := ssa_native_intrinsic_parameters(value.symbol)
+    if len(value.field_names) != 0 || value.integer_value != 0 { return "SSA invalid native intrinsic metadata" }
+    if len(value.operands) != len(params) || value.type_name != result { return "SSA native intrinsic signature" }
+    i := 0
+    for i < len(params) {
+        if ssa_value_type(f.blocks, value.operands[i]) != params[i] { return "SSA native intrinsic argument type" }
+        i = i + 1
+    }
     return ""
 }

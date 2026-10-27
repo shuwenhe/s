@@ -29,3 +29,23 @@ with tempfile.TemporaryDirectory(prefix='s-memory-') as directory:
         executed = subprocess.run([str(output)], preexec_fn=limits, timeout=5)
         assert executed.returncode == 37, f'wrong native result: {executed.returncode}'
         print(f'{count} locals compiled under 128 MiB and executed correctly: PASS')
+
+    # Exercise the same multi-file entry point as Stage1 -> Stage2. Unlike the
+    # full compiler closure, this fixture uses syntax supported end to end.
+    sources = []
+    for i in range(264):
+        source = work / f'part-{i}.s'
+        source.write_text(f'package main\nfunc f{i}() int {{ return {i} }}\n' +
+                          ('func main() int { return f42() }\n' if i == 0 else ''))
+        sources.append(str(source))
+    assembly, binary = work / 'unit.sasm', work / 'unit'
+    for command in ([str(compiler), '--compile-unit', str(assembly), *sources],
+                    [str(compiler), '--emit-bin', str(assembly), str(binary)]):
+        result = subprocess.run(command, cwd=root, preexec_fn=limits,
+                                capture_output=True, text=True, timeout=40)
+        assert result.returncode == 0, (
+            f'264-file native compilation exceeded memory budget or failed: '
+            f'{result.returncode}\n{result.stderr}')
+    executed = subprocess.run([str(binary)], preexec_fn=limits, timeout=5)
+    assert executed.returncode == 42, f'wrong multi-file native result: {executed.returncode}'
+    print('264 source files compiled and linked under 128 MiB; native result 42: PASS')

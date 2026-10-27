@@ -925,23 +925,31 @@ s_make_temp_dir_value:
 s_read_file_value:
     push %rbx
     push %r12
-    sub $8, %rsp
+    push %r13
+    xor %r12d, %r12d
+    xor %r13d, %r13d
     call s_string_cstr
     test %rax, %rax
-    jz .Lread_file_fail
-    mov %rax, %r12
+    jz .Lread_file_cleanup
     mov $-100, %rdi
-    mov %r12, %rsi
+    mov %rax, %rsi
     xor %rdx, %rdx
     xor %rcx, %rcx
     call s_openat
     test %rax, %rax
-    js .Lread_file_fail
+    js .Lread_file_cleanup
     mov %rax, %rbx
-    mov $16777233, %rdi
-    call s_alloc
-    test %rax, %rax
-    jz .Lread_file_close_fail
+    /* Capacity is temporary, not a 16 MiB heap object per source file.
+     * Read streams as well as regular files, then retain only actual bytes. */
+    xor %edi, %edi
+    mov $16777233, %esi
+    mov $3, %edx
+    mov $34, %ecx
+    mov $-1, %r8
+    xor %r9d, %r9d
+    call s_mmap
+    cmp $-4095, %rax
+    jae .Lread_file_close_fail
     mov %rax, %r12
     movq $2, (%r12)
     movq $0, 8(%r12)
@@ -952,6 +960,8 @@ s_read_file_value:
     mov $16777216, %rdx
     sub 8(%r12), %rdx
     call s_read
+    cmp $-4, %rax             # EINTR: no bytes consumed
+    je .Lread_file_loop
     test %rax, %rax
     js .Lread_file_close_fail
     jz .Lread_file_close_ok
@@ -960,10 +970,13 @@ s_read_file_value:
     jb .Lread_file_loop
     /* A full buffer is not EOF. Refuse oversized input rather than compile a
        truncated prefix (which could hide invalid bytes past the boundary). */
+.Lread_file_probe:
     mov %rbx, %rdi
     lea 16777232(%r12), %rsi
     mov $1, %rdx
     call s_read
+    cmp $-4, %rax
+    je .Lread_file_probe
     test %rax, %rax
     jnz .Lread_file_close_fail
 .Lread_file_close_ok:
@@ -971,17 +984,29 @@ s_read_file_value:
     call s_close
     mov 8(%r12), %rcx
     movb $0, 16(%r12,%rcx)
-    mov %r12, %rax
-    add $8, %rsp
-    pop %r12
-    pop %rbx
-    ret
+    lea 17(%rcx), %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Lread_file_cleanup
+    mov %rax, %r13
+    mov %rax, %rdi
+    mov %r12, %rsi
+    mov 8(%r12), %rdx
+    add $17, %rdx
+    call s_memcpy
+    jmp .Lread_file_cleanup
 .Lread_file_close_fail:
     mov %rbx, %rdi
     call s_close
-.Lread_file_fail:
-    xor %eax, %eax
-    add $8, %rsp
+.Lread_file_cleanup:
+    test %r12, %r12
+    jz .Lread_file_done
+    mov %r12, %rdi
+    mov $16777233, %esi
+    call s_munmap
+.Lread_file_done:
+    mov %r13, %rax
+    pop %r13
     pop %r12
     pop %rbx
     ret
@@ -2071,7 +2096,17 @@ s_region_return:
     sub %r12, %r14
     cmp s_region_capacity(%rip), %r14
     jbe .Lregion_have_scratch
-    /* mmap a replacement before releasing the old scratch mapping. */
+    /* No value points into scratch between evacuations. Release it before
+     * growing, otherwise old scratch + new scratch + heap inflate the peak. */
+    mov s_region_scratch(%rip), %rdi
+    test %rdi, %rdi
+    jz .Lregion_allocate_scratch
+    mov s_region_capacity(%rip), %rsi
+    mov $11, %eax
+    syscall
+    movq $0, s_region_scratch(%rip)
+    movq $0, s_region_capacity(%rip)
+.Lregion_allocate_scratch:
     mov %r14, %rsi
     add $65535, %rsi
     and $-65536, %rsi
@@ -2085,15 +2120,6 @@ s_region_return:
     syscall
     cmp $-4095, %rax
     jae .Lregion_oom
-    push %rax
-    mov s_region_scratch(%rip), %rdi
-    test %rdi, %rdi
-    jz .Lregion_store_scratch
-    mov s_region_capacity(%rip), %rsi
-    mov $11, %eax
-    syscall
-.Lregion_store_scratch:
-    pop %rax
     mov %rax, s_region_scratch(%rip)
     mov %r15, s_region_capacity(%rip)
 .Lregion_have_scratch:

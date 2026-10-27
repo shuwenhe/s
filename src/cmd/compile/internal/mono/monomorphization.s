@@ -56,6 +56,7 @@ struct mono_work_item {
     string generic_name
     string[] type_args
     compile.internal.semantic.declaration_ref declaration_ref
+    int declaration_index
 }
 
 struct mono_context {
@@ -64,6 +65,9 @@ struct mono_context {
     string[] processed
     function_decl[] generated
     compile.internal.semantic.declaration_ref[] declarations
+    source_file input_file
+    string current_package
+    int errors
 }
 
 func new_context() mono_context {
@@ -216,7 +220,7 @@ func find_declaration_ref_for_item(mono_context ctx, string item_kind, string ge
             expected_kind = compile.internal.semantic.declaration_kind.struct_kind
         }
         
-        if decl.kind == expected_kind && decl.path == generic_name {
+        if decl.kind == expected_kind && (decl.path == generic_name || decl.package_path + "." + decl.path == generic_name) {
             return decl
         }
         i = i + 1
@@ -297,11 +301,14 @@ func verify_identity_threading(mono_context ctx) m1_identity_verification {
 func monomorphize_file(source_file file, semantic_result result) monomorphize_file_result {
 
     ctx := new_context_with_result(result)
+    ctx.input_file = file
+    extra_packages := string[]()
     extra_items := compile.internal.ast.item[]()
 
     i := 0
     for i < len(file.items) {
-        ctx = collect_item_instances_ctx(file.items[i], file.items, ctx)
+        ctx.current_package = te_package(file, i)
+        if mono_item_is_concrete(file.items[i], file) { ctx = collect_item_instances_ctx(file.items[i], file.items, ctx) }
         i = i + 1
     }
 
@@ -317,6 +324,8 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
 
         if work.item_kind == "method" {
             method_source := find_generic_method(file.items, work.receiver_type, work.generic_name)
+            if work.declaration_index >= 0 && work.declaration_index < len(file.items) { switch file.items[work.declaration_index] { item.method(v): method_source = v, _: () } }
+            ctx.current_package = te_package(file, work.declaration_index)
             if method_source.method.sig.name == "" {
                 continue
             }
@@ -324,8 +333,11 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
             ctx.generated = append(ctx.generated, method_instance.method)
             ctx = collect_item_instances_ctx(item.method(method_instance), file.items, ctx)
             extra_items = append(extra_items, item.method(finalize_monomorphized_method(method_instance)))
+            extra_packages = append(extra_packages, ctx.current_package)
         } else {
             source := find_generic_function(file.items, work.generic_name)
+            if work.declaration_index >= 0 && work.declaration_index < len(file.items) { switch file.items[work.declaration_index] { item.function(v): source = v, _: () } }
+            ctx.current_package = te_package(file, work.declaration_index)
             if source.sig.name == "" {
                 continue
             }
@@ -336,34 +348,41 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
             ctx = collect_item_instances_ctx(item.function(instance), file.items, ctx)
 
             extra_items = append(extra_items, item.function(finalize_monomorphized_function(instance)))
+            extra_packages = append(extra_packages, ctx.current_package)
         }
     }
 
     stripped := item[]()
+    stripped_packages := string[]()
     i = 0
     for i < len(file.items) {
-        if should_keep_after_monomorphization(file.items[i]) {
-            stripped = append(stripped, file.items[i])
+        if should_keep_after_monomorphization(file.items[i], file) {
+            value := file.items[i]
+            switch value { item.function(v): value = item.function(finalize_monomorphized_function(v)), item.method(v): value = item.method(finalize_monomorphized_method(v)), _: () }
+            stripped = append(stripped, value)
+            stripped_packages = append(stripped_packages, te_package(file, i))
         }
         i = i + 1
     }
     file.items = stripped
+    file.item_packages = stripped_packages
 
     i = 0
     for i < len(extra_items) {
         file.items = append(file.items, extra_items[i])
+        file.item_packages = append(file.item_packages, extra_packages[i])
         i = i + 1
     }
 
     m1_verification := verify_identity_threading(ctx)
 
-    monomorphize_file_result { file: file, cache: ctx.cache, invariant_errors: verify_monomorphized_file(file), m1_gate: m1_verification }
+    monomorphize_file_result { file: file, cache: ctx.cache, invariant_errors: verify_monomorphized_file(file) + ctx.errors, m1_gate: m1_verification }
 }
 
-func should_keep_after_monomorphization(item value) bool {
+func should_keep_after_monomorphization(item value, source_file file) bool {
     switch value {
         item.function(function_value) : len(function_value.sig.generics) == 0,
-        item.method(method) : len(method.method.sig.generics) == 0,
+        item.method(method) : len(method.method.sig.generics) == 0 && !mono_receiver_has_parameter(method.receiver_type, file),
         _ : true,
     }
 }
@@ -404,6 +423,9 @@ func collect_stmt_instances_ctx(stmt value, item[] all_items, mono_context ctx) 
     switch value {
         stmt.let(v) : collect_expr_instances_ctx(v.value, all_items, ctx),
         stmt.assign(v) : collect_expr_instances_ctx(v.value, all_items, ctx),
+        stmt.store(v): { out := collect_expr_instances_ctx(v.target, all_items, ctx); collect_expr_instances_ctx(v.value, all_items, out) },
+        stmt.multi(v): { out := ctx; i := 0; for i < len(v.targets) { out = collect_expr_instances_ctx(v.targets[i], all_items, out); i = i + 1 }
+ collect_expr_instances_ctx(v.value, all_items, out) },
         stmt.increment(_) : ctx,
         stmt.c_for(v) : {
             out := collect_stmt_instances_ctx(v.init.value, all_items, ctx)
@@ -426,6 +448,11 @@ func collect_stmt_instances_ctx(stmt value, item[] all_items, mono_context ctx) 
 func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) mono_context {
 	out := ctx
     switch value {
+        expr.record(v): { i := 0; for i < len(v.field_values) { out = collect_expr_instances_ctx(v.field_values[i], all_items, out); i = i + 1 }
+ out },
+        expr.tuple(v): { i := 0; for i < len(v.items) { out = collect_expr_instances_ctx(v.items[i], all_items, out); i = i + 1 }
+ out },
+        expr.while(v): { out = collect_expr_instances_ctx(v.condition.value, all_items, out); collect_block_instances_ctx(v.body, all_items, out) },
 		expr.borrow(v) : collect_expr_instances_ctx(v.target.value, all_items, out),
         expr.binary(v) : {
 			out = collect_expr_instances_ctx(v.left.value, all_items, out)
@@ -487,34 +514,26 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) 
 }
 
 func collect_call_instance_ctx(compile.internal.ast.call_expr call, item[] all_items, mono_context ctx) mono_context {
-    if len(call.type_args) == 0 {
-        return ctx
-    }
-
-    resolved := ""
-    switch call.resolved_callee {
-        option.some(name) : resolved = name,
-        option.none : return ctx,
-    }
-
-    generic_name := ""
-    switch call.callee.value {
-        expr.name(name) : generic_name = name.name,
-        _ : return ctx,
-    }
-
+    generic_name := compile.internal.semantic.qualified_expr_path(call.callee.value)
     source := find_generic_function(all_items, generic_name)
-    if source.sig.name == "" {
+    declaration_index := mono_find_work_index(ctx, generic_name, "")
+    if declaration_index >= 0 && declaration_index < len(ctx.input_file.items) {
+        switch ctx.input_file.items[declaration_index] { item.function(v): source = v, _: () }
+        generic_name = te_package(ctx.input_file, declaration_index) + "." + source.sig.name
+    }
+    if source.sig.name == "" || len(source.sig.generics) == 0 {
         return ctx
     }
 
+    if len(call.type_args) != len(source.sig.generics) { ctx.errors = ctx.errors + 1; return ctx }
+    switch call.resolved_callee { option.some(identity): (), option.none: { ctx.errors = ctx.errors + 1; return ctx } }
     existing := mono_cache_lookup_item(ctx.cache, "function", "", generic_name, call.type_args)
     result := mono_cache_get_or_create_item(ctx.cache, "function", "", generic_name, call.type_args)
     ctx.cache = result.cache
 
     if existing == "" {
         decl_ref := find_declaration_ref_for_item(ctx, "function", generic_name)
-        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.type_args, declaration_ref: decl_ref })
+        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.type_args, declaration_ref: decl_ref, declaration_index: declaration_index })
     }
 
     ctx
@@ -564,7 +583,7 @@ func collect_method_call_instance_ctx(compile.internal.ast.call_expr call, item[
 
     if existing == "" {
         decl_ref := find_declaration_ref_for_item(ctx, "method", method_name)
-        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "method", receiver_type: source.receiver_type, generic_name: method_name, type_args: call.type_args, declaration_ref: decl_ref })
+        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "method", receiver_type: source.receiver_type, generic_name: method_name, type_args: call.type_args, declaration_ref: decl_ref, declaration_index: mono_find_work_index(ctx, method_name, source.receiver_type) })
     }
 
     ctx
@@ -833,7 +852,7 @@ func finalize_monomorphized_function(function_decl function_value) function_decl
         option.some(value) : body = option.some(finalize_block(value)),
         option.none : (),
     }
-    function_decl { sig: function_value.sig, body body, is_public function_value.is_public }
+    function_decl { extern_library: function_value.extern_library, sig: function_value.sig, body body, is_public: function_value.is_public }
 }
 
 func finalize_monomorphized_method(receiver_method_decl method) receiver_method_decl {
@@ -863,6 +882,9 @@ func finalize_stmt(stmt value) stmt {
     switch value {
         stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name: v.type_name, value: finalize_expr(v.value) }),
         stmt.assign(v) : stmt.assign(compile.internal.ast.assign_stmt { name: v.name, value: finalize_expr(v.value) }),
+        stmt.store(v): { v.target = finalize_expr(v.target); v.value = finalize_expr(v.value); stmt.store(v) },
+        stmt.multi(v): { i := 0; for i < len(v.targets) { v.targets[i] = finalize_expr(v.targets[i]); i = i + 1 }
+ v.value = finalize_expr(v.value); stmt.multi(v) },
         stmt.increment(v) : stmt.increment(v),
         stmt.c_for(v) : stmt.c_for(c_for_stmt { init: std.prelude.box(finalize_stmt(v.init.value)), condition: finalize_expr(v.condition), step: std.prelude.box(finalize_stmt(v.step.value)), body: finalize_block(v.body) }),
         stmt.return(v) : {
@@ -885,6 +907,10 @@ func finalize_expr(expr value) expr {
         expr.string(v) : expr.string(v),
         expr.bool(v) : expr.bool(v),
         expr.name(v) : expr.name(v),
+        expr.record(v): { i := 0; for i < len(v.field_values) { v.field_values[i] = finalize_expr(v.field_values[i]); i = i + 1 }
+ expr.record(v) },
+        expr.tuple(v): { i := 0; for i < len(v.items) { v.items[i] = finalize_expr(v.items[i]); i = i + 1 }
+ expr.tuple(v) },
         expr.borrow(v) : expr.borrow(compile.internal.ast.borrow_expr { target: std.prelude.box(finalize_expr(v.target.value)), mutable v.mutable, inferred_type v.inferred_type }),
         expr.binary(v) : expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(finalize_expr(v.left.value)), op v.op, right std.prelude.box(finalize_expr(v.right.value)), inferred_type v.inferred_type }),
         expr.member(v) : expr.member(compile.internal.ast.member_expr { target: std.prelude.box(finalize_expr(v.target.value)), member v.member, inferred_type v.inferred_type }),
@@ -1006,6 +1032,9 @@ func verify_stmt_no_generics(stmt value) int {
     switch value {
         stmt.let(v) : verify_optional_type_no_generics(v.type_name) + verify_expr_no_generics(v.value),
         stmt.assign(v) : verify_expr_no_generics(v.value),
+        stmt.store(v): verify_expr_no_generics(v.target) + verify_expr_no_generics(v.value),
+        stmt.multi(v): { errors := verify_expr_no_generics(v.value); i := 0; for i < len(v.targets) { errors = errors + verify_expr_no_generics(v.targets[i]); i = i + 1 }
+ errors },
         stmt.increment(_) : 0,
         stmt.c_for(v) : verify_stmt_no_generics(v.init.value) + verify_expr_no_generics(v.condition) + verify_stmt_no_generics(v.step.value) + verify_block_no_generics(v.body),
         stmt.return(v) : {
@@ -1026,6 +1055,11 @@ func verify_expr_no_generics(expr value) int {
         expr.string(v) : verify_optional_type_no_generics(v.inferred_type),
         expr.bool(v) : verify_optional_type_no_generics(v.inferred_type),
         expr.name(v) : verify_optional_type_no_generics(v.inferred_type),
+        expr.record(v): { errors := verify_optional_type_no_generics(v.inferred_type); if looks_like_generic_residue(v.type_name) { errors = errors + 1 }
+ i := 0; for i < len(v.field_values) { errors = errors + verify_expr_no_generics(v.field_values[i]); i = i + 1 }
+ errors },
+        expr.tuple(v): { errors := verify_optional_type_no_generics(v.inferred_type); i := 0; for i < len(v.items) { errors = errors + verify_expr_no_generics(v.items[i]); i = i + 1 }
+ errors },
         expr.borrow(v) : verify_optional_type_no_generics(v.inferred_type) + verify_expr_no_generics(v.target.value),
         expr.binary(v) : verify_optional_type_no_generics(v.inferred_type) + verify_expr_no_generics(v.left.value) + verify_expr_no_generics(v.right.value),
         expr.member(v) : verify_optional_type_no_generics(v.inferred_type) + verify_expr_no_generics(v.target.value),
@@ -1146,42 +1180,7 @@ func mono_is_ident_char(string ch) bool {
 }
 
 func substitute_type(string type_name, string[] keys, string[] replacements) string {
-    clean := compile.internal.typesys.parse_type(type_name)
-    i := 0
-    for i < len(keys) {
-        if compile.internal.typesys.same_type(clean, keys[i]) {
-            if i < len(replacements) { return replacements[i] }
-            return "unknown"
-        }
-        i = i + 1
-    }
-    if starts_with(clean, "&mut") {
-        return "&mut " + substitute_type(prelude_slice(clean, 4, len(clean)), keys, replacements)
-    }
-    if starts_with(clean, "&") {
-        return "&" + substitute_type(prelude_slice(clean, 1, len(clean)), keys, replacements)
-    }
-    if ends_with(clean, "[]") {
-        return substitute_type(prelude_slice(clean, 0, len(clean) - 2), keys, replacements) + "[]"
-    }
-    if starts_with(clean, "[]") {
-        return "[]" + substitute_type(prelude_slice(clean, 2, len(clean)), keys, replacements)
-    }
-    args := compile.internal.typesys.extract_type_args(clean)
-    if len(args) == 0 {
-        return clean
-    }
-    base := compile.internal.typesys.base_type_name(clean)
-    built := base + "["
-    i = 0
-    for i < len(args) {
-        if i > 0 {
-            built = built + ", "
-        }
-        built = built + substitute_type(args[i], keys, replacements)
-        i = i + 1
-    }
-    built + "]"
+    te_rewrite_type(type_name, keys, replacements)
 }
 
 func substitute_optional_type(option[string] type_name, string[] generic_names, string[] type_args) option[string] {
@@ -1243,6 +1242,7 @@ func specialize_function_with_names(function_decl source, string[] type_args, st
         option.none : (),
     }
     function_decl {
+        extern_library: source.extern_library,
         sig: function_sig {
             name: make_instance_name(source.sig.name, type_args),
             generics: string[] {},
@@ -1282,6 +1282,9 @@ func substitute_stmt(stmt value, string[] generic_names, string[] type_args) stm
     switch value {
         stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name substitute_optional_type(v.type_name, generic_names, type_args), value substitute_expr(v.value, generic_names, type_args) }),
         stmt.assign(v) : stmt.assign(compile.internal.ast.assign_stmt { name: v.name, value substitute_expr(v.value, generic_names, type_args) }),
+        stmt.store(v): { v.target = substitute_expr(v.target, generic_names, type_args); v.value = substitute_expr(v.value, generic_names, type_args); stmt.store(v) },
+        stmt.multi(v): { i := 0; for i < len(v.targets) { v.targets[i] = substitute_expr(v.targets[i], generic_names, type_args); i = i + 1 }
+ v.value = substitute_expr(v.value, generic_names, type_args); stmt.multi(v) },
         stmt.increment(v) : stmt.increment(compile.internal.ast.increment_stmt { name: v.name }),
         stmt.c_for(v) : stmt.c_for(c_for_stmt { init: std.prelude.box(substitute_stmt(v.init.value, generic_names, type_args)), condition substitute_expr(v.condition, generic_names, type_args), step std.prelude.box(substitute_stmt(v.step.value, generic_names, type_args)), body substitute_block(v.body, generic_names, type_args) }),
         stmt.return(v) : {
@@ -1300,10 +1303,14 @@ func substitute_stmt(stmt value, string[] generic_names, string[] type_args) stm
 
 func substitute_expr(expr value, string[] generic_names, string[] type_args) expr {
     switch value {
-        expr.int(v) : expr.int(v),
-        expr.string(v) : expr.string(v),
-        expr.bool(v) : expr.bool(v),
-        expr.name(v) : expr.name(v),
+        expr.int(v) : { v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.int(v) },
+        expr.string(v) : { v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.string(v) },
+        expr.bool(v) : { v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.bool(v) },
+        expr.name(v) : { v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.name(v) },
+        expr.record(v): { i := 0; for i < len(v.field_values) { v.field_values[i] = substitute_expr(v.field_values[i], generic_names, type_args); i = i + 1 }
+ v.type_name = substitute_type(v.type_name, generic_names, type_args); v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.record(v) },
+        expr.tuple(v): { i := 0; for i < len(v.items) { v.items[i] = substitute_expr(v.items[i], generic_names, type_args); i = i + 1 }
+ v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.tuple(v) },
         expr.borrow(v) : expr.borrow(compile.internal.ast.borrow_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), mutable v.mutable, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
         expr.binary(v) : expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(substitute_expr(v.left.value, generic_names, type_args)), op v.op, right std.prelude.box(substitute_expr(v.right.value, generic_names, type_args)), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
         expr.member(v) : expr.member(compile.internal.ast.member_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), member v.member, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
@@ -1322,18 +1329,8 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
                 i = i + 1
             }
             resolved := v.resolved_callee
-            switch v.callee.value {
-                expr.name(name) : {
-                    if len(call_type_args) > 0 {
-                        resolved = option.some(make_instance_name(name.name, call_type_args))
-                    }
-                }
-                expr.member(member) : {
-                    if len(call_type_args) > 0 {
-                        resolved = option.some(make_instance_name(member.member, call_type_args))
-                    }
-                }
-                _ : (),
+            if len(call_type_args) > 0 {
+                switch resolved { option.some(identity): resolved = option.some(make_instance_name(mono_generic_identity(identity), call_type_args)), option.none: () }
             }
             expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(substitute_expr(v.callee.value, generic_names, type_args)), args args, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args), resolved_callee resolved, type_args call_type_args })
         }
@@ -1574,4 +1571,58 @@ func verify_expr_resolved_calls(expr value) int {
         }
         _ : 0,
     }
+}
+
+func mono_item_is_concrete(item value, source_file file) bool {
+    switch value {
+        item.function(v): len(v.sig.generics) == 0,
+        item.method(v): len(v.method.sig.generics) == 0 && !mono_receiver_has_parameter(v.receiver_type, file),
+        _: true,
+    }
+}
+func mono_receiver_has_parameter(string receiver, source_file file) bool {
+    args := compile.internal.typesys.extract_type_args(receiver)
+    base := compile.internal.typesys.base_type_name(receiver)
+    i := 0
+    for i < len(file.items) {
+        name := te_decl_name(file.items[i])
+        if name != "" && (base == name || base == te_package(file, i) + "." + name) {
+            names := generic_names_from_sig(te_generics(file.items[i])); ai := 0
+            for ai < len(args) { ni := 0; for ni < len(names) { if contains_generic_atom(args[ai], names[ni]) { return true }
+ ni = ni + 1 }
+ ai = ai + 1 }
+            return false
+        }
+        i = i + 1
+    }
+    i = 0
+    for i < len(args) { if looks_like_generic_residue(args[i]) { return true }
+ i = i + 1 }
+    false
+}
+
+func mono_generic_identity(string identity) string {
+    i := 0
+    for i + 6 <= len(identity) { if prelude_slice(identity, i, i+6) == "__mono" { return prelude_slice(identity, 0, i) }
+ i = i + 1 }
+    identity
+}
+func mono_find_work_index(mono_context ctx, string name, string receiver) int {
+    found := -1; i := 0
+    for i < len(ctx.input_file.items) {
+        candidate_name := ""; candidate_receiver := ""
+        switch ctx.input_file.items[i] {
+            item.function(v): { if receiver == "" { candidate_name = v.sig.name } },
+            item.method(v): { if receiver != "" { candidate_name = v.method.sig.name; candidate_receiver = v.receiver_type } },
+            _: (),
+        }
+        pkg := te_package(ctx.input_file, i)
+        owner_matches := receiver == "" || compile.internal.typesys.base_type_name(receiver) == compile.internal.typesys.base_type_name(candidate_receiver)
+        if candidate_name != "" && owner_matches {
+            if name == pkg + "." + candidate_name || (name == candidate_name && pkg == ctx.current_package) { return i }
+            if name == candidate_name { if found >= 0 { found = -2 } else if found == -1 { found = i } }
+        }
+        i = i + 1
+    }
+    found
 }

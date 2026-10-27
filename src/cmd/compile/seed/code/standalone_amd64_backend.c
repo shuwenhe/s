@@ -46,6 +46,7 @@ typedef struct standalone_function {
 	bool integer_only;
     bool region_safe;
     bool region_loop_safe;
+    unsigned long long *live_in;
     unsigned long long borrow_mask;
     int borrow_schema[64];
     int borrow_flow_state;
@@ -985,13 +986,16 @@ static void standalone_analyze_regions(standalone_module *m) {
         }
     } while(changed);
 }
-/* Reclaim loop temporaries with the exact language slots as roots. No stack
- * scanning: only initialized tagged values enter the relocation graph. */
-static void emit_region_loop(FILE *out,standalone_function *fn,const char *symbol,size_t at) {
+#include "standalone_liveness.h"
+/* Evacuate only slots live at the jump target. Array defaults clear dead
+ * slots when reloaded, so discarded snapshots cannot become dangling roots. */
+static void emit_region_loop(FILE *out,standalone_function *fn,const char *symbol,size_t at,size_t target) {
     fprintf(out,"    mov s_heap_current(%%rip), %%rax\n");
     fprintf(out,"    cmp -%d(%%rbp), %%rax\n    jb .Ls_%s_region_%zu\n",fn->frame_size-8,symbol,at);
     fprintf(out,"    mov $%zu, %%rdi\n    call s_array_new\n    test %%rax, %%rax\n    jnz 1f\n    mov $1, %%edi\n    call s_record_error\n1:\n",fn->slot_count*2+1);
+    size_t words=(fn->slot_count+63)/64;
     for(size_t s=0;s<fn->slot_count;s++) {
+        if(fn->live_in && !(fn->live_in[(target-fn->begin)*words+s/64] & (1ULL<<(s%64)))) continue;
         if(fn->slots[s].reg[0]) fprintf(out,"    mov %s, %%rcx\n",fn->slots[s].reg);
         else fprintf(out,"    mov %d(%%rbp), %%rcx\n",fn->slots[s].offset);
         fprintf(out,"    mov %%rcx, %zu(%%rax)\n",16+s*8);
@@ -1008,6 +1012,7 @@ static void emit_region_loop(FILE *out,standalone_function *fn,const char *symbo
     fprintf(out,".Ls_%s_region_%zu:\n",symbol,at);
 }
 static bool emit_function(FILE *out, standalone_module *module, standalone_function *fn, compile_error *err) {
+    if(!standalone_analyze_liveness(module,fn,err)) return false;
 	static const char *arg_regs[STANDALONE_MAX_ARGS] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
 	const char *pending[STANDALONE_MAX_PENDING_ARGS];
 	size_t pending_count = 0;
@@ -1296,7 +1301,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
             if(fn->region_safe && fn->region_loop_safe && !fn->integer_only && !pending_count) {
                 for(size_t j=fn->begin;j<i;j++)
                     if(!strcmp(module->ir.ins[j].op,"LABEL") && !strcmp(module->ir.ins[j].result,ins->result)) {
-                        emit_region_loop(out,fn,symbol,i); break;
+                        emit_region_loop(out,fn,symbol,i,j); break;
                     }
             }
 			char label[STANDALONE_TEXT_CAP];
@@ -1433,7 +1438,10 @@ static bool run_tool(char *const argv[], compile_error *err) {
 }
 static void standalone_free_module(standalone_module *module) {
 	if (!module) return;
-	for (size_t i = 0; i < module->func_count; i++) free(module->funcs[i].slots);
+	for (size_t i = 0; i < module->func_count; i++) {
+        free(module->funcs[i].slots);
+        free(module->funcs[i].live_in);
+    }
 	free(module->globals);
 	standalone_free_record_schemas(module);
 	free(module);

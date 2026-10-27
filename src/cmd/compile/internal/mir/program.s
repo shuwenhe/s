@@ -119,6 +119,7 @@ func mir_program_instruction_error_with_records(mir_program_function function_da
         if mir_program_value_type(function_data, ins.operands[a], index) == "" { return "undefined value in: " + function_data.symbol }
         a = a + 1
     }
+    if ins.op == "native_intrinsic" { return mir_native_intrinsic_error(function_data, ins, index) }
     if ins.op == "call" {
         target := mir_program_function_index(functions, ins.symbol)
         if target < 0 { return "unknown callee: " + ins.symbol }
@@ -142,6 +143,7 @@ func mir_program_instruction_error_with_records(mir_program_function function_da
         return ""
     }
     if len(ins.result_ids) != 1 { return "instruction result count: " + ins.op }
+    if ins.op == "const_string" || ins.op == "string_concat" || ins.op == "string_byte_at" || ins.op == "string_char_at" || ins.op == "string_slice" || ins.op == "string_len" || ins.op == "string_eq" || ins.op == "string_ne" || ins.op == "string_lt" || ins.op == "string_le" || ins.op == "string_gt" || ins.op == "string_ge" { return mir_program_string_instruction_error(function_data, ins, index) }
     if ins.op == "array_new" || ins.op == "array_get" || ins.op == "array_len" || ins.op == "array_append" || ins.op == "array_set" { return mir_program_array_instruction_error(function_data, ins, index, records, enums) }
     if ins.op == "record_new" || ins.op == "record_get" || ins.op == "record_set" { return mir_program_record_instruction_error(function_data, ins, index, records) }
     if len(ins.field_names) != 0 { return "unexpected record field metadata: " + ins.op }
@@ -547,7 +549,7 @@ func mir_program_array_element(string type_name) string {
 }
 
 func mir_program_type_supported(string type_name, mir_program_record[] records, mir_program_enum[] enums) bool {
-    if type_name == "int" || type_name == "()" || type_name == "bool" || mir_program_record_index(records, type_name) >= 0 || mir_program_enum_index(enums, type_name) >= 0 { return true }
+    if type_name == "string" || type_name == "int" || type_name == "()" || type_name == "bool" || mir_program_record_index(records, type_name) >= 0 || mir_program_enum_index(enums, type_name) >= 0 { return true }
     element := mir_program_array_element(type_name)
     if element != "" { return mir_program_type_supported(element, records, enums) }
     return false
@@ -602,5 +604,105 @@ func mir_program_scalar_instruction_error(mir_program_function function_data, mi
     if ins.op == "cmp_eq" || ins.op == "cmp_ne" {
         if left != "int" && left != "bool" && mir_program_enum_index(enums, left) < 0 { return "comparison requires scalar operands" }
     } else if left != "int" { return "ordered comparison requires int operands" }
+    return ""
+}
+
+// String literal bytes are metadata, never an assembler identifier.
+func mir_program_string_instruction_error(mir_program_function f, mir_program_instruction ins, int index) string {
+    if len(ins.field_names) != 0 || ins.integer_value != 0 { return "invalid string metadata" }
+    if ins.op == "const_string" {
+        if len(ins.operands) != 0 || ins.result_types[0] != "string" { return "invalid string constant" }
+        return ""
+    }
+    if ins.symbol != "" { return "unexpected string symbol" }
+    if ins.op == "string_byte_at" || ins.op == "string_char_at" || ins.op == "string_slice" {
+        count := 2
+        result := "string"
+        if ins.op == "string_slice" { count = 3 }
+        if ins.op == "string_byte_at" { result = "int" }
+        if len(ins.operands) != count || ins.result_types[0] != result { return "string access count or result type" }
+        if mir_program_value_type(f, ins.operands[0], index) != "string" { return "string access target type" }
+        i := 1
+        for i < count {
+            if mir_program_value_type(f, ins.operands[i], index) != "int" { return "string access index type" }
+            i = i + 1
+        }
+        return ""
+    }
+    count := 2
+    result := "string"
+    if ins.op == "string_eq" || ins.op == "string_ne" || ins.op == "string_lt" || ins.op == "string_le" || ins.op == "string_gt" || ins.op == "string_ge" { result = "bool" }
+    if ins.op == "string_len" { count = 1; result = "int" }
+    if len(ins.operands) != count || ins.result_types[0] != result { return "string operand count or result type" }
+    i := 0
+    for i < count {
+        if mir_program_value_type(f, ins.operands[i], index) != "string" { return "string operand type" }
+        i = i + 1
+    }
+    return ""
+}
+
+// Exact signatures form the native runtime boundary; names never become assembler symbols.
+func mir_native_intrinsic_result(string name) string {
+    if name == "__host_env_get" { return "string" }
+    if name == "__host_run_argv" { return "int" }
+    if name == "__host_same_file" { return "bool" }
+    if name == "__host_rename_file" { return "int" }
+    if name == "__host_make_temp_dir_in" { return "string" }
+    if name == "__host_make_executable" { return "int" }
+    if name == "host_args" { return "string[]" }
+    if name == "__host_read_to_string" { return "string" }
+    if name == "__host_read_source" { return "string" }
+    if name == "__host_write_text_file" { return "int" }
+    if name == "runtime_env_get" { return "string" }
+    if name == "eprintln" { return "void" }
+    if name == "println" { return "void" }
+    if name == "panic" { return "void" }
+    if name == "__int_to_string" { return "string" }
+    if name == "__host_byte_at" { return "int" }
+    if name == "__host_char_at" { return "string" }
+    if name == "__host_slice" { return "string" }
+    if name == "__string_char_at" { return "string" }
+    if name == "__string_slice" { return "string" }
+    return "?"
+}
+func mir_native_intrinsic_parameters(string name) string[] {
+    if name == "__host_env_get" { return ["string"] }
+    if name == "__host_run_argv" { return ["string[]"] }
+    if name == "__host_same_file" { return ["string","string"] }
+    if name == "__host_rename_file" { return ["string","string"] }
+    if name == "__host_make_temp_dir_in" { return ["string"] }
+    if name == "__host_make_executable" { return ["string"] }
+    if name == "host_args" { return string[]() }
+    if name == "__host_read_to_string" { return ["string"] }
+    if name == "__host_read_source" { return ["string"] }
+    if name == "__host_write_text_file" { return ["string","string"] }
+    if name == "runtime_env_get" { return ["string","string"] }
+    if name == "eprintln" { return ["string"] }
+    if name == "println" { return ["string"] }
+    if name == "panic" { return ["string"] }
+    if name == "__int_to_string" { return ["int"] }
+    if name == "__host_byte_at" { return ["string","int"] }
+    if name == "__host_char_at" { return ["string","int"] }
+    if name == "__host_slice" { return ["string","int","int"] }
+    if name == "__string_char_at" { return ["string","int"] }
+    if name == "__string_slice" { return ["string","int","int"] }
+    return string[]()
+}
+func mir_native_intrinsic_error(mir_program_function f, mir_program_instruction ins, int index) string {
+    result := mir_native_intrinsic_result(ins.symbol)
+    if result == "?" { return "unknown native intrinsic: " + ins.symbol }
+    params := mir_native_intrinsic_parameters(ins.symbol)
+    if len(ins.field_names) != 0 || ins.integer_value != 0 { return "invalid native intrinsic metadata" }
+    if len(ins.operands) != len(params) { return "native intrinsic argument count" }
+    count := 1
+    if result == "void" { count = 0 }
+    if len(ins.result_types) != count { return "native intrinsic result count" }
+    if count == 1 && ins.result_types[0] != result { return "native intrinsic result type" }
+    i := 0
+    for i < len(params) {
+        if mir_program_value_type(f, ins.operands[i], index) != params[i] { return "native intrinsic argument type" }
+        i = i + 1
+    }
     return ""
 }

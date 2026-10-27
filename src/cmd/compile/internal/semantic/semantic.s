@@ -10,6 +10,8 @@ import (
 )
 
 struct type_binding {
+    bool constant
+    option[expr] constant_value
     string name
     string type_name
 }
@@ -39,6 +41,8 @@ struct trait_binding {
 }
 
 struct const_binding {
+    bool mutable
+    option[expr] value
     string package_path
     string name
     string type_name
@@ -128,6 +132,7 @@ struct struct_binding {
 }
 
 struct declaration_ref {
+    compile.internal.ast.enum_variant[] variants
     compile.internal.ast.field[] fields
     string[] generics
     string package_path
@@ -139,6 +144,9 @@ struct semantic_result {
     semantic_error[] errors
     declaration_ref[] declarations
 }
+
+// Each synchronous semantic entrypoint owns and resets this diagnostic log.
+semantic_diagnostic_log := compile.internal.semantic.semantic_error[]()
 
 func declaration_ref_equal(declaration_ref a, declaration_ref b) bool {
     if a.package_path != b.package_path { return false }
@@ -386,16 +394,17 @@ func borrow_place_name(expr value) string {
 }
 
 func check_detailed(string source) semantic_error[] {
+    semantic_diagnostic_log = semantic_error[]()
     diagnostics := semantic_error[]()
     if !compile.internal.typesys.rules_consistent() {
         add_error(source, diagnostics, "e0002", "type rules consistency check failed", "package")
-        return finalize_diagnostics(diagnostics)
+        return finalize_diagnostics(semantic_diagnostic_log)
     }
     run_preparse_semantic_completeness_checks(source, diagnostics)
     parsed := s.legacy_parse_source(source)
     if parsed.is_err() {
         add_error(source, diagnostics, "e0001", "parse failed", "package");
-        return finalize_diagnostics(diagnostics)
+        return finalize_diagnostics(semantic_diagnostic_log)
     }
     file := parsed.unwrap()
     import_roots := collect_import_module_roots(file.uses)
@@ -408,13 +417,15 @@ func check_detailed(string source) semantic_error[] {
         ignored := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics, declaration_ref[]())
         i = i + 1
     }
-    finalize_diagnostics(diagnostics)
+    finalize_diagnostics(semantic_diagnostic_log)
 }
 
 func check_source_file(source_file file, string source) semantic_result {
+    semantic_diagnostic_log = semantic_error[]()
     diagnostics := canonical_enum_errors(file)
     if !compile.internal.typesys.rules_consistent() {
         add_error(source, diagnostics, "e0002", "type rules consistency check failed", "package")
+        diagnostics.push(semantic_diagnostic_log[0])
         return semantic_result {
             errors: finalize_diagnostics(diagnostics),
             declarations: declaration_ref[](),
@@ -426,42 +437,111 @@ func check_source_file(source_file file, string source) semantic_result {
     consts := collect_consts(file, functions, traits, source, diagnostics)
     enum_constants := canonical_enum_constants(file)
     c := 0
-    for c < len(enum_constants) { consts = append(consts, enum_constants[c]); c = c + 1 }
+    for c < len(enum_constants) { consts.push(enum_constants[c]); c = c + 1 }
     structs := collect_structs(file)
     
     declarations := establish_declaration_identities(functions, traits, consts, structs)
     
     enum_declarations := canonical_enum_declarations(file)
     d := 0
-    for d < len(enum_declarations) { declarations = append(declarations, enum_declarations[d]); d = d + 1 }
+    for d < len(enum_declarations) { declarations.push(enum_declarations[d]); d = d + 1 }
+    globals := canonical_collect_globals(file, functions, traits, consts, declarations, source, diagnostics)
+    g := 0
+    for g < len(globals) {
+        consts.push(globals[g])
+        declarations.push(declaration_ref { package_path: globals[g].package_path, kind: declaration_kind.var_kind, path: globals[g].name })
+        g = g + 1
+    }
     f := 0
     for f < len(functions) {
+        if functions[f].has_receiver {
+            enum_index := canonical_enum_index(functions[f].owner_type, declarations)
+            if enum_index >= 0 {
+                generic_index := 0
+                for generic_index < len(declarations[enum_index].generics) {
+                    generic := declarations[enum_index].generics[generic_index]
+                    if !is_generic_name(functions[f].generic_names, generic) { functions[f].generic_names = append(functions[f].generic_names, generic) }
+                    generic_index = generic_index + 1
+                }
+                functions[f].owner_type = canonical_enum_type(functions[f].owner_type, declarations)
+            }
+        }
         functions[f].return_type = canonical_enum_type(functions[f].return_type, declarations)
         p := 0
         for p < len(functions[f].param_types) { functions[f].param_types[p] = canonical_enum_type(functions[f].param_types[p], declarations); p = p + 1 }
         f = f + 1
     }
     function_errors := validate_function_set(functions, source, diagnostics)
-    if function_errors > 0 && len(diagnostics) == 0 { diagnostics = append(diagnostics, canonical_semantic_error("function declarations rejected")) }
+    if function_errors > 0 && len(diagnostics) == 0 && len(semantic_diagnostic_log) == 0 { diagnostics.push(canonical_semantic_error("function declarations rejected")) }
     i := 0
     for i < std.prelude.len(file.items) {
         previous_errors := len(diagnostics)
+        previous_logged := len(semantic_diagnostic_log)
         checked := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics, declarations)
-        // Diagnostics arrays are value arguments on native executors. Preserve
-        // the actual error count even when a nested producer cannot append here.
-        if checked > 0 && len(diagnostics) == previous_errors { diagnostics = append(diagnostics, canonical_semantic_error("semantic check rejected item")) }
+        // Native array arguments copy their descriptor. The package log keeps
+        // nested diagnostics; this fallback detects an unreported rejection.
+        if checked > 0 && len(diagnostics) == previous_errors && len(semantic_diagnostic_log) == previous_logged { diagnostics.push(canonical_semantic_error("semantic check rejected item")) }
         i = i + 1
     }
     
     m2_equality_gate_result := validate_canonical_equality_decision(functions, declarations)
     if m2_equality_gate_result != 0 {
-        diagnostics = append(diagnostics, canonical_semantic_error("canonical equality not used in decision"))
+        diagnostics.push(canonical_semantic_error("canonical equality not used in decision"))
     }
     
+    logged := 0
+    for logged < len(semantic_diagnostic_log) {
+        diagnostics.push(semantic_diagnostic_log[logged])
+        logged = logged + 1
+    }
     return semantic_result {
         errors: finalize_diagnostics(diagnostics),
         declarations: declarations,
     }
+}
+
+func canonical_collect_globals(source_file file, function_binding[] functions, trait_binding[] traits, const_binding[] consts, declaration_ref[] declarations, string source, semantic_error[] diagnostics) const_binding[] {
+    globals := const_binding[]()
+    env := type_binding[]()
+    i := 0
+    for i < len(consts) { env.push(type_binding { name: consts[i].name, type_name: consts[i].type_name, constant: true, constant_value: canonical_const_pattern_value(consts[i]) }); i = i + 1 }
+    i = 0
+    for i < len(file.items) {
+        switch file.items[i] {
+            item.var(variable): {
+                declared := "unknown"
+                if variable.type_name.is_some() { declared = canonical_enum_type(compile.internal.typesys.parse_type(variable.type_name.unwrap()), declarations) }
+                env.push(type_binding { name: variable.name, type_name: declared })
+            }
+            _: (),
+        }
+        i = i + 1
+    }
+    i = 0
+    for i < len(file.items) {
+        switch file.items[i] {
+            item.var(variable): {
+                declared := lookup_name_type(env, variable.name)
+                inferred := declared
+                if variable.value.is_some() {
+                    result := infer_expr(variable.value.unwrap(), env, borrow_state_new(), declared, functions, traits, source, diagnostics, declarations)
+                    inferred = result.type_name
+                    if !is_unknown(declared) && !types_compatible(declared, inferred) { add_error(source, diagnostics, "e3001", "global initializer type mismatch", variable.name) }
+                }
+                if is_unknown(declared) { declared = inferred }
+                if is_unknown(declared) { add_error(source, diagnostics, "e3063", "global type cannot be resolved", variable.name) }
+                globals.push(const_binding { package_path: item_package_at(file.item_packages, i, file.pkg), name: variable.name, type_name: declared, mutable: true })
+                e := len(env)
+                for e > 0 {
+                    e = e - 1
+                    if env[e].name == variable.name { env[e].type_name = declared; break }
+                }
+            }
+            _: (),
+        }
+        i = i + 1
+    }
+    return globals
 }
 
 func collect_structs(source_file file) struct_binding[] {
@@ -470,7 +550,7 @@ func collect_structs(source_file file) struct_binding[] {
     for i < std.prelude.len(file.items) {
         pkg := item_package_at(file.item_packages, i, file.pkg)
         switch file.items[i] {
-            item.struct(struct_decl) : out = append(out, struct_binding { package_path: pkg, name: struct_decl.name, fields: struct_decl.fields, generics: struct_decl.generics }),
+            item.struct(struct_decl) : out.push(struct_binding { package_path: pkg, name: struct_decl.name, fields: struct_decl.fields, generics: struct_decl.generics }),
             _ : {},
         }
         i = i + 1
@@ -482,7 +562,7 @@ func establish_declaration_identities(function_binding[] functions, trait_bindin
     declarations := declaration_ref[]()
     i := 0
     for i < std.prelude.len(functions) {
-        declarations = append(declarations, declaration_ref {
+        declarations.push(declaration_ref {
             package_path: functions[i].package_path,
             kind: declaration_kind.function_kind,
             path: functions[i].name,
@@ -491,7 +571,7 @@ func establish_declaration_identities(function_binding[] functions, trait_bindin
     }
     i = 0
     for i < std.prelude.len(traits) {
-        declarations = append(declarations, declaration_ref {
+        declarations.push(declaration_ref {
             package_path: traits[i].package_path,
             kind: declaration_kind.trait_kind,
             path: traits[i].name,
@@ -500,7 +580,7 @@ func establish_declaration_identities(function_binding[] functions, trait_bindin
     }
     i = 0
     for i < std.prelude.len(consts) {
-        declarations = append(declarations, declaration_ref {
+        declarations.push(declaration_ref {
             package_path: consts[i].package_path,
             kind: declaration_kind.const_kind,
             path: consts[i].name,
@@ -509,7 +589,7 @@ func establish_declaration_identities(function_binding[] functions, trait_bindin
     }
     i = 0
     for i < std.prelude.len(structs) {
-        declarations = append(declarations, declaration_ref {
+        declarations.push(declaration_ref {
             package_path: structs[i].package_path,
             kind: declaration_kind.struct_kind,
             path: structs[i].name,
@@ -688,7 +768,7 @@ func append_anchor_summaries(semantic_error[] diagnostics) semantic_error[] {
     out := semantic_error[]()
     i := 0
     for i < std.prelude.len(diagnostics) {
-        out = append(out, diagnostics[i])
+        out.push(diagnostics[i])
         i = i + 1
     }
     summaries := semantic_error[]()
@@ -714,7 +794,7 @@ func append_anchor_summaries(semantic_error[] diagnostics) semantic_error[] {
     i = 0
     for i < std.prelude.len(summaries) {
         if summaries[i].repeat_count > 1 {
-            out = append(out, summaries[i])
+            out.push(summaries[i])
         }
         i = i + 1
     }
@@ -739,7 +819,7 @@ func dedupe_diagnostics(semantic_error[] diagnostics) semantic_error[] {
         d := diagnostics[i]
         idx := find_diagnostic_index(out, d)
         if idx < 0 {
-            out = append(out, d)
+            out.push(d)
         } else {
             out[idx].repeat_count = out[idx].repeat_count + 1
             if out[idx].hint == "" {
@@ -790,11 +870,11 @@ func insert_diagnostic(semantic_error[] diagnostics, int at, semantic_error item
     out := semantic_error[]()
     i := 0
     for i < std.prelude.len(diagnostics) {
-        if i == at { out = append(out, item) }
-        out = append(out, diagnostics[i])
+        if i == at { out.push(item) }
+        out.push(diagnostics[i])
         i = i + 1
     }
-    if at == std.prelude.len(diagnostics) { out = append(out, item) }
+    if at == std.prelude.len(diagnostics) { out.push(item) }
     return out
 }
 
@@ -847,7 +927,7 @@ func apply_diagnostic_budget(semantic_error[] diagnostics) semantic_error[] {
             }
             warnings = warnings + 1
         }
-        out = append(out, d)
+        out.push(d)
         i = i + 1
     }
     out
@@ -924,8 +1004,8 @@ func collect_import_module_roots(use_decl[] uses) string[] {
             j = j + 1
         }
         if !found {
-            roots = append(roots, root)
-            seen = append(seen, root)
+            roots.push(root)
+            seen.push(root)
         }
         i = i + 1
     }
@@ -949,8 +1029,8 @@ func collect_functions(source_file file) function_binding[] {
     for i < std.prelude.len(file.items) {
         pkg := item_package_at(file.item_packages, i, file.pkg)
         switch file.items[i] {
-            item.function(function_decl) : out = append(out, make_function_binding(function_decl, pkg)),
-            item.method(method_decl) : out = append(out, make_receiver_method_binding(method_decl, pkg)),
+            item.function(function_decl) : out.push(make_function_binding(function_decl, pkg)),
+            item.method(method_decl) : out.push(make_receiver_method_binding(method_decl, pkg)),
             _ : {},
         }
         i = i + 1
@@ -962,13 +1042,13 @@ func make_function_binding(function_decl function_decl, string package_path) fun
     generic_names := string[]()
     i := 0
     for i < std.prelude.len(function_decl.sig.generics) {
-        generic_names = append(generic_names, generic_name(function_decl.sig.generics[i]));
+        generic_names.push(generic_name(function_decl.sig.generics[i]));
         i = i + 1
     }
     params := string[]()
     i = 0
     for i < std.prelude.len(function_decl.sig.params) {
-        params = append(params, compile.internal.typesys.parse_type(function_decl.sig.params[i].type_name));
+        params.push(compile.internal.typesys.parse_type(function_decl.sig.params[i].type_name));
         i = i + 1
     }
     return_type :=
@@ -987,10 +1067,10 @@ func make_function_binding(function_decl function_decl, string package_path) fun
 func make_receiver_method_binding(receiver_method_decl method_decl, string package_path) function_binding {
     binding := make_function_binding(method_decl.method, package_path)
     params := string[]()
-    params = append(params, compile.internal.typesys.parse_type(method_decl.receiver_type))
+    params.push(compile.internal.typesys.parse_type(method_decl.receiver_type))
     i := 0
     for i < std.prelude.len(binding.param_types) {
-        params = append(params, binding.param_types[i])
+        params.push(binding.param_types[i])
         i = i + 1
     }
     binding.owner_type = method_owner_type(compile.internal.typesys.parse_type(method_decl.receiver_type))
@@ -1061,7 +1141,7 @@ func collect_consts(source_file file, function_binding[] functions, trait_bindin
                 }
                 out.push(const_binding {
                     package_path: pkg,
-                    name: const_decl.name, type_name ty, has_int_value has_int_value, int_value int_value,
+                    name: const_decl.name, type_name ty, has_int_value has_int_value, int_value int_value, value: expr_to_check,
                 })
                 ;
                 type_env.push(type_binding {
@@ -1218,7 +1298,7 @@ func collect_traits(source_file file) trait_binding[] {
                     params := string[]()
                     pi := 0
                     for pi < std.prelude.len(trait_decl.methods[mi].params) {
-                        params = append(params, compile.internal.typesys.parse_type(trait_decl.methods[mi].params[pi].type_name));
+                        params.push(compile.internal.typesys.parse_type(trait_decl.methods[mi].params[pi].type_name));
                         pi = pi + 1
                     }
                     return_type :=
@@ -1347,7 +1427,7 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
     pre_errors := validate_function_signature(method, source, diagnostics)
     expected_return :=
         switch method.sig.return_type {
-            option.some(type_name) : compile.internal.typesys.parse_type(type_name),
+            option.some(type_name) : canonical_enum_type(compile.internal.typesys.parse_type(type_name), declarations),
             option.none : "()",
         }
     env := type_binding[]()
@@ -1362,22 +1442,25 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
     i = 0
     for i < std.prelude.len(consts) {
         env.push(type_binding {
-            name: consts[i].name, type_name consts[i].type_name,
+            name: consts[i].name, type_name consts[i].type_name, constant: !consts[i].mutable, constant_value: canonical_const_pattern_value(consts[i]),
         })
+        if !semantic_starts_with(consts[i].name, consts[i].package_path + ".") {
+            env.push(type_binding { name: consts[i].package_path + "." + consts[i].name, type_name: consts[i].type_name, constant: !consts[i].mutable, constant_value: canonical_const_pattern_value(consts[i]) })
+        }
         i = i + 1
     }
     env.push(type_binding {
-        name: method_decl.receiver_name, type_name compile.internal.typesys.parse_type(method_decl.receiver_type),
+        name: method_decl.receiver_name, type_name canonical_enum_type(compile.internal.typesys.parse_type(method_decl.receiver_type), declarations),
     })
     i = 0
     for i < std.prelude.len(method.sig.params) {
         param := method.sig.params[i]
         env.push(type_binding {
-            name: param.name, type_name compile.internal.typesys.parse_type(param.type_name),
+            name: param.name, type_name canonical_enum_type(compile.internal.typesys.parse_type(param.type_name), declarations),
         })
         i = i + 1
     }
-    result := infer_block_expr(method.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics, declaration_ref[]())
+    result := infer_block_expr(method.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics, declarations)
     if expected_return != "()" && result.type_name != "never" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
         if !compile.internal.typesys.same_type(expected_return, result.type_name) {
             return pre_errors + result.errors + add_error(source, diagnostics, "e3004", "method return type mismatch", method.sig.name)
@@ -1408,9 +1491,11 @@ func check_function(function_decl function_decl, function_binding[] functions, t
     i = 0
     for i < std.prelude.len(consts) {
         env.push(type_binding {
-            name: consts[i].name, type_name consts[i].type_name,
+            name: consts[i].name, type_name consts[i].type_name, constant: !consts[i].mutable, constant_value: canonical_const_pattern_value(consts[i]),
         })
-        ;
+        if !semantic_starts_with(consts[i].name, consts[i].package_path + ".") {
+            env.push(type_binding { name: consts[i].package_path + "." + consts[i].name, type_name: consts[i].type_name, constant: !consts[i].mutable, constant_value: canonical_const_pattern_value(consts[i]) })
+        }
         i = i + 1
     }
     i = 0
@@ -1534,7 +1619,7 @@ func check_stmt_with_env(stmt statement, type_binding[] env, borrow_record[] bor
                 else if name != "_" {
                     if value.declaration {
                         if has_duplicate_binding(updated, name) { errors = errors + add_error(source, diagnostics, "e3064", "duplicate local binding in the same scope", name) }
-                        updated = append(updated, type_binding { name: name, type_name: types[i] })
+                        updated.push(type_binding { name: name, type_name: types[i] })
                     } else if !types_compatible(lookup_name_type(updated, name), types[i]) { errors = errors + add_error(source, diagnostics, "e3001", "parallel assignment type mismatch", name) }
                 }
                 i = i + 1
@@ -1720,7 +1805,7 @@ func canonical_record_field_type(string type_name, string field_name, declaratio
     if len(arguments) != len(declaration.generics) { return "" }
     i := 0
     for i < len(arguments) {
-        bindings = append(bindings, type_binding { name: declaration.generics[i], type_name: arguments[i] })
+        bindings.push(type_binding { name: declaration.generics[i], type_name: arguments[i] })
         i = i + 1
     }
     i = 0
@@ -1747,8 +1832,8 @@ func canonical_infer_record(record_literal value, type_binding[] env, borrow_rec
             if value.field_names[j] == name { errors = errors + add_error(source, diagnostics, "e3114", "duplicate record initializer field", name) }
             j = j + 1
         }
-        expected := canonical_record_field_type(value.type_name, name, declarations)
-        actual := infer_expr(value.field_values[i], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+        expected := canonical_enum_type(canonical_record_field_type(value.type_name, name, declarations), declarations)
+        actual := infer_expr(value.field_values[i], env, borrow_state, expected, functions, traits, source, diagnostics, declarations)
         errors = errors + actual.errors
         if expected == "" { errors = errors + add_error(source, diagnostics, "e3115", "unknown record field", name) }
         else if !types_compatible(expected, actual.type_name) { errors = errors + add_error(source, diagnostics, "e3116", "record field type mismatch", name) }
@@ -1846,6 +1931,10 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             result
         }
         expr.member(value) : {
+            enum_path := qualified_expr_path(expr)
+            if canonical_enum_index(qualified_package_part(enum_path), declarations) >= 0 {
+                return canonical_enum_constructor(enum_path, string[](), expected_return, declarations, source, diagnostics)
+            }
             constant_type := lookup_name_type(env, qualified_expr_path(expr))
             if !is_unknown(constant_type) { return ok_type(constant_type) }
             target := infer_expr(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
@@ -1909,7 +1998,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             for i < std.prelude.len(value.args) {
                 arg_result := infer_expr(value.args[i], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
                 errors = errors + arg_result.errors
-                arg_types = append(arg_types, arg_result.type_name);
+                arg_types.push(arg_result.type_name);
                 switch value.args[i] {
                     expr.name(name_value): {
                         builtin := qualified_expr_path(value.callee.value)
@@ -1922,6 +2011,11 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             switch value.callee.value {
                 expr.member(member) : {
                     qualified_path := qualified_expr_path(value.callee.value)
+                    enum_type := qualified_package_part(qualified_path)
+                    if canonical_enum_index(enum_type, declarations) >= 0 {
+                        constructor := canonical_enum_constructor(qualified_path, arg_types, expected_return, declarations, source, diagnostics)
+                        return check_result { type_name: constructor.type_name, errors: errors + constructor.errors }
+                    }
                     qualified := resolve_qualified_call_callee(qualified_path, arg_types, functions, traits, declarations, source, diagnostics)
                     if qualified.ok {
                         value.resolved_callee = option.some(qualified.match.instance_name)
@@ -1939,15 +2033,15 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                         j := 0
                         for j < std.prelude.len(methods) {
                             method_arg_types := string[]()
-                            method_arg_types = append(method_arg_types, method_receiver_arg_type(target.type_name, methods[j].receiver_mode));
+                            method_arg_types.push(method_receiver_arg_type(target.type_name, methods[j].receiver_mode));
                             ai := 0
                             for ai < std.prelude.len(arg_types) {
-                                method_arg_types = append(method_arg_types, arg_types[ai]);
+                                method_arg_types.push(arg_types[ai]);
                                 ai = ai + 1
                             }
                             m := try_match_signature(methods[j], method_arg_types, functions, traits, declarations)
                             if m.ok {
-                                matches = append(matches, m);
+                                matches.push(m);
                             }
                             j = j + 1
                         }
@@ -2123,18 +2217,21 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             i := 0
             for i < std.prelude.len(value.arms) {
                 arm := value.arms[i]
+                arm.pattern = canonical_resolve_const_pattern(arm.pattern, env)
                 if pattern_unreachable(seen_patterns, arm.pattern, subject.type_name) {
                     errors = errors + add_error(source, diagnostics, "e2003", "unreachable switch arm", pattern_anchor(arm.pattern))
                 }
                 if pattern_duplicate(seen_patterns, arm.pattern, subject.type_name) {
                     errors = errors + add_error(source, diagnostics, "e2002", "duplicate switch arm", pattern_anchor(arm.pattern))
                 }
-                pattern_result := check_pattern(arm.pattern, subject.type_name, source, diagnostics)
+                pattern_result := pattern_check_result { bindings: type_binding[](), errors: 0 }
+                if canonical_enum_index(subject.type_name, declarations) >= 0 { pattern_result = canonical_check_enum_pattern(arm.pattern, subject.type_name, source, diagnostics, declarations) }
+                else { pattern_result = check_pattern(arm.pattern, subject.type_name, source, diagnostics) }
                 errors = errors + pattern_result.errors
                 arm_env := clone_env(env)
                 binding_index := 0
                 for binding_index < len(pattern_result.bindings) {
-                    arm_env = append(arm_env, pattern_result.bindings[binding_index])
+                    arm_env.push(pattern_result.bindings[binding_index])
                     binding_index = binding_index + 1
                 }
                 arm_borrows := borrow_state_clone(arm_base_borrows)
@@ -2146,11 +2243,15 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
                 } else if !types_compatible(arm_type, arm_result.type_name) {
                     errors = errors + add_error(source, diagnostics, "e2005", "switch arm result type mismatch", "switch")
                 }
-                seen_patterns = append(seen_patterns, arm.pattern);
+                seen_patterns.push(arm.pattern);
                 i = i + 1
             }
             base := compile.internal.typesys.base_type_name(subject.type_name)
-            if (base == "option" || base == "result") && !patterns_cover_type(seen_patterns, subject.type_name) {
+            exhaustive := true
+            enum_index := canonical_enum_index(subject.type_name, declarations)
+            if enum_index >= 0 { exhaustive = canonical_enum_patterns_cover(seen_patterns, subject.type_name, declarations) }
+            else if base == "option" || base == "result" { exhaustive = patterns_cover_type(seen_patterns, subject.type_name) }
+            if !exhaustive {
                 errors = errors + add_error(source, diagnostics, "e2001", "non-exhaustive switch", "switch")
             }
             check_result {
@@ -2201,15 +2302,30 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
             }
         }
         expr.for(value) : {
+            loop_env := clone_env(env)
+            body_borrows := borrow_state_clone(borrow_state)
+            errors := 0
+            if value.init.is_some() {
+                initialized := check_stmt_with_env(value.init.unwrap().value, loop_env, body_borrows, expected_return, functions, traits, source, diagnostics, declarations)
+                loop_env = initialized.env
+                errors = errors + initialized.errors
+            }
+            if value.condition.is_some() {
+                condition := infer_expr(value.condition.unwrap().value, loop_env, body_borrows, expected_return, functions, traits, source, diagnostics, declarations)
+                errors = errors + condition.errors
+                if !types_compatible("bool", condition.type_name) { errors = errors + add_error(source, diagnostics, "e3006", "for condition must be bool", "for") }
+            }
             iter := check_result { type_name: "()", errors: 0 }
             if value.iterable.is_some() {
-                iter = infer_expr(value.iterable.unwrap().value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
+                iter = infer_expr(value.iterable.unwrap().value, loop_env, body_borrows, expected_return, functions, traits, source, diagnostics, declarations)
             }
-            body_borrows := borrow_state_clone(borrow_state)
-            body_result := infer_block_expr(value.body, env, body_borrows, expected_return, functions, traits, source, diagnostics, declarations)
+            body_result := infer_block_expr(value.body, loop_env, body_borrows, expected_return, functions, traits, source, diagnostics, declarations)
+            if value.post.is_some() {
+                errors = errors + check_stmt(value.post.unwrap().value, loop_env, body_borrows, expected_return, functions, traits, source, diagnostics, declarations)
+            }
             borrow_state_merge_moves(borrow_state, body_borrows)
             check_result {
-                type_name: "()", errors iter.errors + body_result.errors,
+                type_name: "()", errors: errors + iter.errors + body_result.errors,
             }
         }
         expr.block(value) : {
@@ -2256,6 +2372,28 @@ func is_borrow_expr(expr value) bool {
     }
 }
 
+func canonical_const_pattern_value(const_binding binding) option[expr] {
+    if binding.has_int_value { return option.some(expr.int(int_expr { value: std.prelude.to_string(binding.int_value) })) }
+    return binding.value
+}
+
+func canonical_resolve_const_pattern(pattern value, type_binding[] env) pattern {
+    switch value {
+        pattern.name(name): {
+            i := len(env)
+            for i > 0 {
+                i = i - 1
+                if env[i].name == name.name {
+                    if env[i].constant && env[i].constant_value.is_some() { return pattern.literal(literal_pattern { value: env[i].constant_value.unwrap() }) }
+                    return value
+                }
+            }
+            return value
+        }
+        _: return value,
+    }
+}
+
 func check_pattern(pattern pattern, string expected_type, string source, semantic_error[] diagnostics) pattern_check_result {
     bindings := type_binding[]()
     errors := bind_pattern(pattern, expected_type, bindings, source, diagnostics)
@@ -2267,7 +2405,7 @@ func pattern_bindings(pattern value, string expected_type) type_binding[] {
     bindings := type_binding[]()
     switch value {
         pattern.name(name): {
-            if name.name != "_" { bindings = append(bindings, type_binding { name: name.name, type_name: compile.internal.typesys.parse_type(expected_type) }) }
+            if name.name != "_" { bindings.push(type_binding { name: name.name, type_name: compile.internal.typesys.parse_type(expected_type) }) }
         }
         pattern.variant(variant): {
             if len(variant.args) == 1 {
@@ -2461,7 +2599,7 @@ func option_patterns_cover(pattern[] patterns, string expected_type) bool {
                 if ctor == "none" {
                     seen_none = true
                 } else if ctor == "some" && std.prelude.len(value.args) == 1 {
-                    some_patterns = append(some_patterns, value.args[0]);
+                    some_patterns.push(value.args[0]);
                 }
             }
             _ : (),
@@ -2483,9 +2621,9 @@ func result_patterns_cover(pattern[] patterns, string expected_type) bool {
             pattern.variant(value) : {
                 ctor := last_path_segment(value.path)
                 if ctor == "ok" && std.prelude.len(value.args) == 1 {
-                    ok_patterns = append(ok_patterns, value.args[0]);
+                    ok_patterns.push(value.args[0]);
                 } else if ctor == "err" && std.prelude.len(value.args) == 1 {
-                    err_patterns = append(err_patterns, value.args[0]);
+                    err_patterns.push(value.args[0]);
                 }
             }
             _ : (),
@@ -2622,7 +2760,7 @@ func resolve_qualified_call_callee(string qualified_path, string[] arg_types, fu
     for j < std.prelude.len(qualified_candidates) {
         m := try_match_signature(qualified_candidates[j], arg_types, functions, traits, declarations)
         if m.ok {
-            matches = append(matches, m);
+            matches.push(m);
         }
         j = j + 1
     }
@@ -2676,7 +2814,7 @@ func resolve_call_callee(string name, string[] arg_types, function_binding[] fun
     for j < std.prelude.len(candidates) {
         m := try_match_signature(candidates[j], arg_types, functions, traits, declarations)
         if m.ok {
-            matches = append(matches, m);
+            matches.push(m);
         }
         j = j + 1
     }
@@ -2718,7 +2856,7 @@ func lookup_functions(function_binding[] functions, string name) function_bindin
     i := 0
     for i < std.prelude.len(functions) {
         if !functions[i].has_receiver && functions[i].name == name {
-            out = append(out, functions[i]);
+            out.push(functions[i]);
         }
         i = i + 1
     }
@@ -2733,7 +2871,7 @@ func lookup_qualified_functions(function_binding[] functions, string package_pat
     i := 0
     for i < std.prelude.len(functions) {
         if !functions[i].has_receiver && functions[i].package_path == package_path && functions[i].name == name {
-            out = append(out, functions[i]);
+            out.push(functions[i]);
         }
         i = i + 1
     }
@@ -2775,8 +2913,8 @@ func lookup_named_methods(function_binding[] functions, string receiver_type, st
     normalized_receiver := method_owner_type(receiver_type)
     i := 0
     for i < std.prelude.len(functions) {
-        if functions[i].has_receiver && functions[i].owner_type == normalized_receiver && functions[i].name == name {
-            out = append(out, functions[i]);
+        if functions[i].has_receiver && compile.internal.typesys.base_type_name(functions[i].owner_type) == compile.internal.typesys.base_type_name(normalized_receiver) && functions[i].name == name {
+            out.push(functions[i]);
         }
         i = i + 1
     }
@@ -2788,9 +2926,9 @@ func lookup_methods(function_binding[] functions, string receiver_type, string n
     normalized_receiver := method_owner_type(receiver_type)
     i := 0
     for i < std.prelude.len(functions) {
-        if functions[i].has_receiver && functions[i].owner_type == normalized_receiver && functions[i].name == name {
+        if functions[i].has_receiver && compile.internal.typesys.base_type_name(functions[i].owner_type) == compile.internal.typesys.base_type_name(normalized_receiver) && functions[i].name == name {
             if receiver_allows_method(receiver_type, receiver_expr, functions[i].receiver_mode) {
-                out = append(out, functions[i]);
+                out.push(functions[i]);
             }
         }
         i = i + 1
@@ -2866,6 +3004,11 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
     }
     
     generic_bindings := type_binding[]()
+    bind_index := 0
+    for bind_index < len(arg_types) {
+        generic_bindings = collect_type_pattern_bindings(compile.internal.typesys.parse_type_ref(binding.param_types[bind_index]), compile.internal.typesys.parse_type_ref(arg_types[bind_index]), binding.generic_names, generic_bindings)
+        bind_index = bind_index + 1
+    }
     score := 0
     unknown_arg_count := 0
     i := 0
@@ -2922,7 +3065,7 @@ func ordered_type_args(string[] generic_names, type_binding[] bindings) string[]
         if is_unknown(bound) {
             bound = "unknown"
         }
-        args = append(args, bound)
+        args.push(bound)
         i = i + 1
     }
     args
@@ -2978,6 +3121,21 @@ func same_match_rank(signature_match left, signature_match right) bool {
     left.score == right.score
         && left.unknown_arg_count == right.unknown_arg_count
         && left.generic_bind_count == right.generic_bind_count
+}
+
+func collect_type_pattern_bindings(type_ref expected, type_ref actual, string[] generics, type_binding[] bindings) type_binding[] {
+    updated := bindings
+    if is_generic_name(generics, expected.canonical) {
+        if is_unknown(lookup_name_type(updated, expected.canonical)) { updated.push(type_binding { name: expected.canonical, type_name: actual.canonical }) }
+        return updated
+    }
+    if expected.base != actual.base || len(expected.args) != len(actual.args) { return updated }
+    i := 0
+    for i < len(expected.args) {
+        updated = collect_type_pattern_bindings(compile.internal.typesys.parse_type_ref(expected.args[i]), compile.internal.typesys.parse_type_ref(actual.args[i]), generics, updated)
+        i = i + 1
+    }
+    return updated
 }
 
 func match_type_pattern_ref(type_ref param_type, type_ref arg_type, string[] generic_names, type_binding[] generic_bindings) bool {
@@ -3177,7 +3335,7 @@ func clone_env(type_binding[] env) type_binding[] {
     out := type_binding[]()
     i := 0
     for i < std.prelude.len(env) {
-        out = append(out, env[i]);
+        out.push(env[i]);
         i = i + 1
     }
     out
@@ -3311,12 +3469,13 @@ func add_error(string source, semantic_error[] diagnostics, string code, string 
     severity := diagnostic_severity(code)
     tier := diagnostic_tier(code)
     hint := diagnostic_hint(code, recovery_anchor)
-    diagnostics.push(semantic_error {
+    diagnostic := semantic_error {
         code: code, message message,
         stage: "semantic", chain_id chain_id,
         upstream_code: "", severity severity, hint hint, anchor recovery_anchor, tier tier, repeat_count 1, line pos.line, column pos.column,
-    })
-    ;
+    }
+    semantic_diagnostic_log.push(diagnostic)
+    diagnostics.push(diagnostic)
     1
 }
 

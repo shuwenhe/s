@@ -286,7 +286,7 @@ func canonical_array(canonical_parser initial, option[string] type_text, string 
     for state.error == "" && state.token != closing {
         state = canonical_expression(state, 1)
         if state.error != "" { return state }
-        values = append(values, state.expression)
+        values.push(state.expression)
         if state.token != closing { state = canonical_expect(state, ",") }
     }
     state = canonical_expect(state, closing)
@@ -306,8 +306,8 @@ func canonical_record(canonical_parser initial, string type_name) canonical_pars
         if state.token == ":" { state = canonical_advance(state) }
         state = canonical_expression(state, 1)
         if state.error != "" { return state }
-        names = append(names, name)
-        values = append(values, state.expression)
+        names.push(name)
+        values.push(state.expression)
         if state.token != "}" { state = canonical_expect(state, ",") }
     }
     state = canonical_expect(state, "}")
@@ -344,21 +344,63 @@ func canonical_if(canonical_parser initial) canonical_parser {
     return state
 }
 
+func canonical_loop_statement(canonical_parser initial) canonical_parser {
+    state := canonical_expression_list(initial)
+    if state.error != "" { return state }
+    left := state.expression
+    if canonical_assignment_operator(state.token) || state.token == "++" || state.token == "--" {
+        return canonical_assignment(state, left, true)
+    }
+    state.statement = stmt.expr(compile.internal.ast.expr_stmt { expr: left })
+    return state
+}
+
 func canonical_loop(canonical_parser initial) canonical_parser {
     state := initial
     kind := state.token
     state = canonical_advance(state)
     condition := option[box[expr]].none
-    if state.token != "{" {
-        state = canonical_condition(state)
-        condition = option.some(std.prelude.box(state.expression))
+    init := option[box[stmt]].none
+    post := option[box[stmt]].none
+    saved := state.no_record
+    state.no_record = true
+    clauses := false
+    if kind == "for" && state.token == ";" {
+        clauses = true
+        state = canonical_advance(state)
+    } else if state.token != "{" {
+        state = canonical_expression_list(state)
+        if state.error != "" { return state }
+        first := state.expression
+        if kind == "for" && (state.token == ";" || canonical_assignment_operator(state.token)) {
+            clauses = true
+            if state.token == ";" { state.statement = stmt.expr(compile.internal.ast.expr_stmt { expr: first }) }
+            else { state = canonical_assignment(state, first, true) }
+            if state.error != "" { return state }
+            init = option.some(std.prelude.box(state.statement))
+            state = canonical_expect(state, ";")
+        } else { condition = option.some(std.prelude.box(first)) }
     }
+    if clauses {
+        if state.token != ";" {
+            state = canonical_expression(state, 1)
+            condition = option.some(std.prelude.box(state.expression))
+        }
+        state = canonical_expect(state, ";")
+        if state.error != "" { return state }
+        if state.token != "{" {
+            state = canonical_loop_statement(state)
+            post = option.some(std.prelude.box(state.statement))
+        }
+    }
+    if state.error != "" { return state }
+    state.no_record = saved
     state = canonical_block(state)
     if kind == "while" {
         if condition.is_none() { return canonical_fail(state, "while requires a condition") }
         state.expression = expr.while(compile.internal.ast.while_expr { condition: condition.unwrap(), body: state.block, inferred_type: option.none })
     } else {
-        state.expression = expr.for(compile.internal.ast.for_expr { init: option.none, condition: condition, post: option.none, names: string[](), iterable: option.none, body: state.block, inferred_type: option.none })
+        state.expression = expr.for(compile.internal.ast.for_expr { init: init, condition: condition, post: post, names: string[](), iterable: option.none, body: state.block, inferred_type: option.none })
     }
     return state
 }
@@ -408,13 +450,46 @@ func canonical_pattern(canonical_parser initial) canonical_parser {
         for state.error == "" && state.token != ")" {
             state = canonical_pattern(state)
             if state.error != "" { return state }
-            arguments = append(arguments, state.parsed_pattern)
+            arguments.push(state.parsed_pattern)
             if state.token != ")" { state = canonical_expect(state, ",") }
         }
         state = canonical_expect(state, ")")
     }
     if qualified { state.parsed_pattern = pattern.variant(compile.internal.ast.variant_pattern { path: path, args: arguments }) }
     else { state.parsed_pattern = pattern.name(compile.internal.ast.name_pattern { name: path }) }
+    return state
+}
+
+// Go-style case bodies contain statements until the next labelled arm.
+func canonical_case_body(canonical_parser initial) canonical_parser {
+    state := initial
+    statements := compile.internal.ast.stmt[]()
+    final := option[expr].none
+    for state.error == "" && state.token != "case" && state.token != "default" && state.token != "}" && state.token != "" {
+        if state.token == ";" { state = canonical_advance(state); continue }
+        if state.token == "return" {
+            line := state.token_line
+            state = canonical_advance(state)
+            value := option[expr].none
+            if state.token != ";" && state.token != "}" && state.token != "case" && state.token != "default" && state.token_line == line {
+                state = canonical_expression_list(state)
+                value = option.some(state.expression)
+            }
+            statements.push(stmt.return(compile.internal.ast.return_stmt { value: value }))
+        } else {
+            state = canonical_loop_statement(state)
+            if state.error != "" { return state }
+            if state.token == "case" || state.token == "default" || state.token == "}" {
+                switch state.statement {
+                    stmt.expr(value): final = option.some(value.expr),
+                    _ : statements.push(state.statement),
+                }
+            } else { statements.push(state.statement) }
+        }
+        state = canonical_cursor(state)
+        if state.token == ";" { state = canonical_advance(state) }
+    }
+    state.block = compile.internal.ast.block_expr { statements: statements, final_expr: final, inferred_type: option.none }
     return state
 }
 
@@ -427,12 +502,22 @@ func canonical_switch(canonical_parser initial) canonical_parser {
     for state.error == "" && state.token != "}" {
         state = canonical_separators(state)
         if state.token == "}" { break }
-        state = canonical_pattern(state)
+        legacy := state.token == "case" || state.token == "default"
+        if state.token == "default" {
+            state.parsed_pattern = pattern.wildcard(compile.internal.ast.wildcard_pattern {})
+            state = canonical_advance(state)
+        } else {
+            if state.token == "case" { state = canonical_advance(state) }
+            state = canonical_pattern(state)
+        }
         arm_pattern := state.parsed_pattern
         state = canonical_expect(state, ":")
         arm_line := state.token_line
         arm_value := expr.name(compile.internal.ast.name_expr { name: "unit", inferred_type: option.none })
-        if state.token == "return" {
+        if legacy {
+            state = canonical_case_body(state)
+            arm_value = expr.block(state.block)
+        } else if state.token == "return" {
             state = canonical_advance(state)
             returned := option[expr].none
             if state.token != "," && state.token != "}" && state.token != ";" && state.token_line == arm_line {
@@ -451,9 +536,9 @@ func canonical_switch(canonical_parser initial) canonical_parser {
             }
         }
         if state.error != "" { return state }
-        arms = append(arms, compile.internal.ast.switch_arm { pattern: arm_pattern, expr: arm_value })
+        arms.push(compile.internal.ast.switch_arm { pattern: arm_pattern, expr: arm_value })
         if state.token == "," || state.token == ";" { state = canonical_advance(state) }
-        else if state.token != "}" && state.token_line <= arm_line { return canonical_fail(state, "expected switch arm separator") }
+        else if !legacy && state.token != "}" && state.token_line <= arm_line { return canonical_fail(state, "expected switch arm separator") }
     }
     state = canonical_expect(state, "}")
     state.expression = expr.switch(compile.internal.ast.switch_expr { subject: std.prelude.box(subject), arms: arms, inferred_type: option.none })
@@ -470,10 +555,13 @@ func canonical_expression(canonical_parser initial, int minimum) canonical_parse
         if probe.token == "]" {
             state = canonical_parse_type(canonical_advance(probe))
             type_text := "[]" + state.text
-            if state.token != "{" && state.token != "(" { return canonical_fail(state, "expected array initializer") }
-            closing := "}"
-            if state.token == "(" { closing = ")" }
-            state = canonical_array(state, option.some(type_text), closing)
+            if state.token != "{" && state.token != "(" {
+                state.expression = expr.name(compile.internal.ast.name_expr { name: type_text, inferred_type: option.none })
+            } else {
+                closing := "}"
+                if state.token == "(" { closing = ")" }
+                state = canonical_array(state, option.some(type_text), closing)
+            }
         } else { state = canonical_array(state, option.none, "]") }
         value = state.expression
     } else if token == "switch" { state = canonical_switch(state); value = state.expression }
@@ -485,6 +573,12 @@ func canonical_expression(canonical_parser initial, int minimum) canonical_parse
     } else if canonical_char(token, 0) == "\"" || canonical_char(token, 0) == "'" {
         state = canonical_string(state)
         value = state.expression
+    } else if token == "&" {
+        state = canonical_advance(state)
+        mutable := false
+        if state.token == "mut" { mutable = true; state = canonical_advance(state) }
+        state = canonical_expression(state, 30)
+        value = expr.borrow(compile.internal.ast.borrow_expr { target: std.prelude.box(state.expression), mutable: mutable, inferred_type: option.none })
     } else if token == "!" {
         state = canonical_expression(canonical_advance(state), 30)
         value = expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(state.expression), op: "==", right: std.prelude.box(expr.bool(compile.internal.ast.bool_expr { value: false, inferred_type: option.none })), inferred_type: option.none })
@@ -512,7 +606,18 @@ func canonical_expression(canonical_parser initial, int minimum) canonical_parse
         return canonical_fail(state, "expected expression, found '" + token + "'")
     }
     for state.error == "" {
-        if state.token == "{" && !state.no_record && canonical_expression_path(value) != "" {
+        if state.token == "*" {
+            probe := canonical_advance(state)
+            if probe.token == ")" || probe.token == "," || probe.token == ";" || probe.token == "}" {
+                value = expr.borrow(compile.internal.ast.borrow_expr { target: std.prelude.box(value), mutable: true, inferred_type: option.none })
+                state = probe
+            } else {
+                precedence := canonical_precedence(state.token)
+                if precedence < minimum { break }
+                state = canonical_expression(probe, precedence + 1)
+                value = expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(value), op: "*", right: std.prelude.box(state.expression), inferred_type: option.none })
+            }
+        } else if state.token == "{" && !state.no_record && canonical_expression_path(value) != "" {
             state = canonical_record(state, canonical_expression_path(value))
             value = state.expression
         } else if state.token == "." || state.token == "::" {
@@ -532,11 +637,14 @@ func canonical_expression(canonical_parser initial, int minimum) canonical_parse
                     state = canonical_expect(canonical_advance(state), "]")
                     type_text = type_text + "[]"
                 }
-                if state.token != "{" && state.token != "(" { return canonical_fail(state, "expected array initializer") }
-                closing := "}"
-                if state.token == "(" { closing = ")" }
-                state = canonical_array(state, option.some(type_text), closing)
-                value = state.expression
+                if state.token != "{" && state.token != "(" {
+                    value = expr.name(compile.internal.ast.name_expr { name: type_text, inferred_type: option.none })
+                } else {
+                    closing := "}"
+                    if state.token == "(" { closing = ")" }
+                    state = canonical_array(state, option.some(type_text), closing)
+                    value = state.expression
+                }
             } else {
                 state = canonical_expression(state, 1)
                 index := state.expression
@@ -552,7 +660,7 @@ func canonical_expression(canonical_parser initial, int minimum) canonical_parse
                 if len(args) > 0 { state = canonical_expect(state, ",") }
                 state = canonical_expression(state, 1)
                 if state.error != "" { return state }
-                args = append(args, state.expression)
+                args.push(state.expression)
                 if state.token == "" { return canonical_fail(state, "unterminated call") }
             }
             state = canonical_expect(state, ")")
@@ -589,17 +697,17 @@ func canonical_block(canonical_parser initial) canonical_parser {
                 state = canonical_expression_list(state)
                 value = option.some(state.expression)
             }
-            statements = append(statements, stmt.return(compile.internal.ast.return_stmt { value: value }))
+            statements.push(stmt.return(compile.internal.ast.return_stmt { value: value }))
         } else {
             state = canonical_expression_list(state)
             left := state.expression
             if canonical_assignment_operator(state.token) || state.token == "++" || state.token == "--" {
                 state = canonical_assignment(state, left, true)
-                statements = append(statements, state.statement)
+                statements.push(state.statement)
             } else if state.token == "}" {
                 final = option.some(left)
             } else {
-                statements = append(statements, stmt.expr(compile.internal.ast.expr_stmt { expr: left }))
+                statements.push(stmt.expr(compile.internal.ast.expr_stmt { expr: left }))
             }
         }
         state = canonical_cursor(state)
@@ -631,7 +739,7 @@ func canonical_function(canonical_parser initial) canonical_parser {
         for state.error == "" && state.token != "]" {
             if len(generics) > 0 { state = canonical_expect(state, ",") }
             if !canonical_ident(state.token) { return canonical_fail(state, "expected generic parameter") }
-            generics = append(generics, state.token)
+            generics.push(state.token)
             state = canonical_advance(state)
         }
         state = canonical_expect(state, "]")
@@ -639,12 +747,19 @@ func canonical_function(canonical_parser initial) canonical_parser {
     state = canonical_expect(state, "(")
     params := compile.internal.ast.param[]()
     for state.error == "" && state.token != ")" {
-        if len(params) > 0 { state = canonical_expect(state, ",") }
+        if len(params) > 0 { state = canonical_expect(state, ","); if state.token == ")" { break } }
+        first := state.token
         state = canonical_parse_type(state)
         type_name := state.text
         if !canonical_ident(state.token) { return canonical_fail(state, "expected parameter name") }
-        params = append(params, compile.internal.ast.param { name: state.token, type_name: type_name })
-        state = canonical_advance(state)
+        parameter_name := state.token
+        probe := canonical_advance(state)
+        if type_name == first + "*" && (probe.token == "." || probe.token == "[") {
+            state = canonical_parse_type(state)
+            type_name = state.text + "*"
+            parameter_name = first
+        } else { state = probe }
+        params.push(compile.internal.ast.param { name: parameter_name, type_name: type_name })
     }
     signature_line := state.token_line
     state = canonical_expect(state, ")")
@@ -675,7 +790,7 @@ func canonical_enum(canonical_parser initial) canonical_parser {
         for state.error == "" && state.token != "]" {
             if len(generics) > 0 { state = canonical_expect(state, ",") }
             if !canonical_ident(state.token) { return canonical_fail(state, "expected enum type parameter") }
-            generics = append(generics, state.token)
+            generics.push(state.token)
             state = canonical_advance(state)
         }
         state = canonical_expect(state, "]")
@@ -712,7 +827,7 @@ func canonical_enum(canonical_parser initial) canonical_parser {
             tag = tag * sign
             state = canonical_advance(state)
         }
-        variants = append(variants, compile.internal.ast.enum_variant { name: variant_name, payload: payload, explicit_value: tag, has_explicit_value: explicit })
+        variants.push(compile.internal.ast.enum_variant { name: variant_name, payload: payload, explicit_value: tag, has_explicit_value: explicit })
         if state.token != "}" { state = canonical_expect(state, ",") }
     }
     state = canonical_expect(state, "}")
@@ -744,7 +859,7 @@ func canonical_struct(canonical_parser initial) canonical_parser {
         for state.error == "" && state.token != "]" {
             if len(generics) > 0 { state = canonical_expect(state, ",") }
             if !canonical_ident(state.token) { return canonical_fail(state, "expected struct type parameter") }
-            generics = append(generics, state.token)
+            generics.push(state.token)
             state = canonical_advance(state)
         }
         state = canonical_expect(state, "]")
@@ -772,10 +887,14 @@ func canonical_struct(canonical_parser initial) canonical_parser {
             type_name = state.text
         } else {
             if !canonical_ident(state.token) { return canonical_fail(state, "expected field name") }
-            field_name = state.token
-            state = canonical_advance(state)
+            probe := canonical_advance(state)
+            if type_name == first + "*" && (probe.token == "." || probe.token == "[") {
+                field_name = first
+                state = canonical_parse_type(state)
+                type_name = state.text + "*"
+            } else { field_name = state.token; state = probe }
         }
-        fields = append(fields, compile.internal.ast.field { name: field_name, type_name: type_name, is_public: public })
+        fields.push(compile.internal.ast.field { name: field_name, type_name: type_name, is_public: public })
     }
     state = canonical_expect(state, "}")
     state.structure = compile.internal.ast.struct_decl { name: name, generics: generics, fields: fields, is_public: false }
@@ -812,7 +931,7 @@ func canonical_parse(string source) (source_file, syntax_error) {
                     path = std.prelude.prelude_slice(path, 1, len(path) - 1)
                     state = canonical_advance(state)
                 } else { state = canonical_path(state); path = state.text }
-                output.uses = append(output.uses, compile.internal.ast.use_decl { path: path, alias: option.none })
+                output.uses.push(compile.internal.ast.use_decl { path: path, alias: option.none })
                 if !group { break }
             }
         } else if state.token == "extern" {
@@ -829,34 +948,34 @@ func canonical_parse(string source) (source_file, syntax_error) {
             name := state.token
             state = canonical_expect(canonical_advance(state), "=")
             state = canonical_expression(state, 1)
-            output.items = append(output.items, item.const(compile.internal.ast.const_decl { name: name, value: option.some(state.expression), iota_index: 0 }))
-            output.item_packages = append(output.item_packages, package_name)
+            output.items.push(item.const(compile.internal.ast.const_decl { name: name, value: option.some(state.expression), iota_index: 0 }))
+            output.item_packages.push(package_name)
             public = false
         } else if state.token == "struct" {
             state = canonical_struct(state)
             state.structure.is_public = public
             public = false
-            output.items = append(output.items, item.struct(state.structure))
-            output.item_packages = append(output.item_packages, package_name)
+            output.items.push(item.struct(state.structure))
+            output.item_packages.push(package_name)
         } else if state.token == "enum" {
             state = canonical_enum(state)
             state.enumeration.is_public = public
             public = false
-            output.items = append(output.items, item.enum(state.enumeration))
-            output.item_packages = append(output.item_packages, package_name)
+            output.items.push(item.enum(state.enumeration))
+            output.item_packages.push(package_name)
         } else if state.token == "func" {
             state = canonical_function(state)
             state.function.is_public = public
             public = false
-            if state.receiver_name == "" { output.items = append(output.items, item.function(state.function)) }
-            else { output.items = append(output.items, item.method(compile.internal.ast.receiver_method_decl { receiver_name: state.receiver_name, receiver_type: state.receiver_type, method: state.function })) }
-            output.item_packages = append(output.item_packages, package_name)
+            if state.receiver_name == "" { output.items.push(item.function(state.function)) }
+            else { output.items.push(item.method(compile.internal.ast.receiver_method_decl { receiver_name: state.receiver_name, receiver_type: state.receiver_type, method: state.function })) }
+            output.item_packages.push(package_name)
         } else if canonical_ident(state.token) {
             name := state.token
             state = canonical_expect(canonical_advance(state), ":=")
             state = canonical_expression(state, 1)
-            output.items = append(output.items, item.var(compile.internal.ast.var_decl { name: name, type_name: option.none, value: option.some(state.expression) }))
-            output.item_packages = append(output.item_packages, package_name)
+            output.items.push(item.var(compile.internal.ast.var_decl { name: name, type_name: option.none, value: option.some(state.expression) }))
+            output.item_packages.push(package_name)
             public = false
         } else { state = canonical_fail(state, "unsupported top-level declaration: " + state.token) }
         state = canonical_cursor(state)
@@ -918,7 +1037,7 @@ func canonical_expression_list(canonical_parser initial) canonical_parser {
     items := [first]
     for state.error == "" && state.token == "," {
         state = canonical_expression(canonical_advance(state), 1)
-        items = append(items, state.expression)
+        items.push(state.expression)
     }
     state.expression = expr.tuple(compile.internal.ast.tuple_expr { items: items, inferred_type: option.none })
     return state

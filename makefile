@@ -141,6 +141,7 @@ selfhost-protocol-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/native_bootstrap_gate_check.sh
 	@bash test/native-bootstrap-diagnostic/standalone_reachability_check.sh
 	@bash test/native-bootstrap-diagnostic/native_source_reader_check.sh
+	@python3 test/native-bootstrap-diagnostic/native_source_memory_check.py
 	@bash test/native-bootstrap-diagnostic/native_host_tools_check.sh
 	@bash test/native-bootstrap-diagnostic/native_global_state_check.sh
 	@bash test/native-bootstrap-diagnostic/native_fs_result_check.sh
@@ -461,6 +462,7 @@ selfhost-canonical-parser-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/canonical_parser_ast_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_struct_ast_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_control_ast_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_c_for_ast_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_declaration_ast_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_precedence_ast_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_record_ast_check.sh
@@ -487,11 +489,14 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_array_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_bool_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_cfg_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_c_for_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_store_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_tuple_production_check.sh
 
 .PHONY: selfhost-native-memory-check
 selfhost-native-memory-check: compiler
+	@python3 test/native-bootstrap-diagnostic/native_source_memory_check.py
+	@python3 test/native-bootstrap-diagnostic/native_loop_liveness_check.py
 	@python3 test/native-bootstrap-diagnostic/native_snapshot_cost_check.py
 	@python3 test/native-bootstrap-diagnostic/native_temporary_memory_check.py
 	@bash test/native-bootstrap-diagnostic/native_temporary_values_check.sh
