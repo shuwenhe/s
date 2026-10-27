@@ -101,7 +101,7 @@ func amd64_validate_program(function_ssa_program program) string {
             for v < len(function_data.blocks[b].values) {
                 value := function_data.blocks[b].values[v]
                 op := value.op
-                supported := op == "native_intrinsic" || op == "string_byte_at" || op == "string_char_at" || op == "string_slice" || op == "string_eq" || op == "string_ne" || op == "string_lt" || op == "string_le" || op == "string_gt" || op == "string_ge" || op == "const_string" || op == "string_concat" || op == "string_len" || ssa_is_scalar_operation(op) || op == "param" || op == "phi" || op == "const_int" || op == "const_unit" || op == "copy" || op == "add" || op == "sub" || op == "mul" || op == "div" || op == "mod" || op == "call" || op == "record_new" || op == "record_get" || op == "record_set" || op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set"
+                supported := op == "global_get" || op == "global_set" || op == "native_intrinsic" || op == "string_byte_at" || op == "string_char_at" || op == "string_slice" || op == "string_eq" || op == "string_ne" || op == "string_lt" || op == "string_le" || op == "string_gt" || op == "string_ge" || op == "const_string" || op == "string_concat" || op == "string_len" || ssa_is_scalar_operation(op) || op == "param" || op == "phi" || op == "const_int" || op == "const_unit" || op == "copy" || op == "add" || op == "sub" || op == "mul" || op == "div" || op == "mod" || op == "call" || op == "record_new" || op == "record_get" || op == "record_set" || op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set"
                 if !supported { return "amd64: unsupported operation: " + op }
                 if !ssa_type_supported(value.type_name, program.records) && !((op == "call" || op == "native_intrinsic") && value.type_name == "void") { return "amd64: unsupported value type" }
                 v = v + 1
@@ -163,6 +163,7 @@ func amd64_emit_value_with_values(function_ssa_program program, int function_ind
     value := values[position]
     op := value.op
     if op == "param" { return "" }
+    if op == "global_get" || op == "global_set" { return amd64_emit_global(program, values, value) }
     if op == "native_intrinsic" { return amd64_emit_native_intrinsic(values, value, function_index, position) }
     slot := amd64_slot(values, value.id)
     if op == "string_byte_at" || op == "string_char_at" || op == "string_slice" { return amd64_emit_string_access(values, value, function_index, position) }
@@ -341,6 +342,7 @@ func emit_function_ssa_amd64(function_ssa_program program) amd64_program_result 
         + ".section .note.GNU-stack,\"\",@progbits\n"
     if amd64_needs_arena(program) { text = text + amd64_record_allocator() }
     if amd64_needs_intrinsics(program) { text = text + amd64_native_intrinsic_runtime() }
+    if len(program.globals) > 0 { text = text + amd64_emit_global_initializers(program) }
     text = text + ".text\n.Ls_native_bounds:\n  movl $87, %edi\n  movl $60, %eax\n  syscall\n  ud2\n"
     return amd64_program_result { assembly: text, error: "" }
 }
@@ -355,6 +357,9 @@ func amd64_executable_startup(function_ssa_program program) amd64_program_result
     text := ".text\n.globl _start\n.type _start, @function\n_start:\n"
     if amd64_needs_intrinsics(program) {
         text = text + "  movq (%rsp), %rax\n  movq %rax, .Ls_native_argc(%rip)\n  leaq 8(%rsp), %rdx\n  movq %rdx, .Ls_native_argv(%rip)\n  leaq 16(%rsp,%rax,8), %rdx\n  movq %rdx, .Ls_native_envp(%rip)\n"
+    }
+    if len(program.globals) > 0 {
+        text = text + "  movq %rsp, %r12\n  andq $-16, %rsp\n  call s_native_initialize_globals\n  movq %r12, %rsp\n"
     }
     if len(entry.parameter_types) == 1 {
         // Accumulate a negative number: the negative range includes INT64_MIN.
@@ -505,7 +510,7 @@ func amd64_emit_string_access(function_ssa_value[] values, function_ssa_value va
     } else {
         text = text + "  movq " + amd64_slot(values, value.operands[2]) + ", %r10\n  cmpq %rdx, %r10\n  ja " + label + "_fail\n  cmpq %r10, %r9\n  ja " + label + "_fail\n"
     }
-    return text + "  pushq %r12\n  pushq %r13\n  leaq 8(%r8,%r9), %r12\n  movq %r10, %r13\n  subq %r9, %r13\n  movq %r13, %rdi\n  movabsq $9223372036854710256, %r10\n  cmpq %r10, %rdi\n  ja " + label + "_fail\n  addq $8, %rdi\n  call .Ls_native_alloc\n  movq %r13, (%rax)\n  leaq 8(%rax), %rdi\n  movq %r12, %rsi\n  movq %r13, %rcx\n  cld\n  rep movsb\n  popq %r13\n  popq %r12\n  movq %rax, " + slot + "\n  jmp " + label + "_done\n" + failure
+    return text + "  pushq %r12\n  pushq %r13\n  leaq 8(%r8,%r9), %r12\n  movq %r10, %r13\n  subq %r9, %r13\n  movq %r13, %rdi\n  movabsq $9223372036854710256, %r10\n  cmpq %r10, %rdi\n  ja .Ls_native_bounds\n  addq $8, %rdi\n  call .Ls_native_alloc\n  movq %r13, (%rax)\n  leaq 8(%rax), %rdi\n  movq %r12, %rsi\n  movq %r13, %rcx\n  cld\n  rep movsb\n  popq %r13\n  popq %r12\n  movq %rax, " + slot + "\n  jmp " + label + "_done\n" + failure
 }
 
 func amd64_needs_intrinsics(function_ssa_program program) bool {
@@ -588,4 +593,33 @@ func amd64_native_intrinsic_runtime() string {
         + "%rdx\n movl $59,%eax\n syscall\n jmp .Ls_native_run_child_fail\n.Ls_native_run_path:\n movq %rcx,-40(%rbp)\n leaq .Ls_native_path_key(%rip),%rdi\n leaq .Ls_native_default_path(%rip),%rsi\n call .Ls_native_env_get\n movq %rax,%rdi\n call .Ls_native_to_c\n testq %rax,%rax\n je .Ls_native_run_child_fail\n movq %rax,%r14\n.Ls_native_run_path_component:\n movq %r14,%r15\n.Ls_native_run_path_scan:\n cmpb $0,(%r14)\n je .Ls_native_run_path_allocate\n cmpb $58,(%r14)\n je .Ls_native_run_path_allocate\n incq %r14\n jmp .Ls_na"
         + "tive_run_path_scan\n.Ls_native_run_path_allocate:\n movq %r14,%rax\n subq %r15,%rax\n movq %rax,-48(%rbp)\n movq %rax,%rdi\n addq -40(%rbp),%rdi\n addq $2,%rdi\n call .Ls_native_alloc\n movq %rax,-56(%rbp)\n movq %rax,%rdi\n movq %r15,%rsi\n movq -48(%rbp),%rcx\n cld\n rep movsb\n cmpq $0,-48(%rbp)\n je .Ls_native_run_path_name\n movb $47,(%rdi)\n incq %rdi\n.Ls_native_run_path_name:\n movq %r13,%rsi\n movq -40(%rbp),%rcx\n incq %rcx\n rep movsb\n movq -56(%rbp),%rdi\n movq %r12,%rsi\n movq .Ls_native_envp(%rip),%rdx\n mo"
         + "vl $59,%eax\n syscall\n cmpb $0,(%r14)\n je .Ls_native_run_child_fail\n incq %r14\n jmp .Ls_native_run_path_component\n.Ls_native_run_child_fail:\n movl $127,%edi\n movl $60,%eax\n syscall\n ud2\n.Ls_native_run_fail:\n movq $-1,%rax\n.Ls_native_run_done:\n addq $32,%rsp\n popq %r15\n popq %r14\n popq %r13\n popq %r12\n leave\n ret\n"
+}
+
+func amd64_global_name(int index) string { return ".Ls_native_global_" + amd64_integer(index) }
+func amd64_emit_global(function_ssa_program program, function_ssa_value[] values, function_ssa_value value) string {
+    symbol := amd64_global_name(ssa_global_index(program.globals, value.symbol))
+    slot := amd64_slot(values, value.id)
+    if value.op == "global_get" { return "  movq " + symbol + "(%rip), %rax\n  movq %rax, " + slot + "\n" }
+    return "  movq " + amd64_slot(values, value.operands[0]) + ", %rax\n  movq %rax, " + symbol + "(%rip)\n  movq $0, " + slot + "\n"
+}
+func amd64_emit_global_initializers(function_ssa_program program) string {
+    text := ".bss\n.balign 8\n.Ls_native_globals_state: .quad 0\n"
+    g := 0
+    for g < len(program.globals) {
+        text = text + amd64_global_name(g) + ": .quad 0\n"
+        g = g + 1
+    }
+    text = text + ".text\n.globl s_native_initialize_globals\n.type s_native_initialize_globals, @function\ns_native_initialize_globals:\n  pushq %rbp\n  movq %rsp, %rbp\n  cmpq $2, .Ls_native_globals_state(%rip)\n  je .Ls_native_globals_done\n  cmpq $0, .Ls_native_globals_state(%rip)\n  jne .Ls_native_globals_cycle\n  movq $1, .Ls_native_globals_state(%rip)\n"
+    order := ssa_global_order(program)
+    i := 0
+    for i < len(order.order) {
+        index := order.order[i]
+        initializer := program.globals[index].initializer
+        if initializer != "" {
+            target := ssa_function_index(program.functions, initializer)
+            text = text + "  call " + amd64_function_name(target) + "\n  movq %rax, " + amd64_global_name(index) + "(%rip)\n"
+        }
+        i = i + 1
+    }
+    return text + "  movq $2, .Ls_native_globals_state(%rip)\n.Ls_native_globals_done:\n  xorl %eax, %eax\n  leave\n  ret\n.Ls_native_globals_cycle:\n  movl $88, %edi\n  movl $60, %eax\n  syscall\n  ud2\n.size s_native_initialize_globals, .-s_native_initialize_globals\n"
 }

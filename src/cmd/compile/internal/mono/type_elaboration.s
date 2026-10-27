@@ -381,10 +381,22 @@ func elaborate_generic_types(source_file file) type_elaboration_result {
         target := pkg + "." + concrete
         if pkg == request.pkg { target = concrete }
         aliases = append(aliases, te_alias { pkg: request.pkg, original: text, concrete: target })
+        qualified_original := pkg + "." + name + prelude_slice(text, len(base), len(text))
+        aliases = append(aliases, te_alias { pkg: "", original: qualified_original, concrete: pkg + "." + concrete })
         seen := false; i = 0
         for i < len(instances) { if instances[i].declaration == declaration && same_type_args(instances[i].args, args) { seen = true }
  i = i + 1 }
         if seen { continue }
+        i = 0
+        for i < len(instances) {
+            if instances[i].pkg == pkg && instances[i].concrete == concrete { return type_elaboration_result { file: output, error: "generic type instance name collision: " + pkg + "." + concrete } }
+            i = i + 1
+        }
+        i = 0
+        for i < len(file.items) {
+            if te_package(file, i) == pkg && te_decl_name(file.items[i]) == concrete { return type_elaboration_result { file: output, error: "generic type instance conflicts with declaration: " + pkg + "." + concrete } }
+            i = i + 1
+        }
         instances = append(instances, te_instance { declaration: declaration, original: text, concrete: concrete, pkg: pkg, args: args })
         value := te_rewrite_item(file.items[declaration], generics, args)
         switch value {
@@ -401,7 +413,7 @@ func elaborate_generic_types(source_file file) type_elaboration_result {
         keys := string[](); values := string[](); j := 0
         for j < len(aliases) {
             alias := aliases[j]
-            if output.item_packages[i] == alias.pkg { keys = append(keys, alias.original); values = append(values, alias.concrete) }
+            if alias.pkg == "" || output.item_packages[i] == alias.pkg { keys = append(keys, alias.original); values = append(values, alias.concrete) }
             j = j + 1
         }
         output.items[i] = te_rewrite_item(output.items[i], keys, values)

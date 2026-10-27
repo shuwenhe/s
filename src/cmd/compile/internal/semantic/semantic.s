@@ -89,6 +89,16 @@ struct check_result {
     int errors
 }
 
+struct canonical_const_context {
+    const_binding[] known
+    type_binding[] types
+}
+
+struct canonical_inference {
+    string type_name
+    semantic_error[] diagnostics
+}
+
 struct pattern_check_result {
     type_binding[] bindings
     int errors
@@ -140,7 +150,20 @@ struct declaration_ref {
     string path
 }
 
+struct canonical_semantic_inputs {
+    semantic_error[] errors
+    function_binding[] functions
+    trait_binding[] traits
+    struct_binding[] structs
+    declaration_ref[] enums
+    const_binding[] enum_constants
+    source_file constants
+    source_file globals
+}
+
 struct semantic_result {
+    const_binding[] bindings
+    function_binding[] functions
     semantic_error[] errors
     declaration_ref[] declarations
 }
@@ -410,7 +433,7 @@ func check_detailed(string source) semantic_error[] {
     import_roots := collect_import_module_roots(file.uses)
     functions := collect_functions(file)
     traits := collect_traits(file)
-    consts := collect_consts(file, functions, traits, source, diagnostics)
+    consts := collect_consts(canonical_initializer_source(file, false), functions, traits, source, diagnostics)
     validate_function_set(functions, source, diagnostics)
     i := 0
     for i < std.prelude.len(file.items) {
@@ -422,7 +445,8 @@ func check_detailed(string source) semantic_error[] {
 
 func check_source_file(source_file file, string source) semantic_result {
     semantic_diagnostic_log = semantic_error[]()
-    diagnostics := canonical_enum_errors(file)
+    inputs := canonical_collect_semantic_inputs(file)
+    diagnostics := inputs.errors
     if !compile.internal.typesys.rules_consistent() {
         add_error(source, diagnostics, "e0002", "type rules consistency check failed", "package")
         diagnostics.push(semantic_diagnostic_log[0])
@@ -432,45 +456,27 @@ func check_source_file(source_file file, string source) semantic_result {
         }
     }
     import_roots := collect_import_module_roots(file.uses)
-    functions := collect_functions(file)
-    traits := collect_traits(file)
-    consts := collect_consts(file, functions, traits, source, diagnostics)
-    enum_constants := canonical_enum_constants(file)
+    functions := inputs.functions
+    traits := inputs.traits
+    consts := collect_consts(inputs.constants, functions, traits, source, diagnostics)
+    enum_constants := inputs.enum_constants
     c := 0
     for c < len(enum_constants) { consts.push(enum_constants[c]); c = c + 1 }
-    structs := collect_structs(file)
+    structs := inputs.structs
     
     declarations := establish_declaration_identities(functions, traits, consts, structs)
     
-    enum_declarations := canonical_enum_declarations(file)
+    enum_declarations := inputs.enums
     d := 0
     for d < len(enum_declarations) { declarations.push(enum_declarations[d]); d = d + 1 }
-    globals := canonical_collect_globals(file, functions, traits, consts, declarations, source, diagnostics)
+    globals := canonical_collect_globals(inputs.globals, functions, traits, consts, declarations, source, diagnostics)
     g := 0
     for g < len(globals) {
         consts.push(globals[g])
         declarations.push(declaration_ref { package_path: globals[g].package_path, kind: declaration_kind.var_kind, path: globals[g].name })
         g = g + 1
     }
-    f := 0
-    for f < len(functions) {
-        if functions[f].has_receiver {
-            enum_index := canonical_enum_index(functions[f].owner_type, declarations)
-            if enum_index >= 0 {
-                generic_index := 0
-                for generic_index < len(declarations[enum_index].generics) {
-                    generic := declarations[enum_index].generics[generic_index]
-                    if !is_generic_name(functions[f].generic_names, generic) { functions[f].generic_names = append(functions[f].generic_names, generic) }
-                    generic_index = generic_index + 1
-                }
-                functions[f].owner_type = canonical_enum_type(functions[f].owner_type, declarations)
-            }
-        }
-        functions[f].return_type = canonical_enum_type(functions[f].return_type, declarations)
-        p := 0
-        for p < len(functions[f].param_types) { functions[f].param_types[p] = canonical_enum_type(functions[f].param_types[p], declarations); p = p + 1 }
-        f = f + 1
-    }
+    functions = canonical_augment_function_bindings(functions, declarations)
     function_errors := validate_function_set(functions, source, diagnostics)
     if function_errors > 0 && len(diagnostics) == 0 && len(semantic_diagnostic_log) == 0 { diagnostics.push(canonical_semantic_error("function declarations rejected")) }
     i := 0
@@ -497,7 +503,26 @@ func check_source_file(source_file file, string source) semantic_result {
     return semantic_result {
         errors: finalize_diagnostics(diagnostics),
         declarations: declarations,
+        bindings: consts,
+        functions: functions,
     }
+}
+
+func canonical_collect_semantic_inputs(source_file file) canonical_semantic_inputs {
+    inputs := canonical_semantic_inputs {}
+    phase := 0
+    for phase < 8 {
+        if phase == 0 { inputs.errors = canonical_enum_errors(file) }
+        else if phase == 1 { inputs.functions = collect_functions(file) }
+        else if phase == 2 { inputs.traits = collect_traits(file) }
+        else if phase == 3 { inputs.structs = collect_structs(file) }
+        else if phase == 4 { inputs.enums = canonical_enum_declarations(file) }
+        else if phase == 5 { inputs.enum_constants = canonical_enum_constants(file) }
+        else if phase == 6 { inputs.constants = canonical_initializer_source(file, false) }
+        else { inputs.globals = canonical_initializer_source(file, true) }
+        phase = phase + 1
+    }
+    return inputs
 }
 
 func canonical_collect_globals(source_file file, function_binding[] functions, trait_binding[] traits, const_binding[] consts, declaration_ref[] declarations, string source, semantic_error[] diagnostics) const_binding[] {
@@ -1035,7 +1060,37 @@ func collect_functions(source_file file) function_binding[] {
         }
         i = i + 1
     }
-    out
+    canonical_native_builtin_functions(out)
+}
+
+func canonical_function_bindings(source_file file, declaration_ref[] declarations) function_binding[] {
+    functions := collect_functions(file)
+    return canonical_augment_function_bindings(functions, declarations)
+}
+
+func canonical_augment_function_bindings(function_binding[] input, declaration_ref[] declarations) function_binding[] {
+    functions := input
+    f := 0
+    for f < len(functions) {
+        if functions[f].has_receiver {
+            enum_index := canonical_enum_index(functions[f].owner_type, declarations)
+            if enum_index < 0 { enum_index = canonical_record_index(functions[f].owner_type, declarations) }
+            if enum_index >= 0 {
+                generic_index := 0
+                for generic_index < len(declarations[enum_index].generics) {
+                    generic := declarations[enum_index].generics[generic_index]
+                    if !is_generic_name(functions[f].generic_names, generic) { functions[f].generic_names = append(functions[f].generic_names, generic) }
+                    generic_index = generic_index + 1
+                }
+                functions[f].owner_type = canonical_enum_type(functions[f].owner_type, declarations)
+            }
+        }
+        functions[f].return_type = canonical_enum_type(functions[f].return_type, declarations)
+        p := 0
+        for p < len(functions[f].param_types) { functions[f].param_types[p] = canonical_enum_type(functions[f].param_types[p], declarations); p = p + 1 }
+        f = f + 1
+    }
+    return functions
 }
 
 func make_function_binding(function_decl function_decl, string package_path) function_binding {
@@ -1094,23 +1149,19 @@ func no_const_expr() option[expr] {
 }
 
 func collect_consts(source_file file, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) const_binding[] {
-    out := const_binding[]()
-    type_env := type_binding[]()
+    known := const_binding[]()
+    types := type_binding[]()
+    context := canonical_const_context { known: known, types: types }
+    context.types.push(type_binding { name: "iota", type_name: "int" })
     last_const_expr := no_const_expr()
     i := 0
     for i < std.prelude.len(file.items) {
         pkg := item_package_at(file.item_packages, i, file.pkg)
         switch file.items[i] {
             item.const(const_decl) : {
-                if lookup_name_type(type_env, const_decl.name) != "unknown" {
+                if canonical_const_name_type(context, const_decl.name) != "unknown" {
                     ignored := add_error(source, diagnostics, "e3044", "duplicate const declaration", const_decl.name)
                 }
-                local_env := clone_env(type_env)
-                local_env.push(type_binding {
-                    name: "iota",
-                    type_name: "int",
-                })
-                ;
                 expr_to_check := no_const_expr()
                 switch const_decl.value {
                     option.some(value) : {
@@ -1125,12 +1176,23 @@ func collect_consts(source_file file, function_binding[] functions, trait_bindin
                 if expr_to_check.is_none() {
                     ignored2 := add_error(source, diagnostics, "e3045", "const declaration missing initializer and no prior expression in group", const_decl.name)
                 } else {
-                    inferred := infer_expr(expr_to_check.unwrap(), local_env, borrow_state_new(), "()", functions, traits, source, diagnostics, declaration_ref[]())
+                    checked_value := expr_to_check.unwrap()
+                    constant := canonical_const_type(checked_value, context)
+                    inferred := check_result { type_name: constant.type_name, errors: len(constant.diagnostics) }
+                    d := 0
+                    for d < len(constant.diagnostics) {
+                        diagnostic := constant.diagnostics[d]
+                        add_error(source, diagnostics, diagnostic.code, diagnostic.message, diagnostic.anchor)
+                        d = d + 1
+                    }
+                    if inferred.type_name == "" {
+                        inferred = infer_expr(expr_to_check.unwrap(), context.types, borrow_state_new(), "()", functions, traits, source, diagnostics, declaration_ref[]())
+                    }
                     ty = inferred.type_name
                     if is_unknown(ty) {
                         ty = "unknown"
                     } else if compile.internal.typesys.same_type(ty, "int") {
-                        eval_result := eval_const_int_expr(expr_to_check.unwrap(), out, const_decl.iota_index)
+                        eval_result := eval_const_int_expr(checked_value, context, const_decl.iota_index)
                         if eval_result.ok {
                             has_int_value = true
                             int_value = eval_result.value
@@ -1139,12 +1201,12 @@ func collect_consts(source_file file, function_binding[] functions, trait_bindin
                         }
                     }
                 }
-                out.push(const_binding {
+                context.known.push(const_binding {
                     package_path: pkg,
                     name: const_decl.name, type_name ty, has_int_value has_int_value, int_value int_value, value: expr_to_check,
                 })
                 ;
-                type_env.push(type_binding {
+                context.types.push(type_binding {
                     name: const_decl.name, type_name ty,
                 })
                 ;
@@ -1153,10 +1215,10 @@ func collect_consts(source_file file, function_binding[] functions, trait_bindin
         }
         i = i + 1
     }
-    out
+    context.known
 }
 
-func eval_const_int_expr(expr value, const_binding[] known_consts, int iota_value) const_eval_int_result {
+func eval_const_int_expr(expr value, context* canonical_const_context, int iota_value) const_eval_int_result {
     switch value {
         expr.int(int_expr) : const_eval_int_result {
             ok: true, value parse_const_int_literal(int_expr.value),
@@ -1169,13 +1231,13 @@ func eval_const_int_expr(expr value, const_binding[] known_consts, int iota_valu
                     error: "",
                 }
             }
-            i := std.prelude.len(known_consts)
+            i := len(context.known)
             for i > 0 {
                 i = i - 1
-                if known_consts[i].name == name_expr.name {
-                    if known_consts[i].has_int_value {
+                if context.known[i].name == name_expr.name {
+                    if context.known[i].has_int_value {
                         return const_eval_int_result {
-                            ok: true, value known_consts[i].int_value,
+                            ok: true, value context.known[i].int_value,
                             error: "",
                         }
                     }
@@ -1191,11 +1253,11 @@ func eval_const_int_expr(expr value, const_binding[] known_consts, int iota_valu
             }
         }
         expr.binary(binary_expr) : {
-            left := eval_const_int_expr(binary_expr.left.value, known_consts, iota_value)
+            left := eval_const_int_expr(binary_expr.left.value, context, iota_value)
             if !left.ok {
                 return left
             }
-            right := eval_const_int_expr(binary_expr.right.value, known_consts, iota_value)
+            right := eval_const_int_expr(binary_expr.right.value, context, iota_value)
             if !right.ok {
                 return right
             }
@@ -2697,48 +2759,41 @@ func variant_payload_type(string expected_type, string ctor) string {
     "unknown"
 }
 
-func infer_binary(string op, check_result left, check_result right, string source, semantic_error[] diagnostics) check_result {
-    errors := left.errors + right.errors
-    if op == "+" || op == "-" || op == "*" || op == "/" || op == "%" {
-        if !types_compatible("int", left.type_name) || !types_compatible("int", right.type_name) {
-            errors = errors + add_error(source, diagnostics, "e3018", "arithmetic requires int", op)
-        }
-        return check_result {
-            type_name: "int", errors errors,
-        }
+func canonical_binary_inference(string op, string left, string right) canonical_inference {
+    diagnostics := semantic_error[]()
+    if op == "+" && left == "string" && right == "string" { return canonical_inference { type_name: "string", diagnostics: diagnostics } }
+    if op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>" {
+        if !types_compatible("int", left) || !types_compatible("int", right) { diagnostics.push(semantic_error { code: "e3018", message: "arithmetic requires int", anchor: op }) }
+        return canonical_inference { type_name: "int", diagnostics: diagnostics }
     }
     if op == "<" || op == "<=" || op == ">" || op == ">=" {
-        if !types_compatible("int", left.type_name) || !types_compatible("int", right.type_name) {
-            errors = errors + add_error(source, diagnostics, "e3019", "ordering compare requires int", op)
-        }
-        return check_result {
-            type_name: "bool", errors errors,
-        }
+        if !types_compatible("int", left) || !types_compatible("int", right) { diagnostics.push(semantic_error { code: "e3019", message: "ordering compare requires int", anchor: op }) }
+        return canonical_inference { type_name: "bool", diagnostics: diagnostics }
     }
     if op == "==" || op == "!=" {
-        if !types_compatible(left.type_name, right.type_name) {
-            errors = errors + add_error(source, diagnostics, "e3020", "equality compare requires same type", op)
+        if !types_compatible(left, right) { diagnostics.push(semantic_error { code: "e3020", message: "equality compare requires same type", anchor: op }) }
+        if !is_unknown(left) && !is_unknown(right) && !nil_comparable_pair(left, right) {
+            if !compile.internal.typesys.comparable_type(left) || !compile.internal.typesys.comparable_type(right) { diagnostics.push(semantic_error { code: "e3039", message: "equality compare requires comparable types", anchor: op }) }
         }
-        if !is_unknown(left.type_name) && !is_unknown(right.type_name) && !nil_comparable_pair(left.type_name, right.type_name) {
-            if !compile.internal.typesys.comparable_type(left.type_name) || !compile.internal.typesys.comparable_type(right.type_name) {
-                errors = errors + add_error(source, diagnostics, "e3039", "equality compare requires comparable types", op)
-            }
-        }
-        return check_result {
-            type_name: "bool", errors errors,
-        }
+        return canonical_inference { type_name: "bool", diagnostics: diagnostics }
     }
     if op == "&&" || op == "||" {
-        if !types_compatible("bool", left.type_name) || !types_compatible("bool", right.type_name) {
-            errors = errors + add_error(source, diagnostics, "e3021", "logical op requires bool", op)
-        }
-        return check_result {
-            type_name: "bool", errors errors,
-        }
+        if !types_compatible("bool", left) || !types_compatible("bool", right) { diagnostics.push(semantic_error { code: "e3021", message: "logical op requires bool", anchor: op }) }
+        return canonical_inference { type_name: "bool", diagnostics: diagnostics }
     }
-    check_result {
-        type_name: "unknown", errors errors,
+    return canonical_inference { type_name: "unknown", diagnostics: diagnostics }
+}
+
+func infer_binary(string op, check_result left, check_result right, string source, semantic_error[] diagnostics) check_result {
+    inferred := canonical_binary_inference(op, left.type_name, right.type_name)
+    errors := left.errors + right.errors
+    i := 0
+    for i < len(inferred.diagnostics) {
+        diagnostic := inferred.diagnostics[i]
+        errors = errors + add_error(source, diagnostics, diagnostic.code, diagnostic.message, diagnostic.anchor)
+        i = i + 1
     }
+    return check_result { type_name: inferred.type_name, errors: errors }
 }
 
 func resolve_qualified_call_callee(string qualified_path, string[] arg_types, function_binding[] functions, trait_binding[] traits, declaration_ref[] declarations, string source, semantic_error[] diagnostics) call_callee_resolution {
@@ -2790,6 +2845,7 @@ func resolve_qualified_call_callee(string qualified_path, string[] arg_types, fu
             errors: add_error(source, diagnostics, "e1003", "ambiguous overload", qualified_path),
         }
     }
+    if len(best.type_args) > 0 && !semantic_starts_with(best.instance_name, qualified_package + ".") { best.instance_name = qualified_package + "." + best.instance_name }
     call_callee_resolution {
         ok: true,
         match: best,

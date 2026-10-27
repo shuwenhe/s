@@ -14,6 +14,13 @@ func program_collect_enums(source_file source) program_enum_result {
             item.enum(declaration): {
                 symbol := program_item_package(source, i) + "." + declaration.name
                 if len(declaration.generics) != 0 { return program_enum_result { enums: output, error: "generic enum requires monomorphization: " + symbol } }
+                payload := false
+                payload_index := 0
+                for payload_index < len(declaration.variants) {
+                    if declaration.variants[payload_index].payload.is_some() { payload = true }
+                    payload_index = payload_index + 1
+                }
+                if !payload {
                 variants := string[]()
                 tags := int[]()
                 tag := 0
@@ -29,6 +36,7 @@ func program_collect_enums(source_file source) program_enum_result {
                     v = v + 1
                 }
                 output = append(output, mir_program_enum { symbol: symbol, variants: variants, tags: tags })
+                }
             }
             _ : (),
         }

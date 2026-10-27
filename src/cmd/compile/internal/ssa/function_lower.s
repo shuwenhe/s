@@ -64,7 +64,7 @@ func function_mir_value_id_reserved(int[] reserved, int id) bool {
 // previously lowered module, so its saved call metadata is checked as well.
 func function_mir_input_error(mir_program program) string {
     if program.package_name == "" || program.entry_symbol == "" { return "invalid program identity" }
-    validated := lower_mir_program_with_records(program.package_name, program.entry_symbol, program.functions, program.enums, program.records)
+    validated := lower_mir_program_with_globals(program.package_name, program.entry_symbol, program.functions, program.enums, program.records, program.globals)
     if validated.error != "" { return validated.error }
     if len(program.calls) != len(validated.program.calls) { return "MIR: call edge count" }
     i := 0
@@ -186,8 +186,15 @@ func lower_function_mir_to_ssa(mir_program program) function_ssa_result {
         records = append(records, function_ssa_record { symbol: source_record.symbol, field_names: source_record.field_names, field_types: types })
         r = r + 1
     }
+    globals := function_ssa_global[]()
+    g := 0
+    for g < len(program.globals) {
+        global := program.globals[g]
+        globals = append(globals, function_ssa_global { symbol: global.symbol, type_name: mir_program_physical_type(global.type_name, program.enums), initializer: global.initializer })
+        g = g + 1
+    }
     output_program := function_ssa_program {
-        records: records, package_name: program.package_name, entry_symbol: program.entry_symbol,
+        globals: globals, records: records, package_name: program.package_name, entry_symbol: program.entry_symbol,
         functions: output_functions, calls: output_calls,
     }
     result.error = verify_ssa_program(output_program)

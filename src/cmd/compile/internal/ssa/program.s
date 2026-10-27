@@ -48,7 +48,14 @@ struct function_ssa_call {
     int value_id
 }
 
+struct function_ssa_global {
+    string symbol
+    string type_name
+    string initializer
+}
+
 struct function_ssa_program {
+    function_ssa_global[] globals
     function_ssa_record[] records
     string package_name
     string entry_symbol
@@ -324,6 +331,8 @@ func verify_ssa_program(function_ssa_program program) string {
     if ssa_function_index(program.functions, program.entry_symbol) < 0 { return "missing entry function" }
     record_error := ssa_records_error(program.records)
     if record_error != "" { return record_error }
+    global_error := ssa_globals_error(program)
+    if global_error != "" { return global_error }
     i := 0
     for i < len(program.functions) {
         if ssa_function_index(program.functions, program.functions[i].symbol) != i { return "duplicate function" }
@@ -335,7 +344,10 @@ func verify_ssa_program(function_ssa_program program) string {
             v := 0
             for v < len(f.blocks[b].values) {
                 value := f.blocks[b].values[v]
-                if value.op == "record_new" || value.op == "record_get" || value.op == "record_set" {
+                if value.op == "global_get" || value.op == "global_set" {
+                    error = ssa_global_value_error(f, value, program.globals)
+                    if error != "" { return error }
+                } else if value.op == "record_new" || value.op == "record_get" || value.op == "record_set" {
                     error = ssa_record_value_error(f, value, program.records)
                     if error != "" { return error }
                 } else if value.op == "array_new" || value.op == "array_get" || value.op == "array_len" || value.op == "array_append" || value.op == "array_set" {
@@ -407,6 +419,8 @@ func verify_ssa_program(function_ssa_program program) string {
         }
         i = i + 1
     }
+    order := ssa_global_order(program)
+    if order.error != "" { return order.error }
     return ""
 }
 
@@ -639,4 +653,121 @@ func ssa_native_intrinsic_error(function_ssa_function f, function_ssa_value valu
         i = i + 1
     }
     return ""
+}
+
+func ssa_global_index(function_ssa_global[] globals, string symbol) int {
+    i := 0
+    for i < len(globals) {
+        if globals[i].symbol == symbol { return i }
+        i = i + 1
+    }
+    return -1
+}
+func ssa_global_value_error(function_ssa_function f, function_ssa_value value, function_ssa_global[] globals) string {
+    if value.op != "global_get" && value.op != "global_set" { return "SSA unknown global operation" }
+    index := ssa_global_index(globals, value.symbol)
+    if index < 0 { return "SSA unknown global: " + value.symbol }
+    if len(value.field_names) != 0 || value.integer_value != 0 { return "SSA invalid global instruction metadata" }
+    type_name := globals[index].type_name
+    if value.op == "global_get" {
+        if len(value.operands) != 0 || value.type_name != type_name { return "SSA global load type or arity" }
+    } else {
+        if len(value.operands) != 1 || value.type_name != "()" { return "SSA global store result type or arity" }
+        if ssa_value_type(f.blocks, value.operands[0]) != type_name { return "SSA global store operand type" }
+    }
+    return ""
+}
+func ssa_globals_error(function_ssa_program program) string {
+    i := 0
+    for i < len(program.globals) {
+        global := program.globals[i]
+        if global.symbol == "" || ssa_global_index(program.globals, global.symbol) != i { return "SSA invalid or duplicate global identity" }
+        if !ssa_type_supported(global.type_name, program.records) { return "SSA unsupported global type" }
+        if global.initializer != "" {
+            target := ssa_function_index(program.functions, global.initializer)
+            if target < 0 { return "SSA unknown global initializer" }
+            function := program.functions[target]
+            if len(function.parameter_types) != 0 || len(function.result_types) != 1 { return "SSA global initializer signature" }
+            if function.result_types[0] != global.type_name { return "SSA global initializer result type" }
+        }
+        i = i + 1
+    }
+    return ""
+}
+struct ssa_global_order_result { int[] order; string error }
+func ssa_global_dependencies(function_ssa_program program, int root) int[] {
+    globals := program.globals
+    functions := program.functions
+    dependencies := int[]()
+    g := 0
+    for g < len(globals) { dependencies.push(0); g = g + 1 }
+    visited := int[]()
+    f := 0
+    for f < len(functions) { visited.push(0); f = f + 1 }
+    pending := [root];
+    cursor := 0
+    for cursor < len(pending) {
+        index := pending[cursor]
+        if visited[index] == 0 {
+            visited[index] = 1
+            function := functions[index]
+            b := 0
+            for b < len(function.blocks) {
+                i := 0
+                for i < len(function.blocks[b].values) {
+                    ins := function.blocks[b].values[i]
+                    if ins.op == "global_get" || ins.op == "global_set" {
+                        target := ssa_global_index(globals, ins.symbol)
+                        if target >= 0 { dependencies[target] = 1 }
+                    }
+                    if ins.op == "call" {
+                        c := 0
+                        for c < len(program.calls) {
+                            edge := program.calls[c]
+                            if edge.caller == function.symbol && edge.block_id == function.blocks[b].id && edge.value_id == ins.id {
+                                target := ssa_function_index(functions, edge.callee)
+                                if target >= 0 && visited[target] == 0 { pending.push(target) }
+                            }
+                            c = c + 1
+                        }
+                    }
+                    i = i + 1
+                }
+                b = b + 1
+            }
+        }
+        cursor = cursor + 1
+    }
+    return dependencies
+}
+func ssa_global_order(function_ssa_program program) ssa_global_order_result {
+    globals := program.globals
+    functions := program.functions
+    order := int[]()
+    done := int[]()
+    g := 0
+    for g < len(globals) { done.push(0); g = g + 1 }
+    for len(order) < len(globals) {
+        progress := false
+        g = 0
+        for g < len(globals) {
+            if done[g] == 0 {
+                ready := true
+                if globals[g].initializer != "" {
+                    root := ssa_function_index(functions, globals[g].initializer)
+                    if root < 0 { return ssa_global_order_result { order: order, error: "unknown global initializer" } }
+                    dependencies := ssa_global_dependencies(program, root)
+                    d := 0
+                    for d < len(dependencies) {
+                        if dependencies[d] != 0 && done[d] == 0 { ready = false }
+                        d = d + 1
+                    }
+                }
+                if ready { done[g] = 1; order.push(g); progress = true }
+            }
+            g = g + 1
+        }
+        if !progress { return ssa_global_order_result { order: order, error: "cyclic global initialization" } }
+    }
+    return ssa_global_order_result { order: order, error: "" }
 }

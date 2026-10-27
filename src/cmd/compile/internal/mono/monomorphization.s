@@ -44,6 +44,7 @@ struct mono_function_summary {
 }
 
 struct monomorphize_file_result {
+    string error
     file source_file
     mono_cache cache
     int invariant_errors
@@ -68,6 +69,7 @@ struct mono_context {
     source_file input_file
     string current_package
     int errors
+    string error
 }
 
 func new_context() mono_context {
@@ -376,7 +378,7 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
 
     m1_verification := verify_identity_threading(ctx)
 
-    monomorphize_file_result { file: file, cache: ctx.cache, invariant_errors: verify_monomorphized_file(file) + ctx.errors, m1_gate: m1_verification }
+    monomorphize_file_result { error: ctx.error, file: file, cache: ctx.cache, invariant_errors: verify_monomorphized_file(file) + ctx.errors, m1_gate: m1_verification }
 }
 
 func should_keep_after_monomorphization(item value, source_file file) bool {
@@ -515,6 +517,9 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) 
 
 func collect_call_instance_ctx(compile.internal.ast.call_expr call, item[] all_items, mono_context ctx) mono_context {
     generic_name := compile.internal.semantic.qualified_expr_path(call.callee.value)
+    // Semantic and MIR give these exact unqualified builtins their own typed
+    // operations, even when a generic prelude declaration is also in scope.
+    if (generic_name == "len" || generic_name == "append") && len(call.type_args) == 0 && call.resolved_callee.is_none() { return ctx }
     source := find_generic_function(all_items, generic_name)
     declaration_index := mono_find_work_index(ctx, generic_name, "")
     if declaration_index >= 0 && declaration_index < len(ctx.input_file.items) {
@@ -525,8 +530,8 @@ func collect_call_instance_ctx(compile.internal.ast.call_expr call, item[] all_i
         return ctx
     }
 
-    if len(call.type_args) != len(source.sig.generics) { ctx.errors = ctx.errors + 1; return ctx }
-    switch call.resolved_callee { option.some(identity): (), option.none: { ctx.errors = ctx.errors + 1; return ctx } }
+    if len(call.type_args) != len(source.sig.generics) { ctx.errors = ctx.errors + 1; ctx.error = "missing concrete type arguments for " + generic_name; return ctx }
+    switch call.resolved_callee { option.some(identity): (), option.none: { ctx.errors = ctx.errors + 1; ctx.error = "missing resolved declaration for " + generic_name; return ctx } }
     existing := mono_cache_lookup_item(ctx.cache, "function", "", generic_name, call.type_args)
     result := mono_cache_get_or_create_item(ctx.cache, "function", "", generic_name, call.type_args)
     ctx.cache = result.cache
@@ -852,7 +857,7 @@ func finalize_monomorphized_function(function_decl function_value) function_decl
         option.some(value) : body = option.some(finalize_block(value)),
         option.none : (),
     }
-    function_decl { extern_library: function_value.extern_library, sig: function_value.sig, body body, is_public: function_value.is_public }
+    function_decl { intrinsic_name: function_value.intrinsic_name, extern_library: function_value.extern_library, sig: function_value.sig, body body, is_public: function_value.is_public }
 }
 
 func finalize_monomorphized_method(receiver_method_decl method) receiver_method_decl {
@@ -922,7 +927,20 @@ func finalize_expr(expr value) expr {
                 args = append(args, finalize_expr(v.args[i]))
                 i = i + 1
             }
-            expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(finalize_expr(v.callee.value)), args args, inferred_type v.inferred_type, resolved_callee v.resolved_callee, type_args string[]() })
+            callee := finalize_expr(v.callee.value)
+            switch v.callee.value {
+                expr.member(member): {
+                    receiver_type := mono_expression_type(member.target.value)
+                    if receiver_type != "" && receiver_type != "module" && v.resolved_callee.is_some() {
+                        receiver_args := expr[](); receiver_args = append(receiver_args, finalize_expr(member.target.value)); ai := 0
+                        for ai < len(args) { receiver_args = append(receiver_args, args[ai]); ai = ai + 1 }
+                        args = receiver_args
+                        callee = expr.name(name_expr { name: v.resolved_callee.unwrap(), inferred_type: option.none })
+                    }
+                },
+                _: (),
+            }
+            expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(callee), args: args, inferred_type: v.inferred_type, resolved_callee: v.resolved_callee, type_args: string[]() })
         }
         expr.if(v) : {
             else_branch := no_mono_box_expr()
@@ -1214,10 +1232,19 @@ func generic_names_from_sig(string[] generics) string[] {
 
 func method_generic_names(receiver_method_decl source) string[] {
     names := generic_names_from_sig(source.method.sig.generics)
-    if len(names) > 0 {
-        return names
+    receiver_names := compile.internal.typesys.extract_type_args(source.receiver_type)
+    i := 0
+    for i < len(receiver_names) {
+        name := receiver_names[i]
+        if !compile.internal.typesys.is_builtin_primitive(name) {
+            found := false; j := 0
+            for j < len(names) { if names[j] == name { found = true }
+ j = j + 1 }
+            if !found { names = append(names, name) }
+        }
+        i = i + 1
     }
-    compile.internal.typesys.extract_type_args(source.receiver_type)
+    names
 }
 
 func specialize_function(function_decl source, string[] type_args) function_decl {
@@ -1241,7 +1268,10 @@ func specialize_function_with_names(function_decl source, string[] type_args, st
         option.some(value) : body = option.some(substitute_block(value, generic_names, type_args)),
         option.none : (),
     }
+    intrinsic_name := source.intrinsic_name
+    if source.extern_library == "intrinsic" && intrinsic_name == "" { intrinsic_name = source.sig.name }
     function_decl {
+        intrinsic_name: intrinsic_name,
         extern_library: source.extern_library,
         sig: function_sig {
             name: make_instance_name(source.sig.name, type_args),
@@ -1330,7 +1360,7 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
             }
             resolved := v.resolved_callee
             if len(call_type_args) > 0 {
-                switch resolved { option.some(identity): resolved = option.some(make_instance_name(mono_generic_identity(identity), call_type_args)), option.none: () }
+                switch resolved { option.some(identity): resolved = option.some(make_instance_name(mono_substitute_identity(mono_generic_identity(identity), generic_names, type_args), call_type_args)), option.none: () }
             }
             expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(substitute_expr(v.callee.value, generic_names, type_args)), args args, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args), resolved_callee resolved, type_args call_type_args })
         }
@@ -1626,3 +1656,39 @@ func mono_find_work_index(mono_context ctx, string name, string receiver) int {
     }
     found
 }
+
+func mono_substitute_identity(string identity, string[] keys, string[] replacements) string {
+    dot := -1; i := 0; depth := 0
+    for i < len(identity) { ch := string(identity[i]); if ch == "[" { depth = depth + 1 }
+ if ch == "]" { depth = depth - 1 }
+ if ch == "." && depth == 0 { dot = i }
+ i = i + 1 }
+    if dot < 0 { return identity }
+    return substitute_type(prelude_slice(identity, 0, dot), keys, replacements) + prelude_slice(identity, dot, len(identity))
+}
+func mono_expression_type(expr value) string {
+    ty := no_mono_type()
+    switch value {
+        expr.int(v): ty = v.inferred_type,
+        expr.string(v): ty = v.inferred_type,
+        expr.bool(v): ty = v.inferred_type,
+        expr.name(v): ty = v.inferred_type,
+        expr.borrow(v): ty = v.inferred_type,
+        expr.binary(v): ty = v.inferred_type,
+        expr.member(v): ty = v.inferred_type,
+        expr.index(v): ty = v.inferred_type,
+        expr.call(v): ty = v.inferred_type,
+        expr.record(v): ty = v.inferred_type,
+        expr.tuple(v): ty = v.inferred_type,
+        expr.switch(v): ty = v.inferred_type,
+        expr.if(v): ty = v.inferred_type,
+        expr.for(v): ty = v.inferred_type,
+        expr.while(v): ty = v.inferred_type,
+        expr.block(v): ty = v.inferred_type,
+        expr.array(v): ty = v.type_text,
+        expr.map(v): ty = v.type_text,
+    }
+    switch ty { option.some(t): t, option.none: "" }
+}
+
+func no_mono_type() option[string] { option.none }

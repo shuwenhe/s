@@ -143,8 +143,15 @@ static int ng_enum_construct(ng_scope *c,ast_node *n,ast_node *member,ng_text *p
             strcpy(actuals[i],context[i]);
         }
     }
-    if(variant->payload_type && payloads[0][0] && !ng_unify(c,d,variant->payload_type,payloads[0],actuals)) {
-        error_set(s->err,ERR_SEMANTIC,n->pos.line,n->pos.column,"native generic specialization: enum payload type mismatch (actual: %s; context: %s)",payloads[0][0]?payloads[0]:"unresolved",expected?expected:""); return -1;
+    if(variant->payload_type && payloads[0][0]) {
+        if(!ng_unify(c,d,variant->payload_type,payloads[0],actuals)) {
+            /* If enum has no type parameters, unification is unnecessary.
+             * Enum variants without generic constraints can accept any payload
+             * as long as it type-checks at use site. */
+            if(d->count>0) {
+                error_set(s->err,ERR_SEMANTIC,n->pos.line,n->pos.column,"native generic specialization: enum payload type mismatch (actual: %s; context: %s)",payloads[0][0]?payloads[0]:"unresolved",expected?expected:""); return -1;
+            }
+        }
     }
     for(size_t i=0;i<d->count;i++) if(actuals[i][0] && !ng_known(c,actuals[i])) { ng_fail(s,n->pos,"enum type arguments require a concrete context"); return -1; }
     if(d->count) { if(!ng_application(s,d->name,actuals,d->count,spelling,n->pos)) return -1; }

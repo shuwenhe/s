@@ -50,7 +50,14 @@ struct mir_program_call {
     int instruction_index
 }
 
+struct mir_program_global {
+    string symbol
+    string type_name
+    string initializer
+}
+
 struct mir_program {
+    mir_program_global[] globals
     mir_program_record[] records
     mir_program_enum[] enums
     string package_name
@@ -99,7 +106,7 @@ func mir_program_value_type(mir_program_function function_data, int id, int limi
     return ""
 }
 
-func mir_program_instruction_error_with_records(mir_program_function function_data, mir_program_function[] functions, mir_program_instruction ins, int index, mir_program_enum[] enums, mir_program_record[] records) string {
+func mir_program_instruction_error_with_globals(mir_program_function function_data, mir_program_function[] functions, mir_program_instruction ins, int index, mir_program_enum[] enums, mir_program_record[] records, mir_program_global[] globals) string {
     if len(ins.result_ids) != len(ins.result_types) { return "result type count in: " + function_data.symbol }
     r := 0
     for r < len(ins.result_ids) {
@@ -119,6 +126,7 @@ func mir_program_instruction_error_with_records(mir_program_function function_da
         if mir_program_value_type(function_data, ins.operands[a], index) == "" { return "undefined value in: " + function_data.symbol }
         a = a + 1
     }
+    if ins.op == "global_get" || ins.op == "global_set" { return mir_program_global_instruction_error(function_data, ins, index, globals) }
     if ins.op == "native_intrinsic" { return mir_native_intrinsic_error(function_data, ins, index) }
     if ins.op == "call" {
         target := mir_program_function_index(functions, ins.symbol)
@@ -182,7 +190,7 @@ func mir_program_instruction_error_with_records(mir_program_function function_da
     return "unsupported instruction: " + ins.op
 }
 
-func mir_program_function_error_with_records(mir_program_function function_data, mir_program_function[] functions, mir_program_enum[] enums, mir_program_record[] records) string {
+func mir_program_function_error_with_globals(mir_program_function function_data, mir_program_function[] functions, mir_program_enum[] enums, mir_program_record[] records, mir_program_global[] globals) string {
     if function_data.symbol == "" { return "empty function symbol" }
     p := 0
     for p < len(function_data.params) {
@@ -229,7 +237,7 @@ func mir_program_function_error_with_records(mir_program_function function_data,
                 if mir_program_value_definition_count(function_data, ins.result_ids[r]) != 1 { return "duplicate value in: " + function_data.symbol }
                 r = r + 1
             }
-            error := mir_program_instruction_error_with_records(function_data, functions, ins, i, enums, records)
+            error := mir_program_instruction_error_with_globals(function_data, functions, ins, i, enums, records, globals)
             if error != "" { return error }
             i = i + 1
         }
@@ -401,7 +409,7 @@ func mir_program_append_call(mir_program_call[] calls, string caller, string cal
     return calls
 }
 
-func lower_mir_program_with_records(string package_name, string entry_symbol, mir_program_function[] functions, mir_program_enum[] enums, mir_program_record[] records) mir_program_result {
+func lower_mir_program_with_globals(string package_name, string entry_symbol, mir_program_function[] functions, mir_program_enum[] enums, mir_program_record[] records, mir_program_global[] globals) mir_program_result {
     empty := mir_program {
         package_name: package_name, entry_symbol: entry_symbol,
         functions: mir_program_function[]{}, calls: mir_program_call[]{},
@@ -409,6 +417,8 @@ func lower_mir_program_with_records(string package_name, string entry_symbol, mi
     result := mir_program_result { program: empty, error: mir_program_enums_error(enums) }
     if result.error != "" { return result }
     result.error = mir_program_records_error(records, enums)
+    if result.error != "" { return result }
+    result.error = mir_program_globals_error(globals, functions, records, enums)
     if result.error != "" { return result }
     i := 0
     for i < len(functions) {
@@ -428,7 +438,7 @@ func lower_mir_program_with_records(string package_name, string entry_symbol, mi
     calls := []mir_program_call{}
     i = 0
     for i < len(functions) {
-        error := mir_program_function_error_with_records(functions[i], functions, enums, records)
+        error := mir_program_function_error_with_globals(functions[i], functions, enums, records, globals)
         if error != "" { result.error = error; return result }
         b := 0
         for b < len(functions[i].blocks) {
@@ -444,8 +454,10 @@ func lower_mir_program_with_records(string package_name, string entry_symbol, mi
         }
         i = i + 1
     }
+    order := mir_program_global_order(globals, functions)
+    if order.error != "" { result.error = order.error; return result }
     result.program = mir_program {
-        package_name: package_name, entry_symbol: entry_symbol, functions: functions, calls: calls, enums: enums, records: records,
+        package_name: package_name, entry_symbol: entry_symbol, functions: functions, calls: calls, enums: enums, records: records, globals: globals,
     }
     return result
 }
@@ -705,4 +717,120 @@ func mir_native_intrinsic_error(mir_program_function f, mir_program_instruction 
         i = i + 1
     }
     return ""
+}
+
+// Legacy callers construct modules without globals.
+func mir_program_instruction_error_with_records(mir_program_function f, mir_program_function[] functions, mir_program_instruction ins, int index, mir_program_enum[] enums, mir_program_record[] records) string {
+    return mir_program_instruction_error_with_globals(f, functions, ins, index, enums, records, mir_program_global[]())
+}
+func mir_program_function_error_with_records(mir_program_function f, mir_program_function[] functions, mir_program_enum[] enums, mir_program_record[] records) string {
+    return mir_program_function_error_with_globals(f, functions, enums, records, mir_program_global[]())
+}
+func lower_mir_program_with_records(string package_name, string entry_symbol, mir_program_function[] functions, mir_program_enum[] enums, mir_program_record[] records) mir_program_result {
+    return lower_mir_program_with_globals(package_name, entry_symbol, functions, enums, records, mir_program_global[]())
+}
+func mir_program_global_index(mir_program_global[] globals, string symbol) int {
+    i := 0
+    for i < len(globals) {
+        if globals[i].symbol == symbol { return i }
+        i = i + 1
+    }
+    return -1
+}
+func mir_program_global_instruction_error(mir_program_function f, mir_program_instruction ins, int index, mir_program_global[] globals) string {
+    if ins.op != "global_get" && ins.op != "global_set" { return "unknown global operation" }
+    global_index := mir_program_global_index(globals, ins.symbol)
+    if global_index < 0 { return "unknown global: " + ins.symbol }
+    if len(ins.result_ids) != 1 || len(ins.field_names) != 0 || ins.integer_value != 0 { return "invalid global instruction metadata" }
+    type_name := globals[global_index].type_name
+    if ins.op == "global_get" {
+        if len(ins.operands) != 0 || ins.result_types[0] != type_name { return "global load type or arity" }
+    } else {
+        if len(ins.operands) != 1 || ins.result_types[0] != "()" { return "global store result type or arity" }
+        if mir_program_value_type(f, ins.operands[0], index) != type_name { return "global store operand type" }
+    }
+    return ""
+}
+func mir_program_globals_error(mir_program_global[] globals, mir_program_function[] functions, mir_program_record[] records, mir_program_enum[] enums) string {
+    i := 0
+    for i < len(globals) {
+        global := globals[i]
+        if global.symbol == "" || mir_program_global_index(globals, global.symbol) != i { return "invalid or duplicate global identity" }
+        if !mir_program_type_supported(global.type_name, records, enums) { return "unsupported global type: " + global.type_name }
+        if global.initializer != "" {
+            target := mir_program_function_index(functions, global.initializer)
+            if target < 0 { return "unknown global initializer: " + global.initializer }
+            function := functions[target]
+            if function.external || len(function.params) != 0 || len(function.result_types) != 1 { return "global initializer signature" }
+            if function.result_types[0] != global.type_name { return "global initializer result type" }
+        }
+        i = i + 1
+    }
+    return ""
+}
+struct mir_program_global_order_result { int[] order; string error }
+func mir_program_global_dependencies(mir_program_global[] globals, mir_program_function[] functions, int root) int[] {
+    dependencies := int[]()
+    g := 0
+    for g < len(globals) { dependencies.push(0); g = g + 1 }
+    visited := int[]()
+    f := 0
+    for f < len(functions) { visited.push(0); f = f + 1 }
+    pending := [root];
+    cursor := 0
+    for cursor < len(pending) {
+        index := pending[cursor]
+        if visited[index] == 0 {
+            visited[index] = 1
+            function := functions[index]
+            b := 0
+            for b < len(function.blocks) {
+                i := 0
+                for i < len(function.blocks[b].instructions) {
+                    ins := function.blocks[b].instructions[i]
+                    if ins.op == "global_get" || ins.op == "global_set" {
+                        target := mir_program_global_index(globals, ins.symbol)
+                        if target >= 0 { dependencies[target] = 1 }
+                    }
+                    if ins.op == "call" {
+                        target := mir_program_function_index(functions, ins.symbol)
+                        if target >= 0 && visited[target] == 0 { pending.push(target) }
+                    }
+                    i = i + 1
+                }
+                b = b + 1
+            }
+        }
+        cursor = cursor + 1
+    }
+    return dependencies
+}
+func mir_program_global_order(mir_program_global[] globals, mir_program_function[] functions) mir_program_global_order_result {
+    order := int[]()
+    done := int[]()
+    g := 0
+    for g < len(globals) { done.push(0); g = g + 1 }
+    for len(order) < len(globals) {
+        progress := false
+        g = 0
+        for g < len(globals) {
+            if done[g] == 0 {
+                ready := true
+                if globals[g].initializer != "" {
+                    root := mir_program_function_index(functions, globals[g].initializer)
+                    if root < 0 { return mir_program_global_order_result { order: order, error: "unknown global initializer" } }
+                    dependencies := mir_program_global_dependencies(globals, functions, root)
+                    d := 0
+                    for d < len(dependencies) {
+                        if dependencies[d] != 0 && done[d] == 0 { ready = false }
+                        d = d + 1
+                    }
+                }
+                if ready { done[g] = 1; order.push(g); progress = true }
+            }
+            g = g + 1
+        }
+        if !progress { return mir_program_global_order_result { order: order, error: "cyclic global initialization" } }
+    }
+    return mir_program_global_order_result { order: order, error: "" }
 }

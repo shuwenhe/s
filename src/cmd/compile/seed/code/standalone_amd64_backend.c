@@ -489,7 +489,7 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 			current->end = i;
 			assign_local_registers(module,current);
 			detect_integer_only(module, current);
-			current->frame_size = (int)((((current->slot_count + 4) * 8 + STANDALONE_MAX_PENDING_ARGS * 8 + 15) / 16) * 16) + 16;
+			current->frame_size = (int)((((current->slot_count + 4) * 8 + STANDALONE_MAX_PENDING_ARGS * 16 + 15) / 16) * 16) + 16;
 			current = NULL;
 			continue;
 		}
@@ -1011,10 +1011,33 @@ static void emit_region_loop(FILE *out,standalone_function *fn,const char *symbo
     fprintf(out,"    mov s_heap_current(%%rip), %%rcx\n    sub -%d(%%rbp), %%rcx\n    cmp $65536, %%rcx\n    jae 1f\n    mov $65536, %%ecx\n1:\n    add s_heap_current(%%rip), %%rcx\n    mov %%rcx, -%d(%%rbp)\n",fn->frame_size,fn->frame_size-8);
     fprintf(out,".Ls_%s_region_%zu:\n",symbol,at);
 }
+/* A pure defined callee owns the by-value snapshot of its final argument.
+ * Only immediate ARG/CALL adjacency proves that no caller allocation/effect
+ * occurred after that checkpoint. Earlier ARG snapshots retain their original
+ * evaluation-time lifetime and are deliberately outside this region. */
+static bool standalone_final_arg_region(standalone_module *module,
+                                        standalone_function *caller,
+                                        size_t at, size_t pending_after) {
+    if(at+1>=caller->end) return false;
+    standalone_ins *call=&module->ir.ins[at+1];
+    if(strcmp(call->op,"CALL") || runtime_callee(call->operand1)) return false;
+    char *end=NULL;
+    long count=strtol(call->operand2,&end,10);
+    if(!end || *end || count<=0 || (size_t)count>pending_after) return false;
+    const char *defined=defined_function_name(module,call->operand1);
+    if(!defined) return false;
+    for(size_t f=0;f<module->func_count;f++)
+        if(!strcmp(module->funcs[f].name,defined)) return module->funcs[f].region_safe;
+    return false;
+}
+static size_t standalone_arg_region_offset(standalone_function *fn,size_t argument) {
+    return (fn->slot_count+4+STANDALONE_MAX_PENDING_ARGS+argument+1)*8;
+}
 static bool emit_function(FILE *out, standalone_module *module, standalone_function *fn, compile_error *err) {
     if(!standalone_analyze_liveness(module,fn,err)) return false;
 	static const char *arg_regs[STANDALONE_MAX_ARGS] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
 	const char *pending[STANDALONE_MAX_PENDING_ARGS];
+	bool pending_region[STANDALONE_MAX_PENDING_ARGS]={false};
 	size_t pending_count = 0;
 	size_t param_count = 0;
 	size_t i;
@@ -1029,7 +1052,10 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 	if (fn->slot_count > 0) fprintf(out, "    push %%r12\n    push %%r13\n    push %%r14\n    push %%r15\n");
 	if (fn->frame_size > 0) fprintf(out, "    sub $%d, %%rsp\n", fn->frame_size);
     if(fn->region_safe) {
-        fprintf(out,"    call s_region_begin\n    mov %%rax, -%d(%%rbp)\n    add $65536, %%rax\n    mov %%rax, -%d(%%rbp)\n", fn->frame_size,fn->frame_size-8);
+        /* R10 is private to the defined-S call ABI. Save it before the
+         * runtime helper: s_region_begin may initialize the heap and clobber
+         * caller-saved registers. Zero selects its ordinary local checkpoint. */
+        fprintf(out,"    mov %%r10, -%d(%%rbp)\n    call s_region_begin\n    mov -%d(%%rbp), %%r10\n    test %%r10, %%r10\n    cmovnz %%r10, %%rax\n    mov %%rax, -%d(%%rbp)\n    add $65536, %%rax\n    mov %%rax, -%d(%%rbp)\n", fn->frame_size,fn->frame_size,fn->frame_size,fn->frame_size-8);
         if(fn->region_loop_safe) for(size_t s=0;s<fn->slot_count;s++) {
             if(fn->slots[s].reg[0]) fprintf(out,"    xor %s, %s\n",fn->slots[s].reg,fn->slots[s].reg);
             else fprintf(out,"    movq $0, %d(%%rbp)\n",fn->slots[s].offset);
@@ -1052,6 +1078,11 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				return false;
 			}
             if (!emit_load(out, module, fn, ins->result, "%rdi", err)) return false;
+            pending_region[pending_count]=!ins->discard_snapshot &&
+                strcmp(ins->operand1,"mutable_borrow") &&
+                standalone_final_arg_region(module,fn,i,pending_count+1);
+            if(pending_region[pending_count])
+                fprintf(out,"    mov s_heap_current(%%rip), %%rax\n    mov %%rax, -%zu(%%rbp)\n",standalone_arg_region_offset(fn,pending_count));
             if (ins->discard_snapshot || !strcmp(ins->operand1,"mutable_borrow")) fprintf(out,"    mov %%rdi, %%rax\n");
             else fprintf(out,"    call s_value_snapshot\n");
             fprintf(out, "    mov %%rax, -%zu(%%rbp)\n", (fn->slot_count + 4 + pending_count + 1)*8);
@@ -1148,6 +1179,14 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
                 } else fprintf(out, "    mov -%zu(%%rbp), %s\n", (fn->slot_count + 4 + first_arg + arg + 1)*8, arg_regs[arg]);
 			}
 			if (!callee) defined = defined_function_name(module, ins->operand1);
+            /* Set the hidden argument only after all ordinary argument loads,
+             * which may themselves call runtime helpers. Unknown/other defined
+             * functions always receive zero, never a stale runtime register. */
+            if(!callee) {
+                if(defined && call_arg_count>0 && pending_region[pending_count-1])
+                    fprintf(out,"    mov -%zu(%%rbp), %%r10\n",standalone_arg_region_offset(fn,pending_count-1));
+                else fprintf(out,"    xor %%r10d, %%r10d\n");
+            }
 			if (!callee && !defined) {
 				symbol_text(ins->operand1, local_callee, sizeof(local_callee));
 				fprintf(out, "    call s_fn_%s\n", local_callee);
@@ -1386,11 +1425,11 @@ static bool emit_assembly(FILE *out, standalone_module *module, compile_error *e
         for(size_t order=0;order<module->global_order_count;order++) {
             size_t g=module->global_order[order];
             char init[STANDALONE_TEXT_CAP]; symbol_text(module->globals[g].initializer,init,sizeof(init));
-            fprintf(out,"    call s_fn_%s\n    mov %%rax, .Ls_global_%zu(%%rip)\n",init,g);
+            fprintf(out,"    xor %%r10d, %%r10d\n    call s_fn_%s\n    mov %%rax, .Ls_global_%zu(%%rip)\n",init,g);
         }
         fprintf(out,"    add $8, %%rsp\n    pop %%rsi\n    pop %%rdi\n");
     }
-    fprintf(out,"    jmp s_fn_main\n.size s_main, .-s_main\n");
+    fprintf(out,"    xor %%r10d, %%r10d\n    jmp s_fn_main\n.size s_main, .-s_main\n");
     for(size_t g=0;g<module->global_count;g++) fprintf(out,".section .bss\n.p2align 3\n.Ls_global_%zu: .zero 8\n",g);
 	for (i = 0; i < module->func_count; i++) {
 		if (!emit_function(out, module, &module->funcs[i], err)) return false;

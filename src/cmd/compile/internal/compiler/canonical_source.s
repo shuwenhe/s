@@ -2,6 +2,7 @@ package compile.internal
 import (
     "compile.internal.syntax"
     "compile.internal.semantic"
+    "compile.internal.mono"
     "compile.internal.ir.lower"
 )
 
@@ -15,7 +16,19 @@ func canonical_source_to_mir(string source) mir_program_result {
     checked := compile.internal.semantic.check_source_file(parsed, source)
     if trace { eprintln("canonical: semantic complete") }
     if len(checked.errors) != 0 { return mir_program_result { program: empty, error: "canonical semantic: " + checked.errors[0].code + ": " + checked.errors[0].message } }
-    lowered := compile.internal.ir.lower.lower_source_program(parsed)
+    annotated := compile.internal.mono.annotate_canonical_calls(parsed, checked, source)
+    if annotated.error != "" { return mir_program_result { program: empty, error: "canonical annotation: " + annotated.error } }
+    if trace { eprintln("canonical: semantic call annotation complete") }
+    specialized := compile.internal.mono.monomorphize_file(annotated.file, checked)
+    if specialized.error != "" { return mir_program_result { program: empty, error: "canonical monomorphization: " + specialized.error } }
+    if specialized.invariant_errors != 0 { return mir_program_result { program: empty, error: "canonical monomorphization: unresolved generic function or call" } }
+    if trace { eprintln("canonical: function specialization complete") }
+    elaborated := compile.internal.mono.elaborate_generic_types(specialized.file)
+    if elaborated.error != "" { return mir_program_result { program: empty, error: "canonical type elaboration: " + elaborated.error } }
+    if trace { eprintln("canonical: type specialization complete") }
+    flattened := compile.internal.mono.flatten_canonical_methods(elaborated.file)
+    if flattened.error != "" { return mir_program_result { program: empty, error: "canonical method lowering: " + flattened.error } }
+    lowered := compile.internal.ir.lower.lower_source_program(flattened.file)
     if trace { eprintln("canonical: MIR complete") }
     return lowered
 }

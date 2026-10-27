@@ -251,6 +251,8 @@ enum stmt {
 }
 
 struct function_decl {
+    // Original declared intrinsic identity retained by concrete specialization.
+    string intrinsic_name
     string extern_library
     sig function_sig
     option[block_expr] body

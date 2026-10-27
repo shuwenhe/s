@@ -199,7 +199,7 @@ func canonical_enum_constructor(string path, string[] arg_types, string contextu
     if len(arg_types) != arity { return check_result { type_name: "unknown", errors: add_error(source, diagnostics, "e2004", "enum constructor payload arity mismatch", path) } }
     bindings := type_binding[]()
     if arity == 1 {
-        expected := compile.internal.typesys.parse_type_ref(variant.payload.unwrap())
+        expected := compile.internal.typesys.parse_type_ref(canonical_enum_type(variant.payload.unwrap(), declarations))
         actual := compile.internal.typesys.parse_type_ref(arg_types[0])
         bindings = collect_type_pattern_bindings(expected, actual, declaration.generics, bindings)
         if !match_type_pattern_ref(expected, actual, declaration.generics, bindings) {
@@ -259,4 +259,99 @@ func canonical_enum_patterns_cover(pattern[] patterns, string expected_type, dec
         v = v + 1
     }
     return true
+}
+
+// Effectful initializer checking needs only initializer declarations. Do not
+// carry copies of every function body into those long-lived checking calls.
+// Other declarations are checked by the ordinary full-file item pass.
+func canonical_initializer_source(source_file file, bool globals) source_file {
+    selected := source_file { pkg: file.pkg, uses: file.uses, items: item[](), item_packages: string[]() }
+    i := 0
+    for i < len(file.items) {
+        keep := false
+        switch file.items[i] {
+            item.const(_): keep = !globals,
+            item.var(_): keep = globals,
+            _: (),
+        }
+        if keep {
+            selected.items.push(file.items[i])
+            selected.item_packages.push(item_package_at(file.item_packages, i, file.pkg))
+        }
+        i = i + 1
+    }
+    return selected
+}
+
+// Literal constant expressions need no copy of the complete function table.
+// Calls/constructors retain the ordinary inference path, including diagnostics.
+func canonical_const_name_type(context* canonical_const_context, string name) string {
+    i := len(context.types)
+    for i > 0 {
+        i = i - 1
+        if context.types[i].name == name {
+            if context.types[i].type_name == "int" { return "int" }
+            if context.types[i].type_name == "bool" { return "bool" }
+            if context.types[i].type_name == "string" { return "string" }
+            return "declared"
+        }
+    }
+    return "unknown"
+}
+
+func canonical_const_type(expr value, context* canonical_const_context) canonical_inference {
+    diagnostics := semantic_error[]()
+    switch value {
+        expr.int(_): { return canonical_inference { type_name: "int", diagnostics: diagnostics } }
+        expr.string(_): { return canonical_inference { type_name: "string", diagnostics: diagnostics } }
+        expr.bool(_): { return canonical_inference { type_name: "bool", diagnostics: diagnostics } }
+        expr.name(name): {
+            type_name := canonical_const_name_type(context, name.name)
+            if type_name != "unknown" && type_name != "declared" { return canonical_inference { type_name: type_name, diagnostics: diagnostics } }
+        }
+        expr.binary(binary): {
+            left := canonical_const_type(binary.left.value, context)
+            right := canonical_const_type(binary.right.value, context)
+            if left.type_name != "" && right.type_name != "" {
+                inferred := canonical_binary_inference(binary.op, left.type_name, right.type_name)
+                zero_division := (binary.op == "/" || binary.op == "%") && is_zero_int_expr(binary.right.value)
+                return canonical_merge_const_inference(left, right, inferred, zero_division, binary.op)
+            }
+        }
+        _: (),
+    }
+    return canonical_inference { type_name: "", diagnostics: diagnostics }
+}
+
+func canonical_merge_const_inference(canonical_inference left, canonical_inference right, canonical_inference inferred, bool zero_division, string op) canonical_inference {
+    diagnostics := semantic_error[]()
+    i := 0
+    for i < len(left.diagnostics) { diagnostics.push(left.diagnostics[i]); i = i + 1 }
+    i = 0
+    for i < len(right.diagnostics) { diagnostics.push(right.diagnostics[i]); i = i + 1 }
+    i = 0
+    for i < len(inferred.diagnostics) { diagnostics.push(inferred.diagnostics[i]); i = i + 1 }
+    if zero_division { diagnostics.push(semantic_error { code: "e3065", message: "division or modulo by zero is known at compile time", anchor: op }) }
+    return canonical_inference { type_name: inferred.type_name, diagnostics: diagnostics }
+}
+
+// Implicit printing functions have the same exact signatures and reserved
+// identities as their native MIR wrappers. Source declarations take precedence.
+func canonical_native_builtin_functions(function_binding[] initial) function_binding[] {
+    functions := initial
+    names := ["println", "eprintln", "panic"];
+    i := 0
+    for i < len(names) {
+        declared := false
+        f := 0
+        for f < len(initial) {
+            if !initial[f].has_receiver && initial[f].name == names[i] { declared = true }
+            f = f + 1
+        }
+        if !declared {
+            functions = append(functions, function_binding { package_path: "__native_builtin", name: names[i], owner_type: "", has_receiver: false, receiver_mode: "value", generic_names: string[](), param_types: ["string"], return_type: "()" })
+        }
+        i = i + 1
+    }
+    return functions
 }

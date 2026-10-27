@@ -226,8 +226,12 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/mir/program.s \
 	src/cmd/compile/internal/mir/program_enum.s \
 	src/cmd/compile/internal/ir/program_lower.s \
+	src/cmd/compile/internal/ir/program_payload.s \
 	src/cmd/compile/internal/ir/program_enum.s \
 	src/cmd/compile/internal/compiler/canonical_source.s \
+	src/cmd/compile/internal/mono/monomorphization.s \
+	src/cmd/compile/internal/mono/type_elaboration.s \
+	src/cmd/compile/internal/mono/canonical_annotation.s \
 	src/cmd/compile/internal/ssa/program.s \
 	src/cmd/compile/internal/ssa/function_lower.s \
 	src/cmd/compile/internal/codegen/amd64_program.s \
