@@ -1760,6 +1760,19 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					if (resolved) { *out_type = resolved; return 1; }
 				}
 			}
+			/* Heuristic for cross-package struct member access:
+			   if type name contains dots (qualified) and field is array-like name,
+			   assume it returns an array type with any elements */
+			if (lookup_type && strchr(lookup_type, '.')) {
+				if (strcmp(node->as.member_expr.member, "blocks") == 0 ||
+					strcmp(node->as.member_expr.member, "items") == 0 ||
+					strcmp(node->as.member_expr.member, "statements") == 0 ||
+					strcmp(node->as.member_expr.member, "fields") == 0 ||
+					strcmp(node->as.member_expr.member, "elements") == 0) {
+					*out_type = "any[]";
+					return 1;
+				}
+			}
 			*out_type = TYPE_ANY;
 			return 1;
 		case AST_INDEX_EXPR:
