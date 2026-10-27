@@ -13,18 +13,18 @@ struct ca_context {
     string expected
     string pkg
 }
-struct ca_expr_result { expr value; string type_name; string error }
-struct ca_block_result { block_expr value; string error }
-struct ca_stmt_result { stmt value; compile.internal.semantic.type_binding[] env; string error }
+struct ca_expr_result { compile.internal.ast.expr value; string type_name; string error }
+struct ca_block_result { compile.internal.ast.block_expr value; string error }
+struct ca_stmt_result { compile.internal.ast.stmt value; compile.internal.semantic.type_binding[] env; string error }
 
-func ca_infer(expr value, ca_context ctx) compile.internal.semantic.check_result {
+func ca_infer(compile.internal.ast.expr value, ca_context ctx) compile.internal.semantic.check_result {
     compile.internal.semantic.infer_expr(value, ctx.env, compile.internal.semantic.borrow_state_new(), ctx.expected, ctx.functions, ctx.traits, ctx.source, compile.internal.semantic.semantic_error[](), ctx.declarations)
 }
-func ca_bad(expr value, string error) ca_expr_result { ca_expr_result { value: value, type_name: "unknown", error: error } }
-func ca_child(expr value, ca_context ctx, string expected) ca_expr_result {
+func ca_bad(compile.internal.ast.expr value, string error) ca_expr_result { ca_expr_result { value: value, type_name: "unknown", error: error } }
+func ca_child(compile.internal.ast.expr value, ca_context ctx, string expected) ca_expr_result {
     child := ctx; child.expected = expected; ca_expr(value, child)
 }
-func ca_block(block_expr original, ca_context context) ca_block_result {
+func ca_block(compile.internal.ast.block_expr original, ca_context context) ca_block_result {
     block := original; ctx := context; ctx.env = compile.internal.semantic.clone_env(context.env)
     i := 0
     for i < len(block.statements) {
@@ -42,7 +42,7 @@ func ca_block(block_expr original, ca_context context) ca_block_result {
     }
     ca_block_result { value: block, error: "" }
 }
-func ca_stmt(stmt original, ca_context ctx) ca_stmt_result {
+func ca_stmt(compile.internal.ast.stmt original, ca_context ctx) ca_stmt_result {
     value := original
     switch value {
         stmt.let(v): {
@@ -103,7 +103,7 @@ func ca_stmt(stmt original, ca_context ctx) ca_stmt_result {
     if checked.errors != 0 { return ca_stmt_result { value: value, env: ctx.env, error: "semantic environment reconstruction failed" } }
     ca_stmt_result { value: value, env: checked.env, error: "" }
 }
-func ca_expr(expr original, ca_context ctx) ca_expr_result {
+func ca_expr(compile.internal.ast.expr original, ca_context ctx) ca_expr_result {
     inferred := ca_infer(original, ctx)
     if inferred.errors != 0 { return ca_bad(original, "semantic type reconstruction failed in " + ctx.pkg) }
     value := original
@@ -221,39 +221,51 @@ func ca_expr(expr original, ca_context ctx) ca_expr_result {
     }
     ca_expr_result { value: value, type_name: ty, error: "" }
 }
-func ca_call(call_expr original, string ty, ca_context ctx) ca_expr_result {
-    call := original; arg_types := string[](); i := 0
-    for i < len(call.args) {
-        argument := ca_expr(call.args[i], ctx)
+func ca_call(compile.internal.ast.call_expr original, string ty, ca_context ctx) ca_expr_result {
+    new_args := compile.internal.ast.expr[](); arg_types := string[](); i := 0
+    for i < len(original.args) {
+        argument := ca_expr(original.args[i], ctx)
         if argument.error != "" { return argument }
-        call.args[i] = argument.value; arg_types = append(arg_types, argument.type_name); i = i + 1
+        new_args = append(new_args, argument.value); arg_types = append(arg_types, argument.type_name); i = i + 1
     }
-    path := compile.internal.semantic.qualified_expr_path(call.callee.value)
+    
+    path := compile.internal.semantic.qualified_expr_path(original.callee.value)
     owner := compile.internal.semantic.qualified_package_part(path)
+    
     if compile.internal.semantic.canonical_enum_index(owner, ctx.declarations) >= 0 {
         variant := compile.internal.semantic.qualified_decl_part(path)
-        call.callee = std.prelude.box(expr.member(member_expr { target: std.prelude.box(expr.name(name_expr { name: ty, inferred_type: option.some(ty) })), member: variant, inferred_type: option.some(ty) }))
-        call.type_args = string[](); call.inferred_type = option.some(ty)
-        return ca_expr_result { value: expr.call(call), type_name: ty, error: "" }
+        new_call := compile.internal.ast.call_expr { 
+            callee: std.prelude.box(expr.member(member_expr { target: std.prelude.box(expr.name(name_expr { name: ty, inferred_type: option.some(ty) })), member: variant, inferred_type: option.some(ty) })), 
+            args: new_args, 
+            inferred_type: option.some(ty), 
+            resolved_callee: option.none, 
+            type_args: string[]() 
+        }
+        return ca_expr_result { value: expr.call(new_call), type_name: ty, error: "" }
     }
+    
     matched := compile.internal.semantic.signature_match { ok: false }
     receiver_identity := ""
     qualified := compile.internal.semantic.resolve_qualified_call_callee(path, arg_types, ctx.functions, ctx.traits, ctx.declarations, ctx.source, compile.internal.semantic.semantic_error[]())
     if qualified.ok { matched = qualified.match }
     else {
-        switch call.callee.value {
+        switch original.callee.value {
             expr.name(v): {
                 builtin := v.name == "len" || v.name == "append" || v.name == "copy" || v.name == "box" || v.name == "box_new" || v.name == "box_free" || v.name == "int" || v.name == "string" || v.name == "bool"
                 if !builtin && len(compile.internal.semantic.lookup_functions(ctx.functions, v.name)) > 0 {
                     resolution := compile.internal.semantic.resolve_call_callee(v.name, arg_types, ctx.functions, ctx.traits, ctx.declarations, ctx.source, compile.internal.semantic.semantic_error[]())
-                    if !resolution.ok { return ca_bad(expr.call(call), "semantic call resolution failed: " + path) }
+                    if !resolution.ok { 
+                        bad_call := compile.internal.ast.call_expr { callee: original.callee, args: new_args, inferred_type: original.inferred_type, resolved_callee: original.resolved_callee, type_args: original.type_args }
+                        return ca_bad(expr.call(bad_call), "semantic call resolution failed: " + path) 
+                    }
                     matched = resolution.match
                 }
             },
             expr.member(v): {
                 target := ca_expr(v.target.value, ctx); if target.error != "" { return target }
-                v.target = std.prelude.box(target.value); call.callee = std.prelude.box(expr.member(v))
-                candidates := compile.internal.semantic.lookup_methods(ctx.functions, target.type_name, v.member, v.target.value)
+                new_target := std.prelude.box(target.value)
+                new_callee := std.prelude.box(expr.member(member_expr { target: new_target, member: v.member, inferred_type: v.inferred_type }))
+                candidates := compile.internal.semantic.lookup_methods(ctx.functions, target.type_name, v.member, target.value)
                 j := 0; ambiguous := false
                 for j < len(candidates) {
                     receiver_argument := compile.internal.semantic.method_receiver_arg_type(target.type_name, candidates[j].receiver_mode)
@@ -269,18 +281,27 @@ func ca_call(call_expr original, string ty, ca_context ctx) ca_expr_result {
                     }
                     j = j + 1
                 }
-                if ambiguous { return ca_bad(expr.call(call), "ambiguous semantic receiver call: " + path) }
+                if ambiguous { 
+                    bad_call := compile.internal.ast.call_expr { callee: new_callee, args: new_args, inferred_type: original.inferred_type, resolved_callee: original.resolved_callee, type_args: original.type_args }
+                    return ca_bad(expr.call(bad_call), "ambiguous semantic receiver call: " + path) 
+                }
             },
             _: (),
         }
     }
+    
+    final_callee := original.callee
+    final_resolved := original.resolved_callee
+    final_type_args := original.type_args
+    
     if matched.ok {
         identity := matched.instance_name
         if receiver_identity != "" { identity = receiver_identity + "." + mono_generic_identity(identity); if len(matched.type_args) > 0 { identity = make_instance_name(identity, matched.type_args) } }
-        call.resolved_callee = option.some(identity); call.type_args = matched.type_args
+        final_resolved = option.some(identity); final_type_args = matched.type_args
     }
-    call.inferred_type = option.some(ty)
-    ca_expr_result { value: expr.call(call), type_name: ty, error: "" }
+    
+    final_call := compile.internal.ast.call_expr { callee: final_callee, args: new_args, inferred_type: option.some(ty), resolved_callee: final_resolved, type_args: final_type_args }
+    ca_expr_result { value: expr.call(final_call), type_name: ty, error: "" }
 }
 func annotate_canonical_calls(source_file original, compile.internal.semantic.semantic_result checked, string source) canonical_annotation_result {
     file := original
@@ -332,7 +353,7 @@ func annotate_canonical_calls(source_file original, compile.internal.semantic.se
     }
     canonical_annotation_result { file: file, error: "" }
 }
-func ca_function_context(function_decl function, ca_context initial) ca_context {
+func ca_function_context(compile.internal.ast.function_decl function, ca_context initial) ca_context {
     ctx := initial; ctx.expected = "()"
     switch function.sig.return_type { option.some(t): ctx.expected = compile.internal.semantic.canonical_enum_type(compile.internal.typesys.parse_type(t), ctx.declarations), option.none: () }
     i := 0
