@@ -233,23 +233,13 @@ func program_lower_expression(expr expression, string package_name, mir_program_
         expr.for(value): {
             if value.iterable.is_some() || len(value.names) != 0 { state.error = "for form requires explicit lowering"; return state }
             
-            if value.init.is_some() {
-                init_stmt := value.init.unwrap().value
-                state = program_lower_stmt(init_stmt, package_name, signatures, state)
-                if state.error != "" { return state }
+            if value.init.is_some() || value.post.is_some() {
+                return program_lower_three_part_for(value, package_name, signatures, state)
             }
             
             condition := option[expr].none
             if value.condition.is_some() { condition = option.some(value.condition.unwrap().value) }
-            
-            body := value.body
-            if value.post.is_some() {
-                post_stmt := value.post.unwrap().value
-                updated_stmts := append(value.body.statements, post_stmt)
-                body = block_expr { statements: updated_stmts, inferred_type: value.body.inferred_type }
-            }
-            
-            return program_lower_loop(condition, body, package_name, signatures, state)
+            return program_lower_loop(condition, value.body, package_name, signatures, state)
         }
         expr.array(value): {
             array_type := ""
@@ -1007,6 +997,104 @@ func program_add_tuple_record(string type_name, mir_program_record[] initial) mi
         i = i + 1
     }
     return append(records, mir_program_record { symbol: type_name, field_names: names, field_types: types })
+}
+
+func program_lower_three_part_for(compile.internal.ast.for_expr for_value, string package_name, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
+    state := initial
+    saved_names := state.binding_names
+    saved_values := state.binding_values
+    base := program_copy_values(saved_values)
+    
+    state = program_new_block(state)
+    init_block := state.created_block
+    state = program_new_block(state)
+    header := state.created_block
+    state = program_new_block(state)
+    body_block := state.created_block
+    state = program_new_block(state)
+    post_block := state.created_block
+    state = program_new_block(state)
+    exit := state.created_block
+    
+    if state.terminated { state.terminated = false }
+    state = program_finish_block(state, "jump", int[](), [init_block])
+    
+    state = program_open_block(state, init_block)
+    state.binding_names = saved_names
+    state.binding_values = program_copy_values(saved_values)
+    
+    if for_value.init.is_some() {
+        init_stmt := for_value.init.unwrap().value
+        state = program_lower_stmt(init_stmt, package_name, signatures, state)
+        if state.error != "" { return state }
+    }
+    
+    init_bindings := state.binding_names
+    init_values := program_copy_values(state.binding_values)
+    state = program_finish_block(state, "jump", int[](), [header])
+    
+    state = program_open_block(state, header)
+    state.binding_names = init_bindings
+    state.binding_values = program_copy_values(init_values)
+    
+    phi_values := int[]()
+    i := 0
+    for i < len(base) {
+        type_name := program_expression_type(state, state.signature, base[i])
+        id := state.next_value
+        state.next_value = id + 1
+        initial_op := init_values[i]
+        state.instructions = append(state.instructions, mir_program_instruction { op: "phi", result_ids: [id], result_types: [type_name], operands: [initial_op] })
+        phi_values = append(phi_values, id)
+        i = i + 1
+    }
+    
+    state.binding_values = program_copy_values(phi_values)
+    
+    if for_value.condition.is_some() {
+        state = program_lower_expression(for_value.condition.unwrap().value, package_name, signatures, state)
+    } else {
+        state = program_lower_expression(expr.bool(bool_expr { value: true, inferred_type: option.none }), package_name, signatures, state)
+    }
+    if state.error != "" { return state }
+    condition_value := state.expression_value
+    condition_bindings := program_copy_values(state.binding_values)
+    state = program_finish_block(state, "branch", [condition_value], [body_block, exit])
+    
+    state = program_open_block(state, body_block)
+    state.binding_values = program_copy_values(condition_bindings)
+    state = program_lower_block(for_value.body, package_name, signatures, state)
+    if state.error != "" { return state }
+    
+    if !state.terminated {
+        state = program_finish_block(state, "jump", int[](), [post_block])
+    }
+    
+    state = program_open_block(state, post_block)
+    
+    if for_value.post.is_some() {
+        post_stmt := for_value.post.unwrap().value
+        state = program_lower_stmt(post_stmt, package_name, signatures, state)
+        if state.error != "" { return state }
+    }
+    
+    post_values := program_copy_values(state.binding_values)
+    state = program_finish_block(state, "jump", int[](), [header])
+    
+    i = 0
+    for i < len(base) {
+        phi_ops := int[]()
+        phi_ops = append(phi_ops, init_values[i])
+        phi_ops = append(phi_ops, post_values[i])
+        state.blocks[header] = program_set_phi_operands(state.blocks[header], i, phi_ops)
+        i = i + 1
+    }
+    
+    state = program_open_block(state, exit)
+    state.binding_names = saved_names
+    state.binding_values = program_copy_values(condition_bindings)
+    
+    return program_emit_unit(state)
 }
 
 func program_lower_stmt(stmt statement, string package_name, mir_program_function[] signatures, program_lower_state initial) program_lower_state {

@@ -44,10 +44,10 @@ func cfg_new(ir_function ir_func) control_flow_graph {
         function: ir_func, entry_block_id 0
     }
 
-    for i := 0; i < ir_func.basic_blocks.len(); i = i + 1 {
-        ir_block := ir_func.basic_blocks[i]
+    for i := 0; i < ir_func.blocks.len(); i = i + 1 {
+        ir_block := ir_func.blocks[i]
         cfg_block := cfg_block {
-            block_id: ir_block.block_id, label ir_block.label, instructions ir_block.instructions, predecessors ir_block.predecessors, successors ir_block.successors
+            block_id: ir_block.id, label: "", instructions: ir_block.instructions, predecessors: int[](), successors: int[]()
         }
         cfg.blocks = append(cfg.blocks, cfg_block)
     }
