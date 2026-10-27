@@ -229,78 +229,7 @@ func ca_call(compile.internal.ast.call_expr original, string ty, ca_context ctx)
         new_args = append(new_args, argument.value); arg_types = append(arg_types, argument.type_name); i = i + 1
     }
     
-    path := compile.internal.semantic.qualified_expr_path(original.callee.value)
-    owner := compile.internal.semantic.qualified_package_part(path)
-    
-    if compile.internal.semantic.canonical_enum_index(owner, ctx.declarations) >= 0 {
-        variant := compile.internal.semantic.qualified_decl_part(path)
-        new_call := compile.internal.ast.call_expr { 
-            callee: std.prelude.box(expr.member(member_expr { target: std.prelude.box(expr.name(name_expr { name: ty, inferred_type: option.some(ty) })), member: variant, inferred_type: option.some(ty) })), 
-            args: new_args, 
-            inferred_type: option.some(ty), 
-            resolved_callee: option.none, 
-            type_args: string[]() 
-        }
-        return ca_expr_result { value: expr.call(new_call), type_name: ty, error: "" }
-    }
-    
-    matched := compile.internal.semantic.signature_match { ok: false }
-    receiver_identity := ""
-    qualified := compile.internal.semantic.resolve_qualified_call_callee(path, arg_types, ctx.functions, ctx.traits, ctx.declarations, ctx.source, compile.internal.semantic.semantic_error[]())
-    if qualified.ok { matched = qualified.match }
-    else {
-        switch original.callee.value {
-            expr.name(v): {
-                builtin := v.name == "len" || v.name == "append" || v.name == "copy" || v.name == "box" || v.name == "box_new" || v.name == "box_free" || v.name == "int" || v.name == "string" || v.name == "bool"
-                if !builtin && len(compile.internal.semantic.lookup_functions(ctx.functions, v.name)) > 0 {
-                    resolution := compile.internal.semantic.resolve_call_callee(v.name, arg_types, ctx.functions, ctx.traits, ctx.declarations, ctx.source, compile.internal.semantic.semantic_error[]())
-                    if !resolution.ok { 
-                        bad_call := compile.internal.ast.call_expr { callee: original.callee, args: new_args, inferred_type: original.inferred_type, resolved_callee: original.resolved_callee, type_args: original.type_args }
-                        return ca_bad(expr.call(bad_call), "semantic call resolution failed: " + path) 
-                    }
-                    matched = resolution.match
-                }
-            },
-            expr.member(v): {
-                target := ca_expr(v.target.value, ctx); if target.error != "" { return target }
-                new_target := std.prelude.box(target.value)
-                new_callee := std.prelude.box(expr.member(member_expr { target: new_target, member: v.member, inferred_type: v.inferred_type }))
-                candidates := compile.internal.semantic.lookup_methods(ctx.functions, target.type_name, v.member, target.value)
-                j := 0; ambiguous := false
-                for j < len(candidates) {
-                    receiver_argument := compile.internal.semantic.method_receiver_arg_type(target.type_name, candidates[j].receiver_mode)
-                    args := string[] { receiver_argument }
-                    ai := 0; for ai < len(arg_types) { args = append(args, arg_types[ai]); ai = ai + 1 }
-                    candidate := compile.internal.semantic.try_match_signature(candidates[j], args, ctx.functions, ctx.traits, ctx.declarations)
-                    if candidate.ok {
-                        if !matched.ok || compile.internal.semantic.better_match(candidate, matched) {
-                            matched = candidate; ambiguous = false
-                            receiver_identity = ca_receiver_identity(target.type_name, candidates[j].package_path)
-                        }
-                        else if compile.internal.semantic.same_match_rank(candidate, matched) { ambiguous = true }
-                    }
-                    j = j + 1
-                }
-                if ambiguous { 
-                    bad_call := compile.internal.ast.call_expr { callee: new_callee, args: new_args, inferred_type: original.inferred_type, resolved_callee: original.resolved_callee, type_args: original.type_args }
-                    return ca_bad(expr.call(bad_call), "ambiguous semantic receiver call: " + path) 
-                }
-            },
-            _: (),
-        }
-    }
-    
-    final_callee := original.callee
-    final_resolved := original.resolved_callee
-    final_type_args := original.type_args
-    
-    if matched.ok {
-        identity := matched.instance_name
-        if receiver_identity != "" { identity = receiver_identity + "." + mono_generic_identity(identity); if len(matched.type_args) > 0 { identity = make_instance_name(identity, matched.type_args) } }
-        final_resolved = option.some(identity); final_type_args = matched.type_args
-    }
-    
-    final_call := compile.internal.ast.call_expr { callee: final_callee, args: new_args, inferred_type: option.some(ty), resolved_callee: final_resolved, type_args: final_type_args }
+    final_call := compile.internal.ast.call_expr { callee: original.callee, args: new_args, inferred_type: option.some(ty), resolved_callee: original.resolved_callee, type_args: original.type_args }
     ca_expr_result { value: expr.call(final_call), type_name: ty, error: "" }
 }
 func annotate_canonical_calls(source_file original, compile.internal.semantic.semantic_result checked, string source) canonical_annotation_result {
