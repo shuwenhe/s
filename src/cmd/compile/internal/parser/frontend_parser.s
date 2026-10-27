@@ -546,13 +546,81 @@ func parser_parse_for_stmt(p* parser) ast_node {
     for_stmt := ast_new(fp_ast_for_stmt, p.current_token.line, p.current_token.column)
     parser_next_token(p)
 
-    init := parser_parse_statement(p)
-    if init.node_type != 0 {
-        ast_add_child(for_stmt, init)
+    if parser_current_token_is(p, token_lbrace) {
+        body := parser_parse_block(p)
+        ast_add_child(for_stmt, body)
+        return for_stmt
     }
 
-    condition := parser_parse_expression(p, prec_lowest)
-    ast_add_child(for_stmt, condition)
+    if parser_current_token_is(p, token_ident) && parser_peek_token_is(p, token_colon_assign) {
+        ident := ast_new(fp_ast_ident, p.current_token.line, p.current_token.column)
+        ast_set_name(ident, p.current_token.value)
+        parser_next_token(p)
+        parser_next_token(p)
+
+        expr := parser_parse_expression(p, prec_lowest)
+
+        init := ast_new(fp_ast_binary_op, p.current_token.line, p.current_token.column)
+        ast_add_child(init, ident)
+        ast_add_child(init, expr)
+
+        if parser_current_token_is(p, token_semicolon) {
+            ast_add_child(for_stmt, init)
+            parser_next_token(p)
+
+            condition := parser_parse_expression(p, prec_lowest)
+            if condition.node_type != 0 {
+                ast_add_child(for_stmt, condition)
+            }
+
+            if parser_current_token_is(p, token_semicolon) {
+                parser_next_token(p)
+                post := parser_parse_expression(p, prec_lowest)
+                if post.node_type != 0 {
+                    ast_add_child(for_stmt, post)
+                }
+            }
+        } else {
+            ast_add_child(for_stmt, init)
+        }
+    } else if !parser_current_token_is(p, token_semicolon) {
+        init := parser_parse_statement(p)
+
+        if parser_current_token_is(p, token_semicolon) {
+            ast_add_child(for_stmt, init)
+            parser_next_token(p)
+
+            condition := parser_parse_expression(p, prec_lowest)
+            if condition.node_type != 0 {
+                ast_add_child(for_stmt, condition)
+            }
+
+            if parser_current_token_is(p, token_semicolon) {
+                parser_next_token(p)
+                post := parser_parse_expression(p, prec_lowest)
+                if post.node_type != 0 {
+                    ast_add_child(for_stmt, post)
+                }
+            }
+        } else {
+            ast_add_child(for_stmt, init)
+        }
+    } else {
+        parser_next_token(p)
+
+        condition := parser_parse_expression(p, prec_lowest)
+        if condition.node_type != 0 {
+            ast_add_child(for_stmt, condition)
+        }
+
+        if parser_current_token_is(p, token_semicolon) {
+            parser_next_token(p)
+            post := parser_parse_expression(p, prec_lowest)
+            if post.node_type != 0 {
+                ast_add_child(for_stmt, post)
+            }
+        }
+    }
 
     if parser_current_token_is(p, token_lbrace) {
         body := parser_parse_block(p)

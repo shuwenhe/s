@@ -231,10 +231,25 @@ func program_lower_expression(expr expression, string package_name, mir_program_
         }
         expr.while(value): { return program_lower_loop(option.some(value.condition.value), value.body, package_name, signatures, state) }
         expr.for(value): {
-            if value.init.is_some() || value.post.is_some() || value.iterable.is_some() || len(value.names) != 0 { state.error = "for form requires explicit lowering"; return state }
+            if value.iterable.is_some() || len(value.names) != 0 { state.error = "for form requires explicit lowering"; return state }
+            
+            if value.init.is_some() {
+                init_stmt := value.init.unwrap().value
+                state = program_lower_stmt(init_stmt, package_name, signatures, state)
+                if state.error != "" { return state }
+            }
+            
             condition := option[expr].none
             if value.condition.is_some() { condition = option.some(value.condition.unwrap().value) }
-            return program_lower_loop(condition, value.body, package_name, signatures, state)
+            
+            body := value.body
+            if value.post.is_some() {
+                post_stmt := value.post.unwrap().value
+                updated_stmts := append(value.body.statements, post_stmt)
+                body = block_expr { statements: updated_stmts, inferred_type: value.body.inferred_type }
+            }
+            
+            return program_lower_loop(condition, body, package_name, signatures, state)
         }
         expr.array(value): {
             array_type := ""
@@ -992,4 +1007,32 @@ func program_add_tuple_record(string type_name, mir_program_record[] initial) mi
         i = i + 1
     }
     return append(records, mir_program_record { symbol: type_name, field_names: names, field_types: types })
+}
+
+func program_lower_stmt(stmt statement, string package_name, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
+    state := initial
+    switch statement {
+        stmt.let(binding): {
+            if program_binding_index(state, binding.name) >= 0 { state.error = "duplicate binding: " + binding.name; return state }
+            state = program_lower_expression(binding.value, package_name, signatures, state)
+            if state.error != "" { return state }
+            if state.expression_value < 0 { state.error = "cannot bind a void expression"; return state }
+            state.binding_names = append(state.binding_names, binding.name)
+            state.binding_values = append(state.binding_values, state.expression_value)
+        }
+        stmt.assign(binding): {
+            index := program_binding_index(state, binding.name)
+            if index < 0 { state.error = "assignment to undefined binding"; return state }
+            state = program_lower_expression(binding.value, package_name, signatures, state)
+            if state.error != "" { return state }
+            state.binding_values[index] = state.expression_value
+        }
+        stmt.expr(value): {
+            state = program_lower_expression(value.expr, package_name, signatures, state)
+        }
+        _: {
+            state.error = "unsupported statement in for init"
+        }
+    }
+    return state
 }
