@@ -1768,7 +1768,10 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					strcmp(node->as.member_expr.member, "items") == 0 ||
 					strcmp(node->as.member_expr.member, "statements") == 0 ||
 					strcmp(node->as.member_expr.member, "fields") == 0 ||
-					strcmp(node->as.member_expr.member, "elements") == 0) {
+					strcmp(node->as.member_expr.member, "elements") == 0 ||
+					strcmp(node->as.member_expr.member, "globals") == 0 ||
+					strcmp(node->as.member_expr.member, "constants") == 0 ||
+					strcmp(node->as.member_expr.member, "payloads") == 0) {
 					*out_type = "any[]";
 					return 1;
 				}

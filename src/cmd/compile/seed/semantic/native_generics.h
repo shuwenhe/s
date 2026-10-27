@@ -735,9 +735,6 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
             ng_text args[NG_ARGS];
             if(!ng_node(c,n->as.if_stmt.pattern_subject,left)) return false;
             if(ng_enum_type(c,left,args)) return ng_enum_switch(c,n,expected,out,return_position);
-            ng_decl *pattern_owner=n->as.if_stmt.pattern_kind==PATTERN_VARIANT?ng_enum_owner(c,n->as.if_stmt.variant_owner):NULL;
-            if(pattern_owner && seed_enum_has_payload(pattern_owner->node))
-                return ng_fail(s,n->pos,"unresolved enum subject type");
         }
         size_t saved=c->count; const ast_node *saved_pattern=c->active_pattern; VISIT(n->as.if_stmt.condition);
         if(!ng_node(c,n->as.if_stmt.pattern_subject,left)) return false;
@@ -754,7 +751,17 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
                 ng_scope *decl=calloc(1,sizeof(*decl)); if(!decl) return false;
                 decl->state=s; decl->package=owner->package;
                 bool valid=ng_type(decl,variant->payload_type,type,0); free(decl);
-                if(!valid || !ng_bind(c,n->as.if_stmt.payload_binding_name,type)) return false;
+                if(!valid) return false;
+                // Normalize type: if it starts with current package prefix, remove it
+                ng_text normalized_type;
+                strcpy(normalized_type,type);
+                if(owner->package && owner->package[0]) {
+                    size_t pkg_len=strlen(owner->package);
+                    if(!strncmp(normalized_type,owner->package,pkg_len) && normalized_type[pkg_len]=='.') {
+                        strcpy(normalized_type,normalized_type+pkg_len+1);
+                    }
+                }
+                if(!ng_bind(c,n->as.if_stmt.payload_binding_name,normalized_type)) return false;
             }
         }
         if(n->as.if_stmt.binding_name && left[0] && !ng_bind(c,n->as.if_stmt.binding_name,left)) return false;

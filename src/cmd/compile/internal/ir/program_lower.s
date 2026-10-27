@@ -18,6 +18,7 @@ struct program_store_step {
 
 struct program_lower_state {
     program_payload_layout[] payloads
+    program_environment environment
     string store_root
     program_store_step[] store_steps
     mir_program_block[] blocks
