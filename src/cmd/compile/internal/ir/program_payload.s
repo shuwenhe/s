@@ -3,9 +3,7 @@ import ("compile.internal.ast"; "compile.internal.mir"; "std.option"; "std.prelu
 
 // Helper to create binary expressions, avoiding Seed inline enum variant issues
 func make_binary_expr(expr left, string op, expr right) expr {
-    bin := binary_expr { left: std.prelude.box(left), op: op, right: std.prelude.box(right), inferred_type: option.none }
-    bin_expr := expr.binary(bin)
-    bin_expr
+    expr.binary(binary_expr { left: std.prelude.box(left), op: op, right: std.prelude.box(right), inferred_type: option.none })
 }
 
 // Payload enums keep their nominal type and lower to immutable typed records.
