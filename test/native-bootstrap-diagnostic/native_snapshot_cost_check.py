@@ -4,9 +4,11 @@ from pathlib import Path
 import resource
 import struct
 import subprocess
+import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+seed = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else root / 'bin/s_seed'
 
 def run(command, **kwargs):
     return subprocess.run(command, check=True, cwd=root, **kwargs)
@@ -21,6 +23,8 @@ with tempfile.TemporaryDirectory(prefix='s-snapshot-cost-') as directory:
     source = work / 'main.s'
     source.write_text('''package main
 struct item { int number }
+func read(item[] values, int index) int { return values[index].number }
+func change(item[] values) int { values[0].number = 99; return values[0].number }
 func main() int {
     first := item { number: 42 }
     second := item { number: 7 }
@@ -28,10 +32,11 @@ func main() int {
     i := 0
     total := 0
     while i < 2000 {
-        total = total + len(values)
+        total = total + len(values) + read(values, 0)
         i = i + 1
     }
-    if total != 4000 { return 1 }
+    if total != 88000 { return 1 }
+    if change(values) != 99 || values[0].number != 42 { return 3 }
     copy := values
     copy[0].number = 99
     if values[0].number != 42 { return 2 }
@@ -40,8 +45,8 @@ func main() int {
 ''')
     ir = work / 'main.ir'
     asm = work / 'main.S'
-    run([str(root / 'bin/s_seed'), '--compile-native-unit', str(ir), str(source)])
-    run([str(root / 'bin/s_seed'), '--emit-standalone-amd64-asm', str(ir), str(asm)])
+    run([str(seed), '--compile-native-unit', str(ir), str(source)])
+    run([str(seed), '--emit-standalone-amd64-asm', str(ir), str(asm)])
     runtime = (root / 'src/runtime/selfhost_linux_amd64.S').read_text()
     runtime = runtime.replace('.Lrecord_snapshot_allocate:\n',
                               '.Lrecord_snapshot_allocate:\n    incq snapshot_count(%rip)\n', 1)
@@ -65,5 +70,5 @@ func main() int {
     assert result.returncode == 42, f'wrong value/copy semantics: {result.returncode}, {result.stderr!r}'
     assert len(result.stdout) == 8, result.stdout
     count, = struct.unpack('<Q', result.stdout)
-    assert count < 100, f'2000 len calls triggered {count} aggregate snapshots (expected <100)'
-    print(f'2000 aggregate len calls: {count} snapshots; independent value mutation preserved: PASS')
+    assert count < 100, f'2000 intrinsic/readonly calls triggered {count} aggregate snapshots (expected <100)'
+    print(f'2000 intrinsic/readonly aggregate calls: {count} snapshots; independent value mutation preserved: PASS')

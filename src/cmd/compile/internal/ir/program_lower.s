@@ -49,6 +49,41 @@ func program_item_package(source_file src, int index) string {
     return src.pkg
 }
 
+// Repeated declarations of one external contract do not define another
+// function. Compare canonical signature types; conflicting declarations and
+// ordinary definitions still reach the independent duplicate-symbol gate.
+func program_repeated_external_contract(source_file src, int index, function_decl current, mir_program_enum[] enums, mir_program_record[] records) bool {
+    if current.body.is_some() { return false }
+    pkg := program_item_package(src, index)
+    signature := program_signature_with_records(pkg, current, enums, records)
+    previous := 0
+    for previous < index {
+        switch src.items[previous] {
+            item.function(declaration): {
+                if declaration.body.is_none() && declaration.extern_library == current.extern_library
+                    && declaration.sig.name == current.sig.name && program_item_package(src, previous) == pkg
+                    && len(declaration.sig.generics) == len(current.sig.generics) {
+                    candidate := program_signature_with_records(pkg, declaration, enums, records)
+                    same := len(candidate.params) == len(signature.params) && len(candidate.result_types) == len(signature.result_types)
+                    p := 0
+                    for same && p < len(signature.params) { if candidate.params[p].type_name != signature.params[p].type_name { same = false }
+                        p = p + 1 }
+                    p = 0
+                    for same && p < len(signature.result_types) { if candidate.result_types[p] != signature.result_types[p] { same = false }
+                        p = p + 1 }
+                    p = 0
+                    for same && p < len(current.sig.generics) { if declaration.sig.generics[p] != current.sig.generics[p] { same = false }
+                        p = p + 1 }
+                    if same { return true }
+                }
+            }
+            _: (),
+        }
+        previous = previous + 1
+    }
+    return false
+}
+
 func program_signature_with_enums(string package_name, function_decl declaration, mir_program_enum[] enums) mir_program_function {
     params := mir_program_parameter[]()
     i := 0
@@ -573,7 +608,9 @@ func lower_source_program(source_file src) mir_program_result {
     for i < len(src.items) {
         switch src.items[i] {
             item.function(declaration) : {
-                signatures = append(signatures, program_signature_with_records(program_item_package(src, i), declaration, enums, records))
+                if !program_repeated_external_contract(src, i, declaration, enums, records) {
+                    signatures = append(signatures, program_signature_with_records(program_item_package(src, i), declaration, enums, records))
+                }
             }
             item.enum(_): (),
             item.struct(_): (),
@@ -597,10 +634,12 @@ func lower_source_program(source_file src) mir_program_result {
     for i < len(src.items) {
         switch src.items[i] {
             item.function(declaration) : {
-                lowered := program_lower_function_with_layouts(program_item_package(src, i), declaration, signatures[len(functions)], signatures, enums, records, payloads)
-                if lowered.error != "" { result.error = lowered.error; return result }
-                records = lowered.records
-                functions = append(functions, lowered.function_value)
+                if !program_repeated_external_contract(src, i, declaration, enums, records) {
+                    lowered := program_lower_function_with_layouts(program_item_package(src, i), declaration, signatures[len(functions)], signatures, enums, records, payloads)
+                    if lowered.error != "" { result.error = lowered.error; return result }
+                    records = lowered.records
+                    functions = append(functions, lowered.function_value)
+                }
             }
             _ : (),
         }

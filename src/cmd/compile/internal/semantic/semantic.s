@@ -17,6 +17,8 @@ struct type_binding {
 }
 
 struct function_binding {
+    bool is_external
+    string extern_library
     string package_path
     string name
     string owner_type
@@ -437,13 +439,24 @@ func check_detailed(string source) semantic_error[] {
     validate_function_set(functions, source, diagnostics)
     i := 0
     for i < std.prelude.len(file.items) {
-        ignored := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics, declaration_ref[]())
+        package_name := item_package_at(file.item_packages, i, file.pkg)
+        ignored := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics, declaration_ref[](), package_name)
         i = i + 1
     }
     finalize_diagnostics(semantic_diagnostic_log)
 }
 
 func check_source_file(source_file file, string source) semantic_result {
+    return canonical_check_source_file(file, source, false)
+}
+
+// Compilation only consumes a rejected unit's first diagnostic. The complete
+// diagnostic API above still checks every item; valid units share every gate.
+func check_source_file_for_compile(source_file file, string source) semantic_result {
+    return canonical_check_source_file(file, source, true)
+}
+
+func canonical_check_source_file(source_file file, string source, bool stop_on_error) semantic_result {
     semantic_diagnostic_log = semantic_error[]()
     inputs := canonical_collect_semantic_inputs(file)
     diagnostics := inputs.errors
@@ -480,19 +493,22 @@ func check_source_file(source_file file, string source) semantic_result {
     function_errors := validate_function_set(functions, source, diagnostics)
     if function_errors > 0 && len(diagnostics) == 0 && len(semantic_diagnostic_log) == 0 { diagnostics.push(canonical_semantic_error("function declarations rejected")) }
     i := 0
-    for i < std.prelude.len(file.items) {
+    for i < std.prelude.len(file.items) && (!stop_on_error || (len(diagnostics) == 0 && len(semantic_diagnostic_log) == 0)) {
         previous_errors := len(diagnostics)
         previous_logged := len(semantic_diagnostic_log)
-        checked := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics, declarations)
+        package_name := item_package_at(file.item_packages, i, file.pkg)
+        checked := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics, declarations, package_name)
         // Native array arguments copy their descriptor. The package log keeps
         // nested diagnostics; this fallback detects an unreported rejection.
         if checked > 0 && len(diagnostics) == previous_errors && len(semantic_diagnostic_log) == previous_logged { diagnostics.push(canonical_semantic_error("semantic check rejected item")) }
         i = i + 1
     }
     
-    m2_equality_gate_result := validate_canonical_equality_decision(functions, declarations)
-    if m2_equality_gate_result != 0 {
-        diagnostics.push(canonical_semantic_error("canonical equality not used in decision"))
+    if !stop_on_error || (len(diagnostics) == 0 && len(semantic_diagnostic_log) == 0) {
+        m2_equality_gate_result := validate_canonical_equality_decision(functions, declarations)
+        if m2_equality_gate_result != 0 {
+            diagnostics.push(canonical_semantic_error("canonical equality not used in decision"))
+        }
     }
     
     logged := 0
@@ -1054,7 +1070,26 @@ func collect_functions(source_file file) function_binding[] {
     for i < std.prelude.len(file.items) {
         pkg := item_package_at(file.item_packages, i, file.pkg)
         switch file.items[i] {
-            item.function(function_decl) : out.push(make_function_binding(function_decl, pkg)),
+            item.function(function_decl) : {
+                binding := make_function_binding(function_decl, pkg)
+                repeated_contract := false
+                if binding.is_external {
+                    previous := 0
+                    for previous < len(out) {
+                        existing := out[previous]
+                        if existing.is_external && !existing.has_receiver && existing.package_path == binding.package_path
+                            && existing.name == binding.name && existing.extern_library == binding.extern_library
+                            && same_param_types(existing.generic_names, binding.generic_names)
+                            && same_param_types(existing.param_types, binding.param_types)
+                            && compile.internal.typesys.same_type(existing.return_type, binding.return_type) {
+                            repeated_contract = true
+                            break
+                        }
+                        previous = previous + 1
+                    }
+                }
+                if !repeated_contract { out.push(binding) }
+            },
             item.method(method_decl) : out.push(make_receiver_method_binding(method_decl, pkg)),
             _ : {},
         }
@@ -1073,6 +1108,7 @@ func canonical_augment_function_bindings(function_binding[] input, declaration_r
     f := 0
     for f < len(functions) {
         if functions[f].has_receiver {
+            functions[f].owner_type = canonical_type_in_package(functions[f].owner_type, functions[f].package_path, functions[f].generic_names, declarations)
             enum_index := canonical_enum_index(functions[f].owner_type, declarations)
             if enum_index < 0 { enum_index = canonical_record_index(functions[f].owner_type, declarations) }
             if enum_index >= 0 {
@@ -1082,12 +1118,12 @@ func canonical_augment_function_bindings(function_binding[] input, declaration_r
                     if !is_generic_name(functions[f].generic_names, generic) { functions[f].generic_names = append(functions[f].generic_names, generic) }
                     generic_index = generic_index + 1
                 }
-                functions[f].owner_type = canonical_enum_type(functions[f].owner_type, declarations)
+                functions[f].owner_type = canonical_type_in_package(functions[f].owner_type, functions[f].package_path, functions[f].generic_names, declarations)
             }
         }
-        functions[f].return_type = canonical_enum_type(functions[f].return_type, declarations)
+        functions[f].return_type = canonical_type_in_package(functions[f].return_type, functions[f].package_path, functions[f].generic_names, declarations)
         p := 0
-        for p < len(functions[f].param_types) { functions[f].param_types[p] = canonical_enum_type(functions[f].param_types[p], declarations); p = p + 1 }
+        for p < len(functions[f].param_types) { functions[f].param_types[p] = canonical_type_in_package(functions[f].param_types[p], functions[f].package_path, functions[f].generic_names, declarations); p = p + 1 }
         f = f + 1
     }
     return functions
@@ -1112,6 +1148,7 @@ func make_function_binding(function_decl function_decl, string package_path) fun
             option.none : "()",
         }
     return function_binding {
+        is_external: function_decl.body.is_none(), extern_library: function_decl.extern_library,
         package_path: package_path,
         name: function_decl.sig.name,
         owner_type: "", has_receiver false,
@@ -1135,11 +1172,11 @@ func make_receiver_method_binding(receiver_method_decl method_decl, string packa
     binding
 }
 
-func check_item(item item, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics, declaration_ref[] declarations) int {
+func check_item(item item, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics, declaration_ref[] declarations, string package_name) int {
     switch item {
-        item.function(function_decl) : check_function(function_decl, functions, traits, consts, import_roots, source, diagnostics, declarations),
+        item.function(function_decl) : check_function(function_decl, functions, traits, consts, import_roots, source, diagnostics, declarations, package_name),
         item.struct(declaration): canonical_check_record_declaration(declaration, source, diagnostics),
-        item.method(method_decl) : check_receiver_method(method_decl, functions, traits, consts, import_roots, source, diagnostics, declarations),
+        item.method(method_decl) : check_receiver_method(method_decl, functions, traits, consts, import_roots, source, diagnostics, declarations, package_name),
         _ : 0,
     }
 }
@@ -1481,7 +1518,7 @@ func receiver_mode_from_params(compile.internal.ast.param[] params) string {
     "value"
 }
 
-func check_receiver_method(receiver_method_decl method_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics, declaration_ref[] declarations) int {
+func check_receiver_method(receiver_method_decl method_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics, declaration_ref[] declarations, string package_name) int {
     method := method_decl.method
     if method.body.is_none() {
         return 0
@@ -1489,7 +1526,7 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
     pre_errors := validate_function_signature(method, source, diagnostics)
     expected_return :=
         switch method.sig.return_type {
-            option.some(type_name) : canonical_enum_type(compile.internal.typesys.parse_type(type_name), declarations),
+            option.some(type_name) : canonical_type_in_package(type_name, package_name, method.sig.generics, declarations),
             option.none : "()",
         }
     env := type_binding[]()
@@ -1512,13 +1549,13 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
         i = i + 1
     }
     env.push(type_binding {
-        name: method_decl.receiver_name, type_name canonical_enum_type(compile.internal.typesys.parse_type(method_decl.receiver_type), declarations),
+        name: method_decl.receiver_name, type_name canonical_type_in_package(method_decl.receiver_type, package_name, method.sig.generics, declarations),
     })
     i = 0
     for i < std.prelude.len(method.sig.params) {
         param := method.sig.params[i]
         env.push(type_binding {
-            name: param.name, type_name canonical_enum_type(compile.internal.typesys.parse_type(param.type_name), declarations),
+            name: param.name, type_name canonical_type_in_package(param.type_name, package_name, method.sig.generics, declarations),
         })
         i = i + 1
     }
@@ -1531,14 +1568,14 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
     pre_errors + result.errors
 }
 
-func check_function(function_decl function_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics, declaration_ref[] declarations) int {
+func check_function(function_decl function_decl, function_binding[] functions, trait_binding[] traits, const_binding[] consts, string[] import_roots, string source, semantic_error[] diagnostics, declaration_ref[] declarations, string package_name) int {
     if function_decl.body.is_none() {
         return 0
     }
     pre_errors := validate_function_signature(function_decl, source, diagnostics)
     expected_return :=
         switch function_decl.sig.return_type {
-            option.some(type_name) : canonical_enum_type(compile.internal.typesys.parse_type(type_name), declarations),
+            option.some(type_name) : canonical_type_in_package(type_name, package_name, function_decl.sig.generics, declarations),
             option.none : "()",
         }
     env := type_binding[]()
@@ -1564,7 +1601,7 @@ func check_function(function_decl function_decl, function_binding[] functions, t
     for i < std.prelude.len(function_decl.sig.params) {
         param := function_decl.sig.params[i]
         env.push(type_binding {
-            name: param.name, type_name canonical_enum_type(compile.internal.typesys.parse_type(param.type_name), declarations),
+            name: param.name, type_name canonical_type_in_package(param.type_name, package_name, function_decl.sig.generics, declarations),
         })
         ;
         i = i + 1
@@ -1840,6 +1877,48 @@ func canonical_check_record_declaration(struct_decl declaration, string source, 
     return errors
 }
 
+func canonical_type_in_package(string type_name, string package_name, string[] generic_names, declaration_ref[] declarations) string {
+    name := compile.internal.typesys.parse_type(type_name)
+    g := 0
+    for g < len(generic_names) {
+        if name == generic_name(generic_names[g]) { return name }
+        g = g + 1
+    }
+    if name == "()" || name == "unit" || name == "unknown" || compile.internal.typesys.is_builtin_primitive(name) || semantic_starts_with(name, "(") { return name }
+    if semantic_starts_with(name, "&mut") { return "&mut" + canonical_type_in_package(std.prelude.prelude_slice(name, 4, len(name)), package_name, generic_names, declarations) }
+    if semantic_starts_with(name, "&") { return "&" + canonical_type_in_package(std.prelude.prelude_slice(name, 1, len(name)), package_name, generic_names, declarations) }
+    if semantic_starts_with(name, "*") { return "*" + canonical_type_in_package(std.prelude.prelude_slice(name, 1, len(name)), package_name, generic_names, declarations) }
+    if len(name) > 0 && std.prelude.char_at(name, len(name) - 1) == "*" { return canonical_type_in_package(std.prelude.prelude_slice(name, 0, len(name) - 1), package_name, generic_names, declarations) + "*" }
+    if semantic_starts_with(name, "[]") { return "[]" + canonical_type_in_package(std.prelude.prelude_slice(name, 2, len(name)), package_name, generic_names, declarations) }
+    if len(name) >= 2 && std.prelude.prelude_slice(name, len(name) - 2, len(name)) == "[]" { return canonical_type_in_package(std.prelude.prelude_slice(name, 0, len(name) - 2), package_name, generic_names, declarations) + "[]" }
+    if semantic_starts_with(name, "[") {
+        close := 0
+        for close < len(name) && std.prelude.char_at(name, close) != "]" { close = close + 1 }
+        if close > 0 && close < len(name) { return std.prelude.prelude_slice(name, 0, close + 1) + canonical_type_in_package(std.prelude.prelude_slice(name, close + 1, len(name)), package_name, generic_names, declarations) }
+    }
+    base := compile.internal.typesys.base_type_name(name)
+    qualified := package_name + "." + base
+    record := canonical_record_index(qualified, declarations)
+    enumeration := canonical_enum_index(qualified, declarations)
+    if package_name == "" || (record < 0 && enumeration < 0) {
+        record = canonical_record_index(base, declarations)
+        enumeration = canonical_enum_index(base, declarations)
+    }
+    if record >= 0 { qualified = declarations[record].package_path + "." + declarations[record].path }
+    else if enumeration >= 0 { qualified = declarations[enumeration].package_path + "." + declarations[enumeration].path }
+    else { return name }
+    arguments := compile.internal.typesys.extract_type_args(name)
+    if len(arguments) == 0 { return qualified }
+    result := qualified + "["
+    a := 0
+    for a < len(arguments) {
+        if a > 0 { result = result + "," }
+        result = result + canonical_type_in_package(arguments[a], package_name, generic_names, declarations)
+        a = a + 1
+    }
+    return result + "]"
+}
+
 func canonical_record_index(string type_name, declaration_ref[] declarations) int {
     name := compile.internal.typesys.base_type_name(type_name)
     found := -1
@@ -1872,7 +1951,7 @@ func canonical_record_field_type(string type_name, string field_name, declaratio
     }
     i = 0
     for i < len(declaration.fields) {
-        if declaration.fields[i].name == field_name { return instantiate_type(declaration.fields[i].type_name, declaration.generics, bindings) }
+        if declaration.fields[i].name == field_name { return canonical_type_in_package(instantiate_type(declaration.fields[i].type_name, declaration.generics, bindings), declaration.package_path, declaration.generics, declarations) }
         i = i + 1
     }
     return ""
@@ -1986,7 +2065,7 @@ func infer_expr(expr expr, type_binding[] env, borrow_record[] borrow_state, str
         expr.binary(value) : {
             left := infer_expr(value.left.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
             right := infer_expr(value.right.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations)
-            result := infer_binary(value.op, left, right, source, diagnostics)
+            result := infer_binary(value.op, left, right, source, diagnostics, declarations)
             if (value.op == "/" || value.op == "%") && is_zero_int_expr(value.right.value) {
                 result.errors = result.errors + add_error(source, diagnostics, "e3065", "division or modulo by zero is known at compile time", value.op)
             }
@@ -2784,8 +2863,17 @@ func canonical_binary_inference(string op, string left, string right) canonical_
     return canonical_inference { type_name: "unknown", diagnostics: diagnostics }
 }
 
-func infer_binary(string op, check_result left, check_result right, string source, semantic_error[] diagnostics) check_result {
-    inferred := canonical_binary_inference(op, left.type_name, right.type_name)
+func canonical_binary_inference_in_context(string op, string left, string right, declaration_ref[] declarations) canonical_inference {
+    // A scalar enum is comparable within its nominal declaration. Payload
+    // and generic enums still require a separate, proved equality contract.
+    if (op == "==" || op == "!=") && left == right && canonical_is_enum_type(left, declarations) {
+        return canonical_inference { type_name: "bool", diagnostics: semantic_error[]() }
+    }
+    return canonical_binary_inference(op, left, right)
+}
+
+func infer_binary(string op, check_result left, check_result right, string source, semantic_error[] diagnostics, declaration_ref[] declarations) check_result {
+    inferred := canonical_binary_inference_in_context(op, left.type_name, right.type_name, declarations)
     errors := left.errors + right.errors
     i := 0
     for i < len(inferred.diagnostics) {

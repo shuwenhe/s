@@ -46,6 +46,7 @@ typedef struct standalone_function {
 	bool integer_only;
     bool region_safe;
     bool region_globals;
+    unsigned long long readonly_params;
     bool region_loop_safe;
     unsigned long long *live_in;
     unsigned long long borrow_mask;
@@ -922,6 +923,18 @@ static standalone_ins *standalone_arg_call(standalone_module *m,standalone_funct
     }
     return NULL;
 }
+static bool standalone_global_alias(standalone_module *m,standalone_function *fn,
+                                    const bool *aliases,const char *place) {
+    for(size_t g=0;g<m->global_count;g++) {
+        size_t n=strlen(m->globals[g].name);
+        if(!strncmp(place,m->globals[g].name,n) && (!place[n] || place[n]=='.')) return true;
+    }
+    for(size_t s=0;s<fn->slot_count;s++) if(aliases[s]) {
+        size_t n=strlen(fn->slots[s].name);
+        if(!strncmp(place,fn->slots[s].name,n) && (!place[n] || place[n]=='.')) return true;
+    }
+    return false;
+}
 static void standalone_analyze_regions(standalone_module *m) {
     for(size_t f=0;f<m->func_count;f++) {
         standalone_function *fn=&m->funcs[f];
@@ -932,6 +945,7 @@ static void standalone_analyze_regions(standalone_module *m) {
          * conservatively so loop evacuation never strands a younger value in
          * an older parameter object. MOV, by contrast, snapshots aggregates. */
         bool older[STANDALONE_MAX_SLOTS]={false};
+        bool global_aliases[STANDALONE_MAX_SLOTS]={false};
         for(size_t p=fn->begin;p<fn->end && !strcmp(m->ir.ins[p].op,"PARAM");p++) {
             int slot=slot_index(fn,m->ir.ins[p].result,false);
             if(slot>=0) older[slot]=true;
@@ -939,9 +953,33 @@ static void standalone_analyze_regions(standalone_module *m) {
         bool aliases_changed;
         do {
             aliases_changed=false;
+            const char *pending[STANDALONE_MAX_PENDING_ARGS]; size_t pending_count=0;
             for(size_t i=fn->begin;i<fn->end;i++) {
                 standalone_ins *x=&m->ir.ins[i];
                 bool source_older=false, target_older=false;
+                bool global_source=standalone_global_alias(m,fn,global_aliases,x->operand1);
+                if(!strcmp(x->op,"ARG")) {
+                    if(pending_count==STANDALONE_MAX_PENDING_ARGS) fn->region_safe=false;
+                    else pending[pending_count++]=x->result;
+                }
+                if(!strcmp(x->op,"CALL")) {
+                    char *end=NULL; long count=strtol(x->operand2,&end,10);
+                    if(!end || *end || count<0 || (size_t)count>pending_count) { fn->region_safe=false; pending_count=0; }
+                    else {
+                        size_t first=pending_count-(size_t)count;
+                        const char *runtime=runtime_callee(x->operand1);
+                        if(count && runtime && !strcmp(runtime,"s_index_get")) global_source=standalone_global_alias(m,fn,global_aliases,pending[first]);
+                        if(count && runtime && !strcmp(runtime,"s_index_set") && standalone_global_alias(m,fn,global_aliases,pending[first])) fn->region_safe=false;
+                        pending_count=first;
+                    }
+                }
+                if(global_source && (!strcmp(x->op,"READ") || !strcmp(x->op,"INDEX_GET") ||
+                   (!strcmp(x->op,"CALL") && runtime_callee(x->operand1) && !strcmp(runtime_callee(x->operand1),"s_index_get")))) {
+                    int slot=slot_index(fn,x->result,false);
+                    if(slot>=0 && !global_aliases[slot]) { global_aliases[slot]=true; aliases_changed=true; }
+                }
+                if(standalone_global_alias(m,fn,global_aliases,x->result) &&
+                   ((!strcmp(x->op,"MOV") && strchr(x->result,'.')) || !strcmp(x->op,"INDEX_SET"))) fn->region_safe=false;
                 /* Vector methods encode their receiver as quoted slot text,
                  * then mutate that slot without an explicit INDEX_SET/MOV. */
                 standalone_literal receiver;
@@ -951,6 +989,7 @@ static void standalone_analyze_regions(standalone_module *m) {
                    decode_literal(x->result,&receiver,&ignored) && receiver.len<sizeof(receiver.bytes)) {
                     receiver.bytes[receiver.len]=0;
                     receiver_path=(char *)receiver.bytes;
+                    if(standalone_global_alias(m,fn,global_aliases,receiver_path) && standalone_global_index(m,receiver_path)<0) fn->region_safe=false;
                     for(size_t g=0;g<m->global_count;g++) {
                         size_t n=strlen(m->globals[g].name);
                         if(!strncmp(receiver_path,m->globals[g].name,n) &&
@@ -1017,6 +1056,7 @@ static void standalone_analyze_regions(standalone_module *m) {
     } while(changed);
 }
 #include "standalone_liveness.h"
+#include "standalone_readonly.h"
 /* Evacuate only slots live at the jump target. Array defaults clear dead
  * slots when reloaded, so discarded snapshots cannot become dangling roots. */
 static void emit_region_loop(FILE *out,standalone_module *module,standalone_function *fn,const char *symbol,size_t at,size_t target) {
@@ -1127,7 +1167,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
                 standalone_final_arg_region(module,fn,i,pending_count+1);
             if(pending_region[pending_count])
                 fprintf(out,"    mov s_heap_current(%%rip), %%rax\n    mov %%rax, -%zu(%%rbp)\n",standalone_arg_region_offset(fn,pending_count));
-            if (ins->discard_snapshot || !strcmp(ins->operand1,"mutable_borrow")) fprintf(out,"    mov %%rdi, %%rax\n");
+            if (ins->discard_snapshot || !strcmp(ins->operand1,"mutable_borrow") || standalone_readonly_argument(module,fn,i)) fprintf(out,"    mov %%rdi, %%rax\n");
             else fprintf(out,"    call s_value_snapshot\n");
             fprintf(out, "    mov %%rax, -%zu(%%rbp)\n", (fn->slot_count + 4 + pending_count + 1)*8);
             pending[pending_count++] = ins->result;
@@ -1470,6 +1510,7 @@ static bool emit_fs_bridges(FILE *out,standalone_module *m,compile_error *err) {
 static bool emit_assembly(FILE *out, standalone_module *module, compile_error *err) {
 	size_t i;
     standalone_analyze_regions(module);
+    standalone_analyze_readonly(module);
     standalone_analyze_snapshot_uses(module);
 	fprintf(out, ".section .text\n.global s_main\n.type s_main, @function\ns_main:\n");
     if(module->global_count) {

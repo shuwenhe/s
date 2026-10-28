@@ -10,7 +10,7 @@ root,work=map(Path,sys.argv[1:])
 s=(root/'src/cmd/compile/internal/semantic/semantic.s').read_text()
 positions=list(re.finditer(r'^func ([A-Za-z_][A-Za-z_0-9]*)\(',s,re.M))
 functions={m[1]:s[m.start():positions[i+1].start() if i+1<len(positions) else len(s)] for i,m in enumerate(positions)}
-needed=['check_source_file','declaration_ref_equal','declaration_ref_display','find_struct_declaration','check_pattern','instantiate_type','match_type_pattern_ref','qualified_package_part','qualified_decl_part','lookup_name_type','is_unknown','pattern_is_wild'];selected=set()
+needed=['check_source_file_for_compile','check_source_file','declaration_ref_equal','declaration_ref_display','find_struct_declaration','check_pattern','instantiate_type','match_type_pattern_ref','qualified_package_part','qualified_decl_part','lookup_name_type','is_unknown','pattern_is_wild'];selected=set()
 while needed:
  name=needed.pop()
  if name in selected or name not in functions:continue
@@ -36,8 +36,21 @@ func check(string source, bool valid) () {
     if !valid && len(result.errors) == 0 { panic("semantic accepted invalid source") }
 }
 func main() int {
+    check("package alpha\nstruct token { int line }\nfunc read(token value) int { return value.line }\npackage beta\nstruct token { string line }", true)
+    check("package alpha\nstruct token { int line }\nfunc read(token[] values) int { return values[0].line }\npackage beta\nstruct token { string line }", true)
+    check("package alpha\nstruct token { int line }\nfunc read(beta.token value) int { return value.line }\npackage beta\nstruct token { string line }", false)
+    check("package main\nenum Kind { first, second }\nfunc same(Kind value) bool { return value == Kind.first }", true)
+    check("package main\nenum Kind { first }\nenum Other { first }\nfunc same(Kind value) bool { return value == Other.first }", false)
+    check("package main\nenum Kind { first }\nfunc same(Kind value) bool { return value == 0 }", false)
+    check("package main\nenum Payload { some(int), none }\nfunc same(Payload value) bool { return value == value }", false)
+    check("package main\nenum Phantom[T] { none }\nfunc same(Phantom[int] value) bool { return value == value }", false)
+    check("package main\nenum Kind { first }\nfunc same(Kind[] values) bool { return values == values }", false)
     check("package alpha\nfunc read() int { return 1 }\npackage beta\nfunc read() int { return 2 }", true)
     check("package alpha\nfunc read() int { return 1 }\nfunc read() int { return 2 }", false)
+    check("package main\nextern \"intrinsic\" func __host_char_at(string text, int index) string\nextern \"intrinsic\" func __host_char_at(string source, int offset) string", true)
+    check("package main\nextern \"intrinsic\" func __host_char_at(string text, int index) string\nextern \"intrinsic\" func __host_char_at(string source, bool offset) string", false)
+    check("package main\nextern \"intrinsic\" func __host_char_at(string text, int index) string\nextern \"other\" func __host_char_at(string source, int offset) string", false)
+    check("package main\nextern \"intrinsic\" func __host_char_at(string text, int index) string\nextern \"intrinsic\" func __host_char_at(string source, int offset) int", false)
     check("package main\nconst selected = 1\nfunc read(int value) int { return switch value { selected: 10, 2: 20, _: 0, } }", true)
     check("package main\nconst selected = true\nfunc read(int value) int { return switch value { selected: 10, _: 0, } }", false)
     check("package main\nfunc read(int value) int { return switch value { unknown: unknown + 1, } }", true)
@@ -64,6 +77,14 @@ func main() int {
     valid_file, valid_failure := compile.internal.syntax.parse_source("package main\nfunc main() int { return 0 }")
     clean := compile.internal.semantic.check_source_file(valid_file, "package main\nfunc main() int { return 0 }")
     if len(clean.errors) != 0 { return 6 }
+    invalid_source := "package main\nfunc broken() int { return missing_first }\nfunc main() int { return missing_second }"
+    invalid_file, invalid_failure := compile.internal.syntax.parse_source(invalid_source)
+    if invalid_failure.message != "" { return 8 }
+    first_error := compile.internal.semantic.check_source_file_for_compile(invalid_file, invalid_source)
+    all_errors := compile.internal.semantic.check_source_file(invalid_file, invalid_source)
+    if len(first_error.errors) == 0 || len(all_errors.errors) <= len(first_error.errors) { return 9 }
+    accepted := compile.internal.semantic.check_source_file_for_compile(valid_file, "package main\nfunc main() int { return 0 }")
+    if len(accepted.errors) != 0 { return 10 }
     return 42
 }
 S

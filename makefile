@@ -227,6 +227,7 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/mir/program_enum.s \
 	src/cmd/compile/internal/ir/program_lower.s \
 	src/cmd/compile/internal/ir/program_payload.s \
+	src/cmd/compile/internal/ir/program_environment.s \
 	src/cmd/compile/internal/ir/program_enum.s \
 	src/cmd/compile/internal/compiler/canonical_source.s \
 	src/cmd/compile/internal/mono/monomorphization.s \
@@ -490,6 +491,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_semantic_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_mir_public_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_enum_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_external_contract_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_record_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_array_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_bool_production_check.sh
@@ -500,6 +502,9 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 
 .PHONY: selfhost-native-memory-check
 selfhost-native-memory-check: compiler
+	@python3 test/native-bootstrap-diagnostic/native_global_temporary_check.py
+	@python3 test/native-bootstrap-diagnostic/native_argument_region_check.py
+	@python3 test/native-bootstrap-diagnostic/native_multi_package_cost_check.py
 	@python3 test/native-bootstrap-diagnostic/native_source_memory_check.py
 	@python3 test/native-bootstrap-diagnostic/native_loop_liveness_check.py
 	@python3 test/native-bootstrap-diagnostic/native_snapshot_cost_check.py

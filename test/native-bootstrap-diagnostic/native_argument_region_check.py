@@ -3,9 +3,11 @@
 from pathlib import Path
 import resource
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+SEED = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / 'bin/s_seed'
 
 
 def limits():
@@ -44,8 +46,8 @@ func main() int {
 }
 ''')
     ir, binary = work / 'main.ir', work / 'main'
-    subprocess.run([str(ROOT / 'bin/s_seed'), '--compile-native-unit', str(ir), str(source)], check=True)
-    subprocess.run([str(ROOT / 'bin/s_seed'), '--emit-standalone-amd64', str(ir), str(binary)],
+    subprocess.run([str(SEED), '--compile-native-unit', str(ir), str(source)], check=True)
+    subprocess.run([str(SEED), '--emit-standalone-amd64', str(ir), str(binary)],
                    cwd=ROOT, check=True)
     result = subprocess.run([str(binary)], preexec_fn=limits, capture_output=True, timeout=20)
     assert result.returncode == 42, (result.returncode, result.stderr.decode())

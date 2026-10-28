@@ -44,5 +44,21 @@ func main() int {
                    cwd=ROOT, check=True)
     result = subprocess.run([str(binary)], preexec_fn=limits, capture_output=True, timeout=20)
     assert result.returncode == 42, (result.returncode, result.stderr.decode())
+    source.write_text('''package main
+values := string[][]()
+func change() int { values[0][0] = "new" + "value"; return 0 }
+func main() int {
+    row := string[]()
+    row.push("old")
+    values.push(row)
+    change()
+    if values[0][0] != "newvalue" { return 2 }
+    return 42
+}
+''')
+    subprocess.run([str(ROOT / 'bin/s_seed'), '--compile-native-unit', str(ir), str(source)], check=True)
+    subprocess.run([str(ROOT / 'bin/s_seed'), '--emit-standalone-amd64', str(ir), str(binary)], cwd=ROOT, check=True)
+    result = subprocess.run([str(binary)], preexec_fn=limits, capture_output=True, timeout=20)
+    assert result.returncode == 42, (result.returncode, result.stderr.decode())
 
 print('global diagnostic promotion and private argument snapshots under 64 MiB: PASS')
