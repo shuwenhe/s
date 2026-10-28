@@ -415,6 +415,7 @@ selfhost-native-record-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/native_discard_borrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_recursive_ast_borrow_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_import_check.sh
+	@bash test/native-bootstrap-diagnostic/native_ast_constructor_check.sh
 	@bash test/native-bootstrap-diagnostic/native_import_return_check.sh
 	@bash test/native-bootstrap-diagnostic/native_array_element_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_receiver_check.sh

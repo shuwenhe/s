@@ -17,7 +17,7 @@ func program_replace_iota(expr value, int index) expr {
         expr.binary(binary): {
             left := program_replace_iota(binary.left.value, index)
             right := program_replace_iota(binary.right.value, index)
-            return expr.binary(binary_expr { left: std.prelude.box(left), op: binary.op, right: std.prelude.box(right), inferred_type: binary.inferred_type })
+            return expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(left), op: binary.op, right: std.prelude.box(right), inferred_type: binary.inferred_type })
         }
         _: (),
     }
@@ -155,7 +155,7 @@ func program_array_method(member_expr member, expr[] arguments, string pkg, mir_
         args := expr[]()
         args.push(member.target.value)
         callee := expr.name(name_expr { name: "len", inferred_type: option.none })
-        call := expr.call(call_expr { callee: std.prelude.box(callee), args: args, inferred_type: option.none, resolved_callee: option.none, type_args: string[]() })
+        call := expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(callee), args: args, inferred_type: option.none, resolved_callee: option.none, type_args: string[]() })
         if len(arguments) != 0 { state.error = "len method takes no arguments"; return state }
         return program_lower_expression(call, pkg, signatures, state)
     }

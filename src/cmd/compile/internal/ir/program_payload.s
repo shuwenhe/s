@@ -3,7 +3,7 @@ import ("compile.internal.ast"; "compile.internal.mir"; "std.option"; "std.prelu
 
 // Helper to create binary expressions, avoiding Seed inline enum variant issues
 func make_binary_expr(expr left, string op, expr right) expr {
-    expr.binary(binary_expr { left: std.prelude.box(left), op: op, right: std.prelude.box(right), inferred_type: option.none })
+    expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(left), op: op, right: std.prelude.box(right), inferred_type: option.none })
 }
 
 // Payload enums keep their nominal type and lower to immutable typed records.
@@ -141,7 +141,7 @@ func program_pattern_condition(pattern pattern_value, expr subject, string type_
             for v < len(layout.variants) {
                 full := layout.symbol + "." + layout.variants[v]
                 if variant.path == full || pkg + "." + variant.path == full {
-                    tag := expr.member(member_expr { target: std.prelude.box(subject), member: "__variant", inferred_type: option.none })
+                    tag := expr.member(compile.internal.ast.member_expr { target: std.prelude.box(subject), member: "__variant", inferred_type: option.none })
                     number := expr.int(int_expr { value: std.prelude.to_string(layout.tags[v]), inferred_type: option.none })
                     output.condition = make_binary_expr(tag, "==", number)
                     count := 0
@@ -149,7 +149,7 @@ func program_pattern_condition(pattern pattern_value, expr subject, string type_
                     if len(variant.args) != count { output.error = "enum pattern payload arity"; return output }
                     if count == 1 {
                         field := "__payload_" + layout.variants[v]
-                        payload := expr.member(member_expr { target: std.prelude.box(subject), member: field, inferred_type: option.none })
+                        payload := expr.member(compile.internal.ast.member_expr { target: std.prelude.box(subject), member: field, inferred_type: option.none })
                         record := state.records[mir_program_record_index(state.records, type_name)]
                         payload_type := record.field_types[mir_program_record_field_index(record, field)]
                         nested := program_pattern_condition(variant.args[0], payload, payload_type, pkg, state)

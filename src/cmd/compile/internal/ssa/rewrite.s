@@ -9,7 +9,7 @@ func run_arch_rewrite(ssa_func f, string arch) int {
     if arch == "arm" {
         return run_rewrite_arm(f)
     }
-    0
+    return 0
 }
 
 func run_rewrite(ssa_func f, string arch) int {
@@ -25,5 +25,5 @@ func run_rewrite(ssa_func f, string arch) int {
         }
         rounds = rounds + 1
     }
-    total
+    return total
 }

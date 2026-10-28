@@ -25,5 +25,5 @@ func run_cse(ssa_func f) int {
     if changed > 0 {
         recompute_uses(f)
     }
-    changed
+    return changed
 }
