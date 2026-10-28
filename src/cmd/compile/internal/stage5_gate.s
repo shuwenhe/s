@@ -151,6 +151,7 @@ func append_from_stmt(identifier_info[] initial_values, compile.internal.ast.stm
     acc := initial_values
     switch statement {
         stmt.continue(_) : (),
+        stmt.break(_) : (),
         stmt.let(value): acc = append_from_expr(acc, value.value),
         stmt.assign(value): {
             acc = append(acc, identifier_info { identifier_text: value.name, is_qualified: false })

@@ -97,6 +97,8 @@ struct stmt_check_result {
 struct check_result {
     string type_name
     int errors
+    string resolved_callee
+    string[] type_args
 }
 
 struct canonical_const_context {
@@ -1700,7 +1702,7 @@ func infer_block_expr_in_scope(block_expr block, type_binding[] outer_env, borro
         checked := check_stmt_with_env_in_scope(block.statements[i], local_env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope)
         errors = errors + checked.errors
         local_env = checked.env
-        switch block.statements[i] { stmt.return(_) : returns = true, stmt.continue(_) : returns = true, _ : (), }
+        switch block.statements[i] { stmt.return(_) : returns = true, stmt.continue(_) : returns = true, stmt.break(_) : returns = true, _ : (), }
         borrow_state_clear(borrow_state)
         i = i + 1
     }
@@ -1790,6 +1792,10 @@ func check_stmt_in_scope(stmt stmt, type_binding[] env, borrow_record[] borrow_s
     return switch stmt {
         stmt.continue(_) : {
             if scope.loop_depth == 0 { return add_error(source, diagnostics, "e3070", "continue outside loop", "continue") }
+            0
+        },
+        stmt.break(_) : {
+            if scope.loop_depth == 0 { return add_error(source, diagnostics, "e3071", "break outside loop", "break") }
             0
         },
         stmt.multi(_) : check_stmt_with_env_in_scope(stmt, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope).errors,
@@ -2085,7 +2091,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                 }
             }
             if is_unknown(ty) {
-                fn_candidates := lookup_functions(functions, value.name)
+                fn_candidates := lookup_functions_in_scope(functions, value.name, scope.package_path)
                 if std.prelude.len(fn_candidates) > 0 {
                     return ok_type("fn")
                 }
@@ -2235,6 +2241,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                         value.type_args = qualified.match.type_args
                         return check_result {
                             type_name: qualified.match.return_type, errors errors,
+                            resolved_callee: qualified.match.instance_name, type_args: qualified.match.type_args,
                         }
                     }
                     target := infer_expr_in_scope(member.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope)
@@ -2284,6 +2291,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                         value.type_args = best.type_args
                         return check_result {
                             type_name: best.return_type, errors errors,
+                            resolved_callee: best.instance_name, type_args: best.type_args,
                         }
                     }
                     if std.prelude.len(named_methods) > 0 {
@@ -2416,7 +2424,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                             type_name: "()", errors errors + owned.errors,
                         }
                     }
-                    resolved := resolve_call_callee(callee_name.name, arg_types, functions, traits, declarations, source, diagnostics)
+                    resolved := resolve_call_callee_in_scope(callee_name.name, arg_types, functions, traits, declarations, source, diagnostics, scope.package_path)
                     if !resolved.ok {
                         return check_result {
                             type_name: "unknown", errors errors + resolved.errors,
@@ -2426,6 +2434,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                     value.type_args = resolved.match.type_args
                     check_result {
                         type_name: resolved.match.return_type, errors errors,
+                        resolved_callee: resolved.match.instance_name, type_args: resolved.match.type_args,
                     }
                 }
                 _ : {
@@ -3034,7 +3043,11 @@ func resolve_qualified_call_callee(string qualified_path, string[] arg_types, fu
 }
 
 func resolve_call_callee(string name, string[] arg_types, function_binding[] functions, trait_binding[] traits, declaration_ref[] declarations, string source, semantic_error[] diagnostics) call_callee_resolution {
-    candidates := lookup_functions(functions, name)
+    return resolve_call_callee_in_scope(name, arg_types, functions, traits, declarations, source, diagnostics, "")
+}
+
+func resolve_call_callee_in_scope(string name, string[] arg_types, function_binding[] functions, trait_binding[] traits, declaration_ref[] declarations, string source, semantic_error[] diagnostics, string package_path) call_callee_resolution {
+    candidates := lookup_functions_in_scope(functions, name, package_path)
     empty_match := signature_match {
         ok: false, return_type: "unknown", instance_name: "", type_args: string[](), score: 0, generic_bind_count: 0, unknown_arg_count: 0,
     }
@@ -3085,6 +3098,15 @@ func resolve_call_callee(string name, string[] arg_types, function_binding[] fun
         match: best,
         errors: 0,
     }
+}
+
+// A local declaration owns the unqualified name even when its parameters do
+// not match. Other packages cannot turn it into an overload or rescue a call.
+// With no local declaration, retain the existing prelude/import lookup.
+func lookup_functions_in_scope(function_binding[] functions, string name, string package_path) function_binding[] {
+    local := lookup_qualified_functions(functions, package_path, name)
+    if len(local) > 0 { return local }
+    return lookup_functions(functions, name)
 }
 
 func lookup_functions(function_binding[] functions, string name) function_binding[] {

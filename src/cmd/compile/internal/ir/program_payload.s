@@ -200,7 +200,7 @@ func program_switch_phi(program_switch_exit[] exits, int binding, program_lower_
 func program_lower_switch(switch_expr value, string pkg, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
     state := initial
     state = program_lower_expression(value.subject.value, pkg, signatures, state)
-    if state.error != "" { return state }
+    if state.error != "" || state.terminated { return state }
     subject_value := state.expression_value
     subject_type := program_expression_type(state, state.signature, subject_value)
     names := state.binding_names

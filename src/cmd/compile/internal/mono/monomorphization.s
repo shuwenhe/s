@@ -424,6 +424,7 @@ func collect_block_instances_ctx(block_expr block, item[] all_items, mono_contex
 func collect_stmt_instances_ctx(stmt value, item[] all_items, mono_context ctx) mono_context {
     switch value {
         stmt.continue(_) : ctx,
+        stmt.break(_) : ctx,
         stmt.let(v) : collect_expr_instances_ctx(v.value, all_items, ctx),
         stmt.assign(v) : collect_expr_instances_ctx(v.value, all_items, ctx),
         stmt.store(v): { out := collect_expr_instances_ctx(v.target, all_items, ctx); collect_expr_instances_ctx(v.value, all_items, out) },
@@ -651,6 +652,7 @@ func collect_block_instances(block_expr block, item[] all_items, mono_cache cach
 func collect_stmt_instances(stmt value, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
     switch value {
         stmt.continue(_) : cache,
+        stmt.break(_) : cache,
         stmt.let(v) : collect_expr_instances(v.value, all_items, cache, worklist),
         stmt.assign(v) : collect_expr_instances(v.value, all_items, cache, worklist),
         stmt.increment(_) : cache,
@@ -888,6 +890,7 @@ func finalize_block(block_expr block) block_expr {
 func finalize_stmt(stmt value) stmt {
     switch value {
         stmt.continue(_) : value,
+        stmt.break(_) : value,
         stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name: v.type_name, value: finalize_expr(v.value) }),
         stmt.assign(v) : stmt.assign(compile.internal.ast.assign_stmt { name: v.name, value: finalize_expr(v.value) }),
         stmt.store(v): { v.target = finalize_expr(v.target); v.value = finalize_expr(v.value); stmt.store(v) },
@@ -1052,6 +1055,7 @@ func verify_block_no_generics(block_expr block) int {
 func verify_stmt_no_generics(stmt value) int {
     switch value {
         stmt.continue(_) : 0,
+        stmt.break(_) : 0,
         stmt.let(v) : verify_optional_type_no_generics(v.type_name) + verify_expr_no_generics(v.value),
         stmt.assign(v) : verify_expr_no_generics(v.value),
         stmt.store(v): verify_expr_no_generics(v.target) + verify_expr_no_generics(v.value),
@@ -1315,6 +1319,7 @@ func substitute_block(block_expr block, string[] generic_names, string[] type_ar
 func substitute_stmt(stmt value, string[] generic_names, string[] type_args) stmt {
     switch value {
         stmt.continue(_) : value,
+        stmt.break(_) : value,
         stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name substitute_optional_type(v.type_name, generic_names, type_args), value substitute_expr(v.value, generic_names, type_args) }),
         stmt.assign(v) : stmt.assign(compile.internal.ast.assign_stmt { name: v.name, value substitute_expr(v.value, generic_names, type_args) }),
         stmt.store(v): { v.target = substitute_expr(v.target, generic_names, type_args); v.value = substitute_expr(v.value, generic_names, type_args); stmt.store(v) },
@@ -1509,6 +1514,7 @@ func verify_block_resolved_calls(block_expr block) int {
 func verify_stmt_resolved_calls(stmt value) int {
     switch value {
         stmt.continue(_) : 0,
+        stmt.break(_) : 0,
         stmt.let(v) : verify_expr_resolved_calls(v.value),
         stmt.assign(v) : verify_expr_resolved_calls(v.value),
         stmt.increment(_) : 0,

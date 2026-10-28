@@ -76,6 +76,7 @@ func te_rewrite_block(block_expr block, string[] generic_names, string[] type_ar
 func te_rewrite_stmt(stmt value, string[] generic_names, string[] type_args) stmt {
     switch value {
         stmt.continue(_) : value,
+        stmt.break(_) : value,
         stmt.let(v) : stmt.let(var_stmt { name: v.name, type_name te_rewrite_optional_type(v.type_name, generic_names, type_args), value te_rewrite_expr(v.value, generic_names, type_args) }),
         stmt.assign(v) : stmt.assign(compile.internal.ast.assign_stmt { name: v.name, value te_rewrite_expr(v.value, generic_names, type_args) }),
         stmt.store(v) : { v.target = te_rewrite_expr(v.target, generic_names, type_args); v.value = te_rewrite_expr(v.value, generic_names, type_args); stmt.store(v) },
@@ -252,6 +253,7 @@ func te_stmt_types(stmt value) string[] {
     out := string[]()
     switch value {
         stmt.continue(_) : (),
+        stmt.break(_) : (),
         stmt.let(v): { out = te_add_optional(out, v.type_name); out = te_join(out, te_expr_types(v.value)) },
         stmt.assign(v): out = te_expr_types(v.value),
         stmt.store(v): { out = te_expr_types(v.target); out = te_join(out, te_expr_types(v.value)) },

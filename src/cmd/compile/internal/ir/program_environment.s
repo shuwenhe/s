@@ -96,6 +96,21 @@ func program_environment_constant(program_environment environment, string pkg, s
     }
     return -1
 }
+
+func program_lower_constant(int index, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
+    state := initial
+    constant := state.environment.constants[index]
+    stack := state.expanding_constants
+    i := 0
+    for i < len(stack) {
+        if stack[i] == constant.symbol { state.error = "cyclic constant initializer: " + constant.symbol; return state }
+        i = i + 1
+    }
+    state.expanding_constants.push(constant.symbol)
+    state = program_lower_expression(constant.value, constant.package_name, signatures, state)
+    state.expanding_constants = stack
+    return state
+}
 func program_environment_prefix(program_environment environment, string pkg, string path) bool {
     name := path
     i := 0

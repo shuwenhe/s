@@ -51,6 +51,7 @@ func ca_stmt(compile.internal.ast.stmt original, ca_context ctx) ca_stmt_result 
     value := original
     switch value {
         stmt.continue(_): (),
+        stmt.break(_): (),
         stmt.let(v): {
             expected := ctx.expected
             switch v.type_name { option.some(t): expected = t, option.none: () }
@@ -148,7 +149,7 @@ func ca_expr(compile.internal.ast.expr original, ca_context ctx) ca_expr_result 
             index := ca_child(v.index.value, ctx, "int"); if index.error != "" { return index }
             v.target = std.prelude.box(target.value); v.index = std.prelude.box(index.value); v.inferred_type = option.some(ty); value = expr.index(v)
         },
-        expr.call(v): return ca_call(v, ty, ctx),
+        expr.call(v): return ca_call(v, inferred, ctx),
         expr.record(v): {
             i := 0
             for i < len(v.field_values) {
@@ -232,15 +233,21 @@ func ca_expr(compile.internal.ast.expr original, ca_context ctx) ca_expr_result 
     }
     ca_expr_result { value: value, type_name: ty, error: "" }
 }
-func ca_call(compile.internal.ast.call_expr original, string ty, ca_context ctx) ca_expr_result {
+func ca_call(compile.internal.ast.call_expr original, compile.internal.semantic.check_result inferred, ca_context ctx) ca_expr_result {
+    ty := inferred.type_name
     new_args := compile.internal.ast.expr[](); arg_types := string[](); i := 0
     for i < len(original.args) {
         argument := ca_expr(original.args[i], ctx)
         if argument.error != "" { return argument }
         new_args = append(new_args, argument.value); arg_types = append(arg_types, argument.type_name); i = i + 1
     }
-    
-    final_call := compile.internal.ast.call_expr { callee: original.callee, args: new_args, inferred_type: option.some(ty), resolved_callee: original.resolved_callee, type_args: original.type_args }
+    resolved := original.resolved_callee
+    type_args := original.type_args
+    if inferred.resolved_callee != "" {
+        resolved = option.some(inferred.resolved_callee)
+        type_args = inferred.type_args
+    }
+    final_call := compile.internal.ast.call_expr { callee: original.callee, args: new_args, inferred_type: option.some(ty), resolved_callee: resolved, type_args: type_args }
     ca_expr_result { value: expr.call(final_call), type_name: ty, error: "" }
 }
 func annotate_canonical_calls(source_file original, compile.internal.semantic.semantic_result checked, string source) canonical_annotation_result {

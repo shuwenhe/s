@@ -470,6 +470,9 @@ func canonical_case_body(canonical_parser initial) canonical_parser {
         if state.token == "continue" {
             statements.push(stmt.continue(compile.internal.ast.continue_stmt {}))
             state = canonical_advance(state)
+        } else if state.token == "break" {
+            statements.push(stmt.break(compile.internal.ast.break_stmt {}))
+            state = canonical_advance(state)
         } else if state.token == "return" {
             line := state.token_line
             state = canonical_advance(state)
@@ -520,6 +523,10 @@ func canonical_switch(canonical_parser initial) canonical_parser {
         if !legacy && state.token == "continue" {
             state = canonical_advance(state)
             jump := stmt.continue(compile.internal.ast.continue_stmt {})
+            arm_value = expr.block(compile.internal.ast.block_expr { statements: [jump], final_expr: option.none, inferred_type: option.none })
+        } else if !legacy && state.token == "break" {
+            state = canonical_advance(state)
+            jump := stmt.break(compile.internal.ast.break_stmt {})
             arm_value = expr.block(compile.internal.ast.block_expr { statements: [jump], final_expr: option.none, inferred_type: option.none })
         } else if legacy {
             state = canonical_case_body(state)
@@ -706,6 +713,9 @@ func canonical_block(canonical_parser initial) canonical_parser {
         if state.token == ";" { state = canonical_advance(state); continue }
         if state.token == "continue" {
             statements.push(stmt.continue(compile.internal.ast.continue_stmt {}))
+            state = canonical_advance(state)
+        } else if state.token == "break" {
+            statements.push(stmt.break(compile.internal.ast.break_stmt {}))
             state = canonical_advance(state)
         } else if canonical_var_binding(state) {
             state = canonical_advance(state)
