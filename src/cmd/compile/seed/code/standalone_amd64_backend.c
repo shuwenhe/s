@@ -45,6 +45,7 @@ typedef struct standalone_function {
 	int frame_size;
 	bool integer_only;
     bool region_safe;
+    bool region_globals;
     bool region_loop_safe;
     unsigned long long *live_in;
     unsigned long long borrow_mask;
@@ -905,12 +906,27 @@ static void standalone_analyze_snapshot_uses(standalone_module *m) {
         }
     }
 }
-/* Only private value graphs may be reclaimed at return. Borrow/global effects
- * propagate to callers; unknown external services are conservatively excluded. */
+/* Regions may promote returned values and replaced global roots. In-place
+ * writes into older globals and borrowed owners remain ineligible: evacuating
+ * a root alone cannot repair a young edge inside an older object. */
+static standalone_ins *standalone_arg_call(standalone_module *m,standalone_function *fn,size_t at) {
+    size_t pending=1;
+    for(size_t i=at+1;i<fn->end;i++) {
+        standalone_ins *x=&m->ir.ins[i];
+        if(!strcmp(x->op,"ARG")) pending++;
+        if(strcmp(x->op,"CALL")) continue;
+        char *end=NULL; long count=strtol(x->operand2,&end,10);
+        if(!end || *end || count<0) return NULL;
+        if((size_t)count>=pending) return x;
+        pending-=(size_t)count;
+    }
+    return NULL;
+}
 static void standalone_analyze_regions(standalone_module *m) {
     for(size_t f=0;f<m->func_count;f++) {
         standalone_function *fn=&m->funcs[f];
         fn->region_safe=fn->borrow_mask==0;
+        fn->region_globals=false;
         fn->region_loop_safe=true;
         /* READ exposes an element without snapshotting. Follow those aliases
          * conservatively so loop evacuation never strands a younger value in
@@ -938,7 +954,13 @@ static void standalone_analyze_regions(standalone_module *m) {
                     for(size_t g=0;g<m->global_count;g++) {
                         size_t n=strlen(m->globals[g].name);
                         if(!strncmp(receiver_path,m->globals[g].name,n) &&
-                           (!receiver_path[n] || receiver_path[n]=='.')) fn->region_safe=false;
+                           (!receiver_path[n] || receiver_path[n]=='.')) {
+                            fn->region_globals=true;
+                            standalone_ins *call=standalone_arg_call(m,fn,i);
+                            if(receiver_path[n] || !call ||
+                               (strcmp(call->operand1,"__vec_push") && strcmp(call->operand1,"__vec_len")))
+                                fn->region_safe=false;
+                        }
                     }
                 }
                 for(size_t v=0;v<fn->slot_count;v++) if(older[v]) {
@@ -959,9 +981,14 @@ static void standalone_analyze_regions(standalone_module *m) {
             }
         } while(aliases_changed);
         for(size_t s=0;s<fn->slot_count;s++)
-            if(standalone_global_index(m,fn->slots[s].name)>=0) fn->region_safe=false;
+            if(standalone_global_index(m,fn->slots[s].name)>=0) fn->region_globals=true;
         for(size_t i=fn->begin;i<fn->end;i++) {
             standalone_ins *x=&m->ir.ins[i];
+            for(size_t g=0;g<m->global_count;g++) {
+                size_t n=strlen(m->globals[g].name);
+                if(!strncmp(x->result,m->globals[g].name,n) && (!x->result[n] || x->result[n]=='.') &&
+                   ((!strcmp(x->op,"MOV") && x->result[n]=='.') || !strcmp(x->op,"INDEX_SET"))) fn->region_safe=false;
+            }
             if(!strcmp(x->op,"ARG") && !strcmp(x->operand1,"mutable_borrow")) fn->region_safe=false;
             if(!strcmp(x->op,"CALL") && !runtime_callee(x->operand1) &&
                !defined_function_name(m,x->operand1)) fn->region_safe=false;
@@ -981,6 +1008,9 @@ static void standalone_analyze_regions(standalone_module *m) {
                     if(!strcmp(m->funcs[c].name,target) && !m->funcs[c].region_safe) {
                         fn->region_safe=false; changed=true; break;
                     }
+                    else if(!strcmp(m->funcs[c].name,target) && m->funcs[c].region_globals && !fn->region_globals) {
+                        fn->region_globals=true; changed=true;
+                    }
                 if(!fn->region_safe) break;
             }
         }
@@ -989,19 +1019,26 @@ static void standalone_analyze_regions(standalone_module *m) {
 #include "standalone_liveness.h"
 /* Evacuate only slots live at the jump target. Array defaults clear dead
  * slots when reloaded, so discarded snapshots cannot become dangling roots. */
-static void emit_region_loop(FILE *out,standalone_function *fn,const char *symbol,size_t at,size_t target) {
+static void emit_region_loop(FILE *out,standalone_module *module,standalone_function *fn,const char *symbol,size_t at,size_t target) {
+    size_t globals=fn->region_globals?module->global_count:0;
     fprintf(out,"    mov s_heap_current(%%rip), %%rax\n");
     fprintf(out,"    cmp -%d(%%rbp), %%rax\n    jb .Ls_%s_region_%zu\n",fn->frame_size-8,symbol,at);
-    fprintf(out,"    mov $%zu, %%rdi\n    call s_array_new\n    test %%rax, %%rax\n    jnz 1f\n    mov $1, %%edi\n    call s_record_error\n1:\n",fn->slot_count*2+1);
+    fprintf(out,"    mov $%zu, %%rdi\n    call s_array_new\n    test %%rax, %%rax\n    jnz 1f\n    mov $1, %%edi\n    call s_record_error\n1:\n",(fn->slot_count+globals)*2+1);
     size_t words=(fn->slot_count+63)/64;
     for(size_t s=0;s<fn->slot_count;s++) {
+        if(standalone_global_index(module,fn->slots[s].name)>=0) continue;
         if(fn->live_in && !(fn->live_in[(target-fn->begin)*words+s/64] & (1ULL<<(s%64)))) continue;
         if(fn->slots[s].reg[0]) fprintf(out,"    mov %s, %%rcx\n",fn->slots[s].reg);
         else fprintf(out,"    mov %d(%%rbp), %%rcx\n",fn->slots[s].offset);
         fprintf(out,"    mov %%rcx, %zu(%%rax)\n",16+s*8);
     }
+    for(size_t g=0;g<globals;g++)
+        fprintf(out,"    mov .Ls_global_%zu(%%rip), %%rcx\n    mov %%rcx, %zu(%%rax)\n",g,16+(fn->slot_count+g)*8);
     fprintf(out,"    mov %%rax, %%rdi\n    mov -%d(%%rbp), %%rsi\n    call s_region_return\n",fn->frame_size);
+    for(size_t g=0;g<globals;g++)
+        fprintf(out,"    mov %zu(%%rax), %%rcx\n    mov %%rcx, .Ls_global_%zu(%%rip)\n",16+(fn->slot_count+g)*8,g);
     for(size_t s=0;s<fn->slot_count;s++) {
+        if(standalone_global_index(module,fn->slots[s].name)>=0) continue;
         fprintf(out,"    mov %zu(%%rax), %%rcx\n",16+s*8);
         if(fn->slots[s].reg[0]) fprintf(out,"    mov %%rcx, %s\n",fn->slots[s].reg);
         else fprintf(out,"    mov %%rcx, %d(%%rbp)\n",fn->slots[s].offset);
@@ -1011,19 +1048,25 @@ static void emit_region_loop(FILE *out,standalone_function *fn,const char *symbo
     fprintf(out,"    mov s_heap_current(%%rip), %%rcx\n    sub -%d(%%rbp), %%rcx\n    cmp $65536, %%rcx\n    jae 1f\n    mov $65536, %%ecx\n1:\n    add s_heap_current(%%rip), %%rcx\n    mov %%rcx, -%d(%%rbp)\n",fn->frame_size,fn->frame_size-8);
     fprintf(out,".Ls_%s_region_%zu:\n",symbol,at);
 }
-/* A pure defined callee owns the by-value snapshot of its final argument.
- * Only immediate ARG/CALL adjacency proves that no caller allocation/effect
- * occurred after that checkpoint. Earlier ARG snapshots retain their original
- * evaluation-time lifetime and are deliberately outside this region. */
+/* A region-proved callee may consume contiguous by-value ARG snapshots.
+ * Stop at any intervening computation/effect or borrowed argument; snapshots
+ * for pending outer calls remain outside the callee's region. */
 static bool standalone_final_arg_region(standalone_module *module,
                                         standalone_function *caller,
                                         size_t at, size_t pending_after) {
     if(at+1>=caller->end) return false;
-    standalone_ins *call=&module->ir.ins[at+1];
+    size_t next=at+1;
+    if(!strcmp(module->ir.ins[at].operand1,"mutable_borrow")) return false;
+    while(next<caller->end && !strcmp(module->ir.ins[next].op,"ARG")) {
+        if(!strcmp(module->ir.ins[next].operand1,"mutable_borrow")) return false;
+        next++;
+    }
+    if(next==caller->end) return false;
+    standalone_ins *call=&module->ir.ins[next];
     if(strcmp(call->op,"CALL") || runtime_callee(call->operand1)) return false;
     char *end=NULL;
     long count=strtol(call->operand2,&end,10);
-    if(!end || *end || count<=0 || (size_t)count>pending_after) return false;
+    if(!end || *end || count<=0 || (size_t)count>pending_after+next-at-1 || (size_t)count<next-at) return false;
     const char *defined=defined_function_name(module,call->operand1);
     if(!defined) return false;
     for(size_t f=0;f<module->func_count;f++)
@@ -1057,6 +1100,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
          * caller-saved registers. Zero selects its ordinary local checkpoint. */
         fprintf(out,"    mov %%r10, -%d(%%rbp)\n    call s_region_begin\n    mov -%d(%%rbp), %%r10\n    test %%r10, %%r10\n    cmovnz %%r10, %%rax\n    mov %%rax, -%d(%%rbp)\n    add $65536, %%rax\n    mov %%rax, -%d(%%rbp)\n", fn->frame_size,fn->frame_size,fn->frame_size,fn->frame_size-8);
         if(fn->region_loop_safe) for(size_t s=0;s<fn->slot_count;s++) {
+            if(standalone_global_index(module,fn->slots[s].name)>=0) continue;
             if(fn->slots[s].reg[0]) fprintf(out,"    xor %s, %s\n",fn->slots[s].reg,fn->slots[s].reg);
             else fprintf(out,"    movq $0, %d(%%rbp)\n",fn->slots[s].offset);
         }
@@ -1183,8 +1227,9 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
              * which may themselves call runtime helpers. Unknown/other defined
              * functions always receive zero, never a stale runtime register. */
             if(!callee) {
-                if(defined && call_arg_count>0 && pending_region[pending_count-1])
-                    fprintf(out,"    mov -%zu(%%rbp), %%r10\n",standalone_arg_region_offset(fn,pending_count-1));
+                size_t region=pending_count;
+                if(defined) for(size_t a=first_arg;a<pending_count;a++) if(pending_region[a]) { region=a; break; }
+                if(region<pending_count) fprintf(out,"    mov -%zu(%%rbp), %%r10\n",standalone_arg_region_offset(fn,region));
                 else fprintf(out,"    xor %%r10d, %%r10d\n");
             }
 			if (!callee && !defined) {
@@ -1340,7 +1385,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
             if(fn->region_safe && fn->region_loop_safe && !fn->integer_only && !pending_count) {
                 for(size_t j=fn->begin;j<i;j++)
                     if(!strcmp(module->ir.ins[j].op,"LABEL") && !strcmp(module->ir.ins[j].result,ins->result)) {
-                        emit_region_loop(out,fn,symbol,i,j); break;
+                        emit_region_loop(out,module,fn,symbol,i,j); break;
                     }
             }
 			char label[STANDALONE_TEXT_CAP];
@@ -1379,7 +1424,15 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 		}
 	}
 	fprintf(out, "    mov $1, %%rax\n.Ls_%s_return:\n", symbol);
-	if(fn->region_safe) fprintf(out,"    mov %%rax, %%rdi\n    mov -%d(%%rbp), %%rsi\n    call s_region_return\n", fn->frame_size);
+    if(fn->region_safe && fn->region_globals && module->global_count) {
+        fprintf(out,"    push %%rax\n    sub $8, %%rsp\n    mov $%zu, %%edi\n    call s_array_new\n    add $8, %%rsp\n    pop %%rcx\n    test %%rax, %%rax\n    jnz 1f\n    mov $1, %%edi\n    call s_record_error\n1:\n    mov %%rcx, 16(%%rax)\n",(module->global_count+1)*2+1);
+        for(size_t g=0;g<module->global_count;g++)
+            fprintf(out,"    mov .Ls_global_%zu(%%rip), %%rcx\n    mov %%rcx, %zu(%%rax)\n",g,24+g*8);
+        fprintf(out,"    mov %%rax, %%rdi\n    mov -%d(%%rbp), %%rsi\n    call s_region_return\n",fn->frame_size);
+        for(size_t g=0;g<module->global_count;g++)
+            fprintf(out,"    mov %zu(%%rax), %%rcx\n    mov %%rcx, .Ls_global_%zu(%%rip)\n",24+g*8,g);
+        fprintf(out,"    mov 16(%%rax), %%rax\n");
+    } else if(fn->region_safe) fprintf(out,"    mov %%rax, %%rdi\n    mov -%d(%%rbp), %%rsi\n    call s_region_return\n", fn->frame_size);
 	if (fn->frame_size > 0) fprintf(out, "    add $%d, %%rsp\n", fn->frame_size);
 	if (fn->slot_count > 0) fprintf(out, "    pop %%r15\n    pop %%r14\n    pop %%r13\n    pop %%r12\n");
 	fprintf(out, "    leave\n    ret\n.size s_fn_%s, .-s_fn_%s\n\n", symbol, symbol);

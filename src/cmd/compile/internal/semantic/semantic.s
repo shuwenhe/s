@@ -968,7 +968,7 @@ func validate_function_set(function_binding[] functions, string source, semantic
         }
         j := i + 1
         for j < std.prelude.len(functions) {
-            if !functions[i].has_receiver && !functions[j].has_receiver && functions[i].name == functions[j].name {
+            if !functions[i].has_receiver && !functions[j].has_receiver && functions[i].package_path == functions[j].package_path && functions[i].name == functions[j].name {
                 errors = errors + add_error(source, diagnostics, "e3010", "duplicate function declaration", functions[i].name)
             }
             if functions[i].has_receiver

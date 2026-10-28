@@ -269,7 +269,7 @@ func handle_compile_unit(string[] args) int {
     output := args[2]
     if output == "" { eprintln("compiler: empty output path"); return 2 }
     if !native_target_supported() { eprintln("native compiler: P0: supports Linux/amd64"); return 2 }
-    source := ""
+    sources := string[]()
     i := 3
     for i < len(args) {
         if args[i] == output || __host_same_file(args[i], output) {
@@ -281,12 +281,18 @@ func handle_compile_unit(string[] args) int {
             eprintln("compiler: empty or unreadable input: " + args[i])
             return 1
         }
-        source = source + part + "\n"
+        sources.push(part)
         i = i + 1
     }
-    if source == "" {
+    if len(sources) == 0 {
         eprintln("compiler: empty compile unit")
         return 1
+    }
+    source := ""
+    j := 0
+    for j < len(sources) {
+        source = source + sources[j] + "\n"
+        j = j + 1
     }
     mirrored := canonical_source_to_mir(source)
     if mirrored.error != "" { eprintln(mirrored.error); return 1 }

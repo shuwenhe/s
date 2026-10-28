@@ -32,7 +32,7 @@ func check(string source, bool valid) () {
     file, failure := compile.internal.syntax.parse_source(source + "\nfunc main() int { return 0 }")
     if failure.message != "" { panic(failure.message) }
     result := compile.internal.semantic.check_source_file(file, source)
-    if valid && len(result.errors) != 0 { panic(result.errors[0].message) }
+    if valid && len(result.errors) != 0 { eprintln(result.errors[0].code + ": " + result.errors[0].message); panic(result.errors[0].message) }
     if !valid && len(result.errors) == 0 { panic("semantic accepted invalid source") }
 }
 func main() int {
