@@ -23,6 +23,19 @@ func validate() () {
         }
         _ : panic("missing function item"),
     }
+    local_file, local_error := compile.internal.syntax.parse_source("package main\nfunc read(int input) int { var value = input; return value }")
+    if local_error.message != "" { panic(local_error.message) }
+    switch local_file.items[0] {
+        item.function(declaration): {
+            body := declaration.body.unwrap()
+            if len(body.statements) != 2 { panic("var binding was split into expressions") }
+            switch body.statements[0] {
+                stmt.let(binding): { if binding.name != "value" { panic("var binding name lost") } }
+                _: panic("var binding is not a declaration"),
+            }
+        }
+        _: panic("missing var fixture function"),
+    }
     invalid, failure := compile.internal.syntax.parse_source("package main\nenum Code { answer")
     if failure.message == "" { panic("malformed declaration accepted") }
 }

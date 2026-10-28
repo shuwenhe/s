@@ -2,6 +2,9 @@
 
 Full selfhosting is not yet proven. Keep the Stage2/Stage3 convergence gate.
 
+最新 continue 全链路验证及后续 FIRST RED 见 [selfhost-continue-20261028.md](selfhost-continue-20261028.md)。
+
+
 ## Reproduction and evidence
 
 The preserved working Stage1 and SHA-256 are in
@@ -104,70 +107,121 @@ the complete diagnostic API still checks all items. Valid inputs traverse
 every item and the canonical equality gate. Positive/negative native tests
 verify both APIs, including complete-vs-first-error diagnostics.
 
-## First red and independent failures
+## Correctness frontier after the performance repair
 
-Diagnostic tracing reveals repeated same-package intrinsic prototypes are
-currently rejected as duplicate declarations (`__host_char_at`, `__host_slice`,
-`__host_write_text_file`, `runtime_env_get`). Matching external contracts
-must be distinguished from conflicting prototypes and ordinary definitions.
-Matching same-package, same-library external contracts are now merged;
-different parameter types, libraries and ordinary duplicate bodies remain
-rejected by regression tests.
+Matching same-package, same-library external contracts are merged by both
+semantic checking and MIR construction. Conflicting contracts, different
+libraries and ordinary duplicate bodies remain rejected. The native external
+contract end-to-end test passes and preserves existing artifacts on rejection.
 
-The next component FIRST RED was `token_kind_name`: comparing two values of
-the same scalar enum incorrectly produced e3039. Contextual binary inference
-now uses declaration identity for this case. Distinct enums, enum/integer
-comparisons and payload enums remain rejected.
+Declaration identity now follows lexical package and generic scopes through
+function signatures, expression inference, record fields and AST annotation.
+Field types are qualified in declaration scope before generic substitution.
+Native positive and negative tests cover same-named records/enums, generic
+parameters shadowing nominal names, record construction and tuple members.
+Ambiguous unqualified records/enums must remain errors; selecting an arbitrary
+same-named declaration is not a valid fix.
 
-The broad canonical/protocol targets independently stop while building their
-99-module compiler closure at:
+The subsequent diagnostic component frontiers were:
+
+- `compute_padding`: typed-array `set` was absent from canonical method checks.
+  `set`, `push` and `len` now check arity, index and element types.
+- `append_param_offsets`: canonical parser split Seed's `var name = value`
+  declaration into expressions. AST retention and semantic regressions pass.
+  Local duplicate checks now track the block boundary rather than including
+  outer parameters; same-block duplicate declarations remain rejected.
+- `dump_const`: a local parameter `item` shadowed the AST enum `item`, but
+  `item.value` was interpreted as a constructor. Local values now take
+  precedence, including during AST annotation.
+- `dump_function`: discarded switch statements incorrectly required matching
+  arm result types. Discard context is local to the statement's root expression;
+  value-producing switches still reject incompatible result types.
+- `dump_stmt`: enum record payloads lost their defining package. Payloads now
+  use declaration scope before generic substitution.
+- `dump_for_clause`: a returning arm has type `never` and must not conflict
+  with another arm's value type. Valid and invalid return cases are tested.
+- `base.parse_flags`: a global initialized by a factory retained an unqualified
+  return type. Function binding qualification now precedes global inference;
+  the native regression passes.
+
+The latest diagnostic component checks the complete 268-file source in
+33.18 seconds, peak 1033196 KiB, then rejects `continue` in
+`src/cmd/compile/internal/base/hashdebug.s:115` (`base.split`). The shared
+canonical statement AST currently has no loop-jump variant. Fixing this needs
+real parser, semantic and CFG handling, including loop-carried values and
+C-for post execution. Accepting `continue` as an untyped name or skipping the
+statement would be incorrect. This is the next FIRST RED.
+
+These small native diagnostic components locate the first failing function.
+They are not Stage2 builds or convergence evidence.
+
+## Full native measurements
+
+The earlier frozen 268-file Stage1 (hash
+`78c1696a1c863896df617ed5e825a05df9c47ad969896bc25fb3eb50951d77d8`)
+passed native verification, scalar and scalar-enum programs returning 42.
+Stage1 compiled its exact frozen closure: parser 22.306 seconds, semantic
+rejection 39.528 seconds, exit 1 at 39.578 seconds, peak 1025748 KiB.
+
+A further full 268-file Stage1 was independently rebuilt under
+`.bootstrap/selfhost-scope-final/`, using immutable source files and a source
+hash manifest. Seed compilation took 180.24 seconds (peak 671704 KiB); native
+emission took 344.69 seconds (peak 712176 KiB). The resulting ELF passed
+`verify_true_selfhost.sh` and has SHA-256:
 
 ```
-unknown native record transfer type:
-compile.internal.ir.lower.program_lower_state.environment (program_environment)
+19a20ad35ee1c7116d81c908b04315cb7f5ba221a369f2697b541905aad652b2
 ```
 
-The pre-change diagnostic seed reproduces this failure. The separate
-`option[expr]` fixture failure remains tracked; neither is the profiler's
-explanation of Stage2 memory retention.
+It passed the native tuple and external-contract production regressions and
+compiled the three-package `test/selfhost/nominal-scope/` control, executing 42.
+Its real Stage1→Stage2 run parsed in 22.524 seconds and rejected in 45.525
+seconds, exit 1, peak 1033228 KiB (1009.0 MiB). This frozen version predates
+the later enum-shadow/payload/switch fixes. It rejects with e3010, consistent
+with the diagnostic `dump_const` frontier. This is rejection time, not a
+successful compilation time. Actual phase/RSS samples are retained in
+`.bootstrap/selfhost-scope-final/after-measurements.json`.
 
-## Final full native verification
-
-The final full 268-file Stage1 was rebuilt and passed `verify_true_selfhost.sh`.
-It independently compiled, linked and executed both a scalar smoke program
-and a scalar-enum equality program with exit 42. Its SHA-256 is:
+The latest frozen full 268-file build is in
+`.bootstrap/selfhost-scope-latest/`. Its trusted C seed was compiled with `-O2`;
+S compilation still emits native amd64 directly. Seed native compilation took
+162.14 seconds (675668 KiB), native emission 221.31 seconds (712900 KiB).
+The Stage1 ELF passed native verification with SHA-256:
 
 ```
-78c1696a1c863896df617ed5e825a05df9c47ad969896bc25fb3eb50951d77d8
+3f72692b031125562a2885a4137dcae118ae785591d2b22b6ce5f5a6d653e99b
 ```
 
-`.bootstrap/selfhost-profile-final/source/` contains the frozen compiler
-inputs; `source-manifest.json` records all 268 source hashes. The real Stage1
-compiled exactly that frozen closure. Parser completion was observed at
-22.306 seconds; semantic rejection at 39.528 seconds; process exit 1 at
-39.578 seconds. Peak sampled RSS was 1025748 KiB (1001.7 MiB).
+All 268 immutable input hashes were rechecked. The real Stage1→Stage2 run
+parsed in 22.602 seconds, rejected with e3010 in 46.562 seconds, exit 1,
+peak sampled RSS 1033612 KiB (1009.4 MiB). The identical complete-source
+semantic component narrows this error to the `continue` in `base.split`.
+Eight native production groups (semantic, external contract, record, array,
+bool, CFG, store, tuple) passed with this actual full Stage1, plus the
+three-package nominal-scope program executing 42. Ten parser groups and six
+semantic groups passed on the frozen latest sources. This is still a rejected
+Stage2 compilation; it is not evidence of Stage2/Stage3 convergence.
 
-The remaining full-source FIRST RED is `canonical semantic: e3011: unknown
-member`. The diagnostic component narrows it to `dump_tokens` in
-`lexer/token/token.s`: arguments to `std.prelude.to_string` have type
-`unknown`, while the unit contains three distinct package-local `token`
-records. The checker does not preserve the defining package of the
-unqualified `token[]` parameter. `test/selfhost/nominal-scope/` is a minimal
-control: Seed emits a native program executing 42, while the current S checker
-rejects it. Resolving an arbitrary same-named record is not an acceptable fix.
+## Regression status and limits
 
-A further independent pipeline RED remains for repeated matching intrinsic
-prototypes: semantic checking merges the contracts, but MIR construction still
-reports `duplicate function: main.__host_char_at`. The external smoke input
-must not be described as a passing end-to-end test.
+The strengthened snapshot test counts 2005 aggregate snapshots with the
+pre-change seed and 5 with the repaired seed. Global temporary cleanup,
+argument evaluation ordering, nested global aliases and independent value
+mutation pass under 64 MiB. Record borrows, receiver mutation and loop liveness
+regressions passed again after the scope changes.
 
-The strengthened snapshot test, including indexed-record mutation, counts
-2005 aggregate snapshots with the pre-change seed and 5 with the new seed.
-Borrow/receiver, nested global aliases, caller snapshot independence,
-argument evaluation ordering, loop liveness, rope/lexer and canonical semantic
-positive/negative regressions passed. Full canonical/protocol targets remain
-blocked by the separately reproduced 99-module closure error above.
+The missing `program_environment.s` dependency was added to the production
+compiler closure (now 100 modules). The canonical production suite advances
+through its CFG tests, then rejects the C-for early-return fixture's statically
+unreachable `10 / 0` post expression (e3065). The later native store regression
+passes separately; the tuple regression passes with the new full Stage1.
+The separate `option[expr]` fixture remains tracked; it was not the measured
+cause of the original memory growth.
 
-No Stage2 artifact/executable was produced, Stage3 was not run, and no
-convergence/completion marker was created. This is a measured performance
-repair and a new correctness frontier, not complete selfhosting.
+Concurrent external resets repeatedly removed working changes. Diagnostic
+validation therefore uses `.bootstrap/scope-validation/`, an independent source
+snapshot with hashes. Build snapshots remain immutable; changes are never
+attributed to a binary built from an earlier revision.
+
+No Stage2 executable was produced, Stage3 was not run, and no convergence or
+completion marker was created. Selfhosting remains incomplete.

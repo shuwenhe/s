@@ -467,7 +467,10 @@ func canonical_case_body(canonical_parser initial) canonical_parser {
     final := option[expr].none
     for state.error == "" && state.token != "case" && state.token != "default" && state.token != "}" && state.token != "" {
         if state.token == ";" { state = canonical_advance(state); continue }
-        if state.token == "return" {
+        if state.token == "continue" {
+            statements.push(stmt.continue(compile.internal.ast.continue_stmt {}))
+            state = canonical_advance(state)
+        } else if state.token == "return" {
             line := state.token_line
             state = canonical_advance(state)
             value := option[expr].none
@@ -514,7 +517,11 @@ func canonical_switch(canonical_parser initial) canonical_parser {
         state = canonical_expect(state, ":")
         arm_line := state.token_line
         arm_value := expr.name(compile.internal.ast.name_expr { name: "unit", inferred_type: option.none })
-        if legacy {
+        if !legacy && state.token == "continue" {
+            state = canonical_advance(state)
+            jump := stmt.continue(compile.internal.ast.continue_stmt {})
+            arm_value = expr.block(compile.internal.ast.block_expr { statements: [jump], final_expr: option.none, inferred_type: option.none })
+        } else if legacy {
             state = canonical_case_body(state)
             arm_value = expr.block(state.block)
         } else if state.token == "return" {
@@ -683,13 +690,30 @@ func canonical_expression(canonical_parser initial, int minimum) canonical_parse
     return state
 }
 
+func canonical_var_binding(canonical_parser initial) bool {
+    if initial.token != "var" { return false }
+    state := canonical_advance(canonical_cursor(initial))
+    if !canonical_ident(state.token) { return false }
+    state = canonical_advance(state)
+    return state.token == "="
+}
+
 func canonical_block(canonical_parser initial) canonical_parser {
     state := canonical_expect(initial, "{")
     statements := compile.internal.ast.stmt[]()
     final := option[expr].none
     for state.error == "" && state.token != "}" && state.token != "" {
         if state.token == ";" { state = canonical_advance(state); continue }
-        if state.token == "return" {
+        if state.token == "continue" {
+            statements.push(stmt.continue(compile.internal.ast.continue_stmt {}))
+            state = canonical_advance(state)
+        } else if canonical_var_binding(state) {
+            state = canonical_advance(state)
+            name := state.token
+            state = canonical_expect(canonical_advance(state), "=")
+            state = canonical_expression(state, 1)
+            statements.push(stmt.let(compile.internal.ast.var_stmt { name: name, type_name: option.none, value: state.expression }))
+        } else if state.token == "return" {
             return_line := state.token_line
             state = canonical_advance(state)
             value := option[expr].none

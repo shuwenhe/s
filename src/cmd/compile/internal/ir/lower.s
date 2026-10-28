@@ -242,6 +242,7 @@ func convert_block(block_expr b, const_rewrite_entry[] const_entries) block_ir {
 
 func convert_stmt(stmt s, const_rewrite_entry[] const_entries) stmt_ir {
     switch s {
+        stmt.continue(_) : make_expr_stmt(expr_ir.call(call_expr { callee: "stmt.continue", args: expr_ir[]() })),
         stmt.let(var_stmt) : {
             make_let_stmt(var_stmt.name, var_stmt.type_name, convert_expr(var_stmt.value, const_entries))
         }
@@ -438,6 +439,7 @@ func count_const_hits_block(block_expr block, const_rewrite_entry[] const_entrie
 
 func count_const_hits_stmt(stmt s, const_rewrite_entry[] const_entries) int {
     switch s {
+        stmt.continue(_) : 0,
         stmt.let(var_stmt) : count_const_hits_expr(var_stmt.value, const_entries),
         stmt.assign(assign_stmt) : count_const_hits_expr(assign_stmt.value, const_entries),
         stmt.increment(_) : 0,
@@ -533,6 +535,7 @@ func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
 
 func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) expr_ir {
     switch s {
+        stmt.continue(_) : expr_ir.call(call_expr { callee: "stmt.continue", args: expr_ir[]() }),
         stmt.let(var_stmt) : stmt_let_to_expr(var_stmt, const_entries),
         stmt.assign(assign_stmt) : stmt_assign_to_expr(assign_stmt, const_entries),
         stmt.increment(increment_stmt) : stmt_increment_to_expr(increment_stmt),
@@ -727,6 +730,7 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
 
 func dump_expr_stmt(stmt s, const_rewrite_entry[] const_entries) string {
     switch s {
+        stmt.continue(_) : "continue",
         stmt.let(var_stmt) : "let " + var_stmt.name,
         stmt.assign(assign_stmt) : "assign " + assign_stmt.name,
         stmt.increment(increment_stmt) : "increment " + increment_stmt.name,

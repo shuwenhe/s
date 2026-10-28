@@ -12,20 +12,25 @@ struct ca_context {
     string source
     string expected
     string pkg
+    string[] generic_names
+    int local_start
+    bool discard_result
+    int loop_depth
 }
 struct ca_expr_result { compile.internal.ast.expr value; string type_name; string error }
 struct ca_block_result { compile.internal.ast.block_expr value; string error }
 struct ca_stmt_result { compile.internal.ast.stmt value; compile.internal.semantic.type_binding[] env; string error }
 
 func ca_infer(compile.internal.ast.expr value, ca_context ctx) compile.internal.semantic.check_result {
-    compile.internal.semantic.infer_expr(value, ctx.env, compile.internal.semantic.borrow_state_new(), ctx.expected, ctx.functions, ctx.traits, ctx.source, compile.internal.semantic.semantic_error[](), ctx.declarations)
+    scope := compile.internal.semantic.semantic_scope { package_path: ctx.pkg, generic_names: ctx.generic_names, local_start: ctx.local_start, discard_result: ctx.discard_result, loop_depth: ctx.loop_depth }
+    compile.internal.semantic.infer_expr_in_scope(value, ctx.env, compile.internal.semantic.borrow_state_new(), ctx.expected, ctx.functions, ctx.traits, ctx.source, compile.internal.semantic.semantic_error[](), ctx.declarations, scope)
 }
 func ca_bad(compile.internal.ast.expr value, string error) ca_expr_result { ca_expr_result { value: value, type_name: "unknown", error: error } }
 func ca_child(compile.internal.ast.expr value, ca_context ctx, string expected) ca_expr_result {
     child := ctx; child.expected = expected; ca_expr(value, child)
 }
 func ca_block(compile.internal.ast.block_expr original, ca_context context) ca_block_result {
-    block := original; ctx := context; ctx.env = compile.internal.semantic.clone_env(context.env)
+    block := original; ctx := context; ctx.local_start = len(context.env); ctx.env = compile.internal.semantic.clone_env(context.env)
     i := 0
     for i < len(block.statements) {
         statement := ca_stmt(block.statements[i], ctx)
@@ -45,6 +50,7 @@ func ca_block(compile.internal.ast.block_expr original, ca_context context) ca_b
 func ca_stmt(compile.internal.ast.stmt original, ca_context ctx) ca_stmt_result {
     value := original
     switch value {
+        stmt.continue(_): (),
         stmt.let(v): {
             expected := ctx.expected
             switch v.type_name { option.some(t): expected = t, option.none: () }
@@ -78,7 +84,7 @@ func ca_stmt(compile.internal.ast.stmt original, ca_context ctx) ca_stmt_result 
  v.value = option.some(child.value) }, option.none: () }
             value = stmt.return(v)
         },
-        stmt.expr(v): { child := ca_expr(v.expr, ctx); if child.error != "" { return ca_stmt_result { value: value, env: ctx.env, error: child.error } }
+        stmt.expr(v): { discarded := ctx; discarded.discard_result = true; child := ca_expr(v.expr, discarded); if child.error != "" { return ca_stmt_result { value: value, env: ctx.env, error: child.error } }
  v.expr = child.value; value = stmt.expr(v) },
         stmt.defer(v): { child := ca_expr(v.expr, ctx); if child.error != "" { return ca_stmt_result { value: value, env: ctx.env, error: child.error } }
  v.expr = child.value; value = stmt.defer(v) },
@@ -94,18 +100,21 @@ func ca_stmt(compile.internal.ast.stmt original, ca_context ctx) ca_stmt_result 
             if condition.error != "" { return ca_stmt_result { value: value, env: ctx.env, error: condition.error } }
             step := ca_stmt(v.step.value, loop)
             if step.error != "" { return ca_stmt_result { value: value, env: ctx.env, error: step.error } }
-            body := ca_block(v.body, loop)
+            body_ctx := loop; body_ctx.loop_depth = body_ctx.loop_depth + 1
+            body := ca_block(v.body, body_ctx)
             if body.error != "" { return ca_stmt_result { value: value, env: ctx.env, error: body.error } }
             v.init = std.prelude.box(init.value); v.condition = condition.value; v.step = std.prelude.box(step.value); v.body = body.value; value = stmt.c_for(v)
         },
     }
-    checked := compile.internal.semantic.check_stmt_with_env(original, ctx.env, compile.internal.semantic.borrow_state_new(), ctx.expected, ctx.functions, ctx.traits, ctx.source, compile.internal.semantic.semantic_error[](), ctx.declarations)
+    scope := compile.internal.semantic.semantic_scope { package_path: ctx.pkg, generic_names: ctx.generic_names, local_start: ctx.local_start, discard_result: ctx.discard_result, loop_depth: ctx.loop_depth }
+    checked := compile.internal.semantic.check_stmt_with_env_in_scope(original, ctx.env, compile.internal.semantic.borrow_state_new(), ctx.expected, ctx.functions, ctx.traits, ctx.source, compile.internal.semantic.semantic_error[](), ctx.declarations, scope)
     if checked.errors != 0 { return ca_stmt_result { value: value, env: ctx.env, error: "semantic environment reconstruction failed" } }
     ca_stmt_result { value: value, env: checked.env, error: "" }
 }
 func ca_expr(compile.internal.ast.expr original, ca_context ctx) ca_expr_result {
     inferred := ca_infer(original, ctx)
     if inferred.errors != 0 { return ca_bad(original, "semantic type reconstruction failed in " + ctx.pkg) }
+    ctx.discard_result = false
     value := original
     ty := inferred.type_name
     switch value {
@@ -125,7 +134,7 @@ func ca_expr(compile.internal.ast.expr original, ca_context ctx) ca_expr_result 
         expr.member(v): {
             path := compile.internal.semantic.qualified_expr_path(original)
             owner := compile.internal.semantic.qualified_package_part(path)
-            if compile.internal.semantic.canonical_enum_index(owner, ctx.declarations) >= 0 {
+            if compile.internal.semantic.is_unknown(compile.internal.semantic.lookup_name_type(ctx.env, compile.internal.semantic.extract_module_root(path))) && compile.internal.semantic.canonical_enum_index(owner, ctx.declarations) >= 0 {
                 // Generic nullary variants acquire their contextual nominal type.
                 v.target = std.prelude.box(expr.name(name_expr { name: ty, inferred_type: option.some(ty) }))
             } else {
@@ -184,7 +193,8 @@ func ca_expr(compile.internal.ast.expr original, ca_context ctx) ca_expr_result 
         },
         expr.while(v): {
             condition := ca_child(v.condition.value, ctx, "bool"); if condition.error != "" { return condition }
-            body := ca_block(v.body, ctx); if body.error != "" { return ca_bad(value, body.error) }
+            body_ctx := ctx; body_ctx.loop_depth = body_ctx.loop_depth + 1
+            body := ca_block(v.body, body_ctx); if body.error != "" { return ca_bad(value, body.error) }
             v.condition = std.prelude.box(condition.value); v.body = body.value; v.inferred_type = option.some(ty); value = expr.while(v)
         },
         expr.for(v): {
@@ -197,7 +207,8 @@ func ca_expr(compile.internal.ast.expr original, ca_context ctx) ca_expr_result 
  v.iterable = option.some(std.prelude.box(child.value)) }, option.none: () }
             switch v.post { option.some(s): { post := ca_stmt(s.value, loop); if post.error != "" { return ca_bad(value, post.error) }
  v.post = option.some(std.prelude.box(post.value)) }, option.none: () }
-            body := ca_block(v.body, loop); if body.error != "" { return ca_bad(value, body.error) }
+            body_ctx := loop; body_ctx.loop_depth = body_ctx.loop_depth + 1
+            body := ca_block(v.body, body_ctx); if body.error != "" { return ca_bad(value, body.error) }
             v.body = body.value; v.inferred_type = option.some(ty); value = expr.for(v)
         },
         expr.block(v): { body := ca_block(v, ctx); if body.error != "" { return ca_bad(value, body.error) }
@@ -284,11 +295,12 @@ func annotate_canonical_calls(source_file original, compile.internal.semantic.se
 }
 func ca_function_context(compile.internal.ast.function_decl function, ca_context initial) ca_context {
     ctx := initial; ctx.expected = "()"
-    switch function.sig.return_type { option.some(t): ctx.expected = compile.internal.semantic.canonical_enum_type(compile.internal.typesys.parse_type(t), ctx.declarations), option.none: () }
+    ctx.generic_names = function.sig.generics
+    switch function.sig.return_type { option.some(t): ctx.expected = compile.internal.semantic.canonical_type_in_package(t, ctx.pkg, ctx.generic_names, ctx.declarations), option.none: () }
     i := 0
     for i < len(function.sig.params) {
         parameter := function.sig.params[i]
-        ctx.env = append(ctx.env, compile.internal.semantic.type_binding { name: parameter.name, type_name: compile.internal.semantic.canonical_enum_type(compile.internal.typesys.parse_type(parameter.type_name), ctx.declarations) })
+        ctx.env = append(ctx.env, compile.internal.semantic.type_binding { name: parameter.name, type_name: compile.internal.semantic.canonical_type_in_package(parameter.type_name, ctx.pkg, ctx.generic_names, ctx.declarations) })
         i = i + 1
     }
     ctx

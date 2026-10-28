@@ -150,6 +150,7 @@ func append_from_block(identifier_info[] initial_values, compile.internal.ast.bl
 func append_from_stmt(identifier_info[] initial_values, compile.internal.ast.stmt statement) identifier_info[] {
     acc := initial_values
     switch statement {
+        stmt.continue(_) : (),
         stmt.let(value): acc = append_from_expr(acc, value.value),
         stmt.assign(value): {
             acc = append(acc, identifier_info { identifier_text: value.name, is_qualified: false })

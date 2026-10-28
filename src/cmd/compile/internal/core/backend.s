@@ -76,6 +76,7 @@ func fail_int(string message) (int, backend_error) {
 control_panic_active := "@panic.active"
 control_panic_payload := "@panic.payload"
 control_in_defer := "@defer.active"
+control_continue_active := "@continue.active"
 control_return_active := "@return.active"
 control_return_value := "@return.value"
 
@@ -3843,6 +3844,10 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
             cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
             return err
         }
+        if control_continue_is_active(env) {
+            cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
+            return value.unit(unit_value {})
+        }
         if control_return_is_active(env) {
             returned := control_return_payload(env)
             cleanup_scope_owned_values(env, local_start, returned, runtime)
@@ -3969,6 +3974,7 @@ func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] write
             result.ok(())
         }
         compile.internal.ast.stmt.defer(_) : result.ok(())
+        compile.internal.ast.stmt.continue(_) : { set_control(env, control_continue_active, value.bool(true)); result.ok(()) }
         compile.internal.ast.stmt.sroutine(sroutine_stmt) : execute_sroutine_stmt(sroutine_stmt, source, env, writes, runtime)
     }
 }
@@ -4036,6 +4042,7 @@ func execute_c_for(c_for_stmt value, source_file source, binding[] env, write_op
         if value_result_is_err(body_result) {
             return result.err(value_result_error(body_result))
         }
+        set_control(loop_env, control_continue_active, compile.internal.value.bool(false))
         step_result := execute_stmt(value.step.value, source, loop_env, writes, runtime)
         if unit_result_is_err(step_result) {
             return result.err(unit_result_error(step_result))
@@ -4826,6 +4833,7 @@ func copy_control_bindings(binding[] from_env, binding[] to_env) () {
     copy_control_binding(from_env, to_env, control_panic_active)
     copy_control_binding(from_env, to_env, control_panic_payload)
     copy_control_binding(from_env, to_env, control_in_defer)
+    copy_control_binding(from_env, to_env, control_continue_active)
     copy_control_binding(from_env, to_env, control_return_active)
     copy_control_binding(from_env, to_env, control_return_value)
 }
@@ -5168,6 +5176,7 @@ func eval_while_expr(while_expr literal, source_file source, binding[] env, writ
             break
         }
         execute_block_in_place(literal.body, source, env, writes, runtime)
+        set_control(env, control_continue_active, value.bool(false))
     }
     return value.unit(unit_value {})
 }
@@ -6032,4 +6041,15 @@ func backend_join_with(string[] values, string sep) string {
 func report_failure(string message) int {
     std.io.eprintln("backend error: " + message)
     return 1
+}
+
+func control_continue_is_active(binding[] env) bool {
+    index := find_binding_index(env, control_continue_active)
+    if index < 0 {
+        return false
+    }
+    switch env[index].value {
+        value.bool(flag) : flag,
+        _ : false,
+    }
 }

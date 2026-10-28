@@ -148,7 +148,7 @@ func canonical_enum_variant_index(declaration_ref declaration, string name) int 
     return -1
 }
 
-func canonical_enum_payload(string expected_type, declaration_ref declaration, int variant_index) string {
+func canonical_enum_payload(string expected_type, declaration_ref declaration, int variant_index, declaration_ref[] declarations) string {
     variant := declaration.variants[variant_index]
     if variant.payload.is_none() { return "()" }
     arguments := compile.internal.typesys.extract_type_args(expected_type)
@@ -158,7 +158,8 @@ func canonical_enum_payload(string expected_type, declaration_ref declaration, i
         bindings.push(type_binding { name: declaration.generics[i], type_name: arguments[i] })
         i = i + 1
     }
-    return instantiate_type(variant.payload.unwrap(), declaration.generics, bindings)
+    declared := canonical_type_in_package(variant.payload.unwrap(), declaration.package_path, declaration.generics, declarations)
+    return instantiate_type(declared, declaration.generics, bindings)
 }
 
 func canonical_check_enum_pattern(pattern value, string expected_type, string source, semantic_error[] diagnostics, declaration_ref[] declarations) pattern_check_result {
@@ -180,7 +181,7 @@ func canonical_check_enum_pattern(pattern value, string expected_type, string so
                 return pattern_check_result { bindings: type_binding[](), errors: add_error(source, diagnostics, "e2004", "enum variant payload arity mismatch", variant.path) }
             }
             if arity == 0 { return pattern_check_result { bindings: type_binding[](), errors: 0 } }
-            payload_type := canonical_enum_payload(expected_type, declaration, variant_index)
+            payload_type := canonical_enum_payload(expected_type, declaration, variant_index, declarations)
             payload_type = canonical_enum_type(payload_type, declarations)
             return canonical_check_enum_pattern(variant.args[0], payload_type, source, diagnostics, declarations)
         }
@@ -199,7 +200,7 @@ func canonical_enum_constructor(string path, string[] arg_types, string contextu
     if len(arg_types) != arity { return check_result { type_name: "unknown", errors: add_error(source, diagnostics, "e2004", "enum constructor payload arity mismatch", path) } }
     bindings := type_binding[]()
     if arity == 1 {
-        expected := compile.internal.typesys.parse_type_ref(canonical_enum_type(variant.payload.unwrap(), declarations))
+        expected := compile.internal.typesys.parse_type_ref(canonical_type_in_package(variant.payload.unwrap(), declaration.package_path, declaration.generics, declarations))
         actual := compile.internal.typesys.parse_type_ref(arg_types[0])
         bindings = collect_type_pattern_bindings(expected, actual, declaration.generics, bindings)
         if !match_type_pattern_ref(expected, actual, declaration.generics, bindings) {
@@ -253,7 +254,7 @@ func canonical_enum_patterns_cover(pattern[] patterns, string expected_type, dec
             p = p + 1
         }
         if declaration.variants[v].payload.is_some() {
-            covered = canonical_enum_patterns_cover(payload_patterns, canonical_enum_payload(expected_type, declaration, v), declarations)
+            covered = canonical_enum_patterns_cover(payload_patterns, canonical_enum_payload(expected_type, declaration, v, declarations), declarations)
         }
         if !covered { return false }
         v = v + 1

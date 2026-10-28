@@ -237,7 +237,10 @@ struct multi_assign_stmt {
     expr value
 }
 
+struct continue_stmt {}
+
 enum stmt {
+    continue(continue_stmt),
     multi(multi_assign_stmt),
     let(var_stmt),
     assign(assign_stmt),
@@ -527,6 +530,7 @@ func dump_block(block_expr block, string indent) string[] {
 
 func dump_stmt(stmt stmt, string indent) string[] {
     switch stmt {
+        stmt.continue(_) : single_line(indent + "continue"),
         stmt.multi(value): single_line(indent + join_exprs(value.targets) + " = " + dump_expr(value.value)),
         stmt.let(value) : {
             text :=
@@ -574,6 +578,7 @@ func dump_stmt(stmt stmt, string indent) string[] {
 
 func dump_for_clause(stmt stmt) string {
     return switch stmt {
+        stmt.continue(_) : "continue",
         stmt.multi(value): join_exprs(value.targets) + " = " + dump_expr(value.value),
         stmt.let(value) : {
             return switch value.type_name {

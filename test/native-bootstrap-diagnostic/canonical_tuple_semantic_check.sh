@@ -36,6 +36,16 @@ func check(string source, bool valid) () {
     if !valid && len(result.errors) == 0 { panic("semantic accepted invalid source") }
 }
 func main() int {
+    check("package main\nfunc source() (int,string) { return 1, \"a\" }\nfunc relay() (int,string) { source() }", true)
+    check("package main\nfunc source() (int,string) { return 1, \"a\" }\nfunc relay() (int,string) { return source() }", true)
+    check("package main\nfunc relay() (int,string) { (1, \"a\") }", true)
+    check("package main\nfunc source() (int,bool) { return 1, true }\nfunc relay() (int,string) { source() }", false)
+    check("package main\nfunc source() (int,int,int) { return 1, 2, 3 }\nfunc relay() (int,int) { source() }", false)
+    check("package main\nfunc source() (int,int) { return 1, 2 }\nfunc relay() int { source() }", false)
+    check("package main\nfunc source[t](t value) (t,t) { return value, value }\nfunc relay[t](t value) (t,t) { source(value) }", true)
+    check("package main\nfunc source[t](t value) (t,t) { return value, value }\nfunc relay[t](t value) (t,int) { source(value) }", false)
+    check("package main\nfunc source() ((int,string),bool) { return (1, \"a\"), true }\nfunc relay() ((int,string),bool) { source() }", true)
+    check("package main\nstruct Cell { int value }\nfunc source() (Cell,int) { return Cell { value: 1 }, 2 }\nfunc relay() (Cell,int) { source() }", true)
     check("package main\nfunc pair() (int,int) { first, second := 1, 2; first, second = second, first; return first, second }", true)
     check("package main\nfunc pair() (int,int) { first, second := 1, true; return first, second }", false)
     check("package main\nfunc pair() int { first, second := 1, 2, 3; return first }", false)
