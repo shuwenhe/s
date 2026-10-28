@@ -52,22 +52,30 @@ func program_collect_environment(source_file source, mir_program_record[] record
 }
 
 func program_with_global_initializers(source_file initial) source_file {
-    output := initial
+    functions := item[]()
+    function_packages := string[]()
     i := 0
     for i < len(initial.items) {
         switch initial.items[i] {
             item.var(declaration): {
                 if declaration.value.is_some() && declaration.type_name.is_some() {
-                    signature := function_sig { name: "__global_init_" + declaration.name, params: param[](), return_type: declaration.type_name }
+                    signature := function_sig { name: "__global_init_" + declaration.name, params: compile.internal.ast.param[](), return_type: declaration.type_name }
                     body := block_expr { statements: stmt[](), final_expr: declaration.value, inferred_type: declaration.type_name }
                     function := function_decl { sig: signature, body: option.some(body) }
-                    output.items.push(item.function(function))
-                    output.item_packages.push(program_item_package(initial, i))
+                    functions.push(item.function(function))
+                    function_packages.push(program_item_package(initial, i))
                 }
             }
             _: (),
         }
         i = i + 1
+    }
+    output := initial
+    j := 0
+    for j < len(functions) {
+        output.items.push(functions[j])
+        output.item_packages.push(function_packages[j])
+        j = j + 1
     }
     return output
 }
@@ -149,7 +157,7 @@ func program_update_place(string root, program_store_step[] steps, int value, st
     return state
 }
 
-func program_array_method(member_expr member, expr[] arguments, string pkg, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
+func program_array_method(compile.internal.ast.member_expr member, expr[] arguments, string pkg, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
     state := initial
     if member.member == "len" {
         args := expr[]()

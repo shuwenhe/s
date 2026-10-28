@@ -36,6 +36,8 @@ func check(string source, bool valid) () {
     if !valid && len(result.errors) == 0 { panic("semantic accepted invalid source") }
 }
 func main() int {
+    check("package alpha\nfunc read() int { return 1 }\npackage beta\nfunc read() int { return 2 }", true)
+    check("package alpha\nfunc read() int { return 1 }\nfunc read() int { return 2 }", false)
     check("package main\nconst selected = 1\nfunc read(int value) int { return switch value { selected: 10, 2: 20, _: 0, } }", true)
     check("package main\nconst selected = true\nfunc read(int value) int { return switch value { selected: 10, _: 0, } }", false)
     check("package main\nfunc read(int value) int { return switch value { unknown: unknown + 1, } }", true)
