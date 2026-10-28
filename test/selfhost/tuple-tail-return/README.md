@@ -1,7 +1,12 @@
-# Current selfhost FIRST RED: tuple tail return
+# Tuple tail return regression
 
-Seed accepts this source and its native executable returns 42. The canonical
-compiler currently rejects `relay` with e3004 (function return type mismatch).
-This reproduces `base.map_file_mmap` forwarding `map_file_read` as a tail
-expression. It is tracked as an unresolved correctness frontier, not included
-as a passing production regression.
+`doc/s` permits a function's last expression to supply its return value and
+supports multiple return values. Seed and the repaired full Stage1 both compile
+this source to native code executing 42.
+
+The prior full Stage1 rejected `relay` with e3004: declared `(string,string)`
+versus inferred `(string, string)`. The AST was a call and both shapes had two
+string members. `instantiate_type` now emits canonical compact separators,
+including generic members nested inside tuples. Return checking remains strict.
+The native execution and rejection regression is
+`test/native-bootstrap-diagnostic/canonical_tuple_tail_production_check.sh`.

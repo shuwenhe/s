@@ -32,10 +32,13 @@ func check(string source, bool valid) () {
     file, failure := compile.internal.syntax.parse_source(source + "\nfunc main() int { return 0 }")
     if failure.message != "" { panic(failure.message) }
     result := compile.internal.semantic.check_source_file(file, source)
-    if valid && len(result.errors) != 0 { panic(result.errors[0].message) }
+    if valid && len(result.errors) != 0 { eprintln(result.errors[0].message); panic(result.errors[0].message) }
     if !valid && len(result.errors) == 0 { panic("semantic accepted invalid source") }
 }
 func main() int {
+    check("package main\nstruct Box[a,b] { a first; b second }\nfunc source(Box[int,string] value) (Box[int,string],int) { return value, 2 }\nfunc relay(Box[int,string] value) (Box[int,string],int) { source(value) }", true)
+    check("package main\nfunc relay(result[int,string] value) (int,string) { value }", false)
+    check("package main\nfunc source() (alpha.Cell,int) { return alpha.Cell { value: 1 }, 2 }\nfunc relay() (beta.Cell,int) { source() }\npackage alpha\nstruct Cell { int value }\npackage beta\nstruct Cell { int value }", false)
     check("package main\nfunc source() (int,string) { return 1, \"a\" }\nfunc relay() (int,string) { source() }", true)
     check("package main\nfunc source() (int,string) { return 1, \"a\" }\nfunc relay() (int,string) { return source() }", true)
     check("package main\nfunc relay() (int,string) { (1, \"a\") }", true)

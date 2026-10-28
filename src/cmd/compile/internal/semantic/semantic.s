@@ -2074,7 +2074,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
         expr.string(_) : ok_type("string"),
         expr.bool(_) : ok_type("bool"),
         expr.name(value) : {
-            if value.name == "unit" { return ok_type("()") }
+            if value.name == "()" { return ok_type("()") }
             if value.name == "nil" {
                 return ok_type("nil")
             }
@@ -2089,6 +2089,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                 if std.prelude.len(fn_candidates) > 0 {
                     return ok_type("fn")
                 }
+                if value.name == "unit" && !has_duplicate_binding(env, value.name) { return ok_type("()") }
                 return check_result {
                     type_name: "unknown", errors add_error(source, diagnostics, "e3010", "undefined identifier", value.name),
                 }
@@ -3476,7 +3477,7 @@ func instantiate_type(string ty, string[] generic_names, type_binding[] generic_
     i := 0
     for i < std.prelude.len(args) {
         if i > 0 {
-            if tuple { built = built + "," } else { built = built + ", " }
+            built = built + ","
         }
         built = built + instantiate_type(args[i], generic_names, generic_bindings)
         i = i + 1

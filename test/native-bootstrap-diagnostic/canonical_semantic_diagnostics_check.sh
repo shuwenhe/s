@@ -36,6 +36,15 @@ func check(string source, bool valid) () {
     if !valid && len(result.errors) == 0 { panic("semantic accepted invalid source") }
 }
 func main() int {
+    check("package main\nfunc read(string unit) string { unit }", true)
+    check("package main\nfunc read() int { unit := 42; unit }", true)
+    check("package main\nconst unit = 42\nfunc read() int { unit }", true)
+    check("package main\nfunc empty(string unit) () { () }", true)
+    check("package main\nfunc empty() () { unit }", true)
+    check("package main\nfunc wrong(string unit) int { unit }", false)
+    check("package main\nfunc read(int unit) string { unit }", false)
+    check("package main\nfunc read() int { () }", false)
+    check("package main\nfunc read() int { unit := 1; unit := 2; return unit }", false)
     check("package main\nstruct Config { int value }\nselected := create()\nfunc create() Config { return Config { value: 42 } }\nfunc read() Config { return selected }", true)
     check("package main\nenum Code { first, second }\nfunc read(Code value) int { return switch value { Code.first: 42, Code.second: { return 42 }, } }", true)
     check("package main\nenum Code { first, second }\nfunc read(Code value) int { return switch value { Code.first: { return 42 }, Code.second: { return true }, } }", false)

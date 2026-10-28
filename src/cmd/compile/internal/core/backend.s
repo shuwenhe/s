@@ -5033,6 +5033,7 @@ func eval_const_value_expr(expr const_expr, binding[] const_env, int iota_value)
 }
 
 func lookup_name_or_function(binding[] env, source_file source, string name) result[value, backend_error] {
+    if name == "()" { return result.ok(value.unit(unit_value {})) }
     if name == "nil" {
         return result.ok(value.unit(unit_value {}))
     }
@@ -5044,6 +5045,7 @@ func lookup_name_or_function(binding[] env, source_file source, string name) res
     if !function_result_is_err(fn_result) {
         return result.ok(value.fn_ref(name))
     }
+    if name == "unit" { return result.ok(value.unit(unit_value {})) }
     return result.err(backend_error { message: "backend error: unknown name " + name })
 }
 

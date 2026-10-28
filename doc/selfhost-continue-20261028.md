@@ -1,5 +1,8 @@
 # continue 原生全链路验证（2026-10-28）
 
+后续元组尾返回修复和最新 FIRST RED 见 [selfhost-tuple-20261028.md](selfhost-tuple-20261028.md)。
+
+
 ## 结果
 
 Canonical `continue` 已贯通 Parser、共享 AST、Semantic、MIR/SSA 和原生 amd64 跳转。完整 Stage1 构建及原生验证通过；Stage2 仍未生成，Stage3 未运行，固定点未证明。

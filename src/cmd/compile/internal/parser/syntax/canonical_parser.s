@@ -516,7 +516,7 @@ func canonical_switch(canonical_parser initial) canonical_parser {
         arm_pattern := state.parsed_pattern
         state = canonical_expect(state, ":")
         arm_line := state.token_line
-        arm_value := expr.name(compile.internal.ast.name_expr { name: "unit", inferred_type: option.none })
+        arm_value := expr.name(compile.internal.ast.name_expr { name: "()", inferred_type: option.none })
         if !legacy && state.token == "continue" {
             state = canonical_advance(state)
             jump := stmt.continue(compile.internal.ast.continue_stmt {})
@@ -555,7 +555,7 @@ func canonical_switch(canonical_parser initial) canonical_parser {
 func canonical_expression(canonical_parser initial, int minimum) canonical_parser {
     state := initial
     if state.error != "" { return state }
-    value := expr.name(compile.internal.ast.name_expr { name: "unit", inferred_type: option.some("()") })
+    value := expr.name(compile.internal.ast.name_expr { name: "()", inferred_type: option.some("()") })
     token := state.token
     if token == "[" {
         probe := canonical_advance(state)

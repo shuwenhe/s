@@ -359,16 +359,13 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             return state
         }
         expr.name(name) : {
-            if name.name == "unit" {
-                id := state.next_value
-                state.next_value = id + 1
-                state.instructions = append(state.instructions, mir_program_instruction { op: "const_unit", result_ids: [id], result_types: ["()"], operands: int[](), integer_value: 0, symbol: "" })
-                state.expression_value = id
-                return state
-            }
+            if name.name == "()" { return program_emit_unit(state) }
             binding := program_binding_index(state, name.name)
-            if binding < 0 { state.error = "undefined binding: " + name.name; return state }
-            state.expression_value = state.binding_values[binding]
+            if binding >= 0 { state.expression_value = state.binding_values[binding]; return state }
+            if name.name == "unit" {
+                if name.inferred_type.is_none() || name.inferred_type.unwrap() == "()" { return program_emit_unit(state) }
+            }
+            state.error = "undefined binding: " + name.name
             return state
         }
         expr.binary(binary) : {
@@ -809,7 +806,11 @@ func program_finish_block(program_lower_state initial, string terminator, int[] 
 }
 
 func program_emit_unit(program_lower_state state) program_lower_state {
-    return program_lower_expression(expr.name(name_expr { name: "unit", inferred_type: option.none }), "", mir_program_function[](), state)
+    id := state.next_value
+    state.next_value = id + 1
+    state.instructions = append(state.instructions, mir_program_instruction { op: "const_unit", result_ids: [id], result_types: ["()"], operands: int[](), integer_value: 0, symbol: "" })
+    state.expression_value = id
+    return state
 }
 
 func program_emit_phi(program_lower_state initial, int first, int second, int first_block, int second_block) program_lower_state {
@@ -828,6 +829,7 @@ func program_emit_phi(program_lower_state initial, int first, int second, int fi
 
 func program_lower_block(block_expr body, string package_name, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
     state := initial
+    local_start := len(state.binding_names)
     i := 0
     for i < len(body.statements) {
         if state.terminated { return state }
@@ -851,7 +853,7 @@ func program_lower_block(block_expr body, string package_name, mir_program_funct
                         state.instructions = append(state.instructions, mir_program_instruction { op: "record_get", result_ids: [id], result_types: [field_type], operands: [tuple_value], symbol: type_name, integer_value: j })
                         index := program_binding_index(state, name)
                         if binding.declaration {
-                            if index >= 0 { state.error = "duplicate parallel binding"; return state }
+                            if index >= local_start { state.error = "duplicate parallel binding"; return state }
                             state.binding_names = append(state.binding_names, name)
                             state.binding_values = append(state.binding_values, id)
                         } else {
@@ -864,7 +866,7 @@ func program_lower_block(block_expr body, string package_name, mir_program_funct
                 }
             }
             stmt.let(binding): {
-                if program_binding_index(state, binding.name) >= 0 { state.error = "duplicate binding: " + binding.name; return state }
+                if program_binding_index(state, binding.name) >= local_start { state.error = "duplicate binding: " + binding.name; return state }
                 state = program_lower_expression(binding.value, package_name, signatures, state)
                 if state.error != "" { return state }
                 if state.expression_value < 0 { state.error = "cannot bind a void expression"; return state }
