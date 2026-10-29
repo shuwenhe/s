@@ -23,11 +23,11 @@ for pair in '0 7' '4 7' '6 16'; do
 done
 cat > "$work/early.s" <<'S'
 package main
-func main() int { for i := 0; i < 4; i = 10 / 0 { return 42 }; return 7 }
+func main(int divisor) int { for i := 0; i < 4; i = 10 / divisor { return 42 }; return 7 }
 S
 "$compiler" --compile-unit "$work/early.sasm" "$work/early.s"
 "$compiler" --emit-bin "$work/early.sasm" "$work/early"
-status=0; "$work/early" || status=$?
+status=0; "$work/early" 0 || status=$?
 test "$status" -eq 42
 printf keep > "$work/rejected.sasm"
 for mode in condition scope post; do

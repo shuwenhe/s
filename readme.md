@@ -126,6 +126,12 @@ that use printing and other constructs outside P0:
 
 ## Self-hosting status
 
+Latest verification (2026-10-29): eight backend helper return signatures now
+explicitly match their tagged `result[...]` bodies and consumers. All 40
+production checks pass. Complete-source Stage1 next stops at e3020 in
+`build_object_interpreted_legacy`. See
+[the current blocker and measured evidence](doc/selfhost-result-contract-20261029.md).
+
 Full native self-hosting is not yet verified. The current compiler is seed-hosted;
 P0 Native output contains neither the seed compiler nor its interpreter runtime.
 That distinction does not mean the compiler can yet compile its complete source.

@@ -500,6 +500,12 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_tuple_tail_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_continue_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_break_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_if_never_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_statement_boundary_ast_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_statement_boundary_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_backend_result_contract_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_backend_ssa_interface_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_string_order_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_c_for_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_store_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_tuple_production_check.sh

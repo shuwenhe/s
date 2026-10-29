@@ -1,5 +1,7 @@
 # unit 名称绑定优先级修复（2026-10-28）
 
+Latest checkout verification and the current frontier: [string ordering and if/never merge](selfhost-ordering-20261029.md).
+
 ## 结果
 
 `base/timings.s:42` 的 e3116 已消失。原始复现由新完整 Stage1 编译成原生 ELF 并执行 42。Stage2 已越过 timings_add_event，推进到 amd64_emit_edge 的 break；Stage2/Stage3 尚未生成，固定点未证明。

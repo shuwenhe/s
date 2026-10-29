@@ -483,7 +483,12 @@ func canonical_case_body(canonical_parser initial) canonical_parser {
             }
             statements.push(stmt.return(compile.internal.ast.return_stmt { value: value }))
         } else {
-            state = canonical_loop_statement(state)
+            // A statement-leading if ends at its own closing branch. Its
+            // following unary expression is not an infix continuation.
+            if state.token == "if" {
+                state = canonical_if(state)
+                state.statement = stmt.expr(compile.internal.ast.expr_stmt { expr: state.expression })
+            } else { state = canonical_loop_statement(state) }
             if state.error != "" { return state }
             if state.token == "case" || state.token == "default" || state.token == "}" {
                 switch state.statement {
@@ -733,7 +738,10 @@ func canonical_block(canonical_parser initial) canonical_parser {
             }
             statements.push(stmt.return(compile.internal.ast.return_stmt { value: value }))
         } else {
-            state = canonical_expression_list(state)
+            // Keep statement boundaries without restricting multiline binary
+            // operators in bindings, returns or parenthesized expressions.
+            if state.token == "if" { state = canonical_if(state) }
+            else { state = canonical_expression_list(state) }
             left := state.expression
             if canonical_assignment_operator(state.token) || state.token == "++" || state.token == "--" {
                 state = canonical_assignment(state, left, true)

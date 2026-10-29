@@ -16,6 +16,7 @@ import (
     "compile.internal.slice"
     "compile.internal.walk"
     "compile.internal.ssa"
+    "compile.internal.ssa_core"
 )
 
 extern "intrinsic" func runtime_env_get(string key, string fallback) string;
@@ -34,41 +35,41 @@ func fail_function(string message) result[function_decl, backend_error] {
     })
 }
 
-func ok_write_ops(write_op[] value) (write_op[], backend_error) {
+func ok_write_ops(write_op[] value) result[write_op[], backend_error] {
     return result.ok(value)
 }
 
-func fail_write_ops(string message) (write_op[], backend_error) {
+func fail_write_ops(string message) result[write_op[], backend_error] {
     return result.err(backend_error {
         message: message,
     })
 }
 
-func ok_value(value value) (value, backend_error) {
+func ok_value(value value) result[value, backend_error] {
     return result.ok(value)
 }
 
-func fail_value(string message) (value, backend_error) {
+func fail_value(string message) result[value, backend_error] {
     return result.err(backend_error {
         message: message,
     })
 }
 
-func ok_unit() ((), backend_error) {
+func ok_unit() result[(), backend_error] {
     return result.ok(())
 }
 
-func fail_unit(string message) ((), backend_error) {
+func fail_unit(string message) result[(), backend_error] {
     return result.err(backend_error {
         message: message,
     })
 }
 
-func ok_int(int value) (int, backend_error) {
+func ok_int(int value) result[int, backend_error] {
     return result.ok(value)
 }
 
-func fail_int(string message) (int, backend_error) {
+func fail_int(string message) result[int, backend_error] {
     return result.err(backend_error {
         message: message,
     })
@@ -235,18 +236,18 @@ func build_object_interpreted_legacy(string path, string output, string ssa_marg
     if lowering_error != "" {
         return report_failure("mir lowering failed: " + lowering_error)
     }
-    arch := buildcfg_goarch()
+    arch := runtime_env_get("S_TARGET_ARCH", "amd64")
     if !ssa_margin_override_valid(ssa_margin_override) {
         return report_failure("invalid --ssa-dominant-margin value: " + ssa_margin_override)
     }
     dominant_margin := ssa_margin_override_value(ssa_margin_override)
     midend := run_midend_pipeline(graph)
-    ssa_program := build_ssa_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
-    ssa_text := dump_ssa_pipeline(ssa_program)
+    ssa_program := compile.internal.ssa_core.build_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
+    ssa_text := compile.internal.ssa_core.dump_pipeline(ssa_program)
     if ssa_text == "" {
         return report_failure("ssa lowering failed: empty pipeline")
     }
-    debug_map := dump_ssa_debug_map(ssa_program)
+    debug_map := compile.internal.ssa_core.dump_debug_map(ssa_program)
     if debug_map == "" {
         return report_failure("ssa debug map failed: empty map")
     }
@@ -323,18 +324,18 @@ func build_interpreted_legacy(string path, string output, string ssa_margin_over
     if lowering_error != "" {
         return report_failure("mir lowering failed: " + lowering_error)
     }
-    arch := buildcfg_goarch()
+    arch := runtime_env_get("S_TARGET_ARCH", "amd64")
     if !ssa_margin_override_valid(ssa_margin_override) {
         return report_failure("invalid --ssa-dominant-margin value: " + ssa_margin_override)
     }
     dominant_margin := ssa_margin_override_value(ssa_margin_override)
     midend := run_midend_pipeline(graph)
-    ssa_program := build_ssa_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
-    ssa_text := dump_ssa_pipeline(ssa_program)
+    ssa_program := compile.internal.ssa_core.build_pipeline_with_graph_hints_and_margin(graph, midend.optimized_mir_text, arch, dominant_margin)
+    ssa_text := compile.internal.ssa_core.dump_pipeline(ssa_program)
     if ssa_text == "" {
         return report_failure("ssa lowering failed: empty pipeline")
     }
-    debug_map := dump_ssa_debug_map(ssa_program)
+    debug_map := compile.internal.ssa_core.dump_debug_map(ssa_program)
     if debug_map == "" {
         return report_failure("ssa debug map failed: empty map")
     }
@@ -1779,9 +1780,9 @@ func build_abi_emit_plan(string arch, source_file source) string {
                 line = line + " | callee_saved=" + std.prelude.to_string(abi_callee_saved_count(arch))
                 line = line + " | callseq=" + abi_call_sequence_mode(arch, variadic, ret_parts, aggregate_size)
                 line = line + " | " + abi_emit_ret_plan(arch, ret_type, ret_parts, aggregate_size)
-                line = line + " | abi_in_regs=" + std.prelude.to_string(abiutils_in_registers_used(abi_info))
-                line = line + " | abi_out_regs=" + std.prelude.to_string(abiutils_out_registers_used(abi_info))
-                line = line + " | abi_spill=" + std.prelude.to_string(abiutils_spill_area_size(abi_info))
+                line = line + " | abi_in_regs=" + std.prelude.to_string(compile.internal.abi.in_registers_used(abi_info))
+                line = line + " | abi_out_regs=" + std.prelude.to_string(compile.internal.abi.out_registers_used(abi_info))
+                line = line + " | abi_spill=" + std.prelude.to_string(compile.internal.abi.spill_area_size(abi_info))
                 lines = append(lines, line)
             }
             _ : (),
@@ -1966,7 +1967,7 @@ func collect_abi_behavior(string arch, source_file source) abi_behavior_entry[] 
                 variadic := param_count > abi_variadic_gp_limit(arch)
                 aggregate_size := param_count * 8
                 out.push(abi_behavior_entry {
-                    name: fn_decl.sig.name, param_count param_count, variadic variadic, pass_mode abi_aggregate_pass_mode(arch, aggregate_size), return_mode abi_return_mode(arch, "aggregate", aggregate_size), abi_in_regs abiutils_in_registers_used(abi_info), abi_out_regs abiutils_out_registers_used(abi_info), abi_spill_size abiutils_spill_area_size(abi_info), abi_arg_width abiutils_arg_width(abi_info), abi_summary abiutils_info_string(abi_info),
+                    name: fn_decl.sig.name, param_count param_count, variadic variadic, pass_mode abi_aggregate_pass_mode(arch, aggregate_size), return_mode abi_return_mode(arch, "aggregate", aggregate_size), abi_in_regs compile.internal.abi.in_registers_used(abi_info), abi_out_regs compile.internal.abi.out_registers_used(abi_info), abi_spill_size compile.internal.abi.spill_area_size(abi_info), abi_arg_width compile.internal.abi.arg_width(abi_info), abi_summary compile.internal.abi.info_string(abi_info),
                 })
             }
             _ : (),
@@ -3073,7 +3074,7 @@ func resolve_bootstrap_base_compiler() string {
 }
 
 func emit_runtime_launcher_asm(string base_compiler) string {
-    arch := buildcfg_goarch()
+    arch := runtime_env_get("S_TARGET_ARCH", "amd64")
     if arch == "arm64" {
         return emit_runtime_launcher_asm_arm64(base_compiler)
     }
@@ -5503,7 +5504,7 @@ func decode_string_literal(string literal) string {
 }
 
 func emit_asm(write_op[] writes, int exit_code) string {
-    arch := buildcfg_goarch()
+    arch := runtime_env_get("S_TARGET_ARCH", "amd64")
     if arch == "arm64" {
         return emit_asm_arm64(writes, exit_code)
     }

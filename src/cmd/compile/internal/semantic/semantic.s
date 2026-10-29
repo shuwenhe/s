@@ -2511,11 +2511,15 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                     errors = errors + else_result.errors
                     borrow_state_merge_moves(borrow_state, then_borrows)
                     borrow_state_merge_moves(borrow_state, else_borrows)
-                    if !types_compatible(then_result.type_name, else_result.type_name) {
+                    // A terminating branch contributes no value to the join.
+                    branch_type := then_result.type_name
+                    if branch_type == "never" {
+                        branch_type = else_result.type_name
+                    } else if else_result.type_name != "never" && !types_compatible(branch_type, else_result.type_name) {
                         errors = errors + add_error(source, diagnostics, "e3015", "if/else type mismatch", "if")
                     }
                     check_result {
-                        type_name: then_result.type_name, errors errors,
+                        type_name: branch_type, errors errors,
                     }
                 }
                 option.none : {
@@ -2947,7 +2951,8 @@ func canonical_binary_inference(string op, string left, string right) canonical_
         return canonical_inference { type_name: "int", diagnostics: diagnostics }
     }
     if op == "<" || op == "<=" || op == ">" || op == ">=" {
-        if !types_compatible("int", left) || !types_compatible("int", right) { diagnostics.push(semantic_error { code: "e3019", message: "ordering compare requires int", anchor: op }) }
+        if left == "string" && right == "string" { return canonical_inference { type_name: "bool", diagnostics: diagnostics } }
+        if !types_compatible("int", left) || !types_compatible("int", right) { diagnostics.push(semantic_error { code: "e3019", message: "ordering compare requires int or string operands of the same type", anchor: op }) }
         return canonical_inference { type_name: "bool", diagnostics: diagnostics }
     }
     if op == "==" || op == "!=" {
