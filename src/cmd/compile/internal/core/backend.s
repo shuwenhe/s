@@ -1252,30 +1252,30 @@ func validate_toolchain_compat_artifact(string payload) backend_error {
 func build_go_asm_bridge_artifact(string arch, string plan9_source) string {
     lines := string[]()
     lines = append(lines, "go-asm version=1 arch=" + arch + " syntax=plan9")
-    translated := translate_go_plan9_to_gas(arch, plan9_source)
-    if text_backend_pair_is_err(translated.left, translated.right) {
+    translated_text, translated_error := translate_go_plan9_to_gas(arch, plan9_source)
+    if text_backend_pair_is_err(translated_text, translated_error) {
         lines = append(lines, "status=error")
-        lines = append(lines, "reason=" + translated.right.message)
+        lines = append(lines, "reason=" + translated_error.message)
         return backend_join_lines(lines)
     }
     lines = append(lines, "status=ok")
     lines = append(lines, "translator=plan9-to-gas")
-    lines = append(lines, "gas_preview=" + flatten_multiline(translated.left))
+    lines = append(lines, "gas_preview=" + flatten_multiline(translated_text))
     backend_join_lines(lines)
 }
 
 func validate_go_asm_bridge_artifact(string payload) ((), backend_error) {
     if !has_substring(payload, "go-asm version=1") {
-        return backend_error { message: "backend error: go asm artifact header missing" }
+        return (), backend_error { message: "backend error: go asm artifact header missing" }
     }
     if !has_substring(payload, "syntax=plan9") {
-        return backend_error { message: "backend error: go asm artifact syntax marker missing" }
+        return (), backend_error { message: "backend error: go asm artifact syntax marker missing" }
     }
     if !has_substring(payload, "status=ok") {
-        return backend_error { message: "backend error: go asm artifact status is not ok" }
+        return (), backend_error { message: "backend error: go asm artifact status is not ok" }
     }
     if !has_substring(payload, "gas_preview=") {
-        return backend_error { message: "backend error: go asm artifact preview missing" }
+        return (), backend_error { message: "backend error: go asm artifact preview missing" }
     }
     return (), backend_error { message: "" }
 }
@@ -1292,11 +1292,11 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
             continue
         }
         if starts_with_local(cleaned, "TEXT ") {
-            symbol_result := parse_go_text_symbol(cleaned)
-            if text_backend_pair_is_err(symbol_result.left, symbol_result.right) {
-                return symbol_result.right
+            symbol_text, symbol_error := parse_go_text_symbol(cleaned)
+            if text_backend_pair_is_err(symbol_text, symbol_error) {
+                return "", symbol_error
             }
-            symbol := symbol_result.left
+            symbol := symbol_text
             saw_text_directive = true
             output_lines = append(output_lines, "    .text")
             output_lines = append(output_lines, "    .globl " + symbol)
@@ -1308,29 +1308,29 @@ func translate_go_plan9_to_gas(string arch, string plan9_source) (string, backen
         if ends_with_local(cleaned, ":") {
             label := trim_spaces(std.prelude.prelude_slice(cleaned, 0, std.prelude.len(cleaned) - 1))
             if label == "" {
-                return backend_error { message: "go asm translation error: empty label" }
+                return "", backend_error { message: "go asm translation error: empty label" }
             }
             output_lines = append(output_lines, normalize_go_symbol(label) + ":")
             i = i + 1
             continue
         }
         if !saw_text_directive {
-            return backend_error { message: "go asm translation error: missing TEXT: directive" }
+            return "", backend_error { message: "go asm translation error: missing TEXT: directive" }
         }
         if starts_with_local(cleaned, "RET") {
             output_lines = append(output_lines, "    ret")
             i = i + 1
             continue
         }
-        instr_result := translate_go_instruction_line(cleaned, arch)
-        if text_backend_pair_is_err(instr_result.left, instr_result.right) {
-            return instr_result.right
+        instruction_text, instruction_error := translate_go_instruction_line(cleaned, arch)
+        if text_backend_pair_is_err(instruction_text, instruction_error) {
+            return "", instruction_error
         }
-        output_lines = append(output_lines, instr_result.left)
+        output_lines = append(output_lines, instruction_text)
         i = i + 1
     }
     if !saw_text_directive {
-        return backend_error { message: "go asm translation error: no TEXT: directive found" }
+        return "", backend_error { message: "go asm translation error: no TEXT: directive found" }
     }
     return backend_join_lines(output_lines), backend_error { message: "" }
 }
@@ -1343,15 +1343,15 @@ func parse_go_text_symbol(string line) (string, backend_error) {
     after := trim_spaces(std.prelude.prelude_slice(line, std.prelude.len("TEXT: "), std.prelude.len(line)))
     comma := index_of(after, ",")
     if comma < 0 {
-        return backend_error { message: "go asm translation error: malformed TEXT: directive" }
+        return "", backend_error { message: "go asm translation error: malformed TEXT: directive" }
     }
     symbol_ref := trim_spaces(std.prelude.prelude_slice(after, 0, comma))
     if !ends_with_local(symbol_ref, "(SB)") {
-        return backend_error { message: "go asm translation error: TEXT: symbol must use (SB)" }
+        return "", backend_error { message: "go asm translation error: TEXT: symbol must use (SB)" }
     }
     symbol := normalize_go_symbol(std.prelude.prelude_slice(symbol_ref, 0, std.prelude.len(symbol_ref) - std.prelude.len("(SB)")))
     if symbol == "" {
-        return backend_error { message: "go asm translation error: empty TEXT: symbol" }
+        return "", backend_error { message: "go asm translation error: empty TEXT: symbol" }
     }
     return symbol, backend_error { message: "" }
 }
@@ -1366,30 +1366,30 @@ func translate_go_instruction_line(string line, string arch) (string, backend_er
     }
     gas_op := map_go_opcode(op)
     if gas_op == "" {
-        return backend_error { message: "go asm translation error: unsupported opcode " + op }
+        return "", backend_error { message: "go asm translation error: unsupported opcode " + op }
     }
     if args_text == "" {
         return "    " + gas_op, backend_error { message: "" }
     }
     comma := index_of(args_text, ",")
     if comma < 0 {
-        one := convert_go_operand_to_gas(args_text, arch)
-        if text_backend_pair_is_err(one.left, one.right) {
-            return one.right
+        one_operand, one_error := convert_go_operand_to_gas(args_text, arch)
+        if text_backend_pair_is_err(one_operand, one_error) {
+            return "", one_error
         }
-        return "    " + gas_op + " " + one.left, backend_error { message: "" }
+        return "    " + gas_op + " " + one_operand, backend_error { message: "" }
     }
     left_raw := trim_spaces(std.prelude.prelude_slice(args_text, 0, comma))
     right_raw := trim_spaces(std.prelude.prelude_slice(args_text, comma + 1, std.prelude.len(args_text)))
-    left := convert_go_operand_to_gas(left_raw, arch)
-    if text_backend_pair_is_err(left.left, left.right) {
-        return left.right
+    left_operand, left_error := convert_go_operand_to_gas(left_raw, arch)
+    if text_backend_pair_is_err(left_operand, left_error) {
+        return "", left_error
     }
-    right := convert_go_operand_to_gas(right_raw, arch)
-    if text_backend_pair_is_err(right.left, right.right) {
-        return right.right
+    right_operand, right_error := convert_go_operand_to_gas(right_raw, arch)
+    if text_backend_pair_is_err(right_operand, right_error) {
+        return "", right_error
     }
-    return "    " + gas_op + " " + left.left + ", " + right.left, backend_error { message: "" }
+    return "    " + gas_op + " " + left_operand + ", " + right_operand, backend_error { message: "" }
 }
 
 func map_go_opcode(string op) string {
@@ -1468,7 +1468,7 @@ func map_go_opcode(string op) string {
 func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) {
     operand := trim_spaces(raw)
     if operand == "" {
-        return backend_error { message: "go asm translation error: empty operand" }
+        return "", backend_error { message: "go asm translation error: empty operand" }
     }
     if starts_with_local(operand, "$") {
         imm := std.prelude.prelude_slice(operand, 1, std.prelude.len(operand))
@@ -1480,7 +1480,7 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
     if ends_with_local(operand, "(SB)") {
         sym := normalize_go_symbol(std.prelude.prelude_slice(operand, 0, std.prelude.len(operand) - std.prelude.len("(SB)")))
         if sym == "" {
-            return backend_error { message: "go asm translation error: empty symbol operand" }
+            return "", backend_error { message: "go asm translation error: empty symbol operand" }
         }
         return sym, backend_error { message: "" }
     }
@@ -1492,7 +1492,7 @@ func convert_go_operand_to_gas(string raw, string arch) (string, backend_error) 
         }
         mapped_base := map_go_register(base, arch)
         if mapped_base == "" {
-            return backend_error { message: "go asm translation error: unsupported base register " + base }
+            return "", backend_error { message: "go asm translation error: unsupported base register " + base }
         }
         disp := parse_go_disp(std.prelude.prelude_slice(operand, 0, paren))
         return disp + "(" + mapped_base + ")", backend_error { message: "" }
