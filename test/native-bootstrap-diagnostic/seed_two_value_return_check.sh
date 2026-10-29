@@ -12,6 +12,7 @@ func first() int { calls = calls * 10 + 1; return 40 }
 func second() int { calls = calls * 10 + 2; return 2 }
 func ordered() (int,int) { return first(), second() }
 func failed() (string,Failure) { return "", Failure { message: "bad" } }
+func quad() (int,int,int,int) { return 1, 2, 3, 36 }
 func triple() (int,string,bool) { return 40, "payload", true }
 func good() (string,Failure) { return "ok", Failure { message: "" } }
 func main() int {
@@ -27,6 +28,9 @@ func main() int {
     if success != "ok" || empty.message != "" { return 4 }
     number, label, flag := triple()
     if number != 40 || label != "payload" || !flag { return 5 }
+    q0, q1, q2, q3 := quad()
+    seen = false
+    if seen || q0 != 1 || q1 != 2 || q2 != 3 || q3 != 36 { return 6 }
     return 42
 }
 S
@@ -43,4 +47,20 @@ for body in 'return 40, true' 'return 40, 2, 3'; do
     fi
     test "$(cat "$work/invalid.ir")" = keep
  done
+cat > "$work/invalid-binding.s" <<'S'
+package main
+func pair() (int,int) { return 1, 2 }
+func main() int { a, b, c := pair(); return 42 }
+S
+if "$root/bin/s_seed" --compile-native-unit "$work/invalid.ir" "$root/src/result/result.s" "$work/invalid-binding.s" > "$work/error.log" 2>&1; then
+    echo 'accepted three bindings from a two-value producer' >&2; exit 1
+fi
+cat > "$work/invalid-binding.s" <<'S'
+package main
+func nested() result[int,result[int,int]] { return result.ok(1) }
+func main() int { a, b, c := nested(); return 42 }
+S
+if "$root/bin/s_seed" --compile-native-unit "$work/invalid.ir" "$root/src/result/result.s" "$work/invalid-binding.s" > "$work/error.log" 2>&1; then
+    echo 'flattened a result enum as a three-value source tuple' >&2; exit 1
+fi
 echo 'Seed native multiple-value returns: both payloads, evaluation once/order, declaration priority and strict arity/types: PASS'

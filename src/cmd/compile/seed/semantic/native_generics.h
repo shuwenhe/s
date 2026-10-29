@@ -619,6 +619,7 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
         }
         return true;
     case AST_CALL_EXPR: {
+        n->native_tuple_arity=0;
         if(n->as.call_expr.callee && n->as.call_expr.callee->kind==AST_INDEX_EXPR && !n->as.call_expr.callee->as.index_expr.index) {
             if(n->as.call_expr.args.len) return ng_fail(s,n->pos,"array constructor expects no arguments");
             return ng_array_constructor_type(c,n->as.call_expr.callee,out);
@@ -732,6 +733,7 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
                 if(strcmp(full,candidate) && (strcmp(package,c->package) || strcmp(external->as.extern_decl.name,spelling))) continue;
                 ng_scope *decl=calloc(1,sizeof(*decl)); if(!decl) { free(args); return false; }
                 decl->state=s; decl->package=package;
+                n->native_tuple_arity=external->native_tuple_arity;
                 bool ok=ng_type(decl,external->as.extern_decl.return_type,out,0); free(decl); free(args); return ok;
             }
         }
@@ -866,6 +868,7 @@ static bool native_specialize_generics(ast_node *unit,compile_error *err) {
         ast_node *n=unit->as.program.statements.data[i];
         if(n->kind==AST_PACKAGE_DECL) package=n->as.package_decl.name;
         if(n->kind!=AST_EXTERN_DECL) continue;
+        if(!n->native_tuple_arity) n->native_tuple_arity=ng_source_tuple_arity(n->as.extern_decl.return_type);
         ng_scope *c=calloc(1,sizeof(*c)); if(!c) goto done;
         c->state=&s; c->package=package;
         ng_text type; bool valid=true;
