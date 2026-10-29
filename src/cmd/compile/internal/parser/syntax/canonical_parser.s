@@ -579,7 +579,7 @@ func canonical_expression(canonical_parser initial, int minimum) canonical_parse
                 if state.token == "(" { closing = ")" }
                 state = canonical_array(state, option.some(type_text), closing)
             }
-        } else { state = canonical_array(state, option.none, "]") }
+        } else { state = canonical_array(state, option[string].none, "]") }
         value = state.expression
     } else if token == "switch" { state = canonical_switch(state); value = state.expression }
     else if token == "if" { state = canonical_if(state); value = state.expression }
@@ -1001,7 +1001,7 @@ func canonical_parse(string source) (source_file, syntax_error) {
             if state.token != "func" { state = canonical_fail(state, "extern requires a function declaration") }
         } else if state.token == "const" {
             state = canonical_advance(state)
-            if !canonical_ident(state.token) { return syntax_error { message: "expected constant name", line: state.token_line, column: 1 } }
+            if !canonical_ident(state.token) { return compile.internal.ast.source_file {}, syntax_error { message: "expected constant name", line: state.token_line, column: 1 } }
             name := state.token
             state = canonical_expect(canonical_advance(state), "=")
             state = canonical_expression(state, 1)
@@ -1037,9 +1037,9 @@ func canonical_parse(string source) (source_file, syntax_error) {
         } else { state = canonical_fail(state, "unsupported top-level declaration: " + state.token) }
         state = canonical_cursor(state)
     }
-    if state.error != "" { return syntax_error { message: state.error, line: state.token_line, column: 1 } }
-    if output.pkg == "" { return syntax_error { message: "expected package declaration", line: 1, column: 1 } }
-    return output
+    if state.error != "" { return compile.internal.ast.source_file {}, syntax_error { message: state.error, line: state.token_line, column: 1 } }
+    if output.pkg == "" { return compile.internal.ast.source_file {}, syntax_error { message: "expected package declaration", line: 1, column: 1 } }
+    return output, syntax_error { message: "", line: 0, column: 0 }
 }
 
 func canonical_assignment_operator(string token) bool {

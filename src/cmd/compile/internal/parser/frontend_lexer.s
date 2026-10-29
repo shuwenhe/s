@@ -1,4 +1,5 @@
 package compile.internal.parser
+import "std.prelude"
 
 struct token {
     token_type: int
@@ -149,7 +150,7 @@ func frontend_lexer_read_char(lexer* lex) {
     if lex.read_position >= lex.source.len() {
         lex.current_char = ""
     } else {
-        lex.current_char = __host_char_at(lex.source, lex.read_position)
+        lex.current_char = std.prelude.char_at(lex.source, lex.read_position)
     }
     lex.position = lex.read_position
     lex.read_position = lex.read_position + 1
@@ -166,7 +167,7 @@ func frontend_lexer_peek_char(lexer* lex) string {
     if lex.read_position >= lex.source.len() {
         return ""
     } else {
-        return __host_char_at(lex.source, lex.read_position)
+        return std.prelude.char_at(lex.source, lex.read_position)
     }
 }
 
@@ -185,16 +186,16 @@ func frontend_lexer_read_ident(lexer* lex) string {
 }
 
 func frontend_lexer_slice(string source, int start, int end) string {
-    return __host_slice(source, start, end)
+    return std.prelude.prelude_slice(source, start, end)
 }
 
 func frontend_lexer_read_number(lexer* lex) token {
     start := lex.position
-    has_dot := 0
+    has_dot := false
 
     for frontend_is_digit(lex.current_char) || (lex.current_char == '.' && !has_dot) {
         if lex.current_char == '.' {
-            has_dot = 1
+            has_dot = true
         }
         frontend_lexer_read_char(lex)
     }

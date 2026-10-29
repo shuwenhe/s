@@ -89,41 +89,41 @@ func parser_new(lexer lex) parser {
     p
 }
 
-func parser_next_token(p* parser) {
+func parser_next_token(parser* p) {
     p.current_token = p.peek_token
     p.peek_token = frontend_lexer_next_token(p.lexer*)
 }
 
-func parser_current_token_is(p* parser, int tok_type) bool {
+func parser_current_token_is(parser* p, int tok_type) bool {
     return p.current_token.token_type == tok_type
 }
 
-func parser_peek_token_is(p* parser, int tok_type) bool {
+func parser_peek_token_is(parser* p, int tok_type) bool {
     return p.peek_token.token_type == tok_type
 }
 
-func parser_expect_peek(p* parser, int tok_type) int {
+func parser_expect_peek(parser* p, int tok_type) bool {
     if parser_peek_token_is(p, tok_type) {
         parser_next_token(p)
-        return 1
+        return true
     } else {
         message := "Expected " + frontend_token_type_name(tok_type) + " but got " + frontend_token_type_name(p.peek_token.token_type)
         parser_add_error(p, message)
-        return 0
+        return false
     }
 }
 
-func parser_add_error(p* parser, string msg) {
+func parser_add_error(parser* p, string msg) {
     p.errors = append(p.errors, msg)
 }
 
-func parser_skip_newlines(p* parser) {
+func parser_skip_newlines(parser* p) {
     for parser_current_token_is(p, token_newline) {
         parser_next_token(p)
     }
 }
 
-func parser_parse_program(p* parser) ast_node {
+func parser_parse_program(parser* p) ast_node {
     program := ast_new(fp_ast_program, 1, 0)
 
     for !parser_current_token_is(p, token_eof) {
@@ -131,25 +131,25 @@ func parser_parse_program(p* parser) ast_node {
 
         if parser_current_token_is(p, token_package) {
             pkg := parser_parse_package(p)
-            ast_add_child(program, pkg)
+            ast_add_child(program*, pkg)
         } else if parser_current_token_is(p, token_use) {
             imp := parser_parse_import(p)
-            ast_add_child(program, imp)
+            ast_add_child(program*, imp)
         } else if parser_current_token_is(p, token_func) {
             func_decl := parser_parse_func_decl(p)
-            ast_add_child(program, func_decl)
+            ast_add_child(program*, func_decl)
         } else if parser_current_token_is(p, token_struct) {
             struct_decl := parser_parse_struct_decl(p)
-            ast_add_child(program, struct_decl)
+            ast_add_child(program*, struct_decl)
         } else if parser_current_token_is(p, token_enum) {
             enum_decl := parser_parse_enum_decl(p)
-            ast_add_child(program, enum_decl)
+            ast_add_child(program*, enum_decl)
         } else if parser_current_token_is(p, token_var) {
             var_decl := parser_parse_var_decl(p)
-            ast_add_child(program, var_decl)
+            ast_add_child(program*, var_decl)
         } else if parser_current_token_is(p, token_const) {
             const_decl := parser_parse_const_decl(p)
-            ast_add_child(program, const_decl)
+            ast_add_child(program*, const_decl)
         } else {
             parser_add_error(p, "Unexpected token: " + p.current_token.value)
             parser_next_token(p)
@@ -159,20 +159,20 @@ func parser_parse_program(p* parser) ast_node {
     program
 }
 
-func parser_parse_package(p* parser) ast_node {
+func parser_parse_package(parser* p) ast_node {
     pkg := ast_new(fp_ast_package, p.current_token.line, p.current_token.column)
 
     if !parser_expect_peek(p, token_ident) {
         return pkg
     }
 
-    ast_set_name(pkg, p.current_token.value)
+    ast_set_name(pkg*, p.current_token.value)
     parser_next_token(p)
 
     pkg
 }
 
-func parser_parse_import(p* parser) ast_node {
+func parser_parse_import(parser* p) ast_node {
     imp := ast_new(fp_ast_import, p.current_token.line, p.current_token.column)
 
     if !parser_expect_peek(p, token_ident) {
@@ -190,11 +190,11 @@ func parser_parse_import(p* parser) ast_node {
         }
     }
 
-    ast_set_string_data(imp, path)
+    ast_set_string_data(imp*, path)
     imp
 }
 
-func parser_parse_func_decl(p* parser) ast_node {
+func parser_parse_func_decl(parser* p) ast_node {
     func_decl := ast_new(fp_ast_func_decl, p.current_token.line, p.current_token.column)
     parser_next_token(p)
 
@@ -202,7 +202,7 @@ func parser_parse_func_decl(p* parser) ast_node {
 
     if parser_current_token_is(p, token_lparen) {
         receiver := parser_parse_receiver(p)
-        ast_add_child(func_decl, receiver)
+        ast_add_child(func_decl*, receiver)
     }
 
     if !parser_current_token_is(p, token_ident) {
@@ -210,7 +210,7 @@ func parser_parse_func_decl(p* parser) ast_node {
         return func_decl
     }
 
-    ast_set_name(func_decl, p.current_token.value)
+    ast_set_name(func_decl*, p.current_token.value)
     parser_next_token(p)
 
     if !parser_expect_peek(p, token_lparen) {
@@ -218,24 +218,24 @@ func parser_parse_func_decl(p* parser) ast_node {
     }
 
     params := parser_parse_parameters(p)
-    ast_add_child(func_decl, params)
+    ast_add_child(func_decl*, params)
 
     parser_skip_newlines(p)
 
     if !parser_current_token_is(p, token_lbrace) {
         ret_types := parser_parse_return_types(p)
-        ast_add_child(func_decl, ret_types)
+        ast_add_child(func_decl*, ret_types)
     }
 
     if parser_current_token_is(p, token_lbrace) {
         body := parser_parse_block(p)
-        ast_add_child(func_decl, body)
+        ast_add_child(func_decl*, body)
     }
 
     func_decl
 }
 
-func parser_parse_receiver(p* parser) ast_node {
+func parser_parse_receiver(parser* p) ast_node {
     receiver := ast_new(fp_ast_var_decl, p.current_token.line, p.current_token.column)
     parser_next_token(p)
 
@@ -244,7 +244,7 @@ func parser_parse_receiver(p* parser) ast_node {
         return receiver
     }
 
-    ast_set_name(receiver, p.current_token.value)
+    ast_set_name(receiver*, p.current_token.value)
     parser_next_token(p)
 
     if !parser_expect_peek(p, token_colon) {
@@ -252,7 +252,7 @@ func parser_parse_receiver(p* parser) ast_node {
     }
 
     type_node := parser_parse_type(p)
-    ast_set_type_name(receiver, type_node.name)
+    ast_set_type_name(receiver*, type_node.name)
 
     if !parser_expect_peek(p, token_rparen) {
         return receiver
@@ -261,7 +261,7 @@ func parser_parse_receiver(p* parser) ast_node {
     receiver
 }
 
-func parser_parse_parameters(p* parser) ast_node {
+func parser_parse_parameters(parser* p) ast_node {
     params := ast_new(fp_ast_block_stmt, p.current_token.line, p.current_token.column)
 
     parser_next_token(p)
@@ -277,9 +277,9 @@ func parser_parse_parameters(p* parser) ast_node {
 
             param_type := parser_parse_type(p)
             param := ast_new(fp_ast_var_decl, p.current_token.line, p.current_token.column)
-            ast_set_name(param, param_name)
-            ast_set_type_name(param, param_type.name)
-            ast_add_child(params, param)
+            ast_set_name(param*, param_name)
+            ast_set_type_name(param*, param_type.name)
+            ast_add_child(params*, param)
         }
 
         if parser_current_token_is(p, token_comma) {
@@ -296,14 +296,14 @@ func parser_parse_parameters(p* parser) ast_node {
     params
 }
 
-func parser_parse_return_types(p* parser) ast_node {
+func parser_parse_return_types(parser* p) ast_node {
     ret_types := ast_new(fp_ast_block_stmt, p.current_token.line, p.current_token.column)
 
     if parser_current_token_is(p, token_lparen) {
         parser_next_token(p)
         for !parser_current_token_is(p, token_rparen) && !parser_current_token_is(p, token_eof) {
             ret_type := parser_parse_type(p)
-            ast_add_child(ret_types, ret_type)
+            ast_add_child(ret_types*, ret_type)
             if parser_current_token_is(p, token_comma) {
                 parser_next_token(p)
             }
@@ -313,17 +313,17 @@ func parser_parse_return_types(p* parser) ast_node {
         }
     } else {
         ret_type := parser_parse_type(p)
-        ast_add_child(ret_types, ret_type)
+        ast_add_child(ret_types*, ret_type)
     }
 
     ret_types
 }
 
-func parser_parse_type(p* parser) ast_node {
+func parser_parse_type(parser* p) ast_node {
     type_node := ast_new(fp_ast_type_ident, p.current_token.line, p.current_token.column)
 
     if parser_current_token_is(p, token_ident) {
-        ast_set_name(type_node, p.current_token.value)
+        ast_set_name(type_node*, p.current_token.value)
         parser_next_token(p)
     } else if parser_current_token_is(p, token_lbracket) {
         type_node.node_type = fp_ast_type_array
@@ -333,18 +333,18 @@ func parser_parse_type(p* parser) ast_node {
         }
         parser_next_token(p)
         elem_type := parser_parse_type(p)
-        ast_add_child(type_node, elem_type)
+        ast_add_child(type_node*, elem_type)
     } else if parser_current_token_is(p, token_bit_and) {
         type_node.node_type = fp_ast_type_ptr
         parser_next_token(p)
         ref_type := parser_parse_type(p)
-        ast_add_child(type_node, ref_type)
+        ast_add_child(type_node*, ref_type)
     }
 
     type_node
 }
 
-func parser_parse_struct_decl(p* parser) ast_node {
+func parser_parse_struct_decl(parser* p) ast_node {
     struct_decl := ast_new(fp_ast_struct_decl, p.current_token.line, p.current_token.column)
     parser_next_token(p)
 
@@ -353,7 +353,7 @@ func parser_parse_struct_decl(p* parser) ast_node {
         return struct_decl
     }
 
-    ast_set_name(struct_decl, p.current_token.value)
+    ast_set_name(struct_decl*, p.current_token.value)
     parser_next_token(p)
 
     if parser_expect_peek(p, token_lbrace) {
@@ -361,15 +361,15 @@ func parser_parse_struct_decl(p* parser) ast_node {
             parser_skip_newlines(p)
             if parser_current_token_is(p, token_ident) {
                 field := ast_new(fp_ast_var_decl, p.current_token.line, p.current_token.column)
-                ast_set_name(field, p.current_token.value)
+                ast_set_name(field*, p.current_token.value)
                 parser_next_token(p)
 
                 if parser_expect_peek(p, token_colon) {
                     field_type := parser_parse_type(p)
-                    ast_set_type_name(field, field_type.name)
+                    ast_set_type_name(field*, field_type.name)
                 }
 
-                ast_add_child(struct_decl, field)
+                ast_add_child(struct_decl*, field)
             }
             parser_skip_newlines(p)
             if parser_current_token_is(p, token_rbrace) {
@@ -382,7 +382,7 @@ func parser_parse_struct_decl(p* parser) ast_node {
     struct_decl
 }
 
-func parser_parse_enum_decl(p* parser) ast_node {
+func parser_parse_enum_decl(parser* p) ast_node {
     enum_decl := ast_new(fp_ast_enum_decl, p.current_token.line, p.current_token.column)
     parser_next_token(p)
 
@@ -391,7 +391,7 @@ func parser_parse_enum_decl(p* parser) ast_node {
         return enum_decl
     }
 
-    ast_set_name(enum_decl, p.current_token.value)
+    ast_set_name(enum_decl*, p.current_token.value)
     parser_next_token(p)
 
     if parser_expect_peek(p, token_lbrace) {
@@ -399,9 +399,9 @@ func parser_parse_enum_decl(p* parser) ast_node {
             parser_skip_newlines(p)
             if parser_current_token_is(p, token_ident) {
                 variant := ast_new(fp_ast_ident, p.current_token.line, p.current_token.column)
-                ast_set_name(variant, p.current_token.value)
+                ast_set_name(variant*, p.current_token.value)
                 parser_next_token(p)
-                ast_add_child(enum_decl, variant)
+                ast_add_child(enum_decl*, variant)
             }
             if parser_current_token_is(p, token_comma) {
                 parser_next_token(p)
@@ -413,7 +413,7 @@ func parser_parse_enum_decl(p* parser) ast_node {
     enum_decl
 }
 
-func parser_parse_var_decl(p* parser) ast_node {
+func parser_parse_var_decl(parser* p) ast_node {
     var_decl := ast_new(fp_ast_var_decl, p.current_token.line, p.current_token.column)
     parser_next_token(p)
 
@@ -422,25 +422,25 @@ func parser_parse_var_decl(p* parser) ast_node {
         return var_decl
     }
 
-    ast_set_name(var_decl, p.current_token.value)
+    ast_set_name(var_decl*, p.current_token.value)
     parser_next_token(p)
 
     if parser_current_token_is(p, token_colon) {
         parser_next_token(p)
         var_type := parser_parse_type(p)
-        ast_set_type_name(var_decl, var_type.name)
+        ast_set_type_name(var_decl*, var_type.name)
     }
 
     if parser_current_token_is(p, token_assign) || parser_current_token_is(p, token_colon_assign) {
         parser_next_token(p)
         init_expr := parser_parse_expression(p, prec_lowest)
-        ast_add_child(var_decl, init_expr)
+        ast_add_child(var_decl*, init_expr)
     }
 
     var_decl
 }
 
-func parser_parse_const_decl(p* parser) ast_node {
+func parser_parse_const_decl(parser* p) ast_node {
     const_decl := ast_new(fp_ast_const_decl, p.current_token.line, p.current_token.column)
     parser_next_token(p)
 
@@ -449,24 +449,24 @@ func parser_parse_const_decl(p* parser) ast_node {
         return const_decl
     }
 
-    ast_set_name(const_decl, p.current_token.value)
+    ast_set_name(const_decl*, p.current_token.value)
     parser_next_token(p)
 
     if parser_current_token_is(p, token_colon) {
         parser_next_token(p)
         const_type := parser_parse_type(p)
-        ast_set_type_name(const_decl, const_type.name)
+        ast_set_type_name(const_decl*, const_type.name)
     }
 
     if parser_expect_peek(p, token_assign) {
         init_expr := parser_parse_expression(p, prec_lowest)
-        ast_add_child(const_decl, init_expr)
+        ast_add_child(const_decl*, init_expr)
     }
 
     const_decl
 }
 
-func parser_parse_block(p* parser) ast_node {
+func parser_parse_block(parser* p) ast_node {
     block := ast_new(fp_ast_block_stmt, p.current_token.line, p.current_token.column)
 
     if !parser_expect_peek(p, token_lbrace) {
@@ -477,7 +477,7 @@ func parser_parse_block(p* parser) ast_node {
         parser_skip_newlines(p)
         stmt := parser_parse_statement(p)
         if stmt.node_type != 0 {
-            ast_add_child(block, stmt)
+            ast_add_child(block*, stmt)
         }
     }
 
@@ -488,7 +488,7 @@ func parser_parse_block(p* parser) ast_node {
     block
 }
 
-func parser_parse_statement(p* parser) ast_node {
+func parser_parse_statement(parser* p) ast_node {
     if parser_current_token_is(p, token_if) {
         return parser_parse_if_stmt(p)
     } else if parser_current_token_is(p, token_for) {
@@ -516,153 +516,153 @@ func parser_parse_statement(p* parser) ast_node {
     }
 }
 
-func parser_parse_if_stmt(p* parser) ast_node {
+func parser_parse_if_stmt(parser* p) ast_node {
     if_stmt := ast_new(fp_ast_if_stmt, p.current_token.line, p.current_token.column)
     parser_next_token(p)
 
     condition := parser_parse_expression(p, prec_lowest)
-    ast_add_child(if_stmt, condition)
+    ast_add_child(if_stmt*, condition)
 
     if parser_current_token_is(p, token_lbrace) {
         body := parser_parse_block(p)
-        ast_add_child(if_stmt, body)
+        ast_add_child(if_stmt*, body)
     }
 
     if parser_current_token_is(p, token_else) {
         parser_next_token(p)
         if parser_current_token_is(p, token_if) {
             else_part := parser_parse_if_stmt(p)
-            ast_add_child(if_stmt, else_part)
+            ast_add_child(if_stmt*, else_part)
         } else if parser_current_token_is(p, token_lbrace) {
             else_body := parser_parse_block(p)
-            ast_add_child(if_stmt, else_body)
+            ast_add_child(if_stmt*, else_body)
         }
     }
 
     if_stmt
 }
 
-func parser_parse_for_stmt(p* parser) ast_node {
+func parser_parse_for_stmt(parser* p) ast_node {
     for_stmt := ast_new(fp_ast_for_stmt, p.current_token.line, p.current_token.column)
     parser_next_token(p)
 
     if parser_current_token_is(p, token_lbrace) {
         body := parser_parse_block(p)
-        ast_add_child(for_stmt, body)
+        ast_add_child(for_stmt*, body)
         return for_stmt
     }
 
     if parser_current_token_is(p, token_ident) && parser_peek_token_is(p, token_colon_assign) {
         ident := ast_new(fp_ast_ident, p.current_token.line, p.current_token.column)
-        ast_set_name(ident, p.current_token.value)
+        ast_set_name(ident*, p.current_token.value)
         parser_next_token(p)
         parser_next_token(p)
 
         expr := parser_parse_expression(p, prec_lowest)
 
         init := ast_new(fp_ast_binary_op, p.current_token.line, p.current_token.column)
-        ast_add_child(init, ident)
-        ast_add_child(init, expr)
+        ast_add_child(init*, ident)
+        ast_add_child(init*, expr)
 
         if parser_current_token_is(p, token_semicolon) {
-            ast_add_child(for_stmt, init)
+            ast_add_child(for_stmt*, init)
             parser_next_token(p)
 
             condition := parser_parse_expression(p, prec_lowest)
             if condition.node_type != 0 {
-                ast_add_child(for_stmt, condition)
+                ast_add_child(for_stmt*, condition)
             }
 
             if parser_current_token_is(p, token_semicolon) {
                 parser_next_token(p)
                 post := parser_parse_expression(p, prec_lowest)
                 if post.node_type != 0 {
-                    ast_add_child(for_stmt, post)
+                    ast_add_child(for_stmt*, post)
                 }
             }
         } else {
-            ast_add_child(for_stmt, init)
+            ast_add_child(for_stmt*, init)
         }
     } else if !parser_current_token_is(p, token_semicolon) {
         init := parser_parse_statement(p)
 
         if parser_current_token_is(p, token_semicolon) {
-            ast_add_child(for_stmt, init)
+            ast_add_child(for_stmt*, init)
             parser_next_token(p)
 
             condition := parser_parse_expression(p, prec_lowest)
             if condition.node_type != 0 {
-                ast_add_child(for_stmt, condition)
+                ast_add_child(for_stmt*, condition)
             }
 
             if parser_current_token_is(p, token_semicolon) {
                 parser_next_token(p)
                 post := parser_parse_expression(p, prec_lowest)
                 if post.node_type != 0 {
-                    ast_add_child(for_stmt, post)
+                    ast_add_child(for_stmt*, post)
                 }
             }
         } else {
-            ast_add_child(for_stmt, init)
+            ast_add_child(for_stmt*, init)
         }
     } else {
         parser_next_token(p)
 
         condition := parser_parse_expression(p, prec_lowest)
         if condition.node_type != 0 {
-            ast_add_child(for_stmt, condition)
+            ast_add_child(for_stmt*, condition)
         }
 
         if parser_current_token_is(p, token_semicolon) {
             parser_next_token(p)
             post := parser_parse_expression(p, prec_lowest)
             if post.node_type != 0 {
-                ast_add_child(for_stmt, post)
+                ast_add_child(for_stmt*, post)
             }
         }
     }
 
     if parser_current_token_is(p, token_lbrace) {
         body := parser_parse_block(p)
-        ast_add_child(for_stmt, body)
+        ast_add_child(for_stmt*, body)
     }
 
     for_stmt
 }
 
-func parser_parse_while_stmt(p* parser) ast_node {
+func parser_parse_while_stmt(parser* p) ast_node {
     while_stmt := ast_new(fp_ast_while_stmt, p.current_token.line, p.current_token.column)
     parser_next_token(p)
 
     condition := parser_parse_expression(p, prec_lowest)
-    ast_add_child(while_stmt, condition)
+    ast_add_child(while_stmt*, condition)
 
     if parser_current_token_is(p, token_lbrace) {
         body := parser_parse_block(p)
-        ast_add_child(while_stmt, body)
+        ast_add_child(while_stmt*, body)
     }
 
     while_stmt
 }
 
-func parser_parse_return_stmt(p* parser) ast_node {
+func parser_parse_return_stmt(parser* p) ast_node {
     return_stmt := ast_new(fp_ast_return_stmt, p.current_token.line, p.current_token.column)
     parser_next_token(p)
 
     if !parser_current_token_is(p, token_newline) && !parser_current_token_is(p, token_rbrace) && !parser_current_token_is(p, token_eof) {
         expr := parser_parse_expression(p, prec_lowest)
-        ast_add_child(return_stmt, expr)
+        ast_add_child(return_stmt*, expr)
     }
 
     return_stmt
 }
 
-func parser_parse_switch_stmt(p* parser) ast_node {
+func parser_parse_switch_stmt(parser* p) ast_node {
     switch_stmt := ast_new(fp_ast_switch_stmt, p.current_token.line, p.current_token.column)
     parser_next_token(p)
 
     condition := parser_parse_expression(p, prec_lowest)
-    ast_add_child(switch_stmt, condition)
+    ast_add_child(switch_stmt*, condition)
 
     if parser_expect_peek(p, token_lbrace) {
         for !parser_current_token_is(p, token_rbrace) && !parser_current_token_is(p, token_eof) {
@@ -671,7 +671,7 @@ func parser_parse_switch_stmt(p* parser) ast_node {
                 case_clause := ast_new(fp_ast_case_clause, p.current_token.line, p.current_token.column)
                 parser_next_token(p)
                 case_expr := parser_parse_expression(p, prec_lowest)
-                ast_add_child(case_clause, case_expr)
+                ast_add_child(case_clause*, case_expr)
 
                 if parser_expect_peek(p, token_colon) {
                     for !parser_current_token_is(p, token_case) && !parser_current_token_is(p, token_default) && !parser_current_token_is(p, token_rbrace) {
@@ -681,11 +681,11 @@ func parser_parse_switch_stmt(p* parser) ast_node {
                         }
                         stmt := parser_parse_statement(p)
                         if stmt.node_type != 0 {
-                            ast_add_child(case_clause, stmt)
+                            ast_add_child(case_clause*, stmt)
                         }
                     }
                 }
-                ast_add_child(switch_stmt, case_clause)
+                ast_add_child(switch_stmt*, case_clause)
             } else if parser_current_token_is(p, token_default) {
                 parser_next_token(p)
                 parser_expect_peek(p, token_colon)
@@ -696,7 +696,7 @@ func parser_parse_switch_stmt(p* parser) ast_node {
                     }
                     stmt := parser_parse_statement(p)
                     if stmt.node_type != 0 {
-                        ast_add_child(switch_stmt, stmt)
+                        ast_add_child(switch_stmt*, stmt)
                     }
                 }
             }
@@ -707,40 +707,40 @@ func parser_parse_switch_stmt(p* parser) ast_node {
     switch_stmt
 }
 
-func parser_parse_expression(p* parser, int precedence) ast_node {
+func parser_parse_expression(parser* p, int precedence) ast_node {
     primary := parser_parse_primary_expression(p)
     return parser_parse_infix_expression(p, primary, precedence)
 }
 
-func parser_parse_primary_expression(p* parser) ast_node {
+func parser_parse_primary_expression(parser* p) ast_node {
     if parser_current_token_is(p, token_ident) {
         ident := ast_new(fp_ast_ident, p.current_token.line, p.current_token.column)
-        ast_set_name(ident, p.current_token.value)
+        ast_set_name(ident*, p.current_token.value)
         parser_next_token(p)
         return ident
     } else if parser_current_token_is(p, token_int) {
         int_lit := ast_new(fp_ast_int_lit, p.current_token.line, p.current_token.column)
-        ast_set_string_data(int_lit, p.current_token.value)
+        ast_set_string_data(int_lit*, p.current_token.value)
         parser_next_token(p)
         return int_lit
     } else if parser_current_token_is(p, token_float) {
         float_lit := ast_new(fp_ast_float_lit, p.current_token.line, p.current_token.column)
-        ast_set_string_data(float_lit, p.current_token.value)
+        ast_set_string_data(float_lit*, p.current_token.value)
         parser_next_token(p)
         return float_lit
     } else if parser_current_token_is(p, token_string) {
         string_lit := ast_new(fp_ast_string_lit, p.current_token.line, p.current_token.column)
-        ast_set_string_data(string_lit, p.current_token.value)
+        ast_set_string_data(string_lit*, p.current_token.value)
         parser_next_token(p)
         return string_lit
     } else if parser_current_token_is(p, token_true) {
         bool_lit := ast_new(fp_ast_bool_lit, p.current_token.line, p.current_token.column)
-        ast_set_string_data(bool_lit, "true")
+        ast_set_string_data(bool_lit*, "true")
         parser_next_token(p)
         return bool_lit
     } else if parser_current_token_is(p, token_false) {
         bool_lit := ast_new(fp_ast_bool_lit, p.current_token.line, p.current_token.column)
-        ast_set_string_data(bool_lit, "false")
+        ast_set_string_data(bool_lit*, "false")
         parser_next_token(p)
         return bool_lit
     } else if parser_current_token_is(p, token_lparen) {
@@ -753,9 +753,9 @@ func parser_parse_primary_expression(p* parser) ast_node {
         op := p.current_token.value
         parser_next_token(p)
         unary := ast_new(fp_ast_unary_op, p.current_token.line, p.current_token.column)
-        ast_set_string_data(unary, op)
+        ast_set_string_data(unary*, op)
         operand := parser_parse_expression(p, prec_unary)
-        ast_add_child(unary, operand)
+        ast_add_child(unary*, operand)
         return unary
     } else {
         parser_add_error(p, "Unexpected token in expression: " + p.current_token.value)
@@ -763,15 +763,15 @@ func parser_parse_primary_expression(p* parser) ast_node {
     }
 }
 
-func parser_parse_infix_expression(p* parser,ast_node left, int precedence) ast_node {
+func parser_parse_infix_expression(parser* p,ast_node left, int precedence) ast_node {
     for precedence < token_precedence(p.current_token.token_type) {
         if parser_current_token_is(p, token_lparen) {
             call := ast_new(fp_ast_call_expr, p.current_token.line, p.current_token.column)
-            ast_add_child(call, left)
+            ast_add_child(call*, left)
             parser_next_token(p)
             for !parser_current_token_is(p, token_rparen) && !parser_current_token_is(p, token_eof) {
                 arg := parser_parse_expression(p, prec_lowest)
-                ast_add_child(call, arg)
+                ast_add_child(call*, arg)
                 if parser_current_token_is(p, token_comma) {
                     parser_next_token(p)
                 }
@@ -780,20 +780,20 @@ func parser_parse_infix_expression(p* parser,ast_node left, int precedence) ast_
             return parser_parse_infix_expression(p, call, precedence)
         } else if parser_current_token_is(p, token_lbracket) {
             index := ast_new(fp_ast_index_expr, p.current_token.line, p.current_token.column)
-            ast_add_child(index, left)
+            ast_add_child(index*, left)
             parser_next_token(p)
             idx_expr := parser_parse_expression(p, prec_lowest)
-            ast_add_child(index, idx_expr)
+            ast_add_child(index*, idx_expr)
             parser_expect_peek(p, token_rbracket)
             return parser_parse_infix_expression(p, index, precedence)
         } else if parser_current_token_is(p, token_dot) {
             member := ast_new(fp_ast_member_expr, p.current_token.line, p.current_token.column)
-            ast_add_child(member, left)
+            ast_add_child(member*, left)
             parser_next_token(p)
             if parser_current_token_is(p, token_ident) {
                 member_name := ast_new(fp_ast_ident, p.current_token.line, p.current_token.column)
-                ast_set_name(member_name, p.current_token.value)
-                ast_add_child(member, member_name)
+                ast_set_name(member_name*, p.current_token.value)
+                ast_add_child(member*, member_name)
                 parser_next_token(p)
             }
             return parser_parse_infix_expression(p, member, precedence)
@@ -804,16 +804,16 @@ func parser_parse_infix_expression(p* parser,ast_node left, int precedence) ast_
             right_precedence := token_precedence(op_type)
             right := parser_parse_expression(p, right_precedence)
             binary := ast_new(fp_ast_binary_op, p.current_token.line, p.current_token.column)
-            ast_set_string_data(binary, op)
-            ast_add_child(binary, left)
-            ast_add_child(binary, right)
+            ast_set_string_data(binary*, op)
+            ast_add_child(binary*, left)
+            ast_add_child(binary*, right)
             return parser_parse_infix_expression(p, binary, precedence)
         } else if parser_current_token_is(p, token_as) {
             parser_next_token(p)
             cast_type := parser_parse_type(p)
             cast := ast_new(fp_ast_cast_expr, p.current_token.line, p.current_token.column)
-            ast_add_child(cast, left)
-            ast_add_child(cast, cast_type)
+            ast_add_child(cast*, left)
+            ast_add_child(cast*, cast_type)
             return parser_parse_infix_expression(p, cast, precedence)
         } else {
             return left

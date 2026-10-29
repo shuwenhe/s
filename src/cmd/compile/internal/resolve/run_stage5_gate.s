@@ -8,56 +8,48 @@ import (
     "std.result"
 )
 
-func run_stage5_gate_on_file(string filepath) semantic.name_resolution_gate_result {
+func run_stage5_gate_on_file(string filepath) compile.internal.semantic.name_resolution_gate_result {
     
     read_result := std.fs.read_to_string(filepath)
     source := switch read_result {
         result.ok(source) : source,
         result.err(err) : {
             
-            return semantic.name_resolution_gate_result {
+            return compile.internal.semantic.name_resolution_gate_result {
                 total_identifiers: 0,
                 resolved_exact: 0,
                 resolved_ambiguous: 0,
                 unresolved: 0,
                 qualified_with_multiple_matches: 0,
-                details: semantic.identifier_resolution[](),
+                details: compile.internal.semantic.identifier_resolution[](),
                 gate_pass: 0,
             }
         },
     }
     
     
-    parse_result := compile.internal.syntax.parse_source(source)
-    file := switch parse_result {
-        result.ok(parsed) : parsed,
-        result.err(_) : {
-            return semantic.name_resolution_gate_result {
-                total_identifiers: 0,
-                resolved_exact: 0,
-                resolved_ambiguous: 0,
-                unresolved: 0,
-                qualified_with_multiple_matches: 0,
-                details: semantic.identifier_resolution[](),
-                gate_pass: 0,
-            }
-        },
+    file, parse_error := compile.internal.syntax.parse_source(source)
+    if parse_error.message != "" {
+        return compile.internal.semantic.name_resolution_gate_result {
+            total_identifiers: 0, resolved_exact: 0, resolved_ambiguous: 0,
+            unresolved: 0, qualified_with_multiple_matches: 0,
+            details: compile.internal.semantic.identifier_resolution[](), gate_pass: 0,
+        }
     }
+
+    functions := compile.internal.semantic.collect_functions(file)
+    traits := compile.internal.semantic.collect_traits(file)
+    consts := compile.internal.semantic.collect_consts(file, functions, traits, source, compile.internal.semantic.semantic_error[]())
+    structs := compile.internal.semantic.collect_structs(file)
     
     
-    functions := semantic.collect_functions(file)
-    traits := semantic.collect_traits(file)
-    consts := semantic.collect_consts(file, functions, traits, source, semantic.semantic_error[]())
-    structs := semantic.collect_structs(file)
-    
-    
-    return semantic.name_resolution_gate_result {
+    return compile.internal.semantic.name_resolution_gate_result {
         total_identifiers: 0,
         resolved_exact: 0,
         resolved_ambiguous: 0,
         unresolved: 0,
         qualified_with_multiple_matches: 0,
-        details: semantic.identifier_resolution[](),
+        details: compile.internal.semantic.identifier_resolution[](),
         gate_pass: 0,
     }
 }

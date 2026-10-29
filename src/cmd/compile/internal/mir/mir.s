@@ -644,6 +644,8 @@ func mir_expr_type_name(expr value) string {
 
 func mir_callee_name(expr value) string {
     switch value {
+        expr.tuple(_) : "",
+        expr.record(_) : "",
         expr.name(name_value) : name_value.name,
         expr.int(_) : "",
         expr.string(_) : "",

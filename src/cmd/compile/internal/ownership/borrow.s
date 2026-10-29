@@ -109,7 +109,7 @@ func ownership_event_payload(string event, int first) string {
 func ownership_next_colon(string text, int start) int {
     i := start
     for i < len(text) {
-        if string(text[i]) == ":" { return i }
+        if std.prelude.char_at(text, i) == ":" { return i }
         i = i + 1
     }
     -1
@@ -300,7 +300,7 @@ func borrow_check_events(string[] events) borrow_check_result {
 func find_event_colon(string event) int {
     i := 0
     for i < len(event) {
-        if string(event[i]) == ":" { return i }
+        if std.prelude.char_at(event, i) == ":" { return i }
         i = i + 1
     }
     -1
@@ -348,7 +348,7 @@ func lifetime_index(string[] names, string name) int {
 func lifetime_second_colon(string text, int first) int {
     i := first + 1
     for i < len(text) {
-        if string(text[i]) == ":" { return i }
+        if std.prelude.char_at(text, i) == ":" { return i }
         i = i + 1
     }
     -1

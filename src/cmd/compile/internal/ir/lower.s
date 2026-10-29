@@ -28,6 +28,9 @@ func from_syntax(source_file src) package_ir {
             item.const(c) : {
                 _ = c
             }
+            item.var(v) : {
+                _ = v
+            }
             item.struct(s) : {
                 _ = s
             }
@@ -124,7 +127,7 @@ func validate_expr_contract(compile.internal.ir.ast.expr_ir expression) ((), str
     switch expression {
         expr_ir.name(name) : {
             if contains_text(name, "_unlowered") {
-                return "lowering contract violation: placeholder expression remains"
+                return (), "lowering contract violation: placeholder expression remains"
             }
         }
         expr_ir.call(call_expr) : {
@@ -242,6 +245,8 @@ func convert_block(block_expr b, const_rewrite_entry[] const_entries) block_ir {
 
 func convert_stmt(stmt s, const_rewrite_entry[] const_entries) stmt_ir {
     switch s {
+        stmt.multi(_) : panic("legacy IR adapter does not support parallel assignment"),
+        stmt.store(_) : panic("legacy IR adapter does not support aggregate stores"),
         stmt.continue(_) : make_expr_stmt(expr_ir.call(call_expr { callee: "stmt.continue", args: expr_ir[]() })),
         stmt.break(_) : make_expr_stmt(expr_ir.call(call_expr { callee: "stmt.break", args: expr_ir[]() })),
         stmt.let(var_stmt) : {
@@ -283,6 +288,8 @@ func convert_stmt(stmt s, const_rewrite_entry[] const_entries) stmt_ir {
 
 func convert_expr(expr e, const_rewrite_entry[] const_entries) expr_ir {
     switch e {
+        expr.tuple(_) : panic("legacy IR adapter does not support tuple expressions"),
+        expr.record(_) : panic("legacy IR adapter does not support record expressions"),
         expr.int(int_expr) : {
             n := parse_int_literal(int_expr.value)
             expr_ir.int(n)
@@ -328,6 +335,8 @@ func convert_expr(expr e, const_rewrite_entry[] const_entries) expr_ir {
 
 func call_callee_name(expr e) string {
     switch e {
+        expr.tuple(_) : "<expr-callee>",
+        expr.record(_) : "<expr-callee>",
         expr.name(name_expr) : name_expr.name,
         expr.int(_) : "<expr-callee>",
         expr.string(_) : "<expr-callee>",
@@ -380,7 +389,7 @@ func lower_package_to_mir(source_file src) (mir_graph, string) {
     }
     picked := no_lower_function()
     fallback := no_lower_function()
-    i := 0
+    i = 0
     for i < len(src.items) {
         switch src.items[i] {
             item.function(function_decl) : {
@@ -440,6 +449,13 @@ func count_const_hits_block(block_expr block, const_rewrite_entry[] const_entrie
 
 func count_const_hits_stmt(stmt s, const_rewrite_entry[] const_entries) int {
     switch s {
+        stmt.multi(v) : {
+            total := count_const_hits_expr(v.value, const_entries)
+            i := 0
+            for i < len(v.targets) { total = total + count_const_hits_expr(v.targets[i], const_entries); i = i + 1 }
+            total
+        }
+        stmt.store(v) : count_const_hits_expr(v.target, const_entries) + count_const_hits_expr(v.value, const_entries),
         stmt.continue(_) : 0,
         stmt.break(_) : 0,
         stmt.let(var_stmt) : count_const_hits_expr(var_stmt.value, const_entries),
@@ -465,6 +481,18 @@ func count_const_hits_stmt(stmt s, const_rewrite_entry[] const_entries) int {
 
 func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
     switch e {
+        expr.tuple(v) : {
+            total := 0
+            i := 0
+            for i < len(v.items) { total = total + count_const_hits_expr(v.items[i], const_entries); i = i + 1 }
+            total
+        }
+        expr.record(v) : {
+            total := 0
+            i := 0
+            for i < len(v.field_values) { total = total + count_const_hits_expr(v.field_values[i], const_entries); i = i + 1 }
+            total
+        }
         expr.int(_) : 0,
         expr.string(_) : 0,
         expr.bool(_) : 0,
@@ -537,6 +565,8 @@ func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
 
 func stmt_to_expr(stmt s, const_rewrite_entry[] const_entries) expr_ir {
     switch s {
+        stmt.multi(_) : panic("legacy IR adapter does not support parallel assignment"),
+        stmt.store(_) : panic("legacy IR adapter does not support aggregate stores"),
         stmt.continue(_) : expr_ir.call(call_expr { callee: "stmt.continue", args: expr_ir[]() }),
         stmt.break(_) : expr_ir.call(call_expr { callee: "stmt.break", args: expr_ir[]() }),
         stmt.let(var_stmt) : stmt_let_to_expr(var_stmt, const_entries),
@@ -733,6 +763,8 @@ func lower_block_to_mir(string function_name, block_expr block, const_rewrite_en
 
 func dump_expr_stmt(stmt s, const_rewrite_entry[] const_entries) string {
     switch s {
+        stmt.multi(_) : "parallel assign",
+        stmt.store(_) : "store",
         stmt.continue(_) : "continue",
         stmt.break(_) : "break",
         stmt.let(var_stmt) : "let " + var_stmt.name,
@@ -1030,7 +1062,7 @@ func vec1_edge(string label, int target) mir_control_edge[] {
 }
 
 func ir_make_block(int id, string label, string[] lines, string term_kind, mir_control_edge[] edges) mir_basic_block {
-    make_block_with_condition(id, label, lines, term_kind, option.none, edges)
+    make_block_with_condition(id, label, lines, term_kind, option[mir_operand].none, edges)
 }
 
 func make_block_with_condition(int id, string label, string[] lines, string term_kind, option[mir_operand] condition, mir_control_edge[] edges) mir_basic_block {
@@ -1052,7 +1084,7 @@ func make_block_with_condition(int id, string label, string[] lines, string term
 }
 
 func make_entry_block(int id, string label, string[] lines, stmt[] source_statements, string term_kind, mir_control_edge[] edges) mir_basic_block {
-    make_entry_block_with_condition(id, label, lines, source_statements, term_kind, option.none, edges)
+    make_entry_block_with_condition(id, label, lines, source_statements, term_kind, option[mir_operand].none, edges)
 }
 
 func make_entry_block_with_condition(int id, string label, string[] lines, stmt[] source_statements, string term_kind, option[mir_operand] condition, mir_control_edge[] edges) mir_basic_block {

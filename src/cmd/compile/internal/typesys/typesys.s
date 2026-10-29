@@ -24,6 +24,11 @@ func parse_type(string text) string {
     if is_builtin_primitive(clean) {
         return clean
     }
+    // S's postfix T* parameter spelling pairs with the mutable place borrow
+    // value*. Prefix *T remains the distinct raw pointer spelling.
+    if std.prelude.len(clean) > 0 && std.prelude.char_at(clean, std.prelude.len(clean) - 1) == "*" {
+        return "&mut" + parse_type(std.prelude.prelude_slice(clean, 0, std.prelude.len(clean) - 1))
+    }
     if typesys_starts_with(clean, "&mut") {
         return "&mut" + parse_type(std.prelude.prelude_slice(clean, 4, std.prelude.len(clean)))
     }
@@ -49,7 +54,7 @@ func parse_type_ref(string text) type_ref {
     is_mut_ref := false
     is_slice := false
     is_array := false
-    string array_len = ""
+    array_len := ""
     if typesys_starts_with(rest, "&mut") {
         is_ref = true
         is_mut_ref = true

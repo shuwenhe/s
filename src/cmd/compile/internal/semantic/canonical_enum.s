@@ -199,6 +199,15 @@ func canonical_enum_constructor(string path, string[] arg_types, string contextu
     if variant.payload.is_some() { arity = 1 }
     if len(arg_types) != arity { return check_result { type_name: "unknown", errors: add_error(source, diagnostics, "e2004", "enum constructor payload arity mismatch", path) } }
     bindings := type_binding[]()
+    explicit_arguments := compile.internal.typesys.extract_type_args(qualified_package_part(path))
+    if len(explicit_arguments) > 0 {
+        if len(explicit_arguments) != len(declaration.generics) { return check_result { type_name: "unknown", errors: add_error(source, diagnostics, "e2006", "enum type argument arity mismatch", path) } }
+        i := 0
+        for i < len(explicit_arguments) {
+            bindings.push(type_binding { name: declaration.generics[i], type_name: explicit_arguments[i] })
+            i = i + 1
+        }
+    }
     if arity == 1 {
         expected := compile.internal.typesys.parse_type_ref(canonical_type_in_package(variant.payload.unwrap(), declaration.package_path, declaration.generics, declarations))
         actual := compile.internal.typesys.parse_type_ref(arg_types[0])
@@ -286,7 +295,7 @@ func canonical_initializer_source(source_file file, bool globals) source_file {
 
 // Literal constant expressions need no copy of the complete function table.
 // Calls/constructors retain the ordinary inference path, including diagnostics.
-func canonical_const_name_type(context* canonical_const_context, string name) string {
+func canonical_const_name_type(canonical_const_context* context, string name) string {
     i := len(context.types)
     for i > 0 {
         i = i - 1
@@ -300,7 +309,7 @@ func canonical_const_name_type(context* canonical_const_context, string name) st
     return "unknown"
 }
 
-func canonical_const_type(expr value, context* canonical_const_context) canonical_inference {
+func canonical_const_type(expr value, canonical_const_context* context) canonical_inference {
     diagnostics := semantic_error[]()
     switch value {
         expr.int(_): { return canonical_inference { type_name: "int", diagnostics: diagnostics } }

@@ -135,7 +135,8 @@ func ca_expr(compile.internal.ast.expr original, ca_context ctx) ca_expr_result 
         expr.member(v): {
             path := compile.internal.semantic.qualified_expr_path(original)
             owner := compile.internal.semantic.qualified_package_part(path)
-            if compile.internal.semantic.is_unknown(compile.internal.semantic.lookup_name_type(ctx.env, compile.internal.semantic.extract_module_root(path))) && compile.internal.semantic.canonical_enum_index(owner, ctx.declarations) >= 0 {
+            root_type := compile.internal.semantic.lookup_name_type(ctx.env, compile.internal.semantic.extract_module_root(path))
+            if (compile.internal.semantic.is_unknown(root_type) || root_type == "module") && compile.internal.semantic.canonical_enum_index(owner, ctx.declarations) >= 0 {
                 // Generic nullary variants acquire their contextual nominal type.
                 v.target = std.prelude.box(expr.name(name_expr { name: ty, inferred_type: option.some(ty) }))
             } else {
@@ -223,6 +224,7 @@ func ca_expr(compile.internal.ast.expr original, ca_context ctx) ca_expr_result 
                 if compile.internal.semantic.canonical_enum_index(subject.type_name, ctx.declarations) >= 0 { bindings = compile.internal.semantic.canonical_check_enum_pattern(arm.pattern, subject.type_name, ctx.source, compile.internal.semantic.semantic_error[](), ctx.declarations) }
                 else { bindings = compile.internal.semantic.check_pattern(arm.pattern, subject.type_name, ctx.source, compile.internal.semantic.semantic_error[]()) }
                 if bindings.errors != 0 { return ca_bad(value, "semantic pattern reconstruction failed") }
+                arm.pattern = ca_enum_pattern(arm.pattern, subject.type_name, ctx.declarations)
                 branch := ctx; branch.env = compile.internal.semantic.clone_env(ctx.env); b := 0
                 for b < len(bindings.bindings) { branch.env = append(branch.env, bindings.bindings[b]); b = b + 1 }
                 child := ca_expr(arm.expr, branch); if child.error != "" { return child }
@@ -233,6 +235,28 @@ func ca_expr(compile.internal.ast.expr original, ca_context ctx) ca_expr_result 
     }
     ca_expr_result { value: value, type_name: ty, error: "" }
 }
+// Preserve the subject's concrete enum identity for type elaboration, including
+// nested payload patterns whose generic arguments differ from the outer enum.
+func ca_enum_pattern(pattern original, string expected, compile.internal.semantic.declaration_ref[] declarations) pattern {
+    value := original
+    index := compile.internal.semantic.canonical_enum_index(expected, declarations)
+    if index < 0 { return value }
+    switch value {
+        pattern.variant(v): {
+            declaration := declarations[index]
+            variant := compile.internal.semantic.canonical_enum_variant_index(declaration, compile.internal.semantic.qualified_decl_part(v.path))
+            if variant < 0 { return value }
+            v.path = expected + "." + declaration.variants[variant].name
+            if len(v.args) == 1 {
+                payload := compile.internal.semantic.canonical_enum_payload(expected, declaration, variant, declarations)
+                v.args[0] = ca_enum_pattern(v.args[0], payload, declarations)
+            }
+            return pattern.variant(v)
+        }
+        _: return value,
+    }
+}
+
 func ca_call(compile.internal.ast.call_expr original, compile.internal.semantic.check_result inferred, ca_context ctx) ca_expr_result {
     ty := inferred.type_name
     new_args := compile.internal.ast.expr[](); arg_types := string[](); i := 0
@@ -247,7 +271,13 @@ func ca_call(compile.internal.ast.call_expr original, compile.internal.semantic.
         resolved = option.some(inferred.resolved_callee)
         type_args = inferred.type_args
     }
-    final_call := compile.internal.ast.call_expr { callee: original.callee, args: new_args, inferred_type: option.some(ty), resolved_callee: resolved, type_args: type_args }
+    callee := original.callee.value
+    path := compile.internal.semantic.qualified_expr_path(callee)
+    root_type := compile.internal.semantic.lookup_name_type(ctx.env, compile.internal.semantic.extract_module_root(path))
+    if (compile.internal.semantic.is_unknown(root_type) || root_type == "module") && compile.internal.semantic.canonical_enum_index(compile.internal.semantic.qualified_package_part(path), ctx.declarations) >= 0 {
+        callee = expr.member(compile.internal.ast.member_expr { target: std.prelude.box(expr.name(name_expr { name: ty, inferred_type: option.some(ty) })), member: compile.internal.semantic.qualified_decl_part(path), inferred_type: option.some(ty) })
+    }
+    final_call := compile.internal.ast.call_expr { callee: std.prelude.box(callee), args: new_args, inferred_type: option.some(ty), resolved_callee: resolved, type_args: type_args }
     ca_expr_result { value: expr.call(final_call), type_name: ty, error: "" }
 }
 func annotate_canonical_calls(source_file original, compile.internal.semantic.semantic_result checked, string source) canonical_annotation_result {

@@ -32,14 +32,14 @@ func int_set_union(int_set set1, int_set set2) int_set { return set1 }
 func int_set_intersect(int_set set1, int_set set2) int_set { return int_set_new() }
 func int_set_difference(int_set set1, int_set set2) int_set { return set1 }
 
-func dfa_analyze_liveness(cfg* control_flow_graph) liveness_info[] { return liveness_info[]() }
+func dfa_analyze_liveness(control_flow_graph* cfg) liveness_info[] { return liveness_info[]() }
 func dfa_compute_use_def(cfg_block block) int_set { return int_set_new() }
 func dfa_compute_def(cfg_block block) int_set { return int_set_new() }
-func dfa_analyze_reaching_defs(cfg* control_flow_graph) reaching_def_info[] { return reaching_def_info[]() }
+func dfa_analyze_reaching_defs(control_flow_graph* cfg) reaching_def_info[] { return reaching_def_info[]() }
 func dfa_compute_gen(cfg_block block) int_set { return int_set_new() }
 func dfa_compute_kill(cfg_block block) int_set { return int_set_new() }
-func dfa_build_use_def_chains(cfg* control_flow_graph, reaching_def_info[] reaching_defs) use_def_chain[] { return use_def_chain[]() }
+func dfa_build_use_def_chains(control_flow_graph* cfg, reaching_def_info[] reaching_defs) use_def_chain[] { return use_def_chain[]() }
 
-func dfa_analyze(cfg* control_flow_graph) dataflow_analysis {
+func dfa_analyze(control_flow_graph* cfg) dataflow_analysis {
     return dataflow_analysis { liveness: liveness_info[](), reaching_defs: reaching_def_info[](), use_def_chains: use_def_chain[]() }
 }

@@ -46,11 +46,11 @@ func cfg_new(ir_function ir_func) control_flow_graph {
 
     i := 0
     {
-        n := len(ir_func.blocks)
+        n := len(ir_func.basic_blocks)
         for i < n {
-            ir_block := ir_func.blocks[i]
+            ir_block := ir_func.basic_blocks[i]
             cfg_block := cfg_block {
-                block_id: ir_block.id, label: "", instructions: ir_block.instructions, predecessors: int[](), successors: int[]()
+                block_id: ir_block.block_id, label: "", instructions: ir_block.instructions, predecessors: int[](), successors: int[]()
             }
             cfg.blocks = append(cfg.blocks, cfg_block)
             i = i + 1
@@ -60,12 +60,30 @@ func cfg_new(ir_function ir_func) control_flow_graph {
     cfg
 }
 
-func cfg_compute_dominators(cfg* control_flow_graph) {
+// These legacy CFG passes need sized zero-filled integer arrays. Build them
+// with the production array operations rather than an undeclared make API.
+func cfg_zero_row(int count) int[] {
+    if count < 0 { panic("negative CFG array length") }
+    row := int[]()
+    i := 0
+    for i < count { row.push(0); i = i + 1 }
+    return row
+}
+
+func cfg_empty_rows(int count) int[][] {
+    if count < 0 { panic("negative CFG array length") }
+    rows := int[][]()
+    i := 0
+    for i < count { row := int[](); rows.push(row); i = i + 1 }
+    return rows
+}
+
+func cfg_compute_dominators(control_flow_graph* cfg) {
     n := cfg.blocks.len()
 
-    doms := make(int[][], n)
+    doms := cfg_empty_rows(n)
     for i := 0; i < n; i = i + 1 {
-        doms[i] = make(int[], n)
+        doms[i] = cfg_zero_row(n)
     }
 
     doms[0][0] = 1
@@ -80,7 +98,7 @@ func cfg_compute_dominators(cfg* control_flow_graph) {
         changed := 0
 
         for i := 1; i < n; i = i + 1 {
-            new_dom := make(int[], n)
+            new_dom := cfg_zero_row(n)
 
             for j := 0; j < n; j = j + 1 {
                 new_dom[j] = 1
@@ -116,12 +134,12 @@ func cfg_compute_dominators(cfg* control_flow_graph) {
     cfg.dominators = doms
 }
 
-func cfg_compute_post_dominators(cfg* control_flow_graph) {
+func cfg_compute_post_dominators(control_flow_graph* cfg) {
     n := cfg.blocks.len()
 
-    post_doms := make(int[][], n)
+    post_doms := cfg_empty_rows(n)
     for i := 0; i < n; i = i + 1 {
-        post_doms[i] = make(int[], n)
+        post_doms[i] = cfg_zero_row(n)
     }
 
     if cfg.exit_block_id >= 0 && cfg.exit_block_id < n {
@@ -144,7 +162,7 @@ func cfg_compute_post_dominators(cfg* control_flow_graph) {
                 continue
             }
 
-            new_post_dom := make(int[], n)
+            new_post_dom := cfg_zero_row(n)
 
             for j := 0; j < n; j = j + 1 {
                 new_post_dom[j] = 1
@@ -180,12 +198,12 @@ func cfg_compute_post_dominators(cfg* control_flow_graph) {
     cfg.post_dominators = post_doms
 }
 
-func cfg_compute_dominance_frontier(cfg* control_flow_graph) {
+func cfg_compute_dominance_frontier(control_flow_graph* cfg) {
     n := cfg.blocks.len()
-    frontier := make(int[][], n)
+    frontier := cfg_empty_rows(n)
 
     for i := 0; i < n; i = i + 1 {
-        frontier[i] = make(int[], 0)
+        frontier[i] = cfg_zero_row(0)
     }
 
     for x := 0; x < n; x = x + 1 {
@@ -214,7 +232,7 @@ func cfg_compute_dominance_frontier(cfg* control_flow_graph) {
     cfg.dominance_frontier = frontier
 }
 
-func cfg_detect_loops(cfg* control_flow_graph) loop_info[] {
+func cfg_detect_loops(control_flow_graph* cfg) loop_info[] {
     loops := loop_info[]()
 
     for i := 0; i < cfg.blocks.len(); i = i + 1 {
@@ -252,7 +270,7 @@ func cfg_find_or_create_loop(loop_info[] loops, int header_id) loop_info_result 
     }
 }
 
-func cfg_dump(cfg* control_flow_graph) string {
+func cfg_dump(control_flow_graph* cfg) string {
     result := "Control Flow Graph:\n"
 
     for i := 0; i < cfg.blocks.len(); i = i + 1 {

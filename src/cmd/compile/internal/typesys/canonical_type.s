@@ -20,16 +20,16 @@ func primitive(string name) canonical_type {
     canonical_type {
         kind: "primitive",
         primitive_name: name,
-        declared_ref: std.option.none,
+        declared_ref: std.option.option.none,
         child: canonical_type[](),
     }
 }
 
-func declared(semantic.declaration_ref ref) canonical_type {
+func declared(compile.internal.semantic.declaration_ref ref) canonical_type {
     canonical_type {
         kind: "declared",
         primitive_name: "",
-        declared_ref: std.option.some(ref),
+        declared_ref: std.option.option.some(ref),
         child: canonical_type[](),
     }
 }
@@ -38,7 +38,7 @@ func pointer(canonical_type inner) canonical_type {
     canonical_type {
         kind: "pointer",
         primitive_name: "",
-        declared_ref: std.option.none,
+        declared_ref: std.option.option.none,
         child: [inner],
     }
 }
@@ -59,7 +59,7 @@ func canonical_same_type(canonical_type left, canonical_type right) bool {
             if left.declared_ref.is_none() || right.declared_ref.is_none() {
                 return left.declared_ref.is_none() && right.declared_ref.is_none()
             }
-            return semantic.declaration_ref_equal(
+            return compile.internal.semantic.declaration_ref_equal(
                 left.declared_ref.unwrap(),
                 right.declared_ref.unwrap()
             )
@@ -88,7 +88,7 @@ func canonical_type_to_string(canonical_type t) string {
             if t.declared_ref.is_none() {
                 return "unknown"
             }
-            return semantic.declaration_ref_display(t.declared_ref.unwrap())
+            return compile.internal.semantic.declaration_ref_display(t.declared_ref.unwrap())
         }
         "pointer" : {
             if len(t.child) == 0 {
@@ -100,11 +100,11 @@ func canonical_type_to_string(canonical_type t) string {
     "invalid"
 }
 
-func construct_canonical_from_string(string type_str, semantic.declaration_ref[] declarations) canonical_type {
+func construct_canonical_from_string(string type_str, compile.internal.semantic.declaration_ref[] declarations) canonical_type {
     
     pointer_depth := 0
     i := 0
-    for i < std.prelude.len(type_str) && string(type_str[i]) == "*" {
+    for i < std.prelude.len(type_str) && std.prelude.char_at(type_str, i) == "*" {
         pointer_depth = pointer_depth + 1
         i = i + 1
     }
@@ -114,7 +114,7 @@ func construct_canonical_from_string(string type_str, semantic.declaration_ref[]
     base_canonical := canonical_type {
         kind: "primitive",
         primitive_name: "",
-        declared_ref: std.option.none,
+        declared_ref: std.option.option.none,
         child: canonical_type[](),
     }
     
@@ -122,7 +122,7 @@ func construct_canonical_from_string(string type_str, semantic.declaration_ref[]
         base_canonical = primitive(base_name)
     } else {
         
-        found := semantic.find_struct_declaration(declarations, base_name)
+        found := compile.internal.semantic.find_struct_declaration(declarations, base_name)
         if found.is_some() {
             base_canonical = declared(found.unwrap())
         } else {

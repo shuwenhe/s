@@ -142,7 +142,7 @@ func encode_type(string type_name) string {
     out := ""
     i := 0
     for i < len(type_name) {
-        ch := string(type_name[i])
+        ch := std.prelude.char_at(type_name, i)
         if ch == "&" { out = out + "ref"
         } else if ch == "[" { out = out + "arr"
         } else if ch == "]" { out = out + "end"
@@ -651,6 +651,16 @@ func collect_block_instances(block_expr block, item[] all_items, mono_cache cach
 
 func collect_stmt_instances(stmt value, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
     switch value {
+        stmt.store(v) : {
+            out := collect_expr_instances(v.target, all_items, cache, worklist)
+            collect_expr_instances(v.value, all_items, out, worklist)
+        }
+        stmt.multi(v) : {
+            out := cache
+            i := 0
+            for i < len(v.targets) { out = collect_expr_instances(v.targets[i], all_items, out, worklist); i = i + 1 }
+            collect_expr_instances(v.value, all_items, out, worklist)
+        }
         stmt.continue(_) : cache,
         stmt.break(_) : cache,
         stmt.let(v) : collect_expr_instances(v.value, all_items, cache, worklist),
@@ -1219,7 +1229,7 @@ func substitute_optional_type(option[string] type_name, string[] generic_names, 
 func find_char(string text, string needle) int {
     i := 0
     for i < len(text) {
-        if string(text[i]) == needle { return i }
+        if std.prelude.char_at(text, i) == needle { return i }
         i = i + 1
     }
     -1
@@ -1513,6 +1523,13 @@ func verify_block_resolved_calls(block_expr block) int {
 
 func verify_stmt_resolved_calls(stmt value) int {
     switch value {
+        stmt.store(v) : verify_expr_resolved_calls(v.target) + verify_expr_resolved_calls(v.value),
+        stmt.multi(v) : {
+            errors := verify_expr_resolved_calls(v.value)
+            i := 0
+            for i < len(v.targets) { errors = errors + verify_expr_resolved_calls(v.targets[i]); i = i + 1 }
+            errors
+        }
         stmt.continue(_) : 0,
         stmt.break(_) : 0,
         stmt.let(v) : verify_expr_resolved_calls(v.value),
@@ -1671,7 +1688,7 @@ func mono_find_work_index(mono_context ctx, string name, string receiver) int {
 
 func mono_substitute_identity(string identity, string[] keys, string[] replacements) string {
     dot := -1; i := 0; depth := 0
-    for i < len(identity) { ch := string(identity[i]); if ch == "[" { depth = depth + 1 }
+    for i < len(identity) { ch := std.prelude.char_at(identity, i); if ch == "[" { depth = depth + 1 }
  if ch == "]" { depth = depth - 1 }
  if ch == "." && depth == 0 { dot = i }
  i = i + 1 }

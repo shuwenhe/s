@@ -439,7 +439,7 @@ func te_array_wrapper(string text) string {
     if !te_ends_with(text, "]") { return "" }
     i := len(text)-2
     for i >= 0 {
-        ch := string(text[i])
+        ch := std.prelude.char_at(text, i)
         if ch == "[" { if i == len(text)-2 { return "" }
  return prelude_slice(text, i, len(text)) }
         if ch != "0" && ch != "1" && ch != "2" && ch != "3" && ch != "4" && ch != "5" && ch != "6" && ch != "7" && ch != "8" && ch != "9" { return "" }
@@ -475,7 +475,7 @@ func te_find_declaration(source_file file, string base, string pkg) int {
                     if base == name { imported = true }
                     switch import_decl.alias { option.some(alias): { if base == alias + "." + name { imported = true } }, option.none: () }
                     short := ""; pi := 0
-                    for pi < len(owner) { ch := string(owner[pi]); if ch == "." { short = "" } else { short = short + ch }
+                    for pi < len(owner) { ch := std.prelude.char_at(owner, pi); if ch == "." { short = "" } else { short = short + ch }
  pi = pi + 1 }
                     if base == short + "." + name { imported = true }
                 }

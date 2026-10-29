@@ -213,11 +213,11 @@ func find_struct_declaration(declaration_ref[] declarations, string struct_name)
     i := 0
     for i < len(declarations) {
         if declarations[i].kind == declaration_kind.struct_kind && declarations[i].path == struct_name {
-            return std.option.some(declarations[i])
+            return std.option.option.some(declarations[i])
         }
         i = i + 1
     }
-    std.option.none
+    std.option.option.none
 }
 
 func validate_canonical_type_construction(function_binding[] functions, declaration_ref[] declarations) int {
@@ -369,10 +369,10 @@ func borrow_places_overlap(string left, string right) bool {
     if left == right { return true }
     if left == "" || right == "" { return false }
     if semantic_starts_with(left, right) {
-        return std.prelude.len(left) > std.prelude.len(right) && string(left[std.prelude.len(right)]) == "."
+        return std.prelude.len(left) > std.prelude.len(right) && std.prelude.char_at(left, std.prelude.len(right)) == "."
     }
     if semantic_starts_with(right, left) {
-        return std.prelude.len(right) > std.prelude.len(left) && string(right[std.prelude.len(left)]) == "."
+        return std.prelude.len(right) > std.prelude.len(left) && std.prelude.char_at(right, std.prelude.len(left)) == "."
     }
     false
 }
@@ -1034,7 +1034,7 @@ func same_param_types(string[] left, string[] right) bool {
 func extract_module_root(string import_path) string {
     i := 0
     for i < std.prelude.len(import_path) {
-        if string(import_path[i]) == "." {
+        if std.prelude.char_at(import_path, i) == "." || std.prelude.char_at(import_path, i) == "[" {
             return std.prelude.prelude_slice(import_path, 0, i)
         }
         i = i + 1
@@ -1270,7 +1270,7 @@ func collect_consts(source_file file, function_binding[] functions, trait_bindin
     context.known
 }
 
-func eval_const_int_expr(expr value, context* canonical_const_context, int iota_value) const_eval_int_result {
+func eval_const_int_expr(expr value, canonical_const_context* context, int iota_value) const_eval_int_result {
     switch value {
         expr.int(int_expr) : const_eval_int_result {
             ok: true, value parse_const_int_literal(int_expr.value),
@@ -1972,6 +1972,15 @@ func canonical_type_in_package(string type_name, string package_name, string[] g
 }
 
 func canonical_record_index(string type_name, declaration_ref[] declarations) int {
+    // Record fields may be accessed through a typed pointer. Keep the pointer
+    // type on the expression; unwrap it only to find the declared field layout.
+    normalized := compile.internal.typesys.parse_type(type_name)
+    if semantic_starts_with(normalized, "*") {
+        return canonical_record_index(std.prelude.prelude_slice(normalized, 1, len(normalized)), declarations)
+    }
+    if len(normalized) > 0 && std.prelude.char_at(normalized, len(normalized) - 1) == "*" {
+        return canonical_record_index(std.prelude.prelude_slice(normalized, 0, len(normalized) - 1), declarations)
+    }
     name := compile.internal.typesys.base_type_name(type_name)
     found := -1
     i := 0
@@ -2112,7 +2121,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
             root_name := target_name
             dot := 0
             for dot < std.prelude.len(root_name) {
-                if string(root_name[dot]) == "." {
+                if std.prelude.char_at(root_name, dot) == "." {
                     root_name = std.prelude.prelude_slice(root_name, 0, dot)
                     break
                 }
@@ -2153,6 +2162,8 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
             enum_path := qualified_expr_path(expr)
             root_type := lookup_name_type(env, extract_module_root(enum_path))
             if (is_unknown(root_type) || root_type == "module") && canonical_enum_index(qualified_package_part(enum_path), declarations) >= 0 {
+                owner := canonical_type_in_package(qualified_package_part(enum_path), scope.package_path, scope.generic_names, declarations)
+                enum_path = owner + "." + qualified_decl_part(enum_path)
                 return canonical_enum_constructor(enum_path, string[](), expected_return, declarations, source, diagnostics)
             }
             if is_unknown(root_type) || root_type == "module" {
@@ -2236,6 +2247,8 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                     enum_type := qualified_package_part(qualified_path)
                     root_type := lookup_name_type(env, extract_module_root(qualified_path))
                     if (is_unknown(root_type) || root_type == "module") && canonical_enum_index(enum_type, declarations) >= 0 {
+                        enum_type = canonical_type_in_package(enum_type, scope.package_path, scope.generic_names, declarations)
+                        qualified_path = enum_type + "." + qualified_decl_part(qualified_path)
                         constructor := canonical_enum_constructor(qualified_path, arg_types, expected_return, declarations, source, diagnostics)
                         return check_result { type_name: constructor.type_name, errors: errors + constructor.errors }
                     }
@@ -2629,6 +2642,23 @@ func canonical_const_pattern_value(const_binding binding) option[expr] {
 
 func canonical_resolve_const_pattern(pattern value, type_binding[] env) pattern {
     switch value {
+        pattern.variant(variant): {
+            root_type := lookup_name_type(env, extract_module_root(variant.path))
+            if len(variant.args) != 0 || (!is_unknown(root_type) && root_type != "module") { return value }
+            i := len(env)
+            for i > 0 {
+                i = i - 1
+                binding := env[i]
+                if binding.name == variant.path {
+                    scalar := binding.type_name == "int" || binding.type_name == "bool" || binding.type_name == "string"
+                    if scalar && binding.constant && binding.constant_value.is_some() {
+                        return pattern.literal(literal_pattern { value: binding.constant_value.unwrap() })
+                    }
+                    return value
+                }
+            }
+            return value
+        }
         pattern.name(name): {
             i := len(env)
             for i > 0 {
@@ -3155,6 +3185,12 @@ func qualified_expr_path(expr value) string {
             }
             prefix + "." + member_value.member
         }
+        expr.index(index_value) : {
+            prefix := qualified_expr_path(index_value.target.value)
+            argument := qualified_expr_path(index_value.index.value)
+            if prefix == "" || argument == "" { return "" }
+            prefix + "[" + argument + "]"
+        }
         _ : "",
     }
 }
@@ -3359,7 +3395,7 @@ func mono_type_name(string type_name) string {
     out := ""
     i := 0
     for i < std.prelude.len(type_name) {
-        ch := string(type_name[i])
+        ch := std.prelude.char_at(type_name, i)
         if ch == "&" { out = out + "ref"
         } else if ch == "[" { out = out + "arr"
         } else if ch == "]" { out = out + "end"

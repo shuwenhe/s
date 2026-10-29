@@ -24,8 +24,8 @@ func tokenize(string source) (string[], syntax_error) {
         tokens = append(tokens, state.token)
         state = canonical_advance(state)
     }
-    if state.error != "" { return syntax_error { message: state.error, line: state.token_line, column: 1 } }
-    return tokens
+    if state.error != "" { return string[](), syntax_error { message: state.error, line: state.token_line, column: 1 } }
+    return tokens, syntax_error { message: "", line: 0, column: 0 }
 }
 
 func parse_source(string source) (source_file, syntax_error) {
@@ -59,6 +59,6 @@ func dump_tokens_text(string[] tokens) string {
     return output
 }
 
-func dump_source_text(ast.source_file source) string {
+func dump_source_text(compile.internal.ast.source_file source) string {
     return compile.internal.ast.dump_source_file(source)
 }
