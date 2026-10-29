@@ -69,7 +69,7 @@ func main() int {
     return 42
 }
 S
-"$root/bin/s_seed" --compile-native-unit "$work/runtime.ir" "$root/src/prelude/prelude.s" "$work/helpers.s" "$work/runtime.s"
+"$root/bin/s_seed" --compile-native-unit "$work/runtime.ir" "$root/src/prelude/prelude.s" "$root/src/result/result.s" "$work/helpers.s" "$work/runtime.s"
 S_SOURCE_ROOT="$root" "$root/bin/s_seed" --emit-standalone-amd64 "$work/runtime.ir" "$work/runtime"
 sh "$root/misc/scripts/verify_true_selfhost.sh" "$work/runtime"
 status=0; timeout 10 "$work/runtime" || status=$?

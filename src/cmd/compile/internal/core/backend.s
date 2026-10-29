@@ -3786,16 +3786,16 @@ func find_function_in_source_graph(source_file source, string name, string[] vis
     return result.err(backend_error { message: "backend error: unknown function " + name })
 }
 
-func execute_block(block_expr block, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func execute_block(block_expr block, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     local_env := copy_bindings(env)
-    result := execute_block_in_place(block, source, local_env, writes, runtime)
-    if value_result_is_err(result) {
-        return value_result_error(result)
+    executed := execute_block_in_place(block, source, local_env, writes, runtime)
+    if value_result_is_err(executed) {
+        return result.err(value_result_error(executed))
     }
-    return value_result_value(result)
+    return ok_value(value_result_value(executed))
 }
 
-func execute_block_in_place(block_expr block, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func execute_block_in_place(block_expr block, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     local_start := std.prelude.len(env)
     deferred := expr[]()
     si := 0
@@ -3815,17 +3815,17 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
                 run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                 if unit_result_is_err(run_deferred) {
                     cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                    return unit_result_error(run_deferred)
+                    return result.err(unit_result_error(run_deferred))
                 }
                 if control_panic_is_active(env) {
                     cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                    return panic_error(control_panic_payload_text(env))
+                    return result.err(panic_error(control_panic_payload_text(env)))
                 }
                 cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                return value.unit(unit_value {})
+                return ok_value(value.unit(unit_value {}))
             }
             cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-            return err
+            return result.err(err)
         }
         schedule_step := run_sroutine_scheduler_step(source, env, writes, runtime)
         if unit_result_is_err(schedule_step) {
@@ -3834,30 +3834,30 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
                 run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                 if unit_result_is_err(run_deferred) {
                     cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                    return unit_result_error(run_deferred)
+                    return result.err(unit_result_error(run_deferred))
                 }
                 if control_panic_is_active(env) {
                     cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                    return panic_error(control_panic_payload_text(env))
+                    return result.err(panic_error(control_panic_payload_text(env)))
                 }
                 cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                return value.unit(unit_value {})
+                return ok_value(value.unit(unit_value {}))
             }
             cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-            return err
+            return result.err(err)
         }
         if control_break_is_active(env) {
             cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-            return value.unit(unit_value {})
+            return ok_value(value.unit(unit_value {}))
         }
         if control_continue_is_active(env) {
             cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-            return value.unit(unit_value {})
+            return ok_value(value.unit(unit_value {}))
         }
         if control_return_is_active(env) {
             returned := control_return_payload(env)
             cleanup_scope_owned_values(env, local_start, returned, runtime)
-            return returned
+            return ok_value(returned)
         }
         si = si + 1
     }
@@ -3871,17 +3871,17 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
                     run_deferred := execute_deferred(deferred, source, env, writes, runtime, panic_payload(err))
                     if unit_result_is_err(run_deferred) {
                         cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                        return unit_result_error(run_deferred)
+                        return result.err(unit_result_error(run_deferred))
                     }
                     if control_panic_is_active(env) {
                         cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                        return panic_error(control_panic_payload_text(env))
+                        return result.err(panic_error(control_panic_payload_text(env)))
                     }
                     cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                    return value.unit(unit_value {})
+                    return ok_value(value.unit(unit_value {}))
                 }
                 cleanup_scope_owned_values(env, local_start, value.unit(unit_value {}), runtime)
-                return err
+                return result.err(err)
             }
             final_value = value_result_value(final_result)
         }
@@ -3890,12 +3890,12 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
     run_deferred := execute_deferred(deferred, source, env, writes, runtime, "")
     if unit_result_is_err(run_deferred) {
         cleanup_scope_owned_values(env, local_start, final_value, runtime)
-        return unit_result_error(run_deferred)
+        return result.err(unit_result_error(run_deferred))
     }
     schedule_flush := run_sroutine_scheduler_flush(source, env, writes, runtime)
     if unit_result_is_err(schedule_flush) {
         cleanup_scope_owned_values(env, local_start, final_value, runtime)
-        return unit_result_error(schedule_flush)
+        return result.err(unit_result_error(schedule_flush))
     }
     cleanup_scope_owned_values(env, local_start, final_value, runtime)
     return result.ok(final_value)
@@ -5061,53 +5061,53 @@ func lookup_name_or_function(binding[] env, source_file source, string name) res
     return result.err(backend_error { message: "backend error: unknown name " + name })
 }
 
-func eval_map_literal(map_literal literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_map_literal(map_literal literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     entries := compile.internal.fn_map_entry_value[]()
     i := 0
     for i < std.prelude.len(literal.entries) {
         key_result := eval_expr(literal.entries[i].key, source, env, writes, runtime)
         if value_result_is_err(key_result) {
-            return value_result_error(key_result)
+            return result.err(value_result_error(key_result))
         }
         val_result := eval_expr(literal.entries[i].value, source, env, writes, runtime)
         if value_result_is_err(val_result) {
-            return value_result_error(val_result)
+            return result.err(value_result_error(val_result))
         }
         mapped_name := function_name_from_value(value_result_value(val_result))
         if mapped_name == "" {
-            return backend_error { message: "backend error: map literal currently supports function values only" }
+            return result.err(backend_error { message: "backend error: map literal currently supports function values only" })
         }
         entries.push(compile.internal.fn_map_entry_value {
             key: stringify_value(value_result_value(key_result)), func_name: mapped_name,
         })
         i = i + 1
     }
-    return value.fn_map(entries)
+    return ok_value(value.fn_map(entries))
 }
 
-func eval_index_expr(compile.internal.ast.index_expr literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_index_expr(compile.internal.ast.index_expr literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     target_result := eval_expr(literal.target.value, source, env, writes, runtime)
     if value_result_is_err(target_result) {
-        return value_result_error(target_result)
+        return result.err(value_result_error(target_result))
     }
     index_result := eval_expr(literal.index.value, source, env, writes, runtime)
     if value_result_is_err(index_result) {
-        return value_result_error(index_result)
+        return result.err(value_result_error(index_result))
     }
     key := stringify_value(value_result_value(index_result))
     map_result := fn_map_from_value(value_result_value(target_result))
     if map_result.is_none() {
-        return backend_error { message: "backend error: index target is not a function map" }
+        return result.err(backend_error { message: "backend error: index target is not a function map" })
     }
     entries := map_result.unwrap()
     i := 0
     for i < std.prelude.len(entries) {
         if entries[i].key == key {
-            return value.fn_ref(entries[i].func_name)
+            return ok_value(value.fn_ref(entries[i].func_name))
         }
         i = i + 1
     }
-    return backend_error { message: "backend error: map key not found " + key }
+    return result.err(backend_error { message: "backend error: map key not found " + key })
 }
 
 func fn_map_from_value(value target) option[fn_map_entry_value[]] {
@@ -5123,7 +5123,7 @@ func fn_map_from_value(value target) option[fn_map_entry_value[]] {
     }
 }
 
-func eval_print_call(string name, expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_print_call(string name, expr[] args, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     if std.prelude.len(args) > 1 {
         backend_error { message: "backend error: " + name + " expects at most one argument" }
     }
@@ -5131,7 +5131,7 @@ func eval_print_call(string name, expr[] args, source_file source, binding[] env
     if std.prelude.len(args) == 1 {
         arg_result := eval_expr(args[0], source, env, writes, runtime)
         if value_result_is_err(arg_result) {
-            return value_result_error(arg_result)
+            return result.err(value_result_error(arg_result))
         }
         text = stringify_value(value_result_value(arg_result))
     }
@@ -5141,26 +5141,26 @@ func eval_print_call(string name, expr[] args, source_file source, binding[] env
     } else {
         append(writes, write_op { fd: 2, text: op_text });
     }
-    return value.unit(unit_value {})
+    return ok_value(value.unit(unit_value {}))
 }
 
-func eval_if_expr(if_expr literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_if_expr(if_expr literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     cond_result := eval_expr(literal.condition.value, source, env, writes, runtime)
     if value_result_is_err(cond_result) {
-        return value_result_error(cond_result)
+        return result.err(value_result_error(cond_result))
     }
     flag_result := bool_from_value(value_result_value(cond_result))
     if flag_result.is_none() {
-        return backend_error { message: "backend error: if condition must be bool" }
+        return result.err(backend_error { message: "backend error: if condition must be bool" })
     }
     if flag_result.unwrap() {
         execute_block_in_place(literal.then_branch, source, env, writes, runtime)
-        return value.unit(unit_value {})
+        return ok_value(value.unit(unit_value {}))
     }
     if literal.else_branch.is_some() {
         return eval_expr(literal.else_branch.unwrap().value, source, env, writes, runtime)
     }
-    return value.unit(unit_value {})
+    return ok_value(value.unit(unit_value {}))
 }
 
 func bool_from_value(value input) option[bool] {
@@ -5176,15 +5176,15 @@ func bool_from_value(value input) option[bool] {
     }
 }
 
-func eval_while_expr(while_expr literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) (value, backend_error) {
+func eval_while_expr(while_expr literal, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     for true {
         cond_result := eval_expr(literal.condition.value, source, env, writes, runtime)
         if value_result_is_err(cond_result) {
-            return value_result_error(cond_result)
+            return result.err(value_result_error(cond_result))
         }
         flag_result := bool_from_value(value_result_value(cond_result))
         if flag_result.is_none() {
-            return backend_error { message: "backend error: while condition must be bool" }
+            return result.err(backend_error { message: "backend error: while condition must be bool" })
         }
         if !flag_result.unwrap() {
             break
@@ -5196,7 +5196,7 @@ func eval_while_expr(while_expr literal, source_file source, binding[] env, writ
         }
         set_control(env, control_continue_active, value.bool(false))
     }
-    return value.unit(unit_value {})
+    return ok_value(value.unit(unit_value {}))
 }
 
 func lookup_value(binding[] env, string name) result[value, backend_error] {
@@ -5207,7 +5207,7 @@ func lookup_value(binding[] env, string name) result[value, backend_error] {
     return result.ok(env[index].value)
 }
 
-func add_values(value left, value right) (value, backend_error) {
+func add_values(value left, value right) result[value, backend_error] {
     return switch left {
         value.int(left_int) : {
             switch right {
@@ -5225,7 +5225,7 @@ func add_values(value left, value right) (value, backend_error) {
     }
 }
 
-func numeric_binary(value left, value right, string op) (value, backend_error) {
+func numeric_binary(value left, value right, string op) result[value, backend_error] {
     return switch left {
         value.int(left_int) : {
             switch right {
@@ -5257,47 +5257,48 @@ func numeric_binary(value left, value right, string op) (value, backend_error) {
     }
 }
 
-func compare_values(value left, value right, bool equal) (value, backend_error) {
+func compare_values(value left, value right, bool equal) result[value, backend_error] {
     same := false
     switch left {
         value.int(left_int) : {
             switch right {
                 value.int(right_int) : same = left_int == right_int,
-                _ : backend_error { message: "backend error: comparison expects matching types" },
+                _ : { return fail_value("backend error: comparison expects matching types") },
             }
         }
         value.string(left_text) : {
             switch right {
                 value.string(right_text) : same = left_text == right_text,
-                _ : backend_error { message: "backend error: comparison expects matching types" },
+                _ : { return fail_value("backend error: comparison expects matching types") },
             }
         }
         value.bool(left_bool) : {
             switch right {
                 value.bool(right_bool) : same = left_bool == right_bool,
-                _ : backend_error { message: "backend error: comparison expects matching types" },
+                _ : { return fail_value("backend error: comparison expects matching types") },
             }
         }
         value.unit(_) : {
             switch right {
                 value.unit(_) : same = true,
-                _ : backend_error { message: "backend error: comparison expects matching types" },
+                _ : { return fail_value("backend error: comparison expects matching types") },
             }
         }
         value.fn_ref(left_name) : {
             switch right {
                 value.fn_ref(right_name) : same = left_name == right_name,
-                _ : backend_error { message: "backend error: comparison expects matching types" },
+                _ : { return fail_value("backend error: comparison expects matching types") },
             }
         }
         value.channel(left_handle) : {
             switch right {
                 value.channel(right_handle) : same = left_handle.id == right_handle.id,
-                _ : backend_error { message: "backend error: comparison expects matching types" },
+                _ : { return fail_value("backend error: comparison expects matching types") },
             }
         }
+        value.owned_box(_) : { return fail_value("backend error: owned boxes are not comparable") },
         value.fn_map(_) : {
-            return backend_error { message: "backend error: function maps are not comparable" }
+            return fail_value("backend error: function maps are not comparable")
         }
     }
     if equal {
@@ -5306,7 +5307,7 @@ func compare_values(value left, value right, bool equal) (value, backend_error) 
     return ok_value(value.bool(!same))
 }
 
-func ordered_compare(value left, value right, string op) (value, backend_error) {
+func ordered_compare(value left, value right, string op) result[value, backend_error] {
     return switch left {
         value.int(left_int) : {
             switch right {
@@ -5332,7 +5333,7 @@ func ordered_compare(value left, value right, string op) (value, backend_error) 
     }
 }
 
-func logical_binary(value left, value right, bool and_op) (value, backend_error) {
+func logical_binary(value left, value right, bool and_op) result[value, backend_error] {
     return switch left {
         value.bool(left_bool) : {
             switch right {
@@ -5349,7 +5350,7 @@ func logical_binary(value left, value right, bool and_op) (value, backend_error)
     }
 }
 
-func value_to_exit_code(value value) (int, backend_error) {
+func value_to_exit_code(value value) result[int, backend_error] {
     return switch value {
         value.int(number) : ok_int(number),
         value.bool(flag) : {
@@ -5360,6 +5361,7 @@ func value_to_exit_code(value value) (int, backend_error) {
         value.string(_) : fail_int("backend error: main cannot return string"),
         value.channel(_) : fail_int("backend error: main cannot return channel"),
         value.fn_ref(_) : fail_int("backend error: main cannot return function reference"),
+        value.owned_box(_) : fail_int("backend error: main cannot return owned box"),
         value.fn_map(_) : fail_int("backend error: main cannot return function map"),
     }
 }
@@ -5402,7 +5404,7 @@ func parse_int_literal(string literal) int {
     sign * out
 }
 
-func parse_ssa_margin_override(string text) (int, backend_error) {
+func parse_ssa_margin_override(string text) result[int, backend_error] {
     if text == "" {
         return ok_int(-1)
     }

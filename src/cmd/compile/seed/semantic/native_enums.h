@@ -186,36 +186,104 @@ static int ng_enum_construct(ng_scope *c,ast_node *n,ast_node *member,ng_text *p
 /* Destructuring evaluates the producer once, then snapshots each typed
  * result slot. The inactive slot already has its declared default value. */
 static bool ng_result_unpack(ng_scope *c,ast_node *block) {
-    ng_state *s=c->state;
-    if(block->as.block.statements.len!=2) return ng_fail(s,block->pos,"invalid result destructuring");
-    ast_node *first=block->as.block.statements.data[0],*second=block->as.block.statements.data[1];
-    ng_text type,args[NG_ARGS],name;
+    ng_state *s=c->state; size_t count=block->as.block.statements.len;
+    if(count<2 || count>NG_ARGS) return ng_fail(s,block->pos,"invalid tuple destructuring arity");
+    for(size_t i=0;i<count;i++) if(block->as.block.statements.data[i]->kind!=AST_LET_STMT)
+        return ng_fail(s,block->pos,"invalid tuple binding");
+    ast_node *first=block->as.block.statements.data[0];
+    ng_text type,args[NG_ARGS],name,remaining;
     if(!ng_node(c,first->as.let_stmt.value,type)) return false;
-    ng_decl *d=ng_enum_type(c,type,args);
-    if(!d || strcmp(d->name,"std.result.result") || d->count!=2) { error_set(s->err,ERR_SEMANTIC,block->pos.line,block->pos.column,"native generic specialization: multiple assignment requires a two-value result (inferred: %s)",*type?type:"unresolved"); return false; }
+    size_t declared=first->as.let_stmt.value->native_tuple_arity;
+    if((declared && declared!=count) || (count>2 && !declared))
+        return ng_fail(s,block->pos,"tuple binding arity does not match producer declaration");
+    strcpy(remaining,type);
+    for(size_t i=0;i<count-1;i++) {
+        ng_decl *d=ng_enum_type(c,remaining,args);
+        if(!d || strcmp(d->name,"std.result.result") || d->count!=2)
+            return ng_fail(s,block->pos,"tuple destructuring requires a proved native pair layout");
+        strcpy(remaining,args[1]);
+    }
     snprintf(name,sizeof(name),"__native_result_%zu_%zu",block->pos.line,block->pos.column);
     if(ng_bound(c,name)) return ng_fail(s,block->pos,"result temporary binding collision");
     ast_node *temp=ast_new(AST_LET_STMT,block->pos);
-    if(!temp) return false;
+    ast_node **members=calloc(count,sizeof(*members)),**nodes=calloc(count+1,sizeof(*nodes));
+    if(!temp || !members || !nodes) goto bad;
     temp->as.let_stmt.name=ng_dup(name); temp->as.let_stmt.mutable=true;
-    ast_node *members[2]={NULL,NULL}; const char *fields[2]={"__payload_ok","__payload_err"};
-    for(size_t i=0;i<2;i++) {
-        members[i]=ast_new(AST_MEMBER_EXPR,block->pos);
+    if(!temp->as.let_stmt.name) goto bad;
+    for(size_t i=0;i<count;i++) {
         ast_node *root=ast_new(AST_IDENT_EXPR,block->pos);
-        if(!members[i] || !root) { ast_free(root); goto bad; }
-        members[i]->as.member_expr.object=root; root->as.ident_expr.name=ng_dup(name);
-        members[i]->as.member_expr.member=ng_dup(fields[i]); members[i]->native_enum=true;
-        if(!root->as.ident_expr.name || !members[i]->as.member_expr.member) goto bad;
+        if(!root) goto bad;
+        root->as.ident_expr.name=ng_dup(name); members[i]=root;
+        if(!root->as.ident_expr.name) goto bad;
+        size_t steps=i<count-1?i+1:i;
+        for(size_t j=0;j<steps;j++) {
+            ast_node *member=ast_new(AST_MEMBER_EXPR,block->pos);
+            if(!member) goto bad;
+            member->as.member_expr.object=members[i]; members[i]=member;
+            member->as.member_expr.member=ng_dup(i<count-1 && j==i?"__payload_ok":"__payload_err");
+            member->native_enum=true;
+            if(!member->as.member_expr.member) goto bad;
+        }
     }
-    if(!temp->as.let_stmt.name || !ast_vec_push(&block->as.block.statements,NULL)) goto bad;
-    temp->as.let_stmt.value=first->as.let_stmt.value;
-    first->as.let_stmt.value=members[0]; ast_free(second->as.let_stmt.value); second->as.let_stmt.value=members[1];
-    block->as.block.statements.data[0]=temp; block->as.block.statements.data[1]=first; block->as.block.statements.data[2]=second;
-    block->as.block.tuple_binding=false;
-    return true;
+    temp->as.let_stmt.value=first->as.let_stmt.value; nodes[0]=temp;
+    for(size_t i=0;i<count;i++) {
+        ast_node *binding=block->as.block.statements.data[i];
+        if(i) ast_free(binding->as.let_stmt.value);
+        binding->as.let_stmt.value=members[i]; members[i]=NULL; nodes[i+1]=binding;
+    }
+    free(block->as.block.statements.data);
+    block->as.block.statements.data=nodes;
+    block->as.block.statements.len=count+1; block->as.block.statements.cap=count+1;
+    block->as.block.tuple_binding=false; free(members); return true;
 bad:
-    ast_free(temp); ast_free(members[0]); ast_free(members[1]); return false;
+    ast_free(temp);
+    if(members) for(size_t i=0;i<count;i++) ast_free(members[i]);
+    free(members); free(nodes); return false;
 }
+
+/* Explicit source tuples preserve every payload in the Seed's private nested
+ * pair layout. The source arity remains distinct from a named result enum. */
+static ast_node *ng_tuple_values_literal(ng_scope *c,ast_node **values,size_t count,const char *type,source_pos pos) {
+    ng_state *s=c->state; ng_text args[NG_ARGS];
+    ng_decl *d=ng_enum_type(c,type,args);
+    if(count<2 || !d || strcmp(d->name,"std.result.result") || d->count!=2) {
+        ng_fail(s,pos,"missing explicit tuple layout"); return NULL;
+    }
+    ast_node *literal=ast_new(AST_STRUCT_EXPR,pos);
+    if(!literal) return NULL;
+    literal->native_enum=true;
+    literal->as.struct_expr.type_name=ng_dup(type);
+    literal->as.struct_expr.field_names=calloc(3,sizeof(char*));
+    if(!literal->as.struct_expr.type_name || !literal->as.struct_expr.field_names) goto bad;
+    literal->as.struct_expr.field_count=3;
+    const char *fields[3]={"__variant","__payload_ok","__payload_err"};
+    for(size_t i=0;i<3;i++) {
+        ast_node *value=i==0?ast_new(AST_NUMBER_EXPR,pos):i==1?ng_clone(s,values[0]):
+            count==2?ng_clone(s,values[1]):ng_tuple_values_literal(c,values+1,count-1,args[1],pos);
+        if(!value) goto bad;
+        if(!i) value->as.number_expr.literal=ng_dup("0");
+        literal->as.struct_expr.field_names[i]=ng_dup(fields[i]);
+        if((!i && !value->as.number_expr.literal) || !literal->as.struct_expr.field_names[i] ||
+           !ast_vec_push(&literal->as.struct_expr.field_values,value)) {
+            ast_free(value); goto bad;
+        }
+    }
+    return literal;
+bad:
+    ast_free(literal); return NULL;
+}
+static bool ng_tuple_return_values(ng_scope *c,ast_node *n,ng_text out) {
+    size_t count=n->as.return_stmt.values.len;
+    if(count!=c->tuple_arity) return ng_fail(c->state,n->pos,"return list arity does not match declaration");
+    ast_node *literal=ng_tuple_values_literal(c,n->as.return_stmt.values.data,count,c->return_type,n->pos);
+    if(!literal) return false;
+    if(!ng_expect(c,literal,c->return_type,out,false)) { ast_free(literal); return false; }
+    ng_replace_node(n->as.return_stmt.value,literal);
+    for(size_t i=1;i<count;i++) { ast_free(n->as.return_stmt.values.data[i]); n->as.return_stmt.values.data[i]=NULL; }
+    n->as.return_stmt.values.len=1;
+    return true;
+}
+
 static bool ng_enum_switch(ng_scope *c,ast_node *n,const char *expected,ng_text out,bool return_position) {
     ng_state *s=c->state; ng_text subject,args[NG_ARGS],type;
     if(!ng_node(c,n->as.if_stmt.pattern_subject,subject)) return false;

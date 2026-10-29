@@ -19,23 +19,24 @@ func negative(compile.internal.ast.expr expression) bool {
         _: return false,
     }
 }
-func independent(compile.internal.ast.stmt statement) bool {
+func independent(compile.internal.ast.stmt statement, string kind) bool {
     switch statement {
-        stmt.expr(v): { switch v.expr { expr.if(_): return true, _: return false, } },
+        stmt.expr(v): { switch v.expr { expr.if(_): return kind == "if", expr.for(_): return kind == "for", expr.while(_): return kind == "while", expr.switch(_): return kind == "switch", expr.block(_): return kind == "block", _: return false, } },
         _: return false,
     }
 }
-func check_body(compile.internal.ast.block_expr body) () {
+func check_body(compile.internal.ast.block_expr body, string kind) () {
     if len(body.statements) != 1 || body.final_expr.is_none() { panic("if statement consumed the negative tail") }
-    if !independent(body.statements[0]) { panic("missing independent if statement") }
+    if !independent(body.statements[0], kind) { panic("missing independent if statement") }
     if !negative(body.final_expr.unwrap()) { panic("negative tail is not unary minus of one") }
 }
-func check(string body_text) () {
+func check_kind(string body_text, string kind) () {
     source := "package main\nfunc read(int input) int {\n" + body_text + "\n}\n"
     parsed, error := compile.internal.syntax.parse_source(source)
     if error.message != "" { panic(error.message) }
-    switch parsed.items[0] { item.function(declaration): check_body(declaration.body.unwrap()), _: panic("missing function"), }
+    switch parsed.items[0] { item.function(declaration): check_body(declaration.body.unwrap(), kind), _: panic("missing function"), }
 }
+func check(string body_text) () { check_kind(body_text, "if") }
 func main() int {
     check("if input > 0 { return input }\n-1")
     check("if input > 0 { return input }\r\n-1")
@@ -43,6 +44,10 @@ func main() int {
     check("if input > 0 { return input } /* comment\ncontinued */ -1")
     check("if input > 0 { return input }\nelse if input < 0 { return 1 }\n-1")
     check("if input > 0 { return input }; -1")
+    check_kind("for input > 0 { return input }\n-1", "for")
+    check_kind("while input > 0 { return input }\n-1", "while")
+    check_kind("switch input { 0: (), _: (), }\n-1", "switch")
+    check_kind("{ local := input }\n-1", "block")
     return 42
 }
 S
@@ -51,4 +56,4 @@ S_SOURCE_ROOT="$root" "$root/bin/s_seed" --emit-standalone-amd64 "$work/main.ir"
 sh "$root/misc/scripts/verify_true_selfhost.sh" "$work/main"
 status=0; "$work/main" || status=$?
 test "$status" -eq 42
-echo 'canonical statement boundary AST: independent if and unary negative tail, comments, CRLF and else-chain: PASS'
+echo 'canonical statement boundary AST: independent control statements and unary negative tail, comments, CRLF and else-chain: PASS'

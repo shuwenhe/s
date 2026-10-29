@@ -17,7 +17,7 @@ def declaration(kind,name):
             depth-=1
             if depth==0: return backend[start:start+token.end()]+'\n'
     raise RuntimeError('unterminated declaration '+name)
-names=['ok_write_ops','fail_write_ops','ok_value','fail_value','ok_unit','fail_unit','ok_int','fail_int']
+names=['ok_write_ops','fail_write_ops','ok_value','fail_value','ok_unit','fail_unit','ok_int','fail_int','add_values','numeric_binary','compare_values','ordered_compare','logical_binary','value_to_exit_code','parse_ssa_margin_override','parse_int_literal','digit_value']
 fixture='package compile.internal\nimport "std.result"\n'
 for name in ['backend_error','write_op','unit_value','fn_map_entry_value','channel_handle_value','owned_box_value']:
     fixture+=declaration('struct',name)
@@ -39,7 +39,10 @@ func main() int { return 0 }
 consumers=['write_result_is_err','write_result_error','write_result_value','value_result_is_err','value_result_error','value_result_value','unit_result_is_err','unit_result_error','int_result_is_err','int_result_error','int_result_value']
 (work/'consumers.s').write_text('package compile.internal\nimport "std.result"\n'+''.join(declaration('func',name) for name in consumers))
 (work/'result.s').write_text(result_enum)
-source=fixture+callers+result_enum
+prelude=(root/'src/prelude/prelude.s').read_text();interfaces='package std.prelude\n'
+for name in ['len','char_at']:
+    start=re.search(r'^func '+name+r'(?:\[.*?\])?\(',prelude,re.M).start();interfaces+='extern "intrinsic" '+prelude[start:prelude.index('{',start)].strip()+'\n'
+source=fixture+callers+result_enum+interfaces
 # Reuse the production semantic checker, retaining its dependency closure.
 s=(root/'src/cmd/compile/internal/semantic/semantic.s').read_text()
 positions=list(re.finditer(r'^func ([A-Za-z_][A-Za-z_0-9]*)\(',s,re.M)); functions={m[1]:s[m.start():positions[i+1].start() if i+1<len(positions) else len(s)] for i,m in enumerate(positions)}
@@ -102,6 +105,7 @@ import "std.result"
 func payload_number(value payload) int {
     return switch payload { value::int(number): number, _: 0, }
 }
+func payload_flag(value payload) bool { return switch payload { value::bool(flag): flag, _: false, } }
 func main() int {
     op := write_op { fd: 2, text: "payload" }
     writes := ok_write_ops([op])
@@ -127,12 +131,30 @@ func main() int {
     int_failure := fail_int("int error")
     if !int_result_is_err(int_failure) { return 14 }
     if int_result_error(int_failure).message != "int error" { return 15 }
+    sum := add_values(value.int(40), value.int(2))
+    if value_result_is_err(sum) || payload_number(value_result_value(sum)) != 42 { return 16 }
+    zero_division := numeric_binary(value.int(42), value.int(0), "/")
+    if !value_result_is_err(zero_division) { return 17 }
+    same := compare_values(value.int(42), value.int(42), true)
+    if value_result_is_err(same) || !payload_flag(value_result_value(same)) { return 18 }
+    mismatch := compare_values(value.int(42), value.bool(true), true)
+    if !value_result_is_err(mismatch) { return 19 }
+    ordered := ordered_compare(value.int(1), value.int(2), "<")
+    if value_result_is_err(ordered) || !payload_flag(value_result_value(ordered)) { return 20 }
+    logical := logical_binary(value.bool(true), value.bool(false), false)
+    if value_result_is_err(logical) || !payload_flag(value_result_value(logical)) { return 21 }
+    exit_code := value_to_exit_code(value.int(42))
+    if int_result_is_err(exit_code) || int_result_value(exit_code) != 42 { return 22 }
+    margin := parse_ssa_margin_override("42")
+    if int_result_is_err(margin) || int_result_value(margin) != 42 { return 23 }
+    bad_margin := parse_ssa_margin_override("x")
+    if !int_result_is_err(bad_margin) { return 24 }
     return 42
 }
 S
-"$root/bin/s_seed" --compile-native-unit "$work/runtime.ir" "$work/helpers.s" "$work/consumers.s" "$work/result.s" "$work/runtime.s"
+"$root/bin/s_seed" --compile-native-unit "$work/runtime.ir" "$root/src/prelude/prelude.s" "$work/helpers.s" "$work/consumers.s" "$work/result.s" "$work/runtime.s"
 S_SOURCE_ROOT="$root" "$root/bin/s_seed" --emit-standalone-amd64 "$work/runtime.ir" "$work/runtime"
 sh "$root/misc/scripts/verify_true_selfhost.sh" "$work/runtime"
 status=0; timeout 10 "$work/runtime" || status=$?
 test "$status" -eq 42
-echo 'canonical backend result contract: actual eight helpers and callers, true tuple returns, strict tuple/result and payload rejection: PASS'
+echo 'canonical backend result contract: actual result helpers and callers, true tuple returns, strict tuple/result and payload rejection: PASS'

@@ -32,6 +32,7 @@ typedef struct ng_scope {
     const ast_node *active_pattern; /* Diagnostics: nearest validated pattern arm. */
     ng_text return_type;
     bool tuple_return;
+    size_t tuple_arity;
     bool return_position;
 } ng_scope;
 static bool ng_fail(ng_state *s,source_pos pos,const char *message) {
@@ -88,11 +89,21 @@ static bool ng_parameters(ng_state *s,ng_decl *d,const char *parameters) {
 static const char *ng_decl_name(ast_node *n) {
     return ng_record(n)?n->as.let_stmt.name:n->kind==AST_FN_STMT?n->as.fn_stmt.name:n->kind==AST_ENUM_DECL?n->as.enum_decl.name:NULL;
 }
+static size_t ng_source_tuple_arity(const char *text) {
+    size_t commas=0; int depth=0;
+    for(const char *p=text;p && *p;p++) {
+        if(*p=='[' || *p=='(') depth++;
+        else if(*p==']' || *p==')') depth--;
+        else if(*p==',' && !depth) commas++;
+    }
+    return commas?commas+1:0;
+}
 static ng_decl *ng_register(ng_state *s,ast_node *n,const char *package) {
     const char *name=ng_decl_name(n); if(!name) return NULL;
     if(s->count==NG_LIMIT) { ng_fail(s,n->pos,"specialization limit exceeded"); return NULL; }
     ng_decl *d=calloc(1,sizeof(*d)); if(!d) return NULL;
     d->node=n; d->package=package;
+    if(n->kind==AST_FN_STMT && !n->native_tuple_arity) n->native_tuple_arity=ng_source_tuple_arity(n->as.fn_stmt.return_type);
     if(snprintf(d->name,sizeof(d->name),"%s%s%s",package,*package?".":"",name)>=(int)sizeof(d->name) ||
        !ng_parameters(s,d,n->generic_parameters)) { free(d); return NULL; }
     n->native_template=d->count!=0;
@@ -161,6 +172,7 @@ static ast_node *ng_clone(ng_state *s,const ast_node *n) {
     if(!n) return NULL;
     ast_node *r=ast_new(n->kind,n->pos); if(!r) return NULL;
     r->native_enum=n->native_enum;
+    r->native_tuple_arity=n->native_tuple_arity;
 #define STR(f) do { if(n->as.f && !(r->as.f=ng_dup(n->as.f))) goto bad; } while(0)
 #define NODE(f) do { if(n->as.f && !(r->as.f=ng_clone(s,n->as.f))) goto bad; } while(0)
 #define VEC(f) do { if(!ng_clone_vec(s,&r->as.f,&n->as.f)) goto bad; } while(0)
@@ -298,9 +310,16 @@ static bool ng_type(ng_scope *c,const char *raw,ng_text out,unsigned depth) {
         else if(*p==',' && !nesting) tuple=true;
     }
     if(tuple && ng_find(s,"std.result.result",c->package,false)) {
-        ng_text application;
-        if(snprintf(application,sizeof(application),"std.result.result[%s]",text)>=(int)sizeof(application)) return ng_fail(s,(source_pos){0,0},"result type too long");
-        return ng_type(c,application,out,depth+1);
+        ng_text wrapper,tail,application;
+        if(snprintf(wrapper,sizeof(wrapper),"__tuple[%s]",text)>=(int)sizeof(wrapper)) return ng_fail(s,(source_pos){0,0},"tuple type too long");
+        int count=ng_split(wrapper,base,args);
+        if(count<2) return ng_fail(s,(source_pos){0,0},"invalid tuple type");
+        strcpy(tail,args[count-1]);
+        for(int i=count-2;i>=0;i--) {
+            if(snprintf(application,sizeof(application),"std.result.result[%s,%s]",args[i],tail)>=(int)sizeof(application)) return ng_fail(s,(source_pos){0,0},"tuple layout too long");
+            strcpy(tail,application);
+        }
+        return ng_type(c,tail,out,depth+1);
     }
     size_t len=strlen(text);
     if(seed_array_element(text,element,sizeof(element))) {
@@ -697,6 +716,7 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
             ast_free(n->as.call_expr.callee); n->as.call_expr.callee=callee;
         }
         if(d) {
+            n->native_tuple_arity=d->node->native_tuple_arity;
             ng_scope *decl=calloc(1,sizeof(*decl)); if(!decl) { free(args); return false; }
             decl->state=s; decl->package=d->package;
             bool ok=ng_type(decl,d->node->as.fn_stmt.return_type,out,0); free(decl); free(args); return ok;
@@ -725,6 +745,8 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
     }
     case AST_EXPR_STMT: return ng_expect(c,n->as.expr_stmt.expr,expected,out,return_position);
     case AST_RETURN_STMT:
+        if(c->tuple_return && n->as.return_stmt.values.len>1)
+            return ng_tuple_return_values(c,n,out);
         if(!ng_expect(c,n->as.return_stmt.value,c->return_type,out,true)) return false;
         for(size_t i=0;i<n->as.return_stmt.values.len;i++) if(n->as.return_stmt.values.data[i]!=n->as.return_stmt.value) VISIT(n->as.return_stmt.values.data[i]);
         return true;
@@ -787,12 +809,8 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
 }
 static bool ng_function(ng_scope *c,ast_node *fn) {
     ng_text type;
-    int nesting=0;
-    for(const char *at=fn->as.fn_stmt.return_type;at && *at;at++) {
-        if(*at=='[' || *at=='(') nesting++;
-        else if(*at==']' || *at==')') nesting--;
-        else if(*at==',' && !nesting) c->tuple_return=true;
-    }
+    c->tuple_arity=fn->native_tuple_arity;
+    c->tuple_return=c->tuple_arity>1;
     for(size_t i=0;i<fn->as.fn_stmt.param_count;i++) {
         if(!ng_type(c,fn->as.fn_stmt.param_types[i],type,0) || !ng_put(c->state,&fn->as.fn_stmt.param_types[i],type,fn->pos) ||
            !ng_bind(c,fn->as.fn_stmt.params[i],type)) return false;

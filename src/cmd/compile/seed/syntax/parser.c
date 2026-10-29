@@ -1523,6 +1523,17 @@ static ast_node *parse_assignment(parser *p) {
 static ast_node *parse_expression(parser *p) {
 	return parse_assignment(p);
 }
+static int looks_like_tuple_declaration(parser *p) {
+    size_t at = p->current, names = 0;
+    while (at < p->tokens->len && p->tokens->data[at].type == TOKEN_IDENTIFIER) {
+        names++; at++;
+        if (at >= p->tokens->len) return 0;
+        if (p->tokens->data[at].type == TOKEN_ASSIGN_DECLARE) return names >= 2;
+        if (p->tokens->data[at].type != TOKEN_COMMA) return 0;
+        at++;
+    }
+    return 0;
+}
 static ast_node *parse_block(parser *p) {
 	ast_node *block = ast_new(AST_BLOCK, prev(p)->pos);
 	if (!block) {
@@ -1546,6 +1557,10 @@ static ast_node *parse_block(parser *p) {
 				ast_free(block);
 				return NULL;
 			}
+		} else if (looks_like_tuple_declaration(p)) {
+			/* Do not let the typed-binding lookahead scan past a short
+			 * tuple declaration into a later assignment. */
+			stmt = parse_statement(p);
 		} else if ((check(p, TOKEN_IDENTIFIER) || check(p, TOKEN_LBRACKET)) &&
 			!(check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "sroutine") == 0) &&
 			looks_like_typed_binding(p)) {
@@ -1633,58 +1648,29 @@ static ast_node *parse_var_binding_statement(parser *p) {
 	return node;
 }
 static ast_node *parse_tuple_assign_declare_statement(parser *p) {
-	ast_node *block = ast_new(AST_BLOCK, peek(p)->pos);
-	ast_node *first = NULL;
-	ast_node *second = NULL;
-	char *first_name = NULL;
-	char *second_name = NULL;
-	ast_node *value;
-	if (!block) return NULL;
-	block->as.block.transparent_scope = true;
+    ast_node *block = ast_new(AST_BLOCK, peek(p)->pos);
+    if (!block) return NULL;
+    block->as.block.transparent_scope = true;
     block->as.block.tuple_binding = true;
-	if (!expect(p, TOKEN_IDENTIFIER, "first identifier")) goto fail;
-	first_name = dup_cstr(prev(p)->lexeme);
-	if (!expect(p, TOKEN_COMMA, "',' in multiple assignment")) goto fail_name1;
-	if (!expect(p, TOKEN_IDENTIFIER, "second identifier")) goto fail_name1;
-	second_name = dup_cstr(prev(p)->lexeme);
-	if (!expect(p, TOKEN_ASSIGN_DECLARE, "':='")) goto fail_name2;
-	value = parse_expression(p);
-	if (!value) goto fail_name2;
-	first = ast_new(AST_LET_STMT, block->pos);
-	second = ast_new(AST_LET_STMT, block->pos);
-	if (!first || !second) {
-		ast_free(first);
-		ast_free(second);
-		ast_free(value);
-		goto fail_name2;
-	}
-	first->as.let_stmt.name = first_name;
-	first->as.let_stmt.mutable = 1;
-	first->as.let_stmt.value = value;
-	second->as.let_stmt.name = second_name;
-	second->as.let_stmt.mutable = 1;
-	second->as.let_stmt.value = ast_new(AST_BOOL_EXPR, block->pos);
-	if (!second->as.let_stmt.value || !ast_vec_push(&block->as.block.statements, first)) {
-		ast_free(first);
-		ast_free(second);
-		ast_free(block);
-		return NULL;
-	}
-	second->as.let_stmt.value->as.bool_expr.value = 0;
-	if (!ast_vec_push(&block->as.block.statements, second)) {
-		ast_free(second);
-		ast_free(block);
-		return NULL;
-	}
-	consume_optional_semicolon(p);
-	return block;
-fail_name2:
-	free(second_name);
-fail_name1:
-	free(first_name);
+    do {
+        if (!expect(p, TOKEN_IDENTIFIER, "identifier in multiple assignment")) goto fail;
+        ast_node *binding = ast_new(AST_LET_STMT, prev(p)->pos);
+        if (!binding) goto fail;
+        binding->as.let_stmt.name = dup_cstr(prev(p)->lexeme);
+        binding->as.let_stmt.mutable = true;
+        if (block->as.block.statements.len) binding->as.let_stmt.value = ast_new(AST_BOOL_EXPR, block->pos);
+        if (!binding->as.let_stmt.name || (block->as.block.statements.len && !binding->as.let_stmt.value) ||
+            !ast_vec_push(&block->as.block.statements, binding)) {
+            ast_free(binding); goto fail;
+        }
+    } while (match(p, TOKEN_COMMA));
+    if (!expect(p, TOKEN_ASSIGN_DECLARE, "':='")) goto fail;
+    block->as.block.statements.data[0]->as.let_stmt.value = parse_expression(p);
+    if (!block->as.block.statements.data[0]->as.let_stmt.value) goto fail;
+    consume_optional_semicolon(p);
+    return block;
 fail:
-	ast_free(block);
-	return NULL;
+    ast_free(block); return NULL;
 }
 static ast_node *parse_binding_statement(parser *p, int is_mutable) __attribute__((unused));
 static ast_node *parse_binding_statement(parser *p, int is_mutable) {
@@ -3229,10 +3215,7 @@ static ast_node *parse_array_decl_statement(parser *p) {
 static ast_node *parse_statement(parser *p) {
 	(void)p;
     if (check(p, TOKEN_LPAREN) && peek_ahead(p,1) && peek_ahead(p,1)->type == TOKEN_RPAREN && peek_ahead(p,2) && peek_ahead(p,2)->type == TOKEN_IDENTIFIER) return parse_typed_binding_statement(p,1);
-	if (check(p, TOKEN_IDENTIFIER) && peek_ahead(p, 1) &&
-		peek_ahead(p, 1)->type == TOKEN_COMMA && peek_ahead(p, 2) &&
-		peek_ahead(p, 2)->type == TOKEN_IDENTIFIER && peek_ahead(p, 3) &&
-		peek_ahead(p, 3)->type == TOKEN_ASSIGN_DECLARE) {
+	if (looks_like_tuple_declaration(p)) {
 		return parse_tuple_assign_declare_statement(p);
 	}
 	if (check(p, TOKEN_IDENTIFIER) && strcmp(peek(p)->lexeme, "switch") == 0) {

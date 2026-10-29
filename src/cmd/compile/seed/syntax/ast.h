@@ -70,6 +70,7 @@ typedef enum pattern_kind {
 struct ast_node {
 	ast_kind kind;
 	source_pos pos;
+	size_t native_tuple_arity; /* Source tuple arity retained before native layout lowering. */
 	bool native_template;
     bool native_enum;
     bool native_unit;

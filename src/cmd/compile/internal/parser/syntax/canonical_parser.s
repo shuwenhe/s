@@ -483,10 +483,8 @@ func canonical_case_body(canonical_parser initial) canonical_parser {
             }
             statements.push(stmt.return(compile.internal.ast.return_stmt { value: value }))
         } else {
-            // A statement-leading if ends at its own closing branch. Its
-            // following unary expression is not an infix continuation.
-            if state.token == "if" {
-                state = canonical_if(state)
+            if canonical_control_statement_start(state.token) {
+                state = canonical_statement_expression(state)
                 state.statement = stmt.expr(compile.internal.ast.expr_stmt { expr: state.expression })
             } else { state = canonical_loop_statement(state) }
             if state.error != "" { return state }
@@ -710,6 +708,24 @@ func canonical_var_binding(canonical_parser initial) bool {
     return state.token == "="
 }
 
+func canonical_control_statement_start(string token) bool {
+    return token == "if" || token == "for" || token == "while" || token == "switch" || token == "{"
+}
+
+// Seed statement dispatch terminates control statements at their closing
+// branch/block. Expression contexts still use the unrestricted Pratt parser.
+func canonical_statement_expression(canonical_parser initial) canonical_parser {
+    if initial.token == "if" { return canonical_if(initial) }
+    if initial.token == "for" || initial.token == "while" { return canonical_loop(initial) }
+    if initial.token == "switch" { return canonical_switch(initial) }
+    if initial.token == "{" {
+        state := canonical_block(initial)
+        state.expression = expr.block(state.block)
+        return state
+    }
+    return canonical_expression_list(initial)
+}
+
 func canonical_block(canonical_parser initial) canonical_parser {
     state := canonical_expect(initial, "{")
     statements := compile.internal.ast.stmt[]()
@@ -740,8 +756,7 @@ func canonical_block(canonical_parser initial) canonical_parser {
         } else {
             // Keep statement boundaries without restricting multiline binary
             // operators in bindings, returns or parenthesized expressions.
-            if state.token == "if" { state = canonical_if(state) }
-            else { state = canonical_expression_list(state) }
+            state = canonical_statement_expression(state)
             left := state.expression
             if canonical_assignment_operator(state.token) || state.token == "++" || state.token == "--" {
                 state = canonical_assignment(state, left, true)

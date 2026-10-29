@@ -506,6 +506,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_backend_result_contract_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_backend_ssa_interface_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_backend_tuple_contract_check.sh
+	@bash test/native-bootstrap-diagnostic/seed_two_value_return_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_string_order_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_c_for_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_store_production_check.sh
