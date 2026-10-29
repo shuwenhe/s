@@ -48,6 +48,9 @@ func main() int {
     check("package model.types\nenum Code { answer = 42, }\npackage main\nimport \"model.types\"\nfunc main() int { return int(model.types.Code.answer) }", true)
     check("package model.types\nenum Flag { off, on(bool), }\npackage main\nimport \"model.types\"\nfunc main() int { flag := model.types.Flag.on(1); return 42 }", false)
     check("package model.types\nenum Code { answer = 42, }\npackage main\nimport \"model.types\"\nfunc main() int { model := 1; return int(model.types.Code.answer) }", false)
+    check("package main\nconst first = 40\nconst answer = first + 2\nfunc main() int { return answer }", true)
+    check("package main\nconst answer = true + 1\nfunc main() int { return 42 }", false)
+    check("package main\nconst answer = 40\nconst answer = 42\nfunc main() int { return answer }", false)
     return 42
 }
 S

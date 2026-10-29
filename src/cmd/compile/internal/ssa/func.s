@@ -9,8 +9,8 @@ struct ssa_func {
 }
 
 func make_func(string name) ssa_func {
-    blocks := []ssa_bb{}
-    values := []ssa_value{}
+    blocks := ssa_bb[]()
+    values := ssa_value[]()
     f := ssa_func {
         name name,
         entry 0, blocks blocks, values values, next_block_id 0, next_value_id 0

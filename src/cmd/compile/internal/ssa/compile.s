@@ -16,7 +16,7 @@ struct compile_report {
 }
 
 func optimize(ssa_func f, ssa_config cfg) pass_stat[] {
-    stats := []pass_stat{}
+    stats := pass_stat[]()
     if cfg.enable_rewrite {
         stats = append(stats, pass_stat { name "rewrite", changed run_rewrite(f, cfg.target_arch) })
     }
@@ -37,7 +37,7 @@ func optimize(ssa_func f, ssa_config cfg) pass_stat[] {
 
 func compile_func(ssa_func f, ssa_config cfg) compile_report {
     stats := optimize(f, cfg)
-    facts := []prove_fact{}
+    facts := prove_fact[]()
     if cfg.enable_prove {
         facts = run_prove(f)
         stats = append(stats, pass_stat { name "prove", changed len(facts) })

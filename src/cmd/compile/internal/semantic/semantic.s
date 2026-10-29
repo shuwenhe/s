@@ -1211,7 +1211,7 @@ func collect_consts(source_file file, function_binding[] functions, trait_bindin
         scope.package_path = pkg
         switch file.items[i] {
             item.const(const_decl) : {
-                if canonical_const_name_type(context, const_decl.name) != "unknown" {
+                if canonical_const_name_type(context*, const_decl.name) != "unknown" {
                     ignored := add_error(source, diagnostics, "e3044", "duplicate const declaration", const_decl.name)
                 }
                 expr_to_check := no_const_expr()
@@ -1229,7 +1229,7 @@ func collect_consts(source_file file, function_binding[] functions, trait_bindin
                     ignored2 := add_error(source, diagnostics, "e3045", "const declaration missing initializer and no prior expression in group", const_decl.name)
                 } else {
                     checked_value := expr_to_check.unwrap()
-                    constant := canonical_const_type(checked_value, context)
+                    constant := canonical_const_type(checked_value, context*)
                     inferred := check_result { type_name: constant.type_name, errors: len(constant.diagnostics) }
                     d := 0
                     for d < len(constant.diagnostics) {
@@ -1244,7 +1244,7 @@ func collect_consts(source_file file, function_binding[] functions, trait_bindin
                     if is_unknown(ty) {
                         ty = "unknown"
                     } else if compile.internal.typesys.same_type(ty, "int") {
-                        eval_result := eval_const_int_expr(checked_value, context, const_decl.iota_index)
+                        eval_result := eval_const_int_expr(checked_value, context*, const_decl.iota_index)
                         if eval_result.ok {
                             has_int_value = true
                             int_value = eval_result.value

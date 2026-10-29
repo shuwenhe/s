@@ -13,8 +13,8 @@ struct abi_layout {
 
 func assign_abi_layout(string arch, int params, int results) abi_layout {
     int_regs := arch_int_arg_regs(arch)
-    out_params := []abi_location{}
-    out_results := []abi_location{}
+    out_params := abi_location[]()
+    out_results := abi_location[]()
     stack_off := 0
     i := 0
     for i < params {

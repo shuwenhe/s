@@ -17,7 +17,7 @@ struct regalloc_result {
 }
 
 func empty_regalloc_result() regalloc_result {
-    assigns := []reg_assign{}
+    assigns := reg_assign[]()
     regalloc_result { assigns assigns, spills 0 }
 }
 
@@ -45,7 +45,7 @@ func sort_intervals(live_interval[] ivs) {
 }
 
 func build_positions(ssa_func f) int[] {
-    pos := []int{}
+    pos := int[]()
     i := 0
     for i < len(f.values) {
         pos = append(pos, -1)
@@ -78,7 +78,7 @@ func build_positions(ssa_func f) int[] {
 
 func compute_live_intervals(ssa_func f) live_interval[] {
     pos := build_positions(f)
-    ivs := []live_interval{}
+    ivs := live_interval[]()
     i := 0
     for i < len(f.values) {
         if !f.values[i].removed {
@@ -138,7 +138,7 @@ func compute_live_intervals(ssa_func f) live_interval[] {
 }
 
 func active_expire(live_interval[] active, int point) live_interval[] {
-    keep := []live_interval{}
+    keep := live_interval[]()
     i := 0
     for i < len(active) {
         if active[i].end >= point {
@@ -162,8 +162,8 @@ func assigned_reg(reg_assign[] assigns, int value_id) string {
 
 func run_regalloc(ssa_func f, int reg_count) regalloc_result {
     ivs := compute_live_intervals(f)
-    assigns := []reg_assign{}
-    active := []live_interval{}
+    assigns := reg_assign[]()
+    active := live_interval[]()
     spills := 0
     i := 0
     for i < len(ivs) {
@@ -176,7 +176,7 @@ func run_regalloc(ssa_func f, int reg_count) regalloc_result {
             continue
         }
         if len(active) < reg_count {
-            used := []string{}
+            used := string[]()
             ai := 0
             for ai < len(active) {
                 r := assigned_reg(assigns, active[ai].value_id)

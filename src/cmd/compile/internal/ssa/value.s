@@ -17,11 +17,11 @@ func make_value(int id, string name, string op, string ty, int[] args, string li
 }
 
 func int_args0() int[] {
-    []int{}
+    int[]()
 }
 
 func int_args1(int a) int[] {
-    args := []int{}
+    args := int[]()
     append(args, a)
     args
 }

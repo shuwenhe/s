@@ -33,7 +33,7 @@ func fact_non_zero(prove_fact[] facts, int id) bool {
 }
 
 func run_prove(ssa_func f) prove_fact[] {
-    facts := []prove_fact{}
+    facts := prove_fact[]()
     i := 0
     for i < len(f.values) {
         v := f.values[i]

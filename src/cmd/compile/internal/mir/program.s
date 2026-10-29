@@ -435,7 +435,7 @@ func lower_mir_program_with_globals(string package_name, string entry_symbol, mi
     entry := mir_program_function_index(functions, entry_symbol)
     if entry < 0 { result.error = "entry function not found: " + entry_symbol; return result }
     if functions[entry].external { result.error = "entry function has no body: " + entry_symbol; return result }
-    calls := []mir_program_call{}
+    calls := mir_program_call[]()
     i = 0
     for i < len(functions) {
         error := mir_program_function_error_with_globals(functions[i], functions, enums, records, globals)

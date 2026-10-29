@@ -16,7 +16,7 @@ struct wrap_info_blob {
 }
 
 func emit_arg_info(string fn_name, abi_param_desc[] in_params) arg_info_blob {
-    bytes := []int{}
+    bytes := int[]()
     i := 0
     for i < len(in_params) {
         bytes = append_param_encoding(bytes, in_params[i])
@@ -63,7 +63,7 @@ func emit_wrapped_func_info(string fn_name, string wrapped_name) wrap_info_blob 
 }
 
 func emit_ssa_funcdata(string fn_name, abi_param_desc[] params, string wrapped_name) string[] {
-    out := []string{}
+    out := string[]()
     arg_info := emit_arg_info(fn_name, params)
     out = append(out, "FUNCDATA_ArgInfo=" + arg_info.symbol_name)
     if wrapped_name != "" {

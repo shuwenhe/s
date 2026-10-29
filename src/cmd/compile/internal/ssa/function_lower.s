@@ -103,8 +103,8 @@ func lower_function_mir_to_ssa(mir_program program) function_ssa_result {
     }
     result := function_ssa_result { program: empty_program, error: function_mir_input_error(program) }
     if result.error != "" { return result }
-    output_functions := []function_ssa_function{}
-    output_calls := []function_ssa_call{}
+    output_functions := function_ssa_function[]()
+    output_calls := function_ssa_call[]()
     f := 0
     for f < len(program.functions) {
         input_function := program.functions[f]

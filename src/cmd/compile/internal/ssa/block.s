@@ -9,9 +9,9 @@ struct ssa_bb {
 }
 
 func make_block(int id, string kind) ssa_bb {
-    values := []int{}
-    preds := []int{}
-    succs := []int{}
+    values := int[]()
+    preds := int[]()
+    succs := int[]()
     return ssa_bb {
         id id, kind kind, values values, preds preds, succs succs,
         control 0

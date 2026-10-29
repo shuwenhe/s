@@ -150,6 +150,18 @@ func append_from_block(identifier_info[] initial_values, compile.internal.ast.bl
 func append_from_stmt(identifier_info[] initial_values, compile.internal.ast.stmt statement) identifier_info[] {
     acc := initial_values
     switch statement {
+        stmt.store(value): {
+            acc = append_from_expr(acc, value.target)
+            acc = append_from_expr(acc, value.value)
+        }
+        stmt.multi(value): {
+            i := 0
+            for i < len(value.targets) {
+                acc = append_from_expr(acc, value.targets[i])
+                i = i + 1
+            }
+            acc = append_from_expr(acc, value.value)
+        }
         stmt.continue(_) : (),
         stmt.break(_) : (),
         stmt.let(value): acc = append_from_expr(acc, value.value),
@@ -180,6 +192,14 @@ func append_from_stmt(identifier_info[] initial_values, compile.internal.ast.stm
 func append_from_expr(identifier_info[] initial_values, compile.internal.ast.expr expression) identifier_info[] {
     acc := initial_values
     switch expression {
+        expr.tuple(value): {
+            i := 0
+            for i < len(value.items) { acc = append_from_expr(acc, value.items[i]); i = i + 1 }
+        }
+        expr.record(value): {
+            i := 0
+            for i < len(value.field_values) { acc = append_from_expr(acc, value.field_values[i]); i = i + 1 }
+        }
         expr.name(value): acc = append(acc, identifier_info { identifier_text: value.name, is_qualified: false }),
         expr.member(value): {
             path := qualified_expr_path_gate(value)

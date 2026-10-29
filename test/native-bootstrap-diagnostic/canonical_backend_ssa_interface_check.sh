@@ -47,8 +47,9 @@ struct ssa_program {}
 '''
 for marker,value in [('ARCH',rhs('arch')),('BUILDER',rhs('ssa_program')),('TEXT',rhs('ssa_text')),('DEBUG',rhs('debug_map'))]: source=source.replace(marker,value)
 for i,call in enumerate(abi_calls):source=source.replace('ABI'+str(i),call)
-source+=''.join(header(ssa,n) for n in ['build_pipeline_with_graph_hints_and_margin','dump_pipeline','dump_debug_map'])
+source+=''.join(header(ssa,n) for n in ['build_pipeline','build_pipeline_with_graph_hints','build_pipeline_with_graph_hints_and_margin','dump_pipeline','dump_debug_map'])
 source+='package compile.internal.abi\nstruct abi_param_result_info {}\n'+''.join(header(abi,n) for n in abi_names)
+source+='\n'+(root/'src/cmd/compile/internal/ssa/ssa.s').read_text()+'\n'
 (work/'contract.s').write_text(source)
 # Extract production semantic dependencies; only the test record schemas above
 # are isolated. API declarations and backend call expressions come from source.
