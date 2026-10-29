@@ -3638,7 +3638,7 @@ func types_compatible(string left, string right) bool {
     if is_nil(right) {
         return is_nilable_type(left)
     }
-    compile.internal.typesys.assignable_type(left, right) || compile.internal.typesys.compatible_type(left, right)
+    return compile.internal.typesys.assignable_type(left, right) || compile.internal.typesys.compatible_type(left, right)
 }
 
 func nil_comparable_pair(string left, string right) bool {
