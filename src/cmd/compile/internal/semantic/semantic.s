@@ -2151,11 +2151,14 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
         }
         expr.member(value) : {
             enum_path := qualified_expr_path(expr)
-            if is_unknown(lookup_name_type(env, extract_module_root(enum_path))) && canonical_enum_index(qualified_package_part(enum_path), declarations) >= 0 {
+            root_type := lookup_name_type(env, extract_module_root(enum_path))
+            if (is_unknown(root_type) || root_type == "module") && canonical_enum_index(qualified_package_part(enum_path), declarations) >= 0 {
                 return canonical_enum_constructor(enum_path, string[](), expected_return, declarations, source, diagnostics)
             }
-            constant_type := lookup_name_type(env, qualified_expr_path(expr))
-            if !is_unknown(constant_type) { return ok_type(constant_type) }
+            if is_unknown(root_type) || root_type == "module" {
+                constant_type := lookup_name_type(env, enum_path)
+                if !is_unknown(constant_type) { return ok_type(constant_type) }
+            }
             target := infer_expr_in_scope(value.target.value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope)
             field_type := canonical_record_field_type(target.type_name, value.member, declarations)
             if field_type == "" { field_type = compile.internal.prelude.lookup_builtin_field_type(target.type_name, value.member) }
@@ -2231,7 +2234,8 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                 expr.member(member) : {
                     qualified_path := qualified_expr_path(value.callee.value)
                     enum_type := qualified_package_part(qualified_path)
-                    if is_unknown(lookup_name_type(env, extract_module_root(qualified_path))) && canonical_enum_index(enum_type, declarations) >= 0 {
+                    root_type := lookup_name_type(env, extract_module_root(qualified_path))
+                    if (is_unknown(root_type) || root_type == "module") && canonical_enum_index(enum_type, declarations) >= 0 {
                         constructor := canonical_enum_constructor(qualified_path, arg_types, expected_return, declarations, source, diagnostics)
                         return check_result { type_name: constructor.type_name, errors: errors + constructor.errors }
                     }

@@ -40,6 +40,10 @@ func main() int {
     check("package main\nfunc select(int value) int { return switch value { 0: 40, _: 42, } }", true)
     check("package main\nfunc unwrap(option[int] value) int { return switch value { option.some(payload): payload + true, option.none: 0, } }", false)
     check("package main\nfunc unwrap(option[int] value) int { return switch value { option.none: 0, } }", false)
+    check("package main\nfunc select(int value) int { return switch value { 0: 42, _: panic(\"bad\"), } }", true)
+    check("package main\nfunc select(int value) int { return switch value { 0: panic(\"bad\"), _: 42, } }", true)
+    check("package main\nfunc select(int value) int { return switch value { 0: panic(1), _: 42, } }", false)
+    check("package main\nfunc panic(string text) () {}\nfunc select(int value) int { return switch value { 0: 42, _: panic(\"bad\"), } }", false)
     return 42
 }
 S

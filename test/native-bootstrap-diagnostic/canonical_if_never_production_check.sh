@@ -40,6 +40,22 @@ for name in original break_then break_else continue_then continue_else return_th
     done
 done
 for body in \
+    'return switch input { 0: 42, _: panic("expected panic"), }' \
+    'return switch input { 0: panic("expected panic"), _: 42, }' \
+    'value := if input == 0 { 42 } else { panic("expected panic") }; return value'; do
+    printf 'package main\nfunc main(int input) int { %s }\n' "$body" > "$work/panic.s"
+    "$compiler" --compile-unit "$work/panic.sasm" "$work/panic.s"
+    "$compiler" --emit-bin "$work/panic.sasm" "$work/panic"
+    sh "$root/misc/scripts/verify_true_selfhost.sh" "$work/panic"
+    for input in 0 1; do
+        expected=42
+        case "$body" in *'0: panic'*) test "$input" -ne 0 || expected=101 ;; *) test "$input" -eq 0 || expected=101 ;; esac
+        status=0; timeout 10 "$work/panic" "$input" > "$work/panic.out" 2>&1 || status=$?
+        test "$status" -eq "$expected" || { echo "panic branch input=$input exit=$status expected=$expected" >&2; exit 1; }
+        if test "$expected" -eq 101; then rg -q 'expected panic' "$work/panic.out"; fi
+    done
+done
+for body in \
     'value := if input == 0 { 42 } else { true }; return 42' \
     'value := if input == 0 { true } else { 42 }; return 42' \
     'value := if input == 0 { () } else { 42 }; return 42'; do

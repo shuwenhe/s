@@ -3903,6 +3903,8 @@ func execute_block_in_place(block_expr block, source_file source, binding[] env,
 
 func execute_stmt(stmt stmt, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[(), backend_error] {
     return switch stmt {
+        compile.internal.ast.stmt.multi(_) : result.err(backend_error { message: "backend error: parallel assignments are not supported in the mvp backend" }),
+        compile.internal.ast.stmt.store(_) : result.err(backend_error { message: "backend error: aggregate stores are not supported in the mvp backend" }),
         compile.internal.ast.stmt.let(value) : {
             expr_result := eval_expr(value.value, source, env, writes, runtime)
             if value_result_is_err(expr_result) {
@@ -4069,6 +4071,8 @@ func execute_c_for_result(c_for_stmt value, source_file source, binding[] env, w
 
 func eval_expr(expr expr, source_file source, binding[] env, write_op[] writes, runtime_state runtime) result[value, backend_error] {
     return switch expr {
+        expr.tuple(_) : result.err(backend_error { message: "backend error: tuple expressions are not supported in the mvp backend" }),
+        expr.record(_) : result.err(backend_error { message: "backend error: record literals are not supported in the mvp backend" }),
         expr.int(int_expr) : result.ok(value.int(parse_int_literal(int_expr.value))),
         expr.string(string_expr) : result.ok(value.string(decode_string_literal(string_expr.value))),
         expr.bool(bool_expr) : result.ok(value.bool(bool_expr.value)),
@@ -5376,6 +5380,7 @@ func stringify_value(value value) string {
         },
         value.unit(_) : "()",
         value.channel(handle) : "<chan:" + std.prelude.to_string(handle.id) + ">",
+        value.owned_box(handle) : "<box:" + std.prelude.to_string(handle.id) + ">",
         value.fn_ref(name) : "<func:" + name + ">",
         value.fn_map(entries) : "<func-map:" + std.prelude.to_string(std.prelude.len(entries)) + ">",
     }

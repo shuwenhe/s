@@ -530,6 +530,9 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                 op: "call", result_ids: result_ids, result_types: result_types,
                 operands: args, integer_value: 0, symbol: symbol,
             })
+            if symbol == "__native_builtin.panic" {
+                return program_finish_block(state, "unreachable", int[](), int[]())
+            }
             return state
         }
         _ : { state.error = "unsupported P1: expression"; return state },

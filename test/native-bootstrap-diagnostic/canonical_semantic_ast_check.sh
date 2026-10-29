@@ -44,6 +44,10 @@ func main() int {
     check("package main\nfunc main(int value) int { return unknown }", false)
     check("package main\nenum Code { answer, answer, }\nfunc main() int { return 42 }", false)
     check("package main\nenum Code { answer, }\nfunc main() int { return Code.answer + 1 }", false)
+    check("package model.types\nenum Flag { off, on(bool), }\npackage main\nimport \"model.types\"\nfunc main() int { flag := model.types.Flag.on(true); return switch flag { model.types.Flag.on(v): if v { 42 } else { 0 }, model.types.Flag.off: 0, } }", true)
+    check("package model.types\nenum Code { answer = 42, }\npackage main\nimport \"model.types\"\nfunc main() int { return int(model.types.Code.answer) }", true)
+    check("package model.types\nenum Flag { off, on(bool), }\npackage main\nimport \"model.types\"\nfunc main() int { flag := model.types.Flag.on(1); return 42 }", false)
+    check("package model.types\nenum Code { answer = 42, }\npackage main\nimport \"model.types\"\nfunc main() int { model := 1; return int(model.types.Code.answer) }", false)
     return 42
 }
 S

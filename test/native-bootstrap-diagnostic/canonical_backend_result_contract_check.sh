@@ -17,7 +17,7 @@ def declaration(kind,name):
             depth-=1
             if depth==0: return backend[start:start+token.end()]+'\n'
     raise RuntimeError('unterminated declaration '+name)
-names=['ok_write_ops','fail_write_ops','ok_value','fail_value','ok_unit','fail_unit','ok_int','fail_int','add_values','numeric_binary','compare_values','ordered_compare','logical_binary','value_to_exit_code','parse_ssa_margin_override','parse_int_literal','digit_value']
+names=['ok_write_ops','fail_write_ops','ok_value','fail_value','ok_unit','fail_unit','ok_int','fail_int','add_values','numeric_binary','compare_values','ordered_compare','logical_binary','value_to_exit_code','parse_ssa_margin_override','parse_int_literal','digit_value','stringify_value']
 fixture='package compile.internal\nimport "std.result"\n'
 for name in ['backend_error','write_op','unit_value','fn_map_entry_value','channel_handle_value','owned_box_value']:
     fixture+=declaration('struct',name)
@@ -40,7 +40,7 @@ consumers=['write_result_is_err','write_result_error','write_result_value','valu
 (work/'consumers.s').write_text('package compile.internal\nimport "std.result"\n'+''.join(declaration('func',name) for name in consumers))
 (work/'result.s').write_text(result_enum)
 prelude=(root/'src/prelude/prelude.s').read_text();interfaces='package std.prelude\n'
-for name in ['len','char_at']:
+for name in ['len','char_at','to_string']:
     start=re.search(r'^func '+name+r'(?:\[.*?\])?\(',prelude,re.M).start();interfaces+='extern "intrinsic" '+prelude[start:prelude.index('{',start)].strip()+'\n'
 source=fixture+callers+result_enum+interfaces
 # Reuse the production semantic checker, retaining its dependency closure.
@@ -149,6 +149,8 @@ func main() int {
     if int_result_is_err(margin) || int_result_value(margin) != 42 { return 23 }
     bad_margin := parse_ssa_margin_override("x")
     if !int_result_is_err(bad_margin) { return 24 }
+    owned := value.owned_box(owned_box_value { id: 42, payload: value.unit(unit_value {}), live: true })
+    if stringify_value(owned) != "<box:42>" { return 25 }
     return 42
 }
 S

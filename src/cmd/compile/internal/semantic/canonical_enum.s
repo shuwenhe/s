@@ -336,8 +336,9 @@ func canonical_merge_const_inference(canonical_inference left, canonical_inferen
     return canonical_inference { type_name: inferred.type_name, diagnostics: diagnostics }
 }
 
-// Implicit printing functions have the same exact signatures and reserved
-// identities as their native MIR wrappers. Source declarations take precedence.
+// Implicit native functions use their source-level contracts. Panic terminates
+// execution even though its machine-level wrapper has no return value.
+// Source declarations take precedence.
 func canonical_native_builtin_functions(function_binding[] initial) function_binding[] {
     functions := initial
     names := ["println", "eprintln", "panic"];
@@ -350,7 +351,9 @@ func canonical_native_builtin_functions(function_binding[] initial) function_bin
             f = f + 1
         }
         if !declared {
-            functions = append(functions, function_binding { package_path: "__native_builtin", name: names[i], owner_type: "", has_receiver: false, receiver_mode: "value", generic_names: string[](), param_types: ["string"], return_type: "()" })
+            return_type := "()"
+            if names[i] == "panic" { return_type = "never" }
+            functions = append(functions, function_binding { package_path: "__native_builtin", name: names[i], owner_type: "", has_receiver: false, receiver_mode: "value", generic_names: string[](), param_types: ["string"], return_type: return_type })
         }
         i = i + 1
     }
