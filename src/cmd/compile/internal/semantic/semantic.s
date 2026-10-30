@@ -1865,7 +1865,7 @@ func check_stmt_in_scope(stmt stmt, type_binding[] env, borrow_record[] borrow_s
                     if is_borrow_expr(expr) {
                         return expr_result.errors + add_error(source, diagnostics, "e3053", "cannot return a reference to a local value because it does not live long enough", "return")
                     }
-                    if expected_return == "()" {
+                    if expected_return == "()" && !types_compatible(expected_return, expr_result.type_name) {
                         return expr_result.errors + add_error(source, diagnostics, "e3007", "unexpected return value", "return")
                     }
                     if !types_compatible(expected_return, expr_result.type_name) {
@@ -2991,14 +2991,14 @@ func canonical_binary_inference(string op, string left, string right) canonical_
         return canonical_inference { type_name: "bool", diagnostics: diagnostics }
     }
     if op == "==" || op == "!=" {
-        if !types_compatible(left, right) { diagnostics.push(semantic_error { code: "e3020", message: "equality compare requires same type", anchor: op }) }
+        if !types_compatible(left, right) { diagnostics.push(semantic_error { code: "e3020", message: "equality compare requires same type (left=" + left + ", right=" + right + ")", anchor: op }) }
         if !is_unknown(left) && !is_unknown(right) && !nil_comparable_pair(left, right) {
             if !compile.internal.typesys.comparable_type(left) || !compile.internal.typesys.comparable_type(right) { diagnostics.push(semantic_error { code: "e3039", message: "equality compare requires comparable types", anchor: op }) }
         }
         return canonical_inference { type_name: "bool", diagnostics: diagnostics }
     }
     if op == "&&" || op == "||" {
-        if !types_compatible("bool", left) || !types_compatible("bool", right) { diagnostics.push(semantic_error { code: "e3021", message: "logical op requires bool", anchor: op }) }
+        if !types_compatible("bool", left) || !types_compatible("bool", right) { diagnostics.push(semantic_error { code: "e3021", message: "logical op requires bool (left=" + left + ", right=" + right + ")", anchor: op }) }
         return canonical_inference { type_name: "bool", diagnostics: diagnostics }
     }
     return canonical_inference { type_name: "unknown", diagnostics: diagnostics }

@@ -586,6 +586,16 @@ func mir_program_type_supported(string type_name, mir_program_record[] records, 
     return false
 }
 
+// References nested in containers or tuples cannot escape through results.
+func mir_program_contains_reference(string type_name) bool {
+    i := 0
+    for i < len(type_name) {
+        if __host_slice(type_name, i, i + 1) == "&" { return true }
+        i = i + 1
+    }
+    return false
+}
+
 func mir_program_reference_element(string type_name) string {
     if len(type_name) > 4 && __host_slice(type_name, 0, 4) == "&mut" { return __host_slice(type_name, 4, len(type_name)) }
     if len(type_name) > 1 && __host_slice(type_name, 0, 1) == "&" { return __host_slice(type_name, 1, len(type_name)) }

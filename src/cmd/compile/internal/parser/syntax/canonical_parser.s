@@ -708,6 +708,14 @@ func canonical_var_binding(canonical_parser initial) bool {
     return state.token == "="
 }
 
+func canonical_typed_binding(canonical_parser initial) bool {
+    if !canonical_ident(initial.token) && initial.token != "(" && initial.token != "[" && initial.token != "&" { return false }
+    state := canonical_parse_type(initial)
+    if state.error != "" || !canonical_ident(state.token) { return false }
+    state = canonical_advance(state)
+    return state.token == "="
+}
+
 func canonical_control_statement_start(string token) bool {
     return token == "if" || token == "for" || token == "while" || token == "switch" || token == "{"
 }
@@ -744,6 +752,13 @@ func canonical_block(canonical_parser initial) canonical_parser {
             state = canonical_expect(canonical_advance(state), "=")
             state = canonical_expression(state, 1)
             statements.push(stmt.let(compile.internal.ast.var_stmt { name: name, type_name: option.none, value: state.expression }))
+        } else if canonical_typed_binding(state) {
+            state = canonical_parse_type(state)
+            type_name := state.text
+            name := state.token
+            state = canonical_expect(canonical_advance(state), "=")
+            state = canonical_expression(state, 1)
+            statements.push(stmt.let(compile.internal.ast.var_stmt { name: name, type_name: option.some(type_name), value: state.expression }))
         } else if state.token == "return" {
             return_line := state.token_line
             state = canonical_advance(state)

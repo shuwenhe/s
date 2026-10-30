@@ -372,6 +372,7 @@ selfhost-native-record-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/native_const_option_check.sh
 	@bash test/native-bootstrap-diagnostic/native_generic_pattern_ref_check.sh
 	@bash test/native-bootstrap-diagnostic/native_declaration_kind_check.sh
+	@bash test/native-bootstrap-diagnostic/native_mono_contains_check.sh
 	@bash test/native-bootstrap-diagnostic/native_mono_literal_type_check.sh
 	@bash test/native-bootstrap-diagnostic/native_mono_body_option_check.sh
 	@bash test/native-bootstrap-diagnostic/native_lower_entry_check.sh
@@ -425,6 +426,7 @@ selfhost-native-record-check: seed-compiler-bin
 
 .PHONY: selfhost-native-unit-check
 selfhost-native-unit-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_reference_type_check.sh
 	@bash test/native-bootstrap-diagnostic/native_unit_check.sh
 	@bash test/native-bootstrap-diagnostic/native_unit_pipeline_check.sh
 	@bash test/native-bootstrap-diagnostic/native_unit_ssa_check.sh
@@ -505,6 +507,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_if_never_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_statement_boundary_ast_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_statement_boundary_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_mono_memory_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_backend_result_contract_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_backend_ssa_interface_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_cfg_source_contract_check.sh

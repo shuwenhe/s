@@ -64,9 +64,10 @@ struct mono_context {
     mono_cache cache
     mono_work_item[] worklist
     string[] processed
-    function_decl[] generated
     compile.internal.semantic.declaration_ref[] declarations
-    source_file input_file
+    string[] input_names
+    string[] input_receivers
+    string[] input_packages
     string current_package
     int errors
     string error
@@ -77,7 +78,6 @@ func new_context() mono_context {
         cache: new_cache(),
         worklist: mono_work_item[] {},
         processed: string[] {},
-        generated: function_decl[] {},
         declarations: compile.internal.semantic.declaration_ref[] {},
     }
 }
@@ -87,7 +87,6 @@ func new_context_with_result(semantic_result result) mono_context {
         cache: new_cache(),
         worklist: mono_work_item[] {},
         processed: string[] {},
-        generated: function_decl[] {},
         declarations: result.declarations,
     }
 }
@@ -303,7 +302,22 @@ func verify_identity_threading(mono_context ctx) m1_identity_verification {
 func monomorphize_file(source_file file, semantic_result result) monomorphize_file_result {
 
     ctx := new_context_with_result(result)
-    ctx.input_file = file
+    // Keep only lookup metadata in the mutable traversal state. Carrying the
+    // AST here snapshots the complete compiler at every recursive visit.
+    source_index := 0
+    for source_index < len(file.items) {
+        name := ""
+        receiver := ""
+        switch file.items[source_index] {
+            item.function(f): name = f.sig.name,
+            item.method(m): { name = m.method.sig.name; receiver = m.receiver_type },
+            _: (),
+        }
+        ctx.input_names.push(name)
+        ctx.input_receivers.push(receiver)
+        ctx.input_packages.push(te_package(file, source_index))
+        source_index = source_index + 1
+    }
     extra_packages := string[]()
     extra_items := compile.internal.ast.item[]()
 
@@ -332,7 +346,6 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
                 continue
             }
             method_instance := specialize_method(method_source, work.type_args)
-            ctx.generated = append(ctx.generated, method_instance.method)
             ctx = collect_item_instances_ctx(item.method(method_instance), file.items, ctx)
             extra_items = append(extra_items, item.method(finalize_monomorphized_method(method_instance)))
             extra_packages = append(extra_packages, ctx.current_package)
@@ -345,7 +358,6 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
             }
 
             instance := specialize_function(source, work.type_args)
-            ctx.generated = append(ctx.generated, instance)
 
             ctx = collect_item_instances_ctx(item.function(instance), file.items, ctx)
 
@@ -524,9 +536,9 @@ func collect_call_instance_ctx(compile.internal.ast.call_expr call, item[] all_i
     if (generic_name == "len" || generic_name == "append") && len(call.type_args) == 0 && call.resolved_callee.is_none() { return ctx }
     source := find_generic_function(all_items, generic_name)
     declaration_index := mono_find_work_index(ctx, generic_name, "")
-    if declaration_index >= 0 && declaration_index < len(ctx.input_file.items) {
-        switch ctx.input_file.items[declaration_index] { item.function(v): source = v, _: () }
-        generic_name = te_package(ctx.input_file, declaration_index) + "." + source.sig.name
+    if declaration_index >= 0 && declaration_index < len(all_items) {
+        switch all_items[declaration_index] { item.function(v): source = v, _: () }
+        generic_name = ctx.input_packages[declaration_index] + "." + source.sig.name
     }
     if source.sig.name == "" || len(source.sig.generics) == 0 {
         return ctx
@@ -833,12 +845,12 @@ func verify_monomorphized_file(source_file file) int {
     for i < len(file.items) {
         switch file.items[i] {
             item.function(function_value) : {
-                if len(function_value.sig.generics) == 0 && contains_text(function_value.sig.name, "__mono") {
+                if len(function_value.sig.generics) == 0 && mono_contains_text(function_value.sig.name, "__mono") {
                     errors = errors + verify_function_no_generics(function_value)
                 }
             }
             item.method(method) : {
-                if len(method.method.sig.generics) == 0 && contains_text(method.method.sig.name, "__mono") {
+                if len(method.method.sig.generics) == 0 && mono_contains_text(method.method.sig.name, "__mono") {
                     errors = errors + verify_function_no_generics(method.method)
                 }
             }
@@ -1485,7 +1497,7 @@ func verify_monomorphized_file_with_details(source_file file) int {
     for i < len(file.items) {
         switch file.items[i] {
             item.function(function_value) : {
-                if contains_text(function_value.sig.name, "__mono") {
+                if mono_contains_text(function_value.sig.name, "__mono") {
 
                     errors = errors + verify_function_resolved_calls(function_value)
                 }
@@ -1668,14 +1680,11 @@ func mono_generic_identity(string identity) string {
 }
 func mono_find_work_index(mono_context ctx, string name, string receiver) int {
     found := -1; i := 0
-    for i < len(ctx.input_file.items) {
-        candidate_name := ""; candidate_receiver := ""
-        switch ctx.input_file.items[i] {
-            item.function(v): { if receiver == "" { candidate_name = v.sig.name } },
-            item.method(v): { if receiver != "" { candidate_name = v.method.sig.name; candidate_receiver = v.receiver_type } },
-            _: (),
-        }
-        pkg := te_package(ctx.input_file, i)
+    for i < len(ctx.input_names) {
+        candidate_name := ctx.input_names[i]
+        candidate_receiver := ctx.input_receivers[i]
+        if (receiver == "" && candidate_receiver != "") || (receiver != "" && candidate_receiver == "") { candidate_name = "" }
+        pkg := ctx.input_packages[i]
         owner_matches := receiver == "" || compile.internal.typesys.base_type_name(receiver) == compile.internal.typesys.base_type_name(candidate_receiver)
         if candidate_name != "" && owner_matches {
             if name == pkg + "." + candidate_name || (name == candidate_name && pkg == ctx.current_package) { return i }
@@ -1721,3 +1730,12 @@ func mono_expression_type(expr value) string {
 }
 
 func no_mono_type() option[string] { option.none }
+
+func mono_contains_text(string text, string needle) bool {
+    i := 0
+    for i + len(needle) <= len(text) {
+        if prelude_slice(text, i, i + len(needle)) == needle { return true }
+        i = i + 1
+    }
+    return false
+}

@@ -18,6 +18,7 @@ struct type_ref {
 
 func parse_type(string text) string {
     clean := typesys_normalize_type_text(typesys_trim_text(text))
+    if clean == "unit" { return "()" }
     if clean == "" {
         return "unknown"
     }

@@ -581,6 +581,7 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             if symbol == "__native_builtin.panic" {
                 return program_finish_block(state, "unreachable", int[](), int[]())
             }
+            if call_value < 0 { return program_emit_unit(state) }
             return state
         }
         _ : { state.error = "unsupported P1: expression"; return state },
@@ -896,22 +897,30 @@ func program_expression_uses_root(expr value, string root) bool {
         expr.binary(binary): program_expression_uses_root(binary.left.value, root) || program_expression_uses_root(binary.right.value, root),
         expr.call(call): {
             i := 0
-            for i < len(call.args) { if program_expression_uses_root(call.args[i], root) { return true }; i = i + 1 }
+            for i < len(call.args) { if program_expression_uses_root(call.args[i], root) { return true }
+                i = i + 1
+            }
             false
         }
         expr.record(record): {
             i := 0
-            for i < len(record.field_values) { if program_expression_uses_root(record.field_values[i], root) { return true }; i = i + 1 }
+            for i < len(record.field_values) { if program_expression_uses_root(record.field_values[i], root) { return true }
+                i = i + 1
+            }
             false
         }
         expr.array(array): {
             i := 0
-            for i < len(array.items) { if program_expression_uses_root(array.items[i], root) { return true }; i = i + 1 }
+            for i < len(array.items) { if program_expression_uses_root(array.items[i], root) { return true }
+                i = i + 1
+            }
             false
         }
         expr.tuple(tuple): {
             i := 0
-            for i < len(tuple.items) { if program_expression_uses_root(tuple.items[i], root) { return true }; i = i + 1 }
+            for i < len(tuple.items) { if program_expression_uses_root(tuple.items[i], root) { return true }
+                i = i + 1
+            }
             false
         }
         _: false,
