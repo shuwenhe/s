@@ -342,12 +342,14 @@ func te_add_requests(te_request[] initial_requests, string[] names, string pkg) 
 // Expand only reachable concrete declarations. A work item is registered before
 // visiting its fields, so recursive records terminate without dropping fields.
 func elaborate_generic_types(source_file file) type_elaboration_result {
+    trace := runtime_env_get("S_CANONICAL_TRACE", "") == "1"
     output := source_file { pkg: file.pkg, uses: file.uses, items: item[](), item_packages: string[]() }
     requests := te_request[]()
     instances := te_instance[]()
     aliases := te_alias[]()
     i := 0
     for i < len(file.items) {
+        if trace && i % 100 == 0 { eprintln("canonical: type collection " + std.prelude.to_string(i)) }
         value := file.items[i]
         if len(te_generics(value)) == 0 || te_decl_name(value) == "" {
             output.items.push(value)
@@ -358,6 +360,7 @@ func elaborate_generic_types(source_file file) type_elaboration_result {
     }
     cursor := 0
     for cursor < len(requests) {
+        if trace && cursor % 100 == 0 { eprintln("canonical: type request " + std.prelude.to_string(cursor)) }
         if cursor > 100000 { return type_elaboration_result { file: output, error: "generic type expansion does not terminate" } }
         request := requests[cursor]; cursor = cursor + 1
         text := compile.internal.typesys.parse_type(request.type_name)
@@ -424,6 +427,7 @@ func elaborate_generic_types(source_file file) type_elaboration_result {
     }
     i = 0
     for i < len(output.items) {
+        if trace && i % 100 == 0 { eprintln("canonical: type rewrite " + std.prelude.to_string(i)) }
         keys := string[](); values := string[](); j := 0
         for j < len(aliases) {
             alias := aliases[j]
@@ -468,6 +472,7 @@ func te_rewrite_path(string text, string[] keys, string[] values) string {
 // Prefer the containing package, then explicit qualification, then imported
 // declarations. An ambiguous import is an error, never first/last-match wins.
 func te_find_declaration(source_file file, string base, string pkg) int {
+    if compile.internal.typesys.is_builtin_primitive(base) { return -1 }
     i := 0
     for i < len(file.items) {
         name := te_decl_name(file.items[i]); owner := te_package(file, i)
@@ -501,11 +506,41 @@ func te_find_declaration(source_file file, string base, string pkg) int {
     found
 }
 func te_qualify_type(source_file file, string text, string pkg) string {
-    keys := string[](); values := string[](); i := 0
-    for i < len(file.items) {
-        name := te_decl_name(file.items[i])
-        if name != "" && te_find_declaration(file, name, pkg) == i { keys = append(keys, name); values = append(values, te_package(file, i) + "." + name) }
+    clean := compile.internal.typesys.parse_type(text)
+    if compile.internal.typesys.is_builtin_primitive(clean) { return clean }
+    if te_starts_with(clean, "&mut") { return "&mut " + te_qualify_type(file, prelude_slice(clean, 4, len(clean)), pkg) }
+    if te_starts_with(clean, "&") { return "&" + te_qualify_type(file, prelude_slice(clean, 1, len(clean)), pkg) }
+    if te_starts_with(clean, "*") { return "*" + te_qualify_type(file, prelude_slice(clean, 1, len(clean)), pkg) }
+    if te_ends_with(clean, "*") { return te_qualify_type(file, prelude_slice(clean, 0, len(clean)-1), pkg) + "*" }
+    if te_starts_with(clean, "[]") { return "[]" + te_qualify_type(file, prelude_slice(clean, 2, len(clean)), pkg) }
+    if te_ends_with(clean, "[]") { return te_qualify_type(file, prelude_slice(clean, 0, len(clean)-2), pkg) + "[]" }
+    wrapper := te_array_wrapper(clean)
+    if wrapper != "" { return te_qualify_type(file, prelude_slice(clean, 0, len(clean)-len(wrapper)), pkg) + wrapper }
+    if te_starts_with(clean, "[") {
+        close := find_char(clean, "]")
+        if close > 0 { return prelude_slice(clean, 0, close+1) + te_qualify_type(file, prelude_slice(clean, close+1, len(clean)), pkg) }
+    }
+    if compile.internal.typesys.is_tuple_type(clean) {
+        parts := compile.internal.typesys.extract_tuple_args(clean)
+        result := "("; i := 0
+        for i < len(parts) {
+            if i > 0 { result = result + "," }
+            result = result + te_qualify_type(file, parts[i], pkg)
+            i = i + 1
+        }
+        return result + ")"
+    }
+    base := compile.internal.typesys.base_type_name(clean)
+    declaration := te_find_declaration(file, base, pkg)
+    qualified := base
+    if declaration >= 0 { qualified = te_package(file, declaration) + "." + te_decl_name(file.items[declaration]) }
+    args := compile.internal.typesys.extract_type_args(clean)
+    if len(args) == 0 { return qualified }
+    result := qualified + "["; i := 0
+    for i < len(args) {
+        if i > 0 { result = result + "," }
+        result = result + te_qualify_type(file, args[i], pkg)
         i = i + 1
     }
-    te_rewrite_type(text, keys, values)
+    return result + "]"
 }

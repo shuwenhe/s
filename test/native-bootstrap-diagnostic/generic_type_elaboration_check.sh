@@ -100,6 +100,21 @@ func main() int {
         },
         _: return 37,
     }
+    qualification_source := "package layouts\n"
+    qi := 0
+    for qi < 2000 {
+        qualification_source = qualification_source + "struct Record" + std.prelude.to_string(qi) + " { int value }\n"
+        qi = qi + 1
+    }
+    qualification_file, qualification_error := compile.internal.syntax.parse_source(qualification_source)
+    if qualification_error.message != "" { return 80 }
+    qi = 0
+    for qi < 500 {
+        qualification_file.uses.push(compile.internal.ast.use_decl { path: "unused.pkg" + std.prelude.to_string(qi), alias: option.none })
+        qi = qi + 1
+    }
+    if compile.internal.mono.te_qualify_type(qualification_file, "int", "client") != "int" { return 81 }
+    if compile.internal.mono.te_qualify_type(core, "(Widget[],core.box[Widget])", "client") != "(client.Widget[],core.box[client.Widget])" { return 82 }
     return 42
 }
 S
@@ -123,5 +138,5 @@ for name in ['declaration_kind','declaration_ref','const_binding','function_bind
 PY
 "$root/bin/s_seed" --compile-native-unit "$work/test.ir" "$root/src/option/option.s" "$root/src/result/result.s" "$root/src/prelude/prelude.s" "$root/src/fs/fs.s" "$root/src/cmd/compile/internal/ast/ast.s" "$root/src/cmd/compile/internal/parser/syntax/syntax.s" "$root/src/cmd/compile/internal/parser/syntax/canonical_parser.s" "$root/src/cmd/compile/internal/typesys/typesys.s" "$work/semantic_metadata.s" "$root/src/cmd/compile/internal/mono/monomorphization.s" "$root/src/cmd/compile/internal/mono/type_elaboration.s" "$work/main.s"
 S_SOURCE_ROOT="$root" "$root/bin/s_seed" --emit-standalone-amd64 "$work/test.ir" "$work/test"
-status=0; "$work/test" || status=$?; echo "native-status=$status"; test "$status" -eq 42
+status=0; timeout 30 "$work/test" || status=$?; echo "native-status=$status"; test "$status" -eq 42
 echo 'reachable generic records/enums elaborate natively: PASS'

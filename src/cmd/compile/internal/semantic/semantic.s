@@ -3381,6 +3381,11 @@ func specialized_instance_name(function_binding binding, type_binding[] bindings
     name := binding.name
     if binding.has_receiver {
         name = instantiate_type(binding.owner_type, binding.generic_names, bindings) + "." + name
+    } else if binding.package_path != "" {
+        // Cross-package calls resolve through the package-qualified instance
+        // identity; unqualified names would be re-qualified with the caller's
+        // package during IR lowering and fail callee resolution.
+        name = binding.package_path + "." + name
     }
     if std.prelude.len(binding.generic_names) == 0 {
         return name

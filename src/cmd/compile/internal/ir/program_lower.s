@@ -321,7 +321,19 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             target = state.expression_value
             array_type := program_expression_type(state, state.signature, target)
             element := mir_program_array_element(array_type)
-            if element == "" { state.error = "index requires an array"; return state }
+            if element == "" {
+                if array_type == "string" {
+                    state = program_lower_expression(value.index.value, package_name, signatures, state)
+                    if state.error != "" { return state }
+                    index := state.expression_value
+                    id := state.next_value
+                    state.next_value = id + 1
+                    state.instructions = append(state.instructions, mir_program_instruction { op: "string_byte_at", result_ids: [id], result_types: ["int"], operands: [target, index] })
+                    state.expression_value = id
+                    return state
+                }
+                state.error = "index requires an array"; return state
+            }
             state = program_lower_expression(value.index.value, package_name, signatures, state)
             if state.error != "" { return state }
             index := state.expression_value
@@ -354,7 +366,7 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                 if global >= 0 { return program_read_global(global, state) }
                 if !program_environment_prefix(state.environment, package_name, path) {
                 if program_payload_has_path(state.payloads, package_name, path) { return program_payload_constructor(path, expr[](), package_name, signatures, state) }
-                return program_enum_constant(state, package_name, path)
+                if path != "" { return program_enum_constant(state, package_name, path) }
                 }
             }
             state = program_lower_expression(member.target.value, package_name, signatures, state)
@@ -1185,6 +1197,7 @@ func program_lower_if(if_expr branch, string package_name, mir_program_function[
         state.binding_values[i] = state.expression_value
         i = i + 1
     }
+    if branch.inferred_type.is_some() && branch.inferred_type.unwrap() == "()" { return program_emit_unit(state) }
     if then_live && else_live { state = program_emit_phi(state, then_result, else_result, then_end, else_end) }
     else if then_live { state.expression_value = then_result }
     else { state.expression_value = else_result }

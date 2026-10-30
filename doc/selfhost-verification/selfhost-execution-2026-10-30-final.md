@@ -24,13 +24,23 @@ Measured continuation evidence:
   constructors and signatures passes `canonical_nominal_layout_check.sh` with
   `.bootstrap/selfhost-nominal/stage1`.
 - The receiver regression then reproduced a qualified type-elaboration alias
-  losing its package. The alias fix still requires rebuilt-stage1 verification.
+  losing its package. The package-preserving alias fix passes rebuilt-stage1 receiver tests.
 - Nested `.push` reproduced `qualified call requires package identity`.
-  Lowering through existing named-place reconstruction is under verification.
+  Connecting the existing named-place reconstruction passes nested push/set/len execution tests.
 - The previous uncommitted native array capacity change reproduced a crash on
   append to a default array (139), and alias length corruption (43, expected 42).
-  The established persistent layout has been restored; regression verification
-  is pending.
+  The established persistent layout has been restored; default-array and saved-alias regressions pass.
 
 The ongoing decision and test ledger is
 `selfhost-plan-2026-10-30.md`. No stage3 has been installed by this continuation.
+
+Additional measured evidence:
+
+- Imported typed array constructors now preserve resolved element identities.
+- The original 1000-caller / 4000-field / 2 GiB / 120-second stress gate passes.
+- Full generic source-to-MIR regression passes.
+- Native SSA declaration contract checks pass. Unused external declarations
+  prune after validation; reachable unresolved calls and invalid unused source
+  reject while preserving existing output.
+- Clean source-stable acceptance run: `.bootstrap/selfhost-accept.log`.
+  Stage2/stage3 completion and convergence remain pending.

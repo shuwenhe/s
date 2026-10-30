@@ -158,3 +158,75 @@ emission. Raw native SSA tests GREEN for empty signatures, reference escapes,
 invalid sentinel state, declarations with bodies and definitions without bodies.
 The legacy interpreter function-SSA script also encounters missing-field errors
 on existing fixtures (successors); native contract tests are used for this gate.
+Scaling GREEN with output-push stage1: 1000 callers / 4000 fields within the
+original 2 GiB / 120-second gate. Full generic source-to-MIR regression GREEN.
+Code review found no important issue in nominal/array/type/specialization fixes
+or external SSA declaration handling. Minor deferred: raw SSA permits a
+bodyless global initializer, while MIR rejects it; source compilation remains
+protected and executable emission rejects retained externals. No acceptance
+criterion depends on that raw-only permissiveness.
+Fresh sentinel-stage1 acceptance regression sweep GREEN: all 46 scripts in the
+selfhost-canonical-production-check recipe pass; complete log:
+`.bootstrap/accept-production-checks.log`. Compiler source hashes remain equal
+to `.bootstrap/selfhost-accept/source-sha256`; the complete native stage2 run
+has passed parsing and semantic checking and is annotating calls.
+Concurrent workspace update detected: semantic.s specialized_instance_name now
+qualifies non-receiver callees by declaration package. Preserved the change.
+Focused RED reproducer confirms the old stage1 rejects an unqualified imported
+generic call (`unknown callee: main.identity__mono_int`), while its explicitly
+qualified equivalent executes with 42. Added package-specialization regression.
+This invalidates the running acceptance source snapshot; retain that run as a
+diagnostic probe and repeat final acceptance from the integrated stable sources.
+Integrated stage1 rebuilt from all 268 modules with the concurrent package fix;
+artifacts in `.bootstrap/selfhost-integrated`. The earlier full-source probe is
+still elaborating types; no diagnostic or stage2 artifact yet.
+Full probe reached MIR lowering and rejected the known ordinary imported callee:
+`compile.internal.abi.to_string` in `reg_string`. Its total elapsed time was
+28:38, peak RSS 2.52 GiB. Both ordinary and generic imported calls execute with
+the integrated package fix.
+Qualification scaling RED: 2000 nominal declarations / 500 irrelevant imports
+causes a primitive qualification request to time out at 30 seconds. Root cause:
+te_qualify_type rebuilt a map of every visible nominal name, resolving unrelated
+imports per declaration. Resolve only actual type components recursively, and
+skip primitive declaration lookup. Focused type-elaboration/qualification suite
+GREEN after repair, including nested arrays/tuples/generic arguments. Add optional
+collection/request/rewrite trace points to distinguish any remaining slow phase.
+Updated source-stable stage1 GREEN on all 47 canonical production scripts,
+including ordinary/generic imported calls; log:
+`.bootstrap/qualified-production-checks.log`. Full-source run is in annotation;
+its compiler source checksums still match the start snapshot.
+Qualified probe completed all frontend phases and reached MIR lowering in 18:02
+(previous 28:38), peak RSS 2.52 GiB. Next concrete failure:
+`index requires an array in compile.internal.abi.starts_with`. A concurrent
+program_lower.s edit already lowers string indexing to existing string_byte_at;
+preserved it and added a focused RED execution fixture covering single index
+evaluation, default/bounds behavior and UTF-8 byte distinctions. String indexing
+has semantic type u8, so tests compare indexed byte values directly. User has
+asked other compiler edits to pause for the final source-stable run.
+String-index stage1 GREEN on focused byte indexing (bounds/defaults/UTF-8 and
+single evaluation), package qualification and external declaration tests. All
+48 canonical production scripts GREEN; complete log:
+`.bootstrap/string-index-production-checks.log`. Current source-stable bootstrap:
+`.bootstrap/selfhost-string-index.log`.
+String-index probe passes the previous ABI failure; next MIR blocker is a
+discarded switch in ast.dump_function whose arms return string[] and unit.
+Semantic correctly types the discarded expression as unit, but lowering merges
+unused arm values anyway. Focused discarded-switch execution regression RED.
+Preserve all arm effects and binding phis; emit unit instead of a result phi only
+when the checked switch annotation is unit. Value-producing mismatches still
+reject in Semantic. Rebuild and repeat full-source bootstrap after verification.
+The same checked-unit result bug also reproduces in `if true { tick() }`: RED
+`phi input type mismatch`. Apply the same rule after merging binding updates in
+program_lower_if. Keep both-terminated handling and value-producing branch phis
+unchanged. Extended the focused test with taken/untaken effectful unit ifs.
+Checked-unit switch and if regressions GREEN with rebuilt unit-control stage1.
+Review found no correctness issue in never/live exit or binding-merge handling.
+A further concurrent diagnostic edit in program_payload.s invalidated this
+snapshot after stage1 built. To prevent repeated invalidation, continue the
+three-stage bootstrap in `.bootstrap/frozen-selfhost-source`, a copy of src,
+misc, test, makefile and the trusted seed. Root remains intact. Compare verified
+frozen sources against the checkout before final installation.
+Frozen stage1 GREEN on all 49 canonical production scripts (including discarded
+switch/unit-if regression); log:
+`.bootstrap/frozen-selfhost-source/.bootstrap/production-checks.log`.
+The isolated full-source bootstrap has passed Semantic and is annotating calls.

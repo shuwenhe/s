@@ -504,6 +504,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_array_methods_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_bool_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_cfg_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_discarded_switch_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_unit_shadow_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_tuple_tail_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_continue_production_check.sh
@@ -514,6 +515,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_mono_memory_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_mono_index_scaling_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_generic_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_package_specialization_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_receiver_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_unit_entry_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_reachability_production_check.sh
@@ -525,6 +527,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_backend_tuple_contract_check.sh
 	@bash test/native-bootstrap-diagnostic/seed_two_value_return_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_string_order_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_string_index_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_c_for_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_store_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_tuple_production_check.sh

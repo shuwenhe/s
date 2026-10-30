@@ -187,7 +187,8 @@ func program_switch_phi(program_switch_exit[] exits, int binding, program_lower_
     type_name := program_expression_type(state, state.signature, first)
     i = 1
     for i < len(operands) {
-        if program_expression_type(state, state.signature, operands[i]) != type_name { state.error = "switch branch type mismatch"; return state }
+        other_type := program_expression_type(state, state.signature, operands[i])
+        if other_type != type_name { state.error = "switch branch type mismatch: binding " + std.prelude.to_string(binding) + " (" + type_name + " vs " + other_type + ")"; return state }
         i = i + 1
     }
     id := state.next_value
@@ -268,5 +269,8 @@ func program_lower_switch(switch_expr value, string pkg, mir_program_function[] 
         state.binding_values[i] = state.expression_value
         i = i + 1
     }
+    // Semantic marks a discarded switch as unit. Its arms still execute and
+    // their binding updates merge, but their unused values need no common type.
+    if value.inferred_type.is_some() && value.inferred_type.unwrap() == "()" { return program_emit_unit(state) }
     return program_switch_phi(exits, -1, state)
 }
