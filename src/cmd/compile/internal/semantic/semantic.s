@@ -2101,8 +2101,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                 }
             }
             if is_unknown(ty) {
-                fn_candidates := lookup_functions_in_scope(functions, value.name, scope.package_path)
-                if std.prelude.len(fn_candidates) > 0 {
+                if has_function_in_scope(functions, value.name, scope.package_path) {
                     return ok_type("fn")
                 }
                 if value.name == "unit" && !has_duplicate_binding(env, value.name) { return ok_type("()") }
@@ -3155,6 +3154,20 @@ func lookup_functions_in_scope(function_binding[] functions, string name, string
     local := lookup_qualified_functions(functions, package_path, name)
     if len(local) > 0 { return local }
     return lookup_functions(functions, name)
+}
+
+func has_function_in_scope(function_binding[] functions, string name, string package_path) bool {
+    i := 0
+    for i < std.prelude.len(functions) {
+        fn := functions[i]
+        if !fn.has_receiver && fn.name == name {
+            if package_path == "" || fn.package_path == package_path {
+                return true
+            }
+        }
+        i = i + 1
+    }
+    false
 }
 
 func lookup_functions(function_binding[] functions, string name) function_binding[] {
