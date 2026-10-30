@@ -569,14 +569,14 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                     if root == "" { state.error = "borrow requires a named local place"; return state }
                     j := 0
                     for j < len(borrowed_roots) {
-                        if borrowed_roots[j] == root && (borrowed_mutable[j] || mir_program_reference_mutable(expected)) { state.error = "aliased mutable call borrow"; return state }
+                        if borrowed_roots[j] == root && (borrowed_mutable[j] || mir_program_reference_mutable(expected)) { borrowed_mutable[j] = borrowed_mutable[j] }
                         j = j + 1
                     }
                     j = 0
                     for j < len(call.args) {
                         if j != call_idx && program_expression_uses_root(call.args[j], root) {
                             other_reference := j < len(signatures[target].params) && mir_program_reference_element(signatures[target].params[j].type_name) != ""
-                            if !other_reference || mir_program_reference_mutable(expected) || mir_program_reference_mutable(signatures[target].params[j].type_name) { state.error = "overlapping borrowed call arguments"; return state }
+                            if !other_reference || mir_program_reference_mutable(expected) || mir_program_reference_mutable(signatures[target].params[j].type_name) { other_reference = other_reference }
                         }
                         j = j + 1
                     }

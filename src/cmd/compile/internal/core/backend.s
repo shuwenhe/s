@@ -2191,7 +2191,7 @@ func append_debug_ranges_section(string[] lines, source_file source, string ssa_
     for i < std.prelude.len(source.items) {
         switch source.items[i] {
             compile.internal.ast.item.function(fn_decl) : {
-                lo := 0x1000 + fn_idx * range_span
+                lo := 4096 + fn_idx * range_span
                 hi := lo + range_span
                 updated_lines = append(updated_lines, "  fn=" + fn_decl.sig.name + " range=[" + std.prelude.to_string(lo) + "," + std.prelude.to_string(hi) + ")")
                 if loops > 0 {

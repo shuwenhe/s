@@ -336,7 +336,7 @@ func resolve_identifier_to_candidates(string identifier, bool is_qualified, stri
         }
         
         
-        i = 0
+        i := 0
         for i < std.prelude.len(consts) {
             if consts[i].name == identifier {
                 candidates = append(candidates, name_resolution_candidate {

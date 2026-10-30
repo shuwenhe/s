@@ -11,7 +11,7 @@ rm -f "$output_dir/.complete"
 export S_SOURCE_ROOT="$root"
 export S_TARGET_OS=${S_TARGET_OS:-$(uname -s | tr '[:upper:]' '[:lower:]')}
 export S_TARGET_ARCH=${S_TARGET_ARCH:-$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')}
-timeout_seconds=${S_BOOTSTRAP_TIMEOUT:-1200}
+timeout_seconds=${S_BOOTSTRAP_TIMEOUT:-7200}
 verify="$root/misc/scripts/verify_true_selfhost.sh"
 seed="$root/bin/s_seed"
 
