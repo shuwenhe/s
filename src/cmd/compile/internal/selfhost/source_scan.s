@@ -6,7 +6,6 @@ extern "intrinsic" func __host_char_at(string text, int index) string;
 extern "intrinsic" func __host_byte_at(string text, int index) int;
 extern "intrinsic" func __host_byte_string(int value) string;
 extern "intrinsic" func __host_make_executable(string path) int;
-extern "intrinsic" func __host_slice(string text, int start, int end) string;
 
 func digit_text(int value) string {
     if value == 0 { return "0" }

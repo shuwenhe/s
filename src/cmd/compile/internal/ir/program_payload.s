@@ -65,16 +65,18 @@ func program_payload_index(program_payload_layout[] layouts, string symbol) int 
  i = i + 1 }
     return -1
 }
-func program_payload_index_unqualified(program_payload_layout[] layouts, string type_name) int {
+func program_payload_index_by_name(program_payload_layout[] layouts, string type_name) int {
     i := 0
     for i < len(layouts) {
         symbol := layouts[i].symbol
         last_dot := -1
         j := 0
         for j < len(symbol) { if __host_slice(symbol, j, j + 1) == "." { last_dot = j } j = j + 1 }
-        unqualified := symbol
-        if last_dot >= 0 { unqualified = __host_slice(symbol, last_dot + 1, len(symbol)) }
-        if unqualified == type_name { return i }
+        if last_dot >= 0 {
+            if __host_slice(symbol, last_dot + 1, len(symbol)) == type_name { return i }
+        } else {
+            if symbol == type_name { return i }
+        }
         i = i + 1
     }
     return -1
@@ -145,7 +147,7 @@ func program_pattern_condition(pattern pattern_value, expr subject, string type_
         }
         pattern.variant(variant): {
             index := program_payload_index(state.payloads, type_name)
-            if index < 0 { index = program_payload_index_unqualified(state.payloads, type_name) }
+            if index < 0 { index = program_payload_index_by_name(state.payloads, type_name) }
             if index < 0 {
                 constant := expr.name(name_expr { name: variant.path, inferred_type: option.none })
                 if len(variant.args) != 0 { output.error = "payload pattern on scalar enum"; return output }

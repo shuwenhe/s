@@ -7,7 +7,7 @@ import (
 enum token_kind {
     ident,
     int,
-    string,
+    str,
     keyword,
     symbol,
     eof,
@@ -23,7 +23,7 @@ struct token {
 func token_kind_name(token_kind kind) string {
     if kind == token_kind.ident { return "ident" }
     if kind == token_kind.int { return "int" }
-    if kind == token_kind.string { return "string" }
+    if kind == token_kind.str { return "string" }
     if kind == token_kind.keyword { return "keyword" }
     if kind == token_kind.symbol { return "symbol" }
     if kind == token_kind.eof { return "eof" }

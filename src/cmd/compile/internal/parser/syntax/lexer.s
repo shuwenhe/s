@@ -110,7 +110,6 @@ struct syntax_lexer {
 // The lexer owns value snapshots. Mutation uses proved record borrows;
 // neither the source string nor token storage requires an escaping pointer.
 extern "intrinsic" func __host_byte_at(string source, int index) int
-extern "intrinsic" func __host_slice(string source, int start, int end) string
 
 func lexer_new(string source) syntax_lexer {
     return syntax_lexer {
