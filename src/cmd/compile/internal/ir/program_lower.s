@@ -398,6 +398,7 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             if name.name == "unit" {
                 if name.inferred_type.is_none() || name.inferred_type.unwrap() == "()" { return program_emit_unit(state) }
             }
+            if program_is_qualified(name.name) { return program_enum_constant(state, package_name, name.name) }
             state.error = "undefined binding: " + name.name
             return state
         }
@@ -437,12 +438,32 @@ func program_lower_expression(expr expression, string package_name, mir_program_
         }
         expr.call(call) : {
             if len(call.type_args) != 0 { state.error = "generic call requires monomorphization"; return state }
+            
+            // Check for known method calls on compound types (result, option, array)
+            switch call.callee.value {
+                expr.member(member): {
+                    if member.member == "push" || member.member == "set" || member.member == "len" {
+                        return program_array_method(member, call.args, package_name, signatures, state)
+                    }
+                    if member.member == "is_ok" || member.member == "is_err" || member.member == "unwrap" || member.member == "unwrap_err" {
+                        receiver := program_lower_expression(member.target.value, package_name, signatures, state)
+                        if receiver.error != "" || receiver.terminated { return receiver }
+                        receiver = program_read_reference(receiver)
+                        target := receiver.expression_value
+                        type_name := program_expression_type(receiver, receiver.signature, target)
+                        if len(program_tuple_types(type_name)) > 0 {
+                            return program_lower_tuple_result_method(member.member, len(call.args), target, type_name, receiver)
+                        }
+                    }
+                },
+                _: (),
+            }
+            
             if call.resolved_callee.is_none() {
                 switch call.callee.value {
                     expr.member(member): {
-                        if member.member == "push" || member.member == "set" || member.member == "len" {
-                            return program_array_method(member, call.args, package_name, signatures, state)
-                        }
+                        // We've already handled known methods above, but if we're still here,
+                        // it might be an unresolved method call that should fall through
                     },
                     _: (),
                 }
@@ -523,11 +544,14 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             if program_is_qualified(path) {
                 if mir_program_function_index(signatures, path) >= 0 {
                     symbol = path
+                } else if symbol != "" && mir_program_function_index(signatures, symbol) >= 0 {
+                    // Use the resolved callee
+                } else if symbol == "" {
+                    // This might be a method call - try to find it in signatures
+                    symbol = path
                 } else {
-                    if !program_is_qualified(symbol) || mir_program_function_index(signatures, symbol) < 0 {
-                        state.error = "qualified call requires package identity: " + path
-                        return state
-                    }
+                    state.error = "qualified call requires package identity: " + path
+                    return state
                 }
             } else {
                 if symbol == "" { symbol = path }
@@ -1479,7 +1503,50 @@ func program_add_tuple_record(string type_name, mir_program_record[] initial) mi
         names = append(names, "_" + std.prelude.to_string(i))
         i = i + 1
     }
+    // Preserve both explicit payloads. The status is separate from their
+    // values, matching the seed's successful explicit-pair representation.
+    if len(types) == 2 { names.push("__variant"); types.push("int") }
     return append(records, mir_program_record { symbol: type_name, field_names: names, field_types: types })
+}
+
+func program_lower_tuple_result_method(string method, int argument_count, int target, string type_name, program_lower_state initial) program_lower_state {
+    state := initial
+    if argument_count != 0 { state.error = "tuple result method takes no arguments"; return state }
+    if len(program_tuple_types(type_name)) != 2 { state.error = "result methods require a two-element tuple"; return state }
+    record_index := mir_program_record_index(state.records, type_name)
+    if record_index < 0 { state.error = "missing tuple result layout"; return state }
+    record := state.records[record_index]
+    tag_index := mir_program_record_field_index(record, "__variant")
+    if tag_index < 0 { state.error = "missing tuple result status"; return state }
+    if len(record.field_names) != 3 || len(record.field_types) != 3 || tag_index != 2 || record.field_names[0] != "_0" || record.field_names[1] != "_1" { state.error = "invalid tuple result layout"; return state }
+    if record.field_types[tag_index] != "int" { state.error = "invalid tuple result status type"; return state }
+    tag := state.next_value; state.next_value = tag + 1
+    state.instructions.push(mir_program_instruction { op: "record_get", result_ids: [tag], result_types: ["int"], operands: [target], symbol: type_name, integer_value: tag_index })
+    zero := state.next_value; state.next_value = zero + 1
+    state.instructions.push(mir_program_instruction { op: "const_int", result_ids: [zero], result_types: ["int"], operands: int[](), integer_value: 0 })
+    op := "cmp_ne"
+    if method == "is_ok" || method == "unwrap_err" { op = "cmp_eq" }
+    condition := state.next_value; state.next_value = condition + 1
+    state.instructions.push(mir_program_instruction { op: op, result_ids: [condition], result_types: ["bool"], operands: [tag, zero] })
+    state.expression_value = condition
+    if method == "is_ok" || method == "is_err" { return state }
+    state = program_new_block(state); failure := state.created_block
+    state = program_new_block(state); success := state.created_block
+    state = program_finish_block(state, "branch", [condition], [failure, success])
+    state = program_open_block(state, failure)
+    message := "called unwrap on an error result"
+    if method == "unwrap_err" { message = "called unwrap_err on an ok result" }
+    text := state.next_value; state.next_value = text + 1
+    state.instructions.push(mir_program_instruction { op: "const_string", result_ids: [text], result_types: ["string"], operands: int[](), symbol: message })
+    state.instructions.push(mir_program_instruction { op: "native_intrinsic", result_ids: int[](), result_types: string[](), operands: [text], symbol: "panic" })
+    state = program_finish_block(state, "unreachable", int[](), int[]())
+    state = program_open_block(state, success)
+    field := 0
+    if method == "unwrap_err" { field = 1 }
+    value := state.next_value; state.next_value = value + 1
+    state.instructions.push(mir_program_instruction { op: "record_get", result_ids: [value], result_types: [record.field_types[field]], operands: [target], symbol: type_name, integer_value: field })
+    state.expression_value = value
+    return state
 }
 
 func program_lower_three_part_for(compile.internal.ast.for_expr for_value, string package_name, mir_program_function[] signatures, program_lower_state initial) program_lower_state {

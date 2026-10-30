@@ -52,10 +52,6 @@ func program_enum_type(string type_name, string package_name, mir_program_enum[]
 
 func program_enum_constant(program_lower_state initial, string package_name, string path) program_lower_state {
     state := initial
-    if path == "" {
-        state.error = "internal error: empty path in enum constant lookup for package " + package_name
-        return state
-    }
     e := 0
     for e < len(state.enums) {
         enumeration := state.enums[e]
@@ -74,6 +70,6 @@ func program_enum_constant(program_lower_state initial, string package_name, str
         }
         e = e + 1
     }
-    state.error = "unknown enum member: " + path + " in " + package_name
+    state.error = "unknown enum member: " + path
     return state
 }

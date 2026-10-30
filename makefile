@@ -496,6 +496,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_semantic_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_mir_public_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_enum_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_scalar_enum_switch_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_external_contract_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_external_reachability_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_record_production_check.sh
@@ -532,6 +533,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_c_for_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_store_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_tuple_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_tuple_result_methods_check.sh
 
 .PHONY: selfhost-native-memory-check
 selfhost-native-memory-check: compiler

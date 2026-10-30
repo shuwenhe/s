@@ -236,3 +236,29 @@ received a guard against empty qualified-name paths (28c535213). Verified RED
 with a global Entry[] read/store/snapshot/single-evaluation regression. Integrated
 that root guard plus its diagnostic change into the frozen copy; next run uses a
 fresh native-global-index output directory and new source checksums.
+Global indexed-member regression GREEN on rebuilt native-global-index stage1.
+Review proactively found the next closure-relevant defect: scalar enum patterns
+are represented as qualified expr.name values, but ordinary name lowering never
+resolved enum constants. Focused explicit-discriminant switch regression RED
+(undefined binding main.Kind.one). Resolve qualified enum names only after
+local/constant/global lookup, preserving nominal enum typing. Added regression
+for negative/large tags and rejection of patterns from another enum. Integrated
+this fix into the frozen copy before replaying the full-source chain.
+Scalar-pattern stage1 GREEN on focused scalar enums (explicit negative/large
+discriminants and wrong-enum rejection), global indexed members, discarded
+switches and unit ifs. Full replay in frozen copy:
+`.bootstrap/scalar-pattern-bootstrap.log`, output `.bootstrap/native-scalar-pattern`.
+Frozen scalar-pattern stage1 GREEN on all 51 canonical production scripts;
+log `.bootstrap/frozen-selfhost-source/.bootstrap/scalar-production-checks.log`.
+Source checksums for the full-source replay remain unchanged.
+Next full-source MIR blocker is a legacy result method on a tuple return in
+build_object: `source_result.is_err`. Semantic accepts these builtin pair
+methods but canonical lowering only handled resolved nominal result methods.
+Seed's explicit tuple representation preserves both payloads and status zero;
+its FS bridge supplies actual failure status separately. Added a hidden status
+word only at the end of two-element tuple records (positional fields unchanged),
+and lower unresolved pair methods with one receiver evaluation, status checks,
+and panic on invalid unwrap. Do not infer status from error payloads or pretend
+to implement unresolved host APIs. Three-element tuple result methods remain
+explicitly unsupported because Seed nesting differs from canonical typing.
+Focused pair-method regression RED before repair; fresh native stage1 pending.
