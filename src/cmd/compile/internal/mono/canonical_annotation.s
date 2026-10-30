@@ -1,6 +1,8 @@
 package compile.internal.mono
 import ("compile.internal.ast"; "compile.internal.semantic"; "compile.internal.typesys"; "std.option"; "std.prelude")
 
+extern "intrinsic" func runtime_env_get(string key, string fallback) string
+
 // Checking validates the program; this pass records the same resolver decisions
 // on an explicitly reconstructed AST. No local checker mutation is relied on.
 struct canonical_annotation_result { source_file file; string error }
@@ -21,9 +23,17 @@ struct ca_expr_result { compile.internal.ast.expr value; string type_name; strin
 struct ca_block_result { compile.internal.ast.block_expr value; string error }
 struct ca_stmt_result { compile.internal.ast.stmt value; compile.internal.semantic.type_binding[] env; string error }
 
-func ca_infer(compile.internal.ast.expr value, ca_context ctx) compile.internal.semantic.check_result {
-    scope := compile.internal.semantic.semantic_scope { package_path: ctx.pkg, generic_names: ctx.generic_names, local_start: ctx.local_start, discard_result: ctx.discard_result, loop_depth: ctx.loop_depth }
-    compile.internal.semantic.infer_expr_in_scope(value, ctx.env, compile.internal.semantic.borrow_state_new(), ctx.expected, ctx.functions, ctx.traits, ctx.source, compile.internal.semantic.semantic_error[](), ctx.declarations, scope)
+func ca_infer(compile.internal.ast.expr value, ca_context ctx, bool discard_result) compile.internal.semantic.check_result {
+    // Extract the small scope independently so constructing it does not make
+    // the complete lookup context an escaping aggregate argument.
+    pkg := ctx.pkg; generic_names := ctx.generic_names
+    local_start := ctx.local_start; loop_depth := ctx.loop_depth
+    scope := compile.internal.semantic.semantic_scope { package_path: pkg, generic_names: generic_names, local_start: local_start, discard_result: discard_result, loop_depth: loop_depth }
+    // Finish allocations before passing the read-only lookup tables. A nested
+    // argument call otherwise forces evaluation-time copies of those tables.
+    borrows := compile.internal.semantic.borrow_state_new()
+    diagnostics := compile.internal.semantic.semantic_error[]()
+    compile.internal.semantic.infer_expr_in_scope(value, ctx.env, borrows, ctx.expected, ctx.functions, ctx.traits, ctx.source, diagnostics, ctx.declarations, scope)
 }
 func ca_bad(compile.internal.ast.expr value, string error) ca_expr_result { ca_expr_result { value: value, type_name: "unknown", error: error } }
 func ca_child(compile.internal.ast.expr value, ca_context ctx, string expected) ca_expr_result {
@@ -85,7 +95,7 @@ func ca_stmt(compile.internal.ast.stmt original, ca_context ctx) ca_stmt_result 
  v.value = option.some(child.value) }, option.none: () }
             value = stmt.return(v)
         },
-        stmt.expr(v): { discarded := ctx; discarded.discard_result = true; child := ca_expr(v.expr, discarded); if child.error != "" { return ca_stmt_result { value: value, env: ctx.env, error: child.error } }
+        stmt.expr(v): { child := ca_expr_in_scope(v.expr, ctx, true); if child.error != "" { return ca_stmt_result { value: value, env: ctx.env, error: child.error } }
  v.expr = child.value; value = stmt.expr(v) },
         stmt.defer(v): { child := ca_expr(v.expr, ctx); if child.error != "" { return ca_stmt_result { value: value, env: ctx.env, error: child.error } }
  v.expr = child.value; value = stmt.defer(v) },
@@ -108,14 +118,18 @@ func ca_stmt(compile.internal.ast.stmt original, ca_context ctx) ca_stmt_result 
         },
     }
     scope := compile.internal.semantic.semantic_scope { package_path: ctx.pkg, generic_names: ctx.generic_names, local_start: ctx.local_start, discard_result: ctx.discard_result, loop_depth: ctx.loop_depth }
-    checked := compile.internal.semantic.check_stmt_with_env_in_scope(original, ctx.env, compile.internal.semantic.borrow_state_new(), ctx.expected, ctx.functions, ctx.traits, ctx.source, compile.internal.semantic.semantic_error[](), ctx.declarations, scope)
+    borrows := compile.internal.semantic.borrow_state_new()
+    diagnostics := compile.internal.semantic.semantic_error[]()
+    checked := compile.internal.semantic.check_stmt_with_env_in_scope(original, ctx.env, borrows, ctx.expected, ctx.functions, ctx.traits, ctx.source, diagnostics, ctx.declarations, scope)
     if checked.errors != 0 { return ca_stmt_result { value: value, env: ctx.env, error: "semantic environment reconstruction failed" } }
     ca_stmt_result { value: value, env: checked.env, error: "" }
 }
 func ca_expr(compile.internal.ast.expr original, ca_context ctx) ca_expr_result {
-    inferred := ca_infer(original, ctx)
+    return ca_expr_in_scope(original, ctx, false)
+}
+func ca_expr_in_scope(compile.internal.ast.expr original, ca_context ctx, bool discard_result) ca_expr_result {
+    inferred := ca_infer(original, ctx, discard_result)
     if inferred.errors != 0 { return ca_bad(original, "semantic type reconstruction failed in " + ctx.pkg) }
-    ctx.discard_result = false
     value := original
     ty := inferred.type_name
     switch value {
@@ -295,6 +309,7 @@ func ca_call(compile.internal.ast.call_expr original, compile.internal.semantic.
 }
 func annotate_canonical_calls(source_file original, compile.internal.semantic.semantic_result checked, string source) canonical_annotation_result {
     file := original
+    trace := runtime_env_get("S_CANONICAL_TRACE", "") == "1"
     ctx := ca_context { functions: checked.functions, traits: compile.internal.semantic.collect_traits(file), declarations: checked.declarations, env: compile.internal.semantic.type_binding[](), source: source, expected: "()", pkg: file.pkg }
     roots := compile.internal.semantic.collect_import_module_roots(file.uses)
     i := 0
@@ -313,13 +328,15 @@ func annotate_canonical_calls(source_file original, compile.internal.semantic.se
         value := file.items[i]
         switch value {
             item.function(f): {
+                if trace { eprintln("canonical: annotating " + local.pkg + "." + f.sig.name) }
                 local = ca_function_context(f, local)
                 switch f.body { option.some(b): { body := ca_block(b, local); if body.error != "" { return canonical_annotation_result { file: file, error: body.error + " in " + local.pkg + "." + f.sig.name } }
  f.body = option.some(body.value) }, option.none: () }
                 value = item.function(f)
             },
             item.method(m): {
-                local.env = append(local.env, compile.internal.semantic.type_binding { name: m.receiver_name, type_name: compile.internal.semantic.canonical_enum_type(compile.internal.typesys.parse_type(m.receiver_type), ctx.declarations) })
+                if trace { eprintln("canonical: annotating receiver " + local.pkg + "." + m.method.sig.name) }
+                local.env = append(local.env, compile.internal.semantic.type_binding { name: m.receiver_name, type_name: compile.internal.semantic.canonical_type_in_package(m.receiver_type, local.pkg, m.method.sig.generics, ctx.declarations) })
                 local = ca_function_context(m.method, local)
                 switch m.method.body { option.some(b): { body := ca_block(b, local); if body.error != "" { return canonical_annotation_result { file: file, error: body.error + " in receiver method " + m.method.sig.name } }
  m.method.body = option.some(body.value) }, option.none: () }
@@ -356,17 +373,6 @@ func ca_function_context(compile.internal.ast.function_decl function, ca_context
     ctx
 }
 
-func ca_receiver_identity(string type_name, string pkg) string {
-    clean := compile.internal.typesys.parse_type(type_name)
-    for te_starts_with(clean, "&") || te_starts_with(clean, "*") { clean = prelude_slice(clean, 1, len(clean)); if te_starts_with(clean, "mut") { clean = prelude_slice(clean, 3, len(clean)) } }
-    for te_ends_with(clean, "*") { clean = prelude_slice(clean, 0, len(clean)-1) }
-    base := compile.internal.typesys.base_type_name(clean)
-    if te_starts_with(base, pkg + ".") { return clean }
-    // Declaration methods belong to their package. The checker already selected
-    // the exact receiver binding, so this is qualification rather than guessing.
-    return pkg + "." + clean
-}
-
 // Receiver declarations become ordinary functions after specialization, with
 // the checked receiver made an explicit first parameter. Call finalization has
 // already inserted the matching receiver operand and nominal method identity.
@@ -377,7 +383,7 @@ func flatten_canonical_methods(source_file original) canonical_annotation_result
             item.method(method): {
                 if len(method.method.sig.generics) != 0 || mono_receiver_has_parameter(method.receiver_type, file) { return canonical_annotation_result { file: file, error: "receiver method still has generic parameters: " + method.method.sig.name } }
                 pkg := te_package(file, i)
-                owner := ca_receiver_identity(method.receiver_type, pkg)
+                owner := mono_receiver_identity(method.receiver_type, pkg)
                 if te_starts_with(owner, pkg + ".") { owner = prelude_slice(owner, len(pkg)+1, len(owner)) }
                 function := method.method
                 function.sig.name = owner + "." + function.sig.name

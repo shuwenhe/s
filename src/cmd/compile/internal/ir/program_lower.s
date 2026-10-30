@@ -642,6 +642,21 @@ func program_lower_function_with_environment(string package_name, function_decl 
 
 func lower_source_program(source_file initial) mir_program_result {
     src := program_with_global_initializers(initial)
+    entry_package := ""
+    entry_index := 0
+    for entry_index < len(src.items) {
+        switch src.items[entry_index] {
+            item.function(declaration): {
+                if declaration.sig.name == "main" {
+                    if entry_package != "" { return mir_program_result { error: "ambiguous entry: multiple main declarations" } }
+                    entry_package = program_item_package(src, entry_index)
+                }
+            }
+            _: (),
+        }
+        entry_index = entry_index + 1
+    }
+    if entry_package != "" { src.pkg = entry_package }
     empty := mir_program { package_name: src.pkg, entry_symbol: src.pkg + ".main", functions: mir_program_function[](), calls: mir_program_call[]() }
     result := mir_program_result { program: empty, error: "" }
     if len(src.item_packages) != 0 && len(src.item_packages) != len(src.items) {
@@ -713,7 +728,7 @@ func lower_source_program(source_file initial) mir_program_result {
             item.function(declaration) : {
                 if !program_repeated_external_contract(src, i, declaration, enums, records) {
                     lowered := program_lower_function_with_environment(program_item_package(src, i), declaration, signatures[len(functions)], signatures, enums, records, payloads, environment)
-                    if lowered.error != "" { result.error = lowered.error; return result }
+                    if lowered.error != "" { result.error = lowered.error + " in " + program_item_package(src, i) + "." + declaration.sig.name; return result }
                     records = lowered.records
                     functions = append(functions, lowered.function_value)
                 }

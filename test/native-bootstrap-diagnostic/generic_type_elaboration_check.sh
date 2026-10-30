@@ -7,6 +7,10 @@ cat > "$work/main.s" <<'S'
 package main
 import ("compile.internal.ast"; "compile.internal.syntax"; "compile.internal.mono")
 func main() int {
+    requests := compile.internal.mono.te_add_requests(compile.internal.mono.te_request[](), ["Box[int]", " Box[int] "], "left")
+    if len(requests) != 1 { eprintln("duplicate canonical type requests"); return 90 }
+    requests = compile.internal.mono.te_add_requests(requests, ["Box[int]"], "right")
+    if len(requests) != 2 { eprintln("distinct package type requests merged"); return 91 }
     source, error := compile.internal.syntax.parse_source("package demo\nstruct box[T] { T value; box[T][] children }\nenum option[T] { none, some(T) }\nfunc take(option[box[int]] value) box[int] { box[int] { value: 7, children: box[int][] {} } }\n")
     if error.message != "" { return 1 }
     result := compile.internal.mono.elaborate_generic_types(source)
@@ -111,10 +115,10 @@ semantic=(root/'src/cmd/compile/internal/semantic/semantic.s').read_text()
 def sf(n):
  start=semantic.index('func '+n+'('); end=semantic.find('\nfunc ',start+1); return semantic[start:end if end>=0 else len(semantic)]
 parts=[]
-for name in ['declaration_kind','declaration_ref','semantic_result','semantic_error']:
+for name in ['declaration_kind','declaration_ref','const_binding','function_binding','semantic_result','semantic_error']:
  marker=('enum ' if name=='declaration_kind' else 'struct ')+name+' {'
  start=semantic.index(marker); end=semantic.index('\n}',start)+2; parts.append(semantic[start:end])
-(out/'semantic_metadata.s').write_text('package compile.internal.semantic\nimport ("compile.internal.ast"; "std.prelude")\n'+'\n'.join(parts+[sf('declaration_ref_equal'),sf('qualified_expr_path')]))
+(out/'semantic_metadata.s').write_text('package compile.internal.semantic\nimport ("compile.internal.ast"; "std.prelude")\n'+'\n'.join(parts+[sf('declaration_ref_equal'),sf('qualified_expr_path'),sf('qualified_package_part'),sf('find_last_char')]))
 
 PY
 "$root/bin/s_seed" --compile-native-unit "$work/test.ir" "$root/src/option/option.s" "$root/src/result/result.s" "$root/src/prelude/prelude.s" "$root/src/fs/fs.s" "$root/src/cmd/compile/internal/ast/ast.s" "$root/src/cmd/compile/internal/parser/syntax/syntax.s" "$root/src/cmd/compile/internal/parser/syntax/canonical_parser.s" "$root/src/cmd/compile/internal/typesys/typesys.s" "$work/semantic_metadata.s" "$root/src/cmd/compile/internal/mono/monomorphization.s" "$root/src/cmd/compile/internal/mono/type_elaboration.s" "$work/main.s"

@@ -72,6 +72,53 @@ func ssa_function_index(function_ssa_function[] functions, string symbol) int {
     return -1
 }
 
+// Run only after validating the complete unit. Executables retain the entry,
+// every global initializer, and their transitive direct-call closure. Keep the
+// original function order so emission remains deterministic.
+func ssa_executable_program(function_ssa_program original) function_ssa_program {
+    live := int[]()
+    i := 0
+    for i < len(original.functions) { live.push(0); i = i + 1 }
+    entry := original.entry_symbol
+    pending := [entry];
+    g := 0
+    for g < len(original.globals) {
+        if original.globals[g].initializer != "" { pending.push(original.globals[g].initializer) }
+        g = g + 1
+    }
+    cursor := 0
+    for cursor < len(pending) {
+        symbol := pending[cursor]; cursor = cursor + 1
+        index := ssa_function_index(original.functions, symbol)
+        if index >= 0 && live[index] == 0 {
+            live[index] = 1
+            c := 0
+            for c < len(original.calls) {
+                edge := original.calls[c]
+                if edge.caller == symbol { pending.push(edge.callee) }
+                c = c + 1
+            }
+        }
+    }
+    functions := function_ssa_function[]()
+    i = 0
+    for i < len(original.functions) {
+        if live[i] != 0 { functions.push(original.functions[i]) }
+        i = i + 1
+    }
+    calls := function_ssa_call[]()
+    i = 0
+    for i < len(original.calls) {
+        edge := original.calls[i]
+        index := ssa_function_index(original.functions, edge.caller)
+        if index >= 0 && live[index] != 0 { calls.push(edge) }
+        i = i + 1
+    }
+    return function_ssa_program { globals: original.globals, records: original.records,
+        package_name: original.package_name, entry_symbol: original.entry_symbol,
+        functions: functions, calls: calls }
+}
+
 func ssa_block_index(function_ssa_block[] blocks, int id) int {
     i := 0
     for i < len(blocks) {

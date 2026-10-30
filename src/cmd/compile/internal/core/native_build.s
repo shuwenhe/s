@@ -16,6 +16,11 @@ func native_target_supported() bool {
 func native_program_assembly(mir_program program, bool executable) amd64_program_result {
     lowered := lower_function_mir_to_ssa(program)
     if lowered.error != "" { return amd64_program_result { assembly: "", error: lowered.error } }
+    if executable {
+        error := amd64_validate_program(lowered.program)
+        if error != "" { return amd64_program_result { assembly: "", error: error } }
+        lowered.program = ssa_executable_program(lowered.program)
+    }
     emitted := emit_function_ssa_amd64(lowered.program)
     if emitted.error != "" { return emitted }
     if executable {

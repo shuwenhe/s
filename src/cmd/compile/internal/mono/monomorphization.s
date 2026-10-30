@@ -8,6 +8,8 @@ import (
     "std.prelude"
 )
 
+extern "intrinsic" func runtime_env_get(string key, string fallback) string
+
 struct generic_instance_key {
     string function_name
     string[] type_args
@@ -300,7 +302,8 @@ func verify_identity_threading(mono_context ctx) m1_identity_verification {
 }
 
 func monomorphize_file(source_file file, semantic_result result) monomorphize_file_result {
-
+    trace := runtime_env_get("S_CANONICAL_TRACE", "") == "1"
+    if trace { eprintln("canonical: specialization indexing") }
     ctx := new_context_with_result(result)
     // Keep only lookup metadata in the mutable traversal state. Carrying the
     // AST here snapshots the complete compiler at every recursive visit.
@@ -323,12 +326,14 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
 
     i := 0
     for i < len(file.items) {
+        if trace && i % 100 == 0 { eprintln("canonical: specialization collection " + ctx.input_packages[i] + "." + ctx.input_names[i]) }
         ctx.current_package = te_package(file, i)
         if mono_item_is_concrete(file.items[i], file) { ctx = collect_item_instances_ctx(file.items[i], file.items, ctx) }
         i = i + 1
     }
 
     cursor := 0
+    if trace { eprintln("canonical: specialization instances") }
     for cursor < len(ctx.worklist) {
         work := ctx.worklist[cursor]
         cursor = cursor + 1
@@ -336,11 +341,13 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
         if is_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.type_args) {
             continue
         }
+        if trace { eprintln("canonical: specializing " + work.generic_name) }
         ctx = mark_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.type_args)
 
         if work.item_kind == "method" {
-            method_source := find_generic_method(file.items, work.receiver_type, work.generic_name)
+            method_source := receiver_method_decl {}
             if work.declaration_index >= 0 && work.declaration_index < len(file.items) { switch file.items[work.declaration_index] { item.method(v): method_source = v, _: () } }
+            else { method_source = find_generic_method(file.items, work.receiver_type, work.generic_name) }
             ctx.current_package = te_package(file, work.declaration_index)
             if method_source.method.sig.name == "" {
                 continue
@@ -350,8 +357,9 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
             extra_items = append(extra_items, item.method(finalize_monomorphized_method(method_instance)))
             extra_packages = append(extra_packages, ctx.current_package)
         } else {
-            source := find_generic_function(file.items, work.generic_name)
+            source := function_decl {}
             if work.declaration_index >= 0 && work.declaration_index < len(file.items) { switch file.items[work.declaration_index] { item.function(v): source = v, _: () } }
+            else { source = find_generic_function(file.items, work.generic_name) }
             ctx.current_package = te_package(file, work.declaration_index)
             if source.sig.name == "" {
                 continue
@@ -378,19 +386,20 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
         }
         i = i + 1
     }
-    file.items = stripped
-    file.item_packages = stripped_packages
-
     i = 0
     for i < len(extra_items) {
-        file.items = append(file.items, extra_items[i])
-        file.item_packages = append(file.item_packages, extra_packages[i])
+        stripped = append(stripped, extra_items[i])
+        stripped_packages = append(stripped_packages, extra_packages[i])
         i = i + 1
     }
 
+    // Keep the input graph read-only. Writing through the older parameter
+    // disables loop-region reclamation, retaining every traversal snapshot.
+    output := source_file { pkg: file.pkg, uses: file.uses, items: stripped, item_packages: stripped_packages }
+
     m1_verification := verify_identity_threading(ctx)
 
-    monomorphize_file_result { error: ctx.error, file: file, cache: ctx.cache, invariant_errors: verify_monomorphized_file(file) + ctx.errors, m1_gate: m1_verification }
+    monomorphize_file_result { error: ctx.error, file: output, cache: ctx.cache, invariant_errors: verify_monomorphized_file(output) + ctx.errors, m1_gate: m1_verification }
 }
 
 func should_keep_after_monomorphization(item value, source_file file) bool {
@@ -534,12 +543,15 @@ func collect_call_instance_ctx(compile.internal.ast.call_expr call, item[] all_i
     // Semantic and MIR give these exact unqualified builtins their own typed
     // operations, even when a generic prelude declaration is also in scope.
     if (generic_name == "len" || generic_name == "append") && len(call.type_args) == 0 && call.resolved_callee.is_none() { return ctx }
-    source := find_generic_function(all_items, generic_name)
     declaration_index := mono_find_work_index(ctx, generic_name, "")
+    // The index covers the complete source unit. Do not scan/unpack every AST
+    // declaration before using its exact answer (including a missing builtin).
+    if declaration_index < 0 && len(ctx.input_names) > 0 { return ctx }
+    source := function_decl {}
     if declaration_index >= 0 && declaration_index < len(all_items) {
         switch all_items[declaration_index] { item.function(v): source = v, _: () }
         generic_name = ctx.input_packages[declaration_index] + "." + source.sig.name
-    }
+    } else { source = find_generic_function(all_items, generic_name) }
     if source.sig.name == "" || len(source.sig.generics) == 0 {
         return ctx
     }
@@ -591,18 +603,38 @@ func collect_method_call_instance_ctx(compile.internal.ast.call_expr call, item[
         return ctx
     }
 
-    source := find_generic_method(all_items, receiver_type, method_name)
+    // Match the nominal owner chosen by Semantic, rather than comparing an
+    // unqualified declaration spelling with a qualified inferred receiver.
+    owner := ""
+    switch call.resolved_callee {
+        option.some(identity): owner = compile.internal.semantic.qualified_package_part(mono_generic_identity(identity)),
+        option.none: return ctx,
+    }
+    declaration_index := -1
+    i := 0
+    for i < len(ctx.input_names) {
+        if ctx.input_receivers[i] != "" && ctx.input_names[i] == method_name {
+            candidate := mono_receiver_identity(ctx.input_receivers[i], ctx.input_packages[i])
+            if compile.internal.typesys.base_type_name(candidate) == compile.internal.typesys.base_type_name(owner) { declaration_index = i; break }
+        }
+        i = i + 1
+    }
+    if declaration_index < 0 { return ctx }
+    source := receiver_method_decl {}
+    switch all_items[declaration_index] { item.method(value): source = value, _: return ctx }
     if source.method.sig.name == "" {
         return ctx
     }
 
-    existing := mono_cache_lookup_item(ctx.cache, "method", source.receiver_type, method_name, call.type_args)
-    result := mono_cache_get_or_create_item(ctx.cache, "method", source.receiver_type, method_name, call.type_args)
+    generic_name := ctx.input_packages[declaration_index] + "." + method_name
+    receiver_identity := mono_receiver_identity(source.receiver_type, ctx.input_packages[declaration_index])
+    existing := mono_cache_lookup_item(ctx.cache, "method", receiver_identity, generic_name, call.type_args)
+    result := mono_cache_get_or_create_item(ctx.cache, "method", receiver_identity, generic_name, call.type_args)
     ctx.cache = result.cache
 
     if existing == "" {
-        decl_ref := find_declaration_ref_for_item(ctx, "method", method_name)
-        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "method", receiver_type: source.receiver_type, generic_name: method_name, type_args: call.type_args, declaration_ref: decl_ref, declaration_index: mono_find_work_index(ctx, method_name, source.receiver_type) })
+        decl_ref := find_declaration_ref_for_item(ctx, "method", generic_name)
+        ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "method", receiver_type: receiver_identity, generic_name: generic_name, type_args: call.type_args, declaration_ref: decl_ref, declaration_index: declaration_index })
     }
 
     ctx
@@ -819,6 +851,15 @@ func find_generic_function(item[] items, string name) function_decl {
         i = i + 1
     }
     return function_decl {}
+}
+
+func mono_receiver_identity(string type_name, string pkg) string {
+    clean := compile.internal.typesys.parse_type(type_name)
+    for te_starts_with(clean, "&") || te_starts_with(clean, "*") { clean = prelude_slice(clean, 1, len(clean)); if te_starts_with(clean, "mut") { clean = prelude_slice(clean, 3, len(clean)) } }
+    for te_ends_with(clean, "*") { clean = prelude_slice(clean, 0, len(clean)-1) }
+    base := compile.internal.typesys.base_type_name(clean)
+    if te_starts_with(base, pkg + ".") { return clean }
+    return pkg + "." + clean
 }
 
 func find_generic_method(item[] items, string receiver_type, string name) receiver_method_decl {

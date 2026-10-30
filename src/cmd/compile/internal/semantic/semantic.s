@@ -3378,10 +3378,14 @@ func ordered_type_args(string[] generic_names, type_binding[] bindings) string[]
 }
 
 func specialized_instance_name(function_binding binding, type_binding[] bindings) string {
-    if std.prelude.len(binding.generic_names) == 0 {
-        return binding.name
+    name := binding.name
+    if binding.has_receiver {
+        name = instantiate_type(binding.owner_type, binding.generic_names, bindings) + "." + name
     }
-    name := binding.name + "__mono"
+    if std.prelude.len(binding.generic_names) == 0 {
+        return name
+    }
+    name = name + "__mono"
     i := 0
     for i < std.prelude.len(binding.generic_names) {
         bound := lookup_name_type(bindings, binding.generic_names[i])

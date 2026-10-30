@@ -324,9 +324,19 @@ func te_generics(item value) string[] {
 func te_decl_name(item value) string {
     switch value { item.struct(v): v.name, item.enum(v): v.name, _: "" }
 }
+func te_enqueue(te_request[] requests, string name, string pkg) te_request[] {
+    canonical := compile.internal.typesys.parse_type(name)
+    i := 0
+    for i < len(requests) {
+        if requests[i].pkg == pkg && requests[i].type_name == canonical { return requests }
+        i = i + 1
+    }
+    return append(requests, te_request { type_name: canonical, pkg: pkg })
+}
+
 func te_add_requests(te_request[] initial_requests, string[] names, string pkg) te_request[] {
     requests := initial_requests
-    i := 0; for i < len(names) { requests = append(requests, te_request { type_name: names[i], pkg: pkg }); i = i + 1 }
+    i := 0; for i < len(names) { requests = te_enqueue(requests, names[i], pkg); i = i + 1 }
  requests
 }
 // Expand only reachable concrete declarations. A work item is registered before
@@ -351,17 +361,17 @@ func elaborate_generic_types(source_file file) type_elaboration_result {
         if cursor > 100000 { return type_elaboration_result { file: output, error: "generic type expansion does not terminate" } }
         request := requests[cursor]; cursor = cursor + 1
         text := compile.internal.typesys.parse_type(request.type_name)
-        if te_starts_with(text, "*") { requests = append(requests, te_request { type_name: prelude_slice(text, 1, len(text)), pkg: request.pkg }); continue }
-        if te_ends_with(text, "*") { requests = append(requests, te_request { type_name: prelude_slice(text, 0, len(text)-1), pkg: request.pkg }); continue }
-        if te_starts_with(text, "&mut") { requests = append(requests, te_request { type_name: prelude_slice(text, 4, len(text)), pkg: request.pkg }); continue }
-        if te_starts_with(text, "&") { requests = append(requests, te_request { type_name: prelude_slice(text, 1, len(text)), pkg: request.pkg }); continue }
-        if te_ends_with(text, "[]") { requests = append(requests, te_request { type_name: prelude_slice(text, 0, len(text)-2), pkg: request.pkg }); continue }
-        if te_starts_with(text, "[]") { requests = append(requests, te_request { type_name: prelude_slice(text, 2, len(text)), pkg: request.pkg }); continue }
+        if te_starts_with(text, "*") { requests = te_enqueue(requests, prelude_slice(text, 1, len(text)), request.pkg); continue }
+        if te_ends_with(text, "*") { requests = te_enqueue(requests, prelude_slice(text, 0, len(text)-1), request.pkg); continue }
+        if te_starts_with(text, "&mut") { requests = te_enqueue(requests, prelude_slice(text, 4, len(text)), request.pkg); continue }
+        if te_starts_with(text, "&") { requests = te_enqueue(requests, prelude_slice(text, 1, len(text)), request.pkg); continue }
+        if te_ends_with(text, "[]") { requests = te_enqueue(requests, prelude_slice(text, 0, len(text)-2), request.pkg); continue }
+        if te_starts_with(text, "[]") { requests = te_enqueue(requests, prelude_slice(text, 2, len(text)), request.pkg); continue }
         wrapper := te_array_wrapper(text)
-        if wrapper != "" { requests = append(requests, te_request { type_name: prelude_slice(text, 0, len(text)-len(wrapper)), pkg: request.pkg }); continue }
+        if wrapper != "" { requests = te_enqueue(requests, prelude_slice(text, 0, len(text)-len(wrapper)), request.pkg); continue }
         if te_starts_with(text, "[") {
             close := find_char(text, "]")
-            if close > 0 { requests = append(requests, te_request { type_name: prelude_slice(text, close+1, len(text)), pkg: request.pkg }); continue }
+            if close > 0 { requests = te_enqueue(requests, prelude_slice(text, close+1, len(text)), request.pkg); continue }
         }
         if compile.internal.typesys.is_tuple_type(text) { requests = te_add_requests(requests, compile.internal.typesys.extract_tuple_args(text), request.pkg); continue }
         args := compile.internal.typesys.extract_type_args(text)

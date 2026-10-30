@@ -17,6 +17,7 @@ PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
 # Seed Compiler (trusted C bootstrap compiler)
 # ============================================================================
 SEED_COMPILER_SOURCES := $(wildcard src/cmd/compile/seed/*.c src/cmd/compile/seed/*/*.c src/cmd/compile/seed/*/*/*.c src/cmd/compile/seed/*/*/*/*.c src/cmd/compile/seed/*/*.h src/cmd/compile/seed/*/*/*.h)
+SEED_CFLAGS ?= -O2
 
 seed-compiler-bin: bin/s_seed
 
@@ -28,11 +29,11 @@ s-dist-bootstrap-bin: seed-compiler-bin
 	./bin/s_seed src/cmd/dist/bootstrap.s .bootstrap/s-dist/bootstrap.ir
 	./bin/s_seed --emit-bin .bootstrap/s-dist/bootstrap.ir .bootstrap/s-dist/s-dist-bootstrap
 
-bin/s_seed: $(SEED_COMPILER_SOURCES)
+bin/s_seed: $(SEED_COMPILER_SOURCES) makefile
 	@mkdir -p ./bin
 	@echo "Building seed compiler..."
 	@set -e; tmp="$$(mktemp ./bin/s_seed.XXXXXX)"; trap 'rm -f "$$tmp"' EXIT HUP INT TERM; \
-	  gcc -std=c11 -Wall -Wextra -Werror \
+	  gcc $(SEED_CFLAGS) -std=c11 -Wall -Wextra -Werror \
 	  -o "$$tmp" \
 	  src/cmd/compile/seed/s_seed.c \
 	  src/cmd/compile/seed/bootstrap/bootstrap.c \
@@ -508,6 +509,11 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_statement_boundary_ast_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_statement_boundary_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_mono_memory_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_mono_index_scaling_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_generic_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_receiver_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_unit_entry_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_reachability_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_backend_result_contract_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_backend_ssa_interface_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_cfg_source_contract_check.sh
