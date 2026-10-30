@@ -230,3 +230,9 @@ Frozen stage1 GREEN on all 49 canonical production scripts (including discarded
 switch/unit-if regression); log:
 `.bootstrap/frozen-selfhost-source/.bootstrap/production-checks.log`.
 The isolated full-source bootstrap has passed Semantic and is annotating calls.
+Frozen full-source probe passed checked-unit lowering, next failed global indexed
+member access in base.run_at_exit (`unknown enum member: `). Root concurrently
+received a guard against empty qualified-name paths (28c535213). Verified RED
+with a global Entry[] read/store/snapshot/single-evaluation regression. Integrated
+that root guard plus its diagnostic change into the frozen copy; next run uses a
+fresh native-global-index output directory and new source checksums.
