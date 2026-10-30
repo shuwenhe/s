@@ -417,8 +417,8 @@ func (gen* amd64_code_gen) gen_from_ast_program(ast_program* prog) string {
         0 as int64,
         1
     )
-    for i := 0; i < len(prog.functions); i = i + 1 {
-        func_decl := prog.functions[i]
+    for i := 0; loop_var_2 < len(prog.functions); loop_var_2 = loop_var_2 + 1 {
+        func_decl := prog.functions[loop_var_2]
         gen.gen_func_from_ast(func_decl)
     }
     ""

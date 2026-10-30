@@ -93,12 +93,12 @@ func (alias_analysis* aa) no_alias(v1 i32, v2 i32) bool {
 }
 
 func (alias_analysis* aa) analyze_pointer_equality() {
-    for i := i32(0); i < aa.num_values; i += 1 {
+    for i := i32(0); loop_var_2 < aa.num_values; loop_var_2 += 1 {
         for j := i32(0); j < aa.num_values; j += 1 {
-            if i != j {
-                if aa.must_alias_matrix[i][j] != 0 {
+            if loop_var_2 != j {
+                if aa.must_alias_matrix[loop_var_2][j] != 0 {
                     for k := i32(0); k < aa.num_values; k += 1 {
-                        if aa.must_alias_matrix[i][k] != 0 {
+                        if aa.must_alias_matrix[loop_var_2][k] != 0 {
                             aa.add_must_alias(j, k)
                         }
                     }
@@ -109,9 +109,9 @@ func (alias_analysis* aa) analyze_pointer_equality() {
 }
 
 func (alias_analysis* aa) analyze_pointer_dereferencing(load_values i32[], load_targets i32[]) {
-    for i := i32(0); i < i32(len(load_values)); i += 1 {
-        src := load_values[i]
-        tgt := load_targets[i]
+    for i := i32(0); loop_var_3 < i32(len(load_values)); loop_var_3 += 1 {
+        src := load_values[loop_var_3]
+        tgt := load_targets[loop_var_3]
         if src >= 0 && tgt >= 0 {
             aa.add_may_alias(src, tgt)
         }
@@ -119,9 +119,9 @@ func (alias_analysis* aa) analyze_pointer_dereferencing(load_values i32[], load_
 }
 
 func (alias_analysis* aa) analyze_pointer_stores(store_values i32[], store_targets i32[]) {
-    for i := i32(0); i < i32(len(store_values)); i += 1 {
-        src := store_values[i]
-        tgt := store_targets[i]
+    for i := i32(0); loop_var_4 < i32(len(store_values)); loop_var_4 += 1 {
+        src := store_values[loop_var_4]
+        tgt := store_targets[loop_var_4]
         if src >= 0 && tgt >= 0 {
             aa.add_may_alias(src, tgt)
         }
@@ -129,11 +129,11 @@ func (alias_analysis* aa) analyze_pointer_stores(store_values i32[], store_targe
 }
 
 func (alias_analysis* aa) analyze_function_parameters(param_values i32[], bool escape_flags[]) {
-    for i := i32(0); i < i32(len(param_values)); i += 1 {
-        param := param_values[i]
-        if param >= 0 && escape_flags[i] {
+    for i := i32(0); loop_var_5 < i32(len(param_values)); loop_var_5 += 1 {
+        param := param_values[loop_var_5]
+        if param >= 0 && escape_flags[loop_var_5] {
             for j := i32(0); j < aa.num_values; j += 1 {
-                if i != j {
+                if loop_var_5 != j {
                     aa.add_may_alias(param, j)
                 }
             }
@@ -145,12 +145,12 @@ func (alias_analysis* aa) compute_transitive_closure() {
     changed := true
     for changed {
         changed = false
-        for i := i32(0); i < aa.num_values; i += 1 {
+        for i := i32(0); loop_var_6 < aa.num_values; loop_var_6 += 1 {
             for j := i32(0); j < aa.num_values; j += 1 {
-                if aa.may_alias_matrix[i][j] != 0 {
+                if aa.may_alias_matrix[loop_var_6][j] != 0 {
                     for k := i32(0); k < aa.num_values; k += 1 {
-                        if aa.may_alias_matrix[j][k] != 0 && aa.may_alias_matrix[i][k] == 0 {
-                            aa.may_alias_matrix[i][k] = 1
+                        if aa.may_alias_matrix[j][k] != 0 && aa.may_alias_matrix[loop_var_6][k] == 0 {
+                            aa.may_alias_matrix[loop_var_6][k] = 1
                             changed = true
                         }
                     }
@@ -163,9 +163,9 @@ func (alias_analysis* aa) compute_transitive_closure() {
 func (alias_analysis* aa) get_all_aliases(v i32) i32[] {
     i32[] aliases
     if v >= 0 && v < aa.num_values {
-        for i := i32(0); i < aa.num_values; i += 1 {
-            if aa.may_alias_matrix[v][i] != 0 {
-                aliases = append(aliases, i)
+        for i := i32(0); loop_var_7 < aa.num_values; loop_var_7 += 1 {
+            if aa.may_alias_matrix[v][loop_var_7] != 0 {
+                aliases = append(aliases, loop_var_7)
             }
         }
     }
@@ -175,18 +175,18 @@ func (alias_analysis* aa) get_all_aliases(v i32) i32[] {
 func (alias_analysis* aa) to_string() string {
     s := "Alias Analysis:\n"
     s += "May-Alias Relations:\n"
-    for i := i32(0); i < aa.num_values; i += 1 {
-        for j := i + 1; j < aa.num_values; j += 1 {
-            if aa.may_alias_matrix[i][j] != 0 {
-                s += "  " + aa.value_names[i] + " may-alias " + aa.value_names[j] + "\n"
+    for i := i32(0); loop_var_8 < aa.num_values; loop_var_8 += 1 {
+        for j := loop_var_8 + 1; j < aa.num_values; j += 1 {
+            if aa.may_alias_matrix[loop_var_8][j] != 0 {
+                s += "  " + aa.value_names[loop_var_8] + " may-alias " + aa.value_names[j] + "\n"
             }
         }
     }
     s += "Must-Alias Relations:\n"
-    for i := i32(0); i < aa.num_values; i += 1 {
-        for j := i + 1; j < aa.num_values; j += 1 {
-            if aa.must_alias_matrix[i][j] != 0 {
-                s += "  " + aa.value_names[i] + " must-alias " + aa.value_names[j] + "\n"
+    for i := i32(0); loop_var_9 < aa.num_values; loop_var_9 += 1 {
+        for j := loop_var_9 + 1; j < aa.num_values; j += 1 {
+            if aa.must_alias_matrix[loop_var_9][j] != 0 {
+                s += "  " + aa.value_names[loop_var_9] + " must-alias " + aa.value_names[j] + "\n"
             }
         }
     }

@@ -146,11 +146,11 @@ func type_create_func(able* type_table, string[] params, string[] returns) type_
         func_name = func_name + params[i]
     }
     func_name = func_name + ") ("
-    for loop_var_2 := 0; i < returns.len(); i = i + 1 {
+    for loop_var_2 := 0; loop_var_2 < returns.len(); loop_var_2 = loop_var_2 + 1 {
         if loop_var_2 > 0 {
             func_name = func_name + ", "
         }
-        func_name = func_name + returns[i]
+        func_name = func_name + returns[loop_var_2]
     }
     func_name = func_name + ")"
 

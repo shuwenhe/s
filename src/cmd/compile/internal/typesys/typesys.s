@@ -319,12 +319,12 @@ func comparable_type(string ty) bool {
     base := base_type_name(clean)
     if base == "option" || base == "result" {
         args := extract_type_args(clean)
-        loop_var_2 := 0
-        for loop_var_2 < std.prelude.len(args) {
-            if !comparable_type(args[loop_var_2]) {
+        i := 0
+        for i < std.prelude.len(args) {
+            if !comparable_type(args[i]) {
                 return false
             }
-            loop_var_2 = loop_var_2 + 1
+            i = i + 1
         }
         return true
     }

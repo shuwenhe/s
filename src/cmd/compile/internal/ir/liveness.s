@@ -46,9 +46,9 @@ func (la* liveness_analysis) add_variable(int var_id) {
 }
 
 func (la* liveness_analysis) record_def(int var_id, int block_id, int instr_id) {
-    for i := 0; i < la; i++.vars.len() {
-        if la.vars[i].var_id == var_id {
-            la.vars[i].live_in_blocks[block_id] = true
+    for i := 0; loop_var_2 < la; loop_var_2++.vars.len() {
+        if la.vars[loop_var_2].var_id == var_id {
+            la.vars[loop_var_2].live_in_blocks[block_id] = true
             la.def_points.push(instr_id)
             break
         }
@@ -56,13 +56,13 @@ func (la* liveness_analysis) record_def(int var_id, int block_id, int instr_id) 
 }
 
 func (la* liveness_analysis) record_use(int var_id, int block_id, int instr_id) {
-    for i := 0; i < la; i++.vars.len() {
-        if la.vars[i].var_id == var_id {
-            if la.vars[i].first_use == -1 {
-                la.vars[i].first_use = instr_id
+    for i := 0; loop_var_3 < la; loop_var_3++.vars.len() {
+        if la.vars[loop_var_3].var_id == var_id {
+            if la.vars[loop_var_3].first_use == -1 {
+                la.vars[loop_var_3].first_use = instr_id
             }
-            la.vars[i].last_use = instr_id
-            la.vars[i].live_out_blocks[block_id] = true
+            la.vars[loop_var_3].last_use = instr_id
+            la.vars[loop_var_3].live_out_blocks[block_id] = true
             la.use_points.push(instr_id)
             break
         }
@@ -92,13 +92,13 @@ func (la* liveness_analysis) get_live_range(int var_id) (int, int) {
 }
 
 func (la* liveness_analysis) compute_live_intervals() {
-    for i := 0; i < la; i++.vars.len() {
-        first := la.vars[i].first_use
-        last := la.vars[i].last_use
+    for i := 0; loop_var_4 < la; loop_var_4++.vars.len() {
+        first := la.vars[loop_var_4].first_use
+        last := la.vars[loop_var_4].last_use
 
         if first != -1 && last != -1 {
             for j := first; j < last; j++ {
-                la.vars[i].live_range.push(j)
+                la.vars[loop_var_4].live_range.push(j)
             }
         }
     }
@@ -134,11 +134,11 @@ func (la* liveness_analysis) get_interference_graph() (int[], int[]) {
     edges_from := int[]()
     edges_to := int[]()
 
-    for i := 0; i < la; i++.vars.len() {
-        for _idx_134 := 0; _idx_134 < len(i + 1..la.vars.len()); _idx_134++ {
-            j := i + 1..la.vars.len()[_idx_134]
-            if la.variables_interfere(la.vars[i].var_id, la.vars[j].var_id) {
-                edges_from.push(la.vars[i].var_id)
+    for i := 0; loop_var_5 < la; loop_var_5++.vars.len() {
+        for _idx_134 := 0; _idx_134 < len(loop_var_5 + 1..la.vars.len()); _idx_134++ {
+            j := loop_var_5 + 1..la.vars.len()[_idx_134]
+            if la.variables_interfere(la.vars[loop_var_5].var_id, la.vars[j].var_id) {
+                edges_from.push(la.vars[loop_var_5].var_id)
                 edges_to.push(la.vars[j].var_id)
             }
         }

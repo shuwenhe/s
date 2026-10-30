@@ -490,7 +490,7 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx, 
     switch value {
         expr.record(v): { i := 0; for i < len(v.field_values) { out = collect_expr_instances_ctx(v.field_values[i], all_items, out, lookup); i = i + 1 }
  out },
-        expr.tuple(v): { loop_var_2 := 0; for i < len(v.items) { out = collect_expr_instances_ctx(v.items[i], all_items, out, lookup); i = i + 1 }
+        expr.tuple(v): { loop_var_2 := 0; for loop_var_2 < len(v.items) { out = collect_expr_instances_ctx(v.items[loop_var_2], all_items, out, lookup); loop_var_2 = loop_var_2 + 1 }
  out },
         expr.while(v): { out = collect_expr_instances_ctx(v.condition.value, all_items, out, lookup); collect_block_instances_ctx(v.body, all_items, out, lookup) },
 		expr.borrow(v) : collect_expr_instances_ctx(v.target.value, all_items, out, lookup),
@@ -998,7 +998,7 @@ func finalize_expr(expr value) expr {
         expr.name(v) : expr.name(v),
         expr.record(v): { i := 0; for i < len(v.field_values) { v.field_values[i] = finalize_expr(v.field_values[i]); i = i + 1 }
  expr.record(v) },
-        expr.tuple(v): { loop_var_2 := 0; for i < len(v.items) { v.items[i] = finalize_expr(v.items[i]); i = i + 1 }
+        expr.tuple(v): { loop_var_2 := 0; for loop_var_2 < len(v.items) { v.items[loop_var_2] = finalize_expr(v.items[loop_var_2]); loop_var_2 = loop_var_2 + 1 }
  expr.tuple(v) },
         expr.borrow(v) : expr.borrow(compile.internal.ast.borrow_expr { target: std.prelude.box(finalize_expr(v.target.value)), mutable v.mutable, inferred_type v.inferred_type }),
         expr.binary(v) : expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(finalize_expr(v.left.value)), op v.op, right std.prelude.box(finalize_expr(v.right.value)), inferred_type v.inferred_type }),
@@ -1162,7 +1162,7 @@ func verify_expr_no_generics(expr value) int {
         expr.record(v): { errors := verify_optional_type_no_generics(v.inferred_type); if looks_like_generic_residue(v.type_name) { errors = errors + 1 }
  i := 0; for i < len(v.field_values) { errors = errors + verify_expr_no_generics(v.field_values[i]); i = i + 1 }
  errors },
-        expr.tuple(v): { errors := verify_optional_type_no_generics(v.inferred_type); loop_var_2 := 0; for i < len(v.items) { errors = errors + verify_expr_no_generics(v.items[i]); i = i + 1 }
+        expr.tuple(v): { errors := verify_optional_type_no_generics(v.inferred_type); loop_var_2 := 0; for loop_var_2 < len(v.items) { errors = errors + verify_expr_no_generics(v.items[loop_var_2]); loop_var_2 = loop_var_2 + 1 }
  errors },
         expr.borrow(v) : verify_optional_type_no_generics(v.inferred_type) + verify_expr_no_generics(v.target.value),
         expr.binary(v) : verify_optional_type_no_generics(v.inferred_type) + verify_expr_no_generics(v.left.value) + verify_expr_no_generics(v.right.value),
@@ -1427,7 +1427,7 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
         expr.name(v) : { v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.name(v) },
         expr.record(v): { i := 0; for i < len(v.field_values) { v.field_values[i] = substitute_expr(v.field_values[i], generic_names, type_args); i = i + 1 }
  v.type_name = substitute_type(v.type_name, generic_names, type_args); v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.record(v) },
-        expr.tuple(v): { loop_var_2 := 0; for i < len(v.items) { v.items[i] = substitute_expr(v.items[i], generic_names, type_args); i = i + 1 }
+        expr.tuple(v): { loop_var_2 := 0; for loop_var_2 < len(v.items) { v.items[loop_var_2] = substitute_expr(v.items[loop_var_2], generic_names, type_args); loop_var_2 = loop_var_2 + 1 }
  v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.tuple(v) },
         expr.borrow(v) : expr.borrow(compile.internal.ast.borrow_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), mutable v.mutable, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
         expr.binary(v) : expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(substitute_expr(v.left.value, generic_names, type_args)), op v.op, right std.prelude.box(substitute_expr(v.right.value, generic_names, type_args)), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),

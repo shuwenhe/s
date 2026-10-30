@@ -288,7 +288,8 @@ func mir_program_function_error_with_globals(mir_program_function function_data,
             a := 0
             for a < len(ins.operands) {
                 use_block := b
-                use_position := loop_var_2                 if ins.op == "phi" {
+                use_position := loop_var_2
+                if ins.op == "phi" {
                     use_block = mir_program_block_index(function_data, predecessors[a])
                     use_position = len(function_data.blocks[use_block].instructions)
                 }

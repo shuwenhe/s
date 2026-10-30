@@ -221,14 +221,14 @@ func canonical_enum_constructor(string path, string[] arg_types, string contextu
     result_type := declaration.package_path + "." + declaration.path
     if len(declaration.generics) > 0 {
         result_type = result_type + "["
-        loop_var_2 := 0
-        for loop_var_2 < len(declaration.generics) {
-            if loop_var_2 > 0 { result_type = result_type + "," }
-            argument := lookup_name_type(bindings, declaration.generics[loop_var_2])
-            if is_unknown(argument) && loop_var_2 < len(contextual_arguments) { argument = contextual_arguments[loop_var_2] }
+        i := 0
+        for i < len(declaration.generics) {
+            if i > 0 { result_type = result_type + "," }
+            argument := lookup_name_type(bindings, declaration.generics[i])
+            if is_unknown(argument) && i < len(contextual_arguments) { argument = contextual_arguments[i] }
             if is_unknown(argument) { return check_result { type_name: "unknown", errors: add_error(source, diagnostics, "e2006", "cannot infer enum type argument", path) } }
             result_type = result_type + argument
-            loop_var_2 = loop_var_2 + 1
+            i = i + 1
         }
         result_type = result_type + "]"
     }

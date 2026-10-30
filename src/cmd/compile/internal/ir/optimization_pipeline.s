@@ -65,8 +65,8 @@ func (compiler_pipeline* cp) analyze_function(func_idx i32) {
         cp.dominators[func_idx].compute_dominators(preds, func.entry_block)
 
         succs := make(i32[][], num_blocks)
-        for i := i32(0); i < num_blocks; i += 1 {
-            succs[i] = func.blocks[i].successors
+        for i := i32(0); loop_var_2 < num_blocks; loop_var_2 += 1 {
+            succs[loop_var_2] = func.blocks[loop_var_2].successors
         }
         cp.dominators[func_idx].compute_dominance_frontier(succs, preds)
     }
@@ -75,16 +75,16 @@ func (compiler_pipeline* cp) analyze_function(func_idx i32) {
         num_values := i32(len(func.values))
         cp.liveness_analyses[func_idx] = new_liveness_analyzer(num_values, num_blocks)
 
-        for i := i32(0); i < num_blocks; i += 1 {
-            block := func.blocks[i]
+        for i := i32(0); loop_var_3 < num_blocks; loop_var_3 += 1 {
+            block := func.blocks[loop_var_3]
             for _, val := range block.values {
-                cp.liveness_analyses[func_idx].mark_use(i, val.id)
+                cp.liveness_analyses[func_idx].mark_use(loop_var_3, val.id)
             }
         }
 
         succs := make(i32[][], num_blocks)
-        for i := i32(0); i < num_blocks; i += 1 {
-            succs[i] = func.blocks[i].successors
+        for i := i32(0); loop_var_4 < num_blocks; loop_var_4 += 1 {
+            succs[loop_var_4] = func.blocks[loop_var_4].successors
         }
         cp.liveness_analyses[func_idx].compute_liveness(succs)
     }
@@ -142,13 +142,13 @@ func (compiler_pipeline* cp) get_debug_info(func_idx i32) debug_loc_propagator* 
 }
 
 func (compiler_pipeline* cp) run_optimization_pipeline() {
-    for i := i32(0); i < i32(len(cp.functions)); i += 1 {
-        cp.analyze_function(i)
+    for i := i32(0); loop_var_5 < i32(len(cp.functions)); loop_var_5 += 1 {
+        cp.analyze_function(loop_var_5)
 
-        func := cp.functions[i]
+        func := cp.functions[loop_var_5]
         func.eliminate_dead_code()
 
-        liveness := cp.get_liveness_info(i)
+        liveness := cp.get_liveness_info(loop_var_5)
         if liveness != nil {
             for block_id := i32(0); block_id < i32(len(func.blocks)); block_id += 1 {
                 live_vars := liveness.get_live_values(block_id)
@@ -166,8 +166,8 @@ func (compiler_pipeline* cp) run_optimization_pipeline() {
 
 func (compiler_pipeline* cp) emit_debug_info() string {
     s := "Debug Information:\n"
-    for i := i32(0); i < i32(len(cp.functions)); i += 1 {
-        debug_info := cp.get_debug_info(i)
+    for i := i32(0); loop_var_6 < i32(len(cp.functions)); loop_var_6 += 1 {
+        debug_info := cp.get_debug_info(loop_var_6)
         if debug_info != nil {
             s += debug_info.to_string()
         }
@@ -179,10 +179,10 @@ func (compiler_pipeline* cp) to_string() string {
     s := "Compiler Optimization Pipeline:\n"
     s += "Functions: " + string(i32(len(cp.functions))) + "\n"
 
-    for i := i32(0); i < i32(len(cp.functions)); i += 1 {
-        if cp.functions[i] != nil {
-            s += "  [" + string(i) + "] " + cp.functions[i].name
-            if cp.computed[i] {
+    for i := i32(0); loop_var_7 < i32(len(cp.functions)); loop_var_7 += 1 {
+        if cp.functions[loop_var_7] != nil {
+            s += "  [" + string(loop_var_7) + "] " + cp.functions[loop_var_7].name
+            if cp.computed[loop_var_7] {
                 s += " (analyzed)"
             }
             s += "\n"

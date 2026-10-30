@@ -364,7 +364,7 @@ func native_parse_integer(native_parser initial, bool negative) native_parser {
     value := 0
     loop_var_2 := 0
     for loop_var_2 < len(token) {
-        ch := __host_char_at(token, i)
+        ch := __host_char_at(token, loop_var_2)
         if ch == "_" {
             loop_var_2 = loop_var_2 + 1
             continue

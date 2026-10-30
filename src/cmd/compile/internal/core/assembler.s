@@ -52,7 +52,7 @@ func assembler_finalize(assembler* asm) string {
     }
 
     output = output + "\n.section .text\n"
-    for loop_var_2 := 0; i < asm.text_section.len(); i = i + 1 {
+    for i := 0; loop_var_2 < asm.text_section.len(); loop_var_2 = loop_var_2 + 1 {
         output = output + asm.text_section[loop_var_2] + "\n"
     }
 

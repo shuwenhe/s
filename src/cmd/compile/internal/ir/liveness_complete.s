@@ -103,17 +103,17 @@ func (liveness_analyzer* la) compute_liveness(succs i32[][]) {
 
             for v := i32(0); v < la.num_values; v += 1 {
                 old_live_out := la.infos[v].live_out[b][0] != 0
-                for i := i32(1); i < la.num_values; i += 1 {
-                    old_live_out = old_live_out || (la.infos[v].live_out[b][i] != 0)
+                for i := i32(1); loop_var_2 < la.num_values; loop_var_2 += 1 {
+                    old_live_out = old_live_out || (la.infos[v].live_out[b][loop_var_2] != 0)
                 }
 
                 if new_live_out[v] != old_live_out {
                     changed = true
                 }
 
-                for i := i32(0); i < la.num_values; i += 1 {
-                    if new_live_out[i] {
-                        la.infos[v].live_out[b][i] = true
+                for i := i32(0); loop_var_3 < la.num_values; loop_var_3 += 1 {
+                    if new_live_out[loop_var_3] {
+                        la.infos[v].live_out[b][loop_var_3] = true
                     }
                 }
             }
@@ -142,9 +142,9 @@ func (liveness_analyzer* la) compute_liveness(succs i32[][]) {
                 if is_used {
                     la.infos[v].live_in[b][v] = true
                 } else {
-                    for i := i32(0); i < la.num_values; i += 1 {
-                        if la.infos[v].live_out[b][i] && !is_defined {
-                            la.infos[v].live_in[b][i] = true
+                    for i := i32(0); loop_var_4 < la.num_values; loop_var_4 += 1 {
+                        if la.infos[v].live_out[b][loop_var_4] && !is_defined {
+                            la.infos[v].live_in[b][loop_var_4] = true
                         }
                     }
                 }
@@ -178,8 +178,8 @@ func (liveness_analyzer* la) get_live_values(block_id i32) i32[] {
     if block_id >= 0 && block_id < la.num_blocks {
         for v := i32(0); v < la.num_values; v += 1 {
             is_live := false
-            for i := i32(0); i < la.num_values; i += 1 {
-                if la.infos[v].live_in[block_id][i] != 0 || la.infos[v].live_out[block_id][i] != 0 {
+            for i := i32(0); loop_var_5 < la.num_values; loop_var_5 += 1 {
+                if la.infos[v].live_in[block_id][loop_var_5] != 0 || la.infos[v].live_out[block_id][loop_var_5] != 0 {
                     is_live = true
                     break
                 }

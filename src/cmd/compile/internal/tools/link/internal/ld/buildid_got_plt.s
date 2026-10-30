@@ -72,7 +72,7 @@ func (bim* build_id_manager) generate_note_section() u8[] {
 
 	data = append(data, bim.id...)
 
-	for i := descsz; i < aligned_descsz; i += 1 {
+	for i := descsz; loop_var_2 < aligned_descsz; loop_var_2 += 1 {
 		data = append(data, 0)
 	}
 

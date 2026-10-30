@@ -232,7 +232,7 @@ func te_expr_types(expr value) string[] {
         expr.block(v): out = te_join(out, te_block_types(v)),
         expr.switch(v): { out = te_add_optional(out, v.inferred_type); out = te_join(out, te_expr_types(v.subject.value)); i := 0; for i < len(v.arms) { out = te_join(out, te_expr_types(v.arms[i].expr)); out = te_join(out, te_pattern_types(v.arms[i].pattern)); i = i + 1 } },
         expr.array(v): { out = te_add_optional(out, v.type_text); out = te_join(out, te_exprs_types(v.items)) },
-        expr.map(v): { out = te_add_optional(out, v.type_text); loop_var_2 := 0; for i < len(v.entries) { out = te_join(out, te_expr_types(v.entries[i].key)); out = te_join(out, te_expr_types(v.entries[i].value)); i = i + 1 } },
+        expr.map(v): { out = te_add_optional(out, v.type_text); loop_var_2 := 0; for loop_var_2 < len(v.entries) { out = te_join(out, te_expr_types(v.entries[loop_var_2].key)); out = te_join(out, te_expr_types(v.entries[loop_var_2].value)); loop_var_2 = loop_var_2 + 1 } },
     }
     out
 }
@@ -285,7 +285,7 @@ func te_item_types(item value) string[] {
         item.function(v): out = te_function_types(v),
         item.method(v): { out = append(out, v.receiver_type); out = te_join(out, te_function_types(v.method)) },
         item.struct(v): { i := 0; for i < len(v.fields) { out = append(out, v.fields[i].type_name); i = i + 1 } },
-        item.enum(v): { loop_var_2 := 0; for i < len(v.variants) { out = te_add_optional(out, v.variants[i].payload); i = i + 1 } },
+        item.enum(v): { loop_var_2 := 0; for loop_var_2 < len(v.variants) { out = te_add_optional(out, v.variants[loop_var_2].payload); loop_var_2 = loop_var_2 + 1 } },
         item.var(v): { out = te_add_optional(out, v.type_name); switch v.value { option.some(e): out = te_join(out, te_expr_types(e)), option.none: () } },
         item.const(v): { switch v.value { option.some(e): out = te_expr_types(e), option.none: () } },
         item.trait(v): (),
@@ -305,7 +305,7 @@ func te_rewrite_item(item value, string[] keys, string[] values) item {
         item.method(v): { v.receiver_type = te_rewrite_type(v.receiver_type, keys, values); v.method = te_rewrite_function(v.method, keys, values); item.method(v) },
         item.struct(v): { i := 0; for i < len(v.fields) { v.fields[i].type_name = te_rewrite_type(v.fields[i].type_name, keys, values); i = i + 1 }
  item.struct(v) },
-        item.enum(v): { loop_var_2 := 0; for i < len(v.variants) { v.variants[i].payload = te_rewrite_optional_type(v.variants[i].payload, keys, values); i = i + 1 }
+        item.enum(v): { loop_var_2 := 0; for loop_var_2 < len(v.variants) { v.variants[loop_var_2].payload = te_rewrite_optional_type(v.variants[loop_var_2].payload, keys, values); loop_var_2 = loop_var_2 + 1 }
  item.enum(v) },
         item.var(v): { v.type_name = te_rewrite_optional_type(v.type_name, keys, values); switch v.value { option.some(e): v.value = option.some(te_rewrite_expr(e, keys, values)), option.none: () }
  item.var(v) },

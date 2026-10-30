@@ -72,7 +72,7 @@ func register_allocator_build_interference_graph(register_allocator* allocator) 
         allocator.graph.edges = append(allocator.graph.edges, row)
     }
 
-    for loop_var_2 := 0; i < allocator.intervals.len(); i = i + 1 {
+    for i := 0; loop_var_2 < allocator.intervals.len(); loop_var_2 = loop_var_2 + 1 {
         for j := loop_var_2 + 1; j < allocator.intervals.len(); j = j + 1 {
             interval_i := allocator.intervals[loop_var_2]
             interval_j := allocator.intervals[j]

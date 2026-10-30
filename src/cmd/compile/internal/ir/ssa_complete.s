@@ -194,7 +194,7 @@ func ssa_replace_uses(f* ssa_function, int old_id, int new_id) {
             }
         }
     }
-    for loop_var_2 := 0; i < len(f.blocks); i = i + 1 {
+    for i := 0; loop_var_2 < len(f.blocks); loop_var_2 = loop_var_2 + 1 {
         block := f.blocks[loop_var_2]
         for j := 0; j < len(block.phis); j = j + 1 {
             phi := block.phis[j]
@@ -317,10 +317,10 @@ func ssa_eliminate_dead_values(f* ssa_function) int {
         }
     }
     removed := 0
-    for loop_var_2 := 0; i < len(f.blocks); i = i + 1 {
+    for i := 0; loop_var_2 < len(f.blocks); loop_var_2 = loop_var_2 + 1 {
         kept := ssa_value*[]()
-        for j := 0; j < len(f.blocks[i].values); j = j + 1 {
-            value := f.blocks[i].values[j]
+        for j := 0; j < len(f.blocks[loop_var_2].values); j = j + 1 {
+            value := f.blocks[loop_var_2].values[j]
             if live[value.id] {
                 kept = append(kept, value)
             } else {
@@ -328,7 +328,7 @@ func ssa_eliminate_dead_values(f* ssa_function) int {
                 removed = removed + 1
             }
         }
-        f.blocks[i].values = kept
+        f.blocks[loop_var_2].values = kept
     }
     removed
 }
@@ -405,8 +405,8 @@ func (ssa_function* f) get_value_by_name(string name) ssa_value* {
 func (ssa_function* f) eliminate_dead_code() {
     live := make(map[i32]bool)
 
-    for i := i32(0); i < i32(len(f.values)); i += 1 {
-        val := f.values[i]
+    for i := i32(0); loop_var_2 < i32(len(f.values)); loop_var_2 += 1 {
+        val := f.values[loop_var_2]
         if val.op == op_return || val.op == op_store {
             live[val.id] = true
         }
@@ -415,9 +415,9 @@ func (ssa_function* f) eliminate_dead_code() {
     changed := true
     for changed {
         changed = false
-        for i := i32(0); i < i32(len(f.values)); i += 1 {
-            if live[i] {
-                val := f.values[i]
+        for i := i32(0); loop_var_3 < i32(len(f.values)); loop_var_3 += 1 {
+            if live[loop_var_3] {
+                val := f.values[loop_var_3]
                 for _, arg := range val.args {
                     if !live[arg] {
                         live[arg] = true

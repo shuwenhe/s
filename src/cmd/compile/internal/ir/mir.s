@@ -96,13 +96,13 @@ func (f* ir_function) build_cfg() {
         _ = block
     }
 
-    for i := 0; i < n; i++ {
-        targets := f.blocks[i].terminator.targets
-        edge_type := f.blocks[i].terminator.kind
+    for i := 0; loop_var_2 < n; loop_var_2++ {
+        targets := f.blocks[loop_var_2].terminator.targets
+        edge_type := f.blocks[loop_var_2].terminator.kind
 
         for idx := 0; idx < len(targets); idx++ {
             target := targets[idx]
-            f.cfg.add_edge(f.blocks[i].id, target, edge_type)
+            f.cfg.add_edge(f.blocks[loop_var_2].id, target, edge_type)
         }
     }
 
@@ -142,14 +142,14 @@ func (f* ir_function) build_ssa() {
     f.ssa.exit_block = f.exit
 
     n := f.blocks.len()
-    for i := 0; i < n; i++ {
-        block := f.ssa.add_block(f.blocks[i].id, f.blocks[i].label)
+    for i := 0; loop_var_3 < n; loop_var_3++ {
+        block := f.ssa.add_block(f.blocks[loop_var_3].id, f.blocks[loop_var_3].label)
         _ = block
     }
 
-    for i := 0; i < n; i++ {
-        for stmt_idx := 0; stmt_idx < len(f.blocks[i].statements); stmt_idx++ {
-            stmt := f.blocks[i].statements[stmt_idx]
+    for i := 0; loop_var_4 < n; loop_var_4++ {
+        for stmt_idx := 0; stmt_idx < len(f.blocks[loop_var_4].statements); stmt_idx++ {
+            stmt := f.blocks[loop_var_4].statements[stmt_idx]
             switch stmt {
                 mir_statement.assign(a): {
                     args_int := int[]()
@@ -157,7 +157,7 @@ func (f* ir_function) build_ssa() {
                         arg := a.args[arg_idx]
                         args_int.push(0)
                     }
-                    _ = f.ssa.create_value(a.op, args_int, f.blocks[i].id, "")
+                    _ = f.ssa.create_value(a.op, args_int, f.blocks[loop_var_4].id, "")
                 }
                 mir_statement.eval(e): {
                     args_int := int[]()
@@ -165,7 +165,7 @@ func (f* ir_function) build_ssa() {
                         arg := e.args[arg_idx]
                         args_int.push(0)
                     }
-                    _ = f.ssa.create_value(e.op, args_int, f.blocks[i].id, "")
+                    _ = f.ssa.create_value(e.op, args_int, f.blocks[loop_var_4].id, "")
                 }
             }
         }
@@ -180,8 +180,8 @@ func (f* ir_function) insert_phi_nodes() {
     }
 
     n := f.cfg.blocks.len()
-    for i := 0; i < n; i++ {
-        f.ssa.insert_phi_nodes(f.cfg.dominance_frontier[i])
+    for i := 0; loop_var_5 < n; loop_var_5++ {
+        f.ssa.insert_phi_nodes(f.cfg.dominance_frontier[loop_var_5])
     }
 }
 
@@ -193,8 +193,8 @@ func (f* ir_function) analyze_escapes() {
     n := f.locals.len()
     f.escape_analysis = escape.new_escape_analysis()
 
-    for i := 0; i < n; i++ {
-        local := f.locals[i]
+    for i := 0; loop_var_6 < n; loop_var_6++ {
+        local := f.locals[loop_var_6]
         is_pointer := false
         if local.type_name != option.none {
             is_pointer = compile.internal.typesys.is_heap_reference_type(local.type_name.unwrap())
@@ -210,25 +210,25 @@ func (f* ir_function) analyze_liveness() {
     n := f.cfg.blocks.len()
     f.liveness_analysis = liveness.new_liveness_analysis(n)
 
-    for i := 0; i < f; i++.locals.len() {
-        f.liveness_analysis.add_variable(f.locals[i].id)
+    for i := 0; loop_var_7 < f; loop_var_7++.locals.len() {
+        f.liveness_analysis.add_variable(f.locals[loop_var_7].id)
     }
 
     for block_idx := 0; block_idx < f; block_idx++.blocks.len() {
         block := f.blocks[block_idx]
-        for i := 0; i < block; i++.statements.len() {
-            switch block.statements[i] {
+        for i := 0; loop_var_8 < block; loop_var_8++.statements.len() {
+            switch block.statements[loop_var_8] {
                 mir_statement.assign(a): {
-                    f.liveness_analysis.record_def(a.target, block_idx, i)
+                    f.liveness_analysis.record_def(a.target, block_idx, loop_var_8)
                     for arg_idx := 0; arg_idx < len(a.args); arg_idx++ {
                         arg := a.args[arg_idx]
-                        f.liveness_analysis.record_use(arg, block_idx, i)
+                        f.liveness_analysis.record_use(arg, block_idx, loop_var_8)
                     }
                 }
                 mir_statement.eval(e): {
                     for arg_idx := 0; arg_idx < len(e.args); arg_idx++ {
                         arg := e.args[arg_idx]
-                        f.liveness_analysis.record_use(arg, block_idx, i)
+                        f.liveness_analysis.record_use(arg, block_idx, loop_var_8)
                     }
                 }
             }
@@ -245,8 +245,8 @@ func (f* ir_function) analyze_write_barriers() {
 
     for block_idx := 0; block_idx < len(f.blocks); block_idx++ {
         block := f.blocks[block_idx]
-        for i := 0; i < block; i++.statements.len() {
-            switch block.statements[i] {
+        for i := 0; loop_var_9 < block; loop_var_9++.statements.len() {
+            switch block.statements[loop_var_9] {
                 mir_statement.assign(a): {
                     if a.op == "store" && a.args.len() > 0 {
                         target_type := "value"
@@ -255,7 +255,7 @@ func (f* ir_function) analyze_write_barriers() {
                                 target_type = "pointer"
                             }
                         }
-                        _ = f.write_barriers.analyze_store(i, a.target, a.args[0], target_type)
+                        _ = f.write_barriers.analyze_store(loop_var_9, a.target, a.args[0], target_type)
                     }
                 }
             }

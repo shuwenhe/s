@@ -174,7 +174,8 @@ func load_files_concurrent(string[] paths, file_loader_config config) (file_load
     for loop_var_4 < std.prelude.len(seen) {
         if !seen[loop_var_4] {
             return file_load_task[](), backend_error {
-                message: "missing result for index: " + loop_var_4             }
+                message: "missing result for index: " + loop_var_4
+            }
         }
         loop_var_4 = loop_var_4 + 1
     }

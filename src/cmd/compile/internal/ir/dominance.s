@@ -30,10 +30,10 @@ func (dominator_tree* dt) compute_dominators(preds i32[][], entry i32) {
     n := i32(len(preds))
     dom := make(bool[][], n)
 
-    for i := i32(0); i < n; i += 1 {
-        dom[i] = make(bool[], n)
+    for i := i32(0); loop_var_2 < n; loop_var_2 += 1 {
+        dom[loop_var_2] = make(bool[], n)
         for j := i32(0); j < n; j += 1 {
-            dom[i][j] = true
+            dom[loop_var_2][j] = true
         }
     }
 

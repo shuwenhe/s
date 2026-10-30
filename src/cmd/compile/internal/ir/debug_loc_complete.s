@@ -113,13 +113,13 @@ func (dlp* debug_loc_propagator) set_variable_location(i32 instr_id, string var_
 }
 
 func (debug_loc_propagator* dlp) propagate_locations(instr_ids i32[]) {
-    for i := i32(0); i < i32(len(instr_ids)); i += 1 {
-        if i == 0 {
+    for i := i32(0); loop_var_2 < i32(len(instr_ids)); loop_var_2 += 1 {
+        if loop_var_2 == 0 {
             continue
         }
 
-        instr_id := instr_ids[i]
-        prev_instr_id := instr_ids[i - 1]
+        instr_id := instr_ids[loop_var_2]
+        prev_instr_id := instr_ids[loop_var_2 - 1]
 
         prev_loc := source_location{}
         for _for_idx_124 := 0; _for_idx_124 < len(dlp.loc_infos); _for_idx_124++ {

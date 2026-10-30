@@ -128,9 +128,9 @@ func (b* ir_builder) analyze_optimizations() {
     f.analyze_liveness()
 
     (edges_from, edges_to) := f.liveness_analysis.get_interference_graph()
-    for i := 0; i < edges_from; i++.len() {
-        _ = edges_from[i]
-        _ = edges_to[i]
+    for i := 0; loop_var_2 < edges_from; loop_var_2++.len() {
+        _ = edges_from[loop_var_2]
+        _ = edges_to[loop_var_2]
     }
 
     f.analyze_write_barriers()

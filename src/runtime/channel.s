@@ -245,7 +245,7 @@ func select_channels(cases select_case[]) select_result {
 
 	current_g := get_current_sroutine_id()
 
-	for loop_var_2 := i32(0); i < i32(len(cases)); i += 1 {
+	for i := i32(0); loop_var_2 < i32(len(cases)); loop_var_2 += 1 {
 		if cases[loop_var_2].is_send {
 			cases[loop_var_2].ch.send_queue = append(cases[loop_var_2].ch.send_queue, current_g)
 		} else {
@@ -255,14 +255,16 @@ func select_channels(cases select_case[]) select_result {
 
 	sleep_sroutine(current_g)
 
-	for loop_var_3 := i32(0); i < i32(len(cases)); i += 1 {
+	for i := i32(0); loop_var_3 < i32(len(cases)); loop_var_3 += 1 {
 		if cases[loop_var_3].is_send {
 			if cases[loop_var_3].ch.buf_size > 0 {
-				result.chosen = loop_var_3 				return result
+				result.chosen = loop_var_3
+				return result
 			}
 		} else {
 			if cases[loop_var_3].ch.buf_size > 0 {
-				result.chosen = loop_var_3 				result.received_ok = true
+				result.chosen = loop_var_3
+				result.received_ok = true
 				return result
 			}
 		}

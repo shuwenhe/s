@@ -697,10 +697,10 @@ func ssa_string_value_error(function_ssa_function f, function_ssa_value value) s
     if value.op == "string_eq" || value.op == "string_ne" || value.op == "string_lt" || value.op == "string_le" || value.op == "string_gt" || value.op == "string_ge" { result = "bool" }
     if value.op == "string_len" { count = 1; result = "int" }
     if len(value.operands) != count || value.type_name != result { return "SSA string operand count or result type" }
-    loop_var_2 := 0
-    for loop_var_2 < count {
-        if ssa_value_type(f.blocks, value.operands[loop_var_2]) != "string" { return "SSA string operand type" }
-        loop_var_2 = loop_var_2 + 1
+    i := 0
+    for i < count {
+        if ssa_value_type(f.blocks, value.operands[i]) != "string" { return "SSA string operand type" }
+        i = i + 1
     }
     return ""
 }
