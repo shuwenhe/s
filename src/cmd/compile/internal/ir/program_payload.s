@@ -276,10 +276,10 @@ func program_lower_switch(switch_expr value, string pkg, mir_program_function[] 
     if value.inferred_type.is_some() && value.inferred_type.unwrap() == "()" { return program_emit_unit(state) }
     first_type := program_expression_type(state, state.signature, exits[0].result)
     consistent := true
-    i := 1
-    for i < len(exits) {
-        if program_expression_type(state, state.signature, exits[i].result) != first_type { consistent = false }
-        i = i + 1
+    loop_var_2 := 1
+    for loop_var_2 < len(exits) {
+        if program_expression_type(state, state.signature, exits[loop_var_2].result) != first_type { consistent = false }
+        loop_var_2 = loop_var_2 + 1
     }
     if consistent { return program_switch_phi(exits, -1, state) }
     return program_emit_unit(state)

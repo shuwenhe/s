@@ -88,7 +88,7 @@ func cfg_compute_dominators(control_flow_graph* cfg) {
 
     doms[0][0] = 1
 
-    for i := 1; loop_var_2 < n; loop_var_2 = loop_var_2 + 1 {
+    for loop_var_2 := 1; loop_var_2 < n; loop_var_2 = loop_var_2 + 1 {
         for j := 0; j < n; j = j + 1 {
             doms[loop_var_2][j] = 1
         }
@@ -97,7 +97,7 @@ func cfg_compute_dominators(control_flow_graph* cfg) {
     for iteration := 0; iteration < 1000; iteration = iteration + 1 {
         changed := 0
 
-        for i := 1; loop_var_3 < n; loop_var_3 = loop_var_3 + 1 {
+        for loop_var_3 := 1; loop_var_3 < n; loop_var_3 = loop_var_3 + 1 {
             new_dom := cfg_zero_row(n)
 
             for j := 0; j < n; j = j + 1 {
@@ -146,7 +146,7 @@ func cfg_compute_post_dominators(control_flow_graph* cfg) {
         post_doms[cfg.exit_block_id][cfg.exit_block_id] = 1
     }
 
-    for i := 0; loop_var_2 < n; loop_var_2 = loop_var_2 + 1 {
+    for loop_var_2 := 0; loop_var_2 < n; loop_var_2 = loop_var_2 + 1 {
         if loop_var_2 != cfg.exit_block_id {
             for j := 0; j < n; j = j + 1 {
                 post_doms[loop_var_2][j] = 1
@@ -157,7 +157,7 @@ func cfg_compute_post_dominators(control_flow_graph* cfg) {
     for iteration := 0; iteration < 1000; iteration = iteration + 1 {
         changed := 0
 
-        for i := 0; loop_var_3 < n; loop_var_3 = loop_var_3 + 1 {
+        for loop_var_3 := 0; loop_var_3 < n; loop_var_3 = loop_var_3 + 1 {
             if loop_var_3 == cfg.exit_block_id {
                 continue
             }
@@ -209,7 +209,7 @@ func cfg_compute_dominance_frontier(control_flow_graph* cfg) {
     for x := 0; x < n; x = x + 1 {
         if cfg.blocks[x].predecessors.len() >= 2 {
 
-            for i := 0; loop_var_2 < cfg.blocks[x].predecessors.len(); loop_var_2 = loop_var_2 + 1 {
+            for loop_var_2 := 0; loop_var_2 < cfg.blocks[x].predecessors.len(); loop_var_2 = loop_var_2 + 1 {
                 runner := cfg.blocks[x].predecessors[loop_var_2]
 
                 for loop_count := 0; loop_count < n; loop_count = loop_count + 1 {
