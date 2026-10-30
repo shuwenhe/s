@@ -3710,10 +3710,12 @@ func nil_comparable_pair(string left, string right) bool {
 }
 
 func is_nil(string type_name) bool {
+    if type_name == "" { return false }
     compile.internal.typesys.parse_type(type_name) == "nil"
 }
 
 func is_nilable_type(string type_name) bool {
+    if type_name == "" { return false }
     clean := compile.internal.typesys.parse_type(type_name)
     if clean == "fn" || clean == "map" {
         return true
@@ -3726,6 +3728,8 @@ func is_nilable_type(string type_name) bool {
 }
 
 func is_unknown(string type_name) bool {
+    if type_name == "" { return true }
+    if type_name == "unknown" { return true }
     clean := compile.internal.typesys.parse_type(type_name)
     clean == "" || clean == "unknown"
 }
