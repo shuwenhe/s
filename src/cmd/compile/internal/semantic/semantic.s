@@ -3700,6 +3700,9 @@ func ok_type(string type_name) check_result {
 }
 
 func types_compatible(string left, string right) bool {
+    if left == right {
+        return true
+    }
     if is_unknown(left) || is_unknown(right) {
         return is_unknown(left) && is_unknown(right)
     }
