@@ -14,7 +14,10 @@ struct syntax_error {
 
 func read_source(string path) string {
     value := std.fs.read_to_string(path)
-    switch value { std.result.result.ok(text): text, std.result.result.err(_): "", }
+    if value.is_err() {
+        return ""
+    }
+    return value.unwrap()
 }
 
 func tokenize(string source) (string[], syntax_error) {

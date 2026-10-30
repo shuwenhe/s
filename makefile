@@ -520,6 +520,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_package_specialization_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_receiver_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_reference_receiver_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_loop_reference_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_emitter_memory_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_resolved_builtin_names_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_unit_entry_production_check.sh
