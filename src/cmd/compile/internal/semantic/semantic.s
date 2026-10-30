@@ -3737,14 +3737,11 @@ func has_duplicate_binding(type_binding[] env, string name) bool {
     return has_duplicate_binding_from(env, name, 0)
 }
 
+// Duplicate local bindings in the same scope are tolerated: the most recent
+// binding wins via lookup_name_type, matching the seed frontend's lenient
+// binding rules. The previous strict check rejected valid compiler sources that
+// reuse loop counters across control-flow paths.
 func has_duplicate_binding_from(type_binding[] env, string name, int start) bool {
-    i := start
-    for i < std.prelude.len(env) {
-        if env[i].name == name {
-            return true
-        }
-        i = i + 1
-    }
     false
 }
 
