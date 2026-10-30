@@ -365,6 +365,7 @@ help:
 
 .PHONY: selfhost-native-record-check
 selfhost-native-record-check: seed-compiler-bin
+	@bash test/native-bootstrap-diagnostic/native_transfer_index_check.sh
 	@bash test/native-bootstrap-diagnostic/native_semantic_closure_check.sh
 	@bash test/native-bootstrap-diagnostic/native_stage5_ast_check.sh
 	@bash test/native-bootstrap-diagnostic/native_ast_param_type_check.sh
@@ -481,6 +482,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_typesys_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_diagnostics_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_semantic_ast_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_source_diagnostics_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_record_semantic_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_array_semantic_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_switch_semantic_check.sh
@@ -517,6 +519,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 
 .PHONY: selfhost-native-memory-check
 selfhost-native-memory-check: compiler
+	@python3 test/native-bootstrap-diagnostic/native_global_readonly_check.py
 	@python3 test/native-bootstrap-diagnostic/native_global_temporary_check.py
 	@python3 test/native-bootstrap-diagnostic/native_argument_region_check.py
 	@python3 test/native-bootstrap-diagnostic/native_multi_package_cost_check.py

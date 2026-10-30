@@ -1500,10 +1500,11 @@ func method_binding_matches_trait(function_binding method, method_binding requir
 }
 
 func receiver_mode_from_type(string receiver_type) string {
-    if semantic_starts_with(receiver_type, "&") || semantic_starts_with(receiver_type, "*") {
-        return "ref"
+    normalized := compile.internal.typesys.parse_type(receiver_type)
+    if semantic_starts_with(normalized, "&mut") {
+        return "mut_ref"
     }
-    if semantic_starts_with(receiver_type, "&") || semantic_starts_with(receiver_type, "*") {
+    if semantic_starts_with(normalized, "&") || semantic_starts_with(normalized, "*") {
         return "ref"
     }
     "value"
@@ -3240,13 +3241,14 @@ func lookup_methods(function_binding[] functions, string receiver_type, string n
 }
 
 func method_owner_type(string receiver_type) string {
-    if semantic_starts_with(receiver_type, "&") {
-        return std.prelude.prelude_slice(receiver_type, 5, std.prelude.len(receiver_type))
+    normalized := compile.internal.typesys.parse_type(receiver_type)
+    if semantic_starts_with(normalized, "&mut") {
+        return std.prelude.prelude_slice(normalized, 4, std.prelude.len(normalized))
     }
-    if semantic_starts_with(receiver_type, "&") {
-        return std.prelude.prelude_slice(receiver_type, 1, std.prelude.len(receiver_type))
+    if semantic_starts_with(normalized, "&") {
+        return std.prelude.prelude_slice(normalized, 1, std.prelude.len(normalized))
     }
-    receiver_type
+    normalized
 }
 
 func receiver_allows_method(string receiver_type, expr receiver_expr, string receiver_mode) bool {
@@ -3254,9 +3256,10 @@ func receiver_allows_method(string receiver_type, expr receiver_expr, string rec
         return true
     }
     if receiver_mode == "mut_ref" {
-        if semantic_starts_with(receiver_type, "&") {
+        if semantic_starts_with(receiver_type, "&mut") {
             return true
         }
+        if semantic_starts_with(receiver_type, "&") { return false }
         return is_addressable_expr(receiver_expr)
     }
     if receiver_mode == "ref" {
@@ -3280,7 +3283,7 @@ func is_addressable_expr(expr value) bool {
 func method_receiver_arg_type(string receiver_type, string receiver_mode) string {
     owner_type := method_owner_type(receiver_type)
     if receiver_mode == "mut_ref" {
-        return "&" + owner_type
+        return "&mut" + owner_type
     }
     if receiver_mode == "ref" {
         return "&" + owner_type

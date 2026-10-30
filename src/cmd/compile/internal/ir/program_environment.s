@@ -165,7 +165,19 @@ func program_update_place(string root, program_store_step[] steps, int value, st
         }
     }
     binding := program_binding_index(state, root)
-    if binding >= 0 { state.binding_values[binding] = rhs; state.expression_value = rhs; return state }
+    if binding >= 0 {
+        current := state.binding_values[binding]
+        current_type := program_expression_type(state, state.signature, current)
+        referent := mir_program_reference_element(current_type)
+        if referent != "" {
+            if !mir_program_reference_mutable(current_type) { state.error = "cannot write a readonly reference"; return state }
+            if program_expression_type(state, state.signature, rhs) != referent { state.error = "reference store type mismatch"; return state }
+            state = program_emit_reference(state, "reference_set", referent, "()", [current, rhs])
+            state.expression_value = rhs
+            return state
+        }
+        state.binding_values[binding] = rhs; state.expression_value = rhs; return state
+    }
     global := program_environment_global(state.environment, pkg, root)
     if global >= 0 { return program_write_global(global, rhs, state) }
     state.error = "store to undefined binding: " + root

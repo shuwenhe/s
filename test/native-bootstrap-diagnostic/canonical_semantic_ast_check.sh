@@ -30,10 +30,10 @@ package main
 import ("compile.internal.syntax"; "compile.internal.semantic")
 func check(string source, bool valid) () {
     file, failure := compile.internal.syntax.parse_source(source)
-    if failure.message != "" { panic(failure.message) }
+    if failure.message != "" { eprintln(failure.message); panic(failure.message) }
     result := compile.internal.semantic.check_source_file(file, source)
-    if valid && len(result.errors) != 0 { panic(result.errors[0].message) }
-    if !valid && len(result.errors) == 0 { panic("semantic accepted invalid source") }
+    if valid && len(result.errors) != 0 { eprintln(result.errors[0].message); panic(result.errors[0].message) }
+    if !valid && len(result.errors) == 0 { eprintln("semantic accepted invalid source"); panic("semantic accepted invalid source") }
 }
 func main() int {
     check("package main\nfunc main(int value) int { return value + 1 }", true)
@@ -51,13 +51,26 @@ func main() int {
     check("package main\nconst first = 40\nconst answer = first + 2\nfunc main() int { return answer }", true)
     check("package main\nconst answer = true + 1\nfunc main() int { return 42 }", false)
     check("package main\nconst answer = 40\nconst answer = 42\nfunc main() int { return answer }", false)
+    check("package main\nstruct Counter { int value }\nfunc (Counter* self) positive() bool { return self.value > 0 }\nfunc (Counter* self) negative() bool { return !self.positive() }\nfunc main() int { counter := Counter { value: 42 }; if counter.negative() { return 1 }; return 42 }", true)
+    check("package main\nstruct Counter { int value }\nfunc (&Counter self) positive() bool { return self.value > 0 }\nfunc read(&Counter counter) bool { return counter.positive() }\nfunc main() int { return 42 }", true)
+    check("package main\nstruct Counter { int value }\nfunc (Counter* self) positive() bool { return self.value > 0 }\nfunc read(&Counter counter) bool { return counter.positive() }\nfunc main() int { return 42 }", false)
+    check("package main\nstruct Counter { int value }\nfunc (Counter* self) positive() bool { return self.value > 0 }\nfunc create() Counter { return Counter { value: 42 } }\nfunc main() int { if create().positive() { return 42 }; return 1 }", false)
     return 42
 }
 S
+python3 - "$root" "$work" <<'PY2'
+from pathlib import Path
+import json,sys
+root,work=map(Path,sys.argv[1:])
+source='package main\nimport "std.result"\nfunc main() int { return 42 }\nfunc accepts(result[int,string] input) bool { return input.is_err() }\n'+(root/'src/result/result.s').read_text()
+# Long literals exceed the seed IR operand limit; assemble the source at runtime.
+chunks=[json.dumps(source[i:i+256]) for i in range(0,len(source),256)]
+p=work/'main.s';text=p.read_text();text=text.replace('    return 42\n}\n','    check('+ ' + '.join(chunks)+', true)\n    return 42\n}\n');p.write_text(text)
+PY2
 sources=(src/option/option.s src/result/result.s src/prelude/prelude.s src/fs/fs.s src/cmd/compile/internal/ast/ast.s src/cmd/compile/internal/parser/syntax/syntax.s src/cmd/compile/internal/parser/syntax/canonical_parser.s src/cmd/compile/internal/prelude.s src/cmd/compile/internal/typesys/typesys.s src/cmd/compile/internal/typesys/canonical_type.s src/cmd/compile/internal/semantic/canonical_enum.s)
 for i in "${!sources[@]}"; do sources[$i]="$root/${sources[$i]}"; done
-"$root/bin/s_seed" --compile-native-unit "$work/main.ir" "${sources[@]}" "$work/semantic.s" "$work/main.s"
-S_SOURCE_ROOT="$root" "$root/bin/s_seed" --emit-standalone-amd64 "$work/main.ir" "$work/main"
+"${S_TEST_SEED:-$root/bin/s_seed}" --compile-native-unit "$work/main.ir" "${sources[@]}" "$work/semantic.s" "$work/main.s"
+S_SOURCE_ROOT="$root" "${S_TEST_SEED:-$root/bin/s_seed}" --emit-standalone-amd64 "$work/main.ir" "$work/main"
 status=0; "$work/main" || status=$?
 test "$status" -eq 42
 echo 'canonical parser and semantic AST checks execute natively with positive and negative cases: PASS'

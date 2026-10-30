@@ -13,7 +13,7 @@ root,work=map(Path,sys.argv[1:])
 source=(root/'src/cmd/compile/internal/semantic/semantic.s').read_text()
 positions=list(re.finditer(r'^func ([A-Za-z_][A-Za-z_0-9]*)\(',source,re.M))
 functions={m[1]:source[m.start():positions[i+1].start() if i+1<len(positions) else len(source)] for i,m in enumerate(positions)}
-pending=['check_source_file','declaration_ref_equal','declaration_ref_display','qualified_expr_path','find_struct_declaration','check_pattern','instantiate_type','match_type_pattern_ref','qualified_package_part','qualified_decl_part','lookup_name_type','is_unknown','pattern_is_wild']; selected=set()
+pending=['check_source_file_for_compile','check_source_file','declaration_ref_equal','declaration_ref_display','qualified_expr_path','find_struct_declaration','check_pattern','instantiate_type','match_type_pattern_ref','qualified_package_part','qualified_decl_part','lookup_name_type','is_unknown','pattern_is_wild']; selected=set()
 while pending:
  name=pending.pop()
  if name in selected or name not in functions: continue
@@ -46,7 +46,7 @@ func main() int {
 }
 S
 
-sources=(src/option/option.s src/result/result.s src/prelude/prelude.s src/fs/fs.s src/cmd/compile/internal/ast/ast.s src/cmd/compile/internal/parser/syntax/syntax.s src/cmd/compile/internal/parser/syntax/canonical_parser.s src/cmd/compile/internal/prelude.s src/cmd/compile/internal/typesys/typesys.s src/cmd/compile/internal/typesys/canonical_type.s src/cmd/compile/internal/semantic/canonical_enum.s src/cmd/compile/internal/mono/monomorphization.s src/cmd/compile/internal/mono/type_elaboration.s src/cmd/compile/internal/mir/program.s src/cmd/compile/internal/mir/program_enum.s src/cmd/compile/internal/ir/program_lower.s src/cmd/compile/internal/ir/program_payload.s src/cmd/compile/internal/ir/program_enum.s src/cmd/compile/internal/compiler/canonical_source.s src/cmd/compile/internal/ssa/program.s src/cmd/compile/internal/ssa/function_lower.s src/cmd/compile/internal/codegen/amd64_program.s)
+sources=(src/option/option.s src/result/result.s src/prelude/prelude.s src/fs/fs.s src/cmd/compile/internal/ast/ast.s src/cmd/compile/internal/parser/syntax/syntax.s src/cmd/compile/internal/parser/syntax/canonical_parser.s src/cmd/compile/internal/prelude.s src/cmd/compile/internal/typesys/typesys.s src/cmd/compile/internal/typesys/canonical_type.s src/cmd/compile/internal/semantic/canonical_enum.s src/cmd/compile/internal/mono/monomorphization.s src/cmd/compile/internal/mono/canonical_annotation.s src/cmd/compile/internal/mono/type_elaboration.s src/cmd/compile/internal/mir/program.s src/cmd/compile/internal/mir/program_enum.s src/cmd/compile/internal/ir/program_lower.s src/cmd/compile/internal/ir/program_environment.s src/cmd/compile/internal/ir/program_payload.s src/cmd/compile/internal/ir/program_enum.s src/cmd/compile/internal/compiler/canonical_source.s src/cmd/compile/internal/ssa/program.s src/cmd/compile/internal/ssa/function_lower.s src/cmd/compile/internal/codegen/amd64_program.s)
 for i in "${!sources[@]}"; do sources[$i]="$root/${sources[$i]}"; done
 printf 'package compile.internal\nextern "intrinsic" func runtime_env_get(string key, string fallback) string\n' > "$work/helpers.s"
 "$seed" --compile-native-unit "$work/test.ir" "${sources[@]}" "$work/semantic.s" "$work/helpers.s" "$work/main.s"

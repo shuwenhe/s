@@ -74,6 +74,8 @@ typedef struct standalone_global {
     char name[STANDALONE_TEXT_CAP],type[STANDALONE_TEXT_CAP],initializer[STANDALONE_TEXT_CAP];
 } standalone_global;
 typedef struct standalone_module {
+    const standalone_ins **transfer_index;
+    size_t transfer_count;
     standalone_global *globals;
     size_t global_count;
     size_t global_order[STANDALONE_MAX_SLOTS], global_order_count;
@@ -468,6 +470,7 @@ static bool analyze_module(standalone_module *module, compile_error *err) {
 	standalone_function *current = NULL;
 	module->func_count = 0;
 	module->literal_count = 0;
+	if (!standalone_build_transfer_index(module, err)) return false;
 	if (!standalone_collect_record_schemas(module, err) || !standalone_collect_globals(module,err)) return false;
 	for (i = 0; i < module->ir.len; i++) {
 		standalone_ins *ins = &module->ir.ins[i];
@@ -925,13 +928,28 @@ static standalone_ins *standalone_arg_call(standalone_module *m,standalone_funct
 }
 static bool standalone_global_alias(standalone_module *m,standalone_function *fn,
                                     const bool *aliases,const char *place) {
-    for(size_t g=0;g<m->global_count;g++) {
-        size_t n=strlen(m->globals[g].name);
-        if(!strncmp(place,m->globals[g].name,n) && (!place[n] || place[n]=='.')) return true;
-    }
-    for(size_t s=0;s<fn->slot_count;s++) if(aliases[s]) {
-        size_t n=strlen(fn->slots[s].name);
-        if(!strncmp(place,fn->slots[s].name,n) && (!place[n] || place[n]=='.')) return true;
+    /* Inline array operands retain their elements' identity. A global inside
+     * [global] is just as old as a bare global; quoted strings name no graph. */
+    const char *p=place;
+    while(*p) {
+        if(*p=='"') {
+            p++;
+            while(*p && *p!='"') { if(*p=='\\' && p[1]) p++; p++; }
+            if(*p) p++;
+            continue;
+        }
+        if(!isalpha((unsigned char)*p) && *p!='_' && *p!='$') { p++; continue; }
+        const char *start=p++;
+        while(isalnum((unsigned char)*p) || *p=='_' || *p=='$' || *p=='.') p++;
+        size_t length=(size_t)(p-start);
+        for(size_t g=0;g<m->global_count;g++) {
+            size_t n=strlen(m->globals[g].name);
+            if(n<=length && !strncmp(start,m->globals[g].name,n) && (n==length || start[n]=='.')) return true;
+        }
+        for(size_t s=0;s<fn->slot_count;s++) if(aliases[s]) {
+            size_t n=strlen(fn->slots[s].name);
+            if(n<=length && !strncmp(start,fn->slots[s].name,n) && (n==length || start[n]=='.')) return true;
+        }
     }
     return false;
 }
@@ -969,12 +987,17 @@ static void standalone_analyze_regions(standalone_module *m) {
                         size_t first=pending_count-(size_t)count;
                         const char *runtime=runtime_callee(x->operand1);
                         if(count && runtime && !strcmp(runtime,"s_index_get")) global_source=standalone_global_alias(m,fn,global_aliases,pending[first]);
+                        if(runtime && !strcmp(runtime,"s_array_append")) {
+                            for(size_t a=first;a<pending_count;a++)
+                                global_source|=standalone_global_alias(m,fn,global_aliases,pending[a]);
+                        }
                         if(count && runtime && !strcmp(runtime,"s_index_set") && standalone_global_alias(m,fn,global_aliases,pending[first])) fn->region_safe=false;
                         pending_count=first;
                     }
                 }
                 if(global_source && (!strcmp(x->op,"READ") || !strcmp(x->op,"INDEX_GET") ||
-                   (!strcmp(x->op,"CALL") && runtime_callee(x->operand1) && !strcmp(runtime_callee(x->operand1),"s_index_get")))) {
+                   (!strcmp(x->op,"CALL") && runtime_callee(x->operand1) &&
+                    (!strcmp(runtime_callee(x->operand1),"s_index_get") || !strcmp(runtime_callee(x->operand1),"s_array_append"))))) {
                     int slot=slot_index(fn,x->result,false);
                     if(slot>=0 && !global_aliases[slot]) { global_aliases[slot]=true; aliases_changed=true; }
                 }
@@ -1576,6 +1599,7 @@ static void standalone_free_module(standalone_module *module) {
         free(module->funcs[i].live_in);
     }
 	free(module->globals);
+	free(module->transfer_index);
 	standalone_free_record_schemas(module);
 	free(module);
 }

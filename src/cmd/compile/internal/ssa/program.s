@@ -203,6 +203,7 @@ func verify_ssa_function(function_ssa_function f) string {
     t = 0
     for t < len(f.result_types) {
         if f.result_types[t] == "" { return "empty result type: " + f.symbol }
+        if mir_program_contains_reference(f.result_types[t]) { return "SSA reference result escapes its call" }
         t = t + 1
     }
     b := 0
@@ -344,8 +345,17 @@ func verify_ssa_program(function_ssa_program program) string {
             v := 0
             for v < len(f.blocks[b].values) {
                 value := f.blocks[b].values[v]
+                if mir_program_reference_element(value.type_name) != "" && value.op != "param" && value.op != "reference_new" && value.op != "reference_readonly" { return "SSA unproven reference result" }
+                a := 0
+                for a < len(value.operands) {
+                    if mir_program_reference_element(ssa_value_type(f.blocks, value.operands[a])) != "" && value.op != "reference_get" && value.op != "reference_set" && value.op != "reference_readonly" && value.op != "call" { return "SSA reference used outside a proven borrow operation" }
+                    a = a + 1
+                }
                 if value.op == "global_get" || value.op == "global_set" {
                     error = ssa_global_value_error(f, value, program.globals)
+                    if error != "" { return error }
+                } else if value.op == "reference_new" || value.op == "reference_get" || value.op == "reference_set" || value.op == "reference_readonly" {
+                    error = ssa_reference_value_error(f, value, program.records)
                     if error != "" { return error }
                 } else if value.op == "record_new" || value.op == "record_get" || value.op == "record_set" {
                     error = ssa_record_value_error(f, value, program.records)
@@ -383,6 +393,14 @@ func verify_ssa_program(function_ssa_program program) string {
         a := 0
         for a < len(value.operands) {
             if ssa_value_type(program.functions[caller].blocks, value.operands[a]) != target.parameter_types[a] { return "call argument type: " + call.callee }
+            if mir_program_reference_element(target.parameter_types[a]) != "" {
+                previous := 0
+                for previous < a {
+                    if mir_program_reference_element(target.parameter_types[previous]) != "" && ssa_reference_origin(program.functions[caller], value.operands[previous]) == ssa_reference_origin(program.functions[caller], value.operands[a])
+                        && (mir_program_reference_mutable(target.parameter_types[previous]) || mir_program_reference_mutable(target.parameter_types[a])) { return "SSA aliased mutable call reference" }
+                    previous = previous + 1
+                }
+            }
             a = a + 1
         }
         // This: representation has one type per call value, so a call can
@@ -498,10 +516,46 @@ func ssa_array_element(string type_name) string {
 }
 
 func ssa_type_supported(string type_name, function_ssa_record[] records) bool {
+    referent := mir_program_reference_element(type_name)
+    if referent != "" { return ssa_record_index(records, referent) >= 0 || (ssa_array_element(referent) != "" && ssa_type_supported(referent, records)) }
     if type_name == "string" || type_name == "int" || type_name == "()" || type_name == "bool" || ssa_record_index(records, type_name) >= 0 { return true }
     element := ssa_array_element(type_name)
     if element != "" { return ssa_type_supported(element, records) }
     return false
+}
+
+func ssa_reference_origin(function_ssa_function function_data, int original) int {
+    id := original
+    remaining := 1
+    b := 0
+    for b < len(function_data.blocks) { remaining = remaining + len(function_data.blocks[b].values); b = b + 1 }
+    for remaining > 0 {
+        defining := ssa_value_block_index(function_data.blocks, id)
+        if defining < 0 { return -1 }
+        value := function_data.blocks[defining].values[ssa_value_index(function_data.blocks[defining].values, id)]
+        if value.op != "reference_readonly" || len(value.operands) != 1 { return id }
+        id = value.operands[0]; remaining = remaining - 1
+    }
+    return -1
+}
+
+func ssa_reference_value_error(function_ssa_function function_data, function_ssa_value value, function_ssa_record[] records) string {
+    if len(value.field_names) != 0 || value.integer_value != 0 || value.symbol == "" || !ssa_type_supported("&" + value.symbol, records) { return "SSA invalid reference metadata" }
+    if value.op == "reference_new" {
+        if len(value.operands) != 1 || mir_program_reference_element(value.type_name) != value.symbol { return "SSA reference allocation result type or arity" }
+        if ssa_value_type(function_data.blocks, value.operands[0]) != value.symbol { return "SSA reference allocation value type" }
+        return ""
+    }
+    if len(value.operands) < 1 { return "SSA missing reference operand" }
+    reference_type := ssa_value_type(function_data.blocks, value.operands[0])
+    if mir_program_reference_element(reference_type) != value.symbol { return "SSA reference operand referent type" }
+    if value.op == "reference_set" {
+        if !mir_program_reference_mutable(reference_type) || len(value.operands) != 2 || value.type_name != "()" { return "SSA readonly reference store or invalid arity" }
+        if ssa_value_type(function_data.blocks, value.operands[1]) != value.symbol { return "SSA reference store value type" }
+    } else if value.op == "reference_readonly" {
+        if len(value.operands) != 1 || value.type_name != "&" + value.symbol { return "SSA invalid readonly reborrow" }
+    } else if len(value.operands) != 1 || value.type_name != value.symbol { return "SSA reference load result type or arity" }
+    return ""
 }
 
 func ssa_array_value_error(function_ssa_function function_data, function_ssa_value value, function_ssa_record[] records) string {

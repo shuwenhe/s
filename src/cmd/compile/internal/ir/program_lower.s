@@ -3,6 +3,7 @@ package compile.internal.ir.lower
 import (
     "compile.internal.ast"
     "compile.internal.mir"
+    "compile.internal.typesys"
     "std"
     "std.option"
     "std.prelude"
@@ -18,6 +19,7 @@ struct program_store_step {
 
 struct program_continue_edge { int target; int block; int[] values }
 struct program_break_edge { int target; int block; int[] values }
+struct program_borrow_writeback { string root; program_store_step[] steps; int reference; string type_name }
 
 struct program_lower_state {
     bool in_loop
@@ -30,6 +32,7 @@ struct program_lower_state {
     string[] expanding_constants
     string store_root
     program_store_step[] store_steps
+    bool borrow_writeback
     mir_program_block[] blocks
     int block_id
     int created_block
@@ -314,6 +317,8 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             state = program_lower_expression(value.target.value, package_name, signatures, state)
             if state.error != "" { return state }
             target := state.expression_value
+            state = program_read_reference(state)
+            target = state.expression_value
             array_type := program_expression_type(state, state.signature, target)
             element := mir_program_array_element(array_type)
             if element == "" { state.error = "index requires an array"; return state }
@@ -355,6 +360,8 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             state = program_lower_expression(member.target.value, package_name, signatures, state)
             if state.error != "" { return state }
             target := state.expression_value
+            state = program_read_reference(state)
+            target = state.expression_value
             target_type := program_expression_type(state, state.signature, target)
             record_index := mir_program_record_index(state.records, target_type)
             if record_index < 0 { state.error = "member target is not a record: " + target_type; return state }
@@ -510,9 +517,39 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             target := mir_program_function_index(signatures, symbol)
             if target < 0 { state.error = "unknown callee: " + symbol; return state }
             args := int[]()
+            writebacks := program_borrow_writeback[]()
+            borrowed_roots := string[]()
+            borrowed_mutable := bool[]()
+            pending_borrow := false
             i := 0
             for i < len(call.args) {
-                state = program_lower_expression(call.args[i], package_name, signatures, state)
+                if i >= len(signatures[target].params) { state.error = "call argument count"; return state }
+                expected := signatures[target].params[i].type_name
+                reference := mir_program_reference_element(expected) != ""
+                root := program_root_name(call.args[i])
+                switch call.args[i] { expr.borrow(value): root = program_root_name(value.target.value), _: (), }
+                if pending_borrow && !reference && !program_borrow_argument_pure(call.args[i]) { state.error = "effectful argument after a borrow"; return state }
+                if reference {
+                    if root == "" { state.error = "borrow requires a named local place"; return state }
+                    j := 0
+                    for j < len(borrowed_roots) {
+                        if borrowed_roots[j] == root && (borrowed_mutable[j] || mir_program_reference_mutable(expected)) { state.error = "aliased mutable call borrow"; return state }
+                        j = j + 1
+                    }
+                    j = 0
+                    for j < len(call.args) {
+                        if j != i && program_expression_uses_root(call.args[j], root) {
+                            other_reference := j < len(signatures[target].params) && mir_program_reference_element(signatures[target].params[j].type_name) != ""
+                            if !other_reference || mir_program_reference_mutable(expected) || mir_program_reference_mutable(signatures[target].params[j].type_name) { state.error = "overlapping borrowed call arguments"; return state }
+                        }
+                        j = j + 1
+                    }
+                    borrowed_roots.push(root)
+                    borrowed_mutable.push(mir_program_reference_mutable(expected))
+                    pending_borrow = true
+                    state = program_lower_reference_argument(call.args[i], expected, package_name, signatures, state)
+                    if state.borrow_writeback { writebacks.push(program_borrow_writeback { root: state.store_root, steps: state.store_steps, reference: state.expression_value, type_name: mir_program_reference_element(expected) }) }
+                } else { state = program_lower_expression(call.args[i], package_name, signatures, state) }
                 if state.error != "" { return state }
                 args = append(args, state.expression_value)
                 i = i + 1
@@ -530,6 +567,17 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                 op: "call", result_ids: result_ids, result_types: result_types,
                 operands: args, integer_value: 0, symbol: symbol,
             })
+            call_value := state.expression_value
+            w := 0
+            for w < len(writebacks) {
+                writeback := writebacks[w]
+                reference_id := writeback.reference
+                state = program_emit_reference(state, "reference_get", writeback.type_name, writeback.type_name, [reference_id])
+                state = program_update_place(writeback.root, writeback.steps, state.expression_value, package_name, state)
+                if state.error != "" { return state }
+                w = w + 1
+            }
+            state.expression_value = call_value
             if symbol == "__native_builtin.panic" {
                 return program_finish_block(state, "unreachable", int[](), int[]())
             }
@@ -695,11 +743,20 @@ func program_root_name(expr value) string {
     switch value {
         expr.name(name): { return name.name }
         expr.member(member): { return program_root_name(member.target.value) }
+        expr.index(index): { return program_root_name(index.target.value) }
+        expr.borrow(borrow): { return program_root_name(borrow.target.value) }
         _ : { return "" },
     }
 }
 
 func program_record_type(string type_name, string package_name, mir_program_record[] records, mir_program_enum[] enums) string {
+    normalized := compile.internal.typesys.parse_type(type_name)
+    referent := mir_program_reference_element(normalized)
+    if referent != "" {
+        prefix := "&"
+        if mir_program_reference_mutable(normalized) { prefix = "&mut" }
+        return prefix + program_record_type(referent, package_name, records, enums)
+    }
     tuple := program_tuple_types(type_name)
     if len(tuple) > 1 {
         result := "("
@@ -798,6 +855,111 @@ func program_emit_array(program_lower_state initial, string op, string array_typ
     state.instructions = append(state.instructions, mir_program_instruction { op: op, result_ids: [id], result_types: [result_type], operands: operands, symbol: array_type, integer_value: 0 })
     state.expression_value = id
     return state
+}
+
+func program_emit_reference(program_lower_state initial, string op, string referent, string result_type, int[] operands) program_lower_state {
+    state := initial
+    id := state.next_value
+    state.next_value = id + 1
+    state.instructions.push(mir_program_instruction { op: op, result_ids: [id], result_types: [result_type], operands: operands, symbol: referent })
+    state.expression_value = id
+    return state
+}
+
+func program_read_reference(program_lower_state state) program_lower_state {
+    type_name := program_expression_type(state, state.signature, state.expression_value)
+    referent := mir_program_reference_element(type_name)
+    if referent == "" { return state }
+    reference_id := state.expression_value
+    return program_emit_reference(state, "reference_get", referent, referent, [reference_id])
+}
+
+func program_borrow_argument_pure(expr value) bool {
+    switch value {
+        expr.name(_): true,
+        expr.int(_): true,
+        expr.bool(_): true,
+        expr.string(_): true,
+        expr.member(member): program_borrow_argument_pure(member.target.value),
+        expr.index(index): program_borrow_argument_pure(index.target.value) && program_borrow_argument_pure(index.index.value),
+        expr.binary(binary): program_borrow_argument_pure(binary.left.value) && program_borrow_argument_pure(binary.right.value),
+        _: false,
+    }
+}
+
+func program_expression_uses_root(expr value, string root) bool {
+    switch value {
+        expr.name(name): name.name == root,
+        expr.member(member): program_expression_uses_root(member.target.value, root),
+        expr.index(index): program_expression_uses_root(index.target.value, root) || program_expression_uses_root(index.index.value, root),
+        expr.borrow(borrow): program_expression_uses_root(borrow.target.value, root),
+        expr.binary(binary): program_expression_uses_root(binary.left.value, root) || program_expression_uses_root(binary.right.value, root),
+        expr.call(call): {
+            i := 0
+            for i < len(call.args) { if program_expression_uses_root(call.args[i], root) { return true }; i = i + 1 }
+            false
+        }
+        expr.record(record): {
+            i := 0
+            for i < len(record.field_values) { if program_expression_uses_root(record.field_values[i], root) { return true }; i = i + 1 }
+            false
+        }
+        expr.array(array): {
+            i := 0
+            for i < len(array.items) { if program_expression_uses_root(array.items[i], root) { return true }; i = i + 1 }
+            false
+        }
+        expr.tuple(tuple): {
+            i := 0
+            for i < len(tuple.items) { if program_expression_uses_root(tuple.items[i], root) { return true }; i = i + 1 }
+            false
+        }
+        _: false,
+    }
+}
+
+func program_lower_reference_argument(expr argument, string expected, string pkg, mir_program_function[] signatures, program_lower_state initial) program_lower_state {
+    state := initial
+    state.borrow_writeback = false
+    switch argument {
+        expr.borrow(borrow): {
+            if !program_borrow_argument_pure(borrow.target.value) { state.error = "borrow place requires effect-free selectors"; return state }
+            if borrow.mutable != mir_program_reference_mutable(expected) { state.error = "borrow mutability mismatch"; return state }
+            state.store_root = ""
+            state.store_steps = program_store_step[]()
+            state = program_prepare_store(borrow.target.value, pkg, signatures, state)
+            if state.error != "" { return state }
+            binding := program_binding_index(state, state.store_root)
+            if binding < 0 { state.error = "global borrow requires an explicit exclusivity proof"; return state }
+            current := state.binding_values[binding]
+            current_type := program_expression_type(state, state.signature, current)
+            if len(state.store_steps) == 0 && mir_program_reference_element(current_type) != "" {
+                if current_type == expected { state.expression_value = current; return state }
+                if !mir_program_reference_mutable(expected) && mir_program_reference_element(current_type) == mir_program_reference_element(expected) {
+                    return program_emit_reference(state, "reference_readonly", mir_program_reference_element(expected), expected, [current])
+                }
+                state.error = "incompatible reborrow"; return state
+            }
+            referent := mir_program_reference_element(expected)
+            if program_expression_type(state, state.signature, state.expression_value) != referent { state.error = "borrow referent type mismatch"; return state }
+            if borrow.mutable && mir_program_reference_element(current_type) != "" && !mir_program_reference_mutable(current_type) { state.error = "cannot mutably borrow a readonly reference"; return state }
+            source_id := state.expression_value
+            state = program_emit_reference(state, "reference_new", referent, expected, [source_id])
+            state.borrow_writeback = borrow.mutable
+            return state
+        }
+        expr.name(_): {
+            state = program_lower_expression(argument, pkg, signatures, state)
+            actual := program_expression_type(state, state.signature, state.expression_value)
+            if actual == expected { return state }
+            if mir_program_reference_mutable(actual) && !mir_program_reference_mutable(expected) && mir_program_reference_element(actual) == mir_program_reference_element(expected) {
+                source_id := state.expression_value
+                return program_emit_reference(state, "reference_readonly", mir_program_reference_element(expected), expected, [source_id])
+            }
+            state.error = "reference argument requires an explicit borrow"; return state
+        }
+        _: { state.error = "reference argument requires a named borrow"; return state },
+    }
 }
 
 func program_copy_values(int[] values) int[] {
@@ -1168,7 +1330,7 @@ func program_prepare_store(expr target, string package_name, mir_program_functio
                 return program_read_global(global, state)
             }
             state.expression_value = state.binding_values[index]
-            return state
+            return program_read_reference(state)
         }
         expr.member(member): {
             path := program_callee_path(target)

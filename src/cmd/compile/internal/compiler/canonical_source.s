@@ -15,7 +15,7 @@ func canonical_source_to_mir(string source) mir_program_result {
     if trace { eprintln("canonical: parser complete") }
     checked := compile.internal.semantic.check_source_file_for_compile(parsed, source)
     if trace { eprintln("canonical: semantic complete") }
-    if len(checked.errors) != 0 { return mir_program_result { program: empty, error: "canonical semantic: " + checked.errors[0].code + ": " + checked.errors[0].message } }
+    if len(checked.errors) != 0 { return mir_program_result { program: empty, error: canonical_semantic_diagnostic(source, checked.errors[0]) } }
     annotated := compile.internal.mono.annotate_canonical_calls(parsed, checked, source)
     if annotated.error != "" { return mir_program_result { program: empty, error: "canonical annotation: " + annotated.error } }
     if trace { eprintln("canonical: semantic call annotation complete") }
@@ -31,4 +31,29 @@ func canonical_source_to_mir(string source) mir_program_result {
     lowered := compile.internal.ir.lower.lower_source_program(flattened.file)
     if trace { eprintln("canonical: MIR complete") }
     return lowered
+}
+
+func canonical_semantic_diagnostic(string source, compile.internal.semantic.semantic_error diagnostic) string {
+    message := "canonical semantic:" + amd64_integer(diagnostic.line) + ":" + amd64_integer(diagnostic.column)
+        + ": " + diagnostic.code + ": " + diagnostic.message
+    if diagnostic.anchor != "" { message = message + " [anchor=" + diagnostic.anchor + "]" }
+    context := canonical_source_line(source, diagnostic.line)
+    if context != "" { message = message + "\n" + context }
+    return message
+}
+
+func canonical_source_line(string source, int wanted_line) string {
+    line := 1
+    start := 0
+    index := 0
+    for index < len(source) {
+        if __host_slice(source, index, index + 1) == "\n" {
+            if line == wanted_line { return __host_slice(source, start, index) }
+            line = line + 1
+            start = index + 1
+        }
+        index = index + 1
+    }
+    if line == wanted_line { return __host_slice(source, start, len(source)) }
+    return ""
 }

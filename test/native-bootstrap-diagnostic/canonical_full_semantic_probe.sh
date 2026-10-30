@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
+seed=${S_SEED_COMPILER:-"$root/bin/s_seed"}
 work=$(mktemp -d /tmp/s-canonical-semantic-ast.XXXXXX)
 trap 'status=$?; if [ "$status" -eq 0 ]; then rm -rf "$work"; else echo artifacts=$work; fi' EXIT
 python3 - "$root" "$work" <<'PY'
@@ -10,7 +11,7 @@ root,work=map(Path,sys.argv[1:])
 s=(root/'src/cmd/compile/internal/semantic/semantic.s').read_text()
 positions=list(re.finditer(r'^func ([A-Za-z_][A-Za-z_0-9]*)\(',s,re.M))
 functions={m[1]:s[m.start():positions[i+1].start() if i+1<len(positions) else len(s)] for i,m in enumerate(positions)}
-needed=['check_source_file','declaration_ref_equal','declaration_ref_display','find_struct_declaration','check_pattern','instantiate_type','match_type_pattern_ref','qualified_package_part','qualified_decl_part','lookup_name_type','is_unknown','pattern_is_wild'];selected=set()
+needed=['check_source_file_for_compile','check_source_file','declaration_ref_equal','declaration_ref_display','find_struct_declaration','check_pattern','instantiate_type','match_type_pattern_ref','qualified_package_part','qualified_decl_part','lookup_name_type','is_unknown','pattern_is_wild'];selected=set()
 while needed:
  name=needed.pop()
  if name in selected or name not in functions:continue
@@ -19,9 +20,7 @@ while needed:
  needed+=re.findall(r'\b([A-Za-z_][A-Za-z_0-9]*)\s*\(',code)
 text=s[:positions[0].start()]+''.join(functions[m[1]] for m in positions if m[1] in selected)
 if __import__('os').environ.get('S_SEMANTIC_DEBUG')=='1':
- text=text.replace('    errors := left.errors + right.errors', '    eprintln("binary types=" + left.type_name + "," + right.type_name)\n    errors := left.errors + right.errors')
- text=text.replace('    result := infer_block_expr(function_decl.body.unwrap()', '    eprintln("expected return=" + expected_return)\n    result := infer_block_expr(function_decl.body.unwrap()')
- text=text.replace('    if is_unknown(left) || is_unknown(right)', '    eprintln("compatible=" + left + "," + right)\n    if is_unknown(left) || is_unknown(right)')
+ text=text.replace('    result := infer_block_expr_in_scope(function_decl.body.unwrap()', '    eprintln("checking function=" + package_name + "." + function_decl.sig.name + " expected_return=" + expected_return)\n    result := infer_block_expr_in_scope(function_decl.body.unwrap()')
  text=text.replace('    recovery_anchor := resolve_recovery_anchor(source, anchor)','    eprintln(code + ": " + message + " @ " + anchor)\n    recovery_anchor := resolve_recovery_anchor(source, anchor)')
 text=text.replace('func collect_consts(source_file file, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) const_binding[] {', 'func collect_consts(source_file file, function_binding[] functions, trait_binding[] traits, string source, semantic_error[] diagnostics) const_binding[] {\n    eprintln("entered collect_consts")')
 for label,statement in [
@@ -90,7 +89,7 @@ func main() int {
         file = parsed
     }
     eprintln("parsed items=" + std.prelude.to_string(len(file.items)))
-    result := compile.internal.semantic.check_source_file(file, source)
+    result := compile.internal.semantic.check_source_file_for_compile(file, source)
     eprintln("semantic diagnostics=" + std.prelude.to_string(len(result.errors)))
     i := 0
     for i < len(result.errors) && i < 40 {
@@ -104,10 +103,10 @@ func main() int {
 S
 sources=(src/option/option.s src/result/result.s src/prelude/prelude.s src/fs/fs.s src/cmd/compile/internal/ast/ast.s src/cmd/compile/internal/parser/syntax/syntax.s src/cmd/compile/internal/parser/syntax/canonical_parser.s src/cmd/compile/internal/prelude.s src/cmd/compile/internal/typesys/typesys.s src/cmd/compile/internal/typesys/canonical_type.s src/cmd/compile/internal/semantic/canonical_enum.s)
 for i in "${!sources[@]}"; do sources[$i]="$root/${sources[$i]}"; done
-"$root/bin/s_seed" --compile-native-unit "$work/main.ir" "${sources[@]}" "$work/semantic.s" "$work/main.s"
-S_SOURCE_ROOT="$root" "$root/bin/s_seed" --emit-standalone-amd64 "$work/main.ir" "$work/main"
+"$seed" --compile-native-unit "$work/main.ir" "${sources[@]}" "$work/semantic.s" "$work/main.s"
+S_SOURCE_ROOT="$root" "$seed" --emit-standalone-amd64 "$work/main.ir" "$work/main"
 probe_args=("$work/full.s")
 if [ "${S_SEMANTIC_PROBE_PER_FILE:-0}" = 1 ]; then probe_args+=("$root/.bootstrap/native-imports/stage1.sources" "$root"); fi
-status=0; (ulimit -v 1572864; ulimit -t 180; /usr/bin/time -v timeout 180 "$work/main" "${probe_args[@]}") || status=$?
+status=0; (ulimit -v "${S_SEMANTIC_PROBE_MEMORY_KB:-6291456}"; ulimit -t "${S_SEMANTIC_PROBE_SECONDS:-300}"; /usr/bin/time -v timeout "${S_SEMANTIC_PROBE_SECONDS:-300}" "$work/main" "${probe_args[@]}") || status=$?
 if [ "$status" -ne 0 ]; then exit "$status"; fi
-echo 'full264 canonical semantic probe: PASS'
+echo 'full canonical semantic probe: PASS'

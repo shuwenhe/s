@@ -11,9 +11,12 @@ static unsigned long long standalone_read_alias(standalone_function *fn,
 static void standalone_analyze_readonly(standalone_module *m) {
     for(size_t f=0;f<m->func_count;f++) {
         standalone_function *fn=&m->funcs[f]; fn->readonly_params=0;
-        /* A global or borrowed side effect could mutate another alias of an
-         * argument, even when the parameter itself is used only for reads. */
-        if(!fn->region_safe || fn->region_globals || fn->borrow_mask) continue;
+        /* Region safety excludes in-place writes through globals, their
+         * aliases and borrowed callees. Replacing/appending a global root
+         * preserves its old graph, so it does not invalidate read-only
+         * argument sharing. The per-parameter analysis below still rejects
+         * writes through that argument's own aliases. */
+        if(!fn->region_safe || fn->borrow_mask) continue;
         unsigned long long aliases[STANDALONE_MAX_SLOTS]={0},mask=0,forbidden=0;
         size_t p=0;
         for(size_t i=fn->begin;i<fn->end && !strcmp(m->ir.ins[i].op,"PARAM") && p<64;i++,p++) {

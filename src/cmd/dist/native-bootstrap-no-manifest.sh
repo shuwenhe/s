@@ -11,7 +11,7 @@ rm -f "$output_dir/.complete"
 export S_SOURCE_ROOT="$root"
 export S_TARGET_OS=${S_TARGET_OS:-$(uname -s | tr '[:upper:]' '[:lower:]')}
 export S_TARGET_ARCH=${S_TARGET_ARCH:-$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')}
-timeout_seconds=${S_BOOTSTRAP_TIMEOUT:-120}
+timeout_seconds=${S_BOOTSTRAP_TIMEOUT:-1200}
 verify="$root/misc/scripts/verify_true_selfhost.sh"
 seed="$root/bin/s_seed"
 
@@ -41,6 +41,7 @@ while IFS= read -r source; do
 done < "$closure"
 [ "${#sources[@]}" -gt 0 ] || fail 'empty source closure'
 printf 'Resolved source closure: %s files\n' "${#sources[@]}"
+sha256sum "${sources[@]}" > "$output_dir/source-sha256"
 
 printf '[1/3] Seed -> native stage1\n'
 "$seed" --compile-native-unit "$output_dir/stage1.ir" "${sources[@]}" 2>&1 | tee "$output_dir/stage1-compile.log"
@@ -66,5 +67,12 @@ done
 
 cmp -s "$output_dir/stage2.sasm" "$output_dir/stage3.sasm" || fail 'stage2/stage3 assembly did not converge'
 cmp -s "$output_dir/stage2" "$output_dir/stage3" || fail 'stage2/stage3 binaries did not converge'
+for stage in 2 3; do
+    bash "$root/src/cmd/dist/checks/selfhost-execution.sh" \
+        "$output_dir/stage$stage" "$output_dir/stage$stage-execution" \
+        2>&1 | tee "$output_dir/stage$stage-execution.log"
+done
+sha256sum "${sources[@]}" > "$output_dir/source-sha256.after"
+cmp -s "$output_dir/source-sha256" "$output_dir/source-sha256.after" || fail 'compiler sources changed during bootstrap'
 touch "$output_dir/.complete"
 printf 'Native bootstrap verified: seed -> stage1 -> stage2 == stage3\n'

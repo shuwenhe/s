@@ -4,16 +4,49 @@
 static bool standalone_borrow_scalar(const char *t) {
     return t && (!strcmp(t,"int") || !strcmp(t,"bool") || !strcmp(t,"byte") || !strcmp(t,"()"));
 }
-static const char *standalone_transfer(const standalone_module *m,const char *prefix,const char *fn,const char *param) {
-    const char *value=NULL;
-    size_t n=strlen(prefix);
-    for(size_t i=0;i<m->ir.len;i++) {
-        const standalone_ins *x=&m->ir.ins[i];
-        if(strcmp(x->op,"NOP") || strncmp(x->result,prefix,n) || strcmp(x->result+n,fn) || (param && strcmp(param,x->operand1))) continue;
-        if(value) return NULL; /* Duplicate descriptors are not proof. */
-        value=x->operand2;
+static int standalone_transfer_compare(const void *left,const void *right) {
+    const standalone_ins *a=*(const standalone_ins *const *)left;
+    const standalone_ins *b=*(const standalone_ins *const *)right;
+    int result=strcmp(a->result,b->result);
+    return result?result:strcmp(a->operand1,b->operand1);
+}
+/* Metadata is immutable after loading. Index the original records rather than
+ * rewriting them: callers still reject duplicate descriptors, even identical
+ * ones, and NULL parameter queries still require one descriptor in total. */
+static bool standalone_build_transfer_index(standalone_module *m,compile_error *err) {
+    free(m->transfer_index);
+    m->transfer_index=NULL;
+    m->transfer_count=0;
+    for(size_t i=0;i<m->ir.len;i++)
+        if(!strcmp(m->ir.ins[i].op,"NOP")) m->transfer_count++;
+    if(!m->transfer_count) return true;
+    m->transfer_index=malloc(m->transfer_count*sizeof(*m->transfer_index));
+    if(!m->transfer_index) {
+        error_set(err,ERR_OUT_OF_MEMORY,0,0,"native transfer index allocation failed");
+        return false;
     }
-    return value;
+    size_t next=0;
+    for(size_t i=0;i<m->ir.len;i++)
+        if(!strcmp(m->ir.ins[i].op,"NOP")) m->transfer_index[next++]=&m->ir.ins[i];
+    qsort(m->transfer_index,m->transfer_count,sizeof(*m->transfer_index),standalone_transfer_compare);
+    return true;
+}
+static int standalone_transfer_key(const standalone_ins *x,const char *prefix,size_t n,const char *fn,const char *param) {
+    int result=strncmp(x->result,prefix,n);
+    if(!result) result=strcmp(x->result+n,fn);
+    if(!result && param) result=strcmp(x->operand1,param);
+    return result;
+}
+static const char *standalone_transfer(const standalone_module *m,const char *prefix,const char *fn,const char *param) {
+    size_t n=strlen(prefix),first=0,last=m->transfer_count;
+    while(first<last) {
+        size_t middle=first+(last-first)/2;
+        if(standalone_transfer_key(m->transfer_index[middle],prefix,n,fn,param)<0) first=middle+1;
+        else last=middle;
+    }
+    if(first==m->transfer_count || standalone_transfer_key(m->transfer_index[first],prefix,n,fn,param)) return NULL;
+    if(first+1<m->transfer_count && !standalone_transfer_key(m->transfer_index[first+1],prefix,n,fn,param)) return NULL;
+    return m->transfer_index[first]->operand2;
 }
 static standalone_function *standalone_borrow_function(standalone_module *m,const char *name) {
     standalone_function *found=NULL;

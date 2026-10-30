@@ -124,8 +124,15 @@ func mir_program_instruction_error_with_globals(mir_program_function function_da
     a := 0
     for a < len(ins.operands) {
         if mir_program_value_type(function_data, ins.operands[a], index) == "" { return "undefined value in: " + function_data.symbol }
+        if mir_program_reference_element(mir_program_value_type(function_data, ins.operands[a], index)) != "" && ins.op != "reference_get" && ins.op != "reference_set" && ins.op != "reference_readonly" && ins.op != "call" { return "reference used outside a proven borrow operation" }
         a = a + 1
     }
+    r = 0
+    for r < len(ins.result_types) {
+        if mir_program_reference_element(ins.result_types[r]) != "" && ins.op != "reference_new" && ins.op != "reference_readonly" { return "unproven reference result" }
+        r = r + 1
+    }
+    if ins.op == "reference_new" || ins.op == "reference_get" || ins.op == "reference_set" || ins.op == "reference_readonly" { return mir_program_reference_instruction_error(function_data, ins, index, records, enums) }
     if ins.op == "global_get" || ins.op == "global_set" { return mir_program_global_instruction_error(function_data, ins, index, globals) }
     if ins.op == "native_intrinsic" { return mir_native_intrinsic_error(function_data, ins, index) }
     if ins.op == "call" {
@@ -138,6 +145,14 @@ func mir_program_instruction_error_with_globals(mir_program_function function_da
         for a < len(ins.operands) {
             if mir_program_value_type(function_data, ins.operands[a], index) != callee.params[a].type_name {
                 return "call argument type: " + ins.symbol
+            }
+            if mir_program_reference_element(callee.params[a].type_name) != "" {
+                previous := 0
+                for previous < a {
+                    if mir_program_reference_element(callee.params[previous].type_name) != "" && mir_program_reference_origin(function_data, ins.operands[previous]) == mir_program_reference_origin(function_data, ins.operands[a])
+                        && (mir_program_reference_mutable(callee.params[previous].type_name) || mir_program_reference_mutable(callee.params[a].type_name)) { return "aliased mutable call reference" }
+                    previous = previous + 1
+                }
             }
             a = a + 1
         }
@@ -195,6 +210,7 @@ func mir_program_function_error_with_globals(mir_program_function function_data,
     p := 0
     for p < len(function_data.params) {
         if function_data.params[p].value_id < 0 || function_data.params[p].name == "" || function_data.params[p].type_name == "" { return "invalid parameter: " + function_data.symbol }
+        if mir_program_reference_element(function_data.params[p].type_name) != "" && (!mir_program_type_supported(function_data.params[p].type_name, records, enums) || function_data.external) { return "unproven reference parameter" }
         previous := 0
         for previous < p {
             if function_data.params[previous].value_id == function_data.params[p].value_id { return "duplicate parameter value: " + function_data.symbol }
@@ -206,6 +222,7 @@ func mir_program_function_error_with_globals(mir_program_function function_data,
     p = 0
     for p < len(function_data.result_types) {
         if function_data.result_types[p] == "" { return "empty result type: " + function_data.symbol }
+        if mir_program_reference_element(function_data.result_types[p]) != "" { return "reference result escapes its call" }
         p = p + 1
     }
     if function_data.external {
@@ -561,10 +578,65 @@ func mir_program_array_element(string type_name) string {
 }
 
 func mir_program_type_supported(string type_name, mir_program_record[] records, mir_program_enum[] enums) bool {
+    referent := mir_program_reference_element(type_name)
+    if referent != "" { return mir_program_record_index(records, referent) >= 0 || (mir_program_array_element(referent) != "" && mir_program_type_supported(referent, records, enums)) }
     if type_name == "string" || type_name == "int" || type_name == "()" || type_name == "bool" || mir_program_record_index(records, type_name) >= 0 || mir_program_enum_index(enums, type_name) >= 0 { return true }
     element := mir_program_array_element(type_name)
     if element != "" { return mir_program_type_supported(element, records, enums) }
     return false
+}
+
+func mir_program_reference_element(string type_name) string {
+    if len(type_name) > 4 && __host_slice(type_name, 0, 4) == "&mut" { return __host_slice(type_name, 4, len(type_name)) }
+    if len(type_name) > 1 && __host_slice(type_name, 0, 1) == "&" { return __host_slice(type_name, 1, len(type_name)) }
+    return ""
+}
+
+func mir_program_reference_mutable(string type_name) bool {
+    return len(type_name) > 4 && __host_slice(type_name, 0, 4) == "&mut"
+}
+
+func mir_program_reference_origin(mir_program_function function_data, int original) int {
+    id := original
+    remaining := 1
+    b := 0
+    for b < len(function_data.blocks) { remaining = remaining + len(function_data.blocks[b].instructions); b = b + 1 }
+    for remaining > 0 {
+        next := id
+        b = 0
+        for b < len(function_data.blocks) {
+            i := 0
+            for i < len(function_data.blocks[b].instructions) {
+                ins := function_data.blocks[b].instructions[i]
+                if ins.op == "reference_readonly" && len(ins.result_ids) == 1 && ins.result_ids[0] == id && len(ins.operands) == 1 { next = ins.operands[0] }
+                i = i + 1
+            }
+            b = b + 1
+        }
+        if next == id { return id }
+        id = next; remaining = remaining - 1
+    }
+    return -1
+}
+
+func mir_program_reference_instruction_error(mir_program_function function_data, mir_program_instruction ins, int index, mir_program_record[] records, mir_program_enum[] enums) string {
+    if len(ins.result_ids) != 1 || len(ins.result_types) != 1 || len(ins.field_names) != 0 || ins.integer_value != 0 || ins.symbol == "" { return "invalid reference metadata" }
+    if !mir_program_type_supported("&" + ins.symbol, records, enums) { return "unsupported reference referent" }
+    if ins.op == "reference_new" {
+        if len(ins.operands) != 1 || mir_program_reference_element(ins.result_types[0]) != ins.symbol { return "reference allocation result type or arity" }
+        if mir_program_value_type(function_data, ins.operands[0], index) != ins.symbol { return "reference allocation value type" }
+        return ""
+    }
+    if len(ins.operands) < 1 { return "missing reference operand" }
+    reference_type := mir_program_value_type(function_data, ins.operands[0], index)
+    if mir_program_reference_element(reference_type) != ins.symbol { return "reference operand referent type" }
+    if ins.op == "reference_set" {
+        if !mir_program_reference_mutable(reference_type) || len(ins.operands) != 2 || ins.result_types[0] != "()" { return "readonly reference store or invalid arity" }
+        if mir_program_value_type(function_data, ins.operands[1], index) != ins.symbol { return "reference store value type" }
+    } else if ins.op == "reference_readonly" {
+        if len(ins.operands) != 1 || ins.result_types[0] != "&" + ins.symbol { return "invalid readonly reborrow" }
+    } else if len(ins.operands) != 1 || ins.result_types[0] != ins.symbol { return "reference load result type or arity" }
+    return ""
 }
 
 func mir_program_array_instruction_error(mir_program_function function_data, mir_program_instruction ins, int index, mir_program_record[] records, mir_program_enum[] enums) string {

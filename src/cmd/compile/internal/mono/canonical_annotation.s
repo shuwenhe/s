@@ -276,6 +276,19 @@ func ca_call(compile.internal.ast.call_expr original, compile.internal.semantic.
     root_type := compile.internal.semantic.lookup_name_type(ctx.env, compile.internal.semantic.extract_module_root(path))
     if (compile.internal.semantic.is_unknown(root_type) || root_type == "module") && compile.internal.semantic.canonical_enum_index(compile.internal.semantic.qualified_package_part(path), ctx.declarations) >= 0 {
         callee = expr.member(compile.internal.ast.member_expr { target: std.prelude.box(expr.name(name_expr { name: ty, inferred_type: option.some(ty) })), member: compile.internal.semantic.qualified_decl_part(path), inferred_type: option.some(ty) })
+    } else {
+        qualified := compile.internal.semantic.lookup_qualified_functions(ctx.functions, compile.internal.semantic.qualified_package_part(path), compile.internal.semantic.qualified_decl_part(path))
+        if len(qualified) == 0 {
+            switch callee {
+                expr.member(member): {
+                    receiver := ca_expr(member.target.value, ctx)
+                    if receiver.error != "" { return receiver }
+                    member.target = std.prelude.box(receiver.value)
+                    callee = expr.member(member)
+                },
+                _: (),
+            }
+        }
     }
     final_call := compile.internal.ast.call_expr { callee: std.prelude.box(callee), args: new_args, inferred_type: option.some(ty), resolved_callee: resolved, type_args: type_args }
     ca_expr_result { value: expr.call(final_call), type_name: ty, error: "" }

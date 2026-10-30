@@ -101,7 +101,7 @@ func amd64_validate_program(function_ssa_program program) string {
             for v < len(function_data.blocks[b].values) {
                 value := function_data.blocks[b].values[v]
                 op := value.op
-                supported := op == "global_get" || op == "global_set" || op == "native_intrinsic" || op == "string_byte_at" || op == "string_char_at" || op == "string_slice" || op == "string_eq" || op == "string_ne" || op == "string_lt" || op == "string_le" || op == "string_gt" || op == "string_ge" || op == "const_string" || op == "string_concat" || op == "string_len" || ssa_is_scalar_operation(op) || op == "param" || op == "phi" || op == "const_int" || op == "const_unit" || op == "copy" || op == "add" || op == "sub" || op == "mul" || op == "div" || op == "mod" || op == "call" || op == "record_new" || op == "record_get" || op == "record_set" || op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set"
+                supported := op == "reference_new" || op == "reference_get" || op == "reference_set" || op == "reference_readonly" || op == "global_get" || op == "global_set" || op == "native_intrinsic" || op == "string_byte_at" || op == "string_char_at" || op == "string_slice" || op == "string_eq" || op == "string_ne" || op == "string_lt" || op == "string_le" || op == "string_gt" || op == "string_ge" || op == "const_string" || op == "string_concat" || op == "string_len" || ssa_is_scalar_operation(op) || op == "param" || op == "phi" || op == "const_int" || op == "const_unit" || op == "copy" || op == "add" || op == "sub" || op == "mul" || op == "div" || op == "mod" || op == "call" || op == "record_new" || op == "record_get" || op == "record_set" || op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set"
                 if !supported { return "amd64: unsupported operation: " + op }
                 if !ssa_type_supported(value.type_name, program.records) && !((op == "call" || op == "native_intrinsic") && value.type_name == "void") { return "amd64: unsupported value type" }
                 v = v + 1
@@ -166,6 +166,17 @@ func amd64_emit_value_with_values(function_ssa_program program, int function_ind
     if op == "global_get" || op == "global_set" { return amd64_emit_global(program, values, value) }
     if op == "native_intrinsic" { return amd64_emit_native_intrinsic(values, value, function_index, position) }
     slot := amd64_slot(values, value.id)
+    if op == "reference_new" {
+        return "  movq $8, %rdi\n  call .Ls_native_alloc\n  movq " + amd64_slot(values, value.operands[0]) + ", %r10\n  movq %r10, (%rax)\n  movq %rax, " + slot + "\n"
+    }
+    if op == "reference_get" || op == "reference_readonly" {
+        text := "  movq " + amd64_slot(values, value.operands[0]) + ", %rax\n"
+        if op == "reference_get" { text = text + "  movq (%rax), %rax\n" }
+        return text + "  movq %rax, " + slot + "\n"
+    }
+    if op == "reference_set" {
+        return "  movq " + amd64_slot(values, value.operands[0]) + ", %rax\n  movq " + amd64_slot(values, value.operands[1]) + ", %r10\n  movq %r10, (%rax)\n  movq $0, " + slot + "\n"
+    }
     if op == "string_byte_at" || op == "string_char_at" || op == "string_slice" { return amd64_emit_string_access(values, value, function_index, position) }
     if op == "string_eq" || op == "string_ne" || op == "string_lt" || op == "string_le" || op == "string_gt" || op == "string_ge" || op == "const_string" || op == "string_concat" || op == "string_len" { return amd64_emit_string(values, value, function_index, position) }
     if op == "const_unit" { return "  movq $0, " + slot + "\n" }
