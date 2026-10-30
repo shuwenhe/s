@@ -3954,6 +3954,9 @@ func semantic_starts_with(string text, string prefix) bool {
     if std.prelude.len(prefix) > std.prelude.len(text) {
         return false
     }
+    if std.prelude.len(prefix) == 1 {
+        return std.prelude.char_at(text, 0) == std.prelude.char_at(prefix, 0)
+    }
     std.prelude.prelude_slice(text, 0, std.prelude.len(prefix)) == prefix
 }
 
