@@ -238,15 +238,15 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             operands := int[]()
             names := string[]()
             type_name := "("
-            i := 0
-            for i < len(tuple.items) {
-                state = program_lower_expression(tuple.items[i], package_name, signatures, state)
+            tuple_idx := 0
+            for tuple_idx < len(tuple.items) {
+                state = program_lower_expression(tuple.items[tuple_idx], package_name, signatures, state)
                 if state.error != "" { return state }
                 operands = append(operands, state.expression_value)
-                names = append(names, "_" + std.prelude.to_string(i))
-                if i > 0 { type_name = type_name + "," }
+                names = append(names, "_" + std.prelude.to_string(tuple_idx))
+                if tuple_idx > 0 { type_name = type_name + "," }
                 type_name = type_name + program_expression_type(state, state.signature, state.expression_value)
-                i = i + 1
+                tuple_idx = tuple_idx + 1
             }
             type_name = type_name + ")"
             state.records = program_add_tuple_record(type_name, state.records)
@@ -280,8 +280,8 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             count := len(names)
             state = program_lower_block(value, package_name, signatures, state)
             values := int[]()
-            i := 0
-            for i < count { values = append(values, state.binding_values[i]); i = i + 1 }
+            val_idx := 0
+            for val_idx < count { values = append(values, state.binding_values[val_idx]); val_idx = val_idx + 1 }
             state.binding_names = names
             state.binding_values = values
             return state
@@ -302,13 +302,13 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             array_type := ""
             if value.type_text.is_some() { array_type = program_record_type(value.type_text.unwrap(), package_name, state.records, state.enums) }
             operands := int[]()
-            i := 0
-            for i < len(value.items) {
-                state = program_lower_expression(value.items[i], package_name, signatures, state)
+            item_idx := 0
+            for item_idx < len(value.items) {
+                state = program_lower_expression(value.items[item_idx], package_name, signatures, state)
                 if state.error != "" { return state }
                 operands = append(operands, state.expression_value)
                 if array_type == "" { array_type = program_expression_type(state, state.signature, state.expression_value) + "[]" }
-                i = i + 1
+                item_idx = item_idx + 1
             }
             if mir_program_array_element(array_type) == "" { state.error = "empty array literal requires an explicit element type"; return state }
             return program_emit_array(state, "array_new", array_type, array_type, operands)
@@ -343,12 +343,12 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             symbol := program_record_type(value.type_name, package_name, state.records, state.enums)
             if mir_program_record_index(state.records, symbol) < 0 { state.error = "unknown record type: " + symbol; return state }
             operands := int[]()
-            i := 0
-            for i < len(value.field_values) {
-                state = program_lower_expression(value.field_values[i], package_name, signatures, state)
+            field_idx := 0
+            for field_idx < len(value.field_values) {
+                state = program_lower_expression(value.field_values[field_idx], package_name, signatures, state)
                 if state.error != "" { return state }
                 operands = append(operands, state.expression_value)
-                i = i + 1
+                field_idx = field_idx + 1
             }
             id := state.next_value
             state.next_value = id + 1
@@ -497,14 +497,14 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                 }
                 if mir_program_array_element(array_type) == "" { state.error = "builtin requires an array: " + path; return state }
                 if path == "len" { return program_emit_array(state, "array_len", array_type, "int", [target]) }
-                i := 1
-                for i < len(call.args) {
-                    state = program_lower_expression(call.args[i], package_name, signatures, state)
+                arg_idx := 1
+                for arg_idx < len(call.args) {
+                    state = program_lower_expression(call.args[arg_idx], package_name, signatures, state)
                     if state.error != "" { return state }
                     element := state.expression_value
                     state = program_emit_array(state, "array_append", array_type, array_type, [target, element])
                     target = state.expression_value
-                    i = i + 1
+                    arg_idx = arg_idx + 1
                 }
                 return state
             }
@@ -557,14 +557,14 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             borrowed_roots := string[]()
             borrowed_mutable := bool[]()
             pending_borrow := false
-            i := 0
-            for i < len(call.args) {
-                if i >= len(signatures[target].params) { state.error = "call argument count"; return state }
-                expected := signatures[target].params[i].type_name
+            call_idx := 0
+            for call_idx < len(call.args) {
+                if call_idx >= len(signatures[target].params) { state.error = "call argument count"; return state }
+                expected := signatures[target].params[call_idx].type_name
                 reference := mir_program_reference_element(expected) != ""
-                root := program_root_name(call.args[i])
-                switch call.args[i] { expr.borrow(value): root = program_root_name(value.target.value), _: (), }
-                if pending_borrow && !reference && !program_borrow_argument_pure(call.args[i]) { state.error = "effectful argument after a borrow"; return state }
+                root := program_root_name(call.args[call_idx])
+                switch call.args[call_idx] { expr.borrow(value): root = program_root_name(value.target.value), _: (), }
+                if pending_borrow && !reference && !program_borrow_argument_pure(call.args[call_idx]) { state.error = "effectful argument after a borrow"; return state }
                 if reference {
                     if root == "" { state.error = "borrow requires a named local place"; return state }
                     j := 0
@@ -574,7 +574,7 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                     }
                     j = 0
                     for j < len(call.args) {
-                        if j != i && program_expression_uses_root(call.args[j], root) {
+                        if j != call_idx && program_expression_uses_root(call.args[j], root) {
                             other_reference := j < len(signatures[target].params) && mir_program_reference_element(signatures[target].params[j].type_name) != ""
                             if !other_reference || mir_program_reference_mutable(expected) || mir_program_reference_mutable(signatures[target].params[j].type_name) { state.error = "overlapping borrowed call arguments"; return state }
                         }
@@ -583,12 +583,12 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                     borrowed_roots.push(root)
                     borrowed_mutable.push(mir_program_reference_mutable(expected))
                     pending_borrow = true
-                    state = program_lower_reference_argument(call.args[i], expected, package_name, signatures, state)
+                    state = program_lower_reference_argument(call.args[call_idx], expected, package_name, signatures, state)
                     if state.borrow_writeback { writebacks.push(program_borrow_writeback { root: state.store_root, steps: state.store_steps, reference: state.expression_value, type_name: mir_program_reference_element(expected) }) }
-                } else { state = program_lower_expression(call.args[i], package_name, signatures, state) }
+                } else { state = program_lower_expression(call.args[call_idx], package_name, signatures, state) }
                 if state.error != "" { return state }
                 args = append(args, state.expression_value)
-                i = i + 1
+                call_idx = call_idx + 1
             }
             result_types := signatures[target].result_types
             if len(result_types) > 1 { state.error = "multiple-result expression requires explicit binding"; return state }

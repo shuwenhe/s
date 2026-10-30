@@ -270,3 +270,7 @@ incorrectly routed to builtin methods (`len method takes no arguments`). Restore
 the guard directly in root and frozen files, preserving resolved normal and
 nominal receiver calls; added focused qualified-name regression. Further frozen
 changes are applied directly to avoid importing concurrent intermediate edits.
+Guarded tuple-result v3 stage1 GREEN: resolved builtin-like qualified functions,
+pair methods/panic/payloads, generic/concrete receiver methods, and all existing
+tuple execution/strict rejection cases. Frozen bootstrap output:
+`.bootstrap/native-tuple-result-v3`; log `.bootstrap/tuple-result-v3-bootstrap.log`.
