@@ -132,15 +132,15 @@ func program_expression_type(program_lower_state state, mir_program_function sig
         if signature.params[i].value_id == id { return signature.params[i].type_name }
         i = i + 1
     }
-    i = 0
-    for i < len(state.instructions) {
-        instruction := state.instructions[i]
+    instr_idx := 0
+    for instr_idx < len(state.instructions) {
+        instruction := state.instructions[instr_idx]
         r := 0
         for r < len(instruction.result_ids) {
             if instruction.result_ids[r] == id { return instruction.result_types[r] }
             r = r + 1
         }
-        i = i + 1
+        instr_idx = instr_idx + 1
     }
     b := 0
     for b < len(state.blocks) {
@@ -947,30 +947,30 @@ func program_expression_uses_root(expr value, string root) bool {
         expr.borrow(borrow): program_expression_uses_root(borrow.target.value, root),
         expr.binary(binary): program_expression_uses_root(binary.left.value, root) || program_expression_uses_root(binary.right.value, root),
         expr.call(call): {
-            i := 0
-            for i < len(call.args) { if program_expression_uses_root(call.args[i], root) { return true }
-                i = i + 1
+            call_idx := 0
+            for call_idx < len(call.args) { if program_expression_uses_root(call.args[call_idx], root) { return true }
+                call_idx = call_idx + 1
             }
             false
         }
         expr.record(record): {
-            i := 0
-            for i < len(record.field_values) { if program_expression_uses_root(record.field_values[i], root) { return true }
-                i = i + 1
+            record_idx := 0
+            for record_idx < len(record.field_values) { if program_expression_uses_root(record.field_values[record_idx], root) { return true }
+                record_idx = record_idx + 1
             }
             false
         }
         expr.array(array): {
-            i := 0
-            for i < len(array.items) { if program_expression_uses_root(array.items[i], root) { return true }
-                i = i + 1
+            array_idx := 0
+            for array_idx < len(array.items) { if program_expression_uses_root(array.items[array_idx], root) { return true }
+                array_idx = array_idx + 1
             }
             false
         }
         expr.tuple(tuple): {
-            i := 0
-            for i < len(tuple.items) { if program_expression_uses_root(tuple.items[i], root) { return true }
-                i = i + 1
+            tuple_idx := 0
+            for tuple_idx < len(tuple.items) { if program_expression_uses_root(tuple.items[tuple_idx], root) { return true }
+                tuple_idx = tuple_idx + 1
             }
             false
         }
