@@ -3238,9 +3238,10 @@ func qualified_decl_part(string path) string {
 func lookup_named_methods(function_binding[] functions, string receiver_type, string name) function_binding[] {
     out := function_binding[]()
     normalized_receiver := method_owner_type(receiver_type)
+    receiver_base := compile.internal.typesys.base_type_name(normalized_receiver)
     i := 0
     for i < std.prelude.len(functions) {
-        if functions[i].has_receiver && compile.internal.typesys.base_type_name(functions[i].owner_type) == compile.internal.typesys.base_type_name(normalized_receiver) && functions[i].name == name {
+        if functions[i].has_receiver && compile.internal.typesys.base_type_name(functions[i].owner_type) == receiver_base && functions[i].name == name {
             out.push(functions[i]);
         }
         i = i + 1
@@ -3251,9 +3252,10 @@ func lookup_named_methods(function_binding[] functions, string receiver_type, st
 func lookup_methods(function_binding[] functions, string receiver_type, string name, expr receiver_expr) function_binding[] {
     out := function_binding[]()
     normalized_receiver := method_owner_type(receiver_type)
+    receiver_base := compile.internal.typesys.base_type_name(normalized_receiver)
     i := 0
     for i < std.prelude.len(functions) {
-        if functions[i].has_receiver && compile.internal.typesys.base_type_name(functions[i].owner_type) == compile.internal.typesys.base_type_name(normalized_receiver) && functions[i].name == name {
+        if functions[i].has_receiver && compile.internal.typesys.base_type_name(functions[i].owner_type) == receiver_base && functions[i].name == name {
             if receiver_allows_method(receiver_type, receiver_expr, functions[i].receiver_mode) {
                 out.push(functions[i]);
             }
