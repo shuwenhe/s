@@ -262,3 +262,11 @@ and panic on invalid unwrap. Do not infer status from error payloads or pretend
 to implement unresolved host APIs. Three-element tuple result methods remain
 explicitly unsupported because Seed nesting differs from canonical typing.
 Focused pair-method regression RED before repair; fresh native stage1 pending.
+Tuple-result execution regression GREEN on v2 native stage1, including both
+payloads, single receiver evaluation and wrong-status panic. Review caught an
+external concurrent edit removing the unresolved-call guard from builtin
+member dispatch. Concrete RED: qualified utility.len/push/set functions were
+incorrectly routed to builtin methods (`len method takes no arguments`). Restored
+the guard directly in root and frozen files, preserving resolved normal and
+nominal receiver calls; added focused qualified-name regression. Further frozen
+changes are applied directly to avoid importing concurrent intermediate edits.

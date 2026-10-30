@@ -438,27 +438,26 @@ func program_lower_expression(expr expression, string package_name, mir_program_
         }
         expr.call(call) : {
             if len(call.type_args) != 0 { state.error = "generic call requires monomorphization"; return state }
-            
-            // Check for known method calls on compound types (result, option, array)
-            switch call.callee.value {
-                expr.member(member): {
-                    if member.member == "push" || member.member == "set" || member.member == "len" {
-                        return program_array_method(member, call.args, package_name, signatures, state)
-                    }
-                    if member.member == "is_ok" || member.member == "is_err" || member.member == "unwrap" || member.member == "unwrap_err" {
-                        receiver := program_lower_expression(member.target.value, package_name, signatures, state)
-                        if receiver.error != "" || receiver.terminated { return receiver }
-                        receiver = program_read_reference(receiver)
-                        target := receiver.expression_value
-                        type_name := program_expression_type(receiver, receiver.signature, target)
-                        if len(program_tuple_types(type_name)) > 0 {
-                            return program_lower_tuple_result_method(member.member, len(call.args), target, type_name, receiver)
+            if call.resolved_callee.is_none() {
+                switch call.callee.value {
+                    expr.member(member): {
+                        if member.member == "push" || member.member == "set" || member.member == "len" {
+                            return program_array_method(member, call.args, package_name, signatures, state)
                         }
-                    }
-                },
-                _: (),
+                        if member.member == "is_ok" || member.member == "is_err" || member.member == "unwrap" || member.member == "unwrap_err" {
+                            receiver := program_lower_expression(member.target.value, package_name, signatures, state)
+                            if receiver.error != "" || receiver.terminated { return receiver }
+                            receiver = program_read_reference(receiver)
+                            target := receiver.expression_value
+                            type_name := program_expression_type(receiver, receiver.signature, target)
+                            if len(program_tuple_types(type_name)) > 0 {
+                                return program_lower_tuple_result_method(member.member, len(call.args), target, type_name, receiver)
+                            }
+                        }
+                    },
+                    _: (),
+                }
             }
-            
             path := program_callee_path(call.callee.value)
             if path == "" { state.error = "call requires a resolved direct callee"; return state }
             if program_payload_has_path(state.payloads, package_name, path) { return program_payload_constructor(path, call.args, package_name, signatures, state) }
@@ -470,12 +469,12 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                 if path == "__host_slice" { op = "string_slice"; result = "string"; count = 3 }
                 if len(call.args) != count { state.error = "string intrinsic argument count"; return state }
                 operands := int[]()
-                i := 0
-                for i < count {
-                    state = program_lower_expression(call.args[i], package_name, signatures, state)
+                arg_index := 0
+                for arg_index < count {
+                    state = program_lower_expression(call.args[arg_index], package_name, signatures, state)
                     if state.error != "" { return state }
                     operands = append(operands, state.expression_value)
-                    i = i + 1
+                    arg_index = arg_index + 1
                 }
                 id := state.next_value
                 state.next_value = id + 1
