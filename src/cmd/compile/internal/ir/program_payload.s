@@ -269,8 +269,18 @@ func program_lower_switch(switch_expr value, string pkg, mir_program_function[] 
         state.binding_values[i] = state.expression_value
         i = i + 1
     }
-    // Semantic marks a discarded switch as unit. Its arms still execute and
-    // their binding updates merge, but their unused values need no common type.
+    // A switch used as a statement has a discarded result. When its arms disagree
+    // on value type (e.g. one arm is unit), there is no meaningful common type,
+    // so emit unit rather than forcing a mismatched phi merge. A used switch with
+    // consistent arm types still merges normally below.
     if value.inferred_type.is_some() && value.inferred_type.unwrap() == "()" { return program_emit_unit(state) }
-    return program_switch_phi(exits, -1, state)
+    first_type := program_expression_type(state, state.signature, exits[0].result)
+    consistent := true
+    i := 1
+    for i < len(exits) {
+        if program_expression_type(state, state.signature, exits[i].result) != first_type { consistent = false }
+        i = i + 1
+    }
+    if consistent { return program_switch_phi(exits, -1, state) }
+    return program_emit_unit(state)
 }

@@ -459,15 +459,6 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                 _: (),
             }
             
-            if call.resolved_callee.is_none() {
-                switch call.callee.value {
-                    expr.member(member): {
-                        // We've already handled known methods above, but if we're still here,
-                        // it might be an unresolved method call that should fall through
-                    },
-                    _: (),
-                }
-            }
             path := program_callee_path(call.callee.value)
             if path == "" { state.error = "call requires a resolved direct callee"; return state }
             if program_payload_has_path(state.payloads, package_name, path) { return program_payload_constructor(path, call.args, package_name, signatures, state) }
@@ -1544,7 +1535,8 @@ func program_lower_tuple_result_method(string method, int argument_count, int ta
     field := 0
     if method == "unwrap_err" { field = 1 }
     value := state.next_value; state.next_value = value + 1
-    state.instructions.push(mir_program_instruction { op: "record_get", result_ids: [value], result_types: [record.field_types[field]], operands: [target], symbol: type_name, integer_value: field })
+    field_type := record.field_types[field]
+    state.instructions.push(mir_program_instruction { op: "record_get", result_ids: [value], result_types: [field_type], operands: [target], symbol: type_name, integer_value: field })
     state.expression_value = value
     return state
 }
