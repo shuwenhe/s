@@ -595,21 +595,7 @@ func collect_method_call_instance_ctx(compile.internal.ast.call_expr call, item[
     switch call.callee.value {
         expr.member(member) : {
             method_name = member.member
-            switch member.target.value {
-                expr.name(name) : {
-                    switch name.inferred_type {
-                        option.some(ty) : receiver_type = ty,
-                        option.none : (),
-                    }
-                }
-                expr.member(target_member) : {
-                    switch target_member.inferred_type {
-                        option.some(ty) : receiver_type = ty,
-                        option.none : (),
-                    }
-                }
-                _ : (),
-            }
+            receiver_type = mono_expression_type(member.target.value)
         }
         _ : return ctx,
     }
@@ -1441,7 +1427,7 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
                 loop_var_3 = loop_var_3 + 1
             }
             call_type_args := string[]()
-            i = 0
+            i := 0
             for i < len(v.type_args) {
                 call_type_args = append(call_type_args, substitute_type(v.type_args[i], generic_names, type_args))
                 i = i + 1
@@ -1493,11 +1479,25 @@ func substitute_for_expr(for_expr v, string[] generic_names, string[] type_args)
     expr.for(for_expr { init: init, condition: condition, post: post, names: v.names, iterable: iterable, body: substitute_block(v.body, generic_names, type_args), inferred_type: substitute_optional_type(v.inferred_type, generic_names, type_args) })
 }
 
+func substitute_pattern(pattern original, string[] generic_names, string[] type_args) pattern {
+    switch original {
+        pattern.variant(value): {
+            owner := compile.internal.semantic.qualified_package_part(value.path)
+            if owner != "" { value.path = substitute_type(owner, generic_names, type_args) + "." + compile.internal.semantic.qualified_decl_part(value.path) }
+            i := 0
+            for i < len(value.args) { value.args[i] = substitute_pattern(value.args[i], generic_names, type_args); i = i + 1 }
+            return pattern.variant(value)
+        },
+        pattern.literal(value): { value.value = substitute_expr(value.value, generic_names, type_args); return pattern.literal(value) },
+        _: return original,
+    }
+}
+
 func substitute_switch(switch_expr v, string[] generic_names, string[] type_args) switch_expr {
     arms := switch_arm[]()
     i := 0
     for i < len(v.arms) {
-        arms = append(arms, switch_arm { pattern: v.arms[i].pattern, expr substitute_expr(v.arms[i].expr, generic_names, type_args) })
+        arms = append(arms, switch_arm { pattern: substitute_pattern(v.arms[i].pattern, generic_names, type_args), expr substitute_expr(v.arms[i].expr, generic_names, type_args) })
         i = i + 1
     }
     switch_expr { subject: std.prelude.box(substitute_expr(v.subject.value, generic_names, type_args)), arms arms, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }

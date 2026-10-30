@@ -202,6 +202,7 @@ func program_lower_switch(switch_expr value, string pkg, mir_program_function[] 
     state := initial
     state = program_lower_expression(value.subject.value, pkg, signatures, state)
     if state.error != "" || state.terminated { return state }
+    state = program_read_reference(state)
     subject_value := state.expression_value
     subject_type := program_expression_type(state, state.signature, subject_value)
     names := state.binding_names

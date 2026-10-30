@@ -256,17 +256,18 @@ func ca_expr_in_scope(compile.internal.ast.expr original, ca_context ctx, bool d
 // Preserve the subject's concrete enum identity for type elaboration, including
 // nested payload patterns whose generic arguments differ from the outer enum.
 func ca_enum_pattern(pattern original, string expected, compile.internal.semantic.declaration_ref[] declarations) pattern {
+    subject_type := compile.internal.semantic.method_owner_type(expected)
     value := original
-    index := compile.internal.semantic.canonical_enum_index(expected, declarations)
+    index := compile.internal.semantic.canonical_enum_index(subject_type, declarations)
     if index < 0 { return value }
     switch value {
         pattern.variant(v): {
             declaration := declarations[index]
             variant := compile.internal.semantic.canonical_enum_variant_index(declaration, compile.internal.semantic.qualified_decl_part(v.path))
             if variant < 0 { return value }
-            v.path = expected + "." + declaration.variants[variant].name
+            v.path = subject_type + "." + declaration.variants[variant].name
             if len(v.args) == 1 {
-                payload := compile.internal.semantic.canonical_enum_payload(expected, declaration, variant, declarations)
+                payload := compile.internal.semantic.canonical_enum_payload(subject_type, declaration, variant, declarations)
                 v.args[0] = ca_enum_pattern(v.args[0], payload, declarations)
             }
             return pattern.variant(v)
@@ -301,6 +302,22 @@ func ca_call(compile.internal.ast.call_expr original, compile.internal.semantic.
                 expr.member(member): {
                     receiver := ca_expr(member.target.value, ctx, metadata)
                     if receiver.error != "" { return receiver }
+                    // Semantic method resolution permits an addressable value
+                    // to satisfy a reference receiver. Preserve that conversion
+                    // explicitly before methods become ordinary function calls.
+                    methods := compile.internal.semantic.lookup_methods(metadata.functions, receiver.type_name, member.member, member.target.value)
+                    mi := 0
+                    for mi < len(methods) {
+                        receiver_argument_type := compile.internal.semantic.method_receiver_arg_type(receiver.type_name, methods[mi].receiver_mode)
+                        method_arg_types := [receiver_argument_type]; ai := 0
+                        for ai < len(arg_types) { method_arg_types.push(arg_types[ai]); ai = ai + 1 }
+                        matched := compile.internal.semantic.try_match_signature(methods[mi], method_arg_types, metadata.functions, metadata.traits, metadata.declarations)
+                        if matched.ok && matched.instance_name == inferred.resolved_callee && methods[mi].receiver_mode != "value" && !te_starts_with(receiver.type_name, "&") {
+                            receiver.value = expr.borrow(compile.internal.ast.borrow_expr { target: std.prelude.box(receiver.value), mutable: methods[mi].receiver_mode == "mut_ref", inferred_type: option.some(receiver_argument_type) })
+                            receiver.type_name = receiver_argument_type
+                        }
+                        mi = mi + 1
+                    }
                     member.target = std.prelude.box(receiver.value)
                     callee = expr.member(member)
                 },

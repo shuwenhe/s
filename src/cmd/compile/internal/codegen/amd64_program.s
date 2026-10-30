@@ -287,6 +287,52 @@ func amd64_emit_edge(function_ssa_function function_data, function_ssa_value[] v
     return text + "  jmp " + amd64_block_label(function_index, target) + "\n"
 }
 
+// Balanced concatenation bounds retained text under the native bump arena.
+// Keep leaf emission and its absolute value/block positions unchanged.
+func amd64_emit_values_range(function_ssa_program program, int index, function_ssa_value[] values, int start, int end) string {
+    if start >= end { return "" }
+    if end - start == 1 {
+        if values[start].op == "phi" { return "" }
+        return amd64_emit_value_with_values(program, index, start, values)
+    }
+    middle := start + (end - start) / 2
+    left := amd64_emit_values_range(program, index, values, start, middle)
+    right := amd64_emit_values_range(program, index, values, middle, end)
+    return left + right
+}
+
+func amd64_emit_blocks_range(function_ssa_program program, int index, function_ssa_value[] values, int start, int end, int position) string {
+    if start >= end { return "" }
+    function_data := program.functions[index]
+    if end - start == 1 {
+        b := start
+        block := function_data.blocks[b]
+        text := amd64_block_label(index, block.id) + ":\n"
+        text = text + amd64_emit_values_range(program, index, values, position, position + len(block.values))
+        if block.terminator == "return" {
+            if len(block.terminator_values) == 1 { text = text + "  movq " + amd64_slot(values, block.terminator_values[0]) + ", %rax\n" }
+            else { text = text + "  xorl %eax, %eax\n" }
+            text = text + "  leave\n  ret\n"
+        } else if block.terminator == "jump" { text = text + amd64_emit_edge(function_data, values, index, block.id, block.successors[0], 0) }
+        else if block.terminator == "branch" {
+            otherwise := ".Ls_native_f_" + amd64_integer(index) + "_edge_" + amd64_integer(b)
+            text = text + "  cmpq $0, " + amd64_slot(values, block.terminator_values[0]) + "\n  je " + otherwise + "\n"
+            text = text + amd64_emit_edge(function_data, values, index, block.id, block.successors[0], 0)
+            occurrence := 0
+            if block.successors[0] == block.successors[1] { occurrence = 1 }
+            text = text + otherwise + ":\n" + amd64_emit_edge(function_data, values, index, block.id, block.successors[1], occurrence)
+        } else { text = text + "  ud2\n" }
+        return text
+    }
+    middle := start + (end - start) / 2
+    middle_position := position
+    b := start
+    for b < middle { middle_position = middle_position + len(function_data.blocks[b].values); b = b + 1 }
+    left := amd64_emit_blocks_range(program, index, values, start, middle, position)
+    right := amd64_emit_blocks_range(program, index, values, middle, end, middle_position)
+    return left + right
+}
+
 func amd64_emit_function(function_ssa_program program, int index) string {
     function_data := program.functions[index]
     values := amd64_function_values(function_data)
@@ -309,45 +355,28 @@ func amd64_emit_function(function_ssa_program program, int index) string {
         v = v + 1
     }
     text = text + "  jmp " + amd64_block_label(index, function_data.entry_block) + "\n"
-    position := 0
-    b := 0
-    for b < len(function_data.blocks) {
-        block := function_data.blocks[b]
-        text = text + amd64_block_label(index, block.id) + ":\n"
-        v = 0
-        for v < len(block.values) {
-            if block.values[v].op != "phi" { text = text + amd64_emit_value_with_values(program, index, position, values) }
-            position = position + 1
-            v = v + 1
-        }
-        if block.terminator == "return" {
-            if len(block.terminator_values) == 1 { text = text + "  movq " + amd64_slot(values, block.terminator_values[0]) + ", %rax\n" }
-            else { text = text + "  xorl %eax, %eax\n" }
-            text = text + "  leave\n  ret\n"
-        } else if block.terminator == "jump" { text = text + amd64_emit_edge(function_data, values, index, block.id, block.successors[0], 0) }
-        else if block.terminator == "branch" {
-            otherwise := ".Ls_native_f_" + amd64_integer(index) + "_edge_" + amd64_integer(b)
-            text = text + "  cmpq $0, " + amd64_slot(values, block.terminator_values[0]) + "\n  je " + otherwise + "\n"
-            text = text + amd64_emit_edge(function_data, values, index, block.id, block.successors[0], 0)
-            occurrence := 0
-            if block.successors[0] == block.successors[1] { occurrence = 1 }
-            text = text + otherwise + ":\n" + amd64_emit_edge(function_data, values, index, block.id, block.successors[1], occurrence)
-        } else { text = text + "  ud2\n" }
-        b = b + 1
-    }
+    text = text + amd64_emit_blocks_range(program, index, values, 0, len(function_data.blocks), 0)
     return text + ".size " + name + ", .-" + name + "\n"
+}
+
+func amd64_emit_functions_range(function_ssa_program program, int start, int end) string {
+    if start >= end { return "" }
+    if end - start == 1 { return amd64_emit_function(program, start) }
+    middle := start + (end - start) / 2
+    left := amd64_emit_functions_range(program, start, middle)
+    right := amd64_emit_functions_range(program, middle, end)
+    return left + right
 }
 
 func emit_function_ssa_amd64(function_ssa_program program) amd64_program_result {
     error := amd64_validate_program(program)
     if error != "" { return amd64_fail(error) }
-    text := ".text\n"
     f := 0
     for f < len(program.functions) {
         if ssa_function_external(program.functions[f]) { return amd64_fail("unresolved external function: " + program.functions[f].symbol) }
-        text = text + amd64_emit_function(program, f)
         f = f + 1
     }
+    text := ".text\n" + amd64_emit_functions_range(program, 0, len(program.functions))
     entry_index := ssa_function_index(program.functions, program.entry_symbol)
     text = text + ".globl s_native_entry\n.type s_native_entry, @function\ns_native_entry:\n  jmp " + amd64_function_name(entry_index) + "\n.size s_native_entry, .-s_native_entry\n"
         + ".Ls_native_divzero:\n  movl $86, %edi\n  movl $60, %eax\n  syscall\n  ud2\n"
@@ -467,16 +496,21 @@ func amd64_emit_array_with_values(function_ssa_program program, int function_ind
 
 // Native strings are immutable: an untagged pointer to byte length then bytes.
 // Null is the default empty string. Literal bytes use numeric directives only.
+func amd64_emit_string_bytes(string value, int start, int end) string {
+    if start >= end { return "" }
+    if end - start == 1 { return ".byte " + amd64_integer(__host_byte_at(value, start)) + "\n" }
+    middle := start + (end - start) / 2
+    left := amd64_emit_string_bytes(value, start, middle)
+    right := amd64_emit_string_bytes(value, middle, end)
+    return left + right
+}
+
 func amd64_emit_string(function_ssa_value[] values, function_ssa_value value, int function_index, int position) string {
     slot := amd64_slot(values, value.id)
     label := ".Ls_string_" + amd64_integer(function_index) + "_" + amd64_integer(position)
     if value.op == "const_string" {
         text := ".pushsection .rodata\n.balign 8\n" + label + ":\n.quad " + amd64_integer(len(value.symbol)) + "\n"
-        i := 0
-        for i < len(value.symbol) {
-            text = text + ".byte " + amd64_integer(__host_byte_at(value.symbol, i)) + "\n"
-            i = i + 1
-        }
+        text = text + amd64_emit_string_bytes(value.symbol, 0, len(value.symbol))
         return text + ".popsection\n  leaq " + label + "(%rip), %rax\n  movq %rax, " + slot + "\n"
     }
     if value.op == "string_len" {

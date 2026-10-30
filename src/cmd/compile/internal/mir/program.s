@@ -124,7 +124,7 @@ func mir_program_instruction_error_with_globals(mir_program_function function_da
     a := 0
     for a < len(ins.operands) {
         if mir_program_value_type(function_data, ins.operands[a], index) == "" { return "undefined value in: " + function_data.symbol }
-        if mir_program_reference_element(mir_program_value_type(function_data, ins.operands[a], index)) != "" && ins.op != "reference_get" && ins.op != "reference_set" && ins.op != "reference_readonly" && ins.op != "call" { return "reference used outside a proven borrow operation" }
+        if mir_program_reference_element(mir_program_value_type(function_data, ins.operands[a], index)) != "" && ins.op != "reference_get" && ins.op != "reference_set" && ins.op != "reference_readonly" && ins.op != "call" { return "reference used outside a proven borrow operation: " + ins.op + " in " + function_data.symbol }
         a = a + 1
     }
     r = 0
@@ -299,7 +299,7 @@ func mir_program_function_error_with_globals(mir_program_function function_data,
             }
             loop_var_2 = loop_var_2 + 1
         }
-        i = 0
+        i := 0
         for i < len(block.return_values) {
             error := mir_program_value_use_error(function_data, dominance, block.return_values[i], b, len(block.instructions))
             if error != "" { return error }

@@ -151,7 +151,8 @@ func parser_parse_program(parser* p) ast_node {
             const_decl := parser_parse_const_decl(p)
             ast_add_child(program*, const_decl)
         } else {
-            parser_add_error(p, "Unexpected token: " + p.current_token.value)
+            message := "Unexpected token: " + p.current_token.value
+            parser_add_error(p, message)
             parser_next_token(p)
         }
     }
@@ -758,7 +759,8 @@ func parser_parse_primary_expression(parser* p) ast_node {
         ast_add_child(unary*, operand)
         return unary
     } else {
-        parser_add_error(p, "Unexpected token in expression: " + p.current_token.value)
+        message := "Unexpected token in expression: " + p.current_token.value
+        parser_add_error(p, message)
         return ast_new(fp_ast_ident, p.current_token.line, p.current_token.column)
     }
 }
