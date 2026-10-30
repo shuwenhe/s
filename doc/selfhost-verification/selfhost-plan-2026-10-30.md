@@ -100,3 +100,61 @@ at 120 seconds specifically after annotation (2 GiB limit). Inspection found
 collect_call_instance_ctx unconditionally scans the entire AST before using its
 existing declaration index. Use the exact index first; process work items by
 their known declaration indices instead of scanning before overwriting results.
+
+Type requests RED: te_add_requests retained duplicate normalized requests from
+one package. te_enqueue now stores one parsed type/package key; requests from
+different packages stay distinct. Pointer/array/tuple expansion uses the same
+queue. The generic type-elaboration fixture is GREEN, including recursive types
+and cross-package request identity. Its semantic fixture was updated to retain
+the current const_binding/function_binding definitions and exact path helpers.
+
+Indexed lookup alone did not meet the larger traversal's 120-second bound.
+Phase tracing confirms repeated context copying during initial collection.
+Separate immutable mono_index metadata from mutable mono_context for the seven
+recursive collectors; retain compatibility wrappers and restore declaration
+metadata once for the final identity-verification gate.
+
+Continuation: reproduced `unsupported record field type: Graph` with an imported
+record nested in another record. Ruling: preserve Semantic's nominal identities
+in canonical annotation (fields, signatures, constructors), rather than accepting
+unqualified names in the MIR validator. This keeps validation independent and
+avoids selecting a same-named layout from another package. Regression:
+`canonical_nominal_layout_check.sh` (RED with current bin/s_compiler).
+Nominal layout regression GREEN with rebuilt native stage1. Receiver regression
+then exposed type elaboration stripping the package from already-qualified
+same-package type requests; retain that package when building aliases.
+Nested array `.push` regression RED: qualified call requires package identity.
+Lower checked array methods using the existing named-place reconstruction path.
+Array backend investigation found two additional RED executions in the existing
+uncommitted capacity optimization: appending to a default array segfaults (139),
+and appending to an alias changes the saved array length (43 instead of 42).
+The changed layout also disagrees with run_argv's element offsets. Ruling:
+restore the established persistent array representation and allocator before
+attempting further optimization; bootstrap correctness takes priority.
+Receiver regression GREEN after package-preserving alias fix. An existing
+`program_array_method` implementation already handles the desired named-place
+updates but had no call site; use it instead of duplicating its implementation.
+The traced 1000-caller scaling regression now completes function specialization,
+but times out during type elaboration. Seed emission shows that assigning
+`append(output.items, value)` snapshots the entire accumulated AST vector at
+every iteration. Use the existing `.push` operation: its seed lowering snapshots
+only the new item and shallow-copies the descriptor, preserving value isolation
+without repeatedly deep-copying every previously collected declaration.
+Type elaboration's focused native tests GREEN, including recursive records and
+cross-package generic arguments. Apply the same output-list update to mono's
+extra/stripped declaration vectors. Imported typed array constructor regression
+RED (`member target is not a record: Graph`): array annotation must retain the
+resolved array type, not the original unqualified element spelling.
+The expanded production sweep also found a pre-existing forward-global inference
+failure in canonical_environment_production_check.sh, reproduced unchanged with
+original bin/s_compiler; it is separate from the continuation's regressions.
+Imported array regression GREEN with latest native stage1. Scaling now reaches
+native assembly within the existing bound, but still times out there.
+External-declaration reproducer RED: unused tuple-returning stdlib extern rejected
+by function_mir_input_error. Model declarations as empty SSA functions with -1
+entry/exit sentinels; validate their signatures and all ordinary bodies, prune
+only after complete SSA/AMD64 validation, and reject any retained declaration at
+emission. Raw native SSA tests GREEN for empty signatures, reference escapes,
+invalid sentinel state, declarations with bodies and definitions without bodies.
+The legacy interpreter function-SSA script also encounters missing-field errors
+on existing fixtures (successors); native contract tests are used for this gate.

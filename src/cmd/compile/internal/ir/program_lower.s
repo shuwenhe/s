@@ -425,6 +425,16 @@ func program_lower_expression(expr expression, string package_name, mir_program_
         }
         expr.call(call) : {
             if len(call.type_args) != 0 { state.error = "generic call requires monomorphization"; return state }
+            if call.resolved_callee.is_none() {
+                switch call.callee.value {
+                    expr.member(member): {
+                        if member.member == "push" || member.member == "set" || member.member == "len" {
+                            return program_array_method(member, call.args, package_name, signatures, state)
+                        }
+                    },
+                    _: (),
+                }
+            }
             path := program_callee_path(call.callee.value)
             if path == "" { state.error = "call requires a resolved direct callee"; return state }
             if program_payload_has_path(state.payloads, package_name, path) { return program_payload_constructor(path, call.args, package_name, signatures, state) }

@@ -75,6 +75,14 @@ struct mono_context {
     string error
 }
 
+// Immutable lookup metadata is passed separately from mutable traversal state.
+struct mono_index {
+    compile.internal.semantic.declaration_ref[] declarations
+    string[] input_names
+    string[] input_receivers
+    string[] input_packages
+}
+
 func new_context() mono_context {
     mono_context {
         cache: new_cache(),
@@ -212,9 +220,14 @@ func mono_cache_count(mono_cache cache) int {
 }
 
 func find_declaration_ref_for_item(mono_context ctx, string item_kind, string generic_name) compile.internal.semantic.declaration_ref {
+    lookup := mono_index { declarations: ctx.declarations }
+    return mono_index_declaration(lookup, item_kind, generic_name)
+}
+
+func mono_index_declaration(mono_index lookup, string item_kind, string generic_name) compile.internal.semantic.declaration_ref {
     i := 0
-    for i < len(ctx.declarations) {
-        decl := ctx.declarations[i]
+    for i < len(lookup.declarations) {
+        decl := lookup.declarations[i]
         
         expected_kind := compile.internal.semantic.declaration_kind.function_kind
         if item_kind == "method" {
@@ -304,9 +317,10 @@ func verify_identity_threading(mono_context ctx) m1_identity_verification {
 func monomorphize_file(source_file file, semantic_result result) monomorphize_file_result {
     trace := runtime_env_get("S_CANONICAL_TRACE", "") == "1"
     if trace { eprintln("canonical: specialization indexing") }
-    ctx := new_context_with_result(result)
-    // Keep only lookup metadata in the mutable traversal state. Carrying the
-    // AST here snapshots the complete compiler at every recursive visit.
+    ctx := new_context()
+    lookup := mono_index { declarations: result.declarations }
+    // Build lookup metadata outside mutable traversal state. Recursive visits
+    // must not copy either the full AST or its complete declaration index.
     source_index := 0
     for source_index < len(file.items) {
         name := ""
@@ -316,9 +330,9 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
             item.method(m): { name = m.method.sig.name; receiver = m.receiver_type },
             _: (),
         }
-        ctx.input_names.push(name)
-        ctx.input_receivers.push(receiver)
-        ctx.input_packages.push(te_package(file, source_index))
+        lookup.input_names.push(name)
+        lookup.input_receivers.push(receiver)
+        lookup.input_packages.push(te_package(file, source_index))
         source_index = source_index + 1
     }
     extra_packages := string[]()
@@ -326,9 +340,9 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
 
     i := 0
     for i < len(file.items) {
-        if trace && i % 100 == 0 { eprintln("canonical: specialization collection " + ctx.input_packages[i] + "." + ctx.input_names[i]) }
+        if trace && i % 100 == 0 { eprintln("canonical: specialization collection " + lookup.input_packages[i] + "." + lookup.input_names[i]) }
         ctx.current_package = te_package(file, i)
-        if mono_item_is_concrete(file.items[i], file) { ctx = collect_item_instances_ctx(file.items[i], file.items, ctx) }
+        if mono_item_is_concrete(file.items[i], file) { ctx = collect_item_instances_ctx(file.items[i], file.items, ctx, lookup) }
         i = i + 1
     }
 
@@ -353,9 +367,9 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
                 continue
             }
             method_instance := specialize_method(method_source, work.type_args)
-            ctx = collect_item_instances_ctx(item.method(method_instance), file.items, ctx)
-            extra_items = append(extra_items, item.method(finalize_monomorphized_method(method_instance)))
-            extra_packages = append(extra_packages, ctx.current_package)
+            ctx = collect_item_instances_ctx(item.method(method_instance), file.items, ctx, lookup)
+            extra_items.push(item.method(finalize_monomorphized_method(method_instance)))
+            extra_packages.push(ctx.current_package)
         } else {
             source := function_decl {}
             if work.declaration_index >= 0 && work.declaration_index < len(file.items) { switch file.items[work.declaration_index] { item.function(v): source = v, _: () } }
@@ -367,10 +381,10 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
 
             instance := specialize_function(source, work.type_args)
 
-            ctx = collect_item_instances_ctx(item.function(instance), file.items, ctx)
+            ctx = collect_item_instances_ctx(item.function(instance), file.items, ctx, lookup)
 
-            extra_items = append(extra_items, item.function(finalize_monomorphized_function(instance)))
-            extra_packages = append(extra_packages, ctx.current_package)
+            extra_items.push(item.function(finalize_monomorphized_function(instance)))
+            extra_packages.push(ctx.current_package)
         }
     }
 
@@ -381,15 +395,15 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
         if should_keep_after_monomorphization(file.items[i], file) {
             value := file.items[i]
             switch value { item.function(v): value = item.function(finalize_monomorphized_function(v)), item.method(v): value = item.method(finalize_monomorphized_method(v)), _: () }
-            stripped = append(stripped, value)
-            stripped_packages = append(stripped_packages, te_package(file, i))
+            stripped.push(value)
+            stripped_packages.push(te_package(file, i))
         }
         i = i + 1
     }
     i = 0
     for i < len(extra_items) {
-        stripped = append(stripped, extra_items[i])
-        stripped_packages = append(stripped_packages, extra_packages[i])
+        stripped.push(extra_items[i])
+        stripped_packages.push(extra_packages[i])
         i = i + 1
     }
 
@@ -397,6 +411,7 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
     // disables loop-region reclamation, retaining every traversal snapshot.
     output := source_file { pkg: file.pkg, uses: file.uses, items: stripped, item_packages: stripped_packages }
 
+    ctx.declarations = lookup.declarations
     m1_verification := verify_identity_threading(ctx)
 
     monomorphize_file_result { error: ctx.error, file: output, cache: ctx.cache, invariant_errors: verify_monomorphized_file(output) + ctx.errors, m1_gate: m1_verification }
@@ -410,17 +425,17 @@ func should_keep_after_monomorphization(item value, source_file file) bool {
     }
 }
 
-func collect_item_instances_ctx(item value, item[] all_items, mono_context ctx) mono_context {
+func collect_item_instances_ctx(item value, item[] all_items, mono_context ctx, mono_index lookup) mono_context {
     switch value {
         item.function(function_value) : {
             switch function_value.body {
-                option.some(body) : collect_block_instances_ctx(body, all_items, ctx),
+                option.some(body) : collect_block_instances_ctx(body, all_items, ctx, lookup),
                 option.none : ctx,
             }
         }
         item.method(method) : {
             switch method.method.body {
-                option.some(body) : collect_block_instances_ctx(body, all_items, ctx),
+                option.some(body) : collect_block_instances_ctx(body, all_items, ctx, lookup),
                 option.none : ctx,
             }
         }
@@ -428,91 +443,91 @@ func collect_item_instances_ctx(item value, item[] all_items, mono_context ctx) 
     }
 }
 
-func collect_block_instances_ctx(block_expr block, item[] all_items, mono_context ctx) mono_context {
+func collect_block_instances_ctx(block_expr block, item[] all_items, mono_context ctx, mono_index lookup) mono_context {
 	out := ctx
     i := 0
     for i < len(block.statements) {
-		out = collect_stmt_instances_ctx(block.statements[i], all_items, out)
+		out = collect_stmt_instances_ctx(block.statements[i], all_items, out, lookup)
         i = i + 1
     }
     switch block.final_expr {
-		option.some(value) : out = collect_expr_instances_ctx(value, all_items, out),
+		option.some(value) : out = collect_expr_instances_ctx(value, all_items, out, lookup),
         option.none : (),
     }
 	out
 }
 
-func collect_stmt_instances_ctx(stmt value, item[] all_items, mono_context ctx) mono_context {
+func collect_stmt_instances_ctx(stmt value, item[] all_items, mono_context ctx, mono_index lookup) mono_context {
     switch value {
         stmt.continue(_) : ctx,
         stmt.break(_) : ctx,
-        stmt.let(v) : collect_expr_instances_ctx(v.value, all_items, ctx),
-        stmt.assign(v) : collect_expr_instances_ctx(v.value, all_items, ctx),
-        stmt.store(v): { out := collect_expr_instances_ctx(v.target, all_items, ctx); collect_expr_instances_ctx(v.value, all_items, out) },
-        stmt.multi(v): { out := ctx; i := 0; for i < len(v.targets) { out = collect_expr_instances_ctx(v.targets[i], all_items, out); i = i + 1 }
- collect_expr_instances_ctx(v.value, all_items, out) },
+        stmt.let(v) : collect_expr_instances_ctx(v.value, all_items, ctx, lookup),
+        stmt.assign(v) : collect_expr_instances_ctx(v.value, all_items, ctx, lookup),
+        stmt.store(v): { out := collect_expr_instances_ctx(v.target, all_items, ctx, lookup); collect_expr_instances_ctx(v.value, all_items, out, lookup) },
+        stmt.multi(v): { out := ctx; i := 0; for i < len(v.targets) { out = collect_expr_instances_ctx(v.targets[i], all_items, out, lookup); i = i + 1 }
+ collect_expr_instances_ctx(v.value, all_items, out, lookup) },
         stmt.increment(_) : ctx,
         stmt.c_for(v) : {
-            out := collect_stmt_instances_ctx(v.init.value, all_items, ctx)
-            out = collect_expr_instances_ctx(v.condition, all_items, out)
-            out = collect_stmt_instances_ctx(v.step.value, all_items, out)
-            collect_block_instances_ctx(v.body, all_items, out)
+            out := collect_stmt_instances_ctx(v.init.value, all_items, ctx, lookup)
+            out = collect_expr_instances_ctx(v.condition, all_items, out, lookup)
+            out = collect_stmt_instances_ctx(v.step.value, all_items, out, lookup)
+            collect_block_instances_ctx(v.body, all_items, out, lookup)
         }
         stmt.return(v) : {
             switch v.value {
-                option.some(e) : collect_expr_instances_ctx(e, all_items, ctx),
+                option.some(e) : collect_expr_instances_ctx(e, all_items, ctx, lookup),
                 option.none : ctx,
             }
         }
-        stmt.expr(v) : collect_expr_instances_ctx(v.expr, all_items, ctx),
-        stmt.defer(v) : collect_expr_instances_ctx(v.expr, all_items, ctx),
-        stmt.sroutine(v) : collect_expr_instances_ctx(v.expr, all_items, ctx),
+        stmt.expr(v) : collect_expr_instances_ctx(v.expr, all_items, ctx, lookup),
+        stmt.defer(v) : collect_expr_instances_ctx(v.expr, all_items, ctx, lookup),
+        stmt.sroutine(v) : collect_expr_instances_ctx(v.expr, all_items, ctx, lookup),
     }
 }
 
-func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) mono_context {
+func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx, mono_index lookup) mono_context {
 	out := ctx
     switch value {
-        expr.record(v): { i := 0; for i < len(v.field_values) { out = collect_expr_instances_ctx(v.field_values[i], all_items, out); i = i + 1 }
+        expr.record(v): { i := 0; for i < len(v.field_values) { out = collect_expr_instances_ctx(v.field_values[i], all_items, out, lookup); i = i + 1 }
  out },
-        expr.tuple(v): { i := 0; for i < len(v.items) { out = collect_expr_instances_ctx(v.items[i], all_items, out); i = i + 1 }
+        expr.tuple(v): { i := 0; for i < len(v.items) { out = collect_expr_instances_ctx(v.items[i], all_items, out, lookup); i = i + 1 }
  out },
-        expr.while(v): { out = collect_expr_instances_ctx(v.condition.value, all_items, out); collect_block_instances_ctx(v.body, all_items, out) },
-		expr.borrow(v) : collect_expr_instances_ctx(v.target.value, all_items, out),
+        expr.while(v): { out = collect_expr_instances_ctx(v.condition.value, all_items, out, lookup); collect_block_instances_ctx(v.body, all_items, out, lookup) },
+		expr.borrow(v) : collect_expr_instances_ctx(v.target.value, all_items, out, lookup),
         expr.binary(v) : {
-			out = collect_expr_instances_ctx(v.left.value, all_items, out)
-			collect_expr_instances_ctx(v.right.value, all_items, out)
+			out = collect_expr_instances_ctx(v.left.value, all_items, out, lookup)
+			collect_expr_instances_ctx(v.right.value, all_items, out, lookup)
         }
-		expr.member(v) : collect_expr_instances_ctx(v.target.value, all_items, out),
+		expr.member(v) : collect_expr_instances_ctx(v.target.value, all_items, out, lookup),
         expr.index(v) : {
-			out = collect_expr_instances_ctx(v.target.value, all_items, out)
-			collect_expr_instances_ctx(v.index.value, all_items, out)
+			out = collect_expr_instances_ctx(v.target.value, all_items, out, lookup)
+			collect_expr_instances_ctx(v.index.value, all_items, out, lookup)
         }
         expr.call(v) : {
-			out = collect_method_call_instance_ctx(v, all_items, out)
-			out = collect_call_instance_ctx(v, all_items, out)
+			out = collect_method_call_instance_ctx(v, all_items, out, lookup)
+			out = collect_call_instance_ctx(v, all_items, out, lookup)
             i := 0
             for i < len(v.args) {
-				out = collect_expr_instances_ctx(v.args[i], all_items, out)
+				out = collect_expr_instances_ctx(v.args[i], all_items, out, lookup)
                 i = i + 1
             }
-			collect_expr_instances_ctx(v.callee.value, all_items, out)
+			collect_expr_instances_ctx(v.callee.value, all_items, out, lookup)
         }
         expr.if(v) : {
-			out = collect_expr_instances_ctx(v.condition.value, all_items, out)
-			out = collect_block_instances_ctx(v.then_branch, all_items, out)
+			out = collect_expr_instances_ctx(v.condition.value, all_items, out, lookup)
+			out = collect_block_instances_ctx(v.then_branch, all_items, out, lookup)
             switch v.else_branch {
-				option.some(e) : collect_expr_instances_ctx(e.value, all_items, out),
+				option.some(e) : collect_expr_instances_ctx(e.value, all_items, out, lookup),
 				option.none : out,
             }
         }
-		expr.for(v) : collect_for_instances_ctx(v, all_items, out),
-		expr.block(v) : collect_block_instances_ctx(v, all_items, out),
+		expr.for(v) : collect_for_instances_ctx(v, all_items, out, lookup),
+		expr.block(v) : collect_block_instances_ctx(v, all_items, out, lookup),
         expr.switch(v) : {
-			out = collect_expr_instances_ctx(v.subject.value, all_items, out)
+			out = collect_expr_instances_ctx(v.subject.value, all_items, out, lookup)
             i := 0
             for i < len(v.arms) {
-				out = collect_expr_instances_ctx(v.arms[i].expr, all_items, out)
+				out = collect_expr_instances_ctx(v.arms[i].expr, all_items, out, lookup)
                 i = i + 1
             }
 			out
@@ -520,7 +535,7 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) 
         expr.array(v) : {
             i := 0
             for i < len(v.items) {
-				out = collect_expr_instances_ctx(v.items[i], all_items, out)
+				out = collect_expr_instances_ctx(v.items[i], all_items, out, lookup)
                 i = i + 1
             }
 			out
@@ -528,8 +543,8 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) 
         expr.map(v) : {
             i := 0
             for i < len(v.entries) {
-				out = collect_expr_instances_ctx(v.entries[i].key, all_items, out)
-				out = collect_expr_instances_ctx(v.entries[i].value, all_items, out)
+				out = collect_expr_instances_ctx(v.entries[i].key, all_items, out, lookup)
+				out = collect_expr_instances_ctx(v.entries[i].value, all_items, out, lookup)
                 i = i + 1
             }
 			out
@@ -538,19 +553,19 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx) 
     }
 }
 
-func collect_call_instance_ctx(compile.internal.ast.call_expr call, item[] all_items, mono_context ctx) mono_context {
+func collect_call_instance_ctx(compile.internal.ast.call_expr call, item[] all_items, mono_context ctx, mono_index lookup) mono_context {
     generic_name := compile.internal.semantic.qualified_expr_path(call.callee.value)
     // Semantic and MIR give these exact unqualified builtins their own typed
     // operations, even when a generic prelude declaration is also in scope.
     if (generic_name == "len" || generic_name == "append") && len(call.type_args) == 0 && call.resolved_callee.is_none() { return ctx }
-    declaration_index := mono_find_work_index(ctx, generic_name, "")
+    declaration_index := mono_index_find_work(lookup, ctx.current_package, generic_name, "")
     // The index covers the complete source unit. Do not scan/unpack every AST
     // declaration before using its exact answer (including a missing builtin).
-    if declaration_index < 0 && len(ctx.input_names) > 0 { return ctx }
+    if declaration_index < 0 && len(lookup.input_names) > 0 { return ctx }
     source := function_decl {}
     if declaration_index >= 0 && declaration_index < len(all_items) {
         switch all_items[declaration_index] { item.function(v): source = v, _: () }
-        generic_name = ctx.input_packages[declaration_index] + "." + source.sig.name
+        generic_name = lookup.input_packages[declaration_index] + "." + source.sig.name
     } else { source = find_generic_function(all_items, generic_name) }
     if source.sig.name == "" || len(source.sig.generics) == 0 {
         return ctx
@@ -563,14 +578,14 @@ func collect_call_instance_ctx(compile.internal.ast.call_expr call, item[] all_i
     ctx.cache = result.cache
 
     if existing == "" {
-        decl_ref := find_declaration_ref_for_item(ctx, "function", generic_name)
+        decl_ref := mono_index_declaration(lookup, "function", generic_name)
         ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "function", receiver_type: "", generic_name: generic_name, type_args: call.type_args, declaration_ref: decl_ref, declaration_index: declaration_index })
     }
 
     ctx
 }
 
-func collect_method_call_instance_ctx(compile.internal.ast.call_expr call, item[] all_items, mono_context ctx) mono_context {
+func collect_method_call_instance_ctx(compile.internal.ast.call_expr call, item[] all_items, mono_context ctx, mono_index lookup) mono_context {
     if len(call.type_args) == 0 {
         return ctx
     }
@@ -612,9 +627,9 @@ func collect_method_call_instance_ctx(compile.internal.ast.call_expr call, item[
     }
     declaration_index := -1
     i := 0
-    for i < len(ctx.input_names) {
-        if ctx.input_receivers[i] != "" && ctx.input_names[i] == method_name {
-            candidate := mono_receiver_identity(ctx.input_receivers[i], ctx.input_packages[i])
+    for i < len(lookup.input_names) {
+        if lookup.input_receivers[i] != "" && lookup.input_names[i] == method_name {
+            candidate := mono_receiver_identity(lookup.input_receivers[i], lookup.input_packages[i])
             if compile.internal.typesys.base_type_name(candidate) == compile.internal.typesys.base_type_name(owner) { declaration_index = i; break }
         }
         i = i + 1
@@ -626,39 +641,39 @@ func collect_method_call_instance_ctx(compile.internal.ast.call_expr call, item[
         return ctx
     }
 
-    generic_name := ctx.input_packages[declaration_index] + "." + method_name
-    receiver_identity := mono_receiver_identity(source.receiver_type, ctx.input_packages[declaration_index])
+    generic_name := lookup.input_packages[declaration_index] + "." + method_name
+    receiver_identity := mono_receiver_identity(source.receiver_type, lookup.input_packages[declaration_index])
     existing := mono_cache_lookup_item(ctx.cache, "method", receiver_identity, generic_name, call.type_args)
     result := mono_cache_get_or_create_item(ctx.cache, "method", receiver_identity, generic_name, call.type_args)
     ctx.cache = result.cache
 
     if existing == "" {
-        decl_ref := find_declaration_ref_for_item(ctx, "method", generic_name)
+        decl_ref := mono_index_declaration(lookup, "method", generic_name)
         ctx.worklist = append(ctx.worklist, mono_work_item { item_kind: "method", receiver_type: receiver_identity, generic_name: generic_name, type_args: call.type_args, declaration_ref: decl_ref, declaration_index: declaration_index })
     }
 
     ctx
 }
 
-func collect_for_instances_ctx(for_expr v, item[] all_items, mono_context ctx) mono_context {
+func collect_for_instances_ctx(for_expr v, item[] all_items, mono_context ctx, mono_index lookup) mono_context {
 	out := ctx
     switch v.init {
-		option.some(s) : out = collect_stmt_instances_ctx(s.value, all_items, out),
+		option.some(s) : out = collect_stmt_instances_ctx(s.value, all_items, out, lookup),
         option.none : (),
     }
     switch v.condition {
-		option.some(e) : out = collect_expr_instances_ctx(e.value, all_items, out),
+		option.some(e) : out = collect_expr_instances_ctx(e.value, all_items, out, lookup),
         option.none : (),
     }
     switch v.post {
-        option.some(s) : out = collect_stmt_instances_ctx(s.value, all_items, out),
+        option.some(s) : out = collect_stmt_instances_ctx(s.value, all_items, out, lookup),
         option.none : (),
     }
     switch v.iterable {
-        option.some(e) : out = collect_expr_instances_ctx(e.value, all_items, out),
+        option.some(e) : out = collect_expr_instances_ctx(e.value, all_items, out, lookup),
         option.none : (),
     }
-    collect_block_instances_ctx(v.body, all_items, out)
+    collect_block_instances_ctx(v.body, all_items, out, lookup)
 }
 
 func collect_item_instances(item value, item[] all_items, mono_cache cache, mono_work_item[] worklist) mono_cache {
@@ -1720,15 +1735,24 @@ func mono_generic_identity(string identity) string {
     identity
 }
 func mono_find_work_index(mono_context ctx, string name, string receiver) int {
+    lookup := mono_index { input_names: ctx.input_names, input_receivers: ctx.input_receivers, input_packages: ctx.input_packages }
+    return mono_index_find_work(lookup, ctx.current_package, name, receiver)
+}
+
+func mono_index_find_work(mono_index lookup, string current_package, string name, string receiver) int {
     found := -1; i := 0
-    for i < len(ctx.input_names) {
-        candidate_name := ctx.input_names[i]
-        candidate_receiver := ctx.input_receivers[i]
+    wanted_name := name
+    qualifier := compile.internal.semantic.qualified_package_part(name)
+    if qualifier != "" { wanted_name = prelude_slice(name, len(qualifier) + 1, len(name)) }
+    for i < len(lookup.input_names) {
+        candidate_name := lookup.input_names[i]
+        if candidate_name != wanted_name { i = i + 1; continue }
+        candidate_receiver := lookup.input_receivers[i]
         if (receiver == "" && candidate_receiver != "") || (receiver != "" && candidate_receiver == "") { candidate_name = "" }
-        pkg := ctx.input_packages[i]
+        pkg := lookup.input_packages[i]
         owner_matches := receiver == "" || compile.internal.typesys.base_type_name(receiver) == compile.internal.typesys.base_type_name(candidate_receiver)
         if candidate_name != "" && owner_matches {
-            if name == pkg + "." + candidate_name || (name == candidate_name && pkg == ctx.current_package) { return i }
+            if name == pkg + "." + candidate_name || (name == candidate_name && pkg == current_package) { return i }
             if name == candidate_name { if found >= 0 { found = -2 } else if found == -1 { found = i } }
         }
         i = i + 1

@@ -579,8 +579,10 @@ func mir_program_array_element(string type_name) string {
 
 func mir_program_type_supported(string type_name, mir_program_record[] records, mir_program_enum[] enums) bool {
     referent := mir_program_reference_element(type_name)
-    if referent != "" { return mir_program_record_index(records, referent) >= 0 || (mir_program_array_element(referent) != "" && mir_program_type_supported(referent, records, enums)) }
-    if type_name == "string" || type_name == "int" || type_name == "()" || type_name == "bool" || mir_program_record_index(records, type_name) >= 0 || mir_program_enum_index(enums, type_name) >= 0 { return true }
+    if referent != "" { return mir_program_type_supported(referent, records, enums) }
+    if type_name == "string" || type_name == "int" || type_name == "()" || type_name == "bool" { return true }
+    if mir_program_record_index(records, type_name) >= 0 { return true }
+    if mir_program_enum_index(enums, type_name) >= 0 { return true }
     element := mir_program_array_element(type_name)
     if element != "" { return mir_program_type_supported(element, records, enums) }
     return false

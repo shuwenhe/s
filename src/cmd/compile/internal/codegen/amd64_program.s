@@ -92,7 +92,7 @@ func amd64_validate_program(function_ssa_program program) string {
                 }
                 b = b + 1
             }
-            if count != 1 { return "amd64: missing or duplicate parameter" }
+            if !ssa_function_external(function_data) && count != 1 { return "amd64: missing or duplicate parameter" }
             p = p + 1
         }
         b := 0
@@ -344,6 +344,7 @@ func emit_function_ssa_amd64(function_ssa_program program) amd64_program_result 
     text := ".text\n"
     f := 0
     for f < len(program.functions) {
+        if ssa_function_external(program.functions[f]) { return amd64_fail("unresolved external function: " + program.functions[f].symbol) }
         text = text + amd64_emit_function(program, f)
         f = f + 1
     }

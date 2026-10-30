@@ -23,11 +23,14 @@ func canonical_source_to_mir(string source) mir_program_result {
     if specialized.error != "" { return mir_program_result { program: empty, error: "canonical monomorphization: " + specialized.error } }
     if specialized.invariant_errors != 0 { return mir_program_result { program: empty, error: "canonical monomorphization: unresolved generic function or call" } }
     if trace { eprintln("canonical: function specialization complete") }
+    if trace { eprintln("canonical: type elaboration begin") }
     elaborated := compile.internal.mono.elaborate_generic_types(specialized.file)
     if elaborated.error != "" { return mir_program_result { program: empty, error: "canonical type elaboration: " + elaborated.error } }
     if trace { eprintln("canonical: type specialization complete") }
+    if trace { eprintln("canonical: method lowering begin") }
     flattened := compile.internal.mono.flatten_canonical_methods(elaborated.file)
     if flattened.error != "" { return mir_program_result { program: empty, error: "canonical method lowering: " + flattened.error } }
+    if trace { eprintln("canonical: MIR lowering begin") }
     lowered := compile.internal.ir.lower.lower_source_program(flattened.file)
     if trace { eprintln("canonical: MIR complete") }
     return lowered

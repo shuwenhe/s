@@ -20,4 +20,4 @@ PY
 "$compiler" --emit-bin "$work/main.sasm" "$work/main"
 status=0; "$work/main" 1 || status=$?
 test "$status" -eq 42
-echo 'specialization shares a 4000-field declaration index across 1000 generic callers within 2 GiB/120 seconds: PASS'
+echo 'indexed specialization handles 4000 fields and 1000 late generic callers within 2 GiB/120 seconds: PASS'

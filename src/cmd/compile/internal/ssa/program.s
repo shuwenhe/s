@@ -236,12 +236,13 @@ func ssa_value_use_error(function_ssa_function f, int[] dominance, int id, int u
     return ""
 }
 
+// Bodyless declarations use sentinel block identities; definitions always have an entry.
+func ssa_function_external(function_ssa_function f) bool {
+    return f.entry_block == -1 && f.exit_block == -1 && len(f.blocks) == 0
+}
+
 func verify_ssa_function(function_ssa_function f) string {
     if f.symbol == "" { return "empty function symbol" }
-    if len(f.blocks) == 0 { return "function has no blocks: " + f.symbol }
-    if ssa_block_index(f.blocks, f.entry_block) < 0 { return "missing entry block: " + f.symbol }
-    if f.exit_block >= 0 && ssa_block_index(f.blocks, f.exit_block) < 0 { return "missing exit block: " + f.symbol }
-    if len(f.blocks[ssa_block_index(f.blocks, f.entry_block)].predecessors) != 0 { return "entry block has predecessors: " + f.symbol }
     t := 0
     for t < len(f.parameter_types) {
         if f.parameter_types[t] == "" { return "empty parameter type: " + f.symbol }
@@ -253,6 +254,14 @@ func verify_ssa_function(function_ssa_function f) string {
         if mir_program_contains_reference(f.result_types[t]) { return "SSA reference result escapes its call" }
         t = t + 1
     }
+    if f.entry_block == -1 {
+        if len(f.blocks) != 0 || f.entry_block != -1 || f.exit_block != -1 { return "invalid external declaration: " + f.symbol }
+        return ""
+    }
+    if len(f.blocks) == 0 { return "function has no blocks: " + f.symbol }
+    if ssa_block_index(f.blocks, f.entry_block) < 0 { return "missing entry block: " + f.symbol }
+    if f.exit_block >= 0 && ssa_block_index(f.blocks, f.exit_block) < 0 { return "missing exit block: " + f.symbol }
+    if len(f.blocks[ssa_block_index(f.blocks, f.entry_block)].predecessors) != 0 { return "entry block has predecessors: " + f.symbol }
     b := 0
     for b < len(f.blocks) {
         block := f.blocks[b]
@@ -377,6 +386,7 @@ func verify_ssa_function(function_ssa_function f) string {
 func verify_ssa_program(function_ssa_program program) string {
     if program.package_name == "" || program.entry_symbol == "" { return "invalid program identity" }
     if ssa_function_index(program.functions, program.entry_symbol) < 0 { return "missing entry function" }
+    if ssa_function_external(program.functions[ssa_function_index(program.functions, program.entry_symbol)]) { return "entry function is external" }
     record_error := ssa_records_error(program.records)
     if record_error != "" { return record_error }
     global_error := ssa_globals_error(program)

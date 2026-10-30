@@ -497,8 +497,11 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_mir_public_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_enum_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_external_contract_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_external_reachability_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_record_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_nominal_layout_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_array_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_array_methods_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_bool_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_cfg_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_unit_shadow_production_check.sh

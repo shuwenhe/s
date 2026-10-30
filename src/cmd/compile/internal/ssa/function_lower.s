@@ -43,10 +43,12 @@ func function_ssa_append_function(function_ssa_function[] functions, mir_program
         b = b + 1
     }
     if count != 1 { exit = -1 }
+    entry := -1
+    if !source_function.external { entry = source_function.blocks[0].id }
     functions.push(function_ssa_function {
         symbol: source_function.symbol, parameter_types: parameter_types,
         result_types: source_function.result_types, blocks: blocks,
-        entry_block: source_function.blocks[0].id, exit_block: exit,
+        entry_block: entry, exit_block: exit,
     })
     return functions
 }
@@ -79,7 +81,6 @@ func function_mir_input_error(mir_program program) string {
     i = 0
     for i < len(program.functions) {
         input_function := program.functions[i]
-        if input_function.external { return "unsupported external function: " + input_function.symbol }
         if len(input_function.result_types) > 1 { return "unsupported multi-result function: " + input_function.symbol }
         p := 0
         for p < len(input_function.params) {

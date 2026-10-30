@@ -296,11 +296,13 @@ func handle_compile_unit(string[] args) int {
     }
     mirrored := canonical_source_to_mir(source)
     if mirrored.error != "" { eprintln(mirrored.error); return 1 }
+    if runtime_env_get("S_CANONICAL_TRACE", "") == "1" { eprintln("canonical: native assembly begin") }
     emitted := native_program_assembly(mirrored.program, true)
     if emitted.error != "" { eprintln(emitted.error); return 1 }
     // This: is target assembly, not seed IR or the legacy C backend's output.
     artifact := "# S-NATIVE-AMD64-V1\n" + emitted.assembly
     if __host_write_text_file(output, artifact) != 0 { eprintln("compiler: cannot write output"); return 1 }
+    if runtime_env_get("S_CANONICAL_TRACE", "") == "1" { eprintln("canonical: artifact written") }
     return 0
 }
 

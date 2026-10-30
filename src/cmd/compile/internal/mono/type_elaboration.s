@@ -350,8 +350,8 @@ func elaborate_generic_types(source_file file) type_elaboration_result {
     for i < len(file.items) {
         value := file.items[i]
         if len(te_generics(value)) == 0 || te_decl_name(value) == "" {
-            output.items = append(output.items, value)
-            output.item_packages = append(output.item_packages, te_package(file, i))
+            output.items.push(value)
+            output.item_packages.push(te_package(file, i))
             if len(te_generics(value)) == 0 { requests = te_add_requests(requests, te_item_types(value), te_package(file, i)) }
         }
         i = i + 1
@@ -393,7 +393,7 @@ func elaborate_generic_types(source_file file) type_elaboration_result {
         name := te_decl_name(file.items[declaration])
         concrete := make_instance_name(name, args)
         target := pkg + "." + concrete
-        if pkg == request.pkg { target = concrete }
+        if pkg == request.pkg && base == name { target = concrete }
         aliases = append(aliases, te_alias { pkg: request.pkg, original: text, concrete: target })
         qualified_original := pkg + "." + name + prelude_slice(text, len(base), len(text))
         aliases = append(aliases, te_alias { pkg: "", original: qualified_original, concrete: pkg + "." + concrete })
@@ -418,7 +418,7 @@ func elaborate_generic_types(source_file file) type_elaboration_result {
             item.enum(v): { v.name = concrete; v.generics = string[](); value = item.enum(v) },
             _: return type_elaboration_result { file: output, error: "generic type is not a record or enum: " + text },
         }
-        output.items = append(output.items, value); output.item_packages = append(output.item_packages, pkg)
+        output.items.push(value); output.item_packages.push(pkg)
         requests = te_add_requests(requests, args, request.pkg)
         requests = te_add_requests(requests, te_item_types(value), pkg)
     }

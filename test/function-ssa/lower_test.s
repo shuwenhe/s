@@ -165,9 +165,15 @@ func check_invalid_inputs() int {
     external_sink.external = true
     external_sink.blocks = mir_program_block[]{}
     external_module.functions[2] = external_sink
-    rejected_external := lower_function_mir_to_ssa(external_module)
-    if rejected_external.error != "unsupported external function: sample.sink" { return 6 }
-    if len(rejected_external.program.functions) != 0 || len(rejected_external.program.calls) != 0 { return 10 }
+    declared_external := lower_function_mir_to_ssa(external_module)
+    if declared_external.error != "" { return 6 }
+    external_declaration := declared_external.program.functions[2]
+    if !ssa_function_external(external_declaration) || len(external_declaration.blocks) != 0 || external_declaration.entry_block != -1 || external_declaration.exit_block != -1 { return 10 }
+    external_declaration.result_types = string[]{""}
+    if verify_ssa_function(external_declaration) == "" { return 11 }
+    external_declaration.result_types = string[]{"int"}
+    external_declaration.blocks = declared_external.program.functions[0].blocks
+    if verify_ssa_function(external_declaration) == "" { return 12 }
 
     multi_module := fixture()
     multi_unused := multi_module.functions[3]
