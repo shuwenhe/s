@@ -3678,8 +3678,11 @@ func lookup_name_type(type_binding[] env, string name) string {
 }
 
 func ok_type(string type_name) check_result {
+    if type_name == "int" || type_name == "string" || type_name == "bool" || type_name == "()" || type_name == "fn" {
+        return check_result { type_name: type_name, errors: 0 }
+    }
     check_result {
-        type_name: compile.internal.typesys.parse_type(type_name), errors 0,
+        type_name: compile.internal.typesys.parse_type(type_name), errors: 0,
     }
 }
 
