@@ -181,8 +181,8 @@ func (static_single_assignment* ssa) rename_variables() {
             }
 
             var_index := 0
-            for i := 0; i < n; i++ {
-                if i == var_index {
+            for loop_var_2 := 0; i < n; i++ {
+                if loop_var_2 == var_index {
                     version := ssa.variable_versions[var_index]
                     stacks[var_index].push(version)
                     ssa.variable_versions[var_index] = version + 1
@@ -197,8 +197,8 @@ func (static_single_assignment* ssa) rename_variables() {
                 for _idx_187 := 0; _idx_187 < len(ssa.blocks[succ].phis); _idx_187++ {
                     phi := ssa.blocks[succ].phis[_idx_187]
                     var_index := 0
-                    for i := 0; i < n; i++ {
-                        if i == var_index {
+                    for loop_var_3 := 0; i < n; i++ {
+                        if loop_var_3 == var_index {
                             if stacks[var_index].len() > 0 {
                                 phi.incoming_values.push(stacks[var_index][stacks[var_index].len() - 1])
                             }
@@ -226,8 +226,8 @@ func (static_single_assignment* ssa) rename_variables() {
         for _idx_214 := 0; _idx_214 < len(block.phis); _idx_214++ {
             phi := block.phis[_idx_214]
             var_index := 0
-            for i := 0; i < n; i++ {
-                if i == var_index {
+            for loop_var_4 := 0; i < n; i++ {
+                if loop_var_4 == var_index {
                     if stacks[var_index].len() > 0 {
                         stacks[var_index][stacks[var_index].len() - 1] = stacks[var_index][stacks[var_index].len() - 1] - 1
                     }
@@ -239,8 +239,8 @@ func (static_single_assignment* ssa) rename_variables() {
         for _idx_226 := 0; _idx_226 < len(block.values); _idx_226++ {
             value := block.values[_idx_226]
             var_index := 0
-            for i := 0; i < n; i++ {
-                if i == var_index {
+            for loop_var_5 := 0; i < n; i++ {
+                if loop_var_5 == var_index {
                     if stacks[var_index].len() > 0 {
                         stacks[var_index][stacks[var_index].len() - 1] = stacks[var_index][stacks[var_index].len() - 1] - 1
                     }

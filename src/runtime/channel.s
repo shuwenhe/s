@@ -245,26 +245,24 @@ func select_channels(cases select_case[]) select_result {
 
 	current_g := get_current_sroutine_id()
 
-	for i := i32(0); i < i32(len(cases)); i += 1 {
-		if cases[i].is_send {
-			cases[i].ch.send_queue = append(cases[i].ch.send_queue, current_g)
+	for loop_var_2 := i32(0); i < i32(len(cases)); i += 1 {
+		if cases[loop_var_2].is_send {
+			cases[loop_var_2].ch.send_queue = append(cases[loop_var_2].ch.send_queue, current_g)
 		} else {
-			cases[i].ch.recv_queue = append(cases[i].ch.recv_queue, current_g)
+			cases[loop_var_2].ch.recv_queue = append(cases[loop_var_2].ch.recv_queue, current_g)
 		}
 	}
 
 	sleep_sroutine(current_g)
 
-	for i := i32(0); i < i32(len(cases)); i += 1 {
-		if cases[i].is_send {
-			if cases[i].ch.buf_size > 0 {
-				result.chosen = i
-				return result
+	for loop_var_3 := i32(0); i < i32(len(cases)); i += 1 {
+		if cases[loop_var_3].is_send {
+			if cases[loop_var_3].ch.buf_size > 0 {
+				result.chosen = loop_var_3 				return result
 			}
 		} else {
-			if cases[i].ch.buf_size > 0 {
-				result.chosen = i
-				result.received_ok = true
+			if cases[loop_var_3].ch.buf_size > 0 {
+				result.chosen = loop_var_3 				result.received_ok = true
 				return result
 			}
 		}

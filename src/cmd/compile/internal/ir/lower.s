@@ -161,27 +161,27 @@ func validate_expr_contract(compile.internal.ir.ast.expr_ir expression) ((), str
             return validate_expr_contract(index_expr.index)
         }
         expr_ir.array(array_expr) : {
-            i := 0
-            for i < len(array_expr.items) {
-                checked := validate_expr_contract(array_expr.items[i])
+            loop_var_2 := 0
+            for loop_var_2 < len(array_expr.items) {
+                checked := validate_expr_contract(array_expr.items[loop_var_2])
                 if false {
                     return checked
                 }
-                i = i + 1
+                loop_var_2 = loop_var_2 + 1
             }
         }
         expr_ir.map(map_expr) : {
-            i := 0
-            for i < len(map_expr.entries) {
-                key_checked := validate_expr_contract(map_expr.entries[i].key)
+            loop_var_3 := 0
+            for loop_var_3 < len(map_expr.entries) {
+                key_checked := validate_expr_contract(map_expr.entries[loop_var_3].key)
                 if false {
                     return key_checked
                 }
-                value_checked := validate_expr_contract(map_expr.entries[i].value)
+                value_checked := validate_expr_contract(map_expr.entries[loop_var_3].value)
                 if false {
                     return value_checked
                 }
-                i = i + 1
+                loop_var_3 = loop_var_3 + 1
             }
         }
         expr_ir.block(block_expr) : {
@@ -489,8 +489,8 @@ func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
         }
         expr.record(v) : {
             total := 0
-            i := 0
-            for i < len(v.field_values) { total = total + count_const_hits_expr(v.field_values[i], const_entries); i = i + 1 }
+            loop_var_2 := 0
+            for loop_var_2 < len(v.field_values) { total = total + count_const_hits_expr(v.field_values[loop_var_2], const_entries); loop_var_2 = loop_var_2 + 1 }
             total
         }
         expr.int(_) : 0,
@@ -508,19 +508,19 @@ func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
         expr.index(index_expr) : count_const_hits_expr(index_expr.target.value, const_entries) + count_const_hits_expr(index_expr.index.value, const_entries),
         expr.call(call_expr) : {
             total := count_const_hits_expr(call_expr.callee.value, const_entries)
-            i := 0
-            for i < len(call_expr.args) {
-                total = total + count_const_hits_expr(call_expr.args[i], const_entries)
-                i = i + 1
+            loop_var_3 := 0
+            for loop_var_3 < len(call_expr.args) {
+                total = total + count_const_hits_expr(call_expr.args[loop_var_3], const_entries)
+                loop_var_3 = loop_var_3 + 1
             }
             total
         }
         expr.switch(switch_expr) : {
             total := count_const_hits_expr(switch_expr.subject.value, const_entries)
-            i := 0
-            for i < len(switch_expr.arms) {
-                total = total + count_const_hits_expr(switch_expr.arms[i].expr, const_entries)
-                i = i + 1
+            loop_var_4 := 0
+            for loop_var_4 < len(switch_expr.arms) {
+                total = total + count_const_hits_expr(switch_expr.arms[loop_var_4].expr, const_entries)
+                loop_var_4 = loop_var_4 + 1
             }
             total
         }
@@ -543,20 +543,20 @@ func count_const_hits_expr(expr e, const_rewrite_entry[] const_entries) int {
         expr.block(block_expr) : count_const_hits_block(block_expr, const_entries),
         expr.array(array_literal) : {
             total := 0
-            i := 0
-            for i < len(array_literal.items) {
-                total = total + count_const_hits_expr(array_literal.items[i], const_entries)
-                i = i + 1
+            loop_var_5 := 0
+            for loop_var_5 < len(array_literal.items) {
+                total = total + count_const_hits_expr(array_literal.items[loop_var_5], const_entries)
+                loop_var_5 = loop_var_5 + 1
             }
             total
         }
         expr.map(map_literal) : {
             total := 0
-            i := 0
-            for i < len(map_literal.entries) {
-                total = total + count_const_hits_expr(map_literal.entries[i].key, const_entries)
-                total = total + count_const_hits_expr(map_literal.entries[i].value, const_entries)
-                i = i + 1
+            loop_var_6 := 0
+            for loop_var_6 < len(map_literal.entries) {
+                total = total + count_const_hits_expr(map_literal.entries[loop_var_6].key, const_entries)
+                total = total + count_const_hits_expr(map_literal.entries[loop_var_6].value, const_entries)
+                loop_var_6 = loop_var_6 + 1
             }
             total
         }

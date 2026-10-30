@@ -97,9 +97,9 @@ func stack_frame_get_slot_offset(stack_frame frame, int slot_id) int {
         }
     }
 
-    for i := 0; i < frame.spill_slots.len(); i = i + 1 {
-        if frame.spill_slots[i].slot_id == slot_id {
-            return frame.spill_slots[i].offset
+    for loop_var_2 := 0; i < frame.spill_slots.len(); i = i + 1 {
+        if frame.spill_slots[loop_var_2].slot_id == slot_id {
+            return frame.spill_slots[loop_var_2].offset
         }
     }
 

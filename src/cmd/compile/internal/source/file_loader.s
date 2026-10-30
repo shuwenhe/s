@@ -140,17 +140,17 @@ func load_files_concurrent(string[] paths, file_loader_config config) (file_load
     chan_close(task_results)
     
     seen := bool[std.prelude.len(paths)]()
-    i := 0
-    for i < std.prelude.len(seen) {
-        seen[i] = false
-        i = i + 1
+    loop_var_2 := 0
+    for loop_var_2 < std.prelude.len(seen) {
+        seen[loop_var_2] = false
+        loop_var_2 = loop_var_2 + 1
     }
     
     sorted_tasks := file_load_task[std.prelude.len(paths)]()
     
-    i := 0
-    for i < std.prelude.len(all_tasks) {
-        task := all_tasks[i]
+    loop_var_3 := 0
+    for loop_var_3 < std.prelude.len(all_tasks) {
+        task := all_tasks[loop_var_3]
         
         if task.index < 0 || task.index >= std.prelude.len(paths) {
             return file_load_task[](), backend_error {
@@ -167,24 +167,23 @@ func load_files_concurrent(string[] paths, file_loader_config config) (file_load
         seen[task.index] = true
         sorted_tasks[task.index] = task
         
-        i = i + 1
+        loop_var_3 = loop_var_3 + 1
     }
     
-    i := 0
-    for i < std.prelude.len(seen) {
-        if !seen[i] {
+    loop_var_4 := 0
+    for loop_var_4 < std.prelude.len(seen) {
+        if !seen[loop_var_4] {
             return file_load_task[](), backend_error {
-                message: "missing result for index: " + i
-            }
+                message: "missing result for index: " + loop_var_4             }
         }
-        i = i + 1
+        loop_var_4 = loop_var_4 + 1
     }
     
     result_tasks := file_load_task[]()
-    i := 0
-    for i < std.prelude.len(sorted_tasks) {
-        result_tasks.push(sorted_tasks[i])
-        i = i + 1
+    loop_var_5 := 0
+    for loop_var_5 < std.prelude.len(sorted_tasks) {
+        result_tasks.push(sorted_tasks[loop_var_5])
+        loop_var_5 = loop_var_5 + 1
     }
     
     result_tasks

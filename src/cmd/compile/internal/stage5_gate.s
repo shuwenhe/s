@@ -197,8 +197,8 @@ func append_from_expr(identifier_info[] initial_values, compile.internal.ast.exp
             for i < len(value.items) { acc = append_from_expr(acc, value.items[i]); i = i + 1 }
         }
         expr.record(value): {
-            i := 0
-            for i < len(value.field_values) { acc = append_from_expr(acc, value.field_values[i]); i = i + 1 }
+            loop_var_2 := 0
+            for loop_var_2 < len(value.field_values) { acc = append_from_expr(acc, value.field_values[loop_var_2]); loop_var_2 = loop_var_2 + 1 }
         }
         expr.name(value): acc = append(acc, identifier_info { identifier_text: value.name, is_qualified: false }),
         expr.member(value): {
@@ -208,10 +208,10 @@ func append_from_expr(identifier_info[] initial_values, compile.internal.ast.exp
         }
         expr.call(value): {
             acc = append_from_expr(acc, value.callee.value)
-            i := 0
-            for i < len(value.args) {
-                acc = append_from_expr(acc, value.args[i])
-                i = i + 1
+            loop_var_3 := 0
+            for loop_var_3 < len(value.args) {
+                acc = append_from_expr(acc, value.args[loop_var_3])
+                loop_var_3 = loop_var_3 + 1
             }
         }
         expr.binary(value): {
@@ -245,25 +245,25 @@ func append_from_expr(identifier_info[] initial_values, compile.internal.ast.exp
         }
         expr.switch(value): {
             acc = append_from_expr(acc, value.subject.value)
-            i := 0
-            for i < len(value.arms) {
-                acc = append_from_expr(acc, value.arms[i].expr)
-                i = i + 1
+            loop_var_4 := 0
+            for loop_var_4 < len(value.arms) {
+                acc = append_from_expr(acc, value.arms[loop_var_4].expr)
+                loop_var_4 = loop_var_4 + 1
             }
         }
         expr.array(value): {
-            i := 0
-            for i < len(value.items) {
-                acc = append_from_expr(acc, value.items[i])
-                i = i + 1
+            loop_var_5 := 0
+            for loop_var_5 < len(value.items) {
+                acc = append_from_expr(acc, value.items[loop_var_5])
+                loop_var_5 = loop_var_5 + 1
             }
         }
         expr.map(value): {
-            i := 0
-            for i < len(value.entries) {
-                acc = append_from_expr(acc, value.entries[i].key)
-                acc = append_from_expr(acc, value.entries[i].value)
-                i = i + 1
+            loop_var_6 := 0
+            for loop_var_6 < len(value.entries) {
+                acc = append_from_expr(acc, value.entries[loop_var_6].key)
+                acc = append_from_expr(acc, value.entries[loop_var_6].value)
+                loop_var_6 = loop_var_6 + 1
             }
         }
         _ : (),
@@ -324,15 +324,15 @@ func resolve_identifier_to_candidates(string identifier, bool is_qualified, stri
         
         
         matched_functions := lookup_functions(functions, identifier)
-        i := 0
-        for i < std.prelude.len(matched_functions) {
+        loop_var_2 := 0
+        for loop_var_2 < std.prelude.len(matched_functions) {
             candidates = append(candidates, name_resolution_candidate {
-                package_path: matched_functions[i].package_path,
-                name: matched_functions[i].name,
+                package_path: matched_functions[loop_var_2].package_path,
+                name: matched_functions[loop_var_2].name,
                 kind: "function",
                 source_location: "",
             })
-            i = i + 1
+            loop_var_2 = loop_var_2 + 1
         }
         
         

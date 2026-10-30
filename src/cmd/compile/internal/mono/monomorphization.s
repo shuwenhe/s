@@ -490,7 +490,7 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx, 
     switch value {
         expr.record(v): { i := 0; for i < len(v.field_values) { out = collect_expr_instances_ctx(v.field_values[i], all_items, out, lookup); i = i + 1 }
  out },
-        expr.tuple(v): { i := 0; for i < len(v.items) { out = collect_expr_instances_ctx(v.items[i], all_items, out, lookup); i = i + 1 }
+        expr.tuple(v): { loop_var_2 := 0; for i < len(v.items) { out = collect_expr_instances_ctx(v.items[i], all_items, out, lookup); i = i + 1 }
  out },
         expr.while(v): { out = collect_expr_instances_ctx(v.condition.value, all_items, out, lookup); collect_block_instances_ctx(v.body, all_items, out, lookup) },
 		expr.borrow(v) : collect_expr_instances_ctx(v.target.value, all_items, out, lookup),
@@ -506,10 +506,10 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx, 
         expr.call(v) : {
 			out = collect_method_call_instance_ctx(v, all_items, out, lookup)
 			out = collect_call_instance_ctx(v, all_items, out, lookup)
-            i := 0
-            for i < len(v.args) {
-				out = collect_expr_instances_ctx(v.args[i], all_items, out, lookup)
-                i = i + 1
+            loop_var_3 := 0
+            for loop_var_3 < len(v.args) {
+				out = collect_expr_instances_ctx(v.args[loop_var_3], all_items, out, lookup)
+                loop_var_3 = loop_var_3 + 1
             }
 			collect_expr_instances_ctx(v.callee.value, all_items, out, lookup)
         }
@@ -525,27 +525,27 @@ func collect_expr_instances_ctx(expr value, item[] all_items, mono_context ctx, 
 		expr.block(v) : collect_block_instances_ctx(v, all_items, out, lookup),
         expr.switch(v) : {
 			out = collect_expr_instances_ctx(v.subject.value, all_items, out, lookup)
-            i := 0
-            for i < len(v.arms) {
-				out = collect_expr_instances_ctx(v.arms[i].expr, all_items, out, lookup)
-                i = i + 1
+            loop_var_4 := 0
+            for loop_var_4 < len(v.arms) {
+				out = collect_expr_instances_ctx(v.arms[loop_var_4].expr, all_items, out, lookup)
+                loop_var_4 = loop_var_4 + 1
             }
 			out
         }
         expr.array(v) : {
-            i := 0
-            for i < len(v.items) {
-				out = collect_expr_instances_ctx(v.items[i], all_items, out, lookup)
-                i = i + 1
+            loop_var_5 := 0
+            for loop_var_5 < len(v.items) {
+				out = collect_expr_instances_ctx(v.items[loop_var_5], all_items, out, lookup)
+                loop_var_5 = loop_var_5 + 1
             }
 			out
         }
         expr.map(v) : {
-            i := 0
-            for i < len(v.entries) {
-				out = collect_expr_instances_ctx(v.entries[i].key, all_items, out, lookup)
-				out = collect_expr_instances_ctx(v.entries[i].value, all_items, out, lookup)
-                i = i + 1
+            loop_var_6 := 0
+            for loop_var_6 < len(v.entries) {
+				out = collect_expr_instances_ctx(v.entries[loop_var_6].key, all_items, out, lookup)
+				out = collect_expr_instances_ctx(v.entries[loop_var_6].value, all_items, out, lookup)
+                loop_var_6 = loop_var_6 + 1
             }
 			out
         }
@@ -777,27 +777,27 @@ func collect_expr_instances(expr value, item[] all_items, mono_cache cache, mono
         expr.block(v) : collect_block_instances(v, all_items, out, worklist),
         expr.switch(v) : {
             out = collect_expr_instances(v.subject.value, all_items, out, worklist)
-            i := 0
-            for i < len(v.arms) {
-                out = collect_expr_instances(v.arms[i].expr, all_items, out, worklist)
-                i = i + 1
+            loop_var_2 := 0
+            for loop_var_2 < len(v.arms) {
+                out = collect_expr_instances(v.arms[loop_var_2].expr, all_items, out, worklist)
+                loop_var_2 = loop_var_2 + 1
             }
             out
         }
         expr.array(v) : {
-            i := 0
-            for i < len(v.items) {
-                out = collect_expr_instances(v.items[i], all_items, out, worklist)
-                i = i + 1
+            loop_var_3 := 0
+            for loop_var_3 < len(v.items) {
+                out = collect_expr_instances(v.items[loop_var_3], all_items, out, worklist)
+                loop_var_3 = loop_var_3 + 1
             }
             out
         }
         expr.map(v) : {
-            i := 0
-            for i < len(v.entries) {
-                out = collect_expr_instances(v.entries[i].key, all_items, out, worklist)
-                out = collect_expr_instances(v.entries[i].value, all_items, out, worklist)
-                i = i + 1
+            loop_var_4 := 0
+            for loop_var_4 < len(v.entries) {
+                out = collect_expr_instances(v.entries[loop_var_4].key, all_items, out, worklist)
+                out = collect_expr_instances(v.entries[loop_var_4].value, all_items, out, worklist)
+                loop_var_4 = loop_var_4 + 1
             }
             out
         }
@@ -998,7 +998,7 @@ func finalize_expr(expr value) expr {
         expr.name(v) : expr.name(v),
         expr.record(v): { i := 0; for i < len(v.field_values) { v.field_values[i] = finalize_expr(v.field_values[i]); i = i + 1 }
  expr.record(v) },
-        expr.tuple(v): { i := 0; for i < len(v.items) { v.items[i] = finalize_expr(v.items[i]); i = i + 1 }
+        expr.tuple(v): { loop_var_2 := 0; for i < len(v.items) { v.items[i] = finalize_expr(v.items[i]); i = i + 1 }
  expr.tuple(v) },
         expr.borrow(v) : expr.borrow(compile.internal.ast.borrow_expr { target: std.prelude.box(finalize_expr(v.target.value)), mutable v.mutable, inferred_type v.inferred_type }),
         expr.binary(v) : expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(finalize_expr(v.left.value)), op v.op, right std.prelude.box(finalize_expr(v.right.value)), inferred_type v.inferred_type }),
@@ -1006,10 +1006,10 @@ func finalize_expr(expr value) expr {
         expr.index(v) : expr.index(compile.internal.ast.index_expr { target: std.prelude.box(finalize_expr(v.target.value)), index std.prelude.box(finalize_expr(v.index.value)), inferred_type v.inferred_type }),
         expr.call(v) : {
             args := expr[]()
-            i := 0
-            for i < len(v.args) {
-                args = append(args, finalize_expr(v.args[i]))
-                i = i + 1
+            loop_var_3 := 0
+            for loop_var_3 < len(v.args) {
+                args = append(args, finalize_expr(v.args[loop_var_3]))
+                loop_var_3 = loop_var_3 + 1
             }
             callee := finalize_expr(v.callee.value)
             switch v.callee.value {
@@ -1039,28 +1039,28 @@ func finalize_expr(expr value) expr {
         expr.block(v) : expr.block(finalize_block(v)),
         expr.switch(v) : {
             arms := switch_arm[]()
-            i := 0
-            for i < len(v.arms) {
-                arms = append(arms, switch_arm { pattern: v.arms[i].pattern, expr finalize_expr(v.arms[i].expr) })
-                i = i + 1
+            loop_var_4 := 0
+            for loop_var_4 < len(v.arms) {
+                arms = append(arms, switch_arm { pattern: v.arms[loop_var_4].pattern, expr finalize_expr(v.arms[loop_var_4].expr) })
+                loop_var_4 = loop_var_4 + 1
             }
             expr.switch(switch_expr { subject: std.prelude.box(finalize_expr(v.subject.value)), arms arms, inferred_type v.inferred_type })
         }
         expr.array(v) : {
             items := expr[]()
-            i := 0
-            for i < len(v.items) {
-                items = append(items, finalize_expr(v.items[i]))
-                i = i + 1
+            loop_var_5 := 0
+            for loop_var_5 < len(v.items) {
+                items = append(items, finalize_expr(v.items[loop_var_5]))
+                loop_var_5 = loop_var_5 + 1
             }
             expr.array(array_literal { type_text: v.type_text, items items })
         }
         expr.map(v) : {
             entries := map_entry[]()
-            i := 0
-            for i < len(v.entries) {
-                entries = append(entries, map_entry { key: finalize_expr(v.entries[i].key), value finalize_expr(v.entries[i].value) })
-                i = i + 1
+            loop_var_6 := 0
+            for loop_var_6 < len(v.entries) {
+                entries = append(entries, map_entry { key: finalize_expr(v.entries[loop_var_6].key), value finalize_expr(v.entries[loop_var_6].value) })
+                loop_var_6 = loop_var_6 + 1
             }
             expr.map(map_literal { type_text: v.type_text, entries entries })
         }
@@ -1162,7 +1162,7 @@ func verify_expr_no_generics(expr value) int {
         expr.record(v): { errors := verify_optional_type_no_generics(v.inferred_type); if looks_like_generic_residue(v.type_name) { errors = errors + 1 }
  i := 0; for i < len(v.field_values) { errors = errors + verify_expr_no_generics(v.field_values[i]); i = i + 1 }
  errors },
-        expr.tuple(v): { errors := verify_optional_type_no_generics(v.inferred_type); i := 0; for i < len(v.items) { errors = errors + verify_expr_no_generics(v.items[i]); i = i + 1 }
+        expr.tuple(v): { errors := verify_optional_type_no_generics(v.inferred_type); loop_var_2 := 0; for i < len(v.items) { errors = errors + verify_expr_no_generics(v.items[i]); i = i + 1 }
  errors },
         expr.borrow(v) : verify_optional_type_no_generics(v.inferred_type) + verify_expr_no_generics(v.target.value),
         expr.binary(v) : verify_optional_type_no_generics(v.inferred_type) + verify_expr_no_generics(v.left.value) + verify_expr_no_generics(v.right.value),
@@ -1182,29 +1182,29 @@ func verify_expr_no_generics(expr value) int {
         expr.block(v) : verify_block_no_generics(v),
         expr.switch(v) : {
             errors := verify_optional_type_no_generics(v.inferred_type) + verify_expr_no_generics(v.subject.value)
-            i := 0
-            for i < len(v.arms) {
-                errors = errors + verify_expr_no_generics(v.arms[i].expr)
-                i = i + 1
+            loop_var_3 := 0
+            for loop_var_3 < len(v.arms) {
+                errors = errors + verify_expr_no_generics(v.arms[loop_var_3].expr)
+                loop_var_3 = loop_var_3 + 1
             }
             errors
         }
         expr.array(v) : {
             errors := verify_optional_type_no_generics(v.type_text)
-            i := 0
-            for i < len(v.items) {
-                errors = errors + verify_expr_no_generics(v.items[i])
-                i = i + 1
+            loop_var_4 := 0
+            for loop_var_4 < len(v.items) {
+                errors = errors + verify_expr_no_generics(v.items[loop_var_4])
+                loop_var_4 = loop_var_4 + 1
             }
             errors
         }
         expr.map(v) : {
             errors := verify_optional_type_no_generics(v.type_text)
-            i := 0
-            for i < len(v.entries) {
-                errors = errors + verify_expr_no_generics(v.entries[i].key)
-                errors = errors + verify_expr_no_generics(v.entries[i].value)
-                i = i + 1
+            loop_var_5 := 0
+            for loop_var_5 < len(v.entries) {
+                errors = errors + verify_expr_no_generics(v.entries[loop_var_5].key)
+                errors = errors + verify_expr_no_generics(v.entries[loop_var_5].value)
+                loop_var_5 = loop_var_5 + 1
             }
             errors
         }
@@ -1427,7 +1427,7 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
         expr.name(v) : { v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.name(v) },
         expr.record(v): { i := 0; for i < len(v.field_values) { v.field_values[i] = substitute_expr(v.field_values[i], generic_names, type_args); i = i + 1 }
  v.type_name = substitute_type(v.type_name, generic_names, type_args); v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.record(v) },
-        expr.tuple(v): { i := 0; for i < len(v.items) { v.items[i] = substitute_expr(v.items[i], generic_names, type_args); i = i + 1 }
+        expr.tuple(v): { loop_var_2 := 0; for i < len(v.items) { v.items[i] = substitute_expr(v.items[i], generic_names, type_args); i = i + 1 }
  v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.tuple(v) },
         expr.borrow(v) : expr.borrow(compile.internal.ast.borrow_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), mutable v.mutable, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
         expr.binary(v) : expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(substitute_expr(v.left.value, generic_names, type_args)), op v.op, right std.prelude.box(substitute_expr(v.right.value, generic_names, type_args)), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
@@ -1435,10 +1435,10 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
         expr.index(v) : expr.index(compile.internal.ast.index_expr { target: std.prelude.box(substitute_expr(v.target.value, generic_names, type_args)), index std.prelude.box(substitute_expr(v.index.value, generic_names, type_args)), inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args) }),
         expr.call(v) : {
             args := expr[]()
-            i := 0
-            for i < len(v.args) {
-                args = append(args, substitute_expr(v.args[i], generic_names, type_args))
-                i = i + 1
+            loop_var_3 := 0
+            for loop_var_3 < len(v.args) {
+                args = append(args, substitute_expr(v.args[loop_var_3], generic_names, type_args))
+                loop_var_3 = loop_var_3 + 1
             }
             call_type_args := string[]()
             i = 0
@@ -1670,29 +1670,29 @@ func verify_expr_resolved_calls(expr value) int {
         expr.block(v) : verify_block_resolved_calls(v),
         expr.switch(v) : {
             errors := verify_expr_resolved_calls(v.subject.value)
-            i := 0
-            for i < len(v.arms) {
-                errors = errors + verify_expr_resolved_calls(v.arms[i].expr)
-                i = i + 1
+            loop_var_2 := 0
+            for loop_var_2 < len(v.arms) {
+                errors = errors + verify_expr_resolved_calls(v.arms[loop_var_2].expr)
+                loop_var_2 = loop_var_2 + 1
             }
             errors
         }
         expr.array(v) : {
             errors := 0
-            i := 0
-            for i < len(v.items) {
-                errors = errors + verify_expr_resolved_calls(v.items[i])
-                i = i + 1
+            loop_var_3 := 0
+            for loop_var_3 < len(v.items) {
+                errors = errors + verify_expr_resolved_calls(v.items[loop_var_3])
+                loop_var_3 = loop_var_3 + 1
             }
             errors
         }
         expr.map(v) : {
             errors := 0
-            i := 0
-            for i < len(v.entries) {
-                errors = errors + verify_expr_resolved_calls(v.entries[i].key)
-                errors = errors + verify_expr_resolved_calls(v.entries[i].value)
-                i = i + 1
+            loop_var_4 := 0
+            for loop_var_4 < len(v.entries) {
+                errors = errors + verify_expr_resolved_calls(v.entries[loop_var_4].key)
+                errors = errors + verify_expr_resolved_calls(v.entries[loop_var_4].value)
+                loop_var_4 = loop_var_4 + 1
             }
             errors
         }

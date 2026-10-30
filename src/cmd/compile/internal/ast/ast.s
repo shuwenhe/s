@@ -634,10 +634,10 @@ func dump_expr(expr expr) string {
         }
         expr.record(value) : {
             parts := string[]()
-            i := 0
-            for i < len(value.field_names) {
-                parts = append(parts, value.field_names[i] + ": " + dump_expr(value.field_values[i]))
-                i = i + 1
+            loop_var_2 := 0
+            for loop_var_2 < len(value.field_names) {
+                parts = append(parts, value.field_names[loop_var_2] + ": " + dump_expr(value.field_values[loop_var_2]))
+                loop_var_2 = loop_var_2 + 1
             }
             value.type_name + " { " + join_with(parts, ", ") + " }"
         }

@@ -194,8 +194,8 @@ func ssa_replace_uses(f* ssa_function, int old_id, int new_id) {
             }
         }
     }
-    for i := 0; i < len(f.blocks); i = i + 1 {
-        block := f.blocks[i]
+    for loop_var_2 := 0; i < len(f.blocks); i = i + 1 {
+        block := f.blocks[loop_var_2]
         for j := 0; j < len(block.phis); j = j + 1 {
             phi := block.phis[j]
             for k := 0; k < len(phi.value_preds); k = k + 1 {
@@ -317,7 +317,7 @@ func ssa_eliminate_dead_values(f* ssa_function) int {
         }
     }
     removed := 0
-    for i := 0; i < len(f.blocks); i = i + 1 {
+    for loop_var_2 := 0; i < len(f.blocks); i = i + 1 {
         kept := ssa_value*[]()
         for j := 0; j < len(f.blocks[i].values); j = j + 1 {
             value := f.blocks[i].values[j]

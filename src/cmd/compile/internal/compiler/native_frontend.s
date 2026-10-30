@@ -147,10 +147,10 @@ func native_parse_import_item(native_parser initial) native_parser {
         }
     }
     scope := state.scopes[state.scope_index]
-    i := 0
-    for i < len(scope.import_names) {
-        if scope.import_names[i] == alias { return native_fail(state, "duplicate import alias: " + alias) }
-        i = i + 1
+    loop_var_2 := 0
+    for loop_var_2 < len(scope.import_names) {
+        if scope.import_names[loop_var_2] == alias { return native_fail(state, "duplicate import alias: " + alias) }
+        loop_var_2 = loop_var_2 + 1
     }
     scope.import_names.push(alias)
     scope.import_packages.push(path)
@@ -362,11 +362,11 @@ func native_parse_integer(native_parser initial, bool negative) native_parser {
     // Decimal literal
     // Accumulate negatively so the magnitude of INT64_MIN never overflows.
     value := 0
-    i := 0
-    for i < len(token) {
+    loop_var_2 := 0
+    for loop_var_2 < len(token) {
         ch := __host_char_at(token, i)
         if ch == "_" {
-            i = i + 1
+            loop_var_2 = loop_var_2 + 1
             continue
         }
         digit := native_decimal_digit(ch)
@@ -378,7 +378,7 @@ func native_parse_integer(native_parser initial, bool negative) native_parser {
             if digit > limit { return native_fail(state, "integer literal exceeds int64") }
         }
         value = value * 10 - digit
-        i = i + 1
+        loop_var_2 = loop_var_2 + 1
     }
     if !negative { value = 0 - value }
     state = native_emit_integer(state, value)
@@ -421,11 +421,11 @@ func native_call(native_parser initial, string path) native_parser {
     if target_scope.package_name != state.package_name {
         scope := state.scopes[state.scope_index]
         imported := false
-        i := 0
-        for i < len(scope.import_packages) {
-            imported_package := scope.import_packages[i]
+        loop_var_2 := 0
+        for loop_var_2 < len(scope.import_packages) {
+            imported_package := scope.import_packages[loop_var_2]
             if imported_package == target_scope.package_name { imported = true }
-            i = i + 1
+            loop_var_2 = loop_var_2 + 1
         }
         if !imported { return native_fail(state, "callee package not imported: " + target_scope.package_name) }
     }

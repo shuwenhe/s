@@ -614,12 +614,12 @@ func edit_expr(expr value, bool in_bloop) expr {
         expr.block(block_value) : expr.block(edit_block(block_value, in_bloop)),
         expr.switch(switch_value) : {
             arms := switch_arm[]()
-            i := 0
-            for i < std.prelude.len(switch_value.arms) {
+            loop_var_2 := 0
+            for loop_var_2 < std.prelude.len(switch_value.arms) {
                 arms.push(switch_arm {
-                    pattern: switch_value.arms[i].pattern, expr edit_expr(switch_value.arms[i].expr, in_bloop),
+                    pattern: switch_value.arms[loop_var_2].pattern, expr edit_expr(switch_value.arms[loop_var_2].expr, in_bloop),
                 })
-                i = i + 1
+                loop_var_2 = loop_var_2 + 1
             }
             expr.switch(switch_expr {
                 subject: std.prelude.box(edit_expr(switch_value.subject.value, in_bloop)), arms arms, inferred_type switch_value.inferred_type,

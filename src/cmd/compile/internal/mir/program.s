@@ -282,14 +282,13 @@ func mir_program_function_error_with_globals(mir_program_function function_data,
     for b < len(function_data.blocks) {
         block := function_data.blocks[b]
         predecessors := mir_program_predecessors(function_data, block.id)
-        i := 0
-        for i < len(block.instructions) {
-            ins := block.instructions[i]
+        loop_var_2 := 0
+        for loop_var_2 < len(block.instructions) {
+            ins := block.instructions[loop_var_2]
             a := 0
             for a < len(ins.operands) {
                 use_block := b
-                use_position := i
-                if ins.op == "phi" {
+                use_position := loop_var_2                 if ins.op == "phi" {
                     use_block = mir_program_block_index(function_data, predecessors[a])
                     use_position = len(function_data.blocks[use_block].instructions)
                 }
@@ -297,7 +296,7 @@ func mir_program_function_error_with_globals(mir_program_function function_data,
                 if error != "" { return error }
                 a = a + 1
             }
-            i = i + 1
+            loop_var_2 = loop_var_2 + 1
         }
         i = 0
         for i < len(block.return_values) {
@@ -746,10 +745,10 @@ func mir_program_string_instruction_error(mir_program_function f, mir_program_in
     if ins.op == "string_eq" || ins.op == "string_ne" || ins.op == "string_lt" || ins.op == "string_le" || ins.op == "string_gt" || ins.op == "string_ge" { result = "bool" }
     if ins.op == "string_len" { count = 1; result = "int" }
     if len(ins.operands) != count || ins.result_types[0] != result { return "string operand count or result type" }
-    i := 0
-    for i < count {
-        if mir_program_value_type(f, ins.operands[i], index) != "string" { return "string operand type" }
-        i = i + 1
+    loop_var_2 := 0
+    for loop_var_2 < count {
+        if mir_program_value_type(f, ins.operands[loop_var_2], index) != "string" { return "string operand type" }
+        loop_var_2 = loop_var_2 + 1
     }
     return ""
 }

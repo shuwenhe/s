@@ -179,27 +179,27 @@ func ca_expr_in_scope(compile.internal.ast.expr original, ca_context ctx, bool d
             v.inferred_type = option.some(ty); value = expr.record(v)
         },
         expr.tuple(v): {
-            types := compile.internal.typesys.extract_tuple_args(ctx.expected); i := 0
-            for i < len(v.items) {
-                expected := ctx.expected; if i < len(types) { expected = types[i] }
-                child := ca_child(v.items[i], ctx, expected, metadata); if child.error != "" { return child }
-                v.items[i] = child.value; i = i + 1
+            types := compile.internal.typesys.extract_tuple_args(ctx.expected); loop_var_2 := 0
+            for loop_var_2 < len(v.items) {
+                expected := ctx.expected; if loop_var_2 < len(types) { expected = types[loop_var_2] }
+                child := ca_child(v.items[loop_var_2], ctx, expected, metadata); if child.error != "" { return child }
+                v.items[loop_var_2] = child.value; loop_var_2 = loop_var_2 + 1
             }
             v.inferred_type = option.some(ty); value = expr.tuple(v)
         },
         expr.array(v): {
             v.type_text = option.some(ty)
-            expected := compile.internal.semantic.canonical_array_element(ty); i := 0
-            for i < len(v.items) { child := ca_child(v.items[i], ctx, expected, metadata); if child.error != "" { return child }
- v.items[i] = child.value; i = i + 1 }
+            expected := compile.internal.semantic.canonical_array_element(ty); loop_var_3 := 0
+            for loop_var_3 < len(v.items) { child := ca_child(v.items[loop_var_3], ctx, expected, metadata); if child.error != "" { return child }
+ v.items[loop_var_3] = child.value; loop_var_3 = loop_var_3 + 1 }
             value = expr.array(v)
         },
         expr.map(v): {
-            i := 0
-            for i < len(v.entries) {
-                key := ca_expr(v.entries[i].key, ctx, metadata); if key.error != "" { return key }
-                entry := ca_expr(v.entries[i].value, ctx, metadata); if entry.error != "" { return entry }
-                v.entries[i].key = key.value; v.entries[i].value = entry.value; i = i + 1
+            loop_var_4 := 0
+            for loop_var_4 < len(v.entries) {
+                key := ca_expr(v.entries[loop_var_4].key, ctx, metadata); if key.error != "" { return key }
+                entry := ca_expr(v.entries[loop_var_4].value, ctx, metadata); if entry.error != "" { return entry }
+                v.entries[loop_var_4].key = key.value; v.entries[loop_var_4].value = entry.value; loop_var_4 = loop_var_4 + 1
             }
             value = expr.map(v)
         },
@@ -235,9 +235,9 @@ func ca_expr_in_scope(compile.internal.ast.expr original, ca_context ctx, bool d
  value = expr.block(body.value) },
         expr.switch(v): {
             subject := ca_expr(v.subject.value, ctx, metadata); if subject.error != "" { return subject }
-            v.subject = std.prelude.box(subject.value); i := 0
-            for i < len(v.arms) {
-                arm := v.arms[i]; arm.pattern = compile.internal.semantic.canonical_resolve_const_pattern(arm.pattern, ctx.env)
+            v.subject = std.prelude.box(subject.value); loop_var_5 := 0
+            for loop_var_5 < len(v.arms) {
+                arm := v.arms[loop_var_5]; arm.pattern = compile.internal.semantic.canonical_resolve_const_pattern(arm.pattern, ctx.env)
                 bindings := compile.internal.semantic.pattern_check_result { bindings: compile.internal.semantic.type_binding[](), errors: 0 }
                 if compile.internal.semantic.canonical_enum_index(subject.type_name, metadata.declarations) >= 0 { bindings = compile.internal.semantic.canonical_check_enum_pattern(arm.pattern, subject.type_name, metadata.source, compile.internal.semantic.semantic_error[](), metadata.declarations) }
                 else { bindings = compile.internal.semantic.check_pattern(arm.pattern, subject.type_name, metadata.source, compile.internal.semantic.semantic_error[]()) }
@@ -246,7 +246,7 @@ func ca_expr_in_scope(compile.internal.ast.expr original, ca_context ctx, bool d
                 branch := ctx; branch.env = compile.internal.semantic.clone_env(ctx.env); b := 0
                 for b < len(bindings.bindings) { branch.env = append(branch.env, bindings.bindings[b]); b = b + 1 }
                 child := ca_expr(arm.expr, branch, metadata); if child.error != "" { return child }
-                arm.expr = child.value; v.arms[i] = arm; i = i + 1
+                arm.expr = child.value; v.arms[loop_var_5] = arm; loop_var_5 = loop_var_5 + 1
             }
             v.inferred_type = option.some(ty); value = expr.switch(v)
         },

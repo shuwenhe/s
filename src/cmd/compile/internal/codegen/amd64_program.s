@@ -215,11 +215,11 @@ func amd64_emit_value_with_values(function_ssa_program program, int function_ind
         if size == 0 { size = 8 }
         done := ".Ls_record_set_" + amd64_integer(function_index) + "_" + amd64_integer(position)
         text := "  movq $" + amd64_integer(size) + ", %rdi\n  call .Ls_native_alloc\n  movq %rax, " + slot + "\n  movq " + amd64_slot(values, value.operands[0]) + ", %r8\n  testq %r8, %r8\n  je " + done + "\n"
-        i := 0
-        for i < len(record.field_names) {
-            offset := amd64_integer(i * 8)
+        loop_var_2 := 0
+        for loop_var_2 < len(record.field_names) {
+            offset := amd64_integer(loop_var_2 * 8)
             text = text + "  movq " + offset + "(%r8), %r10\n  movq %r10, " + offset + "(%rax)\n"
-            i = i + 1
+            loop_var_2 = loop_var_2 + 1
         }
         return text + done + ":\n  movq " + amd64_slot(values, value.operands[1]) + ", %r10\n  movq %r10, " + amd64_integer(value.integer_value * 8) + "(%rax)\n"
     }

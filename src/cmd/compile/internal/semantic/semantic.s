@@ -2228,19 +2228,19 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
         expr.call(value) : {
             errors := 0
             arg_types := string[]()
-            i := 0
-            for i < std.prelude.len(value.args) {
-                arg_result := infer_expr_in_scope(value.args[i], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope)
+            loop_var_2 := 0
+            for loop_var_2 < std.prelude.len(value.args) {
+                arg_result := infer_expr_in_scope(value.args[loop_var_2], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope)
                 errors = errors + arg_result.errors
                 arg_types.push(arg_result.type_name);
-                switch value.args[i] {
+                switch value.args[loop_var_2] {
                     expr.name(name_value): {
                         builtin := qualified_expr_path(value.callee.value)
-                        if builtin != "len" && !(builtin == "append" && i == 0) { errors = errors + check_move_value(name_value.name, arg_result.type_name, borrow_state, source, diagnostics) }
+                        if builtin != "len" && !(builtin == "append" && loop_var_2 == 0) { errors = errors + check_move_value(name_value.name, arg_result.type_name, borrow_state, source, diagnostics) }
                     }
                     _ : (),
                 }
-                i = i + 1
+                loop_var_2 = loop_var_2 + 1
             }
             switch value.callee.value {
                 expr.member(member) : {
@@ -2469,9 +2469,9 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
             arm_type := "never"
             seen_patterns := pattern[]()
             arm_base_borrows := borrow_state_clone(borrow_state)
-            i := 0
-            for i < std.prelude.len(value.arms) {
-                arm := value.arms[i]
+            loop_var_3 := 0
+            for loop_var_3 < std.prelude.len(value.arms) {
+                arm := value.arms[loop_var_3]
                 arm.pattern = canonical_resolve_const_pattern(arm.pattern, env)
                 if pattern_unreachable(seen_patterns, arm.pattern, subject.type_name) {
                     errors = errors + add_error(source, diagnostics, "e2003", "unreachable switch arm", pattern_anchor(arm.pattern))
@@ -2499,7 +2499,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                     errors = errors + add_error(source, diagnostics, "e2005", "switch arm result type mismatch", "switch")
                 }
                 seen_patterns.push(arm.pattern);
-                i = i + 1
+                loop_var_3 = loop_var_3 + 1
             }
             base := compile.internal.typesys.base_type_name(subject.type_name)
             exhaustive := true
@@ -2604,23 +2604,23 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                 if element == "" { return check_result { type_name: "unknown", errors: add_error(source, diagnostics, "e3123", "array literal requires an array type", "[") } }
             }
             errors := 0
-            i := 0
-            for i < len(value.items) {
-                item := infer_expr_in_scope(value.items[i], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope)
+            loop_var_4 := 0
+            for loop_var_4 < len(value.items) {
+                item := infer_expr_in_scope(value.items[loop_var_4], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope)
                 errors = errors + item.errors
                 if is_unknown(element) { element = item.type_name; type_name = element + "[]" }
                 else if !types_compatible(element, item.type_name) { errors = errors + add_error(source, diagnostics, "e3017", "array item type mismatch", "[") }
-                i = i + 1
+                loop_var_4 = loop_var_4 + 1
             }
             check_result { type_name: type_name, errors: errors }
         }
         expr.map(value) : {
             errors := 0
-            i := 0
-            for i < std.prelude.len(value.entries) {
-                errors = errors + infer_expr_in_scope(value.entries[i].key, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope).errors
-                errors = errors + infer_expr_in_scope(value.entries[i].value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope).errors
-                i = i + 1
+            loop_var_5 := 0
+            for loop_var_5 < std.prelude.len(value.entries) {
+                errors = errors + infer_expr_in_scope(value.entries[loop_var_5].key, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope).errors
+                errors = errors + infer_expr_in_scope(value.entries[loop_var_5].value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope).errors
+                loop_var_5 = loop_var_5 + 1
             }
             check_result {
                 type_name: "map", errors errors,
@@ -2661,11 +2661,11 @@ func canonical_resolve_const_pattern(pattern value, type_binding[] env) pattern 
             return value
         }
         pattern.name(name): {
-            i := len(env)
-            for i > 0 {
-                i = i - 1
-                if env[i].name == name.name {
-                    if env[i].constant && env[i].constant_value.is_some() { return pattern.literal(literal_pattern { value: env[i].constant_value.unwrap() }) }
+            loop_var_2 := len(env)
+            for loop_var_2 > 0 {
+                loop_var_2 = loop_var_2 - 1
+                if env[loop_var_2].name == name.name {
+                    if env[loop_var_2].constant && env[loop_var_2].constant_value.is_some() { return pattern.literal(literal_pattern { value: env[loop_var_2].constant_value.unwrap() }) }
                     return value
                 }
             }

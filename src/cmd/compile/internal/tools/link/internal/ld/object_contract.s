@@ -277,8 +277,8 @@ func s_build_id_for(u8[] data) s_build_id {
         b = (b + int(data[i]) + i) * 2166136261
     }
     result := u8[] {}
-    for i := 0; i < 5; i = i + 1 {
-        result = append(result, u8(a >> (i * 8)))
+    for loop_var_2 := 0; i < 5; i = i + 1 {
+        result = append(result, u8(a >> (loop_var_2 * 8)))
         result = append(result, u8(b >> (i * 8)))
     }
     s_build_id { bytes: result }
