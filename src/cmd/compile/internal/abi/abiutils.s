@@ -47,6 +47,28 @@ struct reg_alloc_result {
     int[] regs
 }
 
+// Local helper to convert int to string (avoids dependency issues during bootstrap)
+func abi_int_to_string(int value) string {
+    if value == 0 { return "0" }
+    if value < 0 {
+        // For negative numbers, convert the absolute value and prepend "-"
+        v := -value
+        s := abi_int_to_string(v)
+        return "-" + s
+    }
+    
+    // For positive numbers, recursively build the string
+    digits := "0123456789"
+    result := ""
+    v := value
+    while v > 0 {
+        digit := v % 10
+        result = string[]{ int(digits[digit]) }[0] + result
+        v = v / 10
+    }
+    result
+}
+
 func new_abi_config(int i_regs_count, int f_regs_count, int offset_for_locals, int which) abi_config {
     abi_config {
         offset_for_locals: offset_for_locals, reg_amounts reg_amounts {
@@ -122,12 +144,12 @@ func frame_offset(abi_param_assignment assignment, abi_param_result_info info) i
 
 func reg_string(reg_amounts amounts, int r) string {
     if r < amounts.int_regs {
-        return "I" + std.conv.int_to_string(r)
+        return "I" + abi_int_to_string(r)
     }
     if r < amounts.int_regs + amounts.float_regs {
-        return "F" + std.conv.int_to_string(r - amounts.int_regs)
+        return "F" + abi_int_to_string(r - amounts.int_regs)
     }
-    "<?>" + std.conv.int_to_string(r)
+    "<?>" + abi_int_to_string(r)
 }
 
 func assignment_string(abi_param_assignment assignment, abi_config config, bool extra) string {
@@ -141,29 +163,29 @@ func assignment_string(abi_param_assignment assignment, abi_config config, bool 
         r := assignment.registers[i]
         regs = regs + " " + reg_string(config.reg_amounts, r)
         if extra {
-            regs = regs + "(" + std.conv.int_to_string(r) + ")"
+            regs = regs + "(" + abi_int_to_string(r) + ")"
         }
         i = i + 1
     }
     if extra {
-        regs = regs + " | #I=" + std.conv.int_to_string(config.reg_amounts.int_regs) + " #F=" + std.conv.int_to_string(config.reg_amounts.float_regs)
+        regs = regs + " | #I=" + abi_int_to_string(config.reg_amounts.int_regs) + " #F=" + abi_int_to_string(config.reg_amounts.float_regs)
     }
-    regs + " } " + offname + ": " + std.conv.int_to_string(assignment.offset) + " typ: " + assignment.type_name
+    regs + " } " + offname + ": " + abi_int_to_string(assignment.offset) + " typ: " + assignment.type_name
 }
 
 func info_string(abi_param_result_info info) string {
     out := ""
     i := 0
     for i < len(info.inparams) {
-        out = out + "IN: " + std.conv.int_to_string(i) + ": " + assignment_string(info.inparams[i], info.config, false) + "\n"
+        out = out + "IN: " + abi_int_to_string(i) + ": " + assignment_string(info.inparams[i], info.config, false) + "\n"
         i = i + 1
     }
     i = 0
     for i < len(info.outparams) {
-        out = out + "OUT: " + std.conv.int_to_string(i) + ": " + assignment_string(info.outparams[i], info.config, false) + "\n"
+        out = out + "OUT: " + abi_int_to_string(i) + ": " + assignment_string(info.outparams[i], info.config, false) + "\n"
         i = i + 1
     }
-    out + "offsetToSpillArea: " + std.conv.int_to_string(info.offset_to_spill_area) + " spillAreaSize: " + std.conv.int_to_string(info.spill_area_size)
+    out + "offsetToSpillArea: " + abi_int_to_string(info.offset_to_spill_area) + " spillAreaSize: " + abi_int_to_string(info.spill_area_size)
 }
 
 func num_param_regs(abi_config config, string type_name) int {
