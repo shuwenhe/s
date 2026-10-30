@@ -51,19 +51,19 @@ struct reg_alloc_result {
 func abi_int_to_string(int value) string {
     if value == 0 { return "0" }
     if value < 0 {
-        // For negative numbers, convert the absolute value and prepend "-"
         v := -value
         s := abi_int_to_string(v)
         return "-" + s
     }
     
-    // For positive numbers, recursively build the string
     digits := "0123456789"
     result := ""
     v := value
     while v > 0 {
         digit := v % 10
-        result = string[]{ int(digits[digit]) }[0] + result
+        // Get character from digits string and append to result
+        ch := digits[digit:digit+1]
+        result = ch + result
         v = v / 10
     }
     result
