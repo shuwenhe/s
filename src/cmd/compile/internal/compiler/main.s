@@ -8,7 +8,6 @@ import (
 extern "intrinsic" func __host_read_to_string(string path) string
 extern "intrinsic" func __host_write_text_file(string path, string data) int
 extern "intrinsic" func __host_char_at(string s, int index) string
-extern "intrinsic" func __host_slice(string s, int start, int end) string
 extern "intrinsic" func host_args() string[]
 
 func compiler_main(string[] args) int {

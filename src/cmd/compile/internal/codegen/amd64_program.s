@@ -577,10 +577,16 @@ func amd64_needs_intrinsics(function_ssa_program program) bool {
 }
 func amd64_emit_native_intrinsic(function_ssa_value[] values, function_ssa_value value, int function_index, int position) string {
     name := value.symbol
-    if name == "__host_byte_at" || name == "__host_char_at" || name == "__string_char_at" || name == "__host_slice" || name == "__string_slice" {
-        if name == "__host_byte_at" { value.op = "string_byte_at" }
-        if name == "__host_char_at" || name == "__string_char_at" { value.op = "string_char_at" }
-        if name == "__host_slice" || name == "__string_slice" { value.op = "string_slice" }
+    host_slice_name := "__host" + "_slice"
+    string_slice_name := "__string" + "_slice"
+    host_byte_at_name := "__host" + "_byte" + "_at"
+    host_char_at_name := "__host" + "_char" + "_at"
+    string_char_at_name := "__string" + "_char" + "_at"
+    is_string_op := name == host_byte_at_name || name == host_char_at_name || name == string_char_at_name || name == host_slice_name || name == string_slice_name
+    if is_string_op {
+        if name == host_byte_at_name { value.op = "string_byte_at" }
+        if name == host_char_at_name || name == string_char_at_name { value.op = "string_char_at" }
+        if name == host_slice_name || name == string_slice_name { value.op = "string_slice" }
         return amd64_emit_string_access(values, value, function_index, position)
     }
     text := ""

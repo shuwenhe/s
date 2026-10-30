@@ -349,8 +349,8 @@ func dump_source_file(source_file source) string {
     join_lines(lines)
 }
 
-func append_item_dump(string[] lines, item item) () {
-    switch item {
+func append_item_dump(string[] lines, item elem) () {
+    switch elem {
         item.function(value) : append_lines(lines, dump_function(value, "")),
         item.const(value) : append_lines(lines, dump_const(value)),
         item.var(value) : append_lines(lines, dump_var(value)),
@@ -359,6 +359,7 @@ func append_item_dump(string[] lines, item item) () {
         item.trait(value) : append_lines(lines, dump_trait(value)),
         item.method(value) : append_lines(lines, dump_receiver_method(value)),
     }
+    return ()
 }
 
 func dump_const(const_decl item) string[] {

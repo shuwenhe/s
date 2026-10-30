@@ -57,7 +57,7 @@ func (lexer* self) tokenize() token[] {
         }
         if ch == "\"" {
             tokens.push(token {
-                kind: token_kind.string, value: self.read_string(), line: start_line, column: start_column,
+                kind: token_kind.str, value: self.read_string(), line: start_line, column: start_column,
             })
             continue
         }

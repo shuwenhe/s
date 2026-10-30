@@ -50,7 +50,8 @@ func canonical_source_line(string source, int wanted_line) string {
     start := 0
     index := 0
     for index < len(source) {
-        if __host_slice(source, index, index + 1) == "\n" {
+        ch := __host_char_at(source, index)
+        if ch == "\n" {
             if line == wanted_line { return __host_slice(source, start, index) }
             line = line + 1
             start = index + 1

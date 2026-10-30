@@ -2982,23 +2982,31 @@ func canonical_binary_inference(string op, string left, string right) canonical_
     diagnostics := semantic_error[]()
     if op == "+" && left == "string" && right == "string" { return canonical_inference { type_name: "string", diagnostics: diagnostics } }
     if op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>" {
+        if is_unknown(left) || is_unknown(right) {
+            // The seed frontend accepts the source; when an operand type is unknown
+            // during canonical inference, defer instead of rejecting. A known string
+            // operand implies string concatenation.
+            if !is_unknown(left) && left == "string" { return canonical_inference { type_name: "string", diagnostics: diagnostics } }
+            if !is_unknown(right) && right == "string" { return canonical_inference { type_name: "string", diagnostics: diagnostics } }
+            return canonical_inference { type_name: "unknown", diagnostics: diagnostics }
+        }
         if !types_compatible("int", left) || !types_compatible("int", right) { diagnostics.push(semantic_error { code: "e3018", message: "arithmetic requires int", anchor: op }) }
         return canonical_inference { type_name: "int", diagnostics: diagnostics }
     }
     if op == "<" || op == "<=" || op == ">" || op == ">=" {
         if left == "string" && right == "string" { return canonical_inference { type_name: "bool", diagnostics: diagnostics } }
-        if !types_compatible("int", left) || !types_compatible("int", right) { diagnostics.push(semantic_error { code: "e3019", message: "ordering compare requires int or string operands of the same type", anchor: op }) }
+        if !is_unknown(left) && !is_unknown(right) && (!types_compatible("int", left) || !types_compatible("int", right)) { diagnostics.push(semantic_error { code: "e3019", message: "ordering compare requires int or string operands of the same type", anchor: op }) }
         return canonical_inference { type_name: "bool", diagnostics: diagnostics }
     }
     if op == "==" || op == "!=" {
-        if !types_compatible(left, right) { diagnostics.push(semantic_error { code: "e3020", message: "equality compare requires same type (left=" + left + ", right=" + right + ")", anchor: op }) }
+        if !is_unknown(left) && !is_unknown(right) && !types_compatible(left, right) { diagnostics.push(semantic_error { code: "e3020", message: "equality compare requires same type (left=" + left + ", right=" + right + ")", anchor: op }) }
         if !is_unknown(left) && !is_unknown(right) && !nil_comparable_pair(left, right) {
             if !compile.internal.typesys.comparable_type(left) || !compile.internal.typesys.comparable_type(right) { diagnostics.push(semantic_error { code: "e3039", message: "equality compare requires comparable types", anchor: op }) }
         }
         return canonical_inference { type_name: "bool", diagnostics: diagnostics }
     }
     if op == "&&" || op == "||" {
-        if !types_compatible("bool", left) || !types_compatible("bool", right) { diagnostics.push(semantic_error { code: "e3021", message: "logical op requires bool (left=" + left + ", right=" + right + ")", anchor: op }) }
+        if !is_unknown(left) && !is_unknown(right) && (!types_compatible("bool", left) || !types_compatible("bool", right)) { diagnostics.push(semantic_error { code: "e3021", message: "logical op requires bool (left=" + left + ", right=" + right + ")", anchor: op }) }
         return canonical_inference { type_name: "bool", diagnostics: diagnostics }
     }
     return canonical_inference { type_name: "unknown", diagnostics: diagnostics }

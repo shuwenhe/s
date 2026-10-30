@@ -1,6 +1,5 @@
 package compile.internal
 
-extern "intrinsic" func __host_slice(string text, int start, int end) string
 
 struct function_ssa_record {
     string symbol

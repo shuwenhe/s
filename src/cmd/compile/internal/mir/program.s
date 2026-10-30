@@ -1,6 +1,5 @@
 package compile.internal
 
-extern "intrinsic" func __host_slice(string text, int start, int end) string
 
 
 // Executable: module boundary. IDs: are local to a function, symbols to a package.

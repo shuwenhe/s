@@ -11,21 +11,18 @@ import (
 func run_stage5_gate_on_file(string filepath) compile.internal.semantic.name_resolution_gate_result {
     
     read_result := std.fs.read_to_string(filepath)
-    source := switch read_result {
-        result.ok(source) : source,
-        result.err(err) : {
-            
-            return compile.internal.semantic.name_resolution_gate_result {
-                total_identifiers: 0,
-                resolved_exact: 0,
-                resolved_ambiguous: 0,
-                unresolved: 0,
-                qualified_with_multiple_matches: 0,
-                details: compile.internal.semantic.identifier_resolution[](),
-                gate_pass: 0,
-            }
-        },
+    if read_result.is_err() {
+        return compile.internal.semantic.name_resolution_gate_result {
+            total_identifiers: 0,
+            resolved_exact: 0,
+            resolved_ambiguous: 0,
+            unresolved: 0,
+            qualified_with_multiple_matches: 0,
+            details: compile.internal.semantic.identifier_resolution[](),
+            gate_pass: 0,
+        }
     }
+    source := read_result.unwrap()
     
     
     file, parse_error := compile.internal.syntax.parse_source(source)
