@@ -3161,8 +3161,9 @@ func lookup_functions(function_binding[] functions, string name) function_bindin
     out := function_binding[]()
     i := 0
     for i < std.prelude.len(functions) {
-        if !functions[i].has_receiver && functions[i].name == name {
-            out.push(functions[i]);
+        fn := functions[i]
+        if !fn.has_receiver && fn.name == name {
+            out.push(fn);
         }
         i = i + 1
     }
@@ -3176,8 +3177,9 @@ func lookup_qualified_functions(function_binding[] functions, string package_pat
     }
     i := 0
     for i < std.prelude.len(functions) {
-        if !functions[i].has_receiver && functions[i].package_path == package_path && functions[i].name == name {
-            out.push(functions[i]);
+        fn := functions[i]
+        if !fn.has_receiver && fn.package_path == package_path && fn.name == name {
+            out.push(fn);
         }
         i = i + 1
     }
