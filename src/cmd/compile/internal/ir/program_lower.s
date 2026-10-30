@@ -1237,14 +1237,21 @@ func program_lower_loop_with_post(option[expr] condition, block_expr body, optio
     state = program_finish_block(state, "jump", int[](), [header])
     state = program_open_block(state, header)
     phi_values := int[]()
+    phi_indices := int[]()
     i := 0
     for i < len(base) {
         type_name := program_expression_type(state, state.signature, base[i])
-        id := state.next_value
-        state.next_value = id + 1
         incoming := base[i]
-        state.instructions = append(state.instructions, mir_program_instruction { op: "phi", result_ids: [id], result_types: [type_name], operands: [incoming] })
-        phi_values = append(phi_values, id)
+        if mir_program_reference_element(type_name) != "" {
+            phi_indices.push(-1)
+            phi_values.push(incoming)
+        } else {
+            id := state.next_value
+            state.next_value = id + 1
+            phi_indices.push(len(state.instructions))
+            state.instructions.push(mir_program_instruction { op: "phi", result_ids: [id], result_types: [type_name], operands: [incoming] })
+            phi_values.push(id)
+        }
         i = i + 1
     }
     state.binding_values = program_copy_values(phi_values)
@@ -1292,7 +1299,13 @@ func program_lower_loop_with_post(option[expr] condition, block_expr body, optio
             e = 0
             for e < len(edges) { operands.push(edges[e].values[i]); e = e + 1 }
             id := operands[0]
-            if len(operands) > 1 {
+            if phi_indices[i] < 0 {
+                e = 0
+                for e < len(operands) {
+                    if operands[e] != base[i] { state.error = "loop changes borrowed reference identity"; return state }
+                    e = e + 1
+                }
+            } else if len(operands) > 1 {
                 type_name := program_expression_type(state, state.signature, id)
                 id = state.next_value; state.next_value = id + 1
                 state.instructions.push(mir_program_instruction { op: "phi", result_ids: [id], result_types: [type_name], operands: operands })
@@ -1307,7 +1320,9 @@ func program_lower_loop_with_post(option[expr] condition, block_expr body, optio
         i = 0
         for i < len(base) {
             incoming := base[i]; back := back_values[i]
-            state.blocks[header] = program_set_phi_operands(state.blocks[header], i, [incoming, back])
+            if phi_indices[i] < 0 {
+                if incoming != back { state.error = "loop changes borrowed reference identity"; return state }
+            } else { state.blocks[header] = program_set_phi_operands(state.blocks[header], phi_indices[i], [incoming, back]) }
             i = i + 1
         }
     }
@@ -1349,6 +1364,7 @@ func program_lower_loop_with_post(option[expr] condition, block_expr body, optio
             e = e + 1 }
         if !same {
             type_name := program_expression_type(state, state.signature, id)
+            if mir_program_reference_element(type_name) != "" { state.error = "loop changes borrowed reference identity"; return state }
             e = 1
             for e < len(operands) {
                 if program_expression_type(state, state.signature, operands[e]) != type_name { state.error = "loop exit phi input type mismatch"; return state }
