@@ -48,25 +48,28 @@ struct reg_alloc_result {
 }
 
 // Local helper to convert int to string (avoids dependency issues during bootstrap)
+// This is needed because the seed compiler cannot resolve std.conv.int_to_string
 func abi_int_to_string(int value) string {
     if value == 0 { return "0" }
     if value < 0 {
-        v := -value
-        s := abi_int_to_string(v)
-        return "-" + s
+        return "-" + abi_int_to_string(-value)
     }
     
-    digits := "0123456789"
-    result := ""
-    v := value
-    while v > 0 {
-        digit := v % 10
-        // Get character from digits string and append to result
-        ch := digits[digit:digit+1]
-        result = ch + result
-        v = v / 10
+    // For simple positive integers, manually build the string
+    if value < 10 { 
+        if value == 1 { return "1" }
+        if value == 2 { return "2" }
+        if value == 3 { return "3" }
+        if value == 4 { return "4" }
+        if value == 5 { return "5" }
+        if value == 6 { return "6" }
+        if value == 7 { return "7" }
+        if value == 8 { return "8" }
+        if value == 9 { return "9" }
     }
-    result
+    
+    // For larger numbers, recursively build
+    return abi_int_to_string(value / 10) + abi_int_to_string(value % 10)
 }
 
 func new_abi_config(int i_regs_count, int f_regs_count, int offset_for_locals, int which) abi_config {
