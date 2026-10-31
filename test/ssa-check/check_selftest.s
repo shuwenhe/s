@@ -114,5 +114,38 @@ func main() int {
     fok.blocks[1].preds = sc_int1(0)
     if check_func(fok) != 0 { return 33 }
 
+    // A Phi whose argument count matches its block's predecessor count passes.
+    if check_func(sc_phi(1)) != 0 { return 34 }
+
+    // Code 12: a Phi whose argument count differs from its pred count.
+    if check_func(sc_phi(2)) != 12 { return 35 }
+
     0
+}
+
+// sc_phi builds a two-block CFG (entry -> b1) where b1 holds a Phi with
+// phi_args arguments and exactly one predecessor. With phi_args == 1 the
+// function is well formed; any other count violates the Phi invariant.
+func sc_phi(int phi_args) ssa_func {
+    args := int[]()
+    a := 0
+    for a < phi_args {
+        args = append(args, 0)
+        a = a + 1
+    }
+    vs := ssa_value[]()
+    vs = append(vs, make_value(0, "v0", op_const(), "int", int_args0(), "0"))
+    vs = append(vs, make_value(1, "v1", op_phi(), "int", args, ""))
+    entry := make_block(0, "entry")
+    entry.values = append(entry.values, 0)
+    entry.control = 0
+    entry.succs = append(entry.succs, 1)
+    body := make_block(1, "b1")
+    body.values = append(body.values, 1)
+    body.control = 1
+    body.preds = append(body.preds, 0)
+    bs := ssa_bb[]()
+    bs = append(bs, entry)
+    bs = append(bs, body)
+    ssa_func { name "p", entry 0, blocks bs, values vs, next_block_id 2, next_value_id 2 }
 }

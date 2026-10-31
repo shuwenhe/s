@@ -14,6 +14,7 @@ package compile.internal
 //   9  a value is scheduled into more than one block
 //   10 the entry block id does not reference an existing block
 //   11 a fixed-arity operation has the wrong number of arguments
+//   12 a Phi has an argument count that differs from its block's pred count
 
 func count_int(int[] xs, int x) int {
     n := 0
@@ -25,6 +26,19 @@ func count_int(int[] xs, int x) int {
         i = i + 1
     }
     n
+}
+
+// value_block_index returns the index of the block whose value list contains
+// value_id, or -1 when the value is not scheduled into any block.
+func value_block_index(ssa_func f, int value_id) int {
+    bi := 0
+    for bi < len(f.blocks) {
+        if count_int(f.blocks[bi].values, value_id) > 0 {
+            return bi
+        }
+        bi = bi + 1
+    }
+    -1
 }
 
 // op_expected_arity reports the exact argument count required by op, or -1 for
@@ -138,6 +152,17 @@ func check_func(ssa_func f) int {
             }
         }
         ai = ai + 1
+    }
+    qi := 0
+    for qi < len(f.values) {
+        pv := f.values[qi]
+        if !pv.removed && pv.op == op_phi() {
+            home := value_block_index(f, pv.id)
+            if home >= 0 && len(pv.args) != len(f.blocks[home].preds) {
+                return 12
+            }
+        }
+        qi = qi + 1
     }
     0
 }
