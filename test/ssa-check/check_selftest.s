@@ -120,6 +120,17 @@ func main() int {
     // Code 12: a Phi whose argument count differs from its pred count.
     if check_func(sc_phi(2)) != 12 { return 35 }
 
+    // Code 13: a non-Phi value that lists itself as an argument.
+    f13 := sc_valid()
+    f13.values[0].op = op_copy()
+    f13.values[0].args = sc_int1(0)
+    if check_func(f13) != 13 { return 36 }
+
+    // A Phi that references itself (loop phi) is permitted by the self-ref rule.
+    fphi := sc_phi(1)
+    fphi.values[1].args = sc_int1(1)
+    if check_func(fphi) != 0 { return 37 }
+
     0
 }
 

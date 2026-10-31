@@ -15,6 +15,7 @@ package compile.internal
 //   10 the entry block id does not reference an existing block
 //   11 a fixed-arity operation has the wrong number of arguments
 //   12 a Phi has an argument count that differs from its block's pred count
+//   13 a non-Phi value lists itself as an argument (circular definition)
 
 func count_int(int[] xs, int x) int {
     n := 0
@@ -77,6 +78,9 @@ func check_func(ssa_func f) int {
         for j < len(v.args) {
             if v.args[j] < 0 || v.args[j] >= len(f.values) {
                 return 2
+            }
+            if !v.removed && v.op != op_phi() && v.args[j] == v.id {
+                return 13
             }
             j = j + 1
         }
