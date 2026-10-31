@@ -130,6 +130,27 @@ func ca_expr(compile.internal.ast.expr original, ca_context ctx, ca_metadata met
     return ca_expr_in_scope(original, ctx, false, metadata)
 }
 func ca_expr_in_scope(compile.internal.ast.expr original, ca_context ctx, bool discard_result, ca_metadata metadata) ca_expr_result {
+    // Fast path: a binary expression's type is a pure function of its operand
+    // types, so recompose it from the already-annotated operands instead of
+    // re-inferring the whole subtree at every level. Inferring the full subtree
+    // at each node made long operator chains O(n^2); this keeps them O(n).
+    switch original {
+        expr.binary(bin): {
+            left := ca_expr(bin.left.value, ctx, metadata)
+            if left.error != "" { return left }
+            right := ca_expr(bin.right.value, ctx, metadata)
+            if right.error != "" { return right }
+            left_result := compile.internal.semantic.check_result { type_name: left.type_name, errors: 0 }
+            right_result := compile.internal.semantic.check_result { type_name: right.type_name, errors: 0 }
+            combined := compile.internal.semantic.infer_binary(bin.op, left_result, right_result, metadata.source, compile.internal.semantic.semantic_error[](), metadata.declarations)
+            if combined.errors != 0 { return ca_bad(original, "semantic type reconstruction failed in " + ctx.pkg) }
+            bin.left = std.prelude.box(left.value)
+            bin.right = std.prelude.box(right.value)
+            bin.inferred_type = option.some(combined.type_name)
+            return ca_expr_result { value: expr.binary(bin), type_name: combined.type_name, error: "" }
+        }
+        _: (),
+    }
     inferred := ca_infer(original, ctx, discard_result, metadata)
     if inferred.errors != 0 { return ca_bad(original, "semantic type reconstruction failed in " + ctx.pkg) }
     value := original
