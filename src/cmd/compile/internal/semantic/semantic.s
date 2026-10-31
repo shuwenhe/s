@@ -3159,9 +3159,9 @@ func lookup_functions_in_scope(function_binding[] functions, string name, string
 func has_function_in_scope(function_binding[] functions, string name, string package_path) bool {
     i := 0
     for i < std.prelude.len(functions) {
-        fn := functions[i]
-        if !fn.has_receiver && fn.name == name {
-            if package_path == "" || fn.package_path == package_path {
+        candidate := functions[i]
+        if !candidate.has_receiver && candidate.name == name {
+            if package_path == "" || candidate.package_path == package_path {
                 return true
             }
         }
@@ -3174,9 +3174,9 @@ func lookup_functions(function_binding[] functions, string name) function_bindin
     out := function_binding[]()
     i := 0
     for i < std.prelude.len(functions) {
-        fn := functions[i]
-        if !fn.has_receiver && fn.name == name {
-            out.push(fn);
+        candidate := functions[i]
+        if !candidate.has_receiver && candidate.name == name {
+            out.push(candidate);
         }
         i = i + 1
     }
@@ -3190,9 +3190,9 @@ func lookup_qualified_functions(function_binding[] functions, string package_pat
     }
     i := 0
     for i < std.prelude.len(functions) {
-        fn := functions[i]
-        if !fn.has_receiver && fn.package_path == package_path && fn.name == name {
-            out.push(fn);
+        candidate := functions[i]
+        if !candidate.has_receiver && candidate.package_path == package_path && candidate.name == name {
+            out.push(candidate);
         }
         i = i + 1
     }
