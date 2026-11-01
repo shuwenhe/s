@@ -629,7 +629,6 @@ func mir_program_type_supported(string type_name, mir_program_record[] records, 
     // to handle types that may not be in the records list yet
     return len(type_name) > 0
 }
-}
 
 // References nested in containers or tuples cannot escape through results.
 func mir_program_contains_reference(string type_name) bool {
