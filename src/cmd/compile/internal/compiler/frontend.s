@@ -1,8 +1,8 @@
 package compile.internal
 
 // Host intrinsic functions for string manipulation
-extern "intrinsic" func __host_char_at(string s, int index) string
-extern "intrinsic" func __host_slice(string s, int start, int end) string
+extern "intrinsic" func __host_char_at(string source, int index) string
+extern "intrinsic" func __host_slice(string source, int start, int end) string
 
 func compiler_number(int n) string {
     digits := "0123456789"
