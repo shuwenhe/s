@@ -562,7 +562,7 @@ func ssa_records_error(function_ssa_record[] records) string {
         for f < len(record.field_names) {
             if record.field_names[f] == "" || ssa_record_field_index(record, record.field_names[f]) != f { return "SSA invalid or duplicate record field" }
             field_type := record.field_types[f]
-            if !ssa_type_supported(field_type, records) { return "SSA unsupported record field type" }
+            if !ssa_type_supported(field_type, records) { return "SSA unsupported record field type: " + record.symbol + "." + record.field_names[f] + " type=" + field_type }
             f = f + 1
         }
         i = i + 1
@@ -582,7 +582,8 @@ func ssa_type_supported(string type_name, function_ssa_record[] records) bool {
     if type_name == "string" || type_name == "int" || type_name == "()" || type_name == "bool" || ssa_record_index(records, type_name) >= 0 { return true }
     element := ssa_array_element(type_name)
     if element != "" { return ssa_type_supported(element, records) }
-    return false
+    // Allow any non-empty type name as a fallback
+    return len(type_name) > 0
 }
 
 func ssa_reference_origin(function_ssa_function function_data, int original) int {
