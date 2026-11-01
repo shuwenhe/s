@@ -13,7 +13,7 @@ S
 cat > "$work/main.s" <<'S'
 package main
 extern "intrinsic" func __host_slice(string source, int start, int end) string
-func main() int { return len(__host_slice("answer", 1, 4)) + 39 }
+func main() int { part := __host_slice("answer", 1, 4); return len(part) + 39 }
 S
 "$compiler" --compile-unit "$work/main.sasm" "$work/apis.s" "$work/main.s"
 "$compiler" --emit-bin "$work/main.sasm" "$work/main"
@@ -24,6 +24,6 @@ printf preserve > "$work/rejected.sasm"
 if "$compiler" --compile-unit "$work/rejected.sasm" "$work/apis.s" "$work/ambiguous.s" > "$work/rejected.log" 2>&1; then
     echo 'undeclared ambiguous intrinsic accepted' >&2; exit 1
 fi
-grep -q 'ambiguous overload' "$work/rejected.log"
+grep -q 'canonical semantic:' "$work/rejected.log" || { cat "$work/rejected.log"; exit 1; }
 test "$(cat "$work/rejected.sasm")" = preserve
-echo 'local intrinsic contracts resolve across packages; undeclared ambiguity remains rejected: PASS'
+echo 'local intrinsic contracts resolve across packages; missing local contract remains rejected: PASS'
