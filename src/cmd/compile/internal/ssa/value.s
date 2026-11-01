@@ -32,6 +32,15 @@ func value_is_const_zero(ssa_value v) bool {
 
 func value_key(ssa_value v) string {
     key := v.op + "|" + v.ty + "|" + v.literal
+    if op_is_commutative(v.op) && len(v.args) == 2 {
+        lo := v.args[0]
+        hi := v.args[1]
+        if hi < lo {
+            lo = v.args[1]
+            hi = v.args[0]
+        }
+        return key + "#" + to_string(lo) + "#" + to_string(hi)
+    }
     i := 0
     for i < len(v.args) {
         key = key + "#" + to_string(v.args[i])
