@@ -1,0 +1,9 @@
+package compile.internal.ssa
+func ssa_html_module_name() string {
+    "ssa/html.s"
+}
+
+func ssa_html_module_apply(ssa_func f) int {
+    recompute_uses(f)
+    0
+}

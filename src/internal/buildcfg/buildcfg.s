@@ -1,0 +1,262 @@
+package internal.buildcfg
+import (
+    "std"
+    "std.env"
+    "std.prelude"
+)
+struct build_cfg_error {
+    string message
+}
+
+struct target {
+    string goos
+    string goarch
+}
+
+struct toolchain {
+    string compiler
+    string assembler
+    string linker
+    string archiver
+}
+
+struct build_cfg {
+    target target
+    toolchain toolchain
+}
+
+func goos() string {
+    explicit_value := normalize_goos(first_non_empty_goos_env())
+    if explicit_value != "" {
+        return explicit_value
+    }
+    inferred_value := infer_goos_from_host_env()
+    if inferred_value != "" {
+        return inferred_value
+    }
+    "linux"
+}
+
+func goarch() string {
+    explicit_value := normalize_goarch(first_non_empty_env())
+    if explicit_value != "" {
+        return explicit_value
+    }
+    inferred_value := infer_goarch_from_host_env()
+    if inferred_value != "" {
+        return inferred_value
+    }
+    "amd64"
+}
+
+func check() string {
+    os := goos()
+    if !is_supported_goos(os) {
+        return "unsupported goos: " + os
+    }
+    arch := goarch()
+    if !is_supported_goarch(arch) {
+        return "unsupported goarch: " + arch
+    }
+    ""
+}
+
+func first_non_empty_goos_env() string {
+    names := string[]()
+    names = append(names, "S_GOOS")
+    names = append(names, "s_goos")
+    names = append(names, "GOOS")
+    i := 0
+    for i < std.prelude.len(names) {
+        value := std.env.get(names[i])
+        switch value {
+            some(raw) : {
+                text := trim_spaces(raw)
+                if text != "" {
+                    return text
+                }
+            }
+            none : {},
+        }
+        i = i + 1
+    }
+    ""
+}
+
+func infer_goos_from_host_env() string {
+    names := string[]()
+    names = append(names, "OSTYPE")
+    names = append(names, "OS")
+    names = append(names, "VSCODE_CLI_OS")
+    names = append(names, "MSYSTEM")
+    i := 0
+    for i < std.prelude.len(names) {
+        value := std.env.get(names[i])
+        switch value {
+            some(raw) : {
+                mapped := map_host_os(raw)
+                if mapped != "" {
+                    return mapped
+                }
+            }
+            none : {},
+        }
+        i = i + 1
+    }
+    ""
+}
+
+func normalize_goos(string os) string {
+    mapped := map_host_os(os)
+    if mapped != "" {
+        return mapped
+    }
+    trim_spaces(os)
+}
+
+func map_host_os(string raw) string {
+    text := trim_spaces(raw)
+    if contains_token(text, "linux") {
+        return "linux"
+    }
+    if contains_token(text, "darwin") || contains_token(text, "mac") || contains_token(text, "osx") {
+        return "darwin"
+    }
+    if contains_token(text, "windows")
+        || contains_token(text, "win32")
+        || contains_token(text, "msys")
+        || contains_token(text, "mingw")
+        || contains_token(text, "cygwin") {
+        return "windows"
+    }
+    if contains_token(text, "freebsd") {
+        return "freebsd"
+    }
+    ""
+}
+
+func is_supported_goos(string os) bool {
+    os == "linux"
+        || os == "darwin"
+        || os == "windows"
+        || os == "freebsd"
+}
+
+func first_non_empty_env() string {
+    names := string[]()
+    names = append(names, "S_GOARCH")
+    names = append(names, "s_goarch")
+    names = append(names, "GOARCH")
+    i := 0
+    for i < std.prelude.len(names) {
+        value := std.env.get(names[i])
+        switch value {
+            some(raw) : {
+                text := trim_spaces(raw)
+                if text != "" {
+                    return text
+                }
+            }
+            none : {},
+        }
+        i = i + 1
+    }
+    ""
+}
+
+func infer_goarch_from_host_env() string {
+    names := string[]()
+    names = append(names, "HOSTTYPE")
+    names = append(names, "MACHTYPE")
+    names = append(names, "PROCESSOR_ARCHITECTURE")
+    names = append(names, "VSCODE_CLI_ARCH")
+    i := 0
+    for i < std.prelude.len(names) {
+        value := std.env.get(names[i])
+        switch value {
+            some(raw) : {
+                mapped := map_host_arch(raw)
+                if mapped != "" {
+                    return mapped
+                }
+            }
+            none : {},
+        }
+        i = i + 1
+    }
+    ""
+}
+
+func normalize_goarch(string arch) string {
+    mapped := map_host_arch(arch)
+    if mapped != "" {
+        return mapped
+    }
+    trim_spaces(arch)
+}
+
+func map_host_arch(string raw) string {
+    text := trim_spaces(raw)
+    if contains_token(text, "aarch64") || contains_token(text, "arm64") {
+        return "arm64"
+    }
+    if contains_token(text, "x86_64") || contains_token(text, "amd64") || contains_token(text, "x64") {
+        return "amd64"
+    }
+    if contains_token(text, "riscv64") {
+        return "riscv64"
+    }
+    if contains_token(text, "s390x") {
+        return "s390x"
+    }
+    if contains_token(text, "wasm") {
+        return "wasm"
+    }
+    if contains_token(text, "amd64p32") {
+        return "amd64p32"
+    }
+    ""
+}
+
+func is_supported_goarch(string arch) bool {
+    arch == "amd64"
+        || arch == "arm64"
+        || arch == "riscv64"
+        || arch == "amd64p32"
+        || arch == "s390x"
+        || arch == "wasm"
+}
+
+func contains_token(string text, string token) bool {
+    if std.prelude.len(token) == 0 {
+        return true
+    }
+    if std.prelude.len(text) < std.prelude.len(token) {
+        return false
+    }
+    i := 0
+    limit := std.prelude.len(text) - std.prelude.len(token)
+    for i <= limit {
+        if std.prelude.slice(text, i, i + std.prelude.len(token)) == token {
+            return true
+        }
+        i = i + 1
+    }
+    false
+}
+
+func trim_spaces(string text) string {
+    start := 0
+    end := std.prelude.len(text)
+    for start < end && is_space(std.prelude.slice(text, start, start + 1)) {
+        start = start + 1
+    }
+    for end > start && is_space(std.prelude.slice(text, end - 1, end)) {
+        end = end - 1
+    }
+    std.prelude.slice(text, start, end)
+}
+
+func is_space(string ch) bool {
+    ch == " " || ch == "\t" || ch == "\n" || ch == "\r"
+}

@@ -1,0 +1,22 @@
+package compile.internal.noder
+func run_lex_tests() int {
+    unit := source_unit {
+        path: "demo.s",
+        text: "package demo\nuse \"std.io\"\nfunc main() { 0 }\n",
+    }
+    tokens_result := lex_source(unit)
+    if tokens_result.is_err() {
+        return 1
+    }
+    tokens := tokens_result.unwrap()
+    if len(tokens) == 0 {
+        return 1
+    }
+    if tokens[0].text != "package" {
+        return 1
+    }
+    if tokens[1].text != "demo" {
+        return 1
+    }
+    0
+}

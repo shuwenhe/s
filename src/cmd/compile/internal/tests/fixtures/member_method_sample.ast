@@ -1,0 +1,10 @@
+package demo.member
+struct point
+  int32 x
+  int32 y
+trait measure
+  func size() int32
+method (point p) size() -> int32
+  final (p.x + p.y)
+func total(point p, vec[int32] items, int32 index) int32
+  final (call p.size() + items[index])

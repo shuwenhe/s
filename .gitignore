@@ -1,0 +1,145 @@
+# Ignore built S compiler binaries and local installs
+.local/
+.bootstrap/
+.build_seed_b6.7.3/
+bin/*
+!bin/s          # Bootstrap compiler - required for self-hosting
+!bin/.gitkeep
+*.exe
+*.arm64_*
+
+# Compiled binaries (should be rebuilt from source)
+src/cmd/compile/compiler
+src/cmd/compile/seed/s_*
+!src/cmd/compile/seed/*.s  # Keep source files
+src/cmd/compile/internal/tests/probe_*
+test/regression/m1_*
+test/regression/parser_*
+test/min_package_test
+
+# Generated build artifacts
+.build_seed_*/
+scripts/s-package-index.tsv
+misc/scripts/test-*.sh
+misc/reports/
+misc/test-results/
+
+# Build outputs
+/build/
+build/
+out/
+dist/
+
+# temporary files and dirs
+tmp/
+*.tmp
+
+# compiled objects and libraries
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+
+# python
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Compiler intermediate representation
+*.ir
+
+# Test and benchmark outputs
+*.test
+*.bench
+test-results.txt
+pip-wheel-metadata/
+*.egg-info/
+
+# logs and coverage
+logs/
+*.log
+.pytest_cache/
+.coverage
+coverage/
+
+# editors and ides
+.vscode/
+.idea/
+*.swp
+*~
+.ds_store
+tags
+ctags
+
+# caches
+.cache/
+.mypy_cache/
+
+# generated tools/artifacts
+misc/tools/*.o
+misc/tools/*.exe
+
+# node
+node_modules/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.python
+.coverage
+htmlcov/
+*.log
+*.tmp
+*.swp
+*.swo
+*.so
+*.o
+*.out
+*.exe
+*.a
+dist/
+!src/cmd/dist/
+!src/cmd/dist/**
+build/
+!src/cmd/compile/internal/build/
+!src/cmd/compile/internal/build/**
+*.egg-info/
+.ds_store
+editor/vscode/*.vsix
+
+# build outputs
+# /s/out/
+.bootstrap/
+
+# Compiled S seed binaries (architecture-specific)
+src/cmd/compile/seed/s_seed_x86_64
+src/cmd/compile/seed/s_seed_*
+
+# Backup files
+*.bak
+*.orig
+
+# Compiled intermediate representation
+*.ir
+
+# Generated seed compiler binaries
+bin/s_seed*
+bin/seed_tests
+bin/s_lexer
+.worktrees/
+docs/

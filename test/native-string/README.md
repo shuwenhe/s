@@ -1,0 +1,5 @@
+Run `bash test/native-string/check.sh` from the repository root.
+
+The validation harness runs real MIR-to-SSA lowering and checks rejection of malformed string instructions. The assembly harness generates validated SSA instructions, assembles and links them with GNU tools, and executes the resulting libc-free Linux/amd64 binary. It checks escaped and UTF-8 literal bytes, concatenation, byte length, all six content comparisons, byte access, character access, slicing, and invalid-access defaults.
+
+Native strings are immutable untagged pointers to an eight-byte byte length followed by bytes. A zero pointer represents the default empty string. Literal bytes use numeric assembler directives; concatenation and slicing allocate fresh arena storage. Byte access returns an unsigned byte as int; character access returns a one-byte string. Invalid byte access returns zero; invalid character access or slice returns an empty string. These defaults follow existing host intrinsic behavior. This representation is independent of the seed runtime's tagged ABI.

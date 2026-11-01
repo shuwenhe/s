@@ -1,0 +1,26 @@
+driver编译器主控层
+frontend
+middlend
+backend
+
+Parser 只产 AST
+Semantic 只做名字/类型/语义
+Lowering 只产 MIR
+Middlend 只消费 MIR
+Backend 只消费后端 IR/MIR
+
+当前编译入口：src/cmd/compile/main.s -> internal/driver/driver.s。
+证明与诊断命令进入 internal/compiler/main.s 的 compiler_main；
+build 命令进入 internal/pipeline/pipeline.s -> internal/core/backend.s。
+internal/sc/main_pipeline.s 是未接入生产构建的旧骨架。
+
+对照本地 Go 的实现状态与缺口：doc/compile-pipeline-status.md。
+
+架构收敛：cmd/compile/internal/syntax -> noder/typecheck/walk -> ssa -> arch backend，再配 cmd/link、runtime、标准库。
+编译器服务的是 S 语言本身，目标是快编译、强运行时集成、SC、sroutine、channel、栈增长这些语言运行时能力。
+
+一套“编译器积木系统”
+
+关键中间层是 MIR，因为所有权、借用检查、drop、move、生命周期等 S 核心语义主要围绕 MIR 做。
+
+/home/shuwen/shuwen/s/src/cmd/s/internal/work

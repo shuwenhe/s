@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root=$(cd "$(dirname "$0")/../.." && pwd)
+work=$(mktemp -d /tmp/s-canonical-semantic-ast.XXXXXX)
+trap 'status=$?; if [ "$status" -eq 0 ]; then rm -rf "$work"; else echo artifacts=$work; fi' EXIT
+python3 - "$root" "$work" <<'PY'
+from pathlib import Path
+import re,sys
+root,work=map(Path,sys.argv[1:])
+s=(root/'src/cmd/compile/internal/semantic/semantic.s').read_text()
+positions=list(re.finditer(r'^func ([A-Za-z_][A-Za-z_0-9]*)\(',s,re.M))
+functions={m[1]:s[m.start():positions[i+1].start() if i+1<len(positions) else len(s)] for i,m in enumerate(positions)}
+needed=['check_source_file','declaration_ref_equal','declaration_ref_display','find_struct_declaration'];selected=set()
+while needed:
+ name=needed.pop()
+ if name in selected or name not in functions:continue
+ selected.add(name)
+ code=re.sub(r'"(?:\\.|[^"\\])*"|//[^\n]*',' ',functions[name])
+ needed+=re.findall(r'\b([A-Za-z_][A-Za-z_0-9]*)\s*\(',code)
+text=s[:positions[0].start()]+''.join(functions[m[1]] for m in positions if m[1] in selected)
+if __import__('os').environ.get('S_SEMANTIC_DEBUG')=='1':
+ text=text.replace('    errors := left.errors + right.errors', '    eprintln("binary types=" + left.type_name + "," + right.type_name)\n    errors := left.errors + right.errors')
+ text=text.replace('    result := infer_block_expr(function_decl.body.unwrap()', '    eprintln("expected return=" + expected_return)\n    result := infer_block_expr(function_decl.body.unwrap()')
+ text=text.replace('    if is_unknown(left) || is_unknown(right)', '    eprintln("compatible=" + left + "," + right)\n    if is_unknown(left) || is_unknown(right)')
+ text=text.replace('    recovery_anchor := resolve_recovery_anchor(source, anchor)','    eprintln(code + ": " + message + " @ " + anchor)\n    recovery_anchor := resolve_recovery_anchor(source, anchor)')
+(work/'semantic.s').write_text(text)
+PY
+cat > "$work/main.s" <<'S'
+package main
+import ("compile.internal.syntax"; "compile.internal.semantic")
+func check(string source, string expected_code) () {
+    file, failure := compile.internal.syntax.parse_source(source)
+    if failure.message != "" { panic(failure.message) }
+    result := compile.internal.semantic.check_source_file(file, source)
+    if expected_code == "" {
+        if len(result.errors) != 0 { panic(result.errors[0].code + ": " + result.errors[0].message) }
+        return
+    }
+    i := 0
+    for i < len(result.errors) {
+        if result.errors[i].code == expected_code { return }
+        i = i + 1
+    }
+    panic("missing expected diagnostic: " + expected_code)
+}
+func main() int {
+    check("package other\nfunc choose(int value) int { value + 1 }\npackage main\nfunc choose(int value) int { value }\nfunc main() int { choose(42) }", "")
+    check("package other\nfunc choose(string value) string { value }\npackage main\nfunc choose(int value) int { value }\nfunc main() int { choose(42) }", "")
+    check("package other\nfunc choose(int value) int { value }\npackage main\nfunc choose(string value) string { value }\nfunc main() int { choose(42) }", "e1002")
+    check("package other\nfunc choose(int value) int { value }\npackage main\nfunc choose(string value) string { value }\nfunc main() int { other.choose(42) }", "")
+    check("package other\nfunc choose(int value) int { value }\npackage third\nfunc choose(int value) int { value }\npackage main\nfunc main() int { choose(42) }", "e1003")
+    check("package main\nextern \"intrinsic\" func probe(string text, int index) int\nextern \"intrinsic\" func probe(string source, int offset) int\nfunc main() int { probe(\"x\", 0) }", "")
+    check("package main\nextern \"intrinsic\" func probe(string text, int index) int\nextern \"intrinsic\" func probe(string source, int offset) string\nfunc main() int { 42 }", "e3010")
+    check("package main\nextern \"intrinsic\" func probe(string text, int index) int\nextern \"other\" func probe(string source, int offset) int\nfunc main() int { 42 }", "e3010")
+    check("package main\nextern \"intrinsic\" func probe(string text, int index) int\nfunc probe(string text, int index) int { index }\nfunc main() int { 42 }", "e3010")
+    return 42
+}
+S
+sources=(src/option/option.s src/result/result.s src/prelude/prelude.s src/fs/fs.s src/cmd/compile/internal/ast/ast.s src/cmd/compile/internal/parser/syntax/syntax.s src/cmd/compile/internal/parser/syntax/canonical_parser.s src/cmd/compile/internal/prelude.s src/cmd/compile/internal/typesys/typesys.s src/cmd/compile/internal/typesys/canonical_type.s src/cmd/compile/internal/semantic/canonical_enum.s)
+for i in "${!sources[@]}"; do sources[$i]="$root/${sources[$i]}"; done
+"${S_TEST_SEED:-$root/bin/s_seed}" --compile-native-unit "$work/main.ir" "${sources[@]}" "$work/semantic.s" "$work/main.s"
+S_SOURCE_ROOT="$root" "${S_TEST_SEED:-$root/bin/s_seed}" --emit-standalone-amd64 "$work/main.ir" "$work/main"
+status=0; "$work/main" || status=$?
+test "$status" -eq 42
+echo 'canonical unqualified calls prefer their lexical package; explicit calls, ambiguity and external contracts retain checks: PASS'

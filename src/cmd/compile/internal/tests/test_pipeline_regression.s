@@ -1,0 +1,452 @@
+package compile.internal.tests.test_pipeline_regression
+import (
+    "compile.internal.core"
+    "compile.internal.build.parse"
+    "compile.internal.ir.lower"
+    "compile.internal.mir"
+    "compile.internal.ssa_core"
+    "compile.internal.syntax"
+    "std"
+    "std.prelude"
+)
+func run_pipeline_regression_suite() int {
+    cli_build_eq := string[]()
+    cli_build_eq = append(cli_build_eq, "compile")
+    cli_build_eq = append(cli_build_eq, "build")
+    cli_build_eq = append(cli_build_eq, "demo.s")
+    cli_build_eq = append(cli_build_eq, "-o")
+    cli_build_eq = append(cli_build_eq, "a.out")
+    cli_build_eq = append(cli_build_eq, "--ssa-dominant-margin=5")
+    parsed_build_eq := compile.internal.build.parse.parse_options(cli_build_eq)
+    if len(parsed_build_eq) < 4 || parsed_build_eq[3] != "5" {
+        return 1
+    }
+    cli_run_split := string[]()
+    cli_run_split = append(cli_run_split, "compile")
+    cli_run_split = append(cli_run_split, "run")
+    cli_run_split = append(cli_run_split, "demo.s")
+    cli_run_split = append(cli_run_split, "--ssa-dominant-margin")
+    cli_run_split = append(cli_run_split, "7")
+    parsed_run_split := compile.internal.build.parse.parse_options(cli_run_split)
+    if len(parsed_run_split) < 4 || parsed_run_split[3] != "7" {
+        return 1
+    }
+    cli_bad_margin := string[]()
+    cli_bad_margin = append(cli_bad_margin, "compile")
+    cli_bad_margin = append(cli_bad_margin, "build")
+    cli_bad_margin = append(cli_bad_margin, "demo.s")
+    cli_bad_margin = append(cli_bad_margin, "-o")
+    cli_bad_margin = append(cli_bad_margin, "a.out")
+    cli_bad_margin = append(cli_bad_margin, "--ssa-dominant-margin=oops")
+    parsed_bad_margin := compile.internal.build.parse.parse_options(cli_bad_margin)
+    if parsed_bad_margin[0] != "help" {
+        return 1
+    }
+    source := "package demo.reg\nconst (\n  A: = 1\n  B\n)\nfunc helper() int {\n  1\n}\nfunc worker() int {\n  helper()\n  0\n}\nfunc main() {\n  arr := [int]{1, 2}\n  mp := [string]int{\"k\": 1}\n  idx := arr[0]\n  bx := { idx + 1 }\n  idx = idx + bx\n  sroutine worker()\n  for (i := 0; i < 1; i++) {\n    idx = idx + arr[i]\n  }\n  B: + mp[\"k\"]\n}"
+    parsed := compile.internal.syntax.parse_source(source)
+    if parsed.is_err() {
+        return 1
+    }
+    lowered_checked := compile.internal.ir.lower.from_syntax_checked(parsed.unwrap())
+    if lowered_checked.is_err() {
+        return 1
+    }
+    lowered := lowered_checked.unwrap()
+    if count_const_decls(lowered) != 2 {
+        return 1
+    }
+    if !has_const_decl(lowered, "A", "1") {
+        return 1
+    }
+    if !has_const_decl(lowered, "B", "1") {
+        return 1
+    }
+    const_only_source := "package demo.constonly\nconst (\n  A: = 1\n  B\n)\nfunc main() {\n  B\n}"
+    const_only_parsed := compile.internal.syntax.parse_source(const_only_source)
+    if const_only_parsed.is_err() {
+        return 1
+    }
+    const_only_lowered := compile.internal.ir.lower.from_syntax_checked(const_only_parsed.unwrap())
+    if const_only_lowered.is_err() {
+        return 1
+    }
+    if !main_final_is_int_literal(const_only_lowered.unwrap(), 1) {
+        return 1
+    }
+    features := collect_ir_package_features(lowered)
+    if (features & 1) == 0 {
+        return 1
+    }
+    if (features & 2) == 0 {
+        return 1
+    }
+    if (features & 4) == 0 {
+        return 1
+    }
+    if (features & 8) == 0 {
+        return 1
+    }
+    if (features & 16) == 0 {
+        return 1
+    }
+    graph_result := compile.internal.ir.lower.lower_main_to_mir(parsed.unwrap())
+    if graph_result.is_err() {
+        return 1
+    }
+    graph := graph_result.unwrap()
+    graph_text := compile.internal.mir.dump_graph(graph)
+    if !contains(graph_text, "yield 1") {
+        return 1
+    }
+    if contains(graph_text, "yield B") {
+        return 1
+    }
+    saw_pkg_functions := false
+    ti := 0
+    for ti < len(graph.trace) {
+        if starts_with(graph.trace[ti], "package.functions=") {
+            saw_pkg_functions = true
+        }
+        ti = ti + 1
+    }
+    if !saw_pkg_functions {
+        return 1
+    }
+    move_drop_source := "package demo.drop\nfunc consume(string value) {\n  value\n}\nfunc main() {\n  left: string = \"a\"\n  consume(left)\n}"
+    move_drop_parsed := compile.internal.syntax.parse_source(move_drop_source)
+    if move_drop_parsed.is_err() {
+        return 1
+    }
+    move_drop_graph := compile.internal.ir.lower.lower_main_to_mir(move_drop_parsed.unwrap())
+    if move_drop_graph.is_err() {
+        return 1
+    }
+    if count_mir_drops(move_drop_graph.unwrap()) != 0 {
+        return 1
+    }
+    reinit_drop_source := "package demo.drop\nfunc consume(string value) {\n  value\n}\nfunc main() {\n  left: string = \"a\"\n  consume(left)\n  left = \"b\"\n}"
+    reinit_drop_parsed := compile.internal.syntax.parse_source(reinit_drop_source)
+    if reinit_drop_parsed.is_err() {
+        return 1
+    }
+    reinit_drop_graph := compile.internal.ir.lower.lower_main_to_mir(reinit_drop_parsed.unwrap())
+    if reinit_drop_graph.is_err() {
+        return 1
+    }
+    if count_mir_drops(reinit_drop_graph.unwrap()) != 1 {
+        return 1
+    }
+    midend := compile.internal.core.run_midend_pipeline(graph)
+    if !contains(midend.report, "inline_sites=") {
+        return 1
+    }
+    if !contains(midend.report, "escape_sites=") {
+        return 1
+    }
+    if !contains(midend.report, "devirtualized=") {
+        return 1
+    }
+    if !contains(midend.report, "pass_rm_unreachable=") {
+        return 1
+    }
+    if !contains(midend.report, "pass_fold_branch=") {
+        return 1
+    }
+    if !contains(midend.report, "const_fold_hits=") {
+        return 1
+    }
+    if !contains(midend.report, "sroutine_sites=") {
+        return 1
+    }
+    if !contains(midend.report, "select_weighted_sites=0") {
+        return 1
+    }
+    if !contains(midend.report, "select_timeout_sites=0") {
+        return 1
+    }
+    if !contains(midend.report, "select_send_sites=0") {
+        return 1
+    }
+    if !contains(midend.report, "const_fold_hits=1") {
+        return 1
+    }
+    metric_graph := mir_graph {
+        blocks: mir_block[](), trace string[](
+            "stmt sroutine worker()",
+            "expr call select_recv_weighted(ch1, 2, ch2, 1)",
+            "expr call select_recv_timeout(ch1, ch2, 3)",
+            "expr call select_send(ch1, 7, ch2, 8)",
+        ),
+    }
+    metric_midend := compile.internal.core.run_midend_pipeline(metric_graph)
+    if !contains(metric_midend.report, "sroutine_sites=1") {
+        return 1
+    }
+    if !contains(metric_midend.report, "select_weighted_sites=1") {
+        return 1
+    }
+    if !contains(metric_midend.report, "select_timeout_sites=1") {
+        return 1
+    }
+    if !contains(metric_midend.report, "select_send_sites=1") {
+        return 1
+    }
+    hinted := compile.internal.ssa_core.build_pipeline_with_graph_hints(graph, midend.optimized_mir_text, "amd64")
+    hinted_dump := compile.internal.ssa_core.dump_pipeline(hinted)
+    if !contains(hinted_dump, "blocks=") {
+        return 1
+    }
+    if !contains(hinted_dump, "dbg_lines=") {
+        return 1
+    }
+    hot_mir := "mir hot blocks=4 entry=0 exit=3 | bb0(entry) stmts=2 term=branch | bb1(path) stmts=0 term=jump | bb2(path2) stmts=0 term=jump | bb3(exit) stmts=0 term=return"
+    hot_low := compile.internal.ssa_core.build_pipeline_with_graph_hints_and_margin(graph, hot_mir, "amd64", 0)
+    hot_low_dump := compile.internal.ssa_core.dump_pipeline(hot_low)
+    if !contains(hot_low_dump, "delta_hot=") {
+        return 1
+    }
+    if !contains(hot_low_dump, ",margin=0,dominant=struct") {
+        return 1
+    }
+    hot_high := compile.internal.ssa_core.build_pipeline_with_graph_hints_and_margin(graph, hot_mir, "amd64", 1000000)
+    hot_high_dump := compile.internal.ssa_core.dump_pipeline(hot_high)
+    if !contains(hot_high_dump, ",margin=1000000,dominant=balanced") {
+        return 1
+    }
+    abi_plan := compile.internal.core.build_abi_emit_plan("riscv64", parsed.unwrap())
+    if !contains(abi_plan, "abi-emit version=1 arch=riscv64") {
+        return 1
+    }
+    wasm_plan := compile.internal.core.build_wasm_toolchain_plan("/tmp/in.c", "/tmp/out.o", "/tmp/out.wasm")
+    if !contains(wasm_plan, "clang --target=wasm32-wasi -c") {
+        return 1
+    }
+    if !contains(wasm_plan, "wasm-ld --no-entry --export=_start") {
+        return 1
+    }
+    0
+}
+
+func count_mir_drops(mir_graph graph) int {
+    count := 0
+    i := 0
+    while i < len(graph.blocks) {
+        j := 0
+        while j < len(graph.blocks[i].statements) {
+            switch graph.blocks[i].statements[j] {
+                mir_statement.drop(_) : count = count + 1
+                _ : { }
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    count
+}
+
+func count_const_decls(ir_ast.package_ir pkg) int {
+    count := 0
+    i := 0
+    for i < len(pkg.decls) {
+        switch pkg.decls[i] {
+            ir_ast.decl_ir.const(_) : count = count + 1,
+            _ : (),
+        }
+        i = i + 1
+    }
+    count
+}
+
+func has_const_decl(ir_ast.package_ir pkg, string name, string value) bool {
+    i := 0
+    for i < len(pkg.decls) {
+        switch pkg.decls[i] {
+            ir_ast.decl_ir.const(cd) : {
+                if cd.name == name && cd.value == value {
+                    return true
+                }
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    false
+}
+
+func main_final_is_int_literal(ir_ast.package_ir pkg, int expected) bool {
+    i := 0
+    for i < len(pkg.decls) {
+        switch pkg.decls[i] {
+            ir_ast.decl_ir.fn_decl(fd) : {
+                if fd.name == "main" && fd.body.is_some() {
+                    body := fd.body.unwrap()
+                    if body.final_expr.is_some() {
+                        switch body.final_expr.unwrap() {
+                            ir_ast.expr_ir.int(value) : {
+                                return value == expected
+                            }
+                            _ : return false,
+                        }
+                    }
+                    return false
+                }
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    false
+}
+
+func collect_ir_package_features(ir_ast.package_ir pkg) int {
+    features := 0
+    i := 0
+    for i < len(pkg.decls) {
+        switch pkg.decls[i] {
+            ir_ast.decl_ir.fn_decl(fd) : {
+                if fd.name == "main" && fd.body.is_some() {
+                    body := fd.body.unwrap()
+                    j := 0
+                    for j < len(body.statements) {
+                        switch body.statements[j] {
+                            ir_ast.stmt_ir.expr(expr_stmt) : {
+                                features = features | collect_ir_expr_features(expr_stmt.expr)
+                            }
+                            ir_ast.stmt_ir.let(var_stmt) : {
+                                features = features | collect_ir_expr_features(var_stmt.value)
+                            }
+                            ir_ast.stmt_ir.assign(assign_stmt) : {
+                                features = features | collect_ir_expr_features(assign_stmt.value)
+                            }
+                            ir_ast.stmt_ir.cfor(cfor_stmt) : {
+                                features = features | 1
+                                features = features | collect_ir_expr_features(cfor_stmt.condition)
+                                features = features | collect_ir_block_features(cfor_stmt.body)
+                            }
+                            _ : (),
+                        }
+                        j = j + 1
+                    }
+                    if body.final_expr.is_some() {
+                        features = features | collect_ir_expr_features(body.final_expr.unwrap())
+                    }
+                }
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    features
+}
+
+func collect_ir_block_features(ir_ast.block_ir block) int {
+    features := 2
+    i := 0
+    for i < len(block.statements) {
+        switch block.statements[i] {
+            ir_ast.stmt_ir.expr(expr_stmt) : {
+                features = features | collect_ir_expr_features(expr_stmt.expr)
+            }
+            ir_ast.stmt_ir.let(var_stmt) : {
+                features = features | collect_ir_expr_features(var_stmt.value)
+            }
+            ir_ast.stmt_ir.assign(assign_stmt) : {
+                features = features | collect_ir_expr_features(assign_stmt.value)
+            }
+            ir_ast.stmt_ir.cfor(cfor_stmt) : {
+                features = features | 1
+                features = features | collect_ir_expr_features(cfor_stmt.condition)
+                features = features | collect_ir_block_features(cfor_stmt.body)
+            }
+            _ : (),
+        }
+        i = i + 1
+    }
+    if block.final_expr.is_some() {
+        features = features | collect_ir_expr_features(block.final_expr.unwrap())
+    }
+    features
+}
+
+func collect_ir_expr_features(ir_ast.expr_ir expression) int {
+    features := 0
+    switch expression {
+        ir_ast.expr_ir.name(name) : {
+            if contains(name, "_unlowered") {
+                return 0
+            }
+        }
+        ir_ast.expr_ir.member(member_expr) : {
+            features = features | 32
+            features = features | collect_ir_expr_features(member_expr.target)
+        }
+        ir_ast.expr_ir.index(index_expr) : {
+            features = features | 4
+            features = features | collect_ir_expr_features(index_expr.target)
+            features = features | collect_ir_expr_features(index_expr.index)
+        }
+        ir_ast.expr_ir.array(array_expr) : {
+            features = features | 8
+            ai := 0
+            for ai < len(array_expr.items) {
+                features = features | collect_ir_expr_features(array_expr.items[ai])
+                ai = ai + 1
+            }
+        }
+        ir_ast.expr_ir.map(map_expr) : {
+            features = features | 16
+            mi := 0
+            for mi < len(map_expr.entries) {
+                features = features | collect_ir_expr_features(map_expr.entries[mi].key)
+                features = features | collect_ir_expr_features(map_expr.entries[mi].value)
+                mi = mi + 1
+            }
+        }
+        ir_ast.expr_ir.block(block_expr) : {
+            features = features | collect_ir_block_features(block_expr)
+        }
+        ir_ast.expr_ir.call(call_expr) : {
+            i := 0
+            for i < len(call_expr.args) {
+                features = features | collect_ir_expr_features(call_expr.args[i])
+                i = i + 1
+            }
+        }
+        ir_ast.expr_ir.binary(binary_expr) : {
+            features = features | collect_ir_expr_features(binary_expr.left)
+            features = features | collect_ir_expr_features(binary_expr.right)
+        }
+        ir_ast.expr_ir.borrow(borrow_expr) : {
+            features = features | collect_ir_expr_features(borrow_expr.target)
+        }
+        _ : (),
+    }
+    features
+}
+
+func starts_with(string text, string prefix) bool {
+    if prefix == "" {
+        return true
+    }
+    if len(text) < len(prefix) {
+        return false
+    }
+    std.prelude.slice(text, 0, len(prefix)) == prefix
+}
+
+func contains(string text, string needle) bool {
+    if needle == "" {
+        return true
+    }
+    if len(text) < len(needle) {
+        return false
+    }
+    i := 0
+    for i <= len(text) - len(needle) {
+        if std.prelude.slice(text, i, i + len(needle)) == needle {
+            return true
+        }
+        i = i + 1
+    }
+    false
+}

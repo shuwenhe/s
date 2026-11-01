@@ -1,0 +1,679 @@
+package compile.internal.typesys
+import (
+    "compile.internal.canonical_type"
+    "std"
+    "std.prelude"
+)
+
+struct type_ref {
+    string canonical
+    string base
+    bool is_ref
+    bool is_mut_ref
+    bool is_slice
+    bool is_array
+    string array_len
+    string[] args
+}
+
+func parse_type(string text) string {
+    clean := typesys_normalize_type_text(typesys_trim_text(text))
+    if clean == "unit" { return "()" }
+    if clean == "" {
+        return "unknown"
+    }
+    if is_builtin_primitive(clean) {
+        return clean
+    }
+    // S's postfix T* parameter spelling pairs with the mutable place borrow
+    // value*. Prefix *T remains the distinct raw pointer spelling.
+    if std.prelude.len(clean) > 0 && std.prelude.char_at(clean, std.prelude.len(clean) - 1) == "*" {
+        return "&mut" + parse_type(std.prelude.prelude_slice(clean, 0, std.prelude.len(clean) - 1))
+    }
+    if typesys_starts_with(clean, "&mut") {
+        return "&mut" + parse_type(std.prelude.prelude_slice(clean, 4, std.prelude.len(clean)))
+    }
+    if typesys_starts_with(clean, "&") {
+        return "&" + parse_type(std.prelude.prelude_slice(clean, 1, std.prelude.len(clean)))
+    }
+    if typesys_starts_with(clean, "[]") {
+        return "[]" + parse_type(std.prelude.prelude_slice(clean, 2, std.prelude.len(clean)))
+    }
+    if typesys_starts_with(clean, "[") {
+        close := typesys_find_char(clean, "]")
+        if close > 0 {
+            return std.prelude.prelude_slice(clean, 0, close + 1) + parse_type(std.prelude.prelude_slice(clean, close + 1, std.prelude.len(clean)))
+        }
+    }
+    return clean
+}
+
+func parse_type_ref(string text) type_ref {
+    canonical := parse_type(text)
+    rest := canonical
+    is_ref := false
+    is_mut_ref := false
+    is_slice := false
+    is_array := false
+    array_len := ""
+    if typesys_starts_with(rest, "&mut") {
+        is_ref = true
+        is_mut_ref = true
+        rest = parse_type(std.prelude.prelude_slice(rest, 4, std.prelude.len(rest)))
+    } else if typesys_starts_with(rest, "&") {
+        is_ref = true
+        rest = parse_type(std.prelude.prelude_slice(rest, 1, std.prelude.len(rest)))
+    }
+    if typesys_starts_with(rest, "[]") {
+        is_slice = true
+        rest = parse_type(std.prelude.prelude_slice(rest, 2, std.prelude.len(rest)))
+    } else if typesys_starts_with(rest, "[") {
+        close := typesys_find_char(rest, "]")
+        if close > 0 {
+            is_array = true
+            array_len = typesys_trim_text(std.prelude.prelude_slice(rest, 1, close))
+            rest = parse_type(std.prelude.prelude_slice(rest, close + 1, std.prelude.len(rest)))
+        }
+    }
+    // S spells owned array/slice types after the element type as well.
+    close := typesys_find_last_char(rest, "]")
+    open := typesys_find_last_char(rest, "[")
+    if open > 0 && close == std.prelude.len(rest) - 1 {
+        length := typesys_trim_text(std.prelude.prelude_slice(rest, open + 1, close))
+        if length == "" {
+            is_slice = true
+            rest = parse_type(std.prelude.prelude_slice(rest, 0, open))
+        } else if is_array_length(length) {
+            is_array = true
+            array_len = length
+            rest = parse_type(std.prelude.prelude_slice(rest, 0, open))
+        }
+    }
+    type_ref {
+        canonical: canonical, base base_type_name(rest), is_ref is_ref, is_mut_ref is_mut_ref, is_slice is_slice, is_array is_array, array_len array_len, args extract_type_args(rest),
+    }
+}
+
+func dump_type_ref(type_ref ty) string {
+    ty.canonical
+}
+
+func same_type_ref(type_ref left, type_ref right) bool {
+    left.canonical == right.canonical
+}
+
+func type_arg(type_ref ty, int index) string {
+    if index < 0 || index >= std.prelude.len(ty.args) {
+        return "unknown"
+    }
+    parse_type(ty.args[index])
+}
+
+func generic_arity(string ty) int {
+    args := extract_type_args(ty)
+    std.prelude.len(args)
+}
+
+func has_unknown_component(string ty) bool {
+    clean := parse_type(ty)
+    if clean == "unknown" {
+        return true
+    }
+    args := extract_type_args(clean)
+    i := 0
+    for i < std.prelude.len(args) {
+        if parse_type(args[i]) == "unknown" {
+            return true
+        }
+        i = i + 1
+    }
+    false
+}
+
+func rules_consistent() bool {
+    if parse_type("  int  ") != "int" {
+        return false
+    }
+    if !same_type("int[]", "int[]") {
+        return false
+    }
+    if !same_type("int[4]", "int[4]") {
+        return false
+    }
+    if same_type("int[4]", "int[8]") {
+        return false
+    }
+    result_ref := parse_type_ref("(int, string)")
+    if result_ref.base != "result" {
+        return false
+    }
+    if type_arg(result_ref, 0) != "int" {
+        return false
+    }
+    if type_arg(result_ref, 1) != "string" {
+        return false
+    }
+    if generic_arity("(int, string)") != 2 {
+        return false
+    }
+    ref_ref := parse_type_ref("&int[]")
+    if !ref_ref.is_ref || ref_ref.is_mut_ref {
+        return false
+    }
+    mut_ref := parse_type_ref("&mut int[]")
+    if !mut_ref.is_ref || !mut_ref.is_mut_ref || mut_ref.base != "int" {
+        return false
+    }
+    array_ref := parse_type_ref("int[4]")
+    if !array_ref.is_array || array_ref.array_len != "4" {
+        return false
+    }
+    true
+}
+
+func dump_type(string ty) string {
+    return parse_type(ty)
+}
+
+func base_type_name(string ty) string {
+    clean := parse_type(ty)
+    if typesys_starts_with(clean, "&mut") {
+        return base_type_name(std.prelude.prelude_slice(clean, 4, std.prelude.len(clean)))
+    }
+    if typesys_starts_with(clean, "&") {
+        return base_type_name(std.prelude.prelude_slice(clean, 1, std.prelude.len(clean)))
+    }
+    if typesys_starts_with(clean, "[]") {
+        return base_type_name(std.prelude.prelude_slice(clean, 2, std.prelude.len(clean)))
+    }
+    if typesys_starts_with(clean, "[") {
+        close := typesys_find_char(clean, "]")
+        if close > 0 {
+            return base_type_name(std.prelude.prelude_slice(clean, close + 1, std.prelude.len(clean)))
+        }
+    }
+    bracket := typesys_find_char(clean, "[")
+    if bracket >= 0 {
+        return typesys_trim_text(std.prelude.prelude_slice(clean, 0, bracket))
+    }
+    angle := typesys_find_char(clean, "<")
+    if angle >= 0 {
+        return typesys_trim_text(std.prelude.prelude_slice(clean, 0, angle))
+    }
+    if is_tuple_type(clean) { return "result" }
+    paren := typesys_find_char(clean, "(")
+    if paren >= 0 {
+        return typesys_trim_text(std.prelude.prelude_slice(clean, 0, paren))
+    }
+    return clean
+}
+
+func extract_type_args(string type_name) string[] {
+    out := string[]()
+    clean := parse_type(type_name)
+    if is_tuple_type(clean) { return extract_tuple_args(clean) }
+    if typesys_starts_with(clean, "[") && !typesys_starts_with(clean, "[]") {
+        close := typesys_find_char(clean, "]")
+        if close > 0 {
+            return extract_type_args(std.prelude.prelude_slice(clean, close + 1, std.prelude.len(clean)))
+        }
+    }
+    open := typesys_find_char(clean, "[")
+    close := typesys_find_last_char(clean, "]")
+    if open < 0 || close <= open + 1 {
+        return out
+    }
+    inner := std.prelude.prelude_slice(clean, open + 1, close)
+    depth := 0
+    start := 0
+    i := 0
+    for i < std.prelude.len(inner) {
+        ch := std.prelude.char_at(inner, i)
+        if ch == "[" {
+            depth = depth + 1
+        } else if ch == "]" {
+            depth = depth - 1
+        } else if ch == "," && depth == 0 {
+            out = append(out, typesys_trim_text(std.prelude.prelude_slice(inner, start, i)))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    if start < std.prelude.len(inner) {
+        out = append(out, typesys_trim_text(std.prelude.prelude_slice(inner, start, std.prelude.len(inner))))
+    }
+    out
+}
+
+func same_type(string left, string right) bool {
+    return parse_type(left) == parse_type(right)
+}
+
+func compatible_type(string left, string right) bool {
+    l := parse_type(left)
+    r := parse_type(right)
+    if l == r {
+        return true
+    }
+    if l == "unknown" || r == "unknown" {
+        return false
+    }
+    if is_tuple_type(l) || is_tuple_type(r) {
+        return compatible_tuple_type(l, r)
+    }
+    lt := parse_type_ref(l)
+    rt := parse_type_ref(r)
+    if lt.is_ref != rt.is_ref || lt.is_mut_ref != rt.is_mut_ref || lt.is_slice != rt.is_slice {
+        return false
+    }
+    if lt.is_array != rt.is_array {
+        return false
+    }
+    if lt.is_array && lt.array_len != rt.array_len {
+        return false
+    }
+    if lt.base != rt.base {
+        return false
+    }
+    if std.prelude.len(lt.args) != std.prelude.len(rt.args) {
+        return false
+    }
+    i := 0
+    for i < std.prelude.len(lt.args) {
+        if !compatible_type(lt.args[i], rt.args[i]) {
+            return false
+        }
+        i = i + 1
+    }
+    true
+}
+
+func comparable_type(string ty) bool {
+    clean := parse_type(ty)
+    if clean == "unknown" || clean == "map" || clean == "fn" {
+        return false
+    }
+    if is_builtin_primitive(clean) {
+        return true
+    }
+    if typesys_starts_with(clean, "&") || (std.prelude.len(clean) > 0 && std.prelude.char_at(clean, std.prelude.len(clean) - 1) == "*") {
+        return true
+    }
+    if typesys_starts_with(clean, "[]") {
+        return false
+    }
+    if typesys_starts_with(clean, "[") {
+        return false
+    }
+    if is_tuple_type(clean) {
+        items := extract_tuple_args(clean)
+        i := 0
+        for i < std.prelude.len(items) {
+            if !comparable_type(items[i]) {
+                return false
+            }
+            i = i + 1
+        }
+        return true
+    }
+    base := base_type_name(clean)
+    if base == "option" || base == "result" {
+        args := extract_type_args(clean)
+        loop_var_2 := 0
+        for loop_var_2 < std.prelude.len(args) {
+            if !comparable_type(args[loop_var_2]) {
+                return false
+            }
+            loop_var_2 = loop_var_2 + 1
+        }
+        return true
+    }
+    false
+}
+
+func assignable_type(string target, string source) bool {
+    t := parse_type(target)
+    s := parse_type(source)
+    if t == s {
+        return true
+    }
+    if s == "nil" {
+        return typesys_is_nilable_type(t)
+    }
+    if t == "nil" {
+        return s == "nil"
+    }
+    if t == "unknown" || s == "unknown" {
+        return false
+    }
+    if compatible_type(t, s) {
+        return true
+    }
+    if is_numeric_primitive(t) && is_numeric_primitive(s) {
+        return numeric_rank(t) >= numeric_rank(s)
+    }
+    if is_tuple_type(t) || is_tuple_type(s) {
+        return assignable_tuple_type(t, s)
+    }
+    false
+}
+
+func typesys_is_nilable_type(string ty) bool {
+    clean := parse_type(ty)
+    if clean == "map" || clean == "fn" {
+        return true
+    }
+    if typesys_starts_with(clean, "[]") || typesys_starts_with(clean, "&") {
+        return true
+    }
+    base := base_type_name(clean)
+    return base == "interface" || base == "trait"
+}
+
+func compatible_tuple_type(string left, string right) bool {
+    l := parse_type(left)
+    r := parse_type(right)
+    if !is_tuple_type(l) || !is_tuple_type(r) {
+        return false
+    }
+    la := extract_tuple_args(l)
+    ra := extract_tuple_args(r)
+    if std.prelude.len(la) != std.prelude.len(ra) {
+        return false
+    }
+    i := 0
+    for i < std.prelude.len(la) {
+        if !compatible_type(la[i], ra[i]) {
+            return false
+        }
+        i = i + 1
+    }
+    true
+}
+
+func assignable_tuple_type(string target, string source) bool {
+    t := parse_type(target)
+    s := parse_type(source)
+    if !is_tuple_type(t) || !is_tuple_type(s) {
+        return false
+    }
+    ta := extract_tuple_args(t)
+    sa := extract_tuple_args(s)
+    if std.prelude.len(ta) != std.prelude.len(sa) {
+        return false
+    }
+    i := 0
+    for i < std.prelude.len(ta) {
+        if !assignable_type(ta[i], sa[i]) {
+            return false
+        }
+        i = i + 1
+    }
+    true
+}
+
+func is_tuple_type(string ty) bool {
+    clean := parse_type(ty)
+    if std.prelude.len(clean) < 2 {
+        return false
+    }
+    return typesys_starts_with(clean, "(") && typesys_ends_with(clean, ")")
+}
+
+func extract_tuple_args(string type_name) string[] {
+    out := string[]()
+    clean := parse_type(type_name)
+    if !is_tuple_type(clean) {
+        return out
+    }
+    inner := std.prelude.prelude_slice(clean, 1, std.prelude.len(clean) - 1)
+    depth := 0
+    start := 0
+    i := 0
+    for i < std.prelude.len(inner) {
+        ch := std.prelude.char_at(inner, i)
+        if ch == "(" || ch == "[" {
+            depth = depth + 1
+        } else if ch == ")" || ch == "]" {
+            depth = depth - 1
+        } else if ch == "," && depth == 0 {
+            out = append(out, typesys_trim_text(std.prelude.prelude_slice(inner, start, i)))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    if start < std.prelude.len(inner) {
+        out = append(out, typesys_trim_text(std.prelude.prelude_slice(inner, start, std.prelude.len(inner))))
+    }
+    out
+}
+
+func is_numeric_primitive(string ty) bool {
+    clean := parse_type(ty)
+    return clean == "i8"
+        || clean == "i16"
+        || clean == "int"
+        || clean == "i64"
+        || clean == "isize"
+        || clean == "u8"
+        || clean == "u16"
+        || clean == "u32"
+        || clean == "u64"
+        || clean == "usize"
+        || clean == "f32"
+        || clean == "f64"
+}
+
+func numeric_rank(string ty) int {
+    clean := parse_type(ty)
+    if clean == "i8" || clean == "u8" {
+        return 1
+    }
+    if clean == "i16" || clean == "u16" {
+        return 2
+    }
+    if clean == "int" || clean == "u32" || clean == "f32" {
+        return 3
+    }
+    if clean == "i64" || clean == "u64" || clean == "isize" || clean == "usize" || clean == "f64" {
+        return 4
+    }
+    0
+}
+
+func is_builtin_primitive(string ty) bool {
+    // Primitive classification is the base case of parse_type.
+    clean := typesys_normalize_type_text(typesys_trim_text(ty))
+    return clean == "()"
+        || clean == "never"
+        || clean == "bool"
+        || clean == "char"
+        || clean == "str"
+        || clean == "string"
+        || clean == "i8"
+        || clean == "i16"
+        || clean == "int"
+        || clean == "i64"
+        || clean == "isize"
+        || clean == "u8"
+        || clean == "u16"
+        || clean == "u32"
+        || clean == "u64"
+        || clean == "usize"
+        || clean == "f32"
+        || clean == "f64"
+}
+
+func is_copy_type(string ty) bool {
+    clean := parse_type(ty)
+    if clean == "()"
+        || clean == "never"
+        || clean == "bool"
+        || clean == "char"
+        || clean == "i8"
+        || clean == "i16"
+        || clean == "int"
+        || clean == "i64"
+        || clean == "isize"
+        || clean == "u8"
+        || clean == "u16"
+        || clean == "u32"
+        || clean == "u64"
+        || clean == "usize"
+        || clean == "f32"
+        || clean == "f64" {
+        return true
+    }
+    if typesys_starts_with(clean, "&") {
+        return true
+    }
+    open := typesys_find_char(clean, "[")
+    close := typesys_find_char(clean, "]")
+    if open > 0 && close == std.prelude.len(clean) - 1 && is_array_length(std.prelude.prelude_slice(clean, open + 1, close)) {
+        return is_copy_type(std.prelude.prelude_slice(clean, 0, open))
+    }
+    return false
+}
+
+func is_array_length(string text) bool {
+    if text == "" {
+        return false
+    }
+    i := 0
+    for i < std.prelude.len(text) {
+        ch := std.prelude.prelude_slice(text, i, i + 1)
+        if ch < "0" || ch > "9" {
+            return false
+        }
+        i = i + 1
+    }
+    true
+}
+
+func is_explicit_owned_type(string ty) bool {
+    base_type_name(ty) == "box"
+}
+
+func ownership_mode(string ty) string {
+    clean := parse_type(ty)
+    if typesys_starts_with(clean, "&") {
+        return "borrow"
+    }
+    if is_copy_type(clean) {
+        return "copy"
+    }
+    if is_explicit_owned_type(clean) {
+        return "owned"
+    }
+    "move"
+}
+
+func requires_drop(string ty) bool {
+    ownership_mode(ty) == "move" || ownership_mode(ty) == "owned"
+}
+
+func is_heap_reference_type(string ty) bool {
+    clean := parse_type(ty)
+    if is_explicit_owned_type(clean) {
+        return true
+    }
+    if typesys_starts_with(clean, "&") || typesys_starts_with(clean, "[]") {
+        return true
+    }
+    base := base_type_name(clean)
+    base == "vec" || base == "map" || base == "string"
+}
+
+func is_reference_type(string ty) bool {
+    return typesys_starts_with(typesys_trim_text(ty), "&")
+}
+
+func typesys_is_slice_type(string ty) bool {
+    return typesys_starts_with(typesys_trim_text(ty), "[]")
+}
+
+func is_generic_type(string ty) bool {
+    clean := typesys_trim_text(ty)
+    return typesys_find_char(clean, "[") >= 0 || typesys_find_char(clean, "<") >= 0
+}
+
+func typesys_normalize_type_text(string text) string {
+    return typesys_trim_text(text)
+}
+
+func typesys_trim_text(string text) string {
+    start := 0
+    end := std.prelude.len(text)
+    for start < end && typesys_is_space(std.prelude.char_at(text, start)) {
+        start = start + 1
+    }
+    for end > start && typesys_is_space(std.prelude.char_at(text, end - 1)) {
+        end = end - 1
+    }
+    return std.prelude.prelude_slice(text, start, end)
+}
+
+func typesys_starts_with(string text, string prefix) bool {
+    prefix_len := std.prelude.len(prefix)
+    if prefix_len > std.prelude.len(text) {
+        return false
+    }
+    return std.prelude.prelude_slice(text, 0, prefix_len) == prefix
+}
+
+func typesys_ends_with(string text, string suffix) bool {
+    suffix_len := std.prelude.len(suffix)
+    text_len := std.prelude.len(text)
+    if suffix_len > text_len {
+        return false
+    }
+    return std.prelude.prelude_slice(text, text_len - suffix_len, text_len) == suffix
+}
+
+func typesys_is_space(string ch) bool {
+    return ch == " " || ch == "\n" || ch == "\t" || ch == "\r"
+}
+
+func typesys_find_char(string text, string needle) int {
+    i := 0
+    for i < std.prelude.len(text) {
+        if std.prelude.prelude_slice(text, i, i + 1) == needle {
+            return i
+        }
+        i = i + 1
+    }
+    return 0 - 1
+}
+
+func typesys_find_last_char(string text, string needle) int {
+    i := std.prelude.len(text)
+    for i > 0 {
+        i = i - 1
+        if std.prelude.prelude_slice(text, i, i + 1) == needle {
+            return i
+        }
+    }
+    return 0 - 1
+}
+
+func extract_section(string text, string open, string close) string {
+    start := typesys_find_char(text, open)
+    if start < 0 {
+        return ""
+    }
+    depth := 0
+    i := start
+    for i < std.prelude.len(text) {
+        ch := std.prelude.prelude_slice(text, i, i + 1)
+        if ch == open {
+            depth = depth + 1
+        } else if ch == close {
+            depth = depth - 1
+            if depth == 0 {
+                return std.prelude.prelude_slice(text, start + 1, i)
+            }
+        }
+        i = i + 1
+    }
+    return ""
+}

@@ -1,0 +1,181 @@
+# JIT 编译配置（添加到 neurx/makefile）
+
+# ============================================================================
+# S JIT 编译系统编译规则
+# ============================================================================
+
+# JIT 源目录
+JIT_DIR := s/src/cmd/compile/seed/jit
+JIT_SOURCES := \
+	$(JIT_DIR)/jit_core.c \
+	$(JIT_DIR)/jit_codegen_x86.c \
+	$(JIT_DIR)/jit_compiler.c
+
+JIT_HEADERS := \
+	$(JIT_DIR)/jit_core.h \
+	$(JIT_DIR)/jit_codegen_x86.h \
+	$(JIT_DIR)/jit_compiler.h
+
+JIT_OBJECTS := $(JIT_SOURCES:.c=.o)
+
+# JIT 编译标志
+JIT_CFLAGS = -I$(JIT_DIR) -I. -fPIC -Wall -Wextra
+
+# ============================================================================
+# 编译 JIT 对象文件
+# ============================================================================
+
+$(JIT_DIR)/%.o: $(JIT_DIR)/%.c $(JIT_HEADERS)
+	@echo "[JIT] Compiling $<"
+	$(CC) $(JIT_CFLAGS) $(CFLAGS) -c -o $@ $<
+
+# ============================================================================
+# JIT 库目标（可选：创建静态库）
+# ============================================================================
+
+JIT_LIB := artifact/lib/libjit.a
+
+$(JIT_LIB): $(JIT_OBJECTS)
+	@mkdir -p artifact/lib
+	@echo "[JIT] Linking static library"
+	ar rcs $@ $^
+
+# ============================================================================
+# S 运行时编译规则（已修改以包含 JIT）
+# ============================================================================
+
+# 原有规则修改
+$(S_RUNNER_BIN): $(JIT_OBJECTS) s/src/cmd/compile/seed/runtime/runtime.o
+	@mkdir -p $$(dirname $@)
+	@echo "[LINK] S Runner with JIT"
+	$(CC) -o $@ $(JIT_OBJECTS) s/src/cmd/compile/seed/runtime/runtime.o \
+		$(LDFLAGS) -ldl -lm
+
+# ============================================================================
+# 清理 JIT 对象文件
+# ============================================================================
+
+clean-jit:
+	@echo "[CLEAN] JIT objects"
+	rm -f $(JIT_OBJECTS) $(JIT_LIB)
+
+# ============================================================================
+# JIT 测试目标
+# ============================================================================
+
+JIT_TEST := artifact/bin/test_jit
+
+test-jit: $(JIT_OBJECTS)
+	@echo "[TEST] Building JIT unit tests"
+	$(CC) $(JIT_CFLAGS) $(CFLAGS) -o $(JIT_TEST) \
+		$(JIT_OBJECTS) $(JIT_DIR)/test_jit.c $(LDFLAGS) -ldl
+	@echo "[TEST] Running JIT tests"
+	@$(JIT_TEST)
+
+# ============================================================================
+# JIT 文档目标
+# ============================================================================
+
+jit-docs:
+	@echo "[DOCS] JIT Documentation"
+	@echo "Main docs: $(JIT_DIR)/README.md"
+	@echo "Design: $(JIT_DIR)/JIT_DESIGN_OVERVIEW.md"
+	@echo "Integration: $(JIT_DIR)/JIT_INTEGRATION_GUIDE.md"
+
+# ============================================================================
+# 添加到主要编译目标
+# ============================================================================
+
+# 修改 posttrain-cpu 目标以包含 JIT
+.PHONY: posttrain-cpu
+posttrain-cpu: $(S_RUNNER_BIN) build-posttrain-sft-s
+	@echo "[BUILD] Post-training (CPU) with JIT support"
+	@echo "Set S_ENABLE_JIT=1 to enable runtime JIT compilation"
+
+# 修改 posttrain-gpu 目标以包含 JIT
+.PHONY: posttrain-gpu
+posttrain-gpu: $(S_RUNNER_BIN) build-posttrain-sft-s
+	@echo "[BUILD] Post-training (GPU) with JIT support"
+	@echo "Set S_ENABLE_JIT=1 to enable runtime JIT compilation"
+
+# ============================================================================
+# 性能测试目标
+# ============================================================================
+
+.PHONY: jit-benchmark
+jit-benchmark: $(S_RUNNER_BIN)
+	@echo "[BENCH] JIT Performance Benchmark"
+	@echo "Running without JIT..."
+	@time -p $(S_RUNNER_BIN) benchmark/loop_benchmark.ir > /dev/null
+	@echo ""
+	@echo "Running with JIT (threshold=10)..."
+	@S_ENABLE_JIT=1 S_JIT_THRESHOLD=10 time -p $(S_RUNNER_BIN) benchmark/loop_benchmark.ir > /dev/null
+	@echo ""
+	@echo "Running with JIT (threshold=100)..."
+	@S_ENABLE_JIT=1 S_JIT_THRESHOLD=100 time -p $(S_RUNNER_BIN) benchmark/loop_benchmark.ir > /dev/null
+
+# ============================================================================
+# 统计代码行数
+# ============================================================================
+
+.PHONY: jit-stats
+jit-stats:
+	@echo "[STATS] JIT Code Statistics"
+	@wc -l $(JIT_SOURCES) $(JIT_HEADERS)
+	@echo ""
+	@echo "Total C files:"
+	@find $(JIT_DIR) -name "*.c" -o -name "*.h" | xargs wc -l
+	@echo ""
+	@echo "Total documentation:"
+	@find $(JIT_DIR) -name "*.md" | xargs wc -l
+
+# ============================================================================
+# 帮助信息
+# ============================================================================
+
+.PHONY: jit-help
+jit-help:
+	@echo "JIT 编译系统编译目标:"
+	@echo ""
+	@echo "  make posttrain-cpu        - 编译支持 JIT 的 CPU 版本"
+	@echo "  make posttrain-gpu        - 编译支持 JIT 的 GPU 版本"
+	@echo "  make test-jit             - 运行 JIT 单元测试"
+	@echo "  make jit-benchmark        - 运行性能基准测试"
+	@echo "  make jit-docs             - 显示 JIT 文档位置"
+	@echo "  make jit-stats            - 显示代码统计"
+	@echo "  make clean-jit            - 清理 JIT 对象文件"
+	@echo ""
+	@echo "使用环境变量启用 JIT:"
+	@echo "  S_ENABLE_JIT=1 ./s_ir_runner program.ir"
+	@echo ""
+	@echo "详细文档:"
+	@echo "  - README.md               - 快速开始"
+	@echo "  - JIT_INTEGRATION_GUIDE.md - 集成步骤"
+	@echo "  - JIT_DESIGN_OVERVIEW.md  - 详细设计"
+
+# ============================================================================
+# 默认目标依赖更新
+# ============================================================================
+
+# 添加到 .PHONY 列表
+.PHONY: clean-jit test-jit jit-docs jit-benchmark jit-stats jit-help
+
+# 添加到 clean 目标
+clean: clean-jit
+
+# ============================================================================
+# 配置选项（在 makefile 顶部添加）
+# ============================================================================
+
+# JIT 默认编译选项
+JIT_ENABLE ?= 1
+ifeq ($(JIT_ENABLE), 1)
+	CFLAGS += -DENABLE_JIT
+endif
+
+# JIT 优化级别（-O2 或 -O3 以获得更好的 JIT 代码）
+ifeq ($(DEBUG), 0)
+	JIT_CFLAGS += -O3 -march=native
+else
+	JIT_CFLAGS += -O0 -g
+endif

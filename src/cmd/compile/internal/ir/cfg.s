@@ -1,0 +1,319 @@
+package compile.internal.ir.cfg
+
+struct cfg_edge {
+    int from_block
+    int to_block
+    string edge_type
+}
+
+struct cfg_block {
+    int id
+    string label
+    int[] predecessors
+    int[] successors
+    int loop_depth
+    bool is_loop_header
+    bool is_exception_handler
+}
+
+struct control_flow_graph {
+    cfg_block[] blocks
+    cfg_edge[] edges
+    int entry_block
+    int exit_block
+    int[] loop_headers
+    int[][] dominator_tree
+    int[][] post_dominator_tree
+    int[] immediate_dominator
+    int[] immediate_post_dominator
+    int[][] dominance_frontier
+}
+
+func new_cfg() control_flow_graph {
+    control_flow_graph {
+        blocks: cfg_block[](),
+        edges: cfg_edge[](),
+        entry_block: 0,
+        exit_block: -1,
+        loop_headers: int[](),
+        dominator_tree: int[][](),
+        post_dominator_tree: int[][](),
+        immediate_dominator: int[](),
+        immediate_post_dominator: int[](),
+        dominance_frontier: int[][]()
+    }
+}
+
+func (control_flow_graph* cfg) add_block(int id, string label) cfg_block {
+    block := cfg_block {
+        id: id,
+        label: label,
+        predecessors: int[](),
+        successors: int[](),
+        loop_depth: 0,
+        is_loop_header: false,
+        is_exception_handler: false
+    }
+    cfg.blocks.push(block)
+    block
+}
+
+func (control_flow_graph* cfg) add_edge(int from, int to, string edge_type) {
+    edge := cfg_edge { from_block: from, to_block: to, edge_type: edge_type }
+    cfg.edges.push(edge)
+    if from < cfg.blocks.len() {
+        cfg.blocks[from].successors.push(to)
+    }
+    if to < cfg.blocks.len() {
+        cfg.blocks[to].predecessors.push(from)
+    }
+}
+
+func (control_flow_graph* cfg) compute_dominators() {
+    n := cfg.blocks.len()
+    cfg.immediate_dominator = int[n]
+    cfg.dominator_tree = int[][n]
+
+    for i := 0; i < n; i++ {
+        cfg.dominator_tree[i] = int[]()
+    }
+
+    for i := 0; loop_var_2 < n; loop_var_2++ {
+        cfg.immediate_dominator[loop_var_2] = -1
+    }
+    cfg.immediate_dominator[cfg.entry_block] = cfg.entry_block
+
+    changed := true
+    for changed {
+        changed = false
+        for i := 0; loop_var_3 < n; loop_var_3++ {
+            if loop_var_3 == cfg.entry_block {
+                continue
+            }
+            new_idom := -1
+            for _idx_93 := 0; _idx_93 < len(cfg.blocks[loop_var_3].predecessors); _idx_93++ {
+                p := cfg.blocks[loop_var_3].predecessors[_idx_93]
+                if cfg.immediate_dominator[p] != -1 {
+                    if new_idom == -1 {
+                        new_idom = p
+                    } else {
+                        new_idom = cfg.intersect_dominators(new_idom, p)
+                    }
+                }
+            }
+            if new_idom != cfg.immediate_dominator[loop_var_3] {
+                cfg.immediate_dominator[loop_var_3] = new_idom
+                changed = true
+            }
+        }
+    }
+
+    for i := 0; loop_var_4 < n; loop_var_4++ {
+        if cfg.immediate_dominator[loop_var_4] != -1 && cfg.immediate_dominator[loop_var_4] != loop_var_4 {
+            cfg.dominator_tree[cfg.immediate_dominator[loop_var_4]].push(loop_var_4)
+        }
+    }
+}
+
+func (control_flow_graph* cfg) intersect_dominators(int b1, int b2) int {
+    finger1 := b1
+    finger2 := b2
+    for finger1 != finger2 {
+        for finger1 > finger2 {
+            finger1 = cfg.immediate_dominator[finger1]
+        }
+        for finger2 > finger1 {
+            finger2 = cfg.immediate_dominator[finger2]
+        }
+    }
+    finger1
+}
+
+func (control_flow_graph* cfg) compute_post_dominators() {
+    n := cfg.blocks.len()
+    cfg.immediate_post_dominator = int[n]
+    cfg.post_dominator_tree = int[][n]
+
+    for i := 0; loop_var_5 < n; loop_var_5++ {
+        cfg.post_dominator_tree[loop_var_5] = int[]()
+    }
+
+    for i := 0; loop_var_6 < n; loop_var_6++ {
+        cfg.immediate_post_dominator[loop_var_6] = -1
+    }
+    cfg.immediate_post_dominator[cfg.exit_block] = cfg.exit_block
+
+    changed := true
+    for changed {
+        changed = false
+        for i := 0; loop_var_7 < n; loop_var_7++ {
+            if loop_var_7 == cfg.exit_block {
+                continue
+            }
+            new_ipdom := -1
+            for _idx_152 := 0; _idx_152 < len(cfg.blocks[loop_var_7].successors); _idx_152++ {
+                s := cfg.blocks[loop_var_7].successors[_idx_152]
+                if cfg.immediate_post_dominator[s] != -1 {
+                    if new_ipdom == -1 {
+                        new_ipdom = s
+                    } else {
+                        new_ipdom = cfg.intersect_post_dominators(new_ipdom, s)
+                    }
+                }
+            }
+            if new_ipdom != cfg.immediate_post_dominator[loop_var_7] {
+                cfg.immediate_post_dominator[loop_var_7] = new_ipdom
+                changed = true
+            }
+        }
+    }
+
+    for i := 0; loop_var_8 < n; loop_var_8++ {
+        if cfg.immediate_post_dominator[loop_var_8] != -1 && cfg.immediate_post_dominator[loop_var_8] != loop_var_8 {
+            cfg.post_dominator_tree[cfg.immediate_post_dominator[loop_var_8]].push(loop_var_8)
+        }
+    }
+}
+
+func (control_flow_graph* cfg) intersect_post_dominators(int b1, int b2) int {
+    finger1 := b1
+    finger2 := b2
+    for finger1 != finger2 {
+        for finger1 > finger2 {
+            finger1 = cfg.immediate_post_dominator[finger1]
+        }
+        for finger2 > finger1 {
+            finger2 = cfg.immediate_post_dominator[finger2]
+        }
+    }
+    finger1
+}
+
+func (control_flow_graph* cfg) compute_dominance_frontier() {
+    n := cfg.blocks.len()
+    cfg.dominance_frontier = int[][n]
+
+    for i := 0; loop_var_9 < n; loop_var_9++ {
+        cfg.dominance_frontier[loop_var_9] = int[]()
+    }
+
+    for x := 0; x < n; x++ {
+        if cfg.blocks[x].predecessors.len() >= 2 {
+            for _idx_199 := 0; _idx_199 < len(cfg.blocks[x].predecessors); _idx_199++ {
+                p := cfg.blocks[x].predecessors[_idx_199]
+                runner := p
+                for runner != cfg.immediate_dominator[x] {
+                    found := false
+                    for _idx_203 := 0; _idx_203 < len(cfg.dominance_frontier[runner]); _idx_203++ {
+                        df := cfg.dominance_frontier[runner][_idx_203]
+                        if df == x {
+                            found = true
+                            break
+                        }
+                    }
+                    if !found {
+                        cfg.dominance_frontier[runner].push(x)
+                    }
+                    runner = cfg.immediate_dominator[runner]
+                    if runner == -1 {
+                        break
+                    }
+                }
+            }
+        }
+    }
+}
+
+func (control_flow_graph* cfg) detect_loops() {
+    n := cfg.blocks.len()
+    cfg.loop_headers = int[]()
+
+    bool[n] visited
+    for i := 0; loop_var_10 < n; loop_var_10++ {
+        visited[loop_var_10] = false
+    }
+
+    func detect_loop_dfs(int block) {
+        visited[block] = true
+        for _idx_233 := 0; _idx_233 < len(cfg.blocks[block].successors); _idx_233++ {
+            succ := cfg.blocks[block].successors[_idx_233]
+            if !visited[succ] {
+                detect_loop_dfs(succ)
+            } else {
+                if succ <= block {
+                    is_header := false
+                    for _idx_239 := 0; _idx_239 < len(cfg.loop_headers); _idx_239++ {
+                        h := cfg.loop_headers[_idx_239]
+                        if h == succ {
+                            is_header = true
+                            break
+                        }
+                    }
+                    if !is_header {
+                        cfg.loop_headers.push(succ)
+                        cfg.blocks[succ].is_loop_header = true
+                    }
+                }
+            }
+        }
+    }
+
+    detect_loop_dfs(cfg.entry_block)
+}
+
+func (control_flow_graph* cfg) compute_loop_depths() {
+    n := cfg.blocks.len()
+    for i := 0; i < n; i++ {
+        cfg.blocks[i].loop_depth = 0
+    }
+
+    changed := true
+    for changed {
+        changed = false
+        for i := 0; loop_var_2 < n; loop_var_2++ {
+            for _idx_267 := 0; _idx_267 < len(cfg.blocks[loop_var_2].predecessors); _idx_267++ {
+                p := cfg.blocks[loop_var_2].predecessors[_idx_267]
+                if cfg.blocks[p].is_loop_header && cfg.blocks[p].loop_depth >= cfg.blocks[loop_var_2].loop_depth {
+                    cfg.blocks[loop_var_2].loop_depth = cfg.blocks[p].loop_depth + 1
+                    changed = true
+                }
+            }
+        }
+    }
+}
+
+func (control_flow_graph* cfg) get_loop_body(int loop_header) int[] {
+    body := int[]()
+    body.push(loop_header)
+
+    worklist := int[]()
+    for _idx_282 := 0; _idx_282 < len(cfg.blocks[loop_header].successors); _idx_282++ {
+        succ := cfg.blocks[loop_header].successors[_idx_282]
+        worklist.push(succ)
+    }
+
+    for worklist.len() > 0 {
+        block := worklist[0]
+        worklist[0] = worklist[worklist.len() - 1]
+        worklist = worklist[0..worklist.len() - 1]
+
+        found := false
+        for _idx_292 := 0; _idx_292 < len(body); _idx_292++ {
+            b := body[_idx_292]
+            if b == block {
+                found = true
+                break
+            }
+        }
+
+        if !found {
+            body.push(block)
+            for _idx_301 := 0; _idx_301 < len(cfg.blocks[block].successors); _idx_301++ {
+                s := cfg.blocks[block].successors[_idx_301]
+                worklist.push(s)
+            }
+        }
+    }
+
+    body
+}

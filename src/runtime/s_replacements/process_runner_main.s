@@ -1,0 +1,23 @@
+func usage(): int {
+    eprint("usage: process_runner run-argv <program> [arg ...] | run-shell <command>")
+    return 1
+}
+
+func main(args: [string]): int {
+    if len(args) < 2 {
+        return usage(
+    }
+    if args[1] == "run-argv" {
+        if len(args) < 3 {
+            return usage(
+        }
+        return process_runner_run_argv(args[2:]
+    }
+    if args[1] == "run-shell" {
+        if len(args) != 3 {
+            return usage(
+        }
+        return process_runner_run_shell(args[2]
+    }
+    return usage(
+}

@@ -1,0 +1,2137 @@
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+#include "../code/target.h"
+#include "../error/error.h"
+#include "../intermediate/ir.h"
+#include "../lexical/token.h"
+#include "../runtime/memory.h"
+#include "../semantic/scope.h"
+#include "../syntax/ast.h"
+static bool expect_tokens(const token_vec *vec, const token_type *expected, size_t n) {
+	size_t i;
+	if (vec->len != n) {
+		return false;
+	}
+	for (i = 0; i < n; i++) {
+		if (vec->data[i].type != expected[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+static bool test_inferred_mutable_bindings(void) {
+	const char *src = "x := 42; y := 7;";
+	token_type expected[] = {
+		TOKEN_IDENTIFIER,
+		TOKEN_ASSIGN_DECLARE,
+		TOKEN_NUMBER,
+		TOKEN_SEMICOLON,
+		TOKEN_IDENTIFIER,
+		TOKEN_ASSIGN_DECLARE,
+		TOKEN_NUMBER,
+		TOKEN_SEMICOLON,
+		TOKEN_EOF,
+	};
+	token_vec tokens;
+	compile_error err;
+	bool ok = lexer_scan(src, &tokens, &err);
+	if (!ok) {
+		return false;
+	}
+	ok = expect_tokens(&tokens, expected, sizeof(expected) / sizeof(expected[0]));
+	ok = ok && strcmp(tokens.data[0].lexeme, "x") == 0;
+	ok = ok && strcmp(tokens.data[4].lexeme, "y") == 0;
+	token_vec_free(&tokens);
+	return ok;
+}
+static bool test_function_header(void) {
+	const char *src = "fn add(a, b) { return a + b; }";
+	token_type expected[] = {
+		TOKEN_FN,
+		TOKEN_IDENTIFIER,
+		TOKEN_LPAREN,
+		TOKEN_IDENTIFIER,
+		TOKEN_COMMA,
+		TOKEN_IDENTIFIER,
+		TOKEN_RPAREN,
+		TOKEN_LBRACE,
+		TOKEN_RETURN,
+		TOKEN_IDENTIFIER,
+		TOKEN_PLUS,
+		TOKEN_IDENTIFIER,
+		TOKEN_SEMICOLON,
+		TOKEN_RBRACE,
+		TOKEN_EOF,
+	};
+	token_vec tokens;
+	compile_error err;
+	bool ok = lexer_scan(src, &tokens, &err);
+	if (!ok) {
+		return false;
+	}
+	ok = expect_tokens(&tokens, expected, sizeof(expected) / sizeof(expected[0]));
+	token_vec_free(&tokens);
+	return ok;
+}
+static bool test_illegal_char_error(void) {
+	const char *src = "x := @;";
+	token_vec tokens;
+	compile_error err;
+	bool ok = lexer_scan(src, &tokens, &err);
+	if (ok) {
+		token_vec_free(&tokens);
+		return false;
+	}
+	return err.code == ERR_ILLEGAL_CHAR;
+}
+static bool test_xor_token_and_ir(void) {
+	const char *src = "fn main() int { return 5 ^ 3; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result parsed;
+	IR ir;
+	bool ok = lexer_scan(src, &tokens, &err);
+	if (!ok) return false;
+	ok = false;
+	for (size_t i = 0; i < tokens.len; i++) {
+		if (tokens.data[i].lexeme && strcmp(tokens.data[i].lexeme, "^") == 0) {
+			ok = tokens.data[i].type == TOKEN_XOR;
+			break;
+		}
+	}
+	if (!ok) { token_vec_free(&tokens); return false; }
+	parsed = parser_parse_tokens(&tokens, &err);
+	if (!parsed.root) { token_vec_free(&tokens); return false; }
+	ir_init(&ir);
+	ok = ir_generate_from_ast(parsed.root, &ir, &err);
+	if (ok) {
+		ok = false;
+		for (int i = 0; i < ir.instruction_count; i++) {
+			if (ir.instructions[i].type == IR_BXOR) { ok = true; break; }
+		}
+	}
+	ir_free(&ir);
+	parser_parse_result_free(&parsed);
+	token_vec_free(&tokens);
+	return ok;
+}
+static bool test_unterminated_string_error(void) {
+	const char *src = "s := \"abc";
+	token_vec tokens;
+	compile_error err;
+	bool ok = lexer_scan(src, &tokens, &err);
+	if (ok) {
+		token_vec_free(&tokens);
+		return false;
+	}
+	return err.code == ERR_UNTERMINATED_STRING;
+}
+static bool test_line_comment_lexing(void) {
+	const char *src = "x := 1; // comment\ny := 2;";
+	token_vec tokens;
+	compile_error err;
+	bool ok = lexer_scan(src, &tokens, &err);
+	if (!ok) {
+		return false;
+	}
+	ok = tokens.len == 9;
+	ok = ok && tokens.data[0].type == TOKEN_IDENTIFIER && strcmp(tokens.data[0].lexeme, "x") == 0;
+	ok = ok && tokens.data[4].type == TOKEN_IDENTIFIER && strcmp(tokens.data[4].lexeme, "y") == 0;
+	token_vec_free(&tokens);
+	return ok;
+}
+static bool test_mutable_inferred_binding(void) {
+	const char *src = "fn main() int { x := 1; x = 2; return x; }";
+	token_vec tokens;
+	parse_result result;
+	compile_error err;
+	bool ok = lexer_scan(src, &tokens, &err);
+	if (!ok) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	if (!result.root) {
+		token_vec_free(&tokens);
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	token_vec_free(&tokens);
+	return ok;
+}
+static bool test_binding_mutability_contract(void) {
+	const char *mutable_src =
+		"fn main() int { x := 10; x = 11; int z = 15; z = 16; return x + z; }";
+	const char *const_src =
+		"const y := 5; fn main() int { y = 6; return y; }";
+	token_vec tokens;
+	parse_result result;
+	compile_error err;
+	bool ok;
+	if (!lexer_scan(mutable_src, &tokens, &err)) return false;
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) return false;
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	if (!ok) return false;
+	if (!lexer_scan(const_src, &tokens, &err)) return false;
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) return false;
+	ok = !semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok && err.code == ERR_SEMANTIC;
+}
+static bool test_array_literal_lexing(void) {
+	const char *src = "xs := [1.0, 2.0, 3.0];";
+	token_type expected[] = {
+		TOKEN_IDENTIFIER,
+		TOKEN_ASSIGN_DECLARE,
+		TOKEN_LBRACKET,
+		TOKEN_NUMBER,
+		TOKEN_COMMA,
+		TOKEN_NUMBER,
+		TOKEN_COMMA,
+		TOKEN_NUMBER,
+		TOKEN_RBRACKET,
+		TOKEN_SEMICOLON,
+		TOKEN_EOF,
+	};
+	token_vec tokens;
+	compile_error err;
+	bool ok = lexer_scan(src, &tokens, &err);
+	if (!ok) {
+		return false;
+	}
+	ok = expect_tokens(&tokens, expected, sizeof(expected) / sizeof(expected[0]));
+	ok = ok && strcmp(tokens.data[0].lexeme, "xs") == 0;
+	token_vec_free(&tokens);
+	return ok;
+}
+static bool test_block_comment_lexing_and_error(void) {
+	const char *ok_src = "x := 1; /* block\ncomment */ y := 2;";
+	const char *bad_src = "x := 1; /* unterminated";
+	token_vec tokens;
+	compile_error err;
+	bool ok = lexer_scan(ok_src, &tokens, &err);
+	if (!ok) {
+		return false;
+	}
+	ok = tokens.len == 9;
+	ok = ok && tokens.data[0].type == TOKEN_IDENTIFIER && strcmp(tokens.data[0].lexeme, "x") == 0;
+	ok = ok && tokens.data[4].type == TOKEN_IDENTIFIER && strcmp(tokens.data[4].lexeme, "y") == 0;
+	token_vec_free(&tokens);
+	if (!ok) {
+		return false;
+	}
+	ok = lexer_scan(bad_src, &tokens, &err);
+	if (ok) {
+		token_vec_free(&tokens);
+		return false;
+	}
+	return err.code == ERR_SYNTAX;
+}
+static bool test_parser_binding_and_precedence(void) {
+	const char *src = "x := 1 + 2 * 3;";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	ast_node *stmt;
+	ast_node *expr;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM && result.root->as.program.statements.len == 1;
+	if (!ok) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	stmt = result.root->as.program.statements.data[0];
+	ok = stmt->kind == AST_LET_STMT && stmt->as.let_stmt.mutable;
+	if (!ok) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	expr = stmt->as.let_stmt.value;
+	ok = expr->kind == AST_BINARY_EXPR && expr->as.binary_expr.op == TOKEN_PLUS;
+	ok = ok && expr->as.binary_expr.right->kind == AST_BINARY_EXPR;
+	ok = ok && expr->as.binary_expr.right->as.binary_expr.op == TOKEN_STAR;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_return_and_block(void) {
+	const char *src = "{ x := 1; return x; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	ast_node *block_stmt;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM && result.root->as.program.statements.len == 1;
+	if (!ok) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	block_stmt = result.root->as.program.statements.data[0];
+	ok = block_stmt->kind == AST_BLOCK && block_stmt->as.block.statements.len == 2;
+	if (ok) {
+		ok = block_stmt->as.block.statements.data[0]->kind == AST_LET_STMT;
+	}
+	if (ok) {
+		ok = block_stmt->as.block.statements.data[1]->kind == AST_RETURN_STMT;
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_array_literal(void) {
+	const char *src = "xs := [1.0, 2.0, 3.0];";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	ast_node *stmt;
+	ast_node *expr;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM && result.root->as.program.statements.len == 1;
+	if (!ok) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	stmt = result.root->as.program.statements.data[0];
+	ok = stmt->kind == AST_LET_STMT && stmt->as.let_stmt.mutable;
+	if (!ok) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	expr = stmt->as.let_stmt.value;
+	ok = expr->kind == AST_ARRAY_EXPR;
+	ok = ok && expr->as.array_expr.items.len == 3;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_const_decl(void) {
+	const char *src = "const ABI_VERSION := 1; fn main() int { return ABI_VERSION; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	IR ir;
+	bool ok;
+	int i;
+	if (!lexer_scan(src, &tokens, &err)) return false;
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root || result.root->as.program.statements.len != 2 ||
+		result.root->as.program.statements.data[0]->kind != AST_CONST_DECL) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	if (!semantic_analyze(result.root, &err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	ir_init(&ir);
+	ok = ir_generate_from_ast(result.root, &ir, &err);
+	if (ok) {
+		ok = false;
+		for (i = 0; i < ir.instruction_count; i++) {
+			if (ir.instructions[i].type == IR_RET && strcmp(ir.instructions[i].result, "1") == 0) {
+				ok = true;
+				break;
+			}
+		}
+	}
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_enum_keyword_variant_names(void) {
+	const char *src = "enum expr { name(name_expr), if(if_expr), for(for_expr), return(return_expr), }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) return false;
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_dotted_package_decl(void) {
+	const char *src = "package neurx.test_tensor; fn main() int { return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len >= 1;
+	if (ok) {
+		ast_node *decl = result.root->as.program.statements.data[0];
+		ok = decl->kind == AST_PACKAGE_DECL;
+		ok = ok && strcmp(decl->as.package_decl.name, "neurx.test_tensor") == 0;
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_dotted_use_decl(void) {
+	const char *src = "use neurx.tensor.ops as ops; fn main() int { return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len >= 1;
+	if (ok) {
+		ast_node *decl = result.root->as.program.statements.data[0];
+		ok = decl->kind == AST_USE_DECL;
+		ok = ok && strcmp(decl->as.use_decl.module_path, "neurx.tensor.ops") == 0;
+		ok = ok && strcmp(decl->as.use_decl.alias, "ops") == 0;
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_use_selector_list(void) {
+	const char *src = "use neurx.tensor.{Tensor, new, add}; fn main() int { return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len >= 1;
+	if (ok) {
+		ast_node *decl = result.root->as.program.statements.data[0];
+		ok = decl->kind == AST_USE_DECL;
+		ok = ok && strcmp(decl->as.use_decl.module_path, "neurx.tensor") == 0;
+		ok = ok && strcmp(decl->as.use_decl.alias, "tensor") == 0;
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_import_string_list_decl(void) {
+	const char *src =
+		"package cmd\n"
+		"import (\n"
+		"    \"compile.internal.backend_elf64\"\n"
+		"    \"compile.internal.semantic\"\n"
+		")\n"
+		"fn main() int { return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len >= 4;
+	if (ok) {
+		ast_node *first_import = result.root->as.program.statements.data[1];
+		ast_node *second_import = result.root->as.program.statements.data[2];
+		ast_node *next_decl = result.root->as.program.statements.data[3];
+		ok = first_import->kind == AST_USE_DECL;
+		ok = ok && strcmp(first_import->as.use_decl.module_path, "compile.internal.backend_elf64") == 0;
+		ok = ok && strcmp(first_import->as.use_decl.alias, "backend_elf64") == 0;
+		ok = ok && second_import->kind == AST_USE_DECL;
+		ok = ok && strcmp(second_import->as.use_decl.module_path, "compile.internal.semantic") == 0;
+		ok = ok && strcmp(second_import->as.use_decl.alias, "semantic") == 0;
+		ok = ok && next_decl->kind == AST_FN_STMT;
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_import_single_string_decl(void) {
+	const char *src = "package cmd\nimport \"std.io\"\nfn main() int { return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len >= 3;
+	if (ok) {
+		ast_node *decl = result.root->as.program.statements.data[1];
+		ast_node *next_decl = result.root->as.program.statements.data[2];
+		ok = decl->kind == AST_USE_DECL;
+		ok = ok && strcmp(decl->as.use_decl.module_path, "std.io") == 0;
+		ok = ok && strcmp(decl->as.use_decl.alias, "io") == 0;
+		ok = ok && next_decl->kind == AST_FN_STMT;
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_member_access_expr(void) {
+	const char *src = "fn main() int { a := 1; println(a.data); return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len == 1;
+	if (ok) {
+		ast_node *fn = result.root->as.program.statements.data[0];
+		ast_node *stmt;
+		ast_node *call;
+		ast_node *arg;
+		ok = fn->kind == AST_FN_STMT;
+		ok = ok && fn->as.fn_stmt.body != NULL;
+		ok = ok && fn->as.fn_stmt.body->kind == AST_BLOCK;
+		ok = ok && fn->as.fn_stmt.body->as.block.statements.len >= 2;
+		if (ok) {
+			stmt = fn->as.fn_stmt.body->as.block.statements.data[1];
+			ok = stmt->kind == AST_EXPR_STMT;
+			if (ok) {
+				call = stmt->as.expr_stmt.expr;
+				ok = call->kind == AST_CALL_EXPR;
+				ok = ok && call->as.call_expr.args.len == 1;
+				if (ok) {
+					arg = call->as.call_expr.args.data[0];
+					ok = arg->kind == AST_MEMBER_EXPR;
+					ok = ok && strcmp(arg->as.member_expr.member, "data") == 0;
+				}
+			}
+		}
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_receiver_adjacent_member_shorthand_call(void) {
+	const char *src = "fn main() int { a := 1; i := 0; println(a[i]std.prelude.len(.terminator.edges)); return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len == 1;
+	if (ok) {
+		ast_node *fn = result.root->as.program.statements.data[0];
+		ast_node *stmt;
+		ast_node *outer_call;
+		ast_node *inner_call;
+		ast_node *callee;
+		ast_node *arg;
+		ast_node *projected;
+		ok = fn->kind == AST_FN_STMT;
+		ok = ok && fn->as.fn_stmt.body != NULL;
+		ok = ok && fn->as.fn_stmt.body->kind == AST_BLOCK;
+		ok = ok && fn->as.fn_stmt.body->as.block.statements.len >= 3;
+		if (ok) {
+			stmt = fn->as.fn_stmt.body->as.block.statements.data[2];
+			ok = stmt->kind == AST_EXPR_STMT;
+			if (ok) {
+				outer_call = stmt->as.expr_stmt.expr;
+				ok = outer_call->kind == AST_CALL_EXPR;
+				ok = ok && outer_call->as.call_expr.args.len == 1;
+				if (ok) {
+					inner_call = outer_call->as.call_expr.args.data[0];
+					ok = inner_call->kind == AST_CALL_EXPR;
+					ok = ok && inner_call->as.call_expr.args.len == 1;
+					callee = inner_call->as.call_expr.callee;
+					arg = inner_call->as.call_expr.args.data[0];
+					ok = ok && callee->kind == AST_MEMBER_EXPR;
+					ok = ok && strcmp(callee->as.member_expr.member, "len") == 0;
+					ok = ok && callee->as.member_expr.object->kind == AST_MEMBER_EXPR;
+					ok = ok && arg->kind == AST_MEMBER_EXPR;
+					ok = ok && strcmp(arg->as.member_expr.member, "edges") == 0;
+					projected = arg->as.member_expr.object;
+					ok = ok && projected->kind == AST_MEMBER_EXPR;
+					ok = ok && strcmp(projected->as.member_expr.member, "terminator") == 0;
+					ok = ok && projected->as.member_expr.object->kind == AST_INDEX_EXPR;
+				}
+			}
+		}
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_control_flow_and_function(void) {
+	const char *src =
+		"fn sum(a, b) { i := 0; while (i < b) { i + 1; } return a + b; } "
+		"for (k := 0; k < 10; k + 1) { if (k == 3) { k + 1; } else { k + 2; } }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	ok = ok && result.root->as.program.statements.len == 2;
+	if (ok) {
+		ok = result.root->as.program.statements.data[0]->kind == AST_FN_STMT;
+	}
+	if (ok) {
+		ok = result.root->as.program.statements.data[1]->kind == AST_FOR_STMT;
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+// Regression tests for struct literal in call arguments (3505 fix)
+static bool test_parser_struct_literal_with_field(void) {
+	const char *src =
+		"fn test() { "
+		"  foo(T { x: 1 }) "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_parser_struct_literal_empty(void) {
+	const char *src =
+		"fn test() { "
+		"  foo(T {}) "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_parser_struct_literal_unit_value_call(void) {
+	const char *src =
+		"fn test() { "
+		"  value.unit(unit_value {}) "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+
+static bool test_parser_switch_variant_pattern_arm(void) {
+	const char *src =
+		"fn main() int { "
+		"  stmt := 0; keep := true; "
+		"  switch stmt { "
+		"    mir_statement::eval(eval_stmt) : { keep = false } "
+		"    _ : (), "
+		"  } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_switch_dot_qualified_pattern_arm(void) {
+	const char *src =
+		"fn main() int { "
+		"  stmt := 0; keep := true; "
+		"  switch stmt { "
+		"    item.function(fn_decl) : { keep = false } "
+		"    _ : (), "
+		"  } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_switch_expression_rhs(void) {
+	const char *src =
+		"fn main() int { "
+		"  subject := 0; "
+		"  ret_type := switch subject { "
+		"    option.some(value) : trim_spaces(value), "
+		"    option.none : \"\", "
+		"  }; "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_switch_string_literal_arm(void) {
+	const char *src =
+		"fn main() int { "
+		"  op := \"+\"; "
+		"  result := switch op { "
+		"    \"+\" : 1, "
+		"    \"-\" : 2, "
+		"    _ : 0, "
+		"  }; "
+		"  return result; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_switch_pattern_return_arm(void) {
+	const char *src =
+		"fn main() int { "
+		"  subject := 0; "
+		"  switch subject { "
+		"    option.some(value) : return split_signature_types(trim_spaces(value)), "
+		"    option.none : return string[](), "
+		"  } "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_switch_block_arm_trailing_comma(void) {
+	const char *src =
+		"fn main() int { "
+		"  subject := 0; keep := true; "
+		"  switch subject { "
+		"    option.some(value) : { keep = false }, "
+		"    option.none : (), "
+		"  } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_switch_struct_literal_expression_arm(void) {
+	const char *src =
+		"struct check_result { string type_name int errors } "
+		"fn main() int { "
+		"  subject := 0; "
+		"  result := switch subject { "
+		"    option.some(value) : check_result { type_name: value, errors: 1 }, "
+		"    option.none : check_result { type_name: \"()\", errors: 0 }, "
+		"  }; "
+		"  return result.errors; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_ok(void) {
+	const char *src = "fn add(a, b) { c := a + b; return c; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_undeclared_symbol(void) {
+	const char *src = "fn main() { return x; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_return_outside_function(void) {
+	const char *src = "return 1;";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_call_arity_mismatch(void) {
+	const char *src =
+		"fn add(int a, int b) int { return a + b; } "
+		"fn main() int { return add(1); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_return_type_mismatch(void) {
+	const char *src = "fn main() int { return \"oops\"; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_call_arg_type_mismatch(void) {
+	const char *src =
+		"fn add(int a, int b) int { return a + b; } "
+		"fn main() int { return add(1, \"x\"); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_missing_return_path(void) {
+	const char *src = "fn classify(int x) int { if (x > 0) { return 1; } }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_assignment_and_loop_control(void) {
+	const char *src =
+		"fn main() int { "
+		"  i := 0; "
+		"  while i < 10 { "
+		"    i = i + 1; "
+		"    if i == 3 { continue; } "
+		"    if i == 5 { break; } "
+		"  } "
+		"  return i; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_bool_flow(void) {
+	const char *src = "fn main() int { if !false && true { return 1; } return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_unreachable_after_break(void) {
+	const char *src =
+		"fn main() int { "
+		"  while true { "
+		"    break; "
+		"    x := 1; "
+		"  } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "after break") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_unreachable_after_continue(void) {
+	const char *src =
+		"fn main() int { "
+		"  while true { "
+		"    continue; "
+		"    x := 1; "
+		"  } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "after continue") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_unreachable_after_return(void) {
+	const char *src =
+		"fn main() int { "
+		"  return 1; "
+		"  x := 2; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "after return") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_nested_if_dead_code(void) {
+	const char *src =
+		"fn main() int { "
+		"  if true { "
+		"    if true { return 1; } else { return 2; } "
+		"  } else { "
+		"    return 3; "
+		"  } "
+		"  x := 0; "
+		"  return x; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "after return") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_short_circuit_assignment_propagation(void) {
+	const char *src =
+		"fn id(any x) any { return x; } "
+		"fn need_int(int x) int { return x; } "
+		"fn main() int { "
+		"  flag := false; "
+		"  b := id(0); "
+		"  flag && (b = \"x\"); "
+		"  return need_int(b); "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_builtin_signature_check(void) {
+	const char *src = "fn main() int { len(); return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "at least 1") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_import_signature_check(void) {
+	const char *src =
+		"use std.io.eprintln as say "
+		"fn main() int { say(); return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "at least 1") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_path_sensitive_narrowing_if_and(void) {
+	const char *src =
+		"fn id(any x) any { return x; } "
+		"fn takes_int(int x) int { return x; } "
+		"fn takes_string(string s) int { return 1; } "
+		"fn main() int { "
+		"  x := id(1); "
+		"  y := id(\"ok\"); "
+		"  if x == 1 && y == \"ok\" { "
+		"    return takes_int(x) + takes_string(y); "
+		"  } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_path_sensitive_narrowing_if_or_else(void) {
+	const char *src =
+		"fn id(any x) any { return x; } "
+		"fn takes_int(int x) int { return x; } "
+		"fn takes_string(string s) int { return 1; } "
+		"fn main() int { "
+		"  x := id(2); "
+		"  y := id(\"s\"); "
+		"  if x == 1 || y == \"ok\" { "
+		"    return 0; "
+		"  } else { "
+		"    return takes_int(x) + takes_string(y); "
+		"  } "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_metadata_import_signature_success(void) {
+	const char *src =
+		"use internal.buildcfg.goarch as goarch "
+		"fn main() int { "
+		"  arch := goarch(); "
+		"  if arch == \"amd64\" { return 1; } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_qualified_module_call_success(void) {
+	const char *src =
+		"package cmd\n"
+		"import (\n"
+		"  \"std.process\"\n"
+		")\n"
+		"fn main() { std.process.exit(0); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_qualified_module_call_unknown_member_fails(void) {
+	const char *src =
+		"package cmd\n"
+		"import (\n"
+		"  \"std.process\"\n"
+		")\n"
+		"fn main() { std.process.nope(); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_call_callee_boundary(void) {
+	const char *src = "fn main() int { x := 0; return (x = 1)(2); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	ok = ok && strstr(err.message, "callee must be an identifier") != NULL;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_semantic_chained_assignment_in_call_args(void) {
+	const char *src =
+		"fn sum(int a, int b) int { return a + b; } "
+		"fn main() int { x := 0; return sum((x = 1), (x = x + 1)); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_assignment_expression(void) {
+	const char *src =
+		"fn main() int { "
+		"  i := 0; "
+		"  j := (i = i + 1); "
+		"  return j; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = semantic_analyze(result.root, &err);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_parser_indexed_member_assignment_place(void) {
+	const char *src =
+		"fn main() int { xs := 0; i := 0; y := 1; xs[i].a = y; return y; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	ok = result.root->kind == AST_PROGRAM;
+	if (ok) {
+		ast_node *fn = result.root->as.program.statements.data[0];
+		ast_node *stmt = fn->as.fn_stmt.body->as.block.statements.data[3];
+		ast_node *assign = stmt->as.expr_stmt.expr;
+		ok = stmt->kind == AST_EXPR_STMT;
+		ok = ok && assign->kind == AST_ASSIGN_EXPR;
+		ok = ok && assign->as.assign_expr.target_expr != NULL;
+		ok = ok && assign->as.assign_expr.target_expr->kind == AST_MEMBER_EXPR;
+		ok = ok && assign->as.assign_expr.value != NULL;
+	}
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_runtime_short_circuit_or(void) {
+	const char *src =
+		"fn main() int { "
+		"  x := 0; "
+		"  if true || (1 / x > 0) { return 1; } "
+		"  return 0; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	IR ir;
+	FILE *tmp;
+	char buf[4096];
+	size_t n;
+	long ret = 0;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	if (!semantic_analyze(result.root, &err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	ir_init(&ir);
+	if (!ir_generate_from_ast(result.root, &ir, &err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	tmp = tmpfile();
+	if (!tmp) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	generate_code(&ir, tmp);
+	fflush(tmp);
+	fseek(tmp, 0, SEEK_SET);
+	n = fread(buf, 1, sizeof(buf) - 1, tmp);
+	buf[n] = '\0';
+	fclose(tmp);
+	ok = runtime_execute_text(buf, "main", &ret, &err);
+	ok = ok && ret == 1;
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_runtime_short_circuit_and_side_effect_order(void) {
+	const char *src =
+		"fn main() int { "
+		"  x := 0; "
+		"  if false && ((x = 1) > 0) { return 2; } "
+		"  return x; "
+		"}";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	IR ir;
+	FILE *tmp;
+	char buf[4096];
+	size_t n;
+	long ret = 0;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	if (!semantic_analyze(result.root, &err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	ir_init(&ir);
+	if (!ir_generate_from_ast(result.root, &ir, &err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	tmp = tmpfile();
+	if (!tmp) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	generate_code(&ir, tmp);
+	fflush(tmp);
+	fseek(tmp, 0, SEEK_SET);
+	n = fread(buf, 1, sizeof(buf) - 1, tmp);
+	buf[n] = '\0';
+	fclose(tmp);
+	ok = runtime_execute_text(buf, "main", &ret, &err);
+	ok = ok && ret == 0;
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool execute_source_main(const char *src, long *ret, compile_error *err) {
+	token_vec tokens;
+	parse_result result;
+	IR ir;
+	FILE *tmp;
+	char buf[8192];
+	size_t n;
+	bool ok;
+	if (!lexer_scan(src, &tokens, err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	if (!semantic_analyze(result.root, err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	ir_init(&ir);
+	if (!ir_generate_from_ast(result.root, &ir, err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	tmp = tmpfile();
+	if (!tmp) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	generate_code(&ir, tmp);
+	fflush(tmp);
+	fseek(tmp, 0, SEEK_SET);
+	n = fread(buf, 1, sizeof(buf) - 1, tmp);
+	buf[n] = '\0';
+	fclose(tmp);
+	ok = runtime_execute_text(buf, "main", ret, err);
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_runtime_string_record_collision(void) {
+	const char *src =
+	    "struct State { int x } "
+	    "func identity(string text) string { return text; } "
+	    "func main() { state := State { x: 42 }; "
+	    "text := \"state\"; copy := text; returned := identity(text); "
+	    "if copy != \"state\" { return 1; } "
+	    "if returned != \"state\" { return 2; } "
+	    "other := state; return other.x; }";
+	compile_error err;
+	long ret = 0;
+	return execute_source_main(src, &ret, &err) && ret == 42;
+}
+static bool test_runtime_receiver_method(void) {
+	const char *src =
+		"struct Point { int x } "
+		"func (self: Point) value() int { return self.x; } "
+		"func main() { p := Point { x: 7 }; return p.value(); }";
+	compile_error err;
+	long ret = 0;
+	return execute_source_main(src, &ret, &err) && ret == 7;
+}
+static bool test_runtime_implicit_trait_dispatch(void) {
+	const char *src =
+		"struct Calc { int marker } "
+		"trait Adder { func add(int a, int b) int; } "
+		"func (self: Calc) add(int a, int b) int { return a + b; } "
+		"func use_adder(Adder value) int { return value.add(3, 4); } "
+		"func main() { return use_adder(Calc { marker: 0 }); }";
+	compile_error err;
+	long ret = 0;
+	return execute_source_main(src, &ret, &err) && ret == 7;
+}
+static bool test_semantic_implicit_trait_missing_method(void) {
+	const char *src =
+		"struct Calc { int marker } "
+		"trait Adder { func add(int a, int b) int; } "
+		"func main() { value := Calc { marker: 0 }; return consume(value); } "
+		"func consume(Adder value) int { return 0; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) return false;
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) return false;
+	ok = !semantic_analyze(result.root, &err) && err.code == ERR_SEMANTIC;
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_runtime_array_len_and_index(void) {
+	const char *src =
+		"fn main() int { "
+		"  xs := [4, 7, 9]; "
+		"  return len(xs) + xs[1]; "
+		"}";
+	compile_error err;
+	long ret = 0;
+	bool ok = execute_source_main(src, &ret, &err);
+	return ok && ret == 10;
+}
+static bool test_runtime_enum_payload_match(void) {
+	const char *src =
+		"enum option[t] { some(t), none, } "
+		"func describe(option[string] value) string { "
+		" switch value { option.some(alias) : \"as \" + alias, option.none : \"none\", } } "
+		"func main() int { "
+		" if describe(option.some(\"x\")) != \"as x\" { return 1; } "
+		" if describe(option.some(\"\")) != \"as \" { return 2; } "
+		" if describe(option.none) != \"none\" { return 3; } "
+		" return 0; }";
+	compile_error err;
+	long ret = -1;
+	bool ok = execute_source_main(src, &ret, &err);
+	if (!ok) fprintf(stderr, "enum payload: %s\n", err.message);
+	return ok && ret == 0;
+}
+
+static bool test_runtime_switch_expression_value(void) {
+	const char *src =
+		"func classify(int n) string { "
+		" switch n { 1 : \"one\", 2 : \"two\", _ : \"other\", } } "
+		"func main() int { "
+		" if classify(2) != \"two\" { return 1; } "
+		" if classify(8) != \"other\" { return 2; } "
+		" result := switch 1 { 1 : \"one\", _ : \"other\", }; "
+		" if result != \"one\" { return 3; } return 0; }";
+	compile_error err;
+	long ret = -1;
+	bool ok = execute_source_main(src, &ret, &err);
+	if (!ok) fprintf(stderr, "switch expression: %s\n", err.message);
+	return ok && ret == 0;
+}
+
+static bool test_runtime_prelude_len_intrinsic(void) {
+	const char *src =
+		"extern \"intrinsic\" func __runtime_len(t value) int; "
+		"func len(t value) int { return __runtime_len(value); } "
+		"func main() int { "
+		" a := [1, 2, 3, 4]; "
+		" if len(a) != 4 { return 11; } "
+		" if len(\"package main\") != 12 { return 12; } "
+		" if len(\"\") != 0 { return 13; } "
+		" return 0; }";
+	compile_error err;
+	long ret = -1;
+	return execute_source_main(src, &ret, &err) && ret == 0;
+}
+
+static bool test_runtime_nested_member_alias_compare(void) {
+	const char *src =
+		"fn main() int { "
+		"  cfg := Config { activation_type: \"gelu\" }; "
+		"  layer := Layer { config: cfg }; "
+		"  if layer.config.activation_type == \"gelu\" { return 1; } "
+		"  return 0; "
+		"}";
+	compile_error err;
+	long ret = 0;
+	bool ok = execute_source_main(src, &ret, &err);
+	return ok && ret == 1;
+}
+static bool test_runtime_nested_member_return_alias(void) {
+	const char *src =
+		"fn build_network() Network { "
+		"  Network { width: 7 } "
+		"} "
+		"fn main() int { "
+		"  layer := Layer { network: build_network() }; "
+		"  return layer.network.width; "
+		"}";
+	compile_error err;
+	long ret = 0;
+	bool ok = execute_source_main(src, &ret, &err);
+	return ok && ret == 7;
+}
+static bool test_runtime_computed_member_place_assignment(void) {
+	const char *src =
+		"struct EdgeList { int count } "
+		"struct Block { EdgeList terminator } "
+		"struct Graph { Block[] blocks } "
+		"fn main() int { "
+		"  b := Block { terminator: EdgeList { count: 0 } }; "
+		"  g := Graph { blocks: [b] }; "
+		"  i := 0; "
+		"  x := EdgeList { count: 704 }; "
+		"  g.blocks[i].terminator = x; "
+		"  return g.blocks[i].terminator.count; "
+		"}";
+	compile_error err;
+	long ret = 0;
+	bool ok = execute_source_main(src, &ret, &err);
+	return ok && ret == 704;
+}
+static bool test_runtime_function_call_and_tail_expr_return(void) {
+	const char *src =
+		"fn id(x) int { x } "
+		"fn add(a, b) int { return a + b; } "
+		"fn main() int { return add(id(2), 3); }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	IR ir;
+	FILE *tmp;
+	char buf[4096];
+	size_t n;
+	long ret = 0;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	if (!semantic_analyze(result.root, &err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	ir_init(&ir);
+	if (!ir_generate_from_ast(result.root, &ir, &err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	tmp = tmpfile();
+	if (!tmp) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	generate_code(&ir, tmp);
+	fflush(tmp);
+	fseek(tmp, 0, SEEK_SET);
+	n = fread(buf, 1, sizeof(buf) - 1, tmp);
+	buf[n] = '\0';
+	fclose(tmp);
+	ok = strstr(buf, "ARG|") != NULL;
+	ok = ok && strstr(buf, "CALL|") != NULL;
+	ok = ok && runtime_execute_text(buf, "main", &ret, &err);
+	ok = ok && ret == 5;
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_runtime_string_value_semantics(void) {
+	const char *target_text =
+		"SSEED-TARGET-V1\n"
+		"FUNC_BEGIN|main|_|_\n"
+		"CMP_EQ|eq1|\"ab\"|\"ab\"\n"
+		"JUMP_IF_FALSE|fail|eq1|_\n"
+		"ADD|s|\"a\"|\"b\"\n"
+		"CMP_EQ|eq2|s|\"ab\"\n"
+		"JUMP_IF_FALSE|fail|eq2|_\n"
+		"RET|7|_|_\n"
+		"LABEL|fail|_|_\n"
+		"RET|0|_|_\n"
+		"FUNC_END|main|_|_\n";
+	compile_error err;
+	long ret = 0;
+	bool ok = runtime_execute_text(target_text, "main", &ret, &err);
+	return ok && ret == 7;
+}
+static bool test_runtime_string_mixed_compare_error(void) {
+	const char *target_text =
+		"SSEED-TARGET-V1\n"
+		"FUNC_BEGIN|main|_|_\n"
+		"CMP_EQ|bad|\"1\"|1\n"
+		"RET|bad|_|_\n"
+		"FUNC_END|main|_|_\n";
+	compile_error err;
+	long ret = 0;
+	bool ok = runtime_execute_text(target_text, "main", &ret, &err);
+	(void)ret;
+	if (ok) {
+		return false;
+	}
+	if (err.code != ERR_SEMANTIC) {
+		return false;
+	}
+	return strstr(err.message, "operand types to match") != NULL;
+}
+static bool test_runtime_string_escape_sequences(void) {
+	const char *target_text =
+		"SSEED-TARGET-V1\n"
+		"FUNC_BEGIN|main|_|_\n"
+		"ADD|s1|\"\\n\"|\"\\t\"\n"
+		"ADD|s2|\"\\\\\"|\"x\"\n"
+		"ADD|s|s1|s2\n"
+		"RET|s|_|_\n"
+		"FUNC_END|main|_|_\n";
+	compile_error err;
+	long ret = 0;
+	bool ok = runtime_execute_text(target_text, "main", &ret, &err);
+	return ok && ret == 4;
+}
+static bool test_runtime_string_long_boundary(void) {
+	char lit[304];
+	char target_text[768];
+	compile_error err;
+	long ret = 0;
+	size_t i;
+	bool ok;
+	lit[0] = '"';
+	for (i = 1; i <= 300; i++) {
+		lit[i] = 'a';
+	}
+	lit[301] = '"';
+	lit[302] = '\0';
+	if (snprintf(
+			target_text,
+			sizeof(target_text),
+			"SSEED-TARGET-V1\n"
+			"FUNC_BEGIN|main|_|_\n"
+			"RET|%s|_|_\n"
+			"FUNC_END|main|_|_\n",
+			lit
+		) < 0) {
+		return false;
+	}
+	ok = runtime_execute_text(target_text, "main", &ret, &err);
+	return ok && ret == 300;
+}
+static bool test_ir_generation_entry(void) {
+	const char *src = "fn add(a, b) { c := a + b; if (c > 0) { return c; } return a; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	IR ir;
+	int i;
+	bool has_func_begin = false;
+	bool has_add = false;
+	bool has_ret = false;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	if (!semantic_analyze(result.root, &err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	ir_init(&ir);
+	if (!ir_generate_from_ast(result.root, &ir, &err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	for (i = 0; i < ir.instruction_count; i++) {
+		if (ir.instructions[i].type == IR_FUNC_BEGIN) {
+			has_func_begin = true;
+		}
+		if (ir.instructions[i].type == IR_ADD) {
+			has_add = true;
+		}
+		if (ir.instructions[i].type == IR_RET) {
+			has_ret = true;
+		}
+	}
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return has_func_begin && has_add && has_ret;
+}
+static bool test_codegen_end_to_end(void) {
+	const char *src = "fn pick(a, b) { if (a < b) { return a; } return b; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	IR ir;
+	FILE *tmp;
+	char buf[4096];
+	size_t n;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	if (!semantic_analyze(result.root, &err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	ir_init(&ir);
+	if (!ir_generate_from_ast(result.root, &ir, &err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	tmp = tmpfile();
+	if (!tmp) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	generate_code(&ir, tmp);
+	fflush(tmp);
+	fseek(tmp, 0, SEEK_SET);
+	n = fread(buf, 1, sizeof(buf) - 1, tmp);
+	buf[n] = '\0';
+	fclose(tmp);
+	ok = strstr(buf, "FUNC_BEGIN") != NULL;
+	ok = ok && strstr(buf, "SSEED-TARGET-V1") != NULL;
+	ok = ok && strstr(buf, "FUNC_BEGIN|") != NULL;
+	ok = ok && strstr(buf, "LABEL|") != NULL;
+	ok = ok && strstr(buf, "JUMP_IF_FALSE|") != NULL;
+	ok = ok && strstr(buf, "RET|") != NULL;
+	ok = ok && strstr(buf, "|_|") != NULL;
+	ok = ok && strstr(buf, "LABEL") != NULL;
+	ok = ok && strstr(buf, "JUMP_IF_FALSE") != NULL;
+	ok = ok && strstr(buf, "RET") != NULL;
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return ok;
+}
+static bool test_runtime_minimal_loop(void) {
+	const char *src = "fn main() { x := 1 + 2; return x; }";
+	token_vec tokens;
+	compile_error err;
+	parse_result result;
+	IR ir;
+	FILE *tmp;
+	char buf[4096];
+	size_t n;
+	long ret = 0;
+	bool ok;
+	if (!lexer_scan(src, &tokens, &err)) {
+		return false;
+	}
+	result = parser_parse_tokens(&tokens, &err);
+	token_vec_free(&tokens);
+	if (!result.root) {
+		return false;
+	}
+	if (!semantic_analyze(result.root, &err)) {
+		parser_parse_result_free(&result);
+		return false;
+	}
+	ir_init(&ir);
+	if (!ir_generate_from_ast(result.root, &ir, &err)) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	tmp = tmpfile();
+	if (!tmp) {
+		ir_free(&ir);
+		parser_parse_result_free(&result);
+		return false;
+	}
+	generate_code(&ir, tmp);
+	fflush(tmp);
+	fseek(tmp, 0, SEEK_SET);
+	n = fread(buf, 1, sizeof(buf) - 1, tmp);
+	buf[n] = '\0';
+	fclose(tmp);
+	ok = runtime_execute_text(buf, "main", &ret, &err);
+	ok = ok && ret == 3;
+	ir_free(&ir);
+	parser_parse_result_free(&result);
+	return ok;
+}
+int main(void) {
+	bool ok = true;
+#define RUN_TEST(fn) do { \
+	bool test_ok = fn(); \
+	if (!test_ok) { \
+		fprintf(stderr, "FAIL: %s\n", #fn); \
+		ok = false; \
+	} \
+} while (0)
+	RUN_TEST(test_inferred_mutable_bindings);
+	RUN_TEST(test_function_header);
+	RUN_TEST(test_illegal_char_error);
+	RUN_TEST(test_xor_token_and_ir);
+	RUN_TEST(test_unterminated_string_error);
+	RUN_TEST(test_line_comment_lexing);
+	RUN_TEST(test_mutable_inferred_binding);
+	RUN_TEST(test_binding_mutability_contract);
+	RUN_TEST(test_array_literal_lexing);
+	RUN_TEST(test_block_comment_lexing_and_error);
+	RUN_TEST(test_parser_binding_and_precedence);
+	RUN_TEST(test_parser_return_and_block);
+	RUN_TEST(test_parser_array_literal);
+	RUN_TEST(test_parser_const_decl);
+	RUN_TEST(test_parser_enum_keyword_variant_names);
+	RUN_TEST(test_parser_dotted_package_decl);
+	RUN_TEST(test_parser_dotted_use_decl);
+	RUN_TEST(test_parser_use_selector_list);
+	RUN_TEST(test_parser_import_single_string_decl);
+	RUN_TEST(test_parser_import_string_list_decl);
+	RUN_TEST(test_parser_member_access_expr);
+	RUN_TEST(test_parser_receiver_adjacent_member_shorthand_call);
+	RUN_TEST(test_parser_control_flow_and_function);
+	// Regression tests for struct literal parser fix (3505)
+	RUN_TEST(test_parser_struct_literal_with_field);
+	RUN_TEST(test_parser_struct_literal_empty);
+	RUN_TEST(test_parser_struct_literal_unit_value_call);
+	RUN_TEST(test_parser_switch_variant_pattern_arm);
+	RUN_TEST(test_parser_switch_dot_qualified_pattern_arm);
+	RUN_TEST(test_parser_switch_expression_rhs);
+	RUN_TEST(test_parser_switch_string_literal_arm);
+	RUN_TEST(test_parser_switch_pattern_return_arm);
+	RUN_TEST(test_parser_switch_block_arm_trailing_comma);
+	RUN_TEST(test_parser_switch_struct_literal_expression_arm);
+	RUN_TEST(test_semantic_ok);
+	RUN_TEST(test_semantic_undeclared_symbol);
+	RUN_TEST(test_semantic_return_outside_function);
+	RUN_TEST(test_semantic_call_arity_mismatch);
+	RUN_TEST(test_semantic_return_type_mismatch);
+	RUN_TEST(test_semantic_call_arg_type_mismatch);
+	RUN_TEST(test_semantic_missing_return_path);
+	RUN_TEST(test_semantic_assignment_and_loop_control);
+	RUN_TEST(test_semantic_bool_flow);
+	RUN_TEST(test_semantic_unreachable_after_break);
+	RUN_TEST(test_semantic_unreachable_after_continue);
+	RUN_TEST(test_semantic_unreachable_after_return);
+	RUN_TEST(test_semantic_nested_if_dead_code);
+	RUN_TEST(test_semantic_call_callee_boundary);
+	RUN_TEST(test_semantic_chained_assignment_in_call_args);
+	RUN_TEST(test_semantic_short_circuit_assignment_propagation);
+	RUN_TEST(test_semantic_builtin_signature_check);
+	RUN_TEST(test_semantic_import_signature_check);
+	RUN_TEST(test_semantic_path_sensitive_narrowing_if_and);
+	RUN_TEST(test_semantic_path_sensitive_narrowing_if_or_else);
+	RUN_TEST(test_semantic_metadata_import_signature_success);
+	RUN_TEST(test_semantic_qualified_module_call_success);
+	RUN_TEST(test_semantic_qualified_module_call_unknown_member_fails);
+	RUN_TEST(test_parser_assignment_expression);
+	RUN_TEST(test_parser_indexed_member_assignment_place);
+	RUN_TEST(test_ir_generation_entry);
+	RUN_TEST(test_codegen_end_to_end);
+	RUN_TEST(test_runtime_minimal_loop);
+	RUN_TEST(test_runtime_short_circuit_or);
+	RUN_TEST(test_runtime_short_circuit_and_side_effect_order);
+	RUN_TEST(test_runtime_array_len_and_index);
+	RUN_TEST(test_runtime_prelude_len_intrinsic);
+	RUN_TEST(test_runtime_switch_expression_value);
+	RUN_TEST(test_runtime_enum_payload_match);
+	RUN_TEST(test_runtime_nested_member_alias_compare);
+	RUN_TEST(test_runtime_nested_member_return_alias);
+	RUN_TEST(test_runtime_computed_member_place_assignment);
+	RUN_TEST(test_runtime_function_call_and_tail_expr_return);
+	RUN_TEST(test_runtime_string_record_collision);
+	RUN_TEST(test_runtime_receiver_method);
+	RUN_TEST(test_runtime_implicit_trait_dispatch);
+	RUN_TEST(test_semantic_implicit_trait_missing_method);
+	RUN_TEST(test_runtime_string_value_semantics);
+	RUN_TEST(test_runtime_string_mixed_compare_error);
+	RUN_TEST(test_runtime_string_escape_sequences);
+	RUN_TEST(test_runtime_string_long_boundary);
+#undef RUN_TEST
+	if (!ok) {
+		fprintf(stderr, "seed parser/semantic/ir tests failed\n");
+		return 1;
+	}
+	printf("seed parser/semantic/ir tests passed\n");
+	return 0;
+}

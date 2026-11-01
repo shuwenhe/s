@@ -1,0 +1,190 @@
+package compile.internal.build.parse
+import (
+    "std"
+    "std.prelude"
+)
+func parse_options(string[] args)  string[] {
+    if len(args) < 2 {
+        return make_options("help", "", "", "", false
+    }
+    command := args[1]
+    if command == "help" || command == "--help" || command == "-h" {
+        return make_options("help", "", "", "", false
+    }
+    if command == "check" || command == "tokens" || command == "ast" {
+        if len(args) < 3 {
+            return make_options("help", "", "", "", false
+        }
+        return make_options(command, args[2], "", "", false
+    }
+    if command == "build" {
+        if len(args) < 5 {
+            return make_options("help", "", "", "", false
+        }
+        if args[3] != "-o" {
+            return make_options("help", "", "", "", false
+        }
+        nostdlib := has_flag(args, 5, "-nostdlib")
+        use_native := has_flag(args, 5, "--native")
+        margin := parse_optional_margin(args, 5)
+        if margin == "__invalid_margin__" {
+            return make_options("help", "", "", "", false
+        }
+        options := make_options(command, args[2], args[4], margin, nostdlib)
+        if use_native {
+            options = append(options, "native")
+        }
+        options
+    }
+    if command == "run" {
+        if len(args) < 3 {
+            return make_options("help", "", "", "", false
+        }
+        nostdlib := has_flag(args, 3, "-nostdlib")
+        margin := parse_optional_margin(args, 3)
+        if margin == "__invalid_margin__" {
+            return make_options("help", "", "", "", false
+        }
+        return make_options(command, args[2], "", margin, nostdlib
+    }
+    if command == "test" {
+        if len(args) >= 3 {
+            return make_options(command, args[2], "", "", false
+        }
+        return make_options(command, "", "", "", false
+    }
+    if command == "mod" {
+        if len(args) < 3 {
+            return make_options("help", "", "", "", false
+        }
+        mod_command := args[2]
+        if mod_command == "init" {
+            if len(args) != 4 {
+                return make_options("help", "", "", "", false
+            }
+            return make_options(command, "init", args[3], "", false
+        }
+        if mod_command == "tidy" {
+            if len(args) != 3 {
+                return make_options("help", "", "", "", false
+            }
+            return make_options(command, "tidy", "", "", false
+        }
+        if mod_command == "index" {
+            if len(args) != 4 {
+                return make_options("help", "", "", "", false
+            }
+            return make_options(command, "index", args[3], "", false
+        }
+        return make_options("help", "", "", "", false
+    }
+    make_options("help", "", "", "", false)
+}
+
+func usage()  string {
+    "usage:\n"
+    + "  s check <path|module>\n"
+    + "  s tokens <path|module>\n"
+    + "  s ast <path|module>\n"
+    + "  s build <path|module> -o <output> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>] [--native] [-nostdlib]\n"
+    + "  s run <path|module> [--ssa-dominant-margin <n>|--ssa-dominant-margin=<n>] [-nostdlib]\n"
+    + "  s test [fixtures_root]\n"
+    + "  s mod init <module>\n"
+    + "  s mod tidy\n"
+    + "  s mod index <dir>\n"
+    + "\n"
+    + "  <module> is a dot-separated package path, e.g. neurx.agent.code_agent\n"
+    + "  --native       Generate: native machine code (direct compilation, experimental)\n"
+    + "  -nostdlib      Generate standalone binary without C library dependencies\n"
+    + "  Set S_PROJECT_ROOT=<dir> for neurx.* modules (strip neurx. prefix for paths).\n"
+    + "  Run 's mod index' in the project to generate scripts/s-package-index.tsv for mismatched packages.\n"
+}
+
+func make_options(string command, string path, string output, string ssa_margin, bool nostdlib)  string[] {
+    options := string[]()
+    options = append(options, command)
+    options = append(options, path)
+    options = append(options, output)
+    options = append(options, ssa_margin)
+    if nostdlib {
+        options = append(options, "nostdlib")
+    }
+    options
+}
+
+func has_flag(string[] args, int start_index, string flag) bool {
+    i := start_index
+    for i < len(args) {
+        if args[i] == flag {
+            return true
+        }
+        i = i + 1
+    }
+    false
+}
+
+func parse_optional_margin(string[] args, int start_index) string {
+    if len(args) <= start_index {
+        return ""
+    }
+    if args[start_index] == "--ssa-dominant-margin" {
+        if len(args) <= start_index + 1 {
+            return "__invalid_margin__"
+        }
+        value := args[start_index + 1]
+        if !is_non_negative_integer(value) {
+            return "__invalid_margin__"
+        }
+        if len(args) > start_index + 2 {
+            return "__invalid_margin__"
+        }
+        return value
+    }
+    if starts_with(args[start_index], "--ssa-dominant-margin=") {
+        value := slice_after(args[start_index], "--ssa-dominant-margin=")
+        if !is_non_negative_integer(value) {
+            return "__invalid_margin__"
+        }
+        if len(args) > start_index + 1 {
+            return "__invalid_margin__"
+        }
+        return value
+    }
+    "__invalid_margin__"
+}
+
+func starts_with(string text, string prefix) bool {
+    if len(text) < len(prefix) {
+        return false
+    }
+    std.prelude.slice(text, 0, len(prefix)) == prefix
+}
+
+func slice_after(string text, string prefix) string {
+    std.prelude.slice(text, len(prefix), len(text))
+}
+
+func is_non_negative_integer(string text) bool {
+    if text == "" {
+        return false
+    }
+    i := 0
+    for i < len(text) {
+        ch := std.prelude.char_at(text, i)
+        if !is_digit_char(ch) {
+            return false
+        }
+        i = i + 1
+    }
+    true
+}
+
+func is_digit_char(string ch) bool {
+    if ch == "0" || ch == "1" || ch == "2" || ch == "3" || ch == "4" {
+        return true
+    }
+    if ch == "5" || ch == "6" || ch == "7" || ch == "8" || ch == "9" {
+        return true
+    }
+    false
+}

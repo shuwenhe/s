@@ -1,0 +1,8 @@
+package compile.internal.parser.syntax
+func scanner_test_case_name() string {
+    "parser/syntax/scanner_test.s"
+}
+
+func scanner_test_case_pass() int {
+    0
+}

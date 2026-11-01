@@ -1,0 +1,123 @@
+package compile.internal.ir.ast
+import (
+    "compile.internal.ir"
+    "std"
+)
+struct program_ir {
+    string package_name
+    package_ir[] packages
+}
+
+struct package_ir {
+    string name
+    decl_ir[] decls
+}
+enum decl_ir {
+    fn_decl(func_decl_ir),
+    type_decl(type_decl),
+    let(var_decl),
+    const(const_decl_ir),
+    method(method_decl),
+}
+
+struct func_decl_ir {
+    string name
+    sig func_sig
+    option[block_ir] body
+}
+
+struct func_sig {
+    param[] params
+    option[string] return_type_name
+    string[] generics
+}
+
+struct param { string name, string type_name }
+
+struct type_decl { string name, string type_expr }
+
+struct var_decl { string name, string type_name, option[string] init }
+
+struct const_decl_ir { string name, string value }
+
+struct method_decl { string receiver_name, string receiver_type, func_decl_ir method }
+
+struct block_ir { stmt_ir[] statements, option[expr_ir] final_expr }
+enum stmt_ir {
+    let(var_stmt_ir),
+    assign(assign_stmt),
+    increment(increment_stmt),
+    cfor(c_for_stmt_ir),
+    expr(expr_stmt),
+    return_stmt(return_stmt),
+}
+
+struct var_stmt_ir { string name, option[string] type_name, expr_ir value }
+
+struct assign_stmt { string name, expr_ir value }
+
+struct increment_stmt { string name }
+
+struct c_for_stmt_ir { stmt_ir init, expr_ir condition, stmt_ir step, block_ir body }
+
+struct expr_stmt { expr_ir expr }
+
+struct return_stmt { option[expr_ir] value }
+enum expr_ir {
+    int(int),
+    string(string),
+    bool(bool),
+    name(string),
+    binary(compile.internal.ir.ast.binary_expr),
+    call(compile.internal.ir.ast.call_expr),
+    borrow(compile.internal.ir.ast.borrow_expr),
+    member(compile.internal.ir.ast.member_expr),
+    index(compile.internal.ir.ast.index_expr),
+    array(compile.internal.ir.ast.array_expr),
+    map(compile.internal.ir.ast.map_expr),
+    block(compile.internal.ir.ast.block_ir),
+}
+
+struct binary_expr { string op, expr_ir left, expr_ir right }
+
+struct call_expr { string callee, expr_ir[] args }
+
+struct borrow_expr { expr_ir target, bool mutable }
+
+struct member_expr { expr_ir target, string member }
+
+struct index_expr { expr_ir target, expr_ir index }
+
+struct array_expr { option[string] type_name, expr_ir[] items }
+
+struct map_entry_expr { expr_ir key, expr_ir value }
+
+struct map_expr { option[string] type_name, map_entry_expr[] entries }
+
+func make_empty_package(string name) package_ir {
+    package_ir { name: name, decls: decl_ir[]() }
+}
+
+func make_let_stmt(string name, option[string] type_name, expr_ir value) stmt_ir {
+    stmt_ir.let(var_stmt_ir { name: name, type_name: type_name, value: value })
+}
+
+func make_assign_stmt(string name, expr_ir value) stmt_ir {
+    stmt_ir.assign(assign_stmt { name: name, value: value })
+}
+
+func make_increment_stmt(string name) stmt_ir {
+    stmt_ir.increment(increment_stmt { name: name })
+}
+
+func make_cfor_stmt(stmt_ir init, expr_ir condition, stmt_ir step, block_ir body) stmt_ir {
+    stmt_ir.cfor(c_for_stmt_ir { init: init, condition: condition, step: step, body: body })
+}
+
+func make_return_stmt(option[expr_ir] value) stmt_ir {
+    stmt_ir.return_stmt(return_stmt { value: value })
+}
+
+func make_expr_stmt(expr_ir value) stmt_ir {
+    stmt_ir.expr(expr_stmt { expr: value })
+}

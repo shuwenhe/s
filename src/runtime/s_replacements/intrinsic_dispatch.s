@@ -1,0 +1,2 @@
+func intrinsic_dispatch() {
+}

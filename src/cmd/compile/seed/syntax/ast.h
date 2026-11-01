@@ -1,0 +1,264 @@
+#ifndef S_SEED_AST_H
+#define S_SEED_AST_H
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include "../lexical/token.h"
+/* Hexadecimal e/E digits do not make an integer literal floating point. */
+static inline bool ast_number_is_float(const char *text) {
+    if(!text || (text[0]=='0' && (text[1]=='x' || text[1]=='X'))) return false;
+    for(const char *p=text;*p;p++) if(*p=='.' || *p=='e' || *p=='E') return true;
+    return false;
+}
+typedef enum ast_kind {
+	AST_PROGRAM = 0,
+	AST_BLOCK,
+	AST_LET_STMT,
+	AST_ASSIGN_STMT,
+	AST_RETURN_STMT,
+	AST_BREAK_STMT,
+	AST_CONTINUE_STMT,
+	AST_SROUTINE_STMT,
+	AST_EXPR_STMT,
+	AST_PACKAGE_DECL,
+	AST_USE_DECL,
+	AST_EXTERN_DECL,
+	AST_VAR_DECL,
+	AST_CONST_DECL,
+	AST_IF_STMT,
+	AST_WHILE_STMT,
+	AST_FOR_STMT,
+	AST_FN_STMT,
+	AST_TRAIT_DECL,
+	AST_ENUM_DECL,
+	AST_BINARY_EXPR,
+	AST_ASSIGN_EXPR,
+	AST_UNARY_EXPR,
+	AST_IDENT_EXPR,
+	AST_NUMBER_EXPR,
+	AST_BOOL_EXPR,
+	AST_STRING_EXPR,
+	AST_ARRAY_EXPR,
+	AST_STRUCT_EXPR,
+	AST_MEMBER_EXPR,
+	AST_INDEX_EXPR,
+	AST_SLICE_EXPR,
+	AST_CALL_EXPR,
+    AST_TRAP_STMT,
+    AST_UNIT_EXPR,
+} ast_kind;
+typedef struct ast_node ast_node;
+typedef struct ast_vec {
+	ast_node **data;
+	size_t len;
+	size_t cap;
+} ast_vec;
+typedef struct ast_enum_variant {
+	char *name;
+	char *payload_type;
+	int64_t explicit_value;
+	bool has_explicit_value;
+	bool has_resolved_value;
+	int64_t resolved_value;
+} ast_enum_variant;
+typedef enum pattern_kind {
+	PATTERN_NONE = 0,
+	PATTERN_WILDCARD,
+	PATTERN_BINDING,
+	PATTERN_VARIANT
+} pattern_kind;
+struct ast_node {
+	ast_kind kind;
+	source_pos pos;
+	size_t native_tuple_arity; /* Source tuple arity retained before native layout lowering. */
+	bool native_template;
+    bool native_enum;
+    bool native_unit;
+	char *generic_parameters;
+	union {
+		struct {
+			ast_vec statements;
+		} program;
+		struct {
+			ast_vec statements;
+			bool transparent_scope;
+            bool tuple_binding;
+            char *inferred_type;
+		} block;
+		struct {
+			char *name;
+			char *type_name;
+			ast_node *value;
+			bool mutable;
+		} let_stmt;
+		struct {
+			char *name;
+			ast_node *value;
+		} assign_stmt;
+		struct {
+			ast_node *value;
+			ast_vec values;
+		} return_stmt;
+		struct {
+			ast_node *call;
+		} sroutine_stmt;
+		struct {
+			ast_node *expr;
+			char *inferred_type;
+		} expr_stmt;
+		struct {
+			char *name;
+		} package_decl;
+		struct {
+			char *module_path;
+			char *alias;
+			char **selectors;
+			size_t selector_count;
+		} use_decl;
+		struct {
+			char *abi;
+			char *name;
+			char **generic_params;
+			size_t generic_count;
+			char **params;
+			char **param_types;
+			size_t param_count;
+			char *return_type;
+		} extern_decl;
+		struct {
+			char *name;
+			char *type_name;
+			ast_node *value;
+		} var_decl;
+		struct {
+			ast_node *condition;
+			ast_node *then_branch;
+			ast_node *else_branch;
+			bool is_pattern_arm;
+			bool is_switch_arm;
+			pattern_kind pattern_kind;
+			char *binding_name;
+			ast_node *pattern_subject;
+			char *variant_owner;
+			char *variant_name;
+			pattern_kind payload_kind;
+			char *payload_binding_name;
+            char *native_variant_field;
+            int64_t native_variant_tag;
+            bool native_variant_array;
+		} if_stmt;
+		struct {
+			ast_node *condition;
+			ast_node *body;
+		} while_stmt;
+		struct {
+			ast_node *init;
+			ast_node *condition;
+			ast_node *post;
+			char *iter_name;
+			ast_node *iterable;
+			ast_node *body;
+		} for_stmt;
+		struct {
+			char *name;
+			char *receiver_type;
+			char *export_abi;
+			char *export_symbol;
+            unsigned long long native_borrow_mask;
+			char **params;
+			char **param_types;
+			size_t param_count;
+			char *return_type;
+			ast_node *body;
+		} fn_stmt;
+		struct {
+			char *name;
+			ast_vec methods;
+		} trait_decl;
+		struct {
+			char *name;
+			char **generic_params;
+			size_t generic_count;
+			ast_enum_variant *variants;
+			size_t variant_count;
+		} enum_decl;
+		struct {
+			token_type op;
+			ast_node *left;
+			ast_node *right;
+		} binary_expr;
+		struct {
+			char *name;
+			ast_node *target_object;
+			ast_node *target_index;
+			ast_node *target_expr;
+			ast_node *value;
+		} assign_expr;
+		struct {
+			token_type op;
+			ast_node *operand;
+		} unary_expr;
+		struct {
+			char *name;
+		} ident_expr;
+		struct {
+			char *literal;
+		} number_expr;
+		struct {
+			int value;
+		} bool_expr;
+		struct {
+			char *literal;
+			bool is_type_name;
+		} string_expr;
+		struct {
+			ast_vec items;
+            char *resolved_array_type;
+            char *explicit_type;
+		} array_expr;
+		struct {
+			char *type_name;
+			char **field_names;
+			ast_vec field_values;
+			size_t field_count;
+		} struct_expr;
+		struct {
+			ast_node *object;
+			char *member;
+			char *resolved_method;
+			char *resolved_enum_type;
+            char *native_owner_name;
+		} member_expr;
+		struct {
+			ast_node *object;
+			ast_node *index;
+		} index_expr;
+		struct {
+			ast_node *object;
+			ast_node *start;
+			ast_node *end;
+		} slice_expr;
+		struct {
+			ast_node *callee;
+			ast_vec args;
+			char *resolved_array_type;
+            char *resolved_return_type; /* Owned semantic return-type cache. */
+            char *native_imports; /* Newline-separated imports from the original source file. */
+            char *native_callee_name; /* Original file's import/package candidate. */
+            unsigned long long native_borrow_mask;
+		} call_expr;
+	} as;
+};
+const char *ast_kind_name(ast_kind kind);
+ast_node *ast_new(ast_kind kind, source_pos pos);
+void ast_free(ast_node *node);
+void ast_vec_init(ast_vec *vec);
+int ast_vec_push(ast_vec *vec, ast_node *node);
+void ast_vec_free(ast_vec *vec);
+typedef struct parse_result {
+	ast_node *root;
+} parse_result;
+struct compile_error;
+parse_result parser_parse_tokens(const token_vec *tokens, struct compile_error *err);
+void parser_parse_result_free(parse_result *res);
+#endif

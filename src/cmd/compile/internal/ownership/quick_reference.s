@@ -1,0 +1,28 @@
+
+package main
+
+func main() int {
+    println("S Ownership System Quick Reference")
+    println("========================================")
+    println("")
+    println("Key Concepts:")
+    println("  1. Ownership - 所有权")
+    println("  2. Move - 转移")
+    println("  3. Borrow - 借用")
+    println("  4. Drop - 析构")
+    println("  5. Lifetime - 生命周期")
+    println("")
+    println("Documentation:")
+    println("  Read: doc/OWNERSHIP_SYSTEM.md")
+    println("  Read: OWNERSHIP_README.md")
+    println("")
+    println("Examples:")
+    println("  See: src/ownership_system.s")
+    println("  See: src/ownership_examples.s")
+    println("  See: src/borrow_checker.s")
+    println("")
+    println("Compile:")
+    println("  ./build/s_ir_runner src/ownership_system.s -o /tmp/ownership")
+    println("")
+    return 0
+}

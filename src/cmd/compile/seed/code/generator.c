@@ -1,0 +1,160 @@
+#include <stdio.h>
+#include "../intermediate/ir.h"
+#include "target.h"
+static const char *nz(const char *s) {
+    return (s && s[0] != '\0') ? s : "_";
+}
+static void emit_field(FILE *out, const char *text) {
+    const unsigned char *p = (const unsigned char *)nz(text);
+    while (*p) {
+        switch (*p) {
+            case '\\':
+                fputs("\\\\", out);
+                break;
+            case '|':
+                fputs("\\|", out);
+                break;
+            case '\n':
+                fputs("\\n", out);
+                break;
+            case '\r':
+                fputs("\\r", out);
+                break;
+            case '\t':
+                fputs("\\t", out);
+                break;
+            default:
+                fputc(*p, out);
+                break;
+        }
+        p++;
+    }
+}
+static void emit_record(FILE *out, const char *op, const char *result, const char *op1, const char *op2) {
+    emit_field(out, op);
+    fputc('|', out);
+    emit_field(out, result);
+    fputc('|', out);
+    emit_field(out, op1);
+    fputc('|', out);
+    emit_field(out, op2);
+    fputc('\n', out);
+}
+void generate_code(IR *ir, FILE *output) {
+    int i;
+    if (!ir || !output) {
+        fprintf(stderr, "invalid input to code generator\n");
+        return;
+    }
+    fprintf(output, "SSEED-TARGET-V1\n");
+    for (i = 0; i < ir->instruction_count; i++) {
+        const IRInstruction *instr = &ir->instructions[i];
+        switch (instr->type) {
+            case IR_NOP:
+                emit_record(output, "NOP", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_EXPORT:
+                emit_record(output, "EXPORT", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_FUNC_BEGIN:
+                emit_record(output, "FUNC_BEGIN", instr->result, "", "");
+                break;
+            case IR_FUNC_END:
+                emit_record(output, "FUNC_END", instr->result, "", "");
+                break;
+            case IR_LABEL:
+                emit_record(output, "LABEL", instr->result, "", "");
+                break;
+            case IR_JUMP:
+                emit_record(output, "JUMP", instr->result, "", "");
+                break;
+            case IR_JUMP_IF_FALSE:
+                emit_record(output, "JUMP_IF_FALSE", instr->result, instr->operand1, "");
+                break;
+            case IR_PARAM:
+                emit_record(output, "PARAM", instr->result, instr->operand1, "");
+                break;
+            case IR_ARG:
+                emit_record(output, "ARG", instr->result, instr->operand1, "");
+                break;
+            case IR_CALL:
+                emit_record(output, "CALL", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_READ:
+                emit_record(output, "READ", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_SROUTINE:
+                emit_record(output, "SROUTINE", instr->result, instr->operand1, "");
+                break;
+            case IR_MOV:
+                emit_record(output, "MOV", instr->result, instr->operand1, "");
+                break;
+            case IR_ADD:
+                emit_record(output, "ADD", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_SUB:
+                emit_record(output, "SUB", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_MUL:
+                emit_record(output, "MUL", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_DIV:
+                emit_record(output, "DIV", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_MOD:
+                emit_record(output, "MOD", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_BAND:
+                emit_record(output, "BAND", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_BOR:
+                emit_record(output, "BOR", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_BXOR:
+                emit_record(output, "BXOR", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_SHL:
+                emit_record(output, "SHL", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_SHR:
+                emit_record(output, "SHR", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_CMP_EQ:
+                emit_record(output, "CMP_EQ", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_CMP_NE:
+                emit_record(output, "CMP_NE", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_CMP_LT:
+                emit_record(output, "CMP_LT", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_CMP_LE:
+                emit_record(output, "CMP_LE", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_CMP_GT:
+                emit_record(output, "CMP_GT", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_CMP_GE:
+                emit_record(output, "CMP_GE", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_INDEX_SET:
+                emit_record(output, "INDEX_SET", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_ARRAY_NEW:
+                emit_record(output, "ARRAY_NEW", instr->result, instr->operand1, instr->operand2);
+                break;
+            case IR_TRAP:
+                emit_record(output,"TRAP",instr->result,"","");
+                break;
+            case IR_UNIT:
+                emit_record(output,"UNIT",instr->result,"","");
+                break;
+            case IR_RET:
+                emit_record(output, "RET", instr->result, "", "");
+                break;
+            default:
+                fprintf(stderr, "unknown IR instruction at #%d (op=%d)\n", i, (int)instr->type);
+                break;
+        }
+    }
+}

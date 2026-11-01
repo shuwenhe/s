@@ -1,0 +1,495 @@
+package compile.internal.build.cache
+import (
+    "std.fs"
+    "std.prelude"
+)
+struct dep_version_state {
+    int version
+    int depth
+    int layer_epoch
+}
+
+struct dep_graph_state {
+    int max_depth
+    int epoch_acc
+    int dep_count
+    int pruned_count
+    int minimal_invalidation_score
+    int parallel_wave_count
+    string direct_signature
+    string pruned_signature
+}
+
+func cache_hit(string source_path, string source_text, string phase) bool {
+    cache_hit_target(source_path, source_text, phase, "default")
+}
+
+func cache_hit_target(string source_path, string source_text, string phase, string target_key) bool {
+    stamp_path := cache_stamp_path(source_path, phase, target_key)
+    cached := std.fs.read_to_string(stamp_path)
+    if cached.is_err() {
+        return false
+    }
+    cached.unwrap() == dependency_fingerprint(source_path, source_text, phase, target_key)
+}
+
+func cache_hit_explain_target(string source_path, string source_text, string phase, string target_key) string {
+    stamp_path := cache_stamp_path(source_path, phase, target_key)
+    cached := std.fs.read_to_string(stamp_path)
+    if cached.is_err() {
+        return "miss:no-stamp"
+    }
+    now := dependency_fingerprint(source_path, source_text, phase, target_key)
+    if cached.unwrap() == now {
+        return "hit:exact-fingerprint"
+    }
+    "miss:fingerprint-drift"
+}
+
+func update_cache(string source_path, string source_text, string phase) bool {
+    update_cache_target(source_path, source_text, phase, "default")
+}
+
+func update_cache_target(string source_path, string source_text, string phase, string target_key) bool {
+    stamp_path := cache_stamp_path(source_path, phase, target_key)
+    domain := invalidation_domain(source_path, source_text, phase, target_key)
+    previous := std.fs.read_to_string(stamp_path)
+    next_fingerprint := dependency_fingerprint(source_path, source_text, phase, target_key)
+    write := std.fs.write_text_file(stamp_path, next_fingerprint)
+    if write.is_err() {
+        return false
+    }
+    if previous.is_err() || previous.unwrap() != next_fingerprint {
+        ignored_epoch := bump_phase_epoch(phase, domain)
+    }
+    pkg := package_name(source_text)
+    prev_export := std.fs.read_to_string(export_stamp_path(pkg))
+    next_export := export_signature(source_text)
+    prev_state := read_dep_version_state(pkg)
+    next_version := prev_state.version
+    if prev_export.is_err() || prev_export.unwrap() != next_export {
+        next_version = next_version + 1
+    }
+    graph_state := dependency_graph_state(source_text, phase, target_key)
+    next_depth := graph_state.max_depth + 1
+    if next_depth < 1 {
+        next_depth = 1
+    }
+    next_layer_epoch := next_version * 97 + next_depth * 13 + graph_state.epoch_acc + graph_state.dep_count
+    export_stamp := export_stamp_path(pkg)
+    export_write := std.fs.write_text_file(export_stamp, next_export)
+    if export_write.is_err() {
+        return false
+    }
+    version_stamp := version_stamp_path(pkg)
+    version_payload := "version=" + std.prelude.to_string(next_version)
+        + ";depth=" + std.prelude.to_string(next_depth)
+        + ";layer=" + std.prelude.to_string(next_layer_epoch)
+        + ";phase_epoch=" + std.prelude.to_string(read_phase_epoch(phase, domain))
+        + ";target=" + sanitize_key(target_key)
+        + ";deps=" + graph_state.direct_signature
+        + ";pruned=" + std.prelude.to_string(graph_state.pruned_count)
+        + ";min_inval=" + std.prelude.to_string(graph_state.minimal_invalidation_score)
+        + ";waves=" + std.prelude.to_string(graph_state.parallel_wave_count)
+        + ";pruned_deps=" + graph_state.pruned_signature
+        + ";explain=" + cache_hit_explain_target(source_path, source_text, phase, target_key)
+    version_write := std.fs.write_text_file(version_stamp, version_payload)
+    !version_write.is_err()
+}
+
+func dependency_fingerprint(string source_path, string source_text, string phase, string target_key) string {
+    own := fingerprint(source_text)
+    pkg := package_name(source_text)
+    imports := import_signature(source_text)
+    exports := export_signature(source_text)
+    propagated := dependency_layer_version_signature(source_text, phase, target_key)
+    domain := invalidation_domain(source_path, source_text, phase, target_key)
+    epoch := read_phase_epoch(phase, domain)
+    phase + ":" + source_path + ":" + pkg + ":" + own + ":" + imports + ":" + exports + ":" + propagated + ":domain=" + domain + ":epoch=" + std.prelude.to_string(epoch) + ":target=" + sanitize_key(target_key)
+}
+
+func cache_stamp_path(string source_path, string phase, string target_key) string {
+    source_path + "." + phase + "." + sanitize_key(target_key) + ".cache"
+}
+
+func invalidation_domain(string source_path, string source_text, string phase, string target_key) string {
+    pkg := package_name(source_text)
+    lane := target_parallel_lane(target_key)
+    phase + ":" + pkg + ":" + sanitize_key(source_path) + ":" + sanitize_key(target_key) + ":lane" + std.prelude.to_string(lane)
+}
+
+func phase_stamp_path(string phase, string domain) string {
+    ".s.cache.phase." + sanitize_key(phase) + "." + sanitize_key(domain)
+}
+
+func read_phase_epoch(string phase, string domain) int {
+    stamp := std.fs.read_to_string(phase_stamp_path(phase, domain))
+    if stamp.is_err() {
+        return 0
+    }
+    value := parse_field_int(stamp.unwrap(), "epoch=")
+    if value < 0 {
+        return 0
+    }
+    value
+}
+
+func bump_phase_epoch(string phase, string domain) bool {
+    current := read_phase_epoch(phase, domain)
+    next := current + 1
+    payload := "epoch=" + std.prelude.to_string(next)
+    write := std.fs.write_text_file(phase_stamp_path(phase, domain), payload)
+    !write.is_err()
+}
+
+func fingerprint(string source_text) string {
+    funcs := count_token(source_text, "func ")
+    structs := count_token(source_text, "struct ")
+    calls := count_token(source_text, " call")
+    uses := count_token(source_text, "\nuse ")
+    pkg := package_name(source_text)
+    pkg + ":" + std.prelude.to_string(std.prelude.len(source_text)) + ":" + std.prelude.to_string(funcs) + ":" + std.prelude.to_string(structs) + ":" + std.prelude.to_string(calls) + ":" + std.prelude.to_string(uses)
+}
+
+func import_signature(string source_text) string {
+    sig := "imports"
+    cursor := 0
+    for cursor < std.prelude.len(source_text) {
+        line_end := index_of_from(source_text, "\n", cursor)
+        if line_end < 0 {
+            line_end = std.prelude.len(source_text)
+        }
+        line := trim_spaces(std.prelude.slice(source_text, cursor, line_end))
+        if starts_with(line, "use ") {
+            path := use_path_from_line(line)
+            sig = sig + "|" + path
+        }
+        cursor = line_end + 1
+    }
+    sig
+}
+
+func export_signature(string source_text) string {
+    pub_funcs := count_token(source_text, "\npub func ") + count_token(source_text, "\npub\nfunc ")
+    pub_structs := count_token(source_text, "\npub struct ")
+    pub_enums := count_token(source_text, "\npub enum ")
+    pub_traits := count_token(source_text, "\npub trait ")
+    pub_impls := count_token(source_text, "\npub impl ")
+    "exports:" + std.prelude.to_string(pub_funcs) + ":" + std.prelude.to_string(pub_structs) + ":" + std.prelude.to_string(pub_enums) + ":" + std.prelude.to_string(pub_traits) + ":" + std.prelude.to_string(pub_impls)
+}
+
+func dependency_layer_version_signature(string source_text, string phase, string target_key) string {
+    graph := dependency_graph_state(source_text, phase, target_key)
+    sig := "dep-layer"
+        + ":max_depth=" + std.prelude.to_string(graph.max_depth)
+        + ":epoch=" + std.prelude.to_string(graph.epoch_acc)
+        + ":count=" + std.prelude.to_string(graph.dep_count)
+        + ":pruned=" + std.prelude.to_string(graph.pruned_count)
+        + ":min_inval=" + std.prelude.to_string(graph.minimal_invalidation_score)
+        + ":waves=" + std.prelude.to_string(graph.parallel_wave_count)
+        + ":direct=" + graph.direct_signature
+        + ":pruned_direct=" + graph.pruned_signature
+    sig
+}
+
+func dependency_graph_state(string source_text, string phase, string target_key) dep_graph_state {
+    max_depth := 0
+    epoch_acc := 0
+    dep_count := 0
+    pruned_count := 0
+    minimal_invalidation := 100
+    waves := 1
+    direct_signature := ""
+    pruned_signature := ""
+    source_pkg := package_name(source_text)
+    phase_budget := phase_depth_budget(phase)
+    cursor := 0
+    for cursor < std.prelude.len(source_text) {
+        line_end := index_of_from(source_text, "\n", cursor)
+        if line_end < 0 {
+            line_end = std.prelude.len(source_text)
+        }
+        line := trim_spaces(std.prelude.slice(source_text, cursor, line_end))
+        if starts_with(line, "use ") {
+            path := use_path_from_line(line)
+            dep_state := read_dep_version_state(path)
+            if should_prune_dependency(path, source_pkg, dep_state, phase_budget, target_key) {
+                pruned_count = pruned_count + 1
+                pruned_signature = pruned_signature + "|" + path
+                minimal_invalidation = minimal_invalidation - 2
+                cursor = line_end + 1
+                continue
+            }
+            if dep_state.depth > max_depth {
+                max_depth = dep_state.depth
+            }
+            weighted := dep_state.layer_epoch + dep_state.version * (dep_state.depth + 1)
+            epoch_acc = epoch_acc + weighted
+            dep_count = dep_count + 1
+            lane := target_parallel_lane(target_key)
+            if lane + 1 > waves {
+                waves = lane + 1
+            }
+            minimal_invalidation = minimal_invalidation - dep_state.depth - dep_state.version
+            direct_signature = direct_signature
+                + "|" + path
+                + "@v" + std.prelude.to_string(dep_state.version)
+                + "d" + std.prelude.to_string(dep_state.depth)
+                + "l" + std.prelude.to_string(dep_state.layer_epoch)
+        }
+        cursor = line_end + 1
+    }
+    if minimal_invalidation < 0 {
+        minimal_invalidation = 0
+    }
+    dep_graph_state {
+        max_depth: max_depth, epoch_acc epoch_acc, dep_count dep_count, pruned_count pruned_count, minimal_invalidation_score minimal_invalidation, parallel_wave_count waves, direct_signature direct_signature, pruned_signature pruned_signature,
+    }
+}
+
+func phase_depth_budget(string phase) int {
+    if phase == "check" {
+        return 1
+    }
+    if phase == "build" {
+        return 3
+    }
+    2
+}
+
+func should_prune_dependency(string dep_path, string source_pkg, dep_version_state dep_state, int depth_budget, string target_key) bool {
+    if dep_state.depth > depth_budget {
+        return true
+    }
+    if dep_state.version == 0 && dep_state.layer_epoch == 0 {
+        return true
+    }
+    if starts_with(dep_path, "std.") {
+        return true
+    }
+    if !same_root_package(dep_path, source_pkg) && target_parallel_lane(target_key) > 1 && dep_state.depth > 0 {
+        return true
+    }
+    false
+}
+
+func same_root_package(string left, string right) bool {
+    l := root_package(left)
+    r := root_package(right)
+    l != "" && l == r
+}
+
+func root_package(string pkg) string {
+    dot := index_of(pkg, ".")
+    if dot < 0 {
+        return pkg
+    }
+    std.prelude.slice(pkg, 0, dot)
+}
+
+func target_parallel_lane(string target_key) int {
+    hash := 0
+    i := 0
+    for i < std.prelude.len(target_key) {
+        hash = (hash * 33 + digit_fallback(std.prelude.slice(target_key, i, i + 1))) % 4
+        i = i + 1
+    }
+    hash
+}
+
+func digit_fallback(string ch) int {
+    if ch >= "0" && ch <= "9" {
+        return digit_value(ch
+    }
+    if ch >= "a" && ch <= "z" {
+        return 10 + index_of("abcdefghijklmnopqrstuvwxyz", ch
+    }
+    if ch >= "A" && ch <= "Z" {
+        return 10 + index_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ", ch
+    }
+    1
+}
+
+func export_stamp_path(string pkg_or_use_path) string {
+    ".s.cache.export." + sanitize_key(pkg_or_use_path)
+}
+
+func version_stamp_path(string pkg_or_use_path) string {
+    ".s.cache.version." + sanitize_key(pkg_or_use_path)
+}
+
+func read_dep_version_state(string pkg_or_use_path) dep_version_state {
+    stamp := std.fs.read_to_string(version_stamp_path(pkg_or_use_path))
+    if stamp.is_err() {
+        return dep_version_state {
+            version: 0, depth 0, layer_epoch 0,
+        }
+    }
+    text := stamp.unwrap()
+    version := parse_field_int(text, "version=")
+    depth := parse_field_int(text, "depth=")
+    layer := parse_field_int(text, "layer=")
+    if version < 0 {
+        version = 0
+    }
+    if depth < 0 {
+        depth = 0
+    }
+    if layer < 0 {
+        layer = 0
+    }
+    dep_version_state {
+        version: version, depth depth, layer_epoch layer,
+    }
+}
+
+func parse_field_int(string text, string marker) int {
+    start := index_of(text, marker)
+    if start < 0 {
+        return -1
+    }
+    start = start + std.prelude.len(marker)
+    value := 0
+    seen := false
+    for start < std.prelude.len(text) {
+        ch := std.prelude.slice(text, start, start + 1)
+        if ch < "0" || ch > "9" {
+            break
+        }
+        value = value * 10 + digit_value(ch)
+        seen = true
+        start = start + 1
+    }
+    if !seen {
+        return -1
+    }
+    value
+}
+
+func digit_value(string ch) int {
+    if ch == "0" { return 0 }
+    if ch == "1" { return 1 }
+    if ch == "2" { return 2 }
+    if ch == "3" { return 3 }
+    if ch == "4" { return 4 }
+    if ch == "5" { return 5 }
+    if ch == "6" { return 6 }
+    if ch == "7" { return 7 }
+    if ch == "8" { return 8 }
+    if ch == "9" { return 9 }
+    0
+}
+
+func sanitize_key(string text) string {
+    out := ""
+    i := 0
+    for i < std.prelude.len(text) {
+        ch := std.prelude.slice(text, i, i + 1)
+        if ch == "." || ch == "/" || ch == " " || ch == "\t" || ch == "\n" || ch == "\r" {
+            out = out + "_"
+        } else {
+            out = out + ch
+        }
+        i = i + 1
+    }
+    out
+}
+
+func use_path_from_line(string line) string {
+    payload := trim_spaces(std.prelude.slice(line, 4, std.prelude.len(line)))
+    as_pos := index_of(payload, " as ")
+    if as_pos < 0 {
+        return payload
+    }
+    trim_spaces(std.prelude.slice(payload, 0, as_pos))
+}
+
+func trim_spaces(string text) string {
+    start := 0
+    end := std.prelude.len(text)
+    for start < end {
+        ch0 := std.prelude.slice(text, start, start + 1)
+        if ch0 != " " && ch0 != "\t" && ch0 != "\n" && ch0 != "\r" {
+            break
+        }
+        start = start + 1
+    }
+    for end > start {
+        ch1 := std.prelude.slice(text, end - 1, end)
+        if ch1 != " " && ch1 != "\t" && ch1 != "\n" && ch1 != "\r" {
+            break
+        }
+        end = end - 1
+    }
+    std.prelude.slice(text, start, end)
+}
+
+func starts_with(string text, string prefix) bool {
+    if std.prelude.len(prefix) > std.prelude.len(text) {
+        return false
+    }
+    std.prelude.slice(text, 0, std.prelude.len(prefix)) == prefix
+}
+
+func package_name(string source_text) string {
+    marker := "package "
+    start := index_of(source_text, marker)
+    if start < 0 {
+        return "unknown"
+    }
+    start = start + std.prelude.len(marker)
+    end := start
+    for end < std.prelude.len(source_text) {
+        ch := std.prelude.slice(source_text, end, end + 1)
+        if ch == " " || ch == "\n" || ch == "\r" || ch == "\t" {
+            break
+        }
+        end = end + 1
+    }
+    std.prelude.slice(source_text, start, end)
+}
+
+func index_of(string text, string token) int {
+    if token == "" {
+        return 0
+    }
+    i := 0
+    for i <= std.prelude.len(text) - std.prelude.len(token) {
+        if std.prelude.slice(text, i, i + std.prelude.len(token)) == token {
+            return i
+        }
+        i = i + 1
+    }
+    -1
+}
+
+func index_of_from(string text, string token, int start) int {
+    if token == "" {
+        return start
+    }
+    i := start
+    for i <= std.prelude.len(text) - std.prelude.len(token) {
+        if std.prelude.slice(text, i, i + std.prelude.len(token)) == token {
+            return i
+        }
+        i = i + 1
+    }
+    -1
+}
+
+func count_token(string text, string token) int {
+    if token == "" {
+        return 0
+    }
+    total := 0
+    i := 0
+    for i <= std.prelude.len(text) - std.prelude.len(token) {
+        if std.prelude.slice(text, i, i + std.prelude.len(token)) == token {
+            total = total + 1
+            i = i + std.prelude.len(token)
+        } else {
+            i = i + 1
+        }
+    }
+    total
+}
