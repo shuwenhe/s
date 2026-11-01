@@ -1,5 +1,7 @@
 package compile.internal.parser.syntax
 
+extern "intrinsic" func __host_slice(string source, int start, int end) string
+
 enum token_type {
     tok_eof = 0,
     tok_ident = 1,

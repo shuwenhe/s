@@ -543,6 +543,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_tuple_result_methods_check.sh
 	@bash test/native-bootstrap-diagnostic/source_closure_import_check.sh
 	@python3 test/native-bootstrap-diagnostic/canonical_annotation_cost_check.py .bootstrap/compiler/compiler.ir
+	@python3 test/native-bootstrap-diagnostic/canonical_record_collection_cost_check.py .bootstrap/compiler/compiler.ir
 	@S_TEST_COMPILER="$(CURDIR)/bin/s_compiler" python3 test/native-bootstrap-diagnostic/dominance_matrix_cost_check.py
 
 .PHONY: selfhost-native-memory-check

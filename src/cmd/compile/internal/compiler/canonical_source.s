@@ -6,6 +6,9 @@ import (
     "compile.internal.ir.lower"
 )
 
+extern "intrinsic" func __host_char_at(string source, int index) string
+extern "intrinsic" func __host_slice(string source, int start, int end) string
+
 func canonical_source_to_mir(string source) mir_program_result {
     empty := mir_program { package_name: "", entry_symbol: "", functions: mir_program_function[](), calls: mir_program_call[](), enums: mir_program_enum[]() }
     trace := runtime_env_get("S_CANONICAL_TRACE", "") == "1"

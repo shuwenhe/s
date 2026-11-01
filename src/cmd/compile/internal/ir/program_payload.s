@@ -1,4 +1,6 @@
 package compile.internal.ir.lower
+
+extern "intrinsic" func __host_slice(string source, int start, int end) string
 import ("compile.internal.ast"; "compile.internal.mir"; "std.option"; "std.prelude")
 
 // Helper to create binary expressions, avoiding Seed inline enum variant issues

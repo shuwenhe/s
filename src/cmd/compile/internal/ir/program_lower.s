@@ -839,6 +839,7 @@ func program_record_type(string type_name, string package_name, mir_program_reco
 
 func program_collect_records(source_file source, mir_program_enum[] enums) mir_program_record[] {
     records := mir_program_record[]()
+    packages := string[]()
     i := 0
     for i < len(source.items) {
         switch source.items[i] {
@@ -851,7 +852,9 @@ func program_collect_records(source_file source, mir_program_enum[] enums) mir_p
                     types = append(types, declaration.fields[f].type_name)
                     f = f + 1
                 }
-                records = append(records, mir_program_record { symbol: program_item_package(source, i) + "." + declaration.name, field_names: names, field_types: types })
+                package_name := program_item_package(source, i)
+                records = append(records, mir_program_record { symbol: package_name + "." + declaration.name, field_names: names, field_types: types })
+                packages = append(packages, package_name)
             }
             _ : (),
         }
@@ -871,20 +874,15 @@ func program_collect_records(source_file source, mir_program_enum[] enums) mir_p
             v = v + 1
         }
         records.push(mir_program_record { symbol: payloads[i].symbol, field_names: names, field_types: types })
+        package_name := payloads[i].package_name
+        packages = append(packages, package_name)
         i = i + 1
     }
     i = 0
     for i < len(records) {
-        package_name := ""
-        j := 0
-        for j < len(source.items) {
-            switch source.items[j] {
-                item.struct(declaration): { if program_item_package(source, j) + "." + declaration.name == records[i].symbol { package_name = program_item_package(source, j) } }
-                item.enum(declaration): { if program_item_package(source, j) + "." + declaration.name == records[i].symbol { package_name = program_item_package(source, j) } }
-                _ : (),
-            }
-            j = j + 1
-        }
+        // Package identities were captured with each layout. Rescanning source
+        // items here repeatedly copies unrelated function bodies during matching.
+        package_name := packages[i]
         f := 0
         for f < len(records[i].field_types) {
             records[i].field_types[f] = program_record_type(records[i].field_types[f], package_name, records, enums)
