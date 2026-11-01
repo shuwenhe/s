@@ -32,3 +32,7 @@ func op_has_side_effect(string op) bool {
 func op_is_pure(string op) bool {
     !(op_has_side_effect(op))
 }
+
+func op_is_commutative(string op) bool {
+    op == op_add() || op == op_mul()
+}

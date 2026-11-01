@@ -665,7 +665,12 @@ func program_lower_function_with_environment(string package_name, function_decl 
     if !state.terminated {
         returns := int[]()
         if len(signature.result_types) == 1 {
-            if state.expression_value < 0 && signature.result_types[0] == "()" { state = program_emit_unit(state) }
+            // A unit ("()") function must always return the unit value, even when
+            // its body ends in an expression statement whose result would
+            // otherwise be treated as an implicit return (s_seed emits unit in
+            // this case). Emitting unit here preserves the trailing expression's
+            // side-effect instructions while discarding its value.
+            if signature.result_types[0] == "()" { state = program_emit_unit(state) }
             if state.expression_value < 0 { output.error = "missing return value: " + signature.symbol; return output }
             returns = append(returns, state.expression_value)
         }

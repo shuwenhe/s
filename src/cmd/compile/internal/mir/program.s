@@ -600,6 +600,19 @@ func mir_program_type_supported(string type_name, mir_program_record[] records, 
     if mir_program_enum_index(enums, type_name) >= 0 { return true }
     element := mir_program_array_element(type_name)
     if element != "" { return mir_program_type_supported(element, records, enums) }
+    // Generic instance types such as vec[ir.node] or map[string]int are
+    // supported when their base container type is a known record/enum/builtin.
+    // The seed (C reference) compiler does not enforce this check and accepts
+    // such reference parameters, so the self-hosting compiler must too, or the
+    // bootstrap dies with "unproven reference parameter".
+    i := 0
+    for i < len(type_name) {
+        if __host_slice(type_name, i, i + 1) == "[" {
+            base := __host_slice(type_name, 0, i)
+            return mir_program_type_supported(base, records, enums)
+        }
+        i = i + 1
+    }
     return false
 }
 
