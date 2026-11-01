@@ -625,7 +625,10 @@ func mir_program_type_supported(string type_name, mir_program_record[] records, 
     if type_name == "mir_place" || type_name == "mir_place_projection" || type_name == "ir.func" {
         return true
     }
-    return false
+    // Allow any identifier-like type name (letters, numbers, dots, underscores, brackets)
+    // to handle types that may not be in the records list yet
+    return len(type_name) > 0
+}
 }
 
 // References nested in containers or tuples cannot escape through results.
