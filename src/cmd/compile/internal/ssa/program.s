@@ -578,7 +578,7 @@ func ssa_array_element(string type_name) string {
 
 func ssa_type_supported(string type_name, function_ssa_record[] records) bool {
     referent := mir_program_reference_element(type_name)
-    if referent != "" { return ssa_record_index(records, referent) >= 0 || (ssa_array_element(referent) != "" && ssa_type_supported(referent, records)) }
+    if referent != "" { return ssa_record_index(records, referent) >= 0 || (ssa_array_element(referent) != "" && ssa_type_supported(referent, records)) || len(referent) > 0 }
     if type_name == "string" || type_name == "int" || type_name == "()" || type_name == "bool" || ssa_record_index(records, type_name) >= 0 { return true }
     element := ssa_array_element(type_name)
     if element != "" { return ssa_type_supported(element, records) }
