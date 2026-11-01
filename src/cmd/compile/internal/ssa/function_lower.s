@@ -84,7 +84,8 @@ func function_mir_input_error(mir_program program) string {
         if len(input_function.result_types) > 1 { return "unsupported multi-result function: " + input_function.symbol }
         p := 0
         for p < len(input_function.params) {
-            if !mir_program_type_supported(input_function.params[p].type_name, program.records, program.enums) { return "unsupported parameter type: " + input_function.symbol }
+            param_type := input_function.params[p].type_name
+            if !mir_program_type_supported(param_type, program.records, program.enums) { return "unsupported parameter type: " + input_function.symbol + " param=" + param_type }
             p = p + 1
         }
         if len(input_function.result_types) == 1 && !mir_program_type_supported(input_function.result_types[0], program.records, program.enums) {
