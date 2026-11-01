@@ -209,7 +209,8 @@ func mir_program_function_error_with_globals(mir_program_function function_data,
     p := 0
     for p < len(function_data.params) {
         if function_data.params[p].value_id < 0 || function_data.params[p].name == "" || function_data.params[p].type_name == "" { return "invalid parameter: " + function_data.symbol }
-        if mir_program_reference_element(function_data.params[p].type_name) != "" && (!mir_program_type_supported(function_data.params[p].type_name, records, enums) || function_data.external) { return "unproven reference parameter" }
+        ref_element := mir_program_reference_element(function_data.params[p].type_name)
+        if ref_element != "" && (!mir_program_type_supported(ref_element, records, enums) || function_data.external) { return "unproven reference parameter" }
         previous := 0
         for previous < p {
             if function_data.params[previous].value_id == function_data.params[p].value_id { return "duplicate parameter value: " + function_data.symbol }
