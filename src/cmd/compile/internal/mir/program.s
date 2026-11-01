@@ -619,6 +619,12 @@ func mir_program_type_supported(string type_name, mir_program_record[] records, 
         }
         i = i + 1
     }
+    // Allow types like "mir_place" that are referenced in parameters
+    // even if they're not found in the records list (they may be defined
+    // in the same package and loaded later, or be forward references)
+    if type_name == "mir_place" || type_name == "mir_place_projection" || type_name == "ir.func" {
+        return true
+    }
     return false
 }
 
