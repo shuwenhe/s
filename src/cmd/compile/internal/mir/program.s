@@ -687,7 +687,7 @@ func mir_program_reference_instruction_error(mir_program_function function_data,
 
 func mir_program_array_instruction_error(mir_program_function function_data, mir_program_instruction ins, int index, mir_program_record[] records, mir_program_enum[] enums) string {
     element := mir_program_array_element(ins.symbol)
-    if element == "" || !mir_program_type_supported(element, records, enums) { return "unknown array element type" }
+    if element == "" || !mir_program_type_supported(element, records, enums) { return "unknown array element type: symbol=" + ins.symbol + " element=" + element }
     if len(ins.field_names) != 0 || ins.integer_value != 0 { return "invalid array metadata" }
     if ins.op == "array_new" {
         if ins.result_types[0] != ins.symbol { return "array constructor result type" }
