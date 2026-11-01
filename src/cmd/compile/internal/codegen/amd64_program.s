@@ -1,6 +1,6 @@
 package compile.internal
 
-extern "intrinsic" func __host_byte_at(string text, int index) int
+extern "intrinsic" func __host_byte_at(string source, int index) int
 
 
 // This: is instruction selection, not an interpreter or a C source producer.

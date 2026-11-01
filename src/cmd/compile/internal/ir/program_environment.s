@@ -146,6 +146,42 @@ func program_write_global(int index, int value, program_lower_state initial) pro
 func program_update_place(string root, program_store_step[] steps, int value, string pkg, program_lower_state initial) program_lower_state {
     state := initial
     rhs := value
+    // Selectors are evaluated before the RHS, but its calls may mutate sibling
+    // fields. Rebuild from the current owner, retaining the evaluated selectors,
+    // so storing the RHS cannot restore an obsolete aggregate snapshot.
+    if len(steps) > 0 {
+        binding := program_binding_index(state, root)
+        if binding >= 0 {
+            state.expression_value = state.binding_values[binding]
+            state = program_read_reference(state)
+        } else {
+            global := program_environment_global(state.environment, pkg, root)
+            if global < 0 { state.error = "store to undefined binding: " + root; return state }
+            state = program_read_global(global, state)
+        }
+        current := state.expression_value
+        n := 0
+        for n < len(steps) {
+            step := steps[n]
+            step.container = current
+            steps[n] = step
+            if n + 1 < len(steps) {
+                field_type := step.value_type
+                type_name := step.type_name
+                selector := step.selector
+                if step.kind == "record" {
+                    id := state.next_value
+                    state.next_value = id + 1
+                    state.instructions.push(mir_program_instruction { op: "record_get", result_ids: [id], result_types: [field_type], operands: [current], symbol: type_name, integer_value: selector })
+                    current = id
+                } else {
+                    state = program_emit_array(state, "array_get", type_name, field_type, [current, selector])
+                    current = state.expression_value
+                }
+            }
+            n = n + 1
+        }
+    }
     i := len(steps)
     for i > 0 {
         i = i - 1

@@ -3,7 +3,7 @@ extern "intrinsic" func host_args() string[];
 extern "intrinsic" func __host_read_to_string(string path) string;
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
 extern "intrinsic" func runtime_env_get(string key, string fallback) string;
-extern "intrinsic" func __host_char_at(string text, int index) string;
+extern "intrinsic" func __host_char_at(string source, int index) string;
 
 struct compiler_state {
     string source

@@ -2,8 +2,8 @@ package compile.selfhost.compiler
 extern "intrinsic" func host_args() string[];
 extern "intrinsic" func __host_read_to_string(string path) string;
 extern "intrinsic" func __host_write_text_file(string path, string contents) int;
-extern "intrinsic" func __host_char_at(string text, int index) string;
-extern "intrinsic" func __host_byte_at(string text, int index) int;
+extern "intrinsic" func __host_char_at(string source, int index) string;
+extern "intrinsic" func __host_byte_at(string source, int index) int;
 extern "intrinsic" func __host_byte_string(int value) string;
 extern "intrinsic" func __host_make_executable(string path) int;
 

@@ -2817,6 +2817,7 @@ func add_module_candidates_in_root(string[] candidates, string root, string modu
     }
     append(candidates, root + "/" + dot_to_slash(module) + ".s")
     append(candidates, root + "/" + dot_to_slash(module) + "/" + last_segment(module) + ".s")
+    return
 }
 
 func add_neurx_module_candidates(string[] candidates, string root, string tail) () {
@@ -2828,6 +2829,7 @@ func add_neurx_module_candidates(string[] candidates, string root, string tail) 
     }
     append(candidates, root + "/app/" + dot_to_slash(tail) + ".s")
     append(candidates, root + "/platform/" + dot_to_slash(tail) + ".s")
+    return
 }
 
 func has_dot_local(string text) bool {
@@ -2865,6 +2867,7 @@ func add_std_module_candidates(string[] candidates, string root, string tail) ()
     }
     append(candidates, root + "/src/" + dot_to_slash(pkg) + ".s")
     append(candidates, root + "/src/" + dot_to_slash(pkg) + "/" + last_segment(pkg) + ".s")
+    return
 }
 
 func add_std_layout_candidates(string[] candidates, string root, string tail) () {
@@ -2893,6 +2896,7 @@ func add_s_module_candidates(string[] candidates, string root, string symbol) ()
     append(candidates, root + "/src/cmd/compile/internal/parser/parser.s")
     append(candidates, root + "/src/cmd/compile/internal/lexer/lexer.s")
     append(candidates, root + "/src/cmd/compile/internal/token/token.s")
+    return
 }
 
 func module_search_roots() string[] {
@@ -2954,6 +2958,7 @@ func push_module_search_root(string[] roots, string root) () {
         return
     }
     append(roots, root)
+    return
 }
 
 func find_quote_from(string text, int start) int {
@@ -5936,6 +5941,7 @@ func append_write_op(string[] data_lines, string[] text_lines, write_op op, int 
     append(text_lines, "    lea " + label + "(%rip), %rsi")
     append(text_lines, "    mov $" + std.prelude.to_string(std.prelude.len(op.text)) + ", %rdx")
     append(text_lines, "    syscall")
+    return
 }
 
 func append_write_op_arm64(string[] data_lines, string[] text_lines, write_op op, int index) () {
@@ -5948,6 +5954,7 @@ func append_write_op_arm64(string[] data_lines, string[] text_lines, write_op op
     append(text_lines, "    add x1, x1, :lo12:" + label)
     append(text_lines, "    ldr x2, =" + std.prelude.to_string(std.prelude.len(op.text)))
     append(text_lines, "    svc #0")
+    return
 }
 
 func append_write_op_riscv64(string[] data_lines, string[] text_lines, write_op op, int index) () {
@@ -5959,6 +5966,7 @@ func append_write_op_riscv64(string[] data_lines, string[] text_lines, write_op 
     append(text_lines, "    la a1, " + label)
     append(text_lines, "    li a2, " + std.prelude.to_string(std.prelude.len(op.text)))
     append(text_lines, "    ecall")
+    return
 }
 
 func append_write_op_s390x(string[] data_lines, string[] text_lines, write_op op, int index) () {
@@ -5970,6 +5978,7 @@ func append_write_op_s390x(string[] data_lines, string[] text_lines, write_op op
     append(text_lines, "    larl %r3, " + label)
     append(text_lines, "    lghi %r4, " + std.prelude.to_string(std.prelude.len(op.text)))
     append(text_lines, "    svc 0")
+    return
 }
 
 func escape_asm_string(string text) string {

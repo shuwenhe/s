@@ -5,7 +5,7 @@ import (
     "std.prelude"
 )
 
-extern "intrinsic" func __host_byte_at(string text, int index) int
+extern "intrinsic" func __host_byte_at(string source, int index) int
 
 // Canonical parsing owns source positions and produces the shared syntax AST.
 // Value states make progress/error propagation explicit across recursive calls.

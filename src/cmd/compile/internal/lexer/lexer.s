@@ -6,7 +6,7 @@ import (
     "std.result"
 )
 
-extern "intrinsic" func __host_byte_at(string text, int index) int;
+extern "intrinsic" func __host_byte_at(string source, int index) int;
 
 struct lex_error {
     string message

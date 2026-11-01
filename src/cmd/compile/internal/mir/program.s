@@ -210,7 +210,7 @@ func mir_program_function_error_with_globals(mir_program_function function_data,
     for p < len(function_data.params) {
         if function_data.params[p].value_id < 0 || function_data.params[p].name == "" || function_data.params[p].type_name == "" { return "invalid parameter: " + function_data.symbol }
         ref_element := mir_program_reference_element(function_data.params[p].type_name)
-        if ref_element != "" && (!mir_program_type_supported(ref_element, records, enums) || function_data.external) { return "unproven reference parameter" }
+        if ref_element != "" && (!mir_program_type_supported(ref_element, records, enums) || function_data.external) { return "unproven reference parameter: " + function_data.symbol + "." + function_data.params[p].name + " (" + function_data.params[p].type_name + ")" }
         previous := 0
         for previous < p {
             if function_data.params[previous].value_id == function_data.params[p].value_id { return "duplicate parameter value: " + function_data.symbol }
@@ -363,10 +363,13 @@ func mir_program_reachable_blocks(mir_program_function function_data, int exclud
     reachable[0] = 1
     i = 0
     for i < len(pending) {
-        block := function_data.blocks[pending[i]]
+        // The instruction payload is irrelevant to reachability. Copy only
+        // successors, and finish indexing before passing the lookup table.
+        successors := function_data.blocks[pending[i]].successors
         e := 0
-        for e < len(block.successors) {
-            next := mir_program_block_index(function_data, block.successors[e])
+        for e < len(successors) {
+            successor := successors[e]
+            next := mir_program_block_index(function_data, successor)
             if next != excluded && reachable[next] == 0 { reachable[next] = 1; pending = append(pending, next) }
             e = e + 1
         }
@@ -375,25 +378,27 @@ func mir_program_reachable_blocks(mir_program_function function_data, int exclud
     return reachable
 }
 
-func mir_program_dominance_matrix(mir_program_function function_data) int[] {
+func mir_program_dominance_matrix(mir_program_function function_data) int[][] {
     reachable := mir_program_reachable_blocks(function_data, -1)
-    dominance := int[]()
+    dominance := int[][]()
     d := 0
     for d < len(function_data.blocks) {
+        row := int[]()
         without := mir_program_reachable_blocks(function_data, d)
         u := 0
         for u < len(function_data.blocks) {
             value := 0
             if reachable[u] == 0 || d == u || without[u] == 0 { value = 1 }
-            dominance = append(dominance, value)
+            row = append(row, value)
             u = u + 1
         }
+        dominance = append(dominance, row)
         d = d + 1
     }
     return dominance
 }
 
-func mir_program_value_use_error(mir_program_function function_data, int[] dominance, int id, int use_block, int use_position) string {
+func mir_program_value_use_error(mir_program_function function_data, int[][] dominance, int id, int use_block, int use_position) string {
     p := 0
     for p < len(function_data.params) { if function_data.params[p].value_id == id { return "" }
         p = p + 1
@@ -407,7 +412,7 @@ func mir_program_value_use_error(mir_program_function function_data, int[] domin
             for r < len(ids) {
                 if ids[r] == id {
                     if b == use_block && i >= use_position { return "forward MIR operand" }
-                    if dominance[b * len(function_data.blocks) + use_block] == 0 { return "nondominating MIR operand" }
+                    if dominance[b][use_block] == 0 { return "nondominating MIR operand" }
                     return ""
                 }
                 r = r + 1

@@ -191,10 +191,13 @@ func ssa_reachable_blocks(function_ssa_function f, int excluded) int[] {
     reachable[entry] = 1
     i := 0
     for i < len(pending) {
-        block := f.blocks[pending[i]]
+        // Avoid snapshotting every value in this block, or the complete CFG
+        // while evaluating a later indexed argument to the lookup helper.
+        successors := f.blocks[pending[i]].successors
         s := 0
-        for s < len(block.successors) {
-            next := ssa_block_index(f.blocks, block.successors[s])
+        for s < len(successors) {
+            successor := successors[s]
+            next := ssa_block_index(f.blocks, successor)
             if next != excluded && reachable[next] == 0 {
                 reachable[next] = 1
                 pending.push(next)
@@ -206,32 +209,34 @@ func ssa_reachable_blocks(function_ssa_function f, int excluded) int[] {
     return reachable
 }
 
-func ssa_dominance_matrix(function_ssa_function f) int[] {
+func ssa_dominance_matrix(function_ssa_function f) int[][] {
     reachable := ssa_reachable_blocks(f, -1)
-    dominance := int[]()
+    dominance := int[][]()
     defining := 0
     for defining < len(f.blocks) {
+        row := int[]()
         without := ssa_reachable_blocks(f, defining)
         using := 0
         for using < len(f.blocks) {
             // Like: Go's domCheck, unreachable uses do not constrain dominance.
             dominates := 0
             if reachable[using] == 0 || defining == using || without[using] == 0 { dominates = 1 }
-            dominance.push(dominates)
+            row.push(dominates)
             using = using + 1
         }
+        dominance = append(dominance, row)
         defining = defining + 1
     }
     return dominance
 }
 
-func ssa_value_use_error(function_ssa_function f, int[] dominance, int id, int use_block, int use_position) string {
+func ssa_value_use_error(function_ssa_function f, int[][] dominance, int id, int use_block, int use_position) string {
     defining := ssa_value_block_index(f.blocks, id)
     if defining < 0 { return "unknown operand: " + f.symbol }
     if defining == use_block && ssa_value_index(f.blocks[defining].values, id) >= use_position {
         return "forward operand: " + f.symbol
     }
-    if dominance[defining * len(f.blocks) + use_block] == 0 { return "nondominating operand: " + f.symbol }
+    if dominance[defining][use_block] == 0 { return "nondominating operand: " + f.symbol }
     return ""
 }
 

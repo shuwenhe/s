@@ -1,5 +1,6 @@
 package compile.internal.parser
 extern "intrinsic" func __host_char_at(string source, int index) string
+extern "intrinsic" func __host_slice(string source, int start, int end) string
 
 struct token {
     token_type: int

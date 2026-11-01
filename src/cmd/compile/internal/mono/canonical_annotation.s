@@ -119,6 +119,14 @@ func ca_stmt(compile.internal.ast.stmt original, ca_context ctx, ca_metadata met
             v.init = std.prelude.box(init.value); v.condition = condition.value; v.step = std.prelude.box(step.value); v.body = body.value; value = stmt.c_for(v)
         },
     }
+    // Only declarations change the environment visible to the next statement.
+    // The initial semantic pass already validated effects and control flow;
+    // checking nonbinding statements again recursively revisits entire bodies.
+    switch original {
+        stmt.let(_): (),
+        stmt.multi(_): (),
+        _: return ca_stmt_result { value: value, env: ctx.env, error: "" },
+    }
     scope := compile.internal.semantic.semantic_scope { package_path: ctx.pkg, generic_names: ctx.generic_names, local_start: ctx.local_start, discard_result: ctx.discard_result, loop_depth: ctx.loop_depth }
     borrows := compile.internal.semantic.borrow_state_new()
     diagnostics := compile.internal.semantic.semantic_error[]()

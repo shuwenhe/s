@@ -128,6 +128,7 @@ func parser_parse_program(parser* p) ast_node {
 
     for !parser_current_token_is(p, token_eof) {
         parser_skip_newlines(p)
+        if parser_current_token_is(p, token_eof) { break }
 
         if parser_current_token_is(p, token_package) {
             pkg := parser_parse_package(p)

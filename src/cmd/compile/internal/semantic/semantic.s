@@ -1577,7 +1577,7 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
         i = i + 1
     }
     result := infer_block_expr_in_scope(method.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics, declarations, scope)
-    if expected_return != "()" && result.type_name != "never" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
+    if result.type_name != "never" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
         if !compile.internal.typesys.same_type(expected_return, result.type_name) {
             return pre_errors + result.errors + add_error(source, diagnostics, "e3004", canonical_return_mismatch("method", method.sig.name, expected_return, result.type_name, method.body.unwrap()), method.sig.name)
         }
@@ -1625,7 +1625,7 @@ func check_function(function_decl function_decl, function_binding[] functions, t
         i = i + 1
     }
     result := infer_block_expr_in_scope(function_decl.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics, declarations, scope)
-    if expected_return != "()" && result.type_name != "never" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
+    if result.type_name != "never" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
         if !compile.internal.typesys.same_type(expected_return, result.type_name) {
             return pre_errors + result.errors + add_error(source, diagnostics, "e3004", canonical_return_mismatch("function", function_decl.sig.name, expected_return, result.type_name, function_decl.body.unwrap()), function_decl.sig.name)
         }

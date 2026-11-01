@@ -9,6 +9,8 @@ output=${2:?usage: source_closure.sh ENTRY OUTPUT}
 
 root=${S_SOURCE_ROOT:-$(pwd)}
 
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
 mode=${S_CLOSURE_MODE:-production}
 case "$mode" in
     production|test) ;;
@@ -296,39 +298,10 @@ while IFS= read -r source_path; do
 
     [ -f "$root/$rel_path" ] || continue
 
-    awk '
-        /^[[:space:]]*use[[:space:]]/ {
-            sub(/^[[:space:]]*use[[:space:]]+/, "")
-            sub(/[[:space:]].*$/, "")
-            print
-        }
-        /^[[:space:]]*import[[:space:]]*[(][[:space:]]*$/ {
-            in_import = 1
-            next
-        }
-        in_import && /^[[:space:]]*[)][[:space:]]*$/ {
-            in_import = 0
-            next
-        }
-        in_import {
-            line = $0
-            sub(/^[[:space:]]*/, "", line)
-            sub(/[[:space:]]*$/, "", line)
-            if (line ~ /^"/) {
-                sub(/^"/, "", line)
-                sub(/".*$/, "", line)
-                print line
-            }
-        }
-        /^[[:space:]]*import[[:space:]]*"[^"]+"/ {
-            line = $0
-            sub(/^[[:space:]]*import[[:space:]]*"/, "", line)
-            sub(/".*$/, "", line)
-            print line
-        }
-    ' "$root/$rel_path" |
-
+    modules=$(python3 "$script_dir/source_imports.py" "$root/$rel_path")
+    printf '%s\n' "$modules" |
     while IFS= read -r module; do
+        [ -n "$module" ] || continue
 
         resolved=$(resolve_module_fallback "$module")
 

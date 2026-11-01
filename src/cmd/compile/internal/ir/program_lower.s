@@ -9,6 +9,8 @@ import (
     "std.prelude"
 )
 
+extern "intrinsic" func runtime_env_get(string key, string fallback) string
+
 struct program_store_step {
     string kind
     int container
@@ -569,14 +571,14 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                     if root == "" { state.error = "borrow requires a named local place"; return state }
                     j := 0
                     for j < len(borrowed_roots) {
-                        if borrowed_roots[j] == root && (borrowed_mutable[j] || mir_program_reference_mutable(expected)) { borrowed_mutable[j] = borrowed_mutable[j] }
+                        if borrowed_roots[j] == root && (borrowed_mutable[j] || mir_program_reference_mutable(expected)) { state.error = "overlapping borrowed call arguments"; return state }
                         j = j + 1
                     }
                     j = 0
                     for j < len(call.args) {
                         if j != call_idx && program_expression_uses_root(call.args[j], root) {
                             other_reference := j < len(signatures[target].params) && mir_program_reference_element(signatures[target].params[j].type_name) != ""
-                            if !other_reference || mir_program_reference_mutable(expected) || mir_program_reference_mutable(signatures[target].params[j].type_name) { other_reference = other_reference }
+                            if !other_reference || mir_program_reference_mutable(expected) || mir_program_reference_mutable(signatures[target].params[j].type_name) { state.error = "overlapping borrowed call arguments"; return state }
                         }
                         j = j + 1
                     }
@@ -682,6 +684,8 @@ func program_lower_function_with_environment(string package_name, function_decl 
 }
 
 func lower_source_program(source_file initial) mir_program_result {
+    trace := runtime_env_get("S_CANONICAL_TRACE", "") == "1"
+    if trace { eprintln("canonical: MIR globals begin") }
     src := program_with_global_initializers(initial)
     entry_package := ""
     entry_index := 0
@@ -704,6 +708,7 @@ func lower_source_program(source_file initial) mir_program_result {
         result.error = "source item package count mismatch"
         return result
     }
+    if trace { eprintln("canonical: MIR layouts begin") }
     enumeration_result := program_collect_enums(src)
     if enumeration_result.error != "" { result.error = enumeration_result.error; return result }
     enums := enumeration_result.enums
@@ -724,6 +729,7 @@ func lower_source_program(source_file initial) mir_program_result {
         }
         tuple_index = tuple_index + 1
     }
+    if trace { eprintln("canonical: MIR record validation begin") }
     record_error := mir_program_records_error(records, enums)
     if record_error != "" { result.error = record_error; return result }
     r := 0
@@ -734,6 +740,7 @@ func lower_source_program(source_file initial) mir_program_result {
         }
         r = r + 1
     }
+    if trace { eprintln("canonical: MIR signatures begin") }
     signatures := mir_program_function[]()
     i := 0
     for i < len(src.items) {
@@ -768,6 +775,7 @@ func lower_source_program(source_file initial) mir_program_result {
         switch src.items[i] {
             item.function(declaration) : {
                 if !program_repeated_external_contract(src, i, declaration, enums, records) {
+                    if trace { eprintln("canonical: MIR function " + signatures[len(functions)].symbol) }
                     lowered := program_lower_function_with_environment(program_item_package(src, i), declaration, signatures[len(functions)], signatures, enums, records, payloads, environment)
                     if lowered.error != "" { result.error = lowered.error + " in " + program_item_package(src, i) + "." + declaration.sig.name; return result }
                     records = lowered.records
@@ -785,6 +793,7 @@ func lower_source_program(source_file initial) mir_program_result {
         }
         builtin_index = builtin_index + 1
     }
+    if trace { eprintln("canonical: MIR verification begin") }
     return lower_mir_program_with_globals(src.pkg, src.pkg + ".main", functions, enums, records, environment.globals)
 }
 

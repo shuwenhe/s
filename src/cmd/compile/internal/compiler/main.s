@@ -7,7 +7,7 @@ import (
 // Host intrinsic functions for file I/O
 extern "intrinsic" func __host_read_to_string(string path) string
 extern "intrinsic" func __host_write_text_file(string path, string data) int
-extern "intrinsic" func __host_char_at(string s, int index) string
+extern "intrinsic" func __host_char_at(string source, int index) string
 extern "intrinsic" func host_args() string[]
 
 func compiler_main(string[] args) int {

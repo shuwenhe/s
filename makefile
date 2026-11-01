@@ -508,6 +508,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_cfg_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_discarded_switch_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_unit_shadow_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_dfa_signature_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_tuple_tail_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_continue_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_break_production_check.sh
@@ -537,8 +538,12 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_string_index_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_c_for_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_store_production_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_store_rhs_effect_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_tuple_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_tuple_result_methods_check.sh
+	@bash test/native-bootstrap-diagnostic/source_closure_import_check.sh
+	@python3 test/native-bootstrap-diagnostic/canonical_annotation_cost_check.py .bootstrap/compiler/compiler.ir
+	@S_TEST_COMPILER="$(CURDIR)/bin/s_compiler" python3 test/native-bootstrap-diagnostic/dominance_matrix_cost_check.py
 
 .PHONY: selfhost-native-memory-check
 selfhost-native-memory-check: compiler

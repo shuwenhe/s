@@ -208,6 +208,7 @@ func ir_builder_visit_while_stmt(ir_builder_context* ctx, while_node* compile.in
 
 func ir_builder_visit_expr_stmt(ir_builder_context* ctx, expr_node* compile.internal.parser.ast_node) {
     ir_builder_visit_expression(ctx, expr_node)
+    return
 }
 
 func ir_builder_visit_var_decl(ir_builder_context* ctx, var_node* compile.internal.parser.ast_node) {

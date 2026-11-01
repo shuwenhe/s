@@ -25,9 +25,9 @@ struct use_def_chain {
 struct int_set { int[] values }
 
 func int_set_new() int_set { return int_set { values: int[]() } }
-func int_set_add(set *int_set, int value) {
+func int_set_add(int_set* set, int value) {
 }
-func int_set_contains(set int_set, int value) int { return 0 }
+func int_set_contains(int_set set, int value) int { return 0 }
 func int_set_union(int_set set1, int_set set2) int_set { return set1 }
 func int_set_intersect(int_set set1, int_set set2) int_set { return int_set_new() }
 func int_set_difference(int_set set1, int_set set2) int_set { return set1 }
