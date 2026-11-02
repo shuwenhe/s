@@ -54,6 +54,13 @@ def main():
         atomic_json(snapshot_file, snapshot)
     results_file = out / 'results.json'
     results = json.loads(results_file.read_text()) if args.resume and results_file.exists() else []
+    if args.resume:
+        markers = [out / name for name in ['FAILED.json', '.accepted'] if (out / name).exists()]
+        if markers:
+            archive = out / 'attempts' / ('status-' + str(time.time_ns()))
+            archive.mkdir(parents=True)
+            for marker in markers:
+                marker.rename(archive / marker.name)
     env = os.environ | {'S_SOURCE_ROOT': str(ROOT), 'S_CANONICAL_TRACE': '1'}
 
     def limits():
@@ -62,6 +69,10 @@ def main():
         resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 
     def unchanged():
+        if subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip() != head:
+            raise RuntimeError('frozen HEAD changed')
+        if subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=all'], cwd=ROOT, text=True):
+            raise RuntimeError('frozen index/worktree changed')
         changed = [p for p, sha in inputs.items() if digest(ROOT / p) != sha]
         if changed:
             raise RuntimeError('frozen inputs changed: ' + repr(changed))
