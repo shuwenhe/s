@@ -27,7 +27,11 @@ func acceptance_main() int {
     if acceptance_expect("PhiInputs", verify_ssa_program(p), "phi operand count: sample.main") != 0 { return 6 }
     p = valid_program(); f = p.functions[0]; b = f.blocks[0]
     b.values.push(function_ssa_value { id: 0, op: "const_int", block_id: 0, type_name: "int" }); f.blocks[0] = b; p.functions[0] = f
-    if acceptance_expect("OperandID", verify_ssa_program(p), "duplicate value: sample.main") != 0 { return 7 }
+    if acceptance_expect("DuplicateValue", verify_ssa_program(p), "duplicate value: sample.main") != 0 { return 7 }
+    p = valid_program(); f = p.functions[0]; b = f.blocks[0]
+    invalid_operand_id := -1
+    b.values.push(function_ssa_value { id: 1, op: "opaque", operands: [invalid_operand_id], block_id: 0, type_name: "int" }); f.blocks[0] = b; p.functions[0] = f
+    if acceptance_expect("InvalidOperandID", verify_ssa_program(p), "unknown operand: sample.main") != 0 { return 15 }
     p = valid_program(); f = p.functions[0]; f.result_types = ["string"]; p.functions[0] = f
     if acceptance_expect("TypeMismatch", verify_ssa_program(p), "return type: sample.main") != 0 { return 8 }
     p = valid_program(); f = p.functions[0]; b = f.blocks[0]
