@@ -35,11 +35,15 @@ byte parity is checked along with exact errors.
 | Undefined SSA value | `unknown operand: sample.main` |
 | InvalidDominance | `nondominating operand: sample.main` |
 | PhiInputs | `phi operand count: sample.main` |
-| OperandID | `duplicate value: sample.main` |
+| InvalidOperandID (OperandID category; operand `-1`) | `unknown operand: sample.main` |
 | TypeMismatch | `return type: sample.main` |
 | InvalidReference | `SSA reference operand referent type` |
 | CFGEdge | `inconsistent successor edge: sample.main` |
 | AMD64ABIcall | `amd64: call argument type: sample.external` |
+
+The undefined-value control references the absent positive ID `99`; the distinct
+invalid-operand-ID control references `-1`. An additional `DuplicateValue`
+control checks `duplicate value: sample.main` independently of OperandID.
 
 Positive controls cover MIR, a scalar SSA function, a diamond CFG, and AMD64
 validation/emission. An additional strictness control requires rejection of an
@@ -76,7 +80,16 @@ Timing is a single local observation, not a statistical speed guarantee.
 
 Final recorded run: all object probes, all 16 matrix probes, and both CLI ELF
 checks passed (exit 0 for the harness; each CLI-produced program exits 42).
-The complete measurement and hash record is `production_acceptance_results.json`.
+The original complete measurement and hash record is
+`production_acceptance_results.json`. That historical run called its duplicate
+value-definition check `OperandID`; it proved duplicate-definition rejection,
+not invalid operand-ID rejection. A follow-up fixture correction retained that
+check as `DuplicateValue` and added the distinct `InvalidOperandID` control
+above. The corrected object probes, both CLI checks, and unchanged 16-block
+matrix probes were rerun successfully; their supplemental record is
+`production_acceptance_operand_id_results.json`. The earlier 64/256/1024
+measurements remain valid for the unchanged production/performance functions;
+those expensive probes were not repeated for this fixture-only correction.
 
 Recorded fixed-seed/fixed-closure run (2026-11-02):
 
