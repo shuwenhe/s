@@ -293,7 +293,9 @@ func mir_program_function_error_with_globals(mir_program_function function_data,
                     use_block = mir_program_block_index(function_data, predecessors[a])
                     use_position = len(function_data.blocks[use_block].instructions)
                 }
-                error := mir_program_value_use_error(function_data, dominance, ins.operands[a], use_block, use_position)
+                // Finish scalar argument evaluation before passing the matrix.
+                operand_id := ins.operands[a]
+                error := mir_program_value_use_error(function_data, dominance, operand_id, use_block, use_position)
                 if error != "" { return error }
                 a = a + 1
             }
@@ -301,7 +303,9 @@ func mir_program_function_error_with_globals(mir_program_function function_data,
         }
         i := 0
         for i < len(block.return_values) {
-            error := mir_program_value_use_error(function_data, dominance, block.return_values[i], b, len(block.instructions))
+            operand_id := block.return_values[i]
+            use_position := len(block.instructions)
+            error := mir_program_value_use_error(function_data, dominance, operand_id, b, use_position)
             if error != "" { return error }
             i = i + 1
         }
@@ -378,14 +382,59 @@ func mir_program_reachable_blocks(mir_program_function function_data, int exclud
     return reachable
 }
 
+// The CFG is validated before dominance. Translate sparse block IDs once;
+// keep instruction payloads out of repeated graph traversals.
+func mir_program_reachable_indices(int[][] edges, int[] zero, int entry, int excluded) int[] {
+    reachable := zero
+    if entry == excluded { return reachable }
+    pending := zero
+    pending[0] = entry
+    reachable[entry] = 1
+    head := 0
+    tail := 1
+    for head < tail {
+        current := pending[head]
+        successors := edges[current]
+        e := 0
+        for e < len(successors) {
+            next := successors[e]
+            if next != excluded && reachable[next] == 0 {
+                reachable[next] = 1
+                pending[tail] = next
+                tail = tail + 1
+            }
+            e = e + 1
+        }
+        head = head + 1
+    }
+    return reachable
+}
+
 func mir_program_dominance_matrix(mir_program_function function_data) int[][] {
-    reachable := mir_program_reachable_blocks(function_data, -1)
+    zero := int[]()
+    edges := int[][]()
     dominance := int[][]()
+    b := 0
+    for b < len(function_data.blocks) {
+        zero = append(zero, 0)
+        dominance = append(dominance, int[]())
+        successors := function_data.blocks[b].successors
+        row := int[]()
+        e := 0
+        for e < len(successors) {
+            successor := successors[e]
+            next := mir_program_block_index(function_data, successor)
+            row = append(row, next)
+            e = e + 1
+        }
+        edges = append(edges, row)
+        b = b + 1
+    }
+    entry := 0
+    reachable := mir_program_reachable_indices(edges, zero, entry, -1)
     d := 0
     for d < len(function_data.blocks) {
-        // Reuse this private reachability row; each cell is read before replacement.
-        // Appending a fresh row would copy its growing prefix for every cell.
-        without := mir_program_reachable_blocks(function_data, d)
+        without := mir_program_reachable_indices(edges, zero, entry, d)
         u := 0
         for u < len(function_data.blocks) {
             value := 0
@@ -393,7 +442,8 @@ func mir_program_dominance_matrix(mir_program_function function_data) int[][] {
             without[u] = value
             u = u + 1
         }
-        dominance = append(dominance, without)
+        // Fill an existing slot so a growing matrix is never deep-copied.
+        dominance[d] = without
         d = d + 1
     }
     return dominance

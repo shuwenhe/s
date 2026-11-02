@@ -209,24 +209,69 @@ func ssa_reachable_blocks(function_ssa_function f, int excluded) int[] {
     return reachable
 }
 
-func ssa_dominance_matrix(function_ssa_function f) int[][] {
-    reachable := ssa_reachable_blocks(f, -1)
-    dominance := int[][]()
-    defining := 0
-    for defining < len(f.blocks) {
-        // Reuse this private reachability row; each cell is read before replacement.
-        // Appending a fresh row would copy its growing prefix for every cell.
-        without := ssa_reachable_blocks(f, defining)
-        using := 0
-        for using < len(f.blocks) {
-            // Like: Go's domCheck, unreachable uses do not constrain dominance.
-            dominates := 0
-            if reachable[using] == 0 || defining == using || without[using] == 0 { dominates = 1 }
-            without[using] = dominates
-            using = using + 1
+// The CFG is validated before dominance. Translate sparse block IDs once;
+// keep instruction payloads out of repeated graph traversals.
+func ssa_reachable_indices(int[][] edges, int[] zero, int entry, int excluded) int[] {
+    reachable := zero
+    if entry == excluded { return reachable }
+    pending := zero
+    pending[0] = entry
+    reachable[entry] = 1
+    head := 0
+    tail := 1
+    for head < tail {
+        current := pending[head]
+        successors := edges[current]
+        e := 0
+        for e < len(successors) {
+            next := successors[e]
+            if next != excluded && reachable[next] == 0 {
+                reachable[next] = 1
+                pending[tail] = next
+                tail = tail + 1
+            }
+            e = e + 1
         }
-        dominance = append(dominance, without)
-        defining = defining + 1
+        head = head + 1
+    }
+    return reachable
+}
+
+func ssa_dominance_matrix(function_ssa_function f) int[][] {
+    zero := int[]()
+    edges := int[][]()
+    dominance := int[][]()
+    b := 0
+    for b < len(f.blocks) {
+        zero = append(zero, 0)
+        dominance = append(dominance, int[]())
+        successors := f.blocks[b].successors
+        row := int[]()
+        e := 0
+        for e < len(successors) {
+            successor := successors[e]
+            next := ssa_block_index(f.blocks, successor)
+            row = append(row, next)
+            e = e + 1
+        }
+        edges = append(edges, row)
+        b = b + 1
+    }
+    entry := ssa_block_index(f.blocks, f.entry_block)
+    reachable := ssa_reachable_indices(edges, zero, entry, -1)
+    d := 0
+    for d < len(f.blocks) {
+        without := ssa_reachable_indices(edges, zero, entry, d)
+        u := 0
+        for u < len(f.blocks) {
+            value := 0
+            if reachable[u] == 0 || d == u || without[u] == 0 { value = 1 }
+            without[u] = value
+            u = u + 1
+        }
+        // Fill an existing slot so a growing matrix is never deep-copied.
+        dominance[d] = without
+        d = d + 1
     }
     return dominance
 }
@@ -371,7 +416,9 @@ func verify_ssa_function(function_ssa_function f) string {
                     use_block = ssa_block_index(f.blocks, block.predecessors[a])
                     use_position = len(f.blocks[use_block].values)
                 }
-                error := ssa_value_use_error(f, dominance, value.operands[a], use_block, use_position)
+                // Finish scalar argument evaluation before passing the matrix.
+                operand_id := value.operands[a]
+                error := ssa_value_use_error(f, dominance, operand_id, use_block, use_position)
                 if error != "" { return error }
                 a = a + 1
             }
@@ -379,7 +426,9 @@ func verify_ssa_function(function_ssa_function f) string {
         }
         a := 0
         for a < len(block.terminator_values) {
-            error := ssa_value_use_error(f, dominance, block.terminator_values[a], b, len(block.values))
+            operand_id := block.terminator_values[a]
+            use_position := len(block.values)
+            error := ssa_value_use_error(f, dominance, operand_id, b, use_position)
             if error != "" { return error }
             a = a + 1
         }

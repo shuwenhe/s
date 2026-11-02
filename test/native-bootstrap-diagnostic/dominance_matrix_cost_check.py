@@ -39,7 +39,7 @@ with tempfile.TemporaryDirectory(prefix='s-dominance-cost-') as directory:
         prefix = 'mir_program' if mode == 'mir' else 'ssa'
         block_type = 'mir_program_block' if mode == 'mir' else 'function_ssa_block'
         function_type = 'mir_program_function' if mode == 'mir' else 'function_ssa_function'
-        suffixes = ['block_index', 'reachable_blocks', 'dominance_matrix', 'value_use_error']
+        suffixes = ['block_index', 'reachable_blocks', 'dominance_matrix', 'reachable_indices', 'value_use_error']
         if mode == 'ssa': suffixes += ['value_index', 'value_block_index']
         definitions = '\n'.join(function(text, prefix + '_' + suffix) for suffix in suffixes)
         if mode == 'mir':
