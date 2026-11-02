@@ -20,7 +20,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def digest(path):
     with Path(path).open('rb') as source:
-        return hashlib.file_digest(source, 'sha256').hexdigest()
+        value = hashlib.sha256()
+        for chunk in iter(lambda: source.read(1024 * 1024), b''):
+            value.update(chunk)
+        return value.hexdigest()
 
 def atomic_json(path, value):
     temporary = path.with_suffix(path.suffix + '.tmp')
