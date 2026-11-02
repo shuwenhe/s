@@ -260,6 +260,21 @@ func compiler_starts_with_trimmed(string line, string prefix) bool {
     return true
 }
 
+// Keep one newline per file, in argument order. Balanced concatenation bounds
+// retained source text to O(bytes * log(files)) in the native lifetime arena.
+func canonical_join_sources(string[] sources) string {
+    return canonical_join_source_range(sources, 0, len(sources))
+}
+
+func canonical_join_source_range(string[] sources, int start, int end) string {
+    if start >= end { return "" }
+    if end - start == 1 { return sources[start] + "\n" }
+    middle := start + (end - start) / 2
+    left := canonical_join_source_range(sources, start, middle)
+    right := canonical_join_source_range(sources, middle, end)
+    return left + right
+}
+
 func handle_compile_unit(string[] args) int {
     if len(args) < 4 {
         eprintln("usage: --compile-unit <output.ir> <input.s>...")
@@ -287,12 +302,7 @@ func handle_compile_unit(string[] args) int {
         eprintln("compiler: empty compile unit")
         return 1
     }
-    source := ""
-    j := 0
-    for j < len(sources) {
-        source = source + sources[j] + "\n"
-        j = j + 1
-    }
+    source := canonical_join_sources(sources)
     mirrored := canonical_source_to_mir(source)
     if mirrored.error != "" { eprintln(mirrored.error); return 1 }
     if runtime_env_get("S_CANONICAL_TRACE", "") == "1" { eprintln("canonical: native assembly begin") }
