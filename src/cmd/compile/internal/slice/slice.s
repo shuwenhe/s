@@ -1,4 +1,5 @@
 package compile.internal
+import "compile.internal.ir.ast"
 
 
 struct slice_info {
@@ -32,7 +33,7 @@ func slice_unit_ready() int {
     1
 }
 
-func slice_funcs(ir.func[] all_fns) slice_stats {
+func slice_funcs(compile.internal.ir.ast.func_decl_ir[] all_fns) slice_stats {
     stats := slice_stats {
         functions_seen: 0,
         functions_analyzed: 0,
@@ -52,7 +53,7 @@ func slice_funcs(ir.func[] all_fns) slice_stats {
     stats
 }
 
-func analyze(ir.func func_item) slice_stats {
+func analyze(compile.internal.ir.ast.func_decl_ir func_item) slice_stats {
     _ = func_item
     slice_stats {
         functions_seen: 0,

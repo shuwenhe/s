@@ -606,28 +606,7 @@ func mir_program_type_supported(string type_name, mir_program_record[] records, 
     if mir_program_enum_index(enums, type_name) >= 0 { return true }
     element := mir_program_array_element(type_name)
     if element != "" { return mir_program_type_supported(element, records, enums) }
-    // Generic instance types such as vec[ir.node] or map[string]int are
-    // supported when their base container type is a known record/enum/builtin.
-    // The seed (C reference) compiler does not enforce this check and accepts
-    // such reference parameters, so the self-hosting compiler must too, or the
-    // bootstrap dies with "unproven reference parameter".
-    i := 0
-    for i < len(type_name) {
-        if __host_slice(type_name, i, i + 1) == "[" {
-            base := __host_slice(type_name, 0, i)
-            return mir_program_type_supported(base, records, enums)
-        }
-        i = i + 1
-    }
-    // Allow types like "mir_place" that are referenced in parameters
-    // even if they're not found in the records list (they may be defined
-    // in the same package and loaded later, or be forward references)
-    if type_name == "mir_place" || type_name == "mir_place_projection" || type_name == "ir.func" {
-        return true
-    }
-    // Allow any identifier-like type name (letters, numbers, dots, underscores, brackets)
-    // to handle types that may not be in the records list yet
-    return len(type_name) > 0
+    return false
 }
 
 // References nested in containers or tuples cannot escape through results.
@@ -696,9 +675,7 @@ func mir_program_reference_instruction_error(mir_program_function function_data,
 func mir_program_array_instruction_error(mir_program_function function_data, mir_program_instruction ins, int index, mir_program_record[] records, mir_program_enum[] enums) string {
     element := mir_program_array_element(ins.symbol)
     if element == "" { return "unknown array element type: symbol=" + ins.symbol + " element=" + element }
-    if !mir_program_type_supported(element, records, enums) {
-        if element != "ir.func" { return "unknown array element type: symbol=" + ins.symbol + " element=" + element }
-    }
+    if !mir_program_type_supported(element, records, enums) { return "unknown array element type: symbol=" + ins.symbol + " element=" + element }
     if len(ins.field_names) != 0 || ins.integer_value != 0 { return "invalid array metadata" }
     if ins.op == "array_new" {
         if ins.result_types[0] != ins.symbol { return "array constructor result type" }

@@ -919,10 +919,10 @@ func join_text(string[] values, string sep) string {
     return out
 }
 
-func mir_compare_places(first mir_place, second string) bool {
+func mir_compare_places(mir_place first, string second) bool {
     return false
 }
 
-func mir_check_prefix(first mir_place, second string) bool {
+func mir_check_prefix(mir_place first, string second) bool {
     return false
 }

@@ -1,4 +1,5 @@
 package compile.internal
+import "compile.internal.ir.ast"
 
 
 struct rewrite_candidate {
@@ -23,7 +24,7 @@ struct rewrite_stats {
     int skipped_heap
 }
 
-func rewrite_result_funcs(ir.func[] fns) rewrite_stats {
+func rewrite_result_funcs(compile.internal.ir.ast.func_decl_ir[] fns) rewrite_stats {
     stats := rewrite_stats {
         functions_seen: 0,
         functions_rewritten: 0,
@@ -44,7 +45,7 @@ func rewrite_result_funcs(ir.func[] fns) rewrite_stats {
     stats
 }
 
-func rewrite(ir.func func_item) rewrite_stats {
+func rewrite(compile.internal.ir.ast.func_decl_ir func_item) rewrite_stats {
     _ = func_item
     rewrite_stats {
         functions_seen: 0,

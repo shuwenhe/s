@@ -834,6 +834,21 @@ func program_record_type(string type_name, string package_name, mir_program_reco
     element := mir_program_array_element(type_name)
     if element != "" { return program_record_type(element, package_name, records, enums) + "[]" }
     if mir_program_record_index(records, package_name + "." + type_name) >= 0 { return package_name + "." + type_name }
+    if mir_program_record_index(records, type_name) >= 0 { return type_name }
+    // Imported names must carry their defining identity into MIR and SSA.
+    // Resolve a unique suffix only; duplicate short names stay unresolved.
+    match := -1
+    i := 0
+    suffix := "." + type_name
+    for i < len(records) {
+        symbol := records[i].symbol
+        if len(symbol) > len(suffix) && __host_slice(symbol, len(symbol) - len(suffix), len(symbol)) == suffix {
+            if match >= 0 { return type_name }
+            match = i
+        }
+        i = i + 1
+    }
+    if match >= 0 { return records[match].symbol }
     return program_enum_type(type_name, package_name, enums)
 }
 

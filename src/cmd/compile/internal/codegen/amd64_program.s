@@ -447,7 +447,7 @@ func amd64_needs_arena(function_ssa_program program) bool {
             v := 0
             for v < len(program.functions[f].blocks[b].values) {
                 op := program.functions[f].blocks[b].values[v].op
-                if op == "native_intrinsic" || op == "string_slice" || op == "string_char_at" || op == "string_concat" || op == "record_new" || op == "record_set" || op == "array_new" || op == "array_append" || op == "array_set" { return true }
+                if op == "reference_new" || op == "native_intrinsic" || op == "string_slice" || op == "string_char_at" || op == "string_concat" || op == "record_new" || op == "record_set" || op == "array_new" || op == "array_append" || op == "array_set" { return true }
                 v = v + 1
             }
             b = b + 1

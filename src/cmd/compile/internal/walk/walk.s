@@ -1,4 +1,5 @@
 package compile.internal
+import "compile.internal.ir.ast"
 
 
 const tmpstringbufsize = 64
@@ -32,7 +33,7 @@ func walk_walk_module_apply() int {
     0
 }
 
-func walk_ir_func(ir.func func_item) walk_stats {
+func walk_ir_func(compile.internal.ir.ast.func_decl_ir func_item) walk_stats {
     state := new_walk_state(func_item)
     state = analyze_pre_walk(state)
     state = order_func(state)
@@ -49,7 +50,7 @@ func walk_ir_func(ir.func func_item) walk_stats {
     }
 }
 
-func walk_funcs(ir.func[] all_fns) walk_stats {
+func walk_funcs(compile.internal.ir.ast.func_decl_ir[] all_fns) walk_stats {
     stats := empty_walk_stats()
     i := 0
     for i < len(all_fns) {
@@ -59,7 +60,7 @@ func walk_funcs(ir.func[] all_fns) walk_stats {
     stats
 }
 
-func new_walk_state(ir.func func_item) walk_state {
+func new_walk_state(compile.internal.ir.ast.func_decl_ir func_item) walk_state {
     _ = func_item
     walk_state {
         curfunc_name: "",

@@ -510,6 +510,10 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_discarded_switch_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_unit_shadow_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_dfa_signature_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_layout_identity_check.sh
+	@python3 test/native-bootstrap-diagnostic/canonical_type_identity_check.py
+	@bash test/native-bootstrap-diagnostic/canonical_pass_function_schema_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_place_signature_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_tuple_tail_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_continue_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_break_production_check.sh
