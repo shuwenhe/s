@@ -1,0 +1,8 @@
+STAGE 17 - INSTRUCTION SELECTION / CODEGEN
+Scope: Stage 17 gate only; production fused codegen before register allocation/machine code
+Register allocation/object/link success is NOT required.
+proof-source=stage17-codegen-gate
+S17.1=FAIL
+S17.1.reason=no observable Stage 17 production fused codegen authority
+first-unmet-contract=S17.1
+stage17-codegen=NOT_CLOSED
