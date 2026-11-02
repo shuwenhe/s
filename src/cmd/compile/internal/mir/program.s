@@ -383,16 +383,17 @@ func mir_program_dominance_matrix(mir_program_function function_data) int[][] {
     dominance := int[][]()
     d := 0
     for d < len(function_data.blocks) {
-        row := int[]()
+        // Reuse this private reachability row; each cell is read before replacement.
+        // Appending a fresh row would copy its growing prefix for every cell.
         without := mir_program_reachable_blocks(function_data, d)
         u := 0
         for u < len(function_data.blocks) {
             value := 0
             if reachable[u] == 0 || d == u || without[u] == 0 { value = 1 }
-            row = append(row, value)
+            without[u] = value
             u = u + 1
         }
-        dominance = append(dominance, row)
+        dominance = append(dominance, without)
         d = d + 1
     }
     return dominance

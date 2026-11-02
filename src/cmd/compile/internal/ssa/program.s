@@ -214,17 +214,18 @@ func ssa_dominance_matrix(function_ssa_function f) int[][] {
     dominance := int[][]()
     defining := 0
     for defining < len(f.blocks) {
-        row := int[]()
+        // Reuse this private reachability row; each cell is read before replacement.
+        // Appending a fresh row would copy its growing prefix for every cell.
         without := ssa_reachable_blocks(f, defining)
         using := 0
         for using < len(f.blocks) {
             // Like: Go's domCheck, unreachable uses do not constrain dominance.
             dominates := 0
             if reachable[using] == 0 || defining == using || without[using] == 0 { dominates = 1 }
-            row.push(dominates)
+            without[using] = dominates
             using = using + 1
         }
-        dominance = append(dominance, row)
+        dominance = append(dominance, without)
         defining = defining + 1
     }
     return dominance
