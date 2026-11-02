@@ -46,7 +46,7 @@ func main() int {
 ''')
     paths = []
     # Rejected reads must release their temporary mappings too. Directories
-    # fail read(2); an oversized stream must fail the EOF probe, not truncate.
+    # fail read(2); large NUL-containing sources must be rejected in full.
     oversized = work / 'oversized'
     with oversized.open('wb') as stream:
         stream.truncate(16777217)
