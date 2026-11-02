@@ -20,6 +20,20 @@ S
 "$compiler" --emit-bin "$work/main.sasm" "$work/main"
 status=0; "$work/main" || status=$?
 test "$status" -eq 42
+cat > "$work/local-enum.s" <<'S'
+package main
+enum Kind { one = 42 }
+func main() int {
+    Kind value = Kind.one
+    return switch value { Kind.one: 42 }
+}
+package unrelated
+struct Kind { int value }
+S
+"$compiler" --compile-unit "$work/local-enum.sasm" "$work/local-enum.s"
+"$compiler" --emit-bin "$work/local-enum.sasm" "$work/local-enum"
+status=0; "$work/local-enum" || status=$?
+test "$status" -eq 42
 cat > "$work/scalar.s" <<'S'
 package main
 func read(int* value) int { return 42 }
