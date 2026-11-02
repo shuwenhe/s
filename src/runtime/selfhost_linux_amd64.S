@@ -926,6 +926,8 @@ s_read_file_value:
     push %rbx
     push %r12
     push %r13
+    push %r14
+    push %r15
     xor %r12d, %r12d
     xor %r13d, %r13d
     call s_string_cstr
@@ -939,10 +941,11 @@ s_read_file_value:
     test %rax, %rax
     js .Lread_file_cleanup
     mov %rax, %rbx
-    /* Capacity is temporary, not a 16 MiB heap object per source file.
-     * Read streams as well as regular files, then retain only actual bytes. */
+    /* Grow temporary storage for streams and large assembly artifacts;
+     * retain only actual bytes in the heap after reaching EOF. */
+    mov $65536, %r14d
     xor %edi, %edi
-    mov $16777233, %esi
+    lea 17(%r14), %rsi
     mov $3, %edx
     mov $34, %ecx
     mov $-1, %r8
@@ -954,10 +957,28 @@ s_read_file_value:
     movq $2, (%r12)
     movq $0, 8(%r12)
 .Lread_file_loop:
+    cmp %r14, 8(%r12)
+    jb .Lread_file_chunk
+    mov %r14, %r15
+    shl $1, %r15
+    jc .Lread_file_close_fail
+    mov %r15, %rdx
+    add $17, %rdx
+    jc .Lread_file_close_fail
+    mov %r12, %rdi
+    lea 17(%r14), %rsi
+    mov $1, %r10d           # MREMAP_MAYMOVE
+    mov $25, %eax          # mremap; failure preserves the old mapping
+    syscall
+    cmp $-4095, %rax
+    jae .Lread_file_close_fail
+    mov %rax, %r12
+    mov %r15, %r14
+.Lread_file_chunk:
     mov %rbx, %rdi
     lea 16(%r12), %rsi
     add 8(%r12), %rsi
-    mov $16777216, %rdx
+    mov %r14, %rdx
     sub 8(%r12), %rdx
     call s_read
     cmp $-4, %rax             # EINTR: no bytes consumed
@@ -966,19 +987,7 @@ s_read_file_value:
     js .Lread_file_close_fail
     jz .Lread_file_close_ok
     add %rax, 8(%r12)
-    cmpq $16777216, 8(%r12)
-    jb .Lread_file_loop
-    /* A full buffer is not EOF. Refuse oversized input rather than compile a
-       truncated prefix (which could hide invalid bytes past the boundary). */
-.Lread_file_probe:
-    mov %rbx, %rdi
-    lea 16777232(%r12), %rsi
-    mov $1, %rdx
-    call s_read
-    cmp $-4, %rax
-    je .Lread_file_probe
-    test %rax, %rax
-    jnz .Lread_file_close_fail
+    jmp .Lread_file_loop
 .Lread_file_close_ok:
     mov %rbx, %rdi
     call s_close
@@ -1002,10 +1011,12 @@ s_read_file_value:
     test %r12, %r12
     jz .Lread_file_done
     mov %r12, %rdi
-    mov $16777233, %esi
+    lea 17(%r14), %rsi
     call s_munmap
 .Lread_file_done:
     mov %r13, %rax
+    pop %r15
+    pop %r14
     pop %r13
     pop %r12
     pop %rbx

@@ -13,6 +13,7 @@ func main() int {
     if text == "data" { return 42 }
     if text == "" { return 7 }
     if len(text) == 16777216 { return 43 }
+    if len(text) == 20971520 { return 44 }
     return 99
 }
 S
@@ -25,9 +26,11 @@ p = Path(sys.argv[1])
 (p / 'valid').write_bytes(b'data')
 (p / 'nul').write_bytes(b'da\0ta')
 (p / 'limit').write_bytes(b' ' * 16777216)
+(p / 'large').write_bytes(b' ' * 20971520)
 (p / 'oversize').write_bytes(b' ' * 16777216 + b'\0')
+(p / 'late-nul').write_bytes(b' ' * 20971520 + b'\0')
 PY
-for pair in 'valid 42' 'nul 7' 'limit 43' 'oversize 7' 'missing 7'; do
+for pair in 'valid 42' 'nul 7' 'limit 43' 'large 44' 'oversize 7' 'late-nul 7' 'missing 7'; do
     read -r name wanted <<< "$pair"
     status=0; "$work/read" "$work/$name" || status=$?
     if [ "$status" -ne "$wanted" ]; then
