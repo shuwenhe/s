@@ -107,6 +107,11 @@ class CleanroomTests(unittest.TestCase):
         runner=self.m.CommandRunner(self.base,logs,self.m.clean_environment(self.base,self.base/'tmp'))
         runner.run('long-executable',[executable],trace=True)
 
+    def test_trace_accepts_canonical_host_assembler_symlink(self):
+        logs=self.base/'logs';logs.mkdir()
+        runner=self.m.CommandRunner(self.base,logs,self.m.clean_environment(self.base,self.base/'tmp'))
+        runner.run('assembler',[sys.executable,'-c','import subprocess; subprocess.run(["/usr/bin/as","--version"],check=True)'],trace=True)
+
     def test_trace_rejects_delegation_to_another_compiler_or_program(self):
         logs=self.base/'logs';logs.mkdir()
         runner=self.m.CommandRunner(self.base,logs,self.m.clean_environment(self.base,self.base/'tmp'))

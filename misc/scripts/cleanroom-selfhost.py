@@ -261,8 +261,8 @@ class CommandRunner:
         elif any(not path.is_file() or path.stat().st_size == 0 for path in outputs):
             failure = 'missing or empty command output'
         if trace and not failure:
-            allowed = {str(Path(command[0]).resolve()), '/usr/bin/as', '/usr/bin/ld',
-                       '/usr/bin/mkdir', '/usr/bin/rm'}
+            allowed = {str(Path(path).resolve()) for path in
+                       [command[0], '/usr/bin/as', '/usr/bin/ld', '/usr/bin/mkdir', '/usr/bin/rm']}
             for line in trace_path.read_text().splitlines():
                 match = re.search(r'execve\(("(?:\\.|[^"\\])*")', line)
                 if match and re.search(r'= 0\s*$', line):
