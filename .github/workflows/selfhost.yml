@@ -1,0 +1,105 @@
+name: Native self-host acceptance
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 20 * * 6'
+  workflow_dispatch:
+    inputs:
+      full_bootstrap:
+        description: Run the full cache-free native bootstrap
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: selfhost-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+jobs:
+  core:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    env:
+      CI_EVIDENCE: ${{ runner.temp }}/s-selfhost-core-${{ github.run_id }}-${{ github.run_attempt }}
+      FROZEN_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.FROZEN_COMMIT }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install and record dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir "$CI_EVIDENCE"
+          sudo apt-get update 2>&1 | tee "$CI_EVIDENCE/dependencies.log"
+          sudo apt-get install -y --no-install-recommends build-essential binutils git python3 python3-yaml ripgrep strace time file 2>&1 | tee -a "$CI_EVIDENCE/dependencies.log"
+      - name: Fresh core acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash misc/scripts/ci-core.sh "$FROZEN_COMMIT" "$CI_EVIDENCE/run" core 2>&1 | tee "$CI_EVIDENCE/controller.log"
+          cat "$CI_EVIDENCE/run/evidence/status.json"
+          if [ 'core' = full ]; then cat "$CI_EVIDENCE/run/evidence/convergence.json"; fi
+      - name: Preserve evidence and executable permissions
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$CI_EVIDENCE"
+          printf '%s\n' "$FROZEN_COMMIT" > "$CI_EVIDENCE/frozen-commit.txt"
+          tar --exclude='./run/checkout' -C "$CI_EVIDENCE" -czf "$RUNNER_TEMP/selfhost-core.tar.gz" .
+          sha256sum "$RUNNER_TEMP/selfhost-core.tar.gz"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: selfhost-core-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/selfhost-core.tar.gz
+          if-no-files-found: error
+          retention-days: 90
+  full:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.full_bootstrap) || contains(github.event.head_commit.message, '[verify-full-bootstrap]')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 300
+    env:
+      CI_EVIDENCE: ${{ runner.temp }}/s-selfhost-full-${{ github.run_id }}-${{ github.run_attempt }}
+      FROZEN_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.FROZEN_COMMIT }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install and record dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir "$CI_EVIDENCE"
+          sudo apt-get update 2>&1 | tee "$CI_EVIDENCE/dependencies.log"
+          sudo apt-get install -y --no-install-recommends build-essential binutils git python3 python3-yaml ripgrep strace time file 2>&1 | tee -a "$CI_EVIDENCE/dependencies.log"
+      - name: Fresh full acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash misc/scripts/ci-core.sh "$FROZEN_COMMIT" "$CI_EVIDENCE/run" full 2>&1 | tee "$CI_EVIDENCE/controller.log"
+          cat "$CI_EVIDENCE/run/evidence/status.json"
+          if [ 'full' = full ]; then cat "$CI_EVIDENCE/run/evidence/convergence.json"; fi
+      - name: Preserve evidence and executable permissions
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$CI_EVIDENCE"
+          printf '%s\n' "$FROZEN_COMMIT" > "$CI_EVIDENCE/frozen-commit.txt"
+          tar --exclude='./run/checkout' -C "$CI_EVIDENCE" -czf "$RUNNER_TEMP/selfhost-full.tar.gz" .
+          sha256sum "$RUNNER_TEMP/selfhost-full.tar.gz"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: selfhost-full-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/selfhost-full.tar.gz
+          if-no-files-found: error
+          retention-days: 90

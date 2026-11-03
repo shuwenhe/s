@@ -246,10 +246,31 @@ def verify_expected_functions(assembly, expected):
     return labels
 
 
+def production_inventory(root, stdout):
+    lines = (Path(root) / 'makefile').read_text().splitlines()
+    expected = []
+    pattern = r'\btest/[A-Za-z0-9_./-]+\.(?:sh|py)\b'
+    for target in ['selfhost-canonical-parser-check', 'selfhost-canonical-production-check']:
+        start = next(i for i, line in enumerate(lines) if line.startswith(target + ':')) + 1
+        for line in lines[start:]:
+            if line and not line.startswith('\t'):
+                break
+            expected.extend(re.findall(pattern, line))
+    observed = set(re.findall(pattern, stdout))
+    missing = sorted(set(expected) - observed)
+    if missing:
+        raise RuntimeError('production tests not executed in make trace: ' + repr(missing))
+    return {'test_commands': len(expected), 'expected_commands': expected,
+            'observed_commands': sorted(observed & set(expected)), 'missing_commands': missing,
+            'pass_summaries': sum('PASS' in line for line in stdout.splitlines()),
+            'count_definition': 'Executed Makefile test-script recipes, not individual assertions inside scripts'}
+
+
 class CommandRunner:
-    def __init__(self, root, logs, environment):
+    def __init__(self, root, logs, environment, poll_interval=1.0):
         self.root, self.logs, self.environment = Path(root), Path(logs), environment
         self.results = []
+        self.poll_interval = poll_interval
 
     def run(self, name, command, outputs=(), expected=0, trace=False):
         command = list(map(str, command))
@@ -267,14 +288,76 @@ class CommandRunner:
         started = datetime.datetime.now(datetime.timezone.utc).isoformat()
         print(name + ': RUNNING', flush=True)
         write_json(self.logs / 'active.json', {'phase': name, 'status': 'RUNNING', 'command': command, 'started_utc': started})
-        with stdout_path.open('x') as stdout, stderr_path.open('x') as stderr:
-            result = subprocess.run(['/usr/bin/time', '-v', '-o', str(metrics), *launched], cwd=self.root,
-                                    env=self.environment, stdout=stdout, stderr=stderr)
+        functions, diagnostics, peak_tree_rss = set(), 0, 0
+        log_position, pending_text = 0, ''
+        last_console = start
+        resources = self.logs / (name + '.resources.tsv')
+        with stdout_path.open('x') as stdout, stderr_path.open('x') as stderr, resources.open('x') as samples:
+            process = subprocess.Popen(['/usr/bin/time', '-v', '-o', str(metrics), *launched], cwd=self.root,
+                                       env=self.environment, stdout=stdout, stderr=stderr,
+                                       stdin=subprocess.DEVNULL, start_new_session=True)
+            samples.write('elapsed_seconds\tprocesses\ttree_rss_kb\ttree_vmdata_kb\tlive_process_cpu_seconds\tMIR_functions\tdiagnostics\n')
+            while True:
+                process_ids, seen, resident, data, ticks = [process.pid], set(), 0, 0, 0
+                while process_ids:
+                    pid = process_ids.pop()
+                    if pid in seen:
+                        continue
+                    seen.add(pid)
+                    try:
+                        proc = Path('/proc') / str(pid)
+                        status = (proc / 'status').read_text()
+                        values = {line.split(':')[0]: int(line.split()[1]) for line in status.splitlines()
+                                  if line.startswith(('VmRSS:', 'VmData:'))}
+                        resident += values.get('VmRSS', 0)
+                        data += values.get('VmData', 0)
+                        fields = (proc / 'stat').read_text().rpartition(')')[2].split()
+                        ticks += int(fields[11]) + int(fields[12])
+                        process_ids.extend(map(int, (proc / 'task' / str(pid) / 'children').read_text().split()))
+                    except (FileNotFoundError, ProcessLookupError):
+                        pass
+                peak_tree_rss = max(peak_tree_rss, resident)
+                with stderr_path.open(errors='replace') as emitted:
+                    emitted.seek(log_position)
+                    pending_text += emitted.read()
+                    log_position = emitted.tell()
+                lines = pending_text.split('\n')
+                pending_text = lines.pop()
+                for line in lines:
+                    if line.startswith('canonical: MIR function '):
+                        functions.add(line[len('canonical: MIR function '):])
+                    if line.startswith(('canonical semantic:', 'canonical parser:', 'mir-error:', 'amd64:')):
+                        diagnostics += 1
+                elapsed = time.monotonic() - start
+                cpu = ticks / os.sysconf('SC_CLK_TCK')
+                samples.write(f'{elapsed:.3f}\t{len(seen)}\t{resident}\t{data}\t{cpu:.3f}\t{len(functions)}\t{diagnostics}\n')
+                samples.flush()
+                if time.monotonic() - last_console >= 60:
+                    print(f'{name}: RUNNING elapsed={elapsed:.0f}s RSS={resident}KiB MIR={len(functions)} diagnostics={diagnostics}', flush=True)
+                    last_console = time.monotonic()
+                write_json(self.logs / 'heartbeat.json', {'phase': name, 'status': 'RUNNING',
+                           'pid': process.pid, 'seconds': elapsed, 'tree_rss_kb': resident,
+                           'tree_vmdata_kb': data, 'sampled_tree_peak_rss_kb': peak_tree_rss,
+                           'cpu_seconds_live': cpu, 'mir_functions_processed': len(functions),
+                           'compiler_diagnostics': diagnostics,
+                           'updated_utc': datetime.datetime.now(datetime.timezone.utc).isoformat()})
+                if process.poll() is not None:
+                    break
+                time.sleep(self.poll_interval)
+            code = process.wait()
+        with stderr_path.open(errors='replace') as emitted:
+            emitted.seek(log_position)
+            remaining = pending_text + emitted.read()
+        for line in remaining.splitlines():
+            if line.startswith('canonical: MIR function '):
+                functions.add(line[len('canonical: MIR function '):])
+            if line.startswith(('canonical semantic:', 'canonical parser:', 'mir-error:', 'amd64:')):
+                diagnostics += 1
         metrics_text = metrics.read_text()
         rss = re.search(r'Maximum resident set size \(kbytes\): (\d+)', metrics_text)
         failure = ''
-        if result.returncode != expected:
-            failure = 'command exit ' + str(result.returncode) + ', expected ' + str(expected)
+        if code != expected:
+            failure = 'command exit ' + str(code) + ', expected ' + str(expected)
         elif any(not path.is_file() or path.stat().st_size == 0 for path in outputs):
             failure = 'missing or empty command output'
         if trace and not failure:
@@ -288,13 +371,25 @@ class CommandRunner:
                         failure = 'unexpected executable at compiler boundary: ' + executable
                         break
         record = {'phase': name, 'status': 'FAIL' if failure else 'PASS', 'command': command,
-                  'cwd': str(self.root), 'started_utc': started, 'exit': result.returncode,
+                  'cwd': str(self.root), 'started_utc': started, 'exit': code,
                   'expected_exit': expected, 'seconds': time.monotonic() - start,
                   'peak_rss_kb': int(rss.group(1)) if rss else None,
+                  'sampled_tree_peak_rss_kb': peak_tree_rss,
+                  'sampling_definition': 'Live descendant main-thread child lists sampled; live CPU may decrease when children exit. Final GNU time CPU/RSS are authoritative. VmData is mapped data, not cumulative allocator event counts.',
+                  'mir_functions_processed': len(functions), 'compiler_diagnostics': diagnostics,
+                  'diagnostic_count_rule': 'canonical parser/semantic, mir-error and amd64 error line prefixes',
                   'rss_definition': 'GNU time maximum resident set size of command/descendants (KiB)',
                   'output_sha256': {str(path): digest(path) for path in outputs if path.is_file()},
                   'stdout_sha256': digest(stdout_path), 'stderr_sha256': digest(stderr_path), 'failure': failure}
+        for key, label in [('user_seconds', 'User time (seconds)'), ('system_seconds', 'System time (seconds)')]:
+            value = re.search(re.escape(label) + r': ([0-9.]+)', metrics_text)
+            record[key] = float(value.group(1)) if value else None
+        cpu_percent = re.search(r'Percent of CPU this job got: ([0-9.]+)%', metrics_text)
+        record['cpu_percent'] = float(cpu_percent.group(1)) if cpu_percent else None
         write_json(receipt, record)
+        write_json(self.logs / 'heartbeat.json', {'phase': name, 'status': record['status'],
+                   'seconds': record['seconds'], 'peak_rss_kb': record['peak_rss_kb'],
+                   'mir_functions_processed': len(functions), 'compiler_diagnostics': diagnostics})
         (self.logs / 'active.json').unlink()
         self.results.append(record)
         write_json(self.logs / 'results.json', self.results)
@@ -317,7 +412,7 @@ def main():
     logs = evidence / 'logs'; logs.mkdir()
     build = evidence / 'build'; build.mkdir()
     root = out / 'checkout'
-    statuses = {name: 'NOT RUN' for name in ['source', 'seed', 'stage1', 'stage2', 'stage3', 'convergence', 'production']}
+    statuses = {name: 'NOT RUN' for name in ['source', 'seed', 'stage1', 'stage2', 'stage3', 'stage3_selfcompile', 'convergence', 'production']}
     active_phase = 'source'
     write_json(evidence / 'status.json', statuses)
     try:
@@ -327,21 +422,19 @@ def main():
         # The regression suite (test/native-bootstrap-diagnostic/*.sh) invokes
         # ripgrep (rg) directly, so it is a hard requirement; surface a clear
         # diagnostic here instead of failing deep inside the build.
-        for name in ['git', 'gcc', 'make', 'as', 'ld', 'strace', 'time', 'bash', 'python3',
-                     'nm', 'objdump', 'readelf', 'sha256sum', 'cmp', 'awk', 'sed', 'grep', 'file', 'timeout', 'strings', 'rg']:
+        for name in ['git', 'gcc', 'cc', 'make', 'as', 'ld', 'strace', 'time', 'bash', 'python3',
+                     'nm', 'objdump', 'readelf', 'sha256sum', 'cmp', 'awk', 'sed', 'grep', 'file', 'timeout', 'strings',
+                     'tar', 'find', 'xargs', 'sort', 'head', 'tail', 'stat', 'wc', 'cut', 'tr', 'dd', 'mkdir', 'rm', 'cp', 'chmod']:
             path = Path('/usr/bin', name)
             if not path.exists():
-                if name == 'rg':
-                    raise RuntimeError(
-                        'required host tool missing: rg (ripgrep). The production '
-                        'regression suite invokes ripgrep directly. Install it with '
-                        '"apt-get install -y ripgrep" (or your platform equivalent) and '
-                        'ensure /usr/bin/rg is on PATH; do not silently skip.')
                 raise RuntimeError('required host tool missing: ' + name)
         host_tools = out / 'host-tools'
         host_tool_manifest = prepare_host_tools(host_tools)
         revision = create_checkout(args.repository, args.revision, root)
         initial = source_manifest(root)
+        launcher_hash = digest(Path(__file__))
+        if initial['misc/scripts/cleanroom-selfhost.py']['sha256'] != launcher_hash:
+            raise RuntimeError('invoking controller differs from frozen committed controller')
         # Preserve executable bits but make all tracked regular input files read-only.
         for name in initial:
             path = root / name
@@ -354,6 +447,7 @@ def main():
         write_json(evidence / 'configuration.json', {'revision': revision, 'mode': args.mode,
                    'target': 'linux/amd64', 'environment': environment, 'platform': platform.platform(),
                    'host_tools': host_tool_manifest,
+                   'controller_sha256': launcher_hash,
                    'clean_clone': 'git clone --no-local --no-hardlinks --no-checkout; detached exact revision',
                    'checkpoint_reuse': False, 'stage_transition_execve_audit': True})
         runner.run('toolchain', ['sh', '-c', 'uname -a; gcc --version; as --version; ld --version; make --version; python3 --version; rg --version'])
@@ -407,6 +501,18 @@ def main():
             statuses[f'stage{stage}'] = 'PASS'
             write_json(evidence / 'status.json', statuses)
         if args.mode == 'full':
+            active_phase = 'stage3_selfcompile'
+            rebuilt_assembly, rebuilt_binary = build / 'stage3-rebuild.sasm', build / 'stage3-rebuild'
+            verify_sources(root, revision, initial)
+            runner.run('stage3-selfcompile', [build / 'stage3', '--compile-unit', rebuilt_assembly, *sources], [rebuilt_assembly], trace=True)
+            verify_expected_functions(rebuilt_assembly.read_text(), expected)
+            runner.run('stage3-selfemit', [build / 'stage3', '--emit-bin', rebuilt_assembly, rebuilt_binary], [rebuilt_binary], trace=True)
+            runner.run('stage3-selfverify', ['sh', 'misc/scripts/verify_true_selfhost.sh', rebuilt_binary])
+            runner.run('stage3-selfexecution', ['bash', 'src/cmd/dist/checks/selfhost-execution.sh', rebuilt_binary, evidence / 'stage3-rebuild-execution'])
+            compare_artifacts(build / 'stage3.sasm', rebuilt_assembly)
+            compare_artifacts(build / 'stage3', rebuilt_binary)
+            verify_sources(root, revision, initial)
+            statuses['stage3_selfcompile'] = 'PASS'
             active_phase = 'convergence'
             if labels[2] != labels[3]:
                 raise RuntimeError('reachable function sets do not converge')
@@ -421,7 +527,7 @@ def main():
             statuses['convergence'] = 'PASS'
         expected_outputs = {'seed', 'stage1.ir', 'stage1'}
         if args.mode == 'full':
-            expected_outputs.update({'stage2.sasm', 'stage2', 'stage3.sasm', 'stage3'})
+            expected_outputs.update({'stage2.sasm', 'stage2', 'stage3.sasm', 'stage3', 'stage3-rebuild.sasm', 'stage3-rebuild'})
         if {path.name for path in build.iterdir()} != expected_outputs:
             raise RuntimeError('unexpected missing or extra bootstrap output')
         shutil.copy2(build / f'stage{final_stage}', root / 'bin/s_compiler')
@@ -429,7 +535,9 @@ def main():
         shutil.copy2(build / 'stage1.ir', generated / 'compiler.ir')
         compiler_hash = digest(root / 'bin/s_compiler')
         active_phase = 'production'
-        runner.run('production', ['make', '-o', 'compiler', 'selfhost-canonical-production-check'])
+        runner.run('production', ['make', '--trace', '-o', 'compiler', 'selfhost-canonical-production-check'])
+        production_tests = production_inventory(root, (logs / 'production.stdout.log').read_text())
+        write_json(evidence / 'production-test-inventory.json', production_tests)
         if digest(root / 'bin/s_compiler') != compiler_hash:
             raise RuntimeError('production suite replaced accepted compiler')
         verify_sources(root, revision, initial)
@@ -438,7 +546,9 @@ def main():
         write_json(evidence / 'source-manifest.after.json', {'revision': revision, 'files': source_manifest(root)})
         write_json(evidence / 'status.json', statuses)
         write_json(evidence / ('ACCEPTED.json' if args.mode == 'full' else 'CORE-PASSED.json'),
-                   {'revision': revision, 'mode': args.mode, 'status': statuses, 'checkpoint_reuse': False})
+                   {'revision': revision, 'mode': args.mode, 'status': statuses, 'checkpoint_reuse': False,
+                    'production_tests': production_tests, 'commands': runner.results,
+                    'artifact_sha256': {p.name: digest(p) for p in sorted(build.iterdir())}})
         print('Clean-room ' + args.mode + ' acceptance: PASS', flush=True)
     except BaseException as error:
         mark_failure(statuses, active_phase)

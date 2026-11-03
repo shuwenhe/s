@@ -130,6 +130,31 @@ class CleanroomTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,'unexpected executable'):
             runner.run('delegated',[sys.executable,'-c','import os; os.execv("/usr/bin/true",["true"])'],trace=True)
 
+    def test_production_trace_must_show_every_declared_test_command(self):
+        root=self.base/'suite';root.mkdir()
+        (root/'makefile').write_text('selfhost-canonical-parser-check: seed\n\t@bash test/parser.sh\n\nselfhost-canonical-production-check: compiler selfhost-canonical-parser-check\n\t@python3 test/types.py\n')
+        with self.assertRaisesRegex(RuntimeError,'not executed'):
+            self.m.production_inventory(root,'bash test/parser.sh\nparser: PASS\n')
+        report=self.m.production_inventory(root,'bash test/parser.sh\nparser: PASS\npython3 test/types.py\ntypes: PASS\n')
+        self.assertEqual(report['test_commands'],2)
+        self.assertEqual(report['pass_summaries'],2)
+        self.assertEqual(report['missing_commands'],[])
+
+    def test_running_command_retains_resources_and_compiler_progress(self):
+        import json
+        logs=self.base/'logs';logs.mkdir()
+        runner=self.m.CommandRunner(self.base,logs,self.m.clean_environment(self.base,self.base/'tmp'),poll_interval=0.01)
+        runner.run('observed',[sys.executable,'-c','import sys,time; print("canonical: MIR function demo.main",file=sys.stderr,flush=True); time.sleep(0.15)'])
+        receipt=json.loads((logs/'observed.json').read_text())
+        self.assertEqual(receipt['mir_functions_processed'],1)
+        self.assertEqual(receipt['compiler_diagnostics'],0)
+        self.assertGreater(receipt['sampled_tree_peak_rss_kb'],0)
+        self.assertGreaterEqual(receipt['user_seconds'],0)
+        self.assertTrue((logs/'observed.resources.tsv').read_text().count('\n')>1)
+        heartbeat=json.loads((logs/'heartbeat.json').read_text())
+        self.assertEqual(heartbeat['phase'],'observed')
+        self.assertEqual(heartbeat['status'],'PASS')
+
     def test_success_missing_output_is_not_pass(self):
         logs=self.base/'logs';logs.mkdir()
         runner=self.m.CommandRunner(self.base,logs,self.m.clean_environment(self.base,self.base/'tmp'))

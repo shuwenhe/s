@@ -19,7 +19,8 @@ for name in ['ssa_type_supported','ssa_record_index','ssa_array_element']:
  source+=function(ssa,name)+'\n'
 source+='''func main() int {
     record := mir_program_record { symbol: "shapes.Item" }
-    records := [record];
+    instantiated := mir_program_record { symbol: "shapes.Box__mono_int", field_names: ["value"], field_types: ["int"] }
+    records := [record, instantiated];
     enums := mir_program_enum[]()
     ssa_record := function_ssa_record { symbol: "shapes.Item" }
     ssa_records := [ssa_record];
@@ -28,8 +29,17 @@ source+='''func main() int {
     if !ssa_type_supported("&int", ssa_records) { return 7 }
     if !ssa_type_supported("&mutstring", ssa_records) { return 8 }
     if !ssa_type_supported("&bool", ssa_records) { return 9 }
+    if !mir_program_type_supported("&shapes.Box__mono_int", records, enums) { return 18 }
     if mir_program_type_supported("Unknown", records, enums) { return 3 }
     if mir_program_type_supported("Unknown[int]", records, enums) { return 4 }
+    if mir_program_type_supported("vec[Unknown]", records, enums) { return 10 }
+    if mir_program_type_supported("map[string,Unknown]", records, enums) { return 11 }
+    if mir_program_type_supported("set[Unknown]", records, enums) { return 12 }
+    if mir_program_type_supported("array[Unknown]", records, enums) { return 13 }
+    if mir_program_type_supported("option[Unknown]", records, enums) { return 14 }
+    if mir_program_type_supported("result[Unknown,int]", records, enums) { return 15 }
+    if mir_program_type_supported("shapes.Item[Unknown]", records, enums) { return 16 }
+    if mir_program_type_supported("Item[Unknown]", records, enums) { return 17 }
     if ssa_type_supported("&Unknown", ssa_records) { return 5 }
     if ssa_type_supported("Unknown[]", ssa_records) { return 6 }
     return 42
