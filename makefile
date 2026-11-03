@@ -482,6 +482,7 @@ selfhost-canonical-parser-check: seed-compiler-bin
 
 .PHONY: selfhost-canonical-production-check
 selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
+	@python3 test/native-bootstrap-diagnostic/native_rope_writer_check.py
 	@python3 test/native-bootstrap-diagnostic/native_source_join_check.py
 	@python3 test/native-bootstrap-diagnostic/native_gc_check.py
 	@python3 test/native-bootstrap-diagnostic/native_gc_object_check.py
