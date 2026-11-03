@@ -657,6 +657,33 @@ func mir_program_type_supported(string type_name, mir_program_record[] records, 
     if mir_program_enum_index(enums, type_name) >= 0 { return true }
     element := mir_program_array_element(type_name)
     if element != "" { return mir_program_type_supported(element, records, enums) }
+    // A generic instance "base[args]" (e.g. vec[ir.node], map[string]int) denotes a
+    // concrete, instantiated type. The C seed reference compiler does not enforce
+    // this MIR-level type check and accepts such reference parameters, so the
+    // self-hosting compiler must too or the native bootstrap dies with
+    // "unproven reference parameter" (e.g. bloop.preserve_stmts' stmts: &vec[ir.node]).
+    // Accept it when base names a known record/enum (the instantiated record always
+    // exists in the program) or a builtin generic container; genuinely unknown
+    // bases such as Unknown[int] remain rejected, per native_type_identity_check.
+    // Deeper SSA borrow validation still enforces actual reference correctness.
+    b := 0
+    while b < len(type_name) {
+        if __host_slice(type_name, b, b + 1) == "[" {
+            base := __host_slice(type_name, 0, b)
+            if mir_program_record_index(records, base) >= 0 { return true }
+            if mir_program_record_index_unqualified(records, base) >= 0 { return true }
+            if mir_program_enum_index(enums, base) >= 0 { return true }
+            if mir_program_record_index(records, type_name) >= 0 { return true }
+            if base == "vec" { return true }
+            if base == "map" { return true }
+            if base == "set" { return true }
+            if base == "array" { return true }
+            if base == "option" { return true }
+            if base == "result" { return true }
+            break
+        }
+        b = b + 1
+    }
     return false
 }
 

@@ -652,22 +652,99 @@ s_host_args_value:
 .type s_write_string_fd, @function
 s_write_string_fd:
     push %rbx
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    mov %rdi, %r12
     mov %rsi, %rbx
+    xor %r13d, %r13d
+    xor %r14d, %r14d
+    xor %r15d, %r15d
     cmpq $6, (%rbx)
-    je .Lwrite_string_rope
+    jne .Lwrite_string_flat
+    # A left-deep public MIR rope may contain hundreds of thousands of nodes.
+    # Keep pending right children in a private growable mapping, not call frames.
+    xor %edi, %edi
+    mov $4096, %esi
+    mov $3, %edx
+    mov $34, %r10d
+    mov $-1, %r8
+    xor %r9d, %r9d
+    mov $9, %eax
+    syscall
+    cmp $-4095, %rax
+    jae .Lwrite_string_finish
+    mov %rax, %r13
+    mov $4096, %r14
+.Lwrite_string_node:
+    cmpq $6, (%rbx)
+    jne .Lwrite_string_flat
+    lea (,%r15,8), %rax
+    cmp %r14, %rax
+    jb .Lwrite_string_push_right
+    mov %r14, %rdx
+    shl $1, %rdx
+    jc .Lwrite_string_no_memory
+    mov %r13, %rdi
+    mov %r14, %rsi
+    mov $1, %r10d
+    mov $25, %eax
+    syscall
+    cmp $-4095, %rax
+    jae .Lwrite_string_finish
+    mov %rax, %r13
+    mov %rdx, %r14
+.Lwrite_string_push_right:
+    mov 24(%rbx), %rax
+    mov %rax, (%r13,%r15,8)
+    inc %r15
+    mov 16(%rbx), %rbx
+    jmp .Lwrite_string_node
+.Lwrite_string_flat:
     lea 16(%rbx), %rsi
     mov 8(%rbx), %rdx
+    test %rdx, %rdx
+    jz .Lwrite_string_next
+.Lwrite_string_bytes:
+    mov %r12, %rdi
     call s_write
-    pop %rbx
-    ret
-.Lwrite_string_rope:
-    mov 16(%rbx), %rsi
-    call s_write_string_fd
+    cmp $-4, %rax
+    je .Lwrite_string_bytes
     test %rax, %rax
-    js .Lwrite_string_done
-    mov 24(%rbx), %rsi
-    call s_write_string_fd
-.Lwrite_string_done:
+    js .Lwrite_string_finish
+    jz .Lwrite_string_no_progress
+    add %rax, %rsi
+    sub %rax, %rdx
+    jnz .Lwrite_string_bytes
+.Lwrite_string_next:
+    test %r15, %r15
+    jz .Lwrite_string_success
+    dec %r15
+    mov (%r13,%r15,8), %rbx
+    jmp .Lwrite_string_node
+.Lwrite_string_success:
+    xor %eax, %eax
+    jmp .Lwrite_string_finish
+.Lwrite_string_no_memory:
+    mov $-12, %rax
+    jmp .Lwrite_string_finish
+.Lwrite_string_no_progress:
+    mov $-5, %rax
+.Lwrite_string_finish:
+    test %r13, %r13
+    jz .Lwrite_string_restore
+    mov %rax, %rbx
+    mov %r13, %rdi
+    mov %r14, %rsi
+    mov $11, %eax
+    syscall
+    mov %rbx, %rax
+.Lwrite_string_restore:
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
     pop %rbx
     ret
 .size s_write_string_fd, .-s_write_string_fd
