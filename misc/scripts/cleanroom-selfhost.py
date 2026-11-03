@@ -111,11 +111,28 @@ def verify_sources(root, revision, manifest):
         raise RuntimeError('frozen source manifest changed')
 
 
-def clean_environment(root, temporary, inherited=None):
+def prepare_host_tools(directory, inherited=None):
+    """Pin the regression suite's ripgrep without inheriting unrelated host PATHs."""
+    inherited = os.environ if inherited is None else inherited
+    candidate = shutil.which('rg', path=inherited.get('PATH', '/usr/bin:/bin'))
+    if candidate is None:
+        raise RuntimeError('required production dependency missing: rg (ripgrep)')
+    source = Path(candidate).resolve()
+    expected = digest(source)
+    fresh_directory(directory)
+    target = Path(directory) / 'rg'
+    shutil.copy2(source, target)
+    if digest(target) != expected:
+        raise RuntimeError('host ripgrep changed while being pinned')
+    return {'rg': {'source': str(source), 'path': str(target), 'sha256': expected}}
+
+
+def clean_environment(root, temporary, inherited=None, host_tools=None):
     # Deliberate allowlist: no S_*, MAKEFLAGS, CC, CFLAGS, preload, runner or caches.
     temporary = Path(temporary)
     temporary.mkdir(parents=True, exist_ok=True)
-    return {'PATH': '/usr/bin:/bin', 'LANG': 'C', 'LC_ALL': 'C', 'TZ': 'UTC',
+    path = '/usr/bin:/bin' if host_tools is None else str(host_tools) + ':/usr/bin:/bin'
+    return {'PATH': path, 'LANG': 'C', 'LC_ALL': 'C', 'TZ': 'UTC',
             'TMPDIR': str(temporary), 'S_SOURCE_ROOT': str(root),
             'S_TARGET_OS': 'linux', 'S_TARGET_ARCH': 'amd64',
             'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': '/dev/null'}
@@ -306,9 +323,23 @@ def main():
     try:
         if platform.system() != 'Linux' or platform.machine() not in ['x86_64', 'amd64']:
             raise RuntimeError('clean-room native acceptance requires Linux/amd64')
-        for name in ['git', 'gcc', 'make', 'as', 'ld', 'strace']:
-            if not Path('/usr/bin', name).exists():
+        # Explicit, fail-loud dependency detection before any build or test runs.
+        # The regression suite (test/native-bootstrap-diagnostic/*.sh) invokes
+        # ripgrep (rg) directly, so it is a hard requirement; surface a clear
+        # diagnostic here instead of failing deep inside the build.
+        for name in ['git', 'gcc', 'make', 'as', 'ld', 'strace', 'time', 'bash', 'python3',
+                     'nm', 'objdump', 'readelf', 'sha256sum', 'cmp', 'awk', 'sed', 'grep', 'file', 'timeout', 'strings', 'rg']:
+            path = Path('/usr/bin', name)
+            if not path.exists():
+                if name == 'rg':
+                    raise RuntimeError(
+                        'required host tool missing: rg (ripgrep). The production '
+                        'regression suite invokes ripgrep directly. Install it with '
+                        '"apt-get install -y ripgrep" (or your platform equivalent) and '
+                        'ensure /usr/bin/rg is on PATH; do not silently skip.')
                 raise RuntimeError('required host tool missing: ' + name)
+        host_tools = out / 'host-tools'
+        host_tool_manifest = prepare_host_tools(host_tools)
         revision = create_checkout(args.repository, args.revision, root)
         initial = source_manifest(root)
         # Preserve executable bits but make all tracked regular input files read-only.
@@ -316,15 +347,16 @@ def main():
             path = root / name
             if not path.is_symlink():
                 path.chmod(path.stat().st_mode & ~0o222)
-        environment = clean_environment(root, out / 'temporary')
+        environment = clean_environment(root, out / 'temporary', host_tools=host_tools)
         environment['S_CANONICAL_TRACE'] = '1'
         runner = CommandRunner(root, logs, environment)
         write_json(evidence / 'source-manifest.json', {'revision': revision, 'files': initial})
         write_json(evidence / 'configuration.json', {'revision': revision, 'mode': args.mode,
                    'target': 'linux/amd64', 'environment': environment, 'platform': platform.platform(),
+                   'host_tools': host_tool_manifest,
                    'clean_clone': 'git clone --no-local --no-hardlinks --no-checkout; detached exact revision',
                    'checkpoint_reuse': False, 'stage_transition_execve_audit': True})
-        runner.run('toolchain', ['sh', '-c', 'uname -a; gcc --version; as --version; ld --version; make --version; python3 --version'])
+        runner.run('toolchain', ['sh', '-c', 'uname -a; gcc --version; as --version; ld --version; make --version; python3 --version; rg --version'])
         runner.run('source-archive', ['git', 'archive', '--format=tar', '-o', evidence / 'source.tar', revision], [evidence / 'source.tar'])
         closure = evidence / 'sources'
         runner.run('source-closure', ['bash', 'src/cmd/dist/source_closure.sh', 'src/cmd/compile/main.s', closure], [closure])

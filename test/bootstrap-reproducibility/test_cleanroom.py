@@ -76,6 +76,18 @@ class CleanroomTests(unittest.TestCase):
             self.m.fresh_directory(output)
         self.assertEqual(sentinel.read_text(), 'keep')
 
+    def test_required_ripgrep_is_copied_and_pinned_without_exposing_host_path(self):
+        import shutil
+        tools=self.base/'host-tools'
+        manifest=self.m.prepare_host_tools(tools)
+        self.assertEqual({p.name for p in tools.iterdir()},{'rg'})
+        self.assertEqual(self.m.digest(tools/'rg'),manifest['rg']['sha256'])
+        env=self.m.clean_environment(self.base/'root',self.base/'tmp',host_tools=tools)
+        self.assertEqual(env['PATH'],str(tools)+':/usr/bin:/bin')
+        subprocess.run([tools/'rg','--version'],check=True,capture_output=True,env=env)
+        with self.assertRaisesRegex(RuntimeError,'rg|ripgrep'):
+            self.m.prepare_host_tools(self.base/'missing-tools',{'PATH':'/nonexistent'})
+
     def test_environment_removes_bootstrap_and_compiler_overrides(self):
         env=self.m.clean_environment(self.base/'root',self.base/'tmp',{'PATH':'/old/bin','S_BOOTSTRAP_RUNNER':'old-stage1','S_SOURCE_ROOT':'old','S_CLOSURE_MODE':'test','LD_PRELOAD':'old.so','CC':'old-cc','CFLAGS':'bad','MAKEFLAGS':'-n','HOME':'/home/example'})
         for key in ['S_BOOTSTRAP_RUNNER','S_CLOSURE_MODE','LD_PRELOAD','CC','CFLAGS','MAKEFLAGS']:
