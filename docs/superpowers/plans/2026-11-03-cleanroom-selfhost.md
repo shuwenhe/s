@@ -24,15 +24,15 @@
 - Standard-library coverage must name exact packages and distinguish unsupported packages from successful application builds.
 
 ### Task 1: Freeze verified source (Phase 1)
-- [ ] Inspect branch/index/worktree, existing evidence and required tracked files.
-- [ ] Run complete core production regressions against installed verified compiler; retain command, exit, duration, RSS and hashes.
-- [ ] Commit mission spec, plan and source-verification receipt. Record exact revision and 268-file ordered closure hashes.
+- [x] Inspect branch/index/worktree, existing evidence and required tracked files.
+- [x] Run complete core production regressions against installed verified compiler; retain command, exit, duration, RSS and hashes.
+- [x] Commit mission spec, plan and source-verification receipt. Record exact revision and 268-file ordered closure hashes.
 
 ### Task 2: Clean-room controller (Phases 2–3)
 **Files:** misc/scripts/cleanroom-selfhost.py; test/bootstrap-reproducibility/test_cleanroom.py; doc/selfhost-verification/cleanroom.md.
 **Interface:** --repository PATH --revision SHA --output NEW_PATH [--mode full|core]. No resume option. Exact revision is cloned locally without hardlinks. All commands run in the clean checkout, with separate build/evidence directories.
-- [ ] Write behavioral tests for fresh clone isolation, dirty source rejection, reuse refusal, environment sanitation, failure logging, source drift, byte comparison and function-label mismatch; observe RED.
-- [ ] Implement minimum controller, manifest, per-command stdout/stderr/time/RSS/output-hash receipts and closure/source integrity checks; observe GREEN.
+- [x] Write behavioral tests for fresh clone isolation, dirty source rejection, reuse refusal, environment sanitation, failure logging, source drift, byte comparison and function-label mismatch; observe RED.
+- [x] Implement minimum controller, manifest, per-command stdout/stderr/time/RSS/output-hash receipts and closure/source integrity checks; observe GREEN.
 - [ ] Commit controller/tests before freezing the clean-room revision.
 - [ ] Run full fresh chain; on failure preserve attempt, fix tested cause, commit and restart in a new directory.
 - [ ] Verify all stages, production regressions using stage3 and exact Stage2/Stage3 assembly/ELF equality.
