@@ -1,75 +1,63 @@
-# Clean-room self-hosting
+# Clean-Room Self-Host Bootstrap — Dependency Manifest
 
-Run on Linux/amd64 with Python 3, Git, GNU make, GCC, binutils, GNU time and
-strace. Commit all required inputs first. Choose an output path that does not
-exist. The command creates a separate, detached, non-hardlinked checkout of the
-exact revision. It never copies the working tree's ignored outputs.
+This document lists every external tool the reproducible self-host acceptance
+pipeline (`misc/scripts/cleanroom-selfhost.py`) and the production regression
+suite require. The controller fails loudly with a clear diagnostic if any
+required tool is missing, rather than silently skipping a check.
 
-```sh
-python3 misc/scripts/cleanroom-selfhost.py \
-  --repository . --revision HEAD --output /tmp/s-cleanroom-new-run
+## Build and bootstrap host tools
+
+Verified by the controller at `/usr/bin/<name>` before any build starts.
+
+| Tool | Purpose |
+|------|---------|
+| `git` | Clone the frozen revision; verify committed blobs. |
+| `gcc` | Build the C Seed reference compiler. |
+| `make` | Drive the seed/stage build targets. |
+| `as`  | GNU assembler (native codegen backend). |
+| `ld`  | GNU linker (native executable linking). |
+| `strace` | Audit `execve` at the compiler boundary. |
+| `time` | `/usr/bin/time -v` peak-RSS measurement. |
+| `bash` | Bootstrap shell scripts (`source_closure.sh`, checks). |
+| `python3` | Controller, diagnostic scripts, oracle checks. |
+| `nm`, `objdump`, `readelf` | Symbol/section inspection of artifacts. |
+| `sha256sum`, `cmp` | Artifact hashing and byte comparison. |
+| `awk`, `sed`, `grep` | Source-closure and diagnostic text processing. |
+| `file` | Artifact type sanity. |
+| `timeout` | Bound any single command. |
+| `strings` | Binary content inspection. |
+
+## Regression-suite tools
+
+| Tool | Purpose |
+|------|---------|
+| `rg` (ripgrep) | **Required.** The production regression suite invokes `rg -q` directly in `test/native-bootstrap-diagnostic/*.sh` (e.g. `ssa-lower-binding_check.sh`, `canonical_statement_boundary_production_check.sh`, `canonical_tuple_tail_production_check.sh`). 180+ `rg` invocations grep AST dumps and error logs. |
+
+`rg` is pinned into the controller's isolated `host-tools/` directory and its
+SHA-256 recorded, but it must be present on the host first. Install with:
+
+```
+apt-get install -y ripgrep      # Debian/Ubuntu; provides /usr/bin/rg
+# pacman -S ripgrep             # Arch
+# dnf install -y ripgrep        # Fedora/RHEL
 ```
 
-`--mode full` is the default. It builds C Seed, the complete 268-source native
-Stage1, Stage2 using only that Stage1, and Stage3 using only that Stage2. There is
-no resume option. Every failed attempt remains in its own directory. Fix and
-commit the cause, then use a new output directory.
+If `rg` is missing the controller raises
+`required host tool missing: rg (ripgrep). The production regression suite
+invokes ripgrep directly...` — it does **not** silently skip the regression.
 
-`--mode core` builds a new C Seed and full-source native Stage1, then runs the
-production suite using that Stage1. It leaves Stage2, Stage3 and convergence as
-NOT RUN and cannot write full acceptance. This is the faster per-commit CI gate.
+## Deterministic environment
 
-The controller sanitizes inherited build/runner/loader settings, pins the target
-and source root, and makes tracked source files read-only. Every Git invocation ignores inherited configuration overrides, global attributes
-and hooks. Checkout bytes are compared against the selected commit’s Git blobs.
-It checks tracked contents, executable bits and Git revision throughout the run. Generated files
-live in ignored checkout directories or the evidence tree, never in source files.
+The controller builds a deterministic PATH for every stage:
+`host-tools:/usr/bin:/bin`, and strip/deny-list bootstrap and compiler
+override variables (`S_BOOTSTRAP_RUNNER`, `S_SOURCE_ROOT`, `S_CLOSURE_MODE`,
+`LD_PRELOAD`, `CC`, `CFLAGS`, `MAKEFLAGS`, `GIT_CONFIG_*`) so a contaminated
+host environment cannot influence the build.
 
-Every compiler boundary is traced with strace. Successful exec calls may target
-only the selected newly built producer, the native assembler/linker, and the declared
-`mkdir`/`rm` temporary-file helpers. This
-prevents delegation to another compiler from being mistaken for native bootstrap.
-Tracing requires ptrace permission for the controller's own new child processes;
-containers which deny it must grant that permission explicitly. The controller
-never signals unrelated or existing processes.
+## Missing-dependency behavior (covered by tests)
 
-## Evidence
-
-`OUTPUT/evidence/` contains:
-
-- `source.tar`: exact committed source archive.
-- `configuration.json`: revision, environment, host and build configuration.
-- `source-manifest.json` and `.after.json`: all tracked input hashes and modes.
-- `sources`, `source.sha256`, `closure-sha256.json`: ordered 268-file closure.
-- `stageN-source-sha256.json`: actual source hashes at each stage boundary.
-- `logs/`: separate stdout, stderr, GNU-time metrics and JSON command receipts;
-  compiler transitions also retain execve traces.
-- `build/`: newly built seed, Stage1 IR, all three native compilers and Stage2/3
-  assembly. No earlier checkpoint is imported.
-- `compiler-source.s`, `compiler.mir`, `oracle-input-sha256.json`: exact joined
-  source and public MIR freshly generated using the new Stage1. An independent
-  Python graph traversal computes expected entry/global-initializer reachability
-  before SSA pruning. The reserved `.__global_init_` root rule is specific to the
-  frozen `program_environment.s` implementation.
-- `expected-functions.json`, `stageN-functions.json`: original-order reachable
-  function inventory, dense native indices, direct-call edges and startup roots.
-  Both assembly outputs must match this independent MIR inventory, not merely
-  each other. Duplicate/undefined labels and wrong entries also fail.
-- `convergence.json`: exact byte comparisons of assembly and ELF outputs.
-- `artifact-sha256.json`, `status.json`, `ACCEPTED.json` or `FAILED.json`.
-
-`ACCEPTED.json` is written only after all three stages, their execution/type/GC/
-object checks, source manifests, byte convergence and complete production suite
-pass. `CORE-PASSED.json` is deliberately a different receipt.
-
-## Controller tests
-
-```sh
-python3 -m unittest discover -s test/bootstrap-reproducibility -v
-```
-
-These create real temporary Git repositories and subprocesses. They check fresh
-checkout isolation, dirty-source rejection, refused output reuse, source drift,
-sanitized environments, retained failure logs, missing outputs, byte differences,
-function-label errors and rejected delegation. The two exec-trace tests require
-permission to trace their newly spawned processes.
+`test/bootstrap-reproducibility/test_cleanroom.py` pins `rg` into a host-tools
+directory and asserts the controller raises a clear error when `rg` is absent
+from the inherited PATH. The upfront host-tool loop in `cleanroom-selfhost.py`
+reproduces this diagnostic for every required tool, so a clean-room run fails
+loudly and early on a missing dependency instead of mid-build.
