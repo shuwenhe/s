@@ -126,20 +126,15 @@ that use printing and other constructs outside P0:
 
 ## Self-hosting status
 
-Latest verification (2026-10-29): eight backend helper return signatures now
-explicitly match their tagged `result[...]` bodies and consumers. All 40
-production checks pass. Complete-source Stage1 next stops at e3020 in
-`build_object_interpreted_legacy`. See
-[the current blocker and measured evidence](doc/selfhost-result-contract-20261029.md).
+Native self-hosting is verified on Linux/amd64 (2026-11-03): C seed → native
+stage1 → stage2 → stage3, using the complete 268-file compiler closure. Stage2
+and freshly compiled stage3 have byte-identical assembly and executables.
+The full production regression suite and native validator rejection tests pass.
+`bin/s_compiler` is the verified stage3 compiler, used by the `bin/s` driver.
 
-Full native self-hosting is not yet verified. The current compiler is seed-hosted;
-P0 Native output contains neither the seed compiler nor its interpreter runtime.
-That distinction does not mean the compiler can yet compile its complete source.
-
-Bootstrap scripts and `make selfhost` are experimental. Acceptance still requires
-complete-source compilation, removal of launcher/interpreter delegation, and a
-verified stage1 → stage2 → stage3 chain. See
-[the pipeline status](doc/compile-pipeline-status.md) for remaining work.
+See [the verification report](doc/selfhost-verification/native-selfhost-2026-11-03.md)
+for checkpoint provenance, hashes, measured results and reproduction commands.
+Run `make selfhost` to bootstrap again. Full compiler builds take tens of minutes.
 
 ## Runtime foundation
 

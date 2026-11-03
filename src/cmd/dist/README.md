@@ -1,4 +1,18 @@
-# Current native bootstrap status (2026-10-25)
+# Native bootstrap verified (2026-11-03)
+
+The complete 268-source compiler closure has passed C seed -> native stage1 ->
+stage2 -> stage3. A fresh stage2 -> stage3 compile completed successfully; both
+assembly and executable bytes converge exactly. All three stages pass native
+verification and source-dependent execution. The final stage3 passes the full
+production suite, strict validator execution, type identity and GC/object checks.
+
+The verified stage3 is installed as `bin/s_compiler`. Run `make selfhost` to
+reproduce the native bootstrap. See
+[the measured verification report](../../../doc/selfhost-verification/native-selfhost-2026-11-03.md)
+for provenance, hashes and evidence. The notes below describe earlier frontiers
+and do not describe the verified current state.
+
+# Historical native bootstrap status (2026-10-25)
 
 `make compiler` now builds a native 95-module S production compiler. Its CLI,
 Public MIR producer and native build commands use the canonical syntax AST,
