@@ -1,3 +1,5 @@
+# Historical draft only; active CI is .github/workflows/selfhost.yml. This file is retained unchanged below for provenance, not current acceptance.
+
 # Clean-room self-host acceptance.
 #
 # Builds the EXACT pinned revision from scratch (C Seed -> Stage1 -> Stage2 ->

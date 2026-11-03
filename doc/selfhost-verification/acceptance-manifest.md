@@ -1,3 +1,5 @@
+> Historical evidence for revision `0418d05c7`, retained for provenance. It does not certify the current source, the strengthened type-negative tests, Stage3 full selfcompilation, or GitHub Actions. Current reproduction instructions are in [cleanroom.md](cleanroom.md).
+
 # Clean-Room Acceptance — Manifest & Verification Matrix
 
 Deliverable companion to `cleanroom-acceptance-20261103.md`.

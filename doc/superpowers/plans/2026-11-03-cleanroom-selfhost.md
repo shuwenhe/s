@@ -5,7 +5,7 @@
 **Goal:** Prove a newly committed, isolated checkout builds fresh C Seed → Stage1 → Stage2 → Stage3 with exact convergence and regressions.
 **Architecture:** Keep all prior evidence. Freeze the verified source first; a committed Python controller creates a local no-hardlinks clone of an exact revision, rejects nonempty output directories, builds every stage anew, measures commands, verifies source identities and retains all output. CI invokes that same controller without caches. Compiler implementation stays unchanged unless a reproducible correctness failure requires a fix.
 **Tech Stack:** Python standard library, Git, GNU make/GCC/binutils, Linux/amd64, GitHub Actions.
-**Spec:** docs/superpowers/specs/2026-11-03-cleanroom-selfhost.md
+**Spec:** doc/superpowers/specs/2026-11-03-cleanroom-selfhost.md
 
 ## Global Constraints
 
@@ -48,3 +48,7 @@
 - [ ] Use fresh stage3 to compile actual stdlib packages and representative imported multi-file applications, including generics/methods/records/arrays/tuples/results and native C ABI.
 - [ ] Record explicit package coverage and reproducible failures; fix correctness failures before performance work.
 - [ ] Independently review whole change, verify evidence/source/artifact hashes and status checklist, commit final report.
+
+## Current mission addendum
+
+Main only; baseline c8448bcb8. Final source must retain strict instantiated-type descriptors, preflight and pin ripgrep, expose actual process heartbeat/CPU/RSS/function/diagnostic metrics, make Stage3 compile the full closure itself, run every production recipe with retained traces, and pass both local and GitHub full acceptance on the frozen commit. Authoring CI is preparation; local and remote acceptance remain separate NOT RUN statuses until their actual fresh commands pass. All previous evidence remains preserved.

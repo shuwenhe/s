@@ -1,3 +1,5 @@
+> Historical evidence for revision `0418d05c7`, retained for provenance. It does not certify the current source, the strengthened type-negative tests, Stage3 full selfcompilation, or GitHub Actions. Current reproduction instructions are in [cleanroom.md](cleanroom.md).
+
 # Clean-Room Self-Host Acceptance Report
 
 - **Date:** 2026-11-03
