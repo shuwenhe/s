@@ -1,0 +1,20 @@
+{
+  "command": [
+    "make",
+    "-o",
+    "compiler",
+    "selfhost-canonical-production-check"
+  ],
+  "exit": 0,
+  "seconds": 202.71245949000877,
+  "compiler_sha256": "83baacc7bb370141844d71029b9345a81c08c095197ddb1752dfead49fa896ce",
+  "source_head": "98c841fd188f8365b079d0392c768204ef169669",
+  "host": "Linux-5.15.0-173-generic-x86_64-with-glibc2.35",
+  "machine": "x86_64",
+  "gcc": "gcc (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0\nCopyright (C) 2021 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+  "target": "linux/amd64",
+  "configuration": {
+    "SEED_CFLAGS": "-O2",
+    "production_compiler": "verified installed stage3; make -o compiler"
+  }
+}
