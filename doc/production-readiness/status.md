@@ -55,3 +55,23 @@ Pending controller run. No new bootstrap or compiler correctness claim yet.
 - Full production run with tracing enabled exited 0; complete log production-unrestricted.log. It includes all prior recipes plus new alias test.
 - No S compiler source change in this increment; historical staged bootstrap evidence remains valid for the unchanged compiler closure. New staged rebuild not claimed.
 - Frozen Stage3 passed all 720 new integer differential cases; development/Stage1 fails. Logs integer-differential-stage3.log and integer-differential-diagnostic.log.
+
+### P0-002 in progress: full-width seed integers
+- Implemented immutable wide integer carrier (header 12) alongside existing odd immediates. Numeric operations, comparisons, integer text, native helpers and region evacuation now recognize boxes. Static large constants use read-only boxes; arithmetic boxes only results outside signed 63-bit range.
+- Direct seed regression observed failure at integer text before fix, now passes constants/arithmetic/returned record and array values, wide shifts/masking and division overflow. Wide main exit status separately observed wrong result 80 before startup fix, then correct result.
+- Rebuilt development compiler passed all 720 native differential cases, previously failing. Added direct seed standalone differential route; all 720 cases pass there too.
+- Fresh review identified a stale integer_only exclusion in loop evacuation/liveness. Added a parameter-free 20-million-iteration wide arithmetic test under 128 MiB; reproduced OOM exit 126, removed stale exclusions, test now passes. Initial parameterized probe passed because PARAM already excludes integer_only; no false regression claim.
+- Additional native-record suite fails at native_generic_pattern_ref_check.sh: unknown type_binding.constant_value option[expr] transfer type. Same failure reproduced with frozen original seed, establishing pre-existing fixture/dependency gap. No skip or assertion change; this remains to repair after current P0.
+- README's seed-runtime-regression target is absent; no runtime suite PASS claimed for that attempted command.
+- Full production suite rerun started after seed changes; pending. Fresh full bootstrap remains required before marking P0-002 complete.
+- Alias test now invokes tracked canonical shell driver through sh, avoiding dependence on ignored bin/s which clean-room production intentionally does not build.
+
+### Additional coverage and review follow-through
+- Expanded differential operands at both signed 63-bit carrier transitions; 900 cases now pass directly through seed standalone and rebuilt development compiler.
+- Direct seed memory/argument, dead-loop liveness/scratch growth, hexadecimal integer and record-copy rollback checks pass. Logs int64-argument-region.log, int64-loop-liveness.log, int64-hex-integers.log, int64-record-rollback.log.
+- Compiler guide's first-program command compiled and executed with exit 25 for input 7 (tutorial/build.log).
+- Repaired stale generic-pattern fixture by including actual option/prelude/AST record dependencies. Original seed reproduced its failure; real matcher assertions unchanged, focused check now passes.
+- Declaration-kind fixture also failed with original seed. Added its actual AST dependencies and the declarations-only mono_index fixture required by the current real lookup implementation (it already used a declarations-only mono_context). Function bodies/assertions unchanged; focused check passes. Full native-record suite rerun pending.
+- Signed literal regression now permanently reproduces all five valid-source failures; range-rejection and output-preservation checks already pass. No signed-literal compiler fix yet.
+- Full production run after seed int64 changes exited 0 (int64-production.log), including all prior recipes and new seed/native differential and memory regressions. New native differential expanded to 900 cases also independently passed. Fresh staged acceptance still pending; P0-002 not yet closed.
+- Native-record suite has another pre-existing failure: native_call_option_context_check.sh accepts incorrect option payload at call. Reproduced using original frozen seed; actual seed semantic correctness issue remains open, no test weakened.

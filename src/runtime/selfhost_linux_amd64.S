@@ -1,3 +1,18 @@
+# Odd immediates retain signed 63-bit values; header 12 boxes carry full int64.
+# Header 10 remains reserved for region forwarding. Boxes are immutable scalars.
+.macro S_UNTAG register
+    test $1, \register
+    jnz 991f
+    test \register, \register
+    jz 991f
+    cmpq $12, (\register)
+    jne 991f
+    mov 8(\register), \register
+    jmp 992f
+991:
+    sar $1, \register
+992:
+.endm
 .section .bss
 .align 8
 .global s_host_argc
@@ -30,9 +45,7 @@ _start:
     mov %rsi, s_host_argv(%rip)
     and $-16, %rsp
     call s_main
-    test $1, %rax
-    jz .Lstart_exit
-    sar $1, %rax
+    S_UNTAG %rax
 .Lstart_exit:
     mov %rax, %rdi
     mov $60, %rax
@@ -250,7 +263,7 @@ s_value_len:
 .type s_array_new, @function
 s_array_new:
     push %r12
-    sar $1, %rdi
+    S_UNTAG %rdi
     mov %rdi, %r12
     lea 16(,%r12,8), %rdi
     call s_alloc
@@ -317,11 +330,19 @@ s_array_append:
 .type s_value_add, @function
 s_value_add:
     test $1, %rdi
+    jnz .Lvalue_add_integer_left
+    test %rdi, %rdi
     jz .Lvalue_add_string
+    cmpq $12, (%rdi)
+    jne .Lvalue_add_string
+.Lvalue_add_integer_left:
     test $1, %rsi
+    jnz s_integer_add
+    test %rsi, %rsi
     jz .Lvalue_add_string
-    lea -1(%rdi,%rsi), %rax
-    ret
+    cmpq $12, (%rsi)
+    je s_integer_add
+    jmp .Lvalue_add_string
 .Lvalue_add_string:
     cmp $1, %rdi
     je .Lvalue_add_right
@@ -357,6 +378,44 @@ s_value_add:
 .global s_value_cmp
 .type s_value_cmp, @function
 s_value_cmp:
+    test $1, %rdi
+    jnz .Lwide_cmp_check_right
+    test %rdi, %rdi
+    jz .Lwide_cmp_check_right
+    cmpq $12, (%rdi)
+    je .Lwide_cmp_left
+.Lwide_cmp_check_right:
+    test $1, %rsi
+    jnz .Lwide_cmp_original
+    test %rsi, %rsi
+    jz .Lwide_cmp_original
+    cmpq $12, (%rsi)
+    jne .Lwide_cmp_original
+    test $1, %rdi
+    jnz .Lwide_cmp_numeric
+    mov $-1, %rax
+    ret
+.Lwide_cmp_left:
+    test $1, %rsi
+    jnz .Lwide_cmp_numeric
+    test %rsi, %rsi
+    jz .Lwide_cmp_left_greater
+    cmpq $12, (%rsi)
+    je .Lwide_cmp_numeric
+.Lwide_cmp_left_greater:
+    mov $1, %rax
+    ret
+.Lwide_cmp_numeric:
+    S_UNTAG %rdi
+    S_UNTAG %rsi
+    xor %eax, %eax
+    cmp %rsi, %rdi
+    je .Lvalue_cmp_done
+    mov $-1, %rax
+    jl .Lvalue_cmp_done
+    mov $1, %rax
+    ret
+.Lwide_cmp_original:
     # Unit has no payload and uses the zero carrier, distinct from tagged int 0.
     test %rdi, %rdi
     jnz .Lvalue_cmp_nonunit_left
@@ -375,8 +434,8 @@ s_value_cmp:
     jz .Lvalue_cmp_left_string
     test $1, %rsi
     jnz .Lvalue_cmp_int_or_mixed
-    sar $1, %rdi
-    sar $1, %rsi
+    S_UNTAG %rdi
+    S_UNTAG %rsi
     xor %eax, %eax
     cmp %rsi, %rdi
     je .Lvalue_cmp_done
@@ -390,8 +449,8 @@ s_value_cmp:
     jz .Lvalue_cmp_mixed_left_string
     test $1, %rsi
     jz .Lvalue_cmp_mixed_right_string
-    sar $1, %rdi
-    sar $1, %rsi
+    S_UNTAG %rdi
+    S_UNTAG %rsi
     xor %eax, %eax
     cmp %rsi, %rdi
     je .Lvalue_cmp_done
@@ -457,7 +516,7 @@ s_value_cmp:
 .global s_string_char_at
 .type s_string_char_at, @function
 s_string_char_at:
-    sar $1, %rsi
+    S_UNTAG %rsi
     test %rsi, %rsi
     js .Lchar_at_fail
     cmp 8(%rdi), %rsi
@@ -472,7 +531,7 @@ s_string_char_at:
 .global s_string_byte_at
 .type s_string_byte_at, @function
 s_string_byte_at:
-    sar $1, %rsi
+    S_UNTAG %rsi
     test %rsi, %rsi
     js .Lbyte_at_fail
     cmp 8(%rdi), %rsi
@@ -487,14 +546,14 @@ s_string_byte_at:
 .global s_byte_string_value
 .type s_byte_string_value, @function
 s_byte_string_value:
-    sar $1, %rdi
+    S_UNTAG %rdi
     jmp s_byte_value_raw
 .size s_byte_string_value, .-s_byte_string_value
 .global s_string_slice
 .type s_string_slice, @function
 s_string_slice:
-    sar $1, %rsi
-    sar $1, %rdx
+    S_UNTAG %rsi
+    S_UNTAG %rdx
     test %rsi, %rsi
     js .Lslice_fail
     cmp %rsi, %rdx
@@ -562,7 +621,7 @@ s_index_get:
     je s_string_char_at
     cmpq $4, (%rdi)
     jne .Lindex_fail
-    sar $1, %rsi
+    S_UNTAG %rsi
     test %rsi, %rsi
     js .Lindex_fail
     cmp 8(%rdi), %rsi
@@ -578,7 +637,7 @@ s_index_get:
 s_index_set:
     test %rdi, %rdi
     jz .Lindex_set_fail
-    sar $1, %rsi
+    S_UNTAG %rsi
     test %rsi, %rsi
     js .Lindex_set_fail
     cmp 8(%rdi), %rsi
@@ -786,7 +845,7 @@ s_int_text:
     push %rbx
     push %r12
     push %r13
-    sar $1, %rdi
+    S_UNTAG %rdi
     mov %rdi, %rbx
     mov $48, %rdi
     call s_alloc
@@ -845,6 +904,11 @@ s_int_text:
 s_value_to_string:
     test $1, %rdi
     jnz s_int_text
+    test %rdi, %rdi
+    jz .Lwide_to_string_done
+    cmpq $12, (%rdi)
+    je s_int_text
+.Lwide_to_string_done:
     mov %rdi, %rax
     ret
 .size s_value_to_string, .-s_value_to_string
@@ -1354,11 +1418,11 @@ s_contains_text:
     mov %rdi, %r12
     mov %rsi, %r13
     call s_value_len
-    sar $1, %rax
+    S_UNTAG %rax
     mov %rax, %rbx
     mov %r13, %rdi
     call s_value_len
-    sar $1, %rax
+    S_UNTAG %rax
     mov %rax, %r15
     test %r15, %r15
     jz .Lcontains_true
@@ -2273,6 +2337,8 @@ s_region_copy:
     jae .Lregion_scan_done
     mov (%r12), %r13
     mov 8(%r12), %r14
+    cmp $12, %r13
+    je .Lregion_scan_integer
     cmp $2, %r13
     je .Lregion_scan_flat
     cmp $6, %r13
@@ -2322,6 +2388,9 @@ s_region_copy:
     mov %rax, 24(%r12)
     mov $32, %eax
     jmp .Lregion_scan_next
+.Lregion_scan_integer:
+    mov $16, %eax
+    jmp .Lregion_scan_next
 .Lregion_scan_flat:
     lea 17(%r14), %rax
 .Lregion_scan_next:
@@ -2358,6 +2427,8 @@ s_region_copy_one:
     mov %rdi, %rbx
     mov (%rbx), %r12
     mov 8(%rbx), %rcx
+    cmp $12, %r12
+    je .Lregion_one_integer
     cmp $2, %r12
     je .Lregion_one_flat
     cmp $6, %r12
@@ -2369,6 +2440,9 @@ s_region_copy_one:
     mov 16(%rbx), %rdx
     shl $4, %rdx
     add $32, %rdx
+    jmp .Lregion_one_bytes
+.Lregion_one_integer:
+    mov $16, %edx
     jmp .Lregion_one_bytes
 .Lregion_one_flat:
     lea 17(%rcx), %rdx
@@ -2446,3 +2520,86 @@ s_region_begin:
     ud2
 .size s_region_begin, .-s_region_begin
 .section .note.GNU-stack,"",@progbits
+
+.section .text
+
+# Pack a raw signed 64-bit integer, allocating only outside the immediate range.
+.global s_integer_pack
+s_integer_pack:
+    lea 1(%rdi,%rdi), %rax
+    mov %rax, %rdx
+    sar $1, %rdx
+    cmp %rdi, %rdx
+    je .Linteger_pack_done
+    push %rdi
+    mov $16, %rdi
+    call s_alloc
+    test %rax, %rax
+    jz .Linteger_oom
+    pop %rdi
+    movq $12, (%rax)
+    mov %rdi, 8(%rax)
+.Linteger_pack_done:
+    ret
+.Linteger_oom:
+    mov $126, %edi
+    jmp s_exit
+
+.macro S_INTEGER_BINARY name, instruction
+.global s_integer_\name
+s_integer_\name:
+    S_UNTAG %rdi
+    S_UNTAG %rsi
+    \instruction %rsi, %rdi
+    jmp s_integer_pack
+.endm
+S_INTEGER_BINARY add, add
+S_INTEGER_BINARY sub, sub
+S_INTEGER_BINARY mul, imul
+S_INTEGER_BINARY or, or
+S_INTEGER_BINARY xor, xor
+S_INTEGER_BINARY and, and
+
+.macro S_INTEGER_SHIFT name, instruction
+.global s_integer_\name
+s_integer_\name:
+    S_UNTAG %rdi
+    S_UNTAG %rsi
+    mov %rsi, %rcx
+    \instruction %cl, %rdi
+    jmp s_integer_pack
+.endm
+S_INTEGER_SHIFT shl, shl
+S_INTEGER_SHIFT shr, sar
+
+.macro S_INTEGER_DIVIDE name, remainder
+.global s_integer_\name
+s_integer_\name:
+    S_UNTAG %rdi
+    S_UNTAG %rsi
+    test %rsi, %rsi
+    jz .Linteger_divzero
+    mov %rdi, %rax
+    cmp $-1, %rsi
+    jne 993f
+    movabs $-9223372036854775808, %rdx
+    cmp %rdx, %rax
+    jne 993f
+    xor %edx, %edx
+    jmp 994f
+993:
+    cqo
+    idiv %rsi
+994:
+.if \remainder
+    mov %rdx, %rdi
+.else
+    mov %rax, %rdi
+.endif
+    jmp s_integer_pack
+.endm
+S_INTEGER_DIVIDE div, 0
+S_INTEGER_DIVIDE mod, 1
+.Linteger_divzero:
+    mov $86, %edi
+    jmp s_exit

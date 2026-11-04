@@ -27,7 +27,7 @@ class LegacyOutputAliasTests(unittest.TestCase):
                     (work / 'alias').symlink_to(work, target_is_directory=True)
                     output = work / 'alias/hello.s'
                 result = subprocess.run(
-                    [str(ROOT / 'bin/s'), 'build', '--legacy', str(source), '-o', str(output)],
+                    ['sh', str(ROOT / 'misc/scripts/s-driver.sh'), 'build', '--legacy', str(source), '-o', str(output)],
                     capture_output=True, timeout=30,
                 )
                 self.assertNotEqual(result.returncode, 0, (alias, result.stderr.decode()))

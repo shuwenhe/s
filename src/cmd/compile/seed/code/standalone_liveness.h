@@ -33,7 +33,7 @@ static void standalone_live_destination(standalone_module *m, standalone_functio
 }
 static bool standalone_analyze_liveness(standalone_module *m, standalone_function *fn,
                                         compile_error *err) {
-    if(!fn->region_safe || !fn->region_loop_safe || fn->integer_only || !fn->slot_count) return true;
+    if(!fn->region_safe || !fn->region_loop_safe || !fn->slot_count) return true;
     size_t count=fn->end-fn->begin, words=(fn->slot_count+63)/64;
     if(!count) return true;
     unsigned long long *uses=calloc(count*words,sizeof(*uses));

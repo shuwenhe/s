@@ -76,6 +76,7 @@ typedef struct standalone_global {
 typedef struct standalone_module {
     const standalone_ins **transfer_index;
     size_t transfer_count;
+    size_t wide_integer_count;
     standalone_global *globals;
     size_t global_count;
     size_t global_order[STANDALONE_MAX_SLOTS], global_order_count;
@@ -720,7 +721,13 @@ static bool emit_load(FILE *out, standalone_module *module, standalone_function 
 	if (is_array_literal(value)) return emit_array_literal(out, module, fn, value, reg, err);
 	if (is_integer(value)) {
 		long long raw = strtoll(value, NULL, standalone_integer_base(value));
-		fprintf(out, "    mov $%lld, %s\n", raw * 2 + 1, reg);
+		if (raw >= -(1LL << 62) && raw <= (1LL << 62) - 1) {
+            /* Unsigned tagging avoids C signed-overflow UB. */
+            fprintf(out, "    mov $%llu, %s\n", (unsigned long long)raw * 2 + 1, reg);
+        } else {
+            size_t id = module->wide_integer_count++;
+            fprintf(out, ".pushsection .rodata\n.p2align 4\n.Ls_wide_integer_%zu: .quad 12\n.quad %lld\n.popsection\n    lea .Ls_wide_integer_%zu(%%rip), %s\n", id, raw, id, reg);
+        }
 		return true;
 	}
 	if (is_string_literal(value)) {
@@ -1343,55 +1350,25 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			const char *store_name = ins->result;
 			if (!emit_load(out, module, fn, ins->operand1, "%rdi", err) ||
 				!emit_load(out, module, fn, ins->operand2, "%rsi", err)) return false;
-			if (fn->integer_only) {
-				fprintf(out, "    lea -1(%%rdi,%%rsi), %%rax\n");
-			} else {
-				fprintf(out, "    test $1, %%rdi\n    jz .Ls_%s_add_slow_%zu\n", symbol, i);
-				fprintf(out, "    test $1, %%rsi\n    jz .Ls_%s_add_slow_%zu\n", symbol, i);
-				fprintf(out, "    lea -1(%%rdi,%%rsi), %%rax\n    jmp .Ls_%s_add_done_%zu\n", symbol, i);
-				fprintf(out, ".Ls_%s_add_slow_%zu:\n    call s_value_add\n", symbol, i);
-				fprintf(out, ".Ls_%s_add_done_%zu:\n", symbol, i);
-			}
+			fprintf(out, "    call s_value_add\n");
 			if (i + 1 < fn->end && strcmp(module->ir.ins[i + 1].op, "MOV") == 0 &&
 				strcmp(module->ir.ins[i + 1].operand1, ins->result) == 0) {
 				store_name = module->ir.ins[i + 1].result;
 				i++;
 			}
 			if (!emit_store(out, module, fn, store_name, "%rax", err)) return false;
-		} else if (strcmp(ins->op, "SUB") == 0 || strcmp(ins->op, "MUL") == 0) {
-			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
-				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
-			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n");
-			fprintf(out, strcmp(ins->op, "SUB") == 0 ? "    sub %%rcx, %%rax\n" : "    imul %%rcx, %%rax\n");
-			fprintf(out, "    lea 1(%%rax,%%rax), %%rax\n");
-			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
-		} else if (strcmp(ins->op, "DIV") == 0 || strcmp(ins->op, "MOD") == 0) {
-			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
-				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
-			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n    cqo\n    idiv %%rcx\n");
-			if (strcmp(ins->op, "MOD") == 0) fprintf(out, "    mov %%rdx, %%rax\n");
-			fprintf(out, "    lea 1(%%rax,%%rax), %%rax\n");
-			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
-		} else if (strcmp(ins->op, "BOR") == 0) {
-			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
-				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
-			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n    or %%rcx, %%rax\n    lea 1(%%rax,%%rax), %%rax\n");
-			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
-		} else if (strcmp(ins->op, "BXOR") == 0) {
-			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
-				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
-			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n    xor %%rcx, %%rax\n    lea 1(%%rax,%%rax), %%rax\n");
-			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
-		} else if (strcmp(ins->op, "BAND") == 0 || strcmp(ins->op, "SHL") == 0 ||
-			strcmp(ins->op, "SHR") == 0) {
-			if (!emit_load(out, module, fn, ins->operand1, "%rax", err) ||
-				!emit_load(out, module, fn, ins->operand2, "%rcx", err)) return false;
-			fprintf(out, "    sar $1, %%rax\n    sar $1, %%rcx\n");
-			if (strcmp(ins->op, "BAND") == 0) fprintf(out, "    and %%rcx, %%rax\n");
-			else if (strcmp(ins->op, "SHL") == 0) fprintf(out, "    shl %%cl, %%rax\n");
-			else fprintf(out, "    sar %%cl, %%rax\n");
-			fprintf(out, "    lea 1(%%rax,%%rax), %%rax\n");
-			if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
+        } else if (!strcmp(ins->op, "SUB") || !strcmp(ins->op, "MUL") ||
+                   !strcmp(ins->op, "DIV") || !strcmp(ins->op, "MOD") ||
+                   !strcmp(ins->op, "BOR") || !strcmp(ins->op, "BXOR") ||
+                   !strcmp(ins->op, "BAND") || !strcmp(ins->op, "SHL") || !strcmp(ins->op, "SHR")) {
+            const char *operation = !strcmp(ins->op, "SUB") ? "sub" : !strcmp(ins->op, "MUL") ? "mul" :
+                !strcmp(ins->op, "DIV") ? "div" : !strcmp(ins->op, "MOD") ? "mod" :
+                !strcmp(ins->op, "BOR") ? "or" : !strcmp(ins->op, "BXOR") ? "xor" :
+                !strcmp(ins->op, "BAND") ? "and" : !strcmp(ins->op, "SHL") ? "shl" : "shr";
+            if (!emit_load(out, module, fn, ins->operand1, "%rdi", err) ||
+                !emit_load(out, module, fn, ins->operand2, "%rsi", err)) return false;
+            fprintf(out, "    call s_integer_%s\n", operation);
+            if (!emit_store(out, module, fn, ins->result, "%rax", err)) return false;
 		} else if (strncmp(ins->op, "CMP_", 4) == 0) {
 			const char *store_name = ins->result;
 			const char *setcc = "sete";
@@ -1412,9 +1389,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				strcmp(module->ir.ins[i + 1].operand1, ins->result) == 0) {
 				char label[STANDALONE_TEXT_CAP];
 				symbol_text(module->ir.ins[i + 1].result, label, sizeof(label));
-				if (fn->integer_only) {
-					fprintf(out, "    cmp %%rsi, %%rdi\n    %s .Ls_%s_%s\n", falsecc, symbol, label);
-				} else {
+				{
 					fprintf(out, "    test $1, %%rdi\n    jz .Ls_%s_cmp_branch_slow_%zu\n", symbol, i);
 					fprintf(out, "    test $1, %%rsi\n    jz .Ls_%s_cmp_branch_slow_%zu\n", symbol, i);
 					fprintf(out, "    cmp %%rsi, %%rdi\n    %s .Ls_%s_%s\n    jmp .Ls_%s_cmp_branch_done_%zu\n", falsecc, symbol, label, symbol, i);
@@ -1424,9 +1399,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				i++;
 				continue;
 			}
-			if (fn->integer_only) {
-				fprintf(out, "    cmp %%rsi, %%rdi\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n", setcc);
-			} else {
+			{
 				fprintf(out, "    test $1, %%rdi\n    jz .Ls_%s_cmp_slow_%zu\n", symbol, i);
 				fprintf(out, "    test $1, %%rsi\n    jz .Ls_%s_cmp_slow_%zu\n", symbol, i);
 				fprintf(out, "    cmp %%rsi, %%rdi\n    %s %%al\n    movzbq %%al, %%rax\n    lea 1(%%rax,%%rax), %%rax\n    jmp .Ls_%s_cmp_done_%zu\n", setcc, symbol, i);
@@ -1445,7 +1418,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			if (!emit_load(out, module, fn, ins->operand1, "%rax", err)) return false;
 			fprintf(out, "    cmp $1, %%rax\n    je .Ls_%s_%s\n", symbol, label);
 		} else if (strcmp(ins->op, "JUMP") == 0) {
-            if(fn->region_safe && fn->region_loop_safe && !fn->integer_only && !pending_count) {
+            if(fn->region_safe && fn->region_loop_safe && !pending_count) {
                 for(size_t j=fn->begin;j<i;j++)
                     if(!strcmp(module->ir.ins[j].op,"LABEL") && !strcmp(module->ir.ins[j].result,ins->result)) {
                         emit_region_loop(out,module,fn,symbol,i,j); break;
