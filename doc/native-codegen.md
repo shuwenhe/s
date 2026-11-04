@@ -16,7 +16,7 @@ Standalone startup accepts no-argument main or one int argument with strict full
 
 The backend uses stack slots for SSA values and System V AMD64 register/stack argument passing. test/native-codegen/check.sh checks seven/eight arguments, odd/even call stack alignment, callee-saved canaries, integer extremes, and malformed SSA. Native C-object tests exercise object interoperability; this does not imply arbitrary C types or libraries are supported.
 
-The embedded native collector is conservative, nonmoving mark/sweep. Its allocation wrapper spills registers before collecting, scans stack/global roots, and recursively scans object contents. See src/runtime/native_gc.c and native_gc_amd64.S. Object/library entry collection has a separate root-safety policy; see the source and object regression. The broader S runtime foundation APIs are separate contracts and do not prove backend integration for channels, scheduling or precise stack maps.
+The embedded native collector is conservative, nonmoving mark/sweep. Its allocation wrapper spills registers before collecting, scans stack/global roots, and recursively scans object contents. See src/runtime/native_gc.c and native_gc_amd64.S. Object/library entry collection has a separate root-safety policy; see the source and object regression. See [runtime and GC](runtime-gc.md) for root scanning, reclamation, object lifetime and maintenance. The broader S runtime foundation APIs are separate contracts and do not prove backend integration for channels, scheduling or precise stack maps.
 
 ## Validation and performance
 
