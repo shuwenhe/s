@@ -1,8 +1,10 @@
 package compile.internal.ir.ast
+
 import (
     "compile.internal.ir"
     "std"
 )
+
 struct program_ir {
     string package_name
     package_ir[] packages
@@ -12,6 +14,7 @@ struct package_ir {
     string name
     decl_ir[] decls
 }
+
 enum decl_ir {
     fn_decl(func_decl_ir),
     type_decl(type_decl),
@@ -43,6 +46,7 @@ struct const_decl_ir { string name, string value }
 struct method_decl { string receiver_name, string receiver_type, func_decl_ir method }
 
 struct block_ir { stmt_ir[] statements, option[expr_ir] final_expr }
+
 enum stmt_ir {
     let(var_stmt_ir),
     assign(assign_stmt),
@@ -63,6 +67,7 @@ struct c_for_stmt_ir { stmt_ir init, expr_ir condition, stmt_ir step, block_ir b
 struct expr_stmt { expr_ir expr }
 
 struct return_stmt { option[expr_ir] value }
+
 enum expr_ir {
     int(int),
     string(string),
