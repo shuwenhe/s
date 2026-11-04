@@ -193,7 +193,7 @@ func mir_program_instruction_error_with_globals(mir_program_function function_da
         if ins.result_types[0] != mir_program_value_type(function_data, ins.operands[0], index) { return "copy type mismatch" }
         return ""
     }
-    if ins.op == "add" || ins.op == "sub" || ins.op == "mul" || ins.op == "div" || ins.op == "mod" {
+    if ins.op == "add" || ins.op == "sub" || ins.op == "mul" || ins.op == "div" || ins.op == "mod" || ins.op == "bit_and" || ins.op == "bit_or" || ins.op == "bit_xor" || ins.op == "shl" || ins.op == "shr" {
         if len(ins.operands) != 2 { return "binary operand count: " + ins.op }
         if ins.result_types[0] != "int" { return "binary result type: " + ins.op }
         if mir_program_value_type(function_data, ins.operands[0], index) != "int" || mir_program_value_type(function_data, ins.operands[1], index) != "int" {

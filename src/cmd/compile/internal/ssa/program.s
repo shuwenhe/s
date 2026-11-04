@@ -362,7 +362,7 @@ func verify_ssa_function(function_ssa_function f) string {
                 if value.parameter_index < 0 || value.parameter_index >= len(f.parameter_types) { return "parameter index: " + f.symbol }
                 if value.type_name != f.parameter_types[value.parameter_index] || len(value.operands) != 0 { return "parameter type: " + f.symbol }
             }
-            if value.op == "add" || value.op == "sub" || value.op == "mul" || value.op == "div" || value.op == "mod" {
+            if value.op == "add" || value.op == "sub" || value.op == "mul" || value.op == "div" || value.op == "mod" || value.op == "bit_and" || value.op == "bit_or" || value.op == "bit_xor" || value.op == "shl" || value.op == "shr" {
                 if value.type_name != "int" || len(value.operands) != 2 { return "binary value type: " + f.symbol }
                 if ssa_value_type(f.blocks, value.operands[0]) != "int" || ssa_value_type(f.blocks, value.operands[1]) != "int" { return "binary operand type: " + f.symbol }
             }

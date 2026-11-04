@@ -229,6 +229,11 @@ func program_binary_opcode(string op) string {
     if op == "*" { return "mul" }
     if op == "/" { return "div" }
     if op == "%" { return "mod" }
+    if op == "&" { return "bit_and" }
+    if op == "|" { return "bit_or" }
+    if op == "^" { return "bit_xor" }
+    if op == "<<" { return "shl" }
+    if op == ">>" { return "shr" }
     if op == "==" { return "cmp_eq" }
     if op == "!=" { return "cmp_ne" }
     if op == "<" { return "cmp_lt" }

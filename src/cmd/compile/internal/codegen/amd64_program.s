@@ -101,7 +101,7 @@ func amd64_validate_program(function_ssa_program program) string {
             for v < len(function_data.blocks[b].values) {
                 value := function_data.blocks[b].values[v]
                 op := value.op
-                supported := op == "reference_new" || op == "reference_get" || op == "reference_set" || op == "reference_readonly" || op == "global_get" || op == "global_set" || op == "native_intrinsic" || op == "string_byte_at" || op == "string_char_at" || op == "string_slice" || op == "string_eq" || op == "string_ne" || op == "string_lt" || op == "string_le" || op == "string_gt" || op == "string_ge" || op == "const_string" || op == "string_concat" || op == "string_len" || ssa_is_scalar_operation(op) || op == "param" || op == "phi" || op == "const_int" || op == "const_unit" || op == "copy" || op == "add" || op == "sub" || op == "mul" || op == "div" || op == "mod" || op == "call" || op == "record_new" || op == "record_get" || op == "record_set" || op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set"
+                supported := op == "reference_new" || op == "reference_get" || op == "reference_set" || op == "reference_readonly" || op == "global_get" || op == "global_set" || op == "native_intrinsic" || op == "string_byte_at" || op == "string_char_at" || op == "string_slice" || op == "string_eq" || op == "string_ne" || op == "string_lt" || op == "string_le" || op == "string_gt" || op == "string_ge" || op == "const_string" || op == "string_concat" || op == "string_len" || ssa_is_scalar_operation(op) || op == "param" || op == "phi" || op == "const_int" || op == "const_unit" || op == "copy" || op == "add" || op == "sub" || op == "mul" || op == "div" || op == "mod" || op == "bit_and" || op == "bit_or" || op == "bit_xor" || op == "shl" || op == "shr" || op == "call" || op == "record_new" || op == "record_get" || op == "record_set" || op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set"
                 if !supported { return "amd64: unsupported operation: " + op }
                 if !ssa_type_supported(value.type_name, program.records) && !((op == "call" || op == "native_intrinsic") && value.type_name == "void") { return "amd64: unsupported value type" }
                 v = v + 1
@@ -233,6 +233,12 @@ func amd64_emit_value_with_values(function_ssa_program program, int function_ind
     if op == "add" { text = text + "  addq %r10, %rax\n" }
     if op == "sub" { text = text + "  subq %r10, %rax\n" }
     if op == "mul" { text = text + "  imulq %r10, %rax\n" }
+    if op == "bit_and" { text = text + "  andq %r10, %rax\n" }
+    if op == "bit_or" { text = text + "  orq %r10, %rax\n" }
+    if op == "bit_xor" { text = text + "  xorq %r10, %rax\n" }
+    // Hardware counts use the low six bits; right shift preserves the sign.
+    if op == "shl" { text = text + "  movq %r10, %rcx\n  shlq %cl, %rax\n" }
+    if op == "shr" { text = text + "  movq %r10, %rcx\n  sarq %cl, %rax\n" }
     if op == "div" || op == "mod" {
         label := ".Ls_native_div_" + amd64_integer(function_index) + "_" + amd64_integer(position)
         text = text + "  testq %r10, %r10\n  je .Ls_native_divzero\n"
