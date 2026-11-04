@@ -31,6 +31,9 @@ It does not perform a fresh multi-stage self-host verification. See the
 [compiler guide](doc/compiler.md) for installation, CLI commands, a first program
 and the additional acceptance dependencies.
 
+Continue with the [native language tutorial](doc/tutorial.md) and its executable
+example for arrays, receiver methods, generics, tuples and enum matching.
+
 The default native path uses structured MIR and SSA and rejects unsupported
 constructs. The explicit `build --legacy` path uses an ownership checker and C
 backend for a separate language subset. Its memory model and feature coverage

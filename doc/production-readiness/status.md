@@ -93,3 +93,7 @@ Pending controller run. No new bootstrap or compiler correctness claim yet.
 - Broader native-record checks exposed another incomplete fixture closure: declaration_ref now embeds AST enum_variant[] and field[] types. The fixture omitted their actual declarations, causing unknown native array transfer type. Reproduced with current seed and original accepted seed emitter (type-tree-red.log, type-tree-baseline.log).
 - Added actual prelude/option/AST dependencies, leaving production helper bodies and all assertions unchanged. Focused execution passes (type-tree-green.log).
 - Complete selfhost-native-record-check now exits 0 with the strict enum candidate and repaired fixtures (enum-record-suite.log), including hosted/native record matrices and lexer stress. This broader target is additional to canonical production, which is still running for the enum increment.
+
+### Native tutorial
+- Added examples/native-tour.s and doc/tutorial.md covering array value snapshots, append, mutable receivers, generic records/functions, tuple returns and variant matching using the current canonical syntax.
+- Built via ./bin/s build and executed; expected exit 42 observed (native-tour/build.log). This verifies the example against the development compiler, not yet a separate final clean-checkout installation.
