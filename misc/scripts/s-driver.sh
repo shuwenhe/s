@@ -114,7 +114,7 @@ emit_binary_legacy() {
 
     output_abs=$(cd "$output_dir" && pwd)/$output_base
 
-    if [ "$input_abs" = "$output_abs" ]; then
+    if [ "$input_abs" = "$output_abs" ] || [ "$input" -ef "$output" ]; then
 
         echo "s: output path must not overwrite input source" >&2
 
