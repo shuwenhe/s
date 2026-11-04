@@ -33,7 +33,10 @@ func main() int {
 }
 ''')
 PY
-"$root/bin/s_seed" --compile-native-unit "$work/tree.ir" "$root/src/option/option.s" "$work/semantic.s" "$work/canonical.s" "$work/main.s"
+"$root/bin/s_seed" --compile-native-unit "$work/tree.ir" \
+    "$root/src/prelude/prelude.s" "$root/src/option/option.s" \
+    "$root/src/cmd/compile/internal/ast/ast.s" \
+    "$work/semantic.s" "$work/canonical.s" "$work/main.s"
 S_SOURCE_ROOT="$root" "$root/bin/s_seed" --emit-standalone-amd64 "$work/tree.ir" "$work/tree"
 status=0; timeout 15 "$work/tree" || status=$?; test "$status" -eq 42
 echo 'production canonical type trees preserve equality, rendering and snapshots: PASS'
