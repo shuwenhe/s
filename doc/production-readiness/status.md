@@ -105,3 +105,7 @@ Pending controller run. No new bootstrap or compiler correctness claim yet.
 - Independently rebuilt parent development compiler; complete native-record target and full canonical production target exited 0 (enum-compiler-build.log, enum-record-suite.log, enum-production.log). The later OOM recipe addition was not in the parsed makefile for that running suite; its focused check passed separately and will be included in the next full run.
 - Review raised numeric/any concrete assignment compatibility. Original seed accepts those fixed enums into IR but cannot emit their float[]/any[] payload representations; no executable-native positive is lost, and no wildcard bypass was added. Float/any native support gaps remain explicit.
 - Final-revision fresh bootstrap remains required. Current 8ca674d6f bootstrap predates this compiler increment.
+
+### Allocation exhaustion coverage
+- Added native_gc_oom.s and native_gc_oom_check.py: repeated retained string doubling attempts a one-GiB value under 48 MiB address-space and 10-second CPU limits. Requires defined exit 126; signals, other exits and hangs fail. Focused check passes (native-gc-oom.log).
+- Added explicit production recipe and documented the check. No allocator behavior changed. Next full production run will include the new recipe.

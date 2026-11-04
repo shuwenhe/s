@@ -48,12 +48,14 @@ unsupported because it addresses a slot inside a runtime slab.
 
 ```sh
 python3 test/native-bootstrap-diagnostic/native_gc_check.py
+python3 test/native-bootstrap-diagnostic/native_gc_oom_check.py
 python3 test/native-bootstrap-diagnostic/native_gc_object_check.py
 ```
 
 The first checks allocation churn, global/recursive/reference roots, snapshots
 and a large live graph, with 128 or 512 MiB address-space limits and CPU/time
-limits. The second checks default PIE linking, repeated C entries and escaped
+limits. The OOM check grows a retained string beyond a 48 MiB address-space
+limit and requires defined exit 126. The object check verifies default PIE linking, repeated C entries and escaped
 arrays under a 512 MiB limit. These checks are included in canonical production
 and staged acceptance. Successful bounded tests do not prove that every
 application has bounded memory.
