@@ -46,3 +46,14 @@
 - [ ] Review final changes and run required checks.
 - [ ] Produce readiness report, evidence index, checklist, benchmarks and limitations.
 - [ ] Mark mission complete only when every applicable criterion is evidenced.
+
+### Float support dependency plan (P1-001)
+- Compatibility baseline: existing seed stores C double and parses with strtod. Use binary64 float; preserve ordinary established values and conversions. Investigate undefined/incorrect seed edge cases explicitly rather than copying C undefined behavior.
+- [ ] Build an exact pure-S decimal-to-binary64 bit parser, checked against an independent Python oracle, including ties, normal/subnormal boundaries, signed zero and exponent extremes. Keep bits in int carriers so bootstrap does not require float execution inside the compiler.
+- [ ] Add canonical float tokens/AST variant and complete traversals, clone/serialization handling; tests before integration.
+- [ ] Add explicit typed MIR/SSA floating operations, constants and int conversions; validate arity/types and keep integer rewrites away from floating operations.
+- [ ] Emit scalar SSE2 arithmetic and unordered-aware comparisons, preserving bits and signed zero; define checked conversion failures and division-zero behavior against established runtime contracts.
+- [ ] Implement and verify AMD64 floating argument/results ABI, including mixed GP/SSE and stack overflow arguments. Do not present private integer bit carriers as C ABI support.
+- [ ] Extend records/arrays/references/enums, defaults and copy/GC handling; establish supported native seed behavior separately.
+- [ ] Add parse/format runtime services, FFI integration and complete numeric edge contract; independent differential and ABI coverage.
+- [ ] Run complete production regression and fresh staged acceptance at frozen integrated revisions, then final source revision. Scalar-only progress does not close P1-001.
