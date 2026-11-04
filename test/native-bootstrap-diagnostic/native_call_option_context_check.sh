@@ -31,3 +31,28 @@ if "$root/bin/s_seed" --compile-native-unit "$work/bad.ir" "$root/src/option/opt
 fi
 test "$(cat "$work/bad.ir")" = preserve
 echo 'concrete call parameter contexts type none and reject incorrect option payloads: PASS'
+# Inferred, explicit, and context-bound enum arguments all enforce payloads.
+cat > "$work/payload.s" <<'S'
+package main
+import "std.option"
+struct record { int value }
+struct other { int value }
+enum fixed { item(record) }
+func unknown() any { return 42 }
+func main() int { return 42 }
+S
+for body in \
+    'func bad() option[record] { return option.some(other { value: 1 }) }' \
+    'func bad() option[record] { return option[record].some("wrong") }' \
+    'func bad() fixed { return fixed.item("wrong") }' \
+    'func bad() option[int] { return option.some(unknown()) }'; do
+    cp "$work/payload.s" "$work/payload-bad.s"
+    printf '%s\n' "$body" >> "$work/payload-bad.s"
+    printf preserve > "$work/bad.ir"
+    if "$root/bin/s_seed" --compile-native-unit "$work/bad.ir" "$root/src/option/option.s" "$work/payload-bad.s" > "$work/bad.log" 2>&1; then
+        echo "accepted incorrect enum payload: $body" >&2; exit 1
+    fi
+    test "$(cat "$work/bad.ir")" = preserve
+    grep -q 'enum payload type mismatch' "$work/bad.log"
+done
+echo 'generic and fixed enum payload mismatches preserve output: PASS'

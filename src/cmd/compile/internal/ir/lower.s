@@ -1,6 +1,7 @@
 package compile.internal.ir.ast
 
 import (
+    "compile.internal"
     "compile.internal.mir"
     "s"
     "std"

@@ -97,3 +97,11 @@ Pending controller run. No new bootstrap or compiler correctness claim yet.
 ### Native tutorial
 - Added examples/native-tour.s and doc/tutorial.md covering array value snapshots, append, mutable receivers, generic records/functions, tuple returns and variant matching using the current canonical syntax.
 - Built via ./bin/s build and executed; expected exit 42 observed (native-tour/build.log). This verifies the example against the development compiler, not yet a separate final clean-checkout installation.
+
+### Strict enum payload increment
+- P1-006: Seed enum construction suppressed failed payload unification and skipped unresolved payloads. Existing call-option regression accepted a string where option[record] was required; existing option payload regression accepted an unproven any subject. Original failures and red/green evidence retained in enum-investigation-evidence/REPORT.md.
+- Restored failing unification, required payload resolution and added nominal-record, explicit-generic, fixed-enum and unresolved-payload negatives, all preserving existing output. Added the two principal scripts to canonical production.
+- Strict checking exposed a real missing import: ir/lower.s calls parse_int_literal from compile.internal without importing its package. Added the import, preserving the 268-path closure. Both minimal and full strict candidates compiled all 268 files to seed IR in isolation.
+- Independently rebuilt parent development compiler; complete native-record target and full canonical production target exited 0 (enum-compiler-build.log, enum-record-suite.log, enum-production.log). The later OOM recipe addition was not in the parsed makefile for that running suite; its focused check passed separately and will be included in the next full run.
+- Review raised numeric/any concrete assignment compatibility. Original seed accepts those fixed enums into IR but cannot emit their float[]/any[] payload representations; no executable-native positive is lost, and no wildcard bypass was added. Float/any native support gaps remain explicit.
+- Final-revision fresh bootstrap remains required. Current 8ca674d6f bootstrap predates this compiler increment.
