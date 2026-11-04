@@ -4,7 +4,7 @@ Build on Linux/amd64 using the [compiler guide](compiler.md), then compile the
 checked-in example from the repository root:
 
 ```sh
-./bin/s build examples/native-tour.s -o /tmp/s-native-tour
+./bin/s build test/native-bootstrap-diagnostic/native_tour.s -o /tmp/s-native-tour
 /tmp/s-native-tour
 echo $?
 # 42
@@ -12,7 +12,7 @@ echo $?
 
 The integer returned by main becomes the process exit status. A shell treats 42
 as nonzero; here it is the example's expected result. See
-[`examples/native-tour.s`](../examples/native-tour.s) for the complete source.
+[`test/native-bootstrap-diagnostic/native_tour.s`](../test/native-bootstrap-diagnostic/native_tour.s) for the complete source.
 
 ## Values and arrays
 

@@ -488,6 +488,11 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@python3 test/native-bootstrap-diagnostic/native_integer_differential_check.py --seed
 	@python3 test/native-bootstrap-diagnostic/native_integer_differential_check.py
 	@python3 test/native-bootstrap-diagnostic/native_signed_integer_check.py
+	@S_TEST_SEED=1 python3 test/native-bootstrap-diagnostic/native_signed_integer_check.py
+	@python3 test/native-bootstrap-diagnostic/native_bitwise_differential_check.py
+	@python3 test/native-bootstrap-diagnostic/native_bitwise_differential_check.py --seed --compiler bin/s_seed
+	@python3 test/native-bootstrap-diagnostic/native_enum_assignability_check.py
+	@python3 test/native-bootstrap-diagnostic/native_tutorial_check.py
 	@bash test/native-bootstrap-diagnostic/native_call_option_context_check.sh
 	@bash test/native-bootstrap-diagnostic/native_option_payload_check.sh
 	@python3 test/native-bootstrap-diagnostic/native_rope_writer_check.py
@@ -506,6 +511,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@bash test/native-bootstrap-diagnostic/canonical_enum_mir_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_aggregate_mir_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_cfg_mir_check.sh
+	@bash test/native-bootstrap-diagnostic/canonical_bitwise_mir_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_semantic_production_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_mir_public_check.sh
 	@bash test/native-bootstrap-diagnostic/canonical_enum_production_check.sh
