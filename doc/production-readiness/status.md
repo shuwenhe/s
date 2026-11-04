@@ -82,3 +82,9 @@ Pending controller run. No new bootstrap or compiler correctness claim yet.
 - Independent read-only review found no correctness defects; suggested boundary coverage was added. Existing canonical statement-boundary and switch AST checks passed, preserving established unary AST behavior.
 - Rebuilt compiler from changed S sources; complete production target exited 0 (signed-production.log). Expanded regression independently passed after review. Fresh staged acceptance at the final source revision remains required.
 - A fresh frozen full bootstrap at 8ca674d6f is running separately (int64-full-bootstrap/); it predates signed-literal changes and cannot certify them.
+
+### Documentation and measurement increment
+- Removed README commands for missing targets; checked every README make target against the current makefile and every linked doc path for existence. Corrected current binary provenance and clean-room versus development bootstrap instructions. Removed the missing target-info command from platforms.md.
+- Added a canonical native benchmark harness retaining source/assembly/binaries, commands, hashes, source diff, compiler/tool versions, per-command elapsed/RSS and repeated correctness checks. Scalar sum and recursive Fibonacci completed warmup plus five runs for both S and C (benchmarks-signed-v3/results.json). Concurrent bootstrap load makes these preliminary harness measurements, not a release performance baseline.
+- Initial benchmark attempt used historical parenthesized loop syntax; canonical parser rejected it. Switched workload to established canonical for syntax; failed attempt retained at benchmarks-signed/.
+- Read-only connected GitHub queries for baseline 35fae2bf returned no commit statuses and no PR workflow runs. The workflow query explicitly covers PR events only; empty output does not verify or disprove historical push Actions acceptance. Independent CI confirmation remains open.

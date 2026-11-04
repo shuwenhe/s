@@ -14,34 +14,35 @@ func (file* writer) write(string data) ((), io_error) {
 
 Traits are satisfied implicitly by method-set compatibility. A type implements a trait when its receiver methods contain every method required by that trait with compatible parameter and return types.
 
-## Compiler ownership and lowering
+## Build and run
 
-`make compiler` builds the P0 Native compiler and retains an explicit legacy
-ownership checker and C backend for a separate language subset. It supports owned integer boxes, moves, lexical
-shared/mutable borrows, branch checks, and automatic cleanup on scope exit,
-return and loop control. Generated applications do not link the S GC.
+The verified native target is Linux/amd64 ELF. Install Git, GNU Make, a C11
+compiler, GNU binutils, Bash and Python 3, then run:
 
 ```sh
-./misc/scripts/s-compiler.sh build --legacy test/compiler/ownership.s -o /tmp/s-owned
-make compiler-check
+make compiler
+./bin/s build test/native-build/program.s -o /tmp/s-native-demo
+/tmp/s-native-demo 7
+# exit status 25
 ```
 
-See [the compiler guide](doc/compiler.md) for the supported syntax, tests and
-limitations. The compiler is seed-hosted; this is not yet full-language or
-converged self-hosted ownership-aware compilation.
+`make compiler` builds the C seed and a seed-hosted native development compiler.
+It does not perform a fresh multi-stage self-host verification. See the
+[compiler guide](doc/compiler.md) for installation, CLI commands, a first program
+and the additional acceptance dependencies.
+
+The default native path uses structured MIR and SSA and rejects unsupported
+constructs. The explicit `build --legacy` path uses an ownership checker and C
+backend for a separate language subset. Its memory model and feature coverage
+differ from the canonical native compiler; see the [native backend guide](doc/native-codegen.md).
 
 ## Performance status
 
-P0 prioritizes correct native code generation; no broad performance claim is made.
-The explicit legacy benchmark path lowers supported S programs to C and uses the
-host C compiler. Generated applications are checked to avoid S GC and seed
-interpreter dependencies.
-
-Use `make benchmark` to compare the no-GC S benchmark with C, Rust when
-`rustc` is available, and Go when `go` is available. Treat the result as local
-measurement data rather than a project-wide performance claim. The immediate
-goal is correctness, deterministic cleanup, and regression tracking; broad
-performance claims need repeated benchmarks across realistic workloads.
+Correctness, reproducibility and regression coverage take priority. Historical
+self-host measurements are recorded with the acceptance evidence. No broad
+performance comparison with C, Rust or Go is established. Native code and the
+legacy C path must be measured separately, recording compiler revision, toolchain,
+workload, repeated execution time and peak memory.
 
 ## Repository layout
 
@@ -62,12 +63,6 @@ stage can execute only on its target or through `S_BOOTSTRAP_RUNNER`.
 
 The verified P0 Native target is **Linux/amd64 ELF**. Other architecture and bootstrap
 experiments are separate from P0 acceptance and do not establish full self-hosting.
-
-Inspect the active target with:
-
-```sh
-make target-info S_TARGET_OS=linux S_TARGET_ARCH=amd64
-```
 
 See [`doc/platforms.md`](doc/platforms.md) for the support matrix and the
 requirements for adding a target.
@@ -100,8 +95,8 @@ Compile an S source file to IR:
 ## Compile a Native program
 
 The default Linux/amd64 build now consumes structured function MIR and SSA.
-P0 supports straight-line int64/void functions, direct calls, arithmetic, bindings
-and returns. Unsupported syntax is rejected; there is no implicit C or interpreter
+The canonical path supports int64, bool, string, unit, records, supported arrays,
+enums, generics and control flow, subject to semantic and lowering validation. Unsupported syntax is rejected; there is no implicit C or interpreter
 fallback. See [the Native codegen guide](doc/native-codegen.md) for ABI and limits.
 
 ```sh
@@ -113,7 +108,7 @@ make compiler
 # same executable, exit status 10
 ./bin/s --emit-amd64 test/native-build/program.s /tmp/demo.s
 ./bin/s --emit-native-object test/native-build/program.s /tmp/demo.o
-make native-codegen-check
+bash test/native-codegen/check.sh
 ```
 
 Existing ownership/C compilation remains available explicitly, including programs
@@ -130,11 +125,17 @@ Native self-hosting is verified on Linux/amd64 (2026-11-03): C seed → native
 stage1 → stage2 → stage3, using the complete 268-file compiler closure. Stage2
 and freshly compiled stage3 have byte-identical assembly and executables.
 The full production regression suite and native validator rejection tests pass.
-`bin/s_compiler` is the verified stage3 compiler, used by the `bin/s` driver.
+These are historical results at the revision in the report. Development builds
+replace `bin/s_compiler`; its filename does not certify a Stage3 artifact. Preserve
+accepted binaries and logs in their evidence directory.
 
 See [the verification report](doc/selfhost-verification/native-selfhost-2026-11-03.md)
 for checkpoint provenance, hashes, measured results and reproduction commands.
-Run `make selfhost` to bootstrap again. Full compiler builds take tens of minutes.
+For new acceptance use the [clean-room controller](doc/selfhost-verification/cleanroom.md)
+from a committed revision and a new evidence directory. `make selfhost` is a
+development bootstrap target and does not by itself perform full clean-room
+acceptance. Complete staged builds can take hours. The ongoing
+[production audit](doc/production-readiness/status.md) records remaining blockers.
 
 ## Runtime foundation
 
@@ -152,27 +153,24 @@ metadata; the presence of an S API alone does not claim that work is complete.
 
 ## Tests
 
-Run the seed compiler tests:
+Run canonical production regression and controller tests:
 
 ```sh
-make seed-tests
+make selfhost-canonical-production-check
+python3 -m unittest discover -s test/bootstrap-reproducibility -v
+bash test/native-codegen/check.sh
 ```
 
-Additional checks are available through:
+Additional seed/native record and memory checks are available:
 
 ```sh
-make seed-runtime-regression
-make seed-network-tests
-make seed-c-abi-test
-make selfhost-lexer-check
-make compiler-check
-make benchmark
+make selfhost-native-record-check
+make selfhost-native-memory-check
 ```
 
-`make benchmark` builds the no-GC S benchmark beside C, Rust when `rustc` is
-available, and Go when `go` is available. Treat its output as measurement data:
-do not claim S is faster than Rust or C unless repeated runs on the target
-machine support that claim.
+These targets have different coverage; success in one does not establish success
+in the others. Tests requiring child-process tracing need an environment that
+permits `strace`. Do not skip tracing assertions to obtain acceptance.
 
 Use `make help` to list the primary build and test targets.
 
