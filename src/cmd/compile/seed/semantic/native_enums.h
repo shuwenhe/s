@@ -97,6 +97,24 @@ static bool ng_enum_type_spelling(ast_node *node,ng_text out,unsigned depth) {
     }
     return native_record_type_spelling(node,out,sizeof(ng_text));
 }
+static bool ng_enum_payload_compatible(ng_scope *c,ng_decl *d,const char *pattern,const char *actual,ng_text actuals[NG_ARGS]) {
+    if(ng_unify(c,d,pattern,actual,actuals)) return true;
+    if(!*actual) return false;
+    for(size_t i=0;i<d->count;i++) if(!strcmp(pattern,d->parameters[i])) return false;
+    /* Generic identities remain invariant. Concrete scalar assignment has a separate
+     * established compatibility rule. Do not use the analyzer's actual-any
+     * wildcard here: an unknown payload cannot prove a concrete layout. */
+    ng_scope *fields=calloc(1,sizeof(*fields));
+    if(!fields) return false;
+    fields->state=c->state; fields->package=d->package; fields->origin=d;
+    for(size_t i=0;i<d->count;i++) strcpy(fields->actuals[i],actuals[i]);
+    ng_text expected;
+    bool ok=ng_type(fields,pattern,expected,0);
+    free(fields);
+    return ok && (!strcmp(expected,"any") ||
+        (!strcmp(expected,"float") && !strcmp(actual,"int")) ||
+        (!strcmp(expected,"int") && !strcmp(actual,"float")));
+}
 /* Return zero for a value member/method, one for a rewritten enum constructor,
  * and -1 for an invalid constructor. Context fixes phantom type parameters. */
 static int ng_enum_construct(ng_scope *c,ast_node *n,ast_node *member,ng_text *payloads,size_t count,const char *expected,ng_text out,bool return_position) {
@@ -144,7 +162,7 @@ static int ng_enum_construct(ng_scope *c,ast_node *n,ast_node *member,ng_text *p
         }
     }
     if(variant->payload_type) {
-        if(!ng_unify(c,d,variant->payload_type,payloads[0],actuals)) {
+        if(!ng_enum_payload_compatible(c,d,variant->payload_type,payloads[0],actuals)) {
             error_set(s->err,ERR_SEMANTIC,n->pos.line,n->pos.column,"native generic specialization: enum payload type mismatch (actual: %s; context: %s)",payloads[0][0]?payloads[0]:"unresolved",expected?expected:""); return -1;
         }
     }
