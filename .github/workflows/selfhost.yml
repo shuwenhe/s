@@ -22,7 +22,6 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     env:
-      CI_EVIDENCE: ${{ runner.temp }}/s-selfhost-core-${{ github.run_id }}-${{ github.run_attempt }}
       FROZEN_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -30,6 +29,9 @@ jobs:
           ref: ${{ env.FROZEN_COMMIT }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Set evidence directory
+        shell: bash
+        run: echo "CI_EVIDENCE=$RUNNER_TEMP/s-selfhost-core-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
       - name: Install and record dependencies
         shell: bash
         run: |
@@ -65,7 +67,6 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 300
     env:
-      CI_EVIDENCE: ${{ runner.temp }}/s-selfhost-full-${{ github.run_id }}-${{ github.run_attempt }}
       FROZEN_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -73,6 +74,9 @@ jobs:
           ref: ${{ env.FROZEN_COMMIT }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Set evidence directory
+        shell: bash
+        run: echo "CI_EVIDENCE=$RUNNER_TEMP/s-selfhost-full-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
       - name: Install and record dependencies
         shell: bash
         run: |

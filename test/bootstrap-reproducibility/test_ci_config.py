@@ -31,6 +31,23 @@ class CIConfigurationTests(unittest.TestCase):
             self.assertIn(name,commands)
         self.assertIn('schedule',workflow['jobs']['full']['if'])
 
+    def test_evidence_path_uses_runner_context_only_inside_steps(self):
+        workflow=yaml.load((ROOT/'.github/workflows/selfhost.yml').read_text(),Loader=yaml.BaseLoader)
+        for name,job in workflow['jobs'].items():
+            # GitHub rejects runner context in jobs.<job_id>.env before any job starts.
+            self.assertNotIn('runner.',str(job.get('env',{})))
+            setup=job['steps'][1]
+            self.assertIn('GITHUB_ENV',setup.get('run',''))
+            with tempfile.TemporaryDirectory(prefix='runner temp ') as directory:
+                env_file=Path(directory)/'environment'
+                env_file.touch()
+                result=subprocess.run(['bash','-eu','-c',setup['run']],capture_output=True,text=True,
+                    env=os.environ|{'RUNNER_TEMP':directory,'GITHUB_ENV':str(env_file),
+                                   'GITHUB_RUN_ID':'123','GITHUB_RUN_ATTEMPT':'2'})
+                self.assertEqual(result.returncode,0,result.stderr)
+                self.assertEqual(env_file.read_text().strip(),
+                    f'CI_EVIDENCE={directory}/s-selfhost-{name}-123-2')
+
     def test_entrypoint_rejects_existing_output_without_touching_it(self):
         with tempfile.TemporaryDirectory() as directory:
             out=Path(directory)/'already';out.mkdir();kept=out/'stage1';kept.write_text('preserve')
