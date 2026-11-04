@@ -30,6 +30,8 @@ class CIConfigurationTests(unittest.TestCase):
             self.assertIn('ripgrep',commands)
             self.assertIn(name,commands)
         self.assertIn('schedule',workflow['jobs']['full']['if'])
+        self.assertIn('native-certification-*', workflow['on']['push']['branches'])
+        self.assertIn('[verify-full-bootstrap]', workflow['jobs']['full']['if'])
 
     def test_evidence_path_uses_runner_context_only_inside_steps(self):
         workflow=yaml.load((ROOT/'.github/workflows/selfhost.yml').read_text(),Loader=yaml.BaseLoader)

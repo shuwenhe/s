@@ -1,7 +1,7 @@
 name: Native self-host acceptance
 on:
   push:
-    branches: [main]
+    branches: [main, 'native-certification-*']
   pull_request:
   schedule:
     - cron: '17 20 * * 6'

@@ -109,3 +109,9 @@ Pending controller run. No new bootstrap or compiler correctness claim yet.
 ### Allocation exhaustion coverage
 - Added native_gc_oom.s and native_gc_oom_check.py: repeated retained string doubling attempts a one-GiB value under 48 MiB address-space and 10-second CPU limits. Requires defined exit 126; signals, other exits and hangs fail. Focused check passes (native-gc-oom.log).
 - Added explicit production recipe and documented the check. No allocator behavior changed. Next full production run will include the new recipe.
+
+### Native certification scope — new request
+- Current checkout starts at main 901c1fede18a6ad876236039ce8adf7ce8a4b1a9, clean; work branch native-certification-20261104. That revision removed the old example and plan. Preserve its decisions; the tutorial now uses a permanent test fixture with an integration recipe.
+- Prior /app/shuwen/production-mission-20261104 evidence directory is unavailable in this environment. Do not count its earlier reported running bootstrap as current acceptance. Available historical .bootstrap and /tmp receipts remain untouched.
+- New evidence: .bootstrap/native-certification-20261104. Initial compiler and seed copied before rebuilding; all new failed and successful attempts retained.
+- Scope is complete native self-host certification. Floating-point implementation is a separate P1 project; only requirements documentation belongs in this increment.
