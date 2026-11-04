@@ -487,6 +487,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@python3 test/native-bootstrap-diagnostic/native_seed_int64_memory_check.py
 	@python3 test/native-bootstrap-diagnostic/native_integer_differential_check.py --seed
 	@python3 test/native-bootstrap-diagnostic/native_integer_differential_check.py
+	@python3 test/native-bootstrap-diagnostic/native_signed_integer_check.py
 	@python3 test/native-bootstrap-diagnostic/native_rope_writer_check.py
 	@python3 test/native-bootstrap-diagnostic/native_source_join_check.py
 	@python3 test/native-bootstrap-diagnostic/native_gc_check.py

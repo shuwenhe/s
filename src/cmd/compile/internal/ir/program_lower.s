@@ -186,6 +186,10 @@ func program_emit_integer(program_lower_state state, string literal) program_low
     value := 0
     i := 0
     if literal == "" { state.error = "empty integer literal"; return state }
+    negative := std.prelude.char_at(literal, 0) == "-"
+    last_digit := 7
+    if negative { i = 1; last_digit = 8 }
+    if i == len(literal) { state.error = "unsupported integer spelling: " + literal; return state }
     for i < len(literal) {
         ch := std.prelude.char_at(literal, i)
         digit := -1
@@ -200,13 +204,15 @@ func program_emit_integer(program_lower_state state, string literal) program_low
         if ch == "8" { digit = 8 }
         if ch == "9" { digit = 9 }
         if digit < 0 { state.error = "unsupported integer spelling: " + literal; return state }
-        if value > 922337203685477580 || (value == 922337203685477580 && digit > 7) {
+        // Accumulate negatively so the minimum signed value is representable.
+        if value < -922337203685477580 || (value == -922337203685477580 && digit > last_digit) {
             state.error = "integer literal exceeds int64: " + literal
             return state
         }
-        value = value * 10 + digit
+        value = value * 10 - digit
         i = i + 1
     }
+    if !negative { value = 0 - value }
     id := state.next_value
     state.next_value = id + 1
     state.instructions = append(state.instructions, mir_program_instruction {

@@ -562,6 +562,23 @@ func canonical_switch(canonical_parser initial) canonical_parser {
     return state
 }
 
+// Keep the established zero-minus AST for ordinary unary expressions. The
+// minimum signed literal needs a signed carrier: its positive magnitude is
+// outside int64 and cannot be lowered as the operand of a subtraction.
+func canonical_negate_expression(expr value) expr {
+    switch value {
+        expr.int(number): {
+            start := 0
+            for start < len(number.value) && canonical_char(number.value, start) == "0" { start = start + 1 }
+            if std.prelude.prelude_slice(number.value, start, len(number.value)) == "9223372036854775808" {
+                return expr.int(compile.internal.ast.int_expr { value: "-9223372036854775808", inferred_type: option.none })
+            }
+        },
+        _: (),
+    }
+    return expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(expr.int(compile.internal.ast.int_expr { value: "0", inferred_type: option.none })), op: "-", right: std.prelude.box(value), inferred_type: option.none })
+}
+
 func canonical_expression(canonical_parser initial, int minimum) canonical_parser {
     state := initial
     if state.error != "" { return state }
@@ -602,7 +619,7 @@ func canonical_expression(canonical_parser initial, int minimum) canonical_parse
     } else if token == "-" || token == "+" {
         state = canonical_expression(canonical_advance(state), 30)
         value = state.expression
-        if token == "-" { value = expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(expr.int(compile.internal.ast.int_expr { value: "0", inferred_type: option.none })), op: "-", right: std.prelude.box(value), inferred_type: option.none }) }
+        if token == "-" { value = canonical_negate_expression(value) }
     } else if token == "(" {
         state = canonical_advance(state)
         saved := state.no_record

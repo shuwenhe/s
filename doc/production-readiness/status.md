@@ -11,9 +11,9 @@ Fresh evidence directory: /app/shuwen/production-mission-20261104.
 
 ## Checklist
 - [x] Read mission, current revision, previous acceptance report and build recipes.
-- [ ] Independently validate historical evidence.
-- [ ] Run fresh controller and production tests.
-- [ ] Complete 20-subsystem audit.
+- [x] Independently validate retained historical evidence; independent remote CI confirmation remains open.
+- [x] Run fresh controller and production tests (rerun after each compiler increment).
+- [x] Initial 20-subsystem audit; deeper coverage and remediation continue.
 - [ ] Resolve all P0/P1 defects with permanent regressions.
 - [ ] Complete documentation and clean-checkout tutorial.
 - [ ] Fresh final bootstrap and independent CI.
@@ -75,3 +75,10 @@ Pending controller run. No new bootstrap or compiler correctness claim yet.
 - Signed literal regression now permanently reproduces all five valid-source failures; range-rejection and output-preservation checks already pass. No signed-literal compiler fix yet.
 - Full production run after seed int64 changes exited 0 (int64-production.log), including all prior recipes and new seed/native differential and memory regressions. New native differential expanded to 900 cases also independently passed. Fresh staged acceptance still pending; P0-002 not yet closed.
 - Native-record suite has another pre-existing failure: native_call_option_context_check.sh accepts incorrect option payload at call. Reproduced using original frozen seed; actual seed semantic correctness issue remains open, no test weakened.
+
+### Signed literal increment: P1-004/P1-005
+- Canonical integer lowering now accumulates negatively with checked signed limits, supporting signed switch patterns and the minimum int64 value. Parser preserves ordinary unary zero-minus ASTs and represents the minimum literal directly.
+- Five original valid-source failures reproduced before fixing (signed-integer-red.log), then passed (signed-integer-green.log). Expanded boundary coverage adds positive maximum, minimum-plus-one precedence, leading-zero positive overflow and below-minimum switch rejection (signed-integer-expanded.log).
+- Independent read-only review found no correctness defects; suggested boundary coverage was added. Existing canonical statement-boundary and switch AST checks passed, preserving established unary AST behavior.
+- Rebuilt compiler from changed S sources; complete production target exited 0 (signed-production.log). Expanded regression independently passed after review. Fresh staged acceptance at the final source revision remains required.
+- A fresh frozen full bootstrap at 8ca674d6f is running separately (int64-full-bootstrap/); it predates signed-literal changes and cannot certify them.
