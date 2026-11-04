@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <errno.h>
 #include "../error/error.h"
 typedef struct parser {
 	const token_vec *tokens;
@@ -3366,7 +3367,8 @@ static ast_node *parse_switch_statement(parser *p) {
 			char *variant_name = NULL;
 			pattern_kind payload_kind = PATTERN_NONE;
 			char *payload_binding_name = NULL;
-			if (check(p, TOKEN_STRING) || check(p, TOKEN_NUMBER) || check(p, TOKEN_TRUE) || check(p, TOKEN_FALSE)) {
+			if (check(p, TOKEN_STRING) || check(p, TOKEN_NUMBER) || check(p, TOKEN_TRUE) || check(p, TOKEN_FALSE) ||
+			    (check(p,TOKEN_MINUS) && peek_ahead(p,1) && peek_ahead(p,1)->type==TOKEN_NUMBER)) {
 				case_value = parse_expression(p);
 				has_expression_body = true;
 				if (!case_value) {
@@ -3818,8 +3820,9 @@ static ast_node *parse_enum_decl(parser *p) {
 			}
 			const char *num_str = peek(p)->lexeme;
 			char *endptr;
-			long value = strtol(num_str, &endptr, 10);
-			if (*endptr != '\0' || value > INT64_MAX || value < INT64_MIN) {
+			errno = 0;
+			long long value = strtoll(num_str, &endptr, 10);
+			if (errno || endptr == num_str || *endptr != '\0' || value > INT64_MAX || value < INT64_MIN) {
 				parse_error(p, peek(p), "invalid enum explicit value");
 				goto fail;
 			}

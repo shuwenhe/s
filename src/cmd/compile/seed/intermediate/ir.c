@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 typedef struct ir_builder {
 	IR *ir;
 	ast_node *root;
@@ -589,7 +590,7 @@ static bool lower_array_literal(ir_builder *b, ast_node *expr, char out[IR_OPERA
 		}
 		switch (item->kind) {
 			case AST_NUMBER_EXPR:
-				snprintf(item_text, sizeof(item_text), "%s", item->as.number_expr.literal);
+				if(!lower_expr(b,item,item_text)) return false;
 				break;
 			case AST_BOOL_EXPR:
 				snprintf(item_text, sizeof(item_text), "%s", item->as.bool_expr.value ? "true" : "false");
@@ -830,6 +831,18 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 		case AST_IF_STMT:
 			return lower_if_value(b, expr, out);
 		case AST_NUMBER_EXPR:
+			if (!ast_number_is_float(expr->as.number_expr.literal)) {
+				const char *literal=expr->as.number_expr.literal;
+				const char *digits=literal;
+				if (*digits=='-' || *digits=='+') digits++;
+				int base=digits[0]=='0' && (digits[1]=='x' || digits[1]=='X')?16:10;
+				char *end=NULL; errno=0;
+				(void)strtoll(literal,&end,base);
+				if (errno || !end || end==literal || *end) {
+					error_set(b->err,ERR_SEMANTIC,expr->pos.line,expr->pos.column,"integer literal exceeds int64: %s",literal);
+					return false;
+				}
+			}
 			snprintf(out, IR_OPERAND_CAP, "%s", expr->as.number_expr.literal);
 			return true;
 		case AST_BOOL_EXPR:
@@ -906,6 +919,17 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 		}
 		case AST_UNARY_EXPR: {
 			char rhs[IR_OPERAND_CAP];
+			ast_node *operand=expr->as.unary_expr.operand;
+			if (expr->as.unary_expr.op==TOKEN_MINUS && operand && operand->kind==AST_NUMBER_EXPR &&
+			    !ast_number_is_float(operand->as.number_expr.literal) && operand->as.number_expr.literal[0]!='-') {
+				const char *literal=operand->as.number_expr.literal;
+				int base=literal[0]=='0' && (literal[1]=='x' || literal[1]=='X')?16:10;
+				char *end=NULL; errno=0;
+				unsigned long long magnitude=strtoull(literal,&end,base);
+				if (!errno && end!=literal && !*end && magnitude==(1ULL<<63)) {
+					copy_str(out,"-9223372036854775808"); return true;
+				}
+			}
 			if (!lower_expr(b, expr->as.unary_expr.operand, rhs)) {
 				return false;
 			}
