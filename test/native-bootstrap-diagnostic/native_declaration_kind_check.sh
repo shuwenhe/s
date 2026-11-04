@@ -11,8 +11,8 @@ semantic=(base/'semantic/semantic.s').read_text()
 def section(start,end): return semantic[semantic.index(start):semantic.index(end,semantic.index(start)+1)]
 (work/'semantic.s').write_text('package compile.internal.semantic\n'+section('enum declaration_kind {','struct struct_binding {')+section('struct declaration_ref {','struct semantic_result {'))
 mono=(base/'mono/monomorphization.s').read_text();start=mono.index('func find_declaration_ref_for_item(');end=mono.index('\nstruct ',start)
-# The real function reads only this field of its production context.
-(work/'mono.s').write_text('package compile.internal.mono\nimport "compile.internal.semantic"\nstruct mono_context { compile.internal.semantic.declaration_ref[] declarations }\n'+mono[start:end])
+# The real functions read only declarations from their production context/index.
+(work/'mono.s').write_text('package compile.internal.mono\nimport "compile.internal.semantic"\nstruct mono_context { compile.internal.semantic.declaration_ref[] declarations }\nstruct mono_index { compile.internal.semantic.declaration_ref[] declarations }\n'+mono[start:end])
 PY
 cat > "$work/main.s" <<'S'
 package main
@@ -31,7 +31,10 @@ func validate() () {
 }
 func main() int { validate(); return 42 }
 S
-"$root/bin/s_seed" --compile-native-unit "$work/main.ir" "$work/semantic.s" "$work/mono.s" "$work/main.s"
+"$root/bin/s_seed" --compile-native-unit "$work/main.ir" \
+    "$root/src/prelude/prelude.s" "$root/src/option/option.s" \
+    "$root/src/cmd/compile/internal/ast/ast.s" \
+    "$work/semantic.s" "$work/mono.s" "$work/main.s"
 S_SOURCE_ROOT="$root" "$root/bin/s_seed" --emit-standalone-amd64 "$work/main.ir" "$work/main"
 status=0; "$work/main" || status=$?
 test "$status" -eq 42

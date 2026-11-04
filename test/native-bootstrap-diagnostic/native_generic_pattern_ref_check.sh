@@ -31,7 +31,10 @@ func main() int {
     return 42
 }
 S
-"$root/bin/s_seed" --compile-native-unit "$work/main.ir" "$work/types.s" "$work/semantic.s" "$work/main.s"
+"$root/bin/s_seed" --compile-native-unit "$work/main.ir" \
+    "$root/src/prelude/prelude.s" "$root/src/option/option.s" \
+    "$root/src/cmd/compile/internal/ast/ast.s" \
+    "$work/types.s" "$work/semantic.s" "$work/main.s"
 S_SOURCE_ROOT="$root" "$root/bin/s_seed" --emit-standalone-amd64 "$work/main.ir" "$work/main"
 status=0; "$work/main" || status=$?
 test "$status" -eq 42
