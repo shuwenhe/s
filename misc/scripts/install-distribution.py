@@ -71,7 +71,9 @@ def main():
     compiler = ROOT / 'bin/s_compiler'
     if not compiler.is_file() or not os.access(compiler, os.X_OK):
         raise RuntimeError('compiler binary missing; run make compiler or extract a complete binary distribution')
-    version = (ROOT / 'VERSION').read_text().strip()
+    revision = subprocess.run(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], capture_output=True, text=True)
+    version = ((ROOT / 'VERSION').read_text().strip() if (ROOT / 'VERSION').is_file()
+               else 'dev-' + (revision.stdout.strip()[:9] or 'unknown'))
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', version):
         raise RuntimeError('invalid VERSION')
     # Every installed source matters: a library-only upgrade must switch trees.
@@ -99,6 +101,8 @@ def main():
             shutil.copy2(compiler, staging / 'bin/s_compiler')
             shutil.copy2(ROOT / 'misc/scripts/s-driver.sh', staging / 'bin/s')
             (staging / 'bin/s').chmod(0o755)
+            if not (staging / 'VERSION').exists():
+                (staging / 'VERSION').write_text(version + '\n')
             if not (staging / 'BUILD-INFO').exists():
                 revision = subprocess.run(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'],
                                           capture_output=True, text=True)

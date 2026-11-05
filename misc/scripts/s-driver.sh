@@ -105,7 +105,13 @@ ensure_compiler() {
 }
 
 if [ "$#" -eq 1 ] && [ "$1" = "--version" ]; then
-    printf 'S compiler %s\n' "$(cat "$root/VERSION")"
+    version=dev-unknown
+    if [ -f "$root/VERSION" ]; then
+        version=$(cat "$root/VERSION")
+    elif revision=$(git -C "$root" rev-parse --short=9 HEAD 2>/dev/null); then
+        version="dev-$revision"
+    fi
+    printf 'S compiler %s\n' "$version"
     if [ -f "$root/BUILD-INFO" ]; then
         cat "$root/BUILD-INFO"
     elif command -v git >/dev/null 2>&1 && git -C "$root" rev-parse --verify HEAD >/dev/null 2>&1; then

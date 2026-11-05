@@ -19,7 +19,7 @@ class InstallationTests(unittest.TestCase):
         shutil.copy2(ROOT / 'misc/scripts/s-driver.sh', bundle / 'bin/s')
         shutil.copy2(ROOT / 'misc/scripts/s-driver.sh', bundle / 'misc/scripts/s-driver.sh')
         shutil.copy2(ROOT / 'bin/s_compiler', bundle / 'bin/s_compiler')
-        shutil.copy2(ROOT / 'VERSION', bundle / 'VERSION')
+        (bundle / 'VERSION').write_text('test-development\n')
         installer = ROOT / 'misc/scripts/install-distribution.py'
         if installer.exists():
             shutil.copy2(installer, bundle / 'misc/scripts/install-distribution.py')
@@ -97,6 +97,17 @@ class InstallationTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn(b'symlink', result.stderr)
             self.assertFalse((work / 'prefix/bin/s').exists())
+
+    def test_checkout_without_version_file_gets_development_identification(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            bundle = self.fixture(work)
+            (bundle / 'VERSION').unlink()
+            result = self.invoke(bundle, work / 'prefix')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            result = subprocess.run([str(work / 'prefix/bin/s'), '--version'], capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn(b'S compiler dev-', result.stdout)
 
 
 if __name__ == '__main__':
