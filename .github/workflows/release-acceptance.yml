@@ -1,0 +1,81 @@
+name: Release acceptance
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  certify:
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: ['22.04', '24.04']
+    runs-on: ubuntu-${{ matrix.ubuntu }}
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Dependencies and owner-approved license gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s LICENSE
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential binutils git python3 python3-yaml ripgrep strace time file coreutils findutils
+      - name: Fresh full bootstrap and production acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash misc/scripts/ci-core.sh "$GITHUB_SHA" "$RUNNER_TEMP/full" full
+      - name: Independent ABI, memory and bounded fuzz
+        shell: bash
+        run: |
+          set -euo pipefail
+          checkout="$RUNNER_TEMP/full/checkout"
+          cd "$checkout"
+          bash test/native-codegen/check.sh
+          make -o compiler selfhost-native-memory-check
+          python3 misc/scripts/fuzz-native.py "$RUNNER_TEMP/fuzz" --compiler "$checkout/bin/s_compiler"
+      - name: Reproducible accepted artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 misc/scripts/build-release.py --acceptance "$RUNNER_TEMP/full/evidence" --output "$RUNNER_TEMP/release-one"
+          python3 misc/scripts/build-release.py --acceptance "$RUNNER_TEMP/full/evidence" --output "$RUNNER_TEMP/release-two"
+          for archive in "$RUNNER_TEMP/release-one/"*.tar.gz; do
+            cmp "$archive" "$RUNNER_TEMP/release-two/$(basename "$archive")"
+          done
+          cd "$RUNNER_TEMP/release-one"
+          sha256sum -c SHA256SUMS
+      - name: Independent clean Ubuntu installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/extracted"
+          tar -xzf "$RUNNER_TEMP/release-one/"*-linux-amd64.tar.gz -C "$RUNNER_TEMP/extracted"
+          bundle=$(find "$RUNNER_TEMP/extracted" -mindepth 1 -maxdepth 1 -type d)
+          cd "$bundle"
+          sha256sum -c FILES.sha256
+          docker run --rm -v "$bundle:/opt/s:ro" ubuntu:${{ matrix.ubuntu }} \
+            bash -c 'set -euo pipefail; apt-get update; apt-get install -y --no-install-recommends python3 binutils coreutils; bash /opt/s/misc/scripts/distribution-smoke.sh /opt/s'
+      - name: Preserve all available evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/preserved"
+          for name in full fuzz release-one release-two; do
+            if [ -e "$RUNNER_TEMP/$name" ]; then
+              tar --exclude='./checkout' -C "$RUNNER_TEMP/$name" -czf "$RUNNER_TEMP/preserved/$name.tar.gz" .
+            fi
+          done
+          printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/preserved/revision.txt"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: release-acceptance-ubuntu-${{ matrix.ubuntu }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/preserved
+          if-no-files-found: error
+          retention-days: 90

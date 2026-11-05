@@ -489,6 +489,8 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@python3 test/native-bootstrap-diagnostic/native_reference_instantiation_check.py -v
 	@python3 test/cli/test_distribution_cli.py -v
 	@python3 test/cli/test_installation.py -v
+	@python3 test/cli/test_release.py -v
+	@python3 test/stdlib-native/check.py -v
 	@python3 test/native-bootstrap-diagnostic/native_seed_int64_check.py
 	@python3 test/native-bootstrap-diagnostic/native_seed_int64_memory_check.py
 	@python3 test/native-bootstrap-diagnostic/native_integer_differential_check.py --seed

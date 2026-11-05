@@ -51,7 +51,7 @@ The checkout shell driver accepts `s input.s`, `s input.s -o output`, `s -o outp
 
 `--compile-unit` takes output first and accepts multiple source inputs. `--emit-bin` consumes emitted assembly; it does not re-read source. MIR and ownership diagnostic modes are listed by `./bin/s --help`.
 
-`build --legacy` is an explicit shell-driver path through the legacy ownership/C subset. It requires a host C compiler and is supported only for that subset. Native builds reject unsupported constructs with no implicit legacy fallback. `make install` installs the compiler binary itself as s; shell-only `--legacy` and `--seed` are not available in that installed binary. Set INSTALL_BIN_DIR to a writable installation directory.
+`build --legacy` is an explicit shell-driver path through the legacy ownership/C subset. It requires a host C compiler and is supported only for that subset. Native builds reject unsupported constructs with no implicit legacy fallback. `make install` now installs the same public driver and native compiler in a versioned relocatable tree. Use PREFIX for the installation root and optionally INSTALL_BIN_DIR for its command directory. See the [installation guide](../S_INSTALLATION_GUIDE.md) for version, run, test, upgrade and uninstall contracts. Binary distributions omit the seed, so `--seed` remains a development-checkout mode.
 
 ## Verification and troubleshooting
 
