@@ -490,6 +490,7 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@python3 test/cli/test_native_diagnostics.py -v
 	@python3 test/native-bootstrap-diagnostic/native_reference_instantiation_check.py -v
 	@python3 test/cli/test_distribution_cli.py -v
+	@python3 test/cli/test_imports.py -v
 	@python3 test/cli/test_installation.py -v
 	@python3 test/cli/test_release.py -v
 	@python3 test/stdlib-native/check.py -v

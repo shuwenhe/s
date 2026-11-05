@@ -38,7 +38,7 @@ func main() int {
 }
 ```
 
-Until public import orchestration is installed, explicitly pass `src/std/time.s` with the application to `bin/s_compiler --compile-unit out.sasm ...`, then `--emit-bin out.sasm program`. The example does not imply old installed compilers already recognize new intrinsic names.
+The public driver resolves `import "std.time"` for build/run/test using the real package source and dependencies. Local imports prefer packages beside the entry project, then the invocation directory, then library packages; `std.*` resolves from the installed library. Same-package helper files participate in normal builds, while executable-file tests keep their entry files separate. Low-level `s_compiler --compile-unit` still takes explicit source inputs. Older installed compilers must be upgraded before they recognize the new intrinsic names.
 
 Acceptance: `python3 test/stdlib-native/test_time.py -v` compiles and executes real S ELF programs, checks wall/monotonic/timer/range behavior, records measured wall/CPU time, exercises the standalone seed and injects EINTR/EIO using strace. Tracing permission is required; failed tracing is a test failure, never a skipped assertion.
 

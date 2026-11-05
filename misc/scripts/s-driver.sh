@@ -104,6 +104,10 @@ ensure_compiler() {
 
 }
 
+build_native() {
+    python3 "$root/misc/scripts/s-build.py" "$root" "$1" "$2" ${3:+--single-entry}
+}
+
 if [ "$#" -eq 1 ] && [ "$1" = "--version" ]; then
     version=dev-unknown
     if [ -f "$root/VERSION" ]; then
@@ -134,7 +138,7 @@ if [ "$#" -ge 2 ] && [ "$1" = "run" ]; then
     trap 'exit 129' HUP
     trap 'exit 130' INT
     trap 'exit 143' TERM
-    "$compiler" build "$source" "$work/program"
+    build_native "$source" "$work/program"
     "$work/program" "$@"
     exit 0
 fi
@@ -153,7 +157,7 @@ if [ "$#" -ge 1 ] && [ "$1" = "test" ]; then
         if [ ! -f "$source" ]; then
             echo "s test: no test file: $source" >&2
             status=1
-        elif "$compiler" build "$source" "$work/program"; then
+        elif build_native "$source" "$work/program" test; then
             if "$work/program"; then
                 printf 'PASS %s\n' "$source"
             else
@@ -234,7 +238,7 @@ emit_binary() {
     trace_authority "production-compiler-entry=bin/s_compiler"
     trace_authority "native-codegen-authority=function-mir-ssa"
     trace_authority "implicit-legacy-fallback=NO"
-    exec "$compiler" build "$input" "$output"
+    exec python3 "$root/misc/scripts/s-build.py" "$root" "$input" "$output"
 
 }
 

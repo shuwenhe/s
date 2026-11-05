@@ -18,6 +18,9 @@ class InstallationTests(unittest.TestCase):
         (bundle / 'makefile').write_text('# distribution fixture\n')
         shutil.copy2(ROOT / 'misc/scripts/s-driver.sh', bundle / 'bin/s')
         shutil.copy2(ROOT / 'misc/scripts/s-driver.sh', bundle / 'misc/scripts/s-driver.sh')
+        shutil.copy2(ROOT / 'misc/scripts/s-build.py', bundle / 'misc/scripts/s-build.py')
+        (bundle / 'src/cmd/dist').mkdir(parents=True)
+        shutil.copy2(ROOT / 'src/cmd/dist/source_imports.py', bundle / 'src/cmd/dist/source_imports.py')
         shutil.copy2(ROOT / 'bin/s_compiler', bundle / 'bin/s_compiler')
         (bundle / 'VERSION').write_text('test-development\n')
         installer = ROOT / 'misc/scripts/install-distribution.py'
