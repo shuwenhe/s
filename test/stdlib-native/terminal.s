@@ -11,9 +11,10 @@ func main() int {
         println(std.prelude.to_string(size.rows) + "x" + std.prelude.to_string(size.columns))
         return 0
     }
-    if mode == "session" || mode == "explicit" {
+    if mode == "session" || mode == "explicit" || mode == "session-status" {
         session, error := std.terminal.initialize(1)
         if error.code != 0 { return error.code }
+        if mode == "session-status" { return 37 }
         if mode == "explicit" {
             if std.terminal.restore(session*).code != 0 { return 40 }
             if std.terminal.restore(session*).code != 0 { return 41 }
@@ -23,6 +24,16 @@ func main() int {
     if mode == "not-tty" {
         ignored, error := std.terminal.initialize(1)
         if error.code != 25 { return 42 }
+        return 0
+    }
+    if mode == "partial" {
+        partial, error := std.terminal.new_buffer(1, 65536)
+        text := "x"
+        while len(text) < 32768 { text = text + text }
+        if std.terminal.buffer_append(partial*, text).code != 0 { return 44 }
+        error = std.terminal.flush(partial*)
+        if error.code != 11 || len(partial.pending) == 0 || len(partial.pending) >= 32768 { return 45 }
+        eprintln(std.prelude.to_string(32768 - len(partial.pending)))
         return 0
     }
     output, error := std.terminal.new_buffer(1, 128)
@@ -51,5 +62,7 @@ func main() int {
     if small_error.code != 0 { return 9 }
     if std.terminal.buffer_append(small*, "12345678").code != 0 { return 10 }
     if std.terminal.buffer_append(small*, "9").code != 75 || small.pending != "12345678" { return 11 }
+    invalid_buffer, fd_error := std.terminal.new_buffer(4294967297, 8)
+    if fd_error.code != 22 { return 12 }
     return 0
 }

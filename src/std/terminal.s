@@ -37,13 +37,13 @@ func cursor_position(int row, int column) (string, terminal_error) {
     return escape() + "[" + std.prelude.to_string(row) + ";" + std.prelude.to_string(column) + "H", terminal_error { code: 0 }
 }
 func dimensions(int descriptor) (terminal_size, terminal_error) {
-    if descriptor < 0 { return terminal_size { rows: 0, columns: 0 }, terminal_error { code: 22 } }
+    if descriptor < 0 || descriptor > 2147483647 { return terminal_size { rows: 0, columns: 0 }, terminal_error { code: 22 } }
     packed := __std_tty_size(descriptor)
     if packed < 0 { return terminal_size { rows: 0, columns: 0 }, terminal_error { code: 0 - packed } }
     return terminal_size { rows: packed >> 32, columns: packed & 4294967295 }, terminal_error { code: 0 }
 }
 func new_buffer(int descriptor, int limit) (output_buffer, terminal_error) {
-    if descriptor < 0 || limit <= 0 || limit > 1048576 {
+    if descriptor < 0 || descriptor > 2147483647 || limit <= 0 || limit > 1048576 {
         return output_buffer { descriptor: descriptor, limit: 0, pending: "" }, terminal_error { code: 22 }
     }
     return output_buffer { descriptor: descriptor, limit: limit, pending: "" }, terminal_error { code: 0 }
@@ -55,7 +55,7 @@ func buffer_append(output_buffer* output, string text) terminal_error {
     return terminal_error { code: 0 }
 }
 func flush(output_buffer* output) terminal_error {
-    if output.descriptor < 0 || output.limit <= 0 || len(output.pending) > output.limit { return terminal_error { code: 22 } }
+    if output.descriptor < 0 || output.descriptor > 2147483647 || output.limit <= 0 || output.limit > 1048576 || len(output.pending) > output.limit { return terminal_error { code: 22 } }
     consumed := 0
     while consumed < len(output.pending) {
         count := __std_write(output.descriptor, output.pending, consumed)

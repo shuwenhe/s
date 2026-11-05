@@ -2679,6 +2679,11 @@ s_std_write_value:
     mov %rax, %r15
     mov %rax, %rdi
     call s_alloc
+    test %rax, %rax
+    jnz .Lstd_write_allocated
+    test %r15, %r15
+    jnz .Lstd_write_nomem
+.Lstd_write_allocated:
     mov %rax, %rbx
     movq $0, (%rsp)
 .Lstd_write_copy:
@@ -2700,6 +2705,9 @@ s_std_write_value:
     jmp .Lstd_write_done
 .Lstd_write_invalid:
     mov $-22, %rax
+    jmp .Lstd_write_done
+.Lstd_write_nomem:
+    mov $-12, %rax
 .Lstd_write_done:
     add $16, %rsp
     pop %r15
@@ -2784,6 +2792,8 @@ s_os_nanosleep:
 .global s_os_write
 .type s_os_write, @function
 s_os_write:
+    cmp $2147483647, %rdi
+    ja .Los_write_invalid_fd
     push %rbp
     mov %rsp, %rbp
     sub $80, %rsp
@@ -2847,6 +2857,9 @@ s_os_write:
     mov 64(%rsp), %rax
 .Los_write_return:
     leave
+    ret
+.Los_write_invalid_fd:
+    mov $-22, %rax
     ret
 .size s_os_write, .-s_os_write
 
@@ -2917,6 +2930,8 @@ s_os_tty_size:
 .global s_os_terminal_enter
 .type s_os_terminal_enter, @function
 s_os_terminal_enter:
+    cmp $2147483647, %rdi
+    ja .Los_terminal_invalid_fd
     cmpq $0, .Los_terminal_token(%rip)
     jne .Los_terminal_busy
     mov .Los_terminal_sequence(%rip), %rax
@@ -2931,6 +2946,9 @@ s_os_terminal_enter:
     ret
 .Los_terminal_overflow:
     mov $-75, %rax
+    ret
+.Los_terminal_invalid_fd:
+    mov $-22, %rax
     ret
 .size s_os_terminal_enter, .-s_os_terminal_enter
 
