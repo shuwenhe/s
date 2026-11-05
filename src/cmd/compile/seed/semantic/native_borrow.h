@@ -392,9 +392,12 @@ static bool borrow_read_expr(borrow_proof *p, ast_node *n, bool unused) {
                 if(target->as.fn_stmt.receiver_type || target->as.fn_stmt.export_abi) return false;
             }
             else if(!make && strcmp(name,"len") && strcmp(name,"append") && strcmp(name,"to_string") &&
+                    strcmp(name,"__std_write") && strcmp(name,"__std_terminal_leave") &&
                     strcmp(name,"__host_byte_at") && strcmp(name,"__host_char_at") && strcmp(name,"__host_slice") &&
                     strcmp(name,"panic")) return false;
         } else if(callee->kind==AST_MEMBER_EXPR) {
+            ast_node *target=borrow_call_function(p,n);
+            if(target) return borrow_reborrow_call(p,n,target);
             if(strcmp(callee->as.member_expr.member,"len") || n->as.call_expr.args.len || !borrow_read_expr(p,callee->as.member_expr.object,false)) return false;
         } else return false;
         for(size_t i=make?1:0;i<n->as.call_expr.args.len;i++) if(!borrow_read_expr(p,n->as.call_expr.args.data[i],false)) return false;

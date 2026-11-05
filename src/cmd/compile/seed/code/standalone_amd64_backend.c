@@ -800,6 +800,11 @@ static const char *runtime_callee(const char *name) {
 	if (strcmp(name, "host_args") == 0) return "s_host_args_value";
 	if (strcmp(name, "__std_clock_ns") == 0) return "s_std_clock_ns_value";
 	if (strcmp(name, "__std_nanosleep") == 0) return "s_std_nanosleep_value";
+	if (strcmp(name, "__std_byte_string") == 0) return "s_byte_string_value";
+	if (strcmp(name, "__std_write") == 0) return "s_std_write_value";
+	if (strcmp(name, "__std_tty_size") == 0) return "s_std_tty_size_value";
+	if (strcmp(name, "__std_terminal_enter") == 0) return "s_std_terminal_enter_value";
+	if (strcmp(name, "__std_terminal_leave") == 0) return "s_std_terminal_leave_value";
 	if (strcmp(name, "println") == 0 || strcmp(name, "__host_println") == 0) return "s_println_value";
 	if (strcmp(name, "eprintln") == 0 || strcmp(name, "__host_eprintln") == 0) return "s_eprintln_value";
 	if (strcmp(name, "char_at") == 0 || strcmp(name, "__host_char_at") == 0 || strcmp(name, "__string_char_at") == 0) return "s_string_char_at";
