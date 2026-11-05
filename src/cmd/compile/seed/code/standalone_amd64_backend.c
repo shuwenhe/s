@@ -805,6 +805,9 @@ static const char *runtime_callee(const char *name) {
 	if (strcmp(name, "__std_tty_size") == 0) return "s_std_tty_size_value";
 	if (strcmp(name, "__std_terminal_enter") == 0) return "s_std_terminal_enter_value";
 	if (strcmp(name, "__std_terminal_leave") == 0) return "s_std_terminal_leave_value";
+	if (strcmp(name, "__std_raw_enter") == 0) return "s_std_raw_enter_value";
+	if (strcmp(name, "__std_raw_leave") == 0) return "s_std_raw_leave_value";
+	if (strcmp(name, "__std_read_byte") == 0) return "s_std_read_byte_value";
 	if (strcmp(name, "println") == 0 || strcmp(name, "__host_println") == 0) return "s_println_value";
 	if (strcmp(name, "eprintln") == 0 || strcmp(name, "__host_eprintln") == 0) return "s_eprintln_value";
 	if (strcmp(name, "char_at") == 0 || strcmp(name, "__host_char_at") == 0 || strcmp(name, "__string_char_at") == 0) return "s_string_char_at";

@@ -1,166 +1,232 @@
 package std.input
-import ("std.result"; "std.prelude")
+import "std.result"
 
 struct input_error { int code }
-struct input_event { string kind, int code }
-struct input_reader { int descriptor, string buffer, int buffer_pos, int buffer_len, bool eof }
-struct input_session { int generation, bool active }
+struct input_session { int descriptor, int generation, bool active }
+struct key_event { string kind, string text, int code }
+struct reader { int descriptor, string pending, int escape_started_ns, bool eof, bool discarding }
 
+extern "intrinsic" func __std_raw_enter(int descriptor) int
+extern "intrinsic" func __std_raw_leave(int generation) int
+extern "intrinsic" func __std_read_byte(int descriptor, int timeout_ms) int
+extern "intrinsic" func __std_clock_ns(int clock_id) int
 extern "intrinsic" func __std_byte_string(int value) string
-extern "intrinsic" func __std_read(int descriptor, int max_bytes) (string, int)
-extern "intrinsic" func __std_input_raw_mode(int descriptor) int
-extern "intrinsic" func __std_input_restore_mode(int generation) int
-
-func new_reader(int descriptor) (input_reader, input_error) {
-    if descriptor < 0 || descriptor > 2147483647 {
-        return input_reader { descriptor: descriptor, buffer: "", buffer_pos: 0, buffer_len: 0, eof: false }, input_error { code: 22 }
-    }
-    return input_reader { descriptor: descriptor, buffer: "", buffer_pos: 0, buffer_len: 0, eof: false }, input_error { code: 0 }
-}
+extern "intrinsic" func __host_byte_at(string text, int index) int
+extern "intrinsic" func __string_slice(string text, int start, int end) string
 
 func raw_mode(int descriptor) (input_session, input_error) {
     if descriptor < 0 || descriptor > 2147483647 {
-        return input_session { generation: 0, active: false }, input_error { code: 22 }
+        return input_session { descriptor: descriptor, generation: 0, active: false }, input_error { code: 22 }
     }
-    token := __std_input_raw_mode(descriptor)
-    if token < 0 { return input_session { generation: 0, active: false }, input_error { code: 0 - token } }
-    return input_session { generation: token, active: true }, input_error { code: 0 }
+    token := __std_raw_enter(descriptor)
+    if token < 0 { return input_session { descriptor: descriptor, generation: 0, active: false }, input_error { code: 0 - token } }
+    return input_session { descriptor: descriptor, generation: token, active: true }, input_error { code: 0 }
 }
 
 func restore(input_session* session) input_error {
     if !session.active { return input_error { code: 0 } }
-    status := __std_input_restore_mode(session.generation)
+    status := __std_raw_leave(session.generation)
     if status < 0 { return input_error { code: 0 - status } }
     session.active = false
     return input_error { code: 0 }
 }
 
-func byte_at_pos(string buffer, int pos) int {
-    if pos < 0 || pos >= len(buffer) { return 0 }
-    byte_val := buffer[pos]
-    return byte_val
+func new_reader(int descriptor) (reader, input_error) {
+    value := reader { descriptor: descriptor, pending: "", escape_started_ns: 0, eof: false, discarding: false }
+    if descriptor < 0 || descriptor > 2147483647 { return value, input_error { code: 22 } }
+    return value, input_error { code: 0 }
 }
 
-func read_nonblocking(input_reader* reader) (input_event, input_error) {
-    if reader.eof {
-        return input_event { kind: "eof", code: 0 }, input_error { code: 0 }
-    }
-    
-    if reader.buffer_pos >= reader.buffer_len {
-        data, status := __std_read(reader.descriptor, 4096)
-        bytes_read := status
-        if bytes_read < 0 {
-            code := 5
-            code = 0 - bytes_read
-            if code != 11 {
-                return input_event { kind: "", code: 0 }, input_error { code: code }
-            }
-            return input_event { kind: "none", code: 0 }, input_error { code: 0 }
-        }
-        zero := 0
-        if bytes_read <= zero {
-            reader.eof = true
-            return input_event { kind: "eof", code: 0 }, input_error { code: 0 }
-        }
-        reader.buffer = data
-        reader.buffer_pos = 0
-        reader.buffer_len = bytes_read
-    }
-    
-    if reader.buffer_pos >= reader.buffer_len {
-        return input_event { kind: "none", code: 0 }, input_error { code: 0 }
-    }
-    
-    pos := reader.buffer_pos
-    byte_int := byte_at_pos(reader.buffer, pos)
-    reader.buffer_pos = reader.buffer_pos + 1
-    
-    esc_code := 27
-    zero_code := 0
-    w_code := 119
-    a_code := 97
-    s_code := 115
-    d_code := 100
-    
-    if byte_int == esc_code {
-        escape_result := parse_escape_sequence(reader)
-        if escape_result.kind == "" {
-            return input_event { kind: "escape", code: 27 }, input_error { code: 0 }
-        }
-        return escape_result, input_error { code: 0 }
-    }
-    
-    if byte_int == zero_code {
-        return input_event { kind: "key", code: 0 }, input_error { code: 0 }
-    }
-    
-    if byte_int == w_code { return input_event { kind: "up", code: 65 }, input_error { code: 0 } }
-    if byte_int == a_code { return input_event { kind: "left", code: 68 }, input_error { code: 0 } }
-    if byte_int == s_code { return input_event { kind: "down", code: 66 }, input_error { code: 0 } }
-    if byte_int == d_code { return input_event { kind: "right", code: 67 }, input_error { code: 0 } }
-    
-    return input_event { kind: "key", code: byte_int }, input_error { code: 0 }
-}
+func input_event(string kind) key_event { return key_event { kind: kind, text: "", code: 0 } }
 
-func parse_escape_sequence(input_reader* reader) input_event {
-    if reader.buffer_pos >= reader.buffer_len {
-        return input_event { kind: "", code: 0 }
-    }
+func is_valid_escape_sequence(string text) bool {
+    if len(text) < 2 { return false }
+    first := __host_byte_at(text, 0)
+    if first != 27 { return false }
+    second := __host_byte_at(text, 1)
     
-    next_byte_int := byte_at_pos(reader.buffer, reader.buffer_pos)
-    bracket_code := 91
+    // ESC followed by something other than [ or O is just an escape key
+    if second != 91 && second != 79 { return false }
     
-    if next_byte_int != bracket_code {
-        return input_event { kind: "", code: 0 }
-    }
+    // ESC O requires exactly 2 more bytes: ESC O X
+    if second == 79 { return len(text) == 3 }
     
-    reader.buffer_pos = reader.buffer_pos + 1
-    
-    if reader.buffer_pos >= reader.buffer_len {
-        return input_event { kind: "", code: 0 }
-    }
-    
-    arrow_byte_int := byte_at_pos(reader.buffer, reader.buffer_pos)
-    reader.buffer_pos = reader.buffer_pos + 1
-    
-    a_arrow := 65
-    b_arrow := 66
-    c_arrow := 67
-    d_arrow := 68
-    
-    if arrow_byte_int == a_arrow { return input_event { kind: "up", code: 65 } }
-    if arrow_byte_int == b_arrow { return input_event { kind: "down", code: 66 } }
-    if arrow_byte_int == c_arrow { return input_event { kind: "right", code: 67 } }
-    if arrow_byte_int == d_arrow { return input_event { kind: "left", code: 68 } }
-    
-    return input_event { kind: "", code: 0 }
-}
-
-func read_blocking(input_reader* reader) (input_event, input_error) {
-    timeout_count := 0
-    max_timeout := 10000
-    
-    for timeout_count < max_timeout {
-        event, error := read_nonblocking(reader)
-        if error.code != 0 { return event, error }
-        if event.kind != "none" { return event, error }
+    // ESC [ requires: ESC [ [parameters] terminator
+    // Parameters are 0-9 and semicolon (;)
+    // Terminator is a letter (64-126)
+    if second == 91 {
+        if len(text) < 3 { return false }
+        last := __host_byte_at(text, len(text) - 1)
+        if last < 64 || last > 126 { return false }
         
-        data, status := __std_read(reader.descriptor, 1)
-        bytes_read := status
-        zero := 0
-        if bytes_read <= zero {
-            reader.eof = true
-            return input_event { kind: "eof", code: 0 }, input_error { code: 0 }
+        // Check all middle characters are digits or semicolons
+        index := 2
+        while index < len(text) - 1 {
+            byte_val := __host_byte_at(text, index)
+            if (byte_val < 48 || byte_val > 57) && byte_val != 59 { return false }
+            index = index + 1
         }
-        if bytes_read < 0 {
-            code := 0 - bytes_read
-            return input_event { kind: "", code: 0 }, input_error { code: code }
-        }
-        reader.buffer = data
-        reader.buffer_pos = 0
-        reader.buffer_len = bytes_read
-        timeout_count = timeout_count + 1
+        return true
     }
     
-    return input_event { kind: "", code: 0 }, input_error { code: 24 }
+    return false
 }
+
+func decode_key(string text) key_event {
+    if len(text) == 0 { return input_event("none") }
+    first := __host_byte_at(text, 0)
+    last := __host_byte_at(text, len(text) - 1)
+    kind := "key"
+    
+    if first == 27 {
+        if len(text) == 1 { return key_event { kind: "escape", text: text, code: 27 } }
+        
+        kind = "unknown"
+        
+        if is_valid_escape_sequence(text) {
+            if last == 65 { kind = "up" }
+            if last == 66 { kind = "down" }
+            if last == 67 { kind = "right" }
+            if last == 68 { kind = "left" }
+        }
+
+        return key_event { kind: kind, text: text, code: last }
+    }
+    
+    // Non-escape characters: check for WASD mapping
+    if first == 119 || first == 87 { kind = "up" }
+    if first == 97 || first == 65 { kind = "left" }
+    if first == 115 || first == 83 { kind = "down" }
+    if first == 100 || first == 68 { kind = "right" }
+    return key_event { kind: kind, text: text, code: first }
+}
+
+func read_key(reader* state, bool blocking) (key_event, input_error) {
+    if state.descriptor < 0 || state.descriptor > 2147483647 || len(state.pending) > 32 {
+        return input_event("none"), input_error { code: 22 }
+    }
+    
+    drained := 0
+    while true {
+        // Process pending buffer first
+        if len(state.pending) > 0 {
+            first := __host_byte_at(state.pending, 0)
+            
+            // If we're discarding bytes from an oversized sequence, skip until we hit a terminator
+            if state.discarding {
+                if first >= 64 && first <= 126 { 
+                    state.discarding = false 
+                    state.pending = __string_slice(state.pending, 1, len(state.pending))
+                } else {
+                    state.pending = __string_slice(state.pending, 1, len(state.pending))
+                }
+                continue
+            }
+            
+            // Non-escape characters are emitted immediately
+            if first != 27 {
+                text := __string_slice(state.pending, 0, 1)
+                state.pending = __string_slice(state.pending, 1, len(state.pending))
+                return decode_key(text), input_error { code: 0 }
+            }
+            
+            // This is an escape character
+            if len(state.pending) > 1 {
+                second := __host_byte_at(state.pending, 1)
+                
+                // ESC not followed by [ or O is a standalone escape
+                if second != 91 && second != 79 {
+                    state.pending = __string_slice(state.pending, 1, len(state.pending))
+                    return key_event { kind: "escape", text: __std_byte_string(27), code: 27 }, input_error { code: 0 }
+                }
+                
+                // We have ESC[ or ESC0, wait for completion
+                if len(state.pending) >= 3 {
+                    last := __host_byte_at(state.pending, len(state.pending) - 1)
+                    
+                    // If we reach 32 bytes while still in escape mode (no terminator), mark for discard
+                    if len(state.pending) == 32 && (last < 64 || last > 126) {
+                        text := state.pending
+                        state.pending = ""
+                        state.discarding = true
+                        return decode_key(text), input_error { code: 0 }
+                    }
+                    
+                    // Complete escape sequence detected (ends with terminator)
+                    if last >= 64 && last <= 126 {
+                        text := state.pending
+                        state.pending = ""
+                        return decode_key(text), input_error { code: 0 }
+                    }
+                }
+            }
+        }
+        
+        // Handle EOF
+        if state.eof {
+            if len(state.pending) > 0 {
+                text := state.pending
+                state.pending = ""
+                return decode_key(text), input_error { code: 0 }
+            }
+            return input_event("eof"), input_error { code: 0 }
+        }
+        
+        // Calculate read timeout for escape sequence timeout
+        timeout := 0
+        if blocking { timeout = -1 }
+        if len(state.pending) > 0 {
+            now := __std_clock_ns(1)
+            if now < 0 { return input_event("none"), input_error { code: 0 - now } }
+            if state.escape_started_ns < 0 || state.escape_started_ns > now { return input_event("none"), input_error { code: 22 } }
+            elapsed := now - state.escape_started_ns
+            if elapsed >= 25000000 {
+                text := state.pending
+                state.pending = ""
+                return decode_key(text), input_error { code: 0 }
+            }
+            if blocking { timeout = (25000000 - elapsed + 999999) / 1000000 }
+        }
+        
+        // Read next byte
+        byte := __std_read_byte(state.descriptor, timeout)
+        if byte == -4096 { state.eof = true; continue }
+        if byte == -11 {
+            if !blocking { return input_event("none"), input_error { code: 0 } }
+            continue
+        }
+        if byte < 0 { return input_event("none"), input_error { code: 0 - byte } }
+        
+        // If we're still discarding bytes from an oversized sequence, skip until terminator
+        if state.discarding {
+            if byte >= 64 && byte <= 126 {
+                state.discarding = false
+            }
+            continue
+        }
+        
+        if state.discarding {
+            if byte >= 64 && byte <= 126 { state.discarding = false }
+            drained = drained + 1
+            if drained >= 256 { return input_event("none"), input_error { code: 0 } }
+            continue
+        }
+
+        // Emit immediate byte if not starting escape sequence
+        if len(state.pending) == 0 && byte != 27 { return decode_key(__std_byte_string(byte)), input_error { code: 0 } }
+        
+        // Starting or continuing escape sequence
+        if len(state.pending) == 0 {
+            now := __std_clock_ns(1)
+            if now < 0 { return input_event("none"), input_error { code: 0 - now } }
+            state.escape_started_ns = now
+        }
+        
+        state.pending = state.pending + __std_byte_string(byte)
+    }
+    
+    return input_event("none"), input_error { code: 0 }
+}
+
+func read_blocking(reader* state) (key_event, input_error) { return read_key(state*, true) }
+func read_nonblocking(reader* state) (key_event, input_error) { return read_key(state*, false) }

@@ -601,7 +601,7 @@ func amd64_needs_intrinsics(function_ssa_program program) bool {
 func amd64_emit_native_intrinsic(function_ssa_value[] values, function_ssa_value value, int function_index, int position) string {
     name := value.symbol
     if name == "__std_byte_string" {
-        return "  movl $16, %edi\n  call .Ls_native_alloc\n  movq $1, (%rax)\n  movq "
+        return "  movl $16, %edi\n  call .Ls_native_alloc\n  movq $1, (%rax)\n  movq $0, 8(%rax)\n  movq "
             + amd64_slot(values, value.operands[0]) + ", %rdx\n  movb %dl, 8(%rax)\n  movq %rax, " + amd64_slot(values, value.id) + "\n"
     }
     host_slice_name := "__host" + "_slice"
@@ -623,6 +623,9 @@ func amd64_emit_native_intrinsic(function_ssa_value[] values, function_ssa_value
         i = i + 1
     }
     target := ".Ls_native_host_args"
+    if name == "__std_raw_enter" { target = "s_os_raw_enter" }
+    if name == "__std_raw_leave" { target = "s_os_raw_leave" }
+    if name == "__std_read_byte" { target = "s_os_read_byte" }
     if name == "__std_write" { target = "s_os_write_string" }
     if name == "__std_tty_size" { target = "s_os_tty_size" }
     if name == "__std_terminal_enter" { target = "s_os_terminal_enter" }
@@ -736,7 +739,24 @@ func amd64_os_runtime() string {
         + "unction\ns_os_terminal_leave:\n    test %rdi, %rdi\n    jle .Los_terminal_bad_token\n    cmp .Los_terminal_token(%rip), %rdi\n    jne .Los_terminal_bad_token\n    push %r12\n    push %r13\n    push %r14\n    mov .Los_terminal_fd(%rip), %r12\n    xor %r13d, %r13d\n.Lo"
         + "s_terminal_leave_write:\n    mov %r12, %rdi\n    lea .Los_terminal_restore(%rip), %rsi\n    add %r13, %rsi\n    mov $14, %edx\n    sub %r13, %rdx\n    call s_os_write\n    test %rax, %rax\n    js .Los_terminal_leave_done\n    je .Los_terminal_leave_zero\n    add %ra"
         + "x, %r13\n    cmp $14, %r13\n    jb .Los_terminal_leave_write\n    movq $0, .Los_terminal_token(%rip)\n    xor %eax, %eax\n.Los_terminal_leave_done:\n    pop %r14\n    pop %r13\n    pop %r12\n    ret\n.Los_terminal_leave_zero:\n    mov $-5, %rax\n    jmp .Los_terminal_"
-        + "leave_done\n.Los_terminal_bad_token:\n    mov $-22, %rax\n    ret\n.size s_os_terminal_leave, .-s_os_terminal_leave\n\n.global s_os_cleanup\n.type s_os_cleanup, @function\ns_os_cleanup:\n    mov .Los_terminal_token(%rip), %rdi\n    test %rdi, %rdi\n    je .Los_cleanu"
-        + "p_done\n    jmp s_os_terminal_leave\n.Los_cleanup_done:\n    xor %eax, %eax\n    ret\n.size s_os_cleanup, .-s_os_cleanup\n"
+        + "leave_done\n.Los_terminal_bad_token:\n    mov $-22, %rax\n    ret\n.size s_os_terminal_leave, .-s_os_terminal_leave\n\n.global s_os_cleanup\n.type s_os_cleanup, @function\ns_os_cleanup:\n    sub $8, %rsp\n    mov .Los_raw_token(%rip), %rdi\n    test %rdi, %rdi\n    je"
+        + " .Los_cleanup_output\n    call s_os_raw_leave\n.Los_cleanup_output:\n    mov .Los_terminal_token(%rip), %rdi\n    test %rdi, %rdi\n    je .Los_cleanup_pop\n    call s_os_terminal_leave\n.Los_cleanup_pop:\n    add $8, %rsp\n.Los_cleanup_done:\n    xor %eax, %eax\n    "
+        + "ret\n.size s_os_cleanup, .-s_os_cleanup\n\n.bss\n.balign 8\n.Los_raw_token: .quad 0\n.Los_raw_sequence: .quad 0\n.Los_raw_fd: .quad 0\n.Los_raw_saved: .zero 36\n.text\n.global s_os_raw_enter\n.type s_os_raw_enter, @function\ns_os_raw_enter:\n    cmp $2147483647, %rdi\n "
+        + "   ja .Los_raw_invalid\n    cmpq $0, .Los_raw_token(%rip)\n    jne .Los_raw_busy\n    push %r12\n    push %r13\n    sub $88, %rsp\n    mov %rdi, %r12\n    mov .Los_raw_sequence(%rip), %r13\n    add $1, %r13\n    jo .Los_raw_overflow\n.Los_raw_get:\n    mov %r12, %rdi"
+        + "\n    mov $21505, %esi\n    mov %rsp, %rdx\n    mov $16, %eax\n    syscall\n    cmp $-4, %rax\n    je .Los_raw_get\n    test %rax, %rax\n    js .Los_raw_enter_done\n    mov %rsp, %rsi\n    lea 40(%rsp), %rdi\n    mov $36, %ecx\n    cld\n    rep movsb\n    andl $-1516, 4"
+        + "0(%rsp)\n    andl $-2, 44(%rsp)\n    andl $-305, 48(%rsp)\n    orl $48, 48(%rsp)\n    andl $-32844, 52(%rsp)\n    movb $0, 62(%rsp)\n    movb $1, 63(%rsp)\n.Los_raw_set:\n    mov %r12, %rdi\n    mov $21506, %esi\n    lea 40(%rsp), %rdx\n    mov $16, %eax\n    syscall\n"
+        + "    cmp $-4, %rax\n    je .Los_raw_set\n    test %rax, %rax\n    js .Los_raw_enter_done\n    mov %rsp, %rsi\n    lea .Los_raw_saved(%rip), %rdi\n    mov $36, %ecx\n    cld\n    rep movsb\n    mov %r12, .Los_raw_fd(%rip)\n    mov %r13, .Los_raw_sequence(%rip)\n    mov"
+        + " %r13, .Los_raw_token(%rip)\n    mov %r13, %rax\n.Los_raw_enter_done:\n    add $88, %rsp\n    pop %r13\n    pop %r12\n    ret\n.Los_raw_overflow:\n    mov $-75, %rax\n    jmp .Los_raw_enter_done\n.Los_raw_busy:\n    mov $-16, %rax\n    ret\n.Los_raw_invalid:\n    mov $-"
+        + "22, %rax\n    ret\n.size s_os_raw_enter, .-s_os_raw_enter\n\n.global s_os_raw_leave\n.type s_os_raw_leave, @function\ns_os_raw_leave:\n    test %rdi, %rdi\n    jle .Los_raw_invalid_token\n    cmp .Los_raw_token(%rip), %rdi\n    jne .Los_raw_invalid_token\n.Los_raw_re"
+        + "store_retry:\n    mov .Los_raw_fd(%rip), %rdi\n    mov $21506, %esi\n    lea .Los_raw_saved(%rip), %rdx\n    mov $16, %eax\n    syscall\n    cmp $-4, %rax\n    je .Los_raw_restore_retry\n    test %rax, %rax\n    js .Los_raw_restore_done\n    movq $0, .Los_raw_token("
+        + "%rip)\n.Los_raw_restore_done:\n    ret\n.Los_raw_invalid_token:\n    mov $-22, %rax\n    ret\n.size s_os_raw_leave, .-s_os_raw_leave\n\n# Poll/read a byte with an absolute monotonic deadline across interruptions.\n# -4096 is EOF (outside Linux errno range); -11 is "
+        + "no byte before timeout.\n.global s_os_read_byte\n.type s_os_read_byte, @function\ns_os_read_byte:\n    cmp $2147483647, %rdi\n    ja .Los_read_invalid\n    cmp $-1, %rsi\n    jl .Los_read_invalid\n    cmp $2147483647, %rsi\n    jg .Los_read_invalid\n    push %r12\n  "
+        + "  push %r13\n    push %r14\n    sub $16, %rsp\n    mov %rdi, %r12\n    mov %rsi, %r13\n    xor %r14d, %r14d\n    test %r13, %r13\n    jle .Los_read_poll\n    mov $1, %edi\n    call s_os_clock_ns\n    test %rax, %rax\n    js .Los_read_done\n    imul $1000000, %r13, %r1"
+        + "4\n    add %rax, %r14\n    jo .Los_read_overflow\n.Los_read_poll:\n    mov %r12d, (%rsp)\n    movl $1, 4(%rsp)\n    mov %rsp, %rdi\n    mov $1, %esi\n    mov %r13, %rdx\n    mov $7, %eax\n    syscall\n    cmp $-4, %rax\n    je .Los_read_interrupted\n    test %rax, %rax"
+        + "\n    js .Los_read_done\n    je .Los_read_none\n    testw $32, 6(%rsp)\n    jnz .Los_read_bad_fd\n    mov %r12, %rdi\n    lea 8(%rsp), %rsi\n    mov $1, %edx\n    xor %eax, %eax\n    syscall\n    cmp $-4, %rax\n    je .Los_read_interrupted\n    test %rax, %rax\n    js "
+        + ".Los_read_done\n    je .Los_read_eof\n    movzbl 8(%rsp), %eax\n    jmp .Los_read_done\n.Los_read_interrupted:\n    test %r14, %r14\n    je .Los_read_poll\n    mov $1, %edi\n    call s_os_clock_ns\n    test %rax, %rax\n    js .Los_read_done\n    mov %r14, %rdx\n    su"
+        + "b %rax, %rdx\n    jle .Los_read_none\n    lea 999999(%rdx), %rax\n    xor %edx, %edx\n    mov $1000000, %ecx\n    div %rcx\n    mov %rax, %r13\n    jmp .Los_read_poll\n.Los_read_none:\n    mov $-11, %rax\n    jmp .Los_read_done\n.Los_read_eof:\n    mov $-4096, %rax\n  "
+        + "  jmp .Los_read_done\n.Los_read_bad_fd:\n    mov $-9, %rax\n    jmp .Los_read_done\n.Los_read_overflow:\n    mov $-75, %rax\n.Los_read_done:\n    add $16, %rsp\n    pop %r14\n    pop %r13\n    pop %r12\n    ret\n.Los_read_invalid:\n    mov $-22, %rax\n    ret\n.size s_os"
+        + "_read_byte, .-s_os_read_byte\n"
 }
 // END GENERATED NATIVE OS

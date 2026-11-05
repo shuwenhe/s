@@ -31,4 +31,4 @@ The initial audit identifies these important implementation gaps:
 
 The native OS boundary is authored in `src/runtime/native_os_amd64.S`. `generate-native-os.py` embeds the same raw routines into the canonical native runtime and tagged seed runtime. MIR/SSA validate each intrinsic signature; the standard-library S layer owns API validation and typed errors. No C++/ncurses or external `sleep` process performs library operations.
 
-See [time API](time.md) for the first implemented module and its limitations.
+Implemented API references: [time](time.md), [terminal](terminal.md), [input](input.md). Each describes its tested scope and remaining limitations; full staged compatibility is recorded separately from development-compiler execution.

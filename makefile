@@ -495,6 +495,8 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@python3 test/cli/test_release.py -v
 	@python3 test/stdlib-native/check.py -v
 	@python3 test/stdlib-native/test_time.py -v
+	@python3 test/stdlib-native/test_terminal.py -v
+	@python3 test/stdlib-native/test_input.py -v
 	@python3 test/stdlib-native/test_seed_borrow_integration.py -v
 	@python3 test/native-bootstrap-diagnostic/native_seed_int64_check.py
 	@python3 test/native-bootstrap-diagnostic/native_seed_int64_memory_check.py

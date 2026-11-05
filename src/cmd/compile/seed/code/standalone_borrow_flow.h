@@ -176,6 +176,8 @@ static int borrow_flow_call(borrow_flow_types *t,standalone_function *fn,int *st
         return borrow_flow_is_array(t,array) && args[1]==t->elements[array-(int)t->m->record_count]?array:BF_UNKNOWN;
     }
     if(runtime) {
+        if(!strcmp(runtime,"s_std_raw_enter_value") || !strcmp(runtime,"s_std_raw_leave_value")) return count==1 && args[0]==BF_INT?BF_INT:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_std_read_byte_value")) return count==2 && args[0]==BF_INT && args[1]==BF_INT?BF_INT:BF_UNKNOWN;
         if(!strcmp(runtime,"s_std_tty_size_value") || !strcmp(runtime,"s_std_terminal_enter_value") || !strcmp(runtime,"s_std_terminal_leave_value")) return count==1 && args[0]==BF_INT?BF_INT:BF_UNKNOWN;
         if(!strcmp(runtime,"s_std_write_value")) return count==3 && args[0]==BF_INT && args[1]==BF_STRING && args[2]==BF_INT?BF_INT:BF_UNKNOWN;
         if(!strcmp(runtime,"s_std_clock_ns_value")) return count==1 && args[0]==BF_INT?BF_INT:BF_UNKNOWN;

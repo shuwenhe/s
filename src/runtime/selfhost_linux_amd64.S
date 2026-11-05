@@ -2718,6 +2718,35 @@ s_std_write_value:
     mov %rax, %rdi
     jmp s_integer_pack
 
+
+# Typed keyboard adapters for the tagged seed ABI.
+.text
+.global s_std_raw_enter_value
+s_std_raw_enter_value:
+    S_UNTAG %rdi
+    sub $8, %rsp
+    call s_os_raw_enter
+    add $8, %rsp
+    mov %rax, %rdi
+    jmp s_integer_pack
+.global s_std_raw_leave_value
+s_std_raw_leave_value:
+    S_UNTAG %rdi
+    sub $8, %rsp
+    call s_os_raw_leave
+    add $8, %rsp
+    mov %rax, %rdi
+    jmp s_integer_pack
+.global s_std_read_byte_value
+s_std_read_byte_value:
+    S_UNTAG %rdi
+    S_UNTAG %rsi
+    sub $8, %rsp
+    call s_os_read_byte
+    add $8, %rsp
+    mov %rax, %rdi
+    jmp s_integer_pack
+
 # BEGIN GENERATED NATIVE OS
 # Shared freestanding OS boundary. SysV AMD64 arguments/results; negative errno.
 # Generated into canonical runtime text and the seed runtime by generate-native-os.py.
@@ -2995,12 +3024,215 @@ s_os_terminal_leave:
 .global s_os_cleanup
 .type s_os_cleanup, @function
 s_os_cleanup:
+    sub $8, %rsp
+    mov .Los_raw_token(%rip), %rdi
+    test %rdi, %rdi
+    je .Los_cleanup_output
+    call s_os_raw_leave
+.Los_cleanup_output:
     mov .Los_terminal_token(%rip), %rdi
     test %rdi, %rdi
-    je .Los_cleanup_done
-    jmp s_os_terminal_leave
+    je .Los_cleanup_pop
+    call s_os_terminal_leave
+.Los_cleanup_pop:
+    add $8, %rsp
 .Los_cleanup_done:
     xor %eax, %eax
     ret
 .size s_os_cleanup, .-s_os_cleanup
+
+.bss
+.balign 8
+.Los_raw_token: .quad 0
+.Los_raw_sequence: .quad 0
+.Los_raw_fd: .quad 0
+.Los_raw_saved: .zero 36
+.text
+.global s_os_raw_enter
+.type s_os_raw_enter, @function
+s_os_raw_enter:
+    cmp $2147483647, %rdi
+    ja .Los_raw_invalid
+    cmpq $0, .Los_raw_token(%rip)
+    jne .Los_raw_busy
+    push %r12
+    push %r13
+    sub $88, %rsp
+    mov %rdi, %r12
+    mov .Los_raw_sequence(%rip), %r13
+    add $1, %r13
+    jo .Los_raw_overflow
+.Los_raw_get:
+    mov %r12, %rdi
+    mov $21505, %esi
+    mov %rsp, %rdx
+    mov $16, %eax
+    syscall
+    cmp $-4, %rax
+    je .Los_raw_get
+    test %rax, %rax
+    js .Los_raw_enter_done
+    mov %rsp, %rsi
+    lea 40(%rsp), %rdi
+    mov $36, %ecx
+    cld
+    rep movsb
+    andl $-1516, 40(%rsp)
+    andl $-2, 44(%rsp)
+    andl $-305, 48(%rsp)
+    orl $48, 48(%rsp)
+    andl $-32844, 52(%rsp)
+    movb $0, 62(%rsp)
+    movb $1, 63(%rsp)
+.Los_raw_set:
+    mov %r12, %rdi
+    mov $21506, %esi
+    lea 40(%rsp), %rdx
+    mov $16, %eax
+    syscall
+    cmp $-4, %rax
+    je .Los_raw_set
+    test %rax, %rax
+    js .Los_raw_enter_done
+    mov %rsp, %rsi
+    lea .Los_raw_saved(%rip), %rdi
+    mov $36, %ecx
+    cld
+    rep movsb
+    mov %r12, .Los_raw_fd(%rip)
+    mov %r13, .Los_raw_sequence(%rip)
+    mov %r13, .Los_raw_token(%rip)
+    mov %r13, %rax
+.Los_raw_enter_done:
+    add $88, %rsp
+    pop %r13
+    pop %r12
+    ret
+.Los_raw_overflow:
+    mov $-75, %rax
+    jmp .Los_raw_enter_done
+.Los_raw_busy:
+    mov $-16, %rax
+    ret
+.Los_raw_invalid:
+    mov $-22, %rax
+    ret
+.size s_os_raw_enter, .-s_os_raw_enter
+
+.global s_os_raw_leave
+.type s_os_raw_leave, @function
+s_os_raw_leave:
+    test %rdi, %rdi
+    jle .Los_raw_invalid_token
+    cmp .Los_raw_token(%rip), %rdi
+    jne .Los_raw_invalid_token
+.Los_raw_restore_retry:
+    mov .Los_raw_fd(%rip), %rdi
+    mov $21506, %esi
+    lea .Los_raw_saved(%rip), %rdx
+    mov $16, %eax
+    syscall
+    cmp $-4, %rax
+    je .Los_raw_restore_retry
+    test %rax, %rax
+    js .Los_raw_restore_done
+    movq $0, .Los_raw_token(%rip)
+.Los_raw_restore_done:
+    ret
+.Los_raw_invalid_token:
+    mov $-22, %rax
+    ret
+.size s_os_raw_leave, .-s_os_raw_leave
+
+# Poll/read a byte with an absolute monotonic deadline across interruptions.
+# -4096 is EOF (outside Linux errno range); -11 is no byte before timeout.
+.global s_os_read_byte
+.type s_os_read_byte, @function
+s_os_read_byte:
+    cmp $2147483647, %rdi
+    ja .Los_read_invalid
+    cmp $-1, %rsi
+    jl .Los_read_invalid
+    cmp $2147483647, %rsi
+    jg .Los_read_invalid
+    push %r12
+    push %r13
+    push %r14
+    sub $16, %rsp
+    mov %rdi, %r12
+    mov %rsi, %r13
+    xor %r14d, %r14d
+    test %r13, %r13
+    jle .Los_read_poll
+    mov $1, %edi
+    call s_os_clock_ns
+    test %rax, %rax
+    js .Los_read_done
+    imul $1000000, %r13, %r14
+    add %rax, %r14
+    jo .Los_read_overflow
+.Los_read_poll:
+    mov %r12d, (%rsp)
+    movl $1, 4(%rsp)
+    mov %rsp, %rdi
+    mov $1, %esi
+    mov %r13, %rdx
+    mov $7, %eax
+    syscall
+    cmp $-4, %rax
+    je .Los_read_interrupted
+    test %rax, %rax
+    js .Los_read_done
+    je .Los_read_none
+    testw $32, 6(%rsp)
+    jnz .Los_read_bad_fd
+    mov %r12, %rdi
+    lea 8(%rsp), %rsi
+    mov $1, %edx
+    xor %eax, %eax
+    syscall
+    cmp $-4, %rax
+    je .Los_read_interrupted
+    test %rax, %rax
+    js .Los_read_done
+    je .Los_read_eof
+    movzbl 8(%rsp), %eax
+    jmp .Los_read_done
+.Los_read_interrupted:
+    test %r14, %r14
+    je .Los_read_poll
+    mov $1, %edi
+    call s_os_clock_ns
+    test %rax, %rax
+    js .Los_read_done
+    mov %r14, %rdx
+    sub %rax, %rdx
+    jle .Los_read_none
+    lea 999999(%rdx), %rax
+    xor %edx, %edx
+    mov $1000000, %ecx
+    div %rcx
+    mov %rax, %r13
+    jmp .Los_read_poll
+.Los_read_none:
+    mov $-11, %rax
+    jmp .Los_read_done
+.Los_read_eof:
+    mov $-4096, %rax
+    jmp .Los_read_done
+.Los_read_bad_fd:
+    mov $-9, %rax
+    jmp .Los_read_done
+.Los_read_overflow:
+    mov $-75, %rax
+.Los_read_done:
+    add $16, %rsp
+    pop %r14
+    pop %r13
+    pop %r12
+    ret
+.Los_read_invalid:
+    mov $-22, %rax
+    ret
+.size s_os_read_byte, .-s_os_read_byte
 # END GENERATED NATIVE OS

@@ -392,6 +392,8 @@ static bool borrow_read_expr(borrow_proof *p, ast_node *n, bool unused) {
                 if(target->as.fn_stmt.receiver_type || target->as.fn_stmt.export_abi) return false;
             }
             else if(!make && strcmp(name,"len") && strcmp(name,"append") && strcmp(name,"to_string") &&
+                    strcmp(name,"__std_raw_leave") && strcmp(name,"__std_read_byte") && strcmp(name,"__std_clock_ns") &&
+                    strcmp(name,"__std_byte_string") && strcmp(name,"__string_slice") &&
                     strcmp(name,"__std_write") && strcmp(name,"__std_terminal_leave") &&
                     strcmp(name,"__host_byte_at") && strcmp(name,"__host_char_at") && strcmp(name,"__host_slice") &&
                     strcmp(name,"panic")) return false;

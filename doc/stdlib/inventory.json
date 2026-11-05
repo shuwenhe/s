@@ -17041,6 +17041,76 @@
       ],
       "placeholder_files": []
     },
+    "std.input": {
+      "apis": [
+        {
+          "file": "src/std/input.s",
+          "signature": "func raw_mode(int descriptor) (input_session, input_error)"
+        },
+        {
+          "file": "src/std/input.s",
+          "signature": "func restore(input_session* session) input_error"
+        },
+        {
+          "file": "src/std/input.s",
+          "signature": "func new_reader(int descriptor) (reader, input_error)"
+        },
+        {
+          "file": "src/std/input.s",
+          "signature": "func input_event(string kind) key_event"
+        },
+        {
+          "file": "src/std/input.s",
+          "signature": "func decode_key(string text) key_event"
+        },
+        {
+          "file": "src/std/input.s",
+          "signature": "func read_key(reader* state, bool blocking) (key_event, input_error)"
+        },
+        {
+          "file": "src/std/input.s",
+          "signature": "func read_blocking(reader* state) (key_event, input_error)"
+        },
+        {
+          "file": "src/std/input.s",
+          "signature": "func read_nonblocking(reader* state) (key_event, input_error)"
+        }
+      ],
+      "files": [
+        "src/std/input.s"
+      ],
+      "intrinsics": [
+        {
+          "declaration": "extern \"intrinsic\" func __std_raw_enter(int descriptor) int",
+          "file": "src/std/input.s"
+        },
+        {
+          "declaration": "extern \"intrinsic\" func __std_raw_leave(int generation) int",
+          "file": "src/std/input.s"
+        },
+        {
+          "declaration": "extern \"intrinsic\" func __std_read_byte(int descriptor, int timeout_ms) int",
+          "file": "src/std/input.s"
+        },
+        {
+          "declaration": "extern \"intrinsic\" func __std_clock_ns(int clock_id) int",
+          "file": "src/std/input.s"
+        },
+        {
+          "declaration": "extern \"intrinsic\" func __std_byte_string(int value) string",
+          "file": "src/std/input.s"
+        },
+        {
+          "declaration": "extern \"intrinsic\" func __host_byte_at(string text, int index) int",
+          "file": "src/std/input.s"
+        },
+        {
+          "declaration": "extern \"intrinsic\" func __string_slice(string text, int start, int end) string",
+          "file": "src/std/input.s"
+        }
+      ],
+      "placeholder_files": []
+    },
     "std.io": {
       "apis": [
         {
@@ -18774,6 +18844,88 @@
       "intrinsics": [],
       "placeholder_files": []
     },
+    "std.terminal": {
+      "apis": [
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func escape() string"
+        },
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func reset_color() string"
+        },
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func clear_screen() string"
+        },
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func cursor_visible(bool visible) string"
+        },
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func alternate_screen(bool enabled) string"
+        },
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func color(int foreground, int background, bool bright) (string, terminal_error)"
+        },
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func cursor_position(int row, int column) (string, terminal_error)"
+        },
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func dimensions(int descriptor) (terminal_size, terminal_error)"
+        },
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func new_buffer(int descriptor, int limit) (output_buffer, terminal_error)"
+        },
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func buffer_append(output_buffer* output, string text) terminal_error"
+        },
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func flush(output_buffer* output) terminal_error"
+        },
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func initialize(int descriptor) (terminal_session, terminal_error)"
+        },
+        {
+          "file": "src/std/terminal.s",
+          "signature": "func restore(terminal_session* session) terminal_error"
+        }
+      ],
+      "files": [
+        "src/std/terminal.s"
+      ],
+      "intrinsics": [
+        {
+          "declaration": "extern \"intrinsic\" func __std_byte_string(int value) string",
+          "file": "src/std/terminal.s"
+        },
+        {
+          "declaration": "extern \"intrinsic\" func __std_write(int descriptor, string text, int offset) int",
+          "file": "src/std/terminal.s"
+        },
+        {
+          "declaration": "extern \"intrinsic\" func __std_tty_size(int descriptor) int",
+          "file": "src/std/terminal.s"
+        },
+        {
+          "declaration": "extern \"intrinsic\" func __std_terminal_enter(int descriptor) int",
+          "file": "src/std/terminal.s"
+        },
+        {
+          "declaration": "extern \"intrinsic\" func __std_terminal_leave(int generation) int",
+          "file": "src/std/terminal.s"
+        }
+      ],
+      "placeholder_files": []
+    },
     "std.text": {
       "apis": [
         {
@@ -19143,6 +19295,6 @@
     }
   },
   "placeholder_shaped_files": 4806,
-  "revision": "7d3ce6ba475a3a8ff5a9849f2ceb176dc85d1aac",
-  "source_files": 4914
+  "revision": "639b74ddde6e2404b9296b5352b22289aa65b279",
+  "source_files": 4916
 }

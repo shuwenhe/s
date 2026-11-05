@@ -79,6 +79,28 @@ class NativeInputTests(unittest.TestCase):
         result = subprocess.run([str(self.binary), 'notty'], input=b'', capture_output=True, timeout=5)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_unknown_and_oversized_escape_sequences_do_not_become_arrow_keys(self):
+        for payload, wanted in ((b'\x1b[1;5A', [b'up:65', b'eof:0']),
+                                (b'\x1b[?A', [b'unknown:65', b'eof:0']),
+                                (b'\x1b[' + b'1' * 40 + b'A', [b'unknown:49', b'eof:0'])):
+            with self.subTest(payload=payload):
+                result = subprocess.run([str(self.binary)], input=payload, capture_output=True, timeout=5)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.splitlines(), wanted)
+
+    def test_seed_keyboard_parsing_and_raw_mode_cleanup(self):
+        intermediate, binary = self.work / 'seed.ir', self.work / 'seed-input'
+        result = subprocess.run([str(ROOT / 'bin/s_seed'), '--compile-native-unit', str(intermediate), *map(str, self.sources)],
+                                capture_output=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = subprocess.run([str(ROOT / 'bin/s_seed'), '--emit-standalone-amd64', str(intermediate), str(binary)],
+                                cwd=ROOT, env=os.environ | {'S_SOURCE_ROOT': str(ROOT)}, capture_output=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = subprocess.run([str(binary)], input=b'w\x1b[D', capture_output=True, timeout=5)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.splitlines(), [b'up:119', b'left:68', b'eof:0'])
+        self.raw_session('raw-exit', binary=binary)
+
     def raw_session(self, mode, binary=None, inject=False):
         master, slave = pty.openpty()
         original = termios.tcgetattr(slave)
