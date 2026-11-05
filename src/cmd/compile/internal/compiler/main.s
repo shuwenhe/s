@@ -11,6 +11,12 @@ extern "intrinsic" func __host_char_at(string source, int index) string
 extern "intrinsic" func host_args() string[]
 
 func compiler_main(string[] args) int {
+    // Every output mode must reject input aliases before opening an output.
+    // Unit compilation puts the output first and may read several sources.
+    if compiler_output_overwrites_input(args) {
+        eprintln("compiler: output must not overwrite input source")
+        return 2
+    }
     if len(args) == 4 && args[1] == "--canonical-ast-check" {
         source := __host_read_to_string(args[2])
         if source == "" { eprintln("compiler: empty or unreadable input"); return 1 }
@@ -201,6 +207,27 @@ func compiler_main(string[] args) int {
     if result.error != "" { eprintln(result.error); return 1 }
     if __host_write_text_file(args[3], result.code) != 0 { eprintln("compiler: cannot write output"); return 1 }
     return 0
+}
+
+func compiler_output_overwrites_input(string[] args) bool {
+    if len(args) >= 4 && args[1] == "--compile-unit" {
+        i := 3
+        while i < len(args) {
+            if args[2] == args[i] || __host_same_file(args[2], args[i]) { return true }
+            i = i + 1
+        }
+        return false
+    }
+    if len(args) == 5 && args[1] == "build" && args[3] == "-o" {
+        return args[2] == args[4] || __host_same_file(args[2], args[4])
+    }
+    if len(args) == 4 {
+        return args[2] == args[3] || __host_same_file(args[2], args[3])
+    }
+    if len(args) == 3 {
+        return args[1] == args[2] || __host_same_file(args[1], args[2])
+    }
+    return false
 }
 
 func compiler_remove_duplicate_packages(string source) string {
