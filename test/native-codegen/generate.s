@@ -2,6 +2,7 @@ package native_codegen_test
 
 func native_value(int id, string op, int[] operands, int literal, int parameter) function_ssa_value {
     return function_ssa_value {
+        symbol: "", field_names: string[](),
         id: id, op: op, operands: operands, block_id: 41, type_name: "int",
         integer_value: literal, parameter_index: parameter,
     }
@@ -207,6 +208,7 @@ func main() int {
         functions[0].blocks.push(empty)
     }
     program := function_ssa_program {
+        records: function_ssa_record[](), globals: function_ssa_global[](),
         package_name: "sample", entry_symbol: entry_symbol, functions: functions, calls: calls,
     }
     emitted := emit_function_ssa_amd64(program)

@@ -4,7 +4,7 @@ root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 work=$(mktemp -d /tmp/s-native-codegen.XXXXXX)
 printf 'Native SSA codegen artifacts=%s\n' "$work"
 cd "$root"
-sources=(src/cmd/compile/internal/ssa/program.s src/cmd/compile/internal/codegen/amd64_program.s test/native-codegen/generate.s)
+sources=(src/cmd/compile/internal/mir/program.s src/cmd/compile/internal/mir/program_enum.s src/cmd/compile/internal/ssa/program.s src/cmd/compile/internal/codegen/amd64_program.s test/native-codegen/generate.s)
 sha256sum "${sources[@]}" bin/s_seed > "$work/input-hashes.txt"
 as --version > "$work/assembler-version.txt"
 ld --version > "$work/linker-version.txt"
