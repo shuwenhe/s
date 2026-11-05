@@ -815,6 +815,7 @@ func mir_program_string_instruction_error(mir_program_function f, mir_program_in
 
 // Exact signatures form the native runtime boundary; names never become assembler symbols.
 func mir_native_intrinsic_result(string name) string {
+    if name == "__std_clock_ns" || name == "__std_nanosleep" { return "int" }
     if name == "__host_env_get" { return "string" }
     if name == "__host_run_argv" { return "int" }
     if name == "__host_same_file" { return "bool" }
@@ -838,6 +839,8 @@ func mir_native_intrinsic_result(string name) string {
     return "?"
 }
 func mir_native_intrinsic_parameters(string name) string[] {
+    if name == "__std_clock_ns" { return ["int"] }
+    if name == "__std_nanosleep" { return ["int","int"] }
     if name == "__host_env_get" { return ["string"] }
     if name == "__host_run_argv" { return ["string[]"] }
     if name == "__host_same_file" { return ["string","string"] }

@@ -798,13 +798,15 @@ static const char *runtime_callee(const char *name) {
 	if (tail != NULL) name = tail + 1;
 	if (strcmp(name, "len") == 0 || strcmp(name, "__string_len") == 0 || strcmp(name, "__vec_len") == 0) return "s_value_len";
 	if (strcmp(name, "host_args") == 0) return "s_host_args_value";
-	if (strcmp(name, "__host_println") == 0) return "s_println_value";
+	if (strcmp(name, "__std_clock_ns") == 0) return "s_std_clock_ns_value";
+	if (strcmp(name, "__std_nanosleep") == 0) return "s_std_nanosleep_value";
+	if (strcmp(name, "println") == 0 || strcmp(name, "__host_println") == 0) return "s_println_value";
 	if (strcmp(name, "eprintln") == 0 || strcmp(name, "__host_eprintln") == 0) return "s_eprintln_value";
-	if (strcmp(name, "char_at") == 0 || strcmp(name, "__host_char_at") == 0) return "s_string_char_at";
+	if (strcmp(name, "char_at") == 0 || strcmp(name, "__host_char_at") == 0 || strcmp(name, "__string_char_at") == 0) return "s_string_char_at";
 	if (strcmp(name, "byte_at") == 0 || strcmp(name, "__host_byte_at") == 0) return "s_string_byte_at";
 	if (strcmp(name, "slice") == 0 || strcmp(name, "__host_slice") == 0) return "s_string_slice";
 	if (strcmp(name, "__string_slice") == 0 || strcmp(name, "prelude_slice") == 0) return "s_string_slice";
-	if (strcmp(name, "to_string") == 0) return "s_int_text";
+	if (strcmp(name, "to_string") == 0 || strcmp(name, "__int_to_string") == 0) return "s_int_text";
 	if (strcmp(name, "__host_byte_string") == 0) return "s_byte_string_value";
 	if (strcmp(name, "__index_get") == 0) return "s_index_get";
 	if (strcmp(name, "append") == 0 || strcmp(name, "__vec_push") == 0) return "s_array_append";

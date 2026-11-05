@@ -176,6 +176,8 @@ static int borrow_flow_call(borrow_flow_types *t,standalone_function *fn,int *st
         return borrow_flow_is_array(t,array) && args[1]==t->elements[array-(int)t->m->record_count]?array:BF_UNKNOWN;
     }
     if(runtime) {
+        if(!strcmp(runtime,"s_std_clock_ns_value")) return count==1 && args[0]==BF_INT?BF_INT:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_std_nanosleep_value")) return count==2 && args[0]==BF_INT && args[1]==BF_INT?BF_INT:BF_UNKNOWN;
         int fs=standalone_fs_bridge_kind(runtime);
         if(fs>=0) {
             if(count!=(fs==1?2:1) || args[0]!=BF_STRING || (fs==1 && args[1]!=BF_STRING)) return BF_UNKNOWN;

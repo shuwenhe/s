@@ -301,6 +301,7 @@ compiler-source-list:
 	@printf '%s\n' $(COMPILER_SOURCES)
 
 compiler: seed-compiler-bin
+	@python3 misc/scripts/generate-native-os.py --check
 	@mkdir -p .bootstrap/compiler bin
 	@echo "compiler-entry=$(CURDIR)/src/cmd/compile/main.s"
 	@for src in $(COMPILER_SOURCES); do echo "compiler-source=$$src"; done
@@ -483,6 +484,7 @@ selfhost-canonical-parser-check: seed-compiler-bin
 
 .PHONY: selfhost-canonical-production-check
 selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
+	@python3 misc/scripts/generate-native-os.py --check
 	@python3 test/cli/test_output_alias.py -v
 	@python3 test/cli/test_native_output_alias.py -v
 	@python3 test/cli/test_native_diagnostics.py -v
@@ -491,6 +493,8 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@python3 test/cli/test_installation.py -v
 	@python3 test/cli/test_release.py -v
 	@python3 test/stdlib-native/check.py -v
+	@python3 test/stdlib-native/test_time.py -v
+	@python3 test/stdlib-native/test_seed_borrow_integration.py -v
 	@python3 test/native-bootstrap-diagnostic/native_seed_int64_check.py
 	@python3 test/native-bootstrap-diagnostic/native_seed_int64_memory_check.py
 	@python3 test/native-bootstrap-diagnostic/native_integer_differential_check.py --seed

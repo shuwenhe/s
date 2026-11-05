@@ -616,6 +616,8 @@ func amd64_emit_native_intrinsic(function_ssa_value[] values, function_ssa_value
         i = i + 1
     }
     target := ".Ls_native_host_args"
+    if name == "__std_clock_ns" { target = "s_os_clock_ns" }
+    if name == "__std_nanosleep" { target = "s_os_nanosleep" }
     if name == "__host_run_argv" { target = ".Ls_native_run_argv" }
     if name == "__host_same_file" { target = ".Ls_native_same_file" }
     if name == "__host_rename_file" { target = ".Ls_native_rename" }
@@ -665,6 +667,7 @@ func amd64_native_intrinsic_runtime() string {
         + "%rdx\n movl $59,%eax\n syscall\n jmp .Ls_native_run_child_fail\n.Ls_native_run_path:\n movq %rcx,-40(%rbp)\n leaq .Ls_native_path_key(%rip),%rdi\n leaq .Ls_native_default_path(%rip),%rsi\n call .Ls_native_env_get\n movq %rax,%rdi\n call .Ls_native_to_c\n testq %rax,%rax\n je .Ls_native_run_child_fail\n movq %rax,%r14\n.Ls_native_run_path_component:\n movq %r14,%r15\n.Ls_native_run_path_scan:\n cmpb $0,(%r14)\n je .Ls_native_run_path_allocate\n cmpb $58,(%r14)\n je .Ls_native_run_path_allocate\n incq %r14\n jmp .Ls_na"
         + "tive_run_path_scan\n.Ls_native_run_path_allocate:\n movq %r14,%rax\n subq %r15,%rax\n movq %rax,-48(%rbp)\n movq %rax,%rdi\n addq -40(%rbp),%rdi\n addq $2,%rdi\n call .Ls_native_alloc\n movq %rax,-56(%rbp)\n movq %rax,%rdi\n movq %r15,%rsi\n movq -48(%rbp),%rcx\n cld\n rep movsb\n cmpq $0,-48(%rbp)\n je .Ls_native_run_path_name\n movb $47,(%rdi)\n incq %rdi\n.Ls_native_run_path_name:\n movq %r13,%rsi\n movq -40(%rbp),%rcx\n incq %rcx\n rep movsb\n movq -56(%rbp),%rdi\n movq %r12,%rsi\n movq .Ls_native_envp(%rip),%rdx\n mo"
         + "vl $59,%eax\n syscall\n cmpb $0,(%r14)\n je .Ls_native_run_child_fail\n incq %r14\n jmp .Ls_native_run_path_component\n.Ls_native_run_child_fail:\n movl $127,%edi\n movl $60,%eax\n syscall\n ud2\n.Ls_native_run_fail:\n movq $-1,%rax\n.Ls_native_run_done:\n addq $32,%rsp\n popq %r15\n popq %r14\n popq %r13\n popq %r12\n leave\n ret\n"
+        + amd64_os_runtime()
 }
 
 func amd64_global_name(int index) string { return ".Ls_native_global_" + amd64_integer(index) }
@@ -695,3 +698,15 @@ func amd64_emit_global_initializers(function_ssa_program program) string {
     }
     return text + "  movq $2, .Ls_native_globals_state(%rip)\n.Ls_native_globals_done:\n  xorl %eax, %eax\n  leave\n  ret\n.Ls_native_globals_cycle:\n  movl $88, %edi\n  movl $60, %eax\n  syscall\n  ud2\n.size s_native_initialize_globals, .-s_native_initialize_globals\n"
 }
+
+// BEGIN GENERATED NATIVE OS
+func amd64_os_runtime() string {
+    return "# Shared freestanding OS boundary. SysV AMD64 arguments/results; negative errno.\n# Generated into canonical runtime text and the seed runtime by generate-native-os.py.\n.text\n.global s_os_clock_ns\n.type s_os_clock_ns, @function\ns_os_clock_ns:\n    cmp $1, %r"
+        + "di\n    ja .Los_clock_invalid\n    sub $16, %rsp\n    mov %rsp, %rsi\n    mov $228, %eax\n    syscall\n    test %rax, %rax\n    js .Los_clock_done\n    mov (%rsp), %rax\n    test %rax, %rax\n    js .Los_clock_overflow\n    imul $1000000000, %rax, %rax\n    jo .Los_clo"
+        + "ck_overflow\n    add 8(%rsp), %rax\n    jo .Los_clock_overflow\n.Los_clock_done:\n    add $16, %rsp\n    ret\n.Los_clock_overflow:\n    mov $-75, %rax\n    jmp .Los_clock_done\n.Los_clock_invalid:\n    mov $-22, %rax\n    ret\n.size s_os_clock_ns, .-s_os_clock_ns\n\n.gl"
+        + "obal s_os_nanosleep\n.type s_os_nanosleep, @function\ns_os_nanosleep:\n    # Validate even direct intrinsic callers before exposing stack timespecs.\n    test %rdi, %rdi\n    js .Los_sleep_invalid\n    cmp $1000000000, %rsi\n    jae .Los_sleep_invalid\n    sub $32"
+        + ", %rsp\n    mov %rdi, (%rsp)\n    mov %rsi, 8(%rsp)\n.Los_sleep_retry:\n    # Initialize remaining=request as a safe fallback for injected EINTR.\n    mov (%rsp), %rax\n    mov %rax, 16(%rsp)\n    mov 8(%rsp), %rax\n    mov %rax, 24(%rsp)\n    mov %rsp, %rdi\n    le"
+        + "a 16(%rsp), %rsi\n    mov $35, %eax\n    syscall\n    cmp $-4, %rax\n    jne .Los_sleep_done\n    mov 16(%rsp), %rax\n    mov %rax, (%rsp)\n    mov 24(%rsp), %rax\n    mov %rax, 8(%rsp)\n    jmp .Los_sleep_retry\n.Los_sleep_done:\n    add $32, %rsp\n    ret\n.Los_sleep"
+        + "_invalid:\n    mov $-22, %rax\n    ret\n.size s_os_nanosleep, .-s_os_nanosleep\n"
+}
+// END GENERATED NATIVE OS

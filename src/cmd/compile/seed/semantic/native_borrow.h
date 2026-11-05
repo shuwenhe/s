@@ -66,6 +66,27 @@ static ast_node *borrow_function(borrow_proof *p, const char *name) {
     (void)pkg;
     return found;
 }
+/* Package-qualified calls need the same ownership proof as bare calls. A
+ * lexical value shadowing the import root must never select a static callee. */
+static ast_node *borrow_call_function(borrow_proof *p,ast_node *call) {
+    ast_node *callee=call->as.call_expr.callee;
+    if(!callee) return NULL;
+    if(callee->kind==AST_IDENT_EXPR) return borrow_function(p,callee->as.ident_expr.name);
+    if(callee->kind!=AST_MEMBER_EXPR) return NULL;
+    char name[IR_OPERAND_CAP];
+    if(!native_record_type_spelling(callee,name,sizeof(name))) return NULL;
+    size_t root=strcspn(name,".");
+    for(size_t i=0;i<p->count;i++)
+        if(strlen(p->bindings[i].name)==root && !strncmp(name,p->bindings[i].name,root)) return NULL;
+    if(p->function) for(size_t i=0;i<p->function->as.fn_stmt.param_count;i++) {
+        const char *param=p->function->as.fn_stmt.params[i];
+        if(strlen(param)==root && !strncmp(name,param,root)) return NULL;
+    }
+    ast_node *function=borrow_function(p,name);
+    if(!function && call->as.call_expr.native_callee_name)
+        function=borrow_function(p,call->as.call_expr.native_callee_name);
+    return function;
+}
 static bool borrow_record_name(borrow_proof *p,ast_node *record,char *out,size_t cap) {
     const char *pkg="";
     for(size_t i=0;i<p->unit->as.program.statements.len;i++) {
@@ -459,7 +480,8 @@ static bool borrow_walk(borrow_proof *p,ast_node *n) {
     case AST_BLOCK: {
         size_t saved=p->count;
         bool ok=borrow_walk_vec(p,&n->as.block.statements);
-        p->count=saved; return ok;
+        if(!n->as.block.transparent_scope) p->count=saved;
+        return ok;
     }
     case AST_LET_STMT: {
         if(n->as.let_stmt.type_name && !strcmp(n->as.let_stmt.type_name,"struct")) return true;
@@ -479,7 +501,7 @@ static bool borrow_walk(borrow_proof *p,ast_node *n) {
             /* If method not found, be lenient - might be external package method */
             /* Real borrow checking will happen in full semantic analysis */
         }
-        ast_node *f=callee && callee->kind==AST_IDENT_EXPR ? borrow_function(p,callee->as.ident_expr.name):NULL;
+        ast_node *f=borrow_call_function(p,n);
         if(f && f->as.fn_stmt.native_borrow_mask) {
             if(n->as.call_expr.args.len!=f->as.fn_stmt.param_count) goto unproven;
             for(size_t i=0;i<n->as.call_expr.args.len;i++) {
