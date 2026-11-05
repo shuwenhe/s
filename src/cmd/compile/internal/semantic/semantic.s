@@ -3558,8 +3558,8 @@ func instantiate_type(string ty, string[] generic_names, type_binding[] generic_
             return bound
         }
     }
-    if semantic_starts_with(clean, "&") {
-        return "&" + instantiate_type(std.prelude.prelude_slice(clean, 5, std.prelude.len(clean)), generic_names, generic_bindings)
+    if semantic_starts_with(clean, "&mut") {
+        return "&mut" + instantiate_type(std.prelude.prelude_slice(clean, 4, std.prelude.len(clean)), generic_names, generic_bindings)
     }
     if semantic_starts_with(clean, "&") {
         return "&" + instantiate_type(std.prelude.prelude_slice(clean, 1, std.prelude.len(clean)), generic_names, generic_bindings)
@@ -3595,8 +3595,8 @@ func type_contains_generic(string ty, string[] generic_names) bool {
     if is_generic_name(generic_names, clean) {
         return true
     }
-    if semantic_starts_with(clean, "&") {
-        return type_contains_generic(std.prelude.prelude_slice(clean, 5, std.prelude.len(clean)), generic_names)
+    if semantic_starts_with(clean, "&mut") {
+        return type_contains_generic(std.prelude.prelude_slice(clean, 4, std.prelude.len(clean)), generic_names)
     }
     if semantic_starts_with(clean, "&") {
         return type_contains_generic(std.prelude.prelude_slice(clean, 1, std.prelude.len(clean)), generic_names)

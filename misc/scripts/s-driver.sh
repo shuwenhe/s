@@ -3,7 +3,8 @@ set -eu
 
 
 
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+script_path=$(readlink -f -- "$0")
+script_dir=$(CDPATH= cd -- "$(dirname -- "$script_path")" && pwd)
 
 if [ -f "$script_dir/../makefile" ]; then
 
@@ -40,6 +41,9 @@ usage() {
     echo '  s -o <output> <input.s>' >&2
 
     echo '  s build <input.s> -o <output>' >&2
+    echo '  s --version' >&2
+    echo '  s run <input.s> [-- <program arguments>...]' >&2
+    echo '  s test [<test.s>...]  (default: ./*_test.s; exit 0 passes)' >&2
     echo '  s build --legacy <input.s> -o <output>' >&2
 
     echo '  s --emit-c <input.s> <output.c>' >&2
@@ -89,12 +93,75 @@ default_output() {
 ensure_compiler() {
 
     if [ ! -x "$compiler" ]; then
-
-        make -C "$root" compiler >/dev/null
+        if [ -d "$root/.git" ] || [ -f "$root/.git" ]; then
+            make -C "$root" compiler >/dev/null
+        else
+            echo 's: compiler binary missing; reinstall the distribution' >&2
+            exit 1
+        fi
 
     fi
 
 }
+
+if [ "$#" -eq 1 ] && [ "$1" = "--version" ]; then
+    printf 'S compiler %s\n' "$(cat "$root/VERSION")"
+    if [ -f "$root/BUILD-INFO" ]; then
+        cat "$root/BUILD-INFO"
+    elif command -v git >/dev/null 2>&1 && git -C "$root" rev-parse --verify HEAD >/dev/null 2>&1; then
+        printf 'source-revision %s\n' "$(git -C "$root" rev-parse HEAD)"
+        if [ -n "$(git -C "$root" status --porcelain --untracked-files=no)" ]; then
+            echo 'working-tree modified'
+        fi
+    fi
+    exit 0
+fi
+
+if [ "$#" -ge 2 ] && [ "$1" = "run" ]; then
+    shift
+    source=$1
+    shift
+    if [ "$#" -gt 0 ] && [ "$1" = "--" ]; then shift; fi
+    ensure_compiler
+    work=$(mktemp -d "${TMPDIR:-/tmp}/s-run.XXXXXXXX")
+    trap 'rm -rf "$work"' EXIT
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    "$compiler" build "$source" "$work/program"
+    "$work/program" "$@"
+    exit 0
+fi
+
+if [ "$#" -ge 1 ] && [ "$1" = "test" ]; then
+    shift
+    if [ "$#" -eq 0 ]; then set -- ./*_test.s; fi
+    ensure_compiler
+    work=$(mktemp -d "${TMPDIR:-/tmp}/s-test.XXXXXXXX")
+    trap 'rm -rf "$work"' EXIT
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    status=0
+    for source do
+        if [ ! -f "$source" ]; then
+            echo "s test: no test file: $source" >&2
+            status=1
+        elif "$compiler" build "$source" "$work/program"; then
+            if "$work/program"; then
+                printf 'PASS %s\n' "$source"
+            else
+                result=$?
+                printf 'FAIL %s (exit %s)\n' "$source" "$result" >&2
+                status=1
+            fi
+        else
+            printf 'FAIL %s (compilation)\n' "$source" >&2
+            status=1
+        fi
+    done
+    exit "$status"
+fi
 
 
 

@@ -139,73 +139,70 @@ func compiler_main(string[] args) int {
         return 0
     }
     if args[1] == "--emit-mir-place" {
-        if __host_write_text_file(args[3], compiler_emit_mir_place(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_place(source))
     }
     if args[1] == "--emit-mir-movepath" {
-        if __host_write_text_file(args[3], compiler_emit_mir_movepath(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_movepath(source))
     }
     if args[1] == "--emit-mir-partial-move" {
-        if __host_write_text_file(args[3], compiler_emit_mir_partial_move(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_partial_move(source))
     }
     if args[1] == "--emit-mir-reinit" {
-        if __host_write_text_file(args[3], compiler_emit_mir_reinit(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_reinit(source))
     }
     if args[1] == "--emit-mir-partial-drop" {
-        if __host_write_text_file(args[3], compiler_emit_mir_partial_drop(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_partial_drop(source))
     }
     if args[1] == "--emit-mir-place-borrow" {
-        if __host_write_text_file(args[3], compiler_emit_mir_place_borrow(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_place_borrow(source))
     }
     if args[1] == "--emit-mir-reference-liveness" {
-        if __host_write_text_file(args[3], compiler_emit_mir_reference_liveness(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_reference_liveness(source))
     }
     if args[1] == "--emit-mir-loan-liveness" {
-        if __host_write_text_file(args[3], compiler_emit_mir_loan_liveness(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_loan_liveness(source))
     }
     if args[1] == "--emit-mir-region-constraints" {
-        if __host_write_text_file(args[3], compiler_emit_mir_region_constraints(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_region_constraints(source))
     }
     if args[1] == "--emit-mir-region-solver" {
-        if __host_write_text_file(args[3], compiler_emit_mir_region_solver(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_region_solver(source))
     }
     if args[1] == "--emit-mir-nll-borrow-check" {
-        if __host_write_text_file(args[3], compiler_emit_mir_nll_borrow_check(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_nll_borrow_check(source))
     }
     if args[1] == "--emit-mir-nll-shadow" {
-        if __host_write_text_file(args[3], compiler_emit_mir_nll_shadow(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_nll_shadow(source))
     }
     if args[1] == "--emit-mir-nll-real-cfg" {
-        if __host_write_text_file(args[3], compiler_emit_mir_nll_real_cfg(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_nll_real_cfg(source))
     }
     if args[1] == "--emit-mir-ownership-solver-check" {
         if __host_write_text_file(args[3], compiler_emit_ownership_solver_check()) != 0 { eprintln("compiler: cannot write output"); return 1 }
         return 0
     }
     if args[1] == "--emit-mir-nll-ownership" {
-        if __host_write_text_file(args[3], compiler_emit_mir_nll_ownership(source)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir_nll_ownership(source))
     }
     if args[1] == "--emit-mir" || args[1] == "--emit-mir-after-drop" {
         elaborate := args[1] == "--emit-mir-after-drop"
-        if __host_write_text_file(args[3], compiler_emit_mir(source, elaborate)) != 0 { eprintln("compiler: cannot write output"); return 1 }
-        return 0
+        return compiler_write_diagnostic(args[3], compiler_emit_mir(source, elaborate))
     }
     result := compiler_compile(source)
     if result.error != "" { eprintln(result.error); return 1 }
     if __host_write_text_file(args[3], result.code) != 0 { eprintln("compiler: cannot write output"); return 1 }
+    return 0
+}
+
+func compiler_write_diagnostic(string output, string text) int {
+    if compiler_starts_with_trimmed(text, "mir-error") {
+        eprintln(text)
+        return 1
+    }
+    if __host_write_text_file(output, text) != 0 {
+        eprintln("compiler: cannot write output")
+        return 1
+    }
     return 0
 }
 

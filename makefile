@@ -316,10 +316,11 @@ compiler: seed-compiler-bin
 # ============================================================================
 .PHONY: install
 install: compiler
-	@mkdir -p "$(INSTALL_BIN_DIR)"
-	@$(INSTALL_PROGRAM) -m 0755 ./bin/s_compiler "$(INSTALL_BIN_DIR)/s"
-	@echo "Installed S compiler to: $(INSTALL_BIN_DIR)/s"
-	@echo "Usage: $(INSTALL_BIN_DIR)/s <file.s>"
+	@python3 misc/scripts/install-distribution.py --prefix "$(PREFIX)" --bin-dir "$(INSTALL_BIN_DIR)"
+
+.PHONY: uninstall
+uninstall:
+	@python3 misc/scripts/install-distribution.py --prefix "$(PREFIX)" --bin-dir "$(INSTALL_BIN_DIR)" --uninstall
 
 # ============================================================================
 # Self-hosted compiler
@@ -483,6 +484,11 @@ selfhost-canonical-parser-check: seed-compiler-bin
 .PHONY: selfhost-canonical-production-check
 selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@python3 test/cli/test_output_alias.py -v
+	@python3 test/cli/test_native_output_alias.py -v
+	@python3 test/cli/test_native_diagnostics.py -v
+	@python3 test/native-bootstrap-diagnostic/native_reference_instantiation_check.py -v
+	@python3 test/cli/test_distribution_cli.py -v
+	@python3 test/cli/test_installation.py -v
 	@python3 test/native-bootstrap-diagnostic/native_seed_int64_check.py
 	@python3 test/native-bootstrap-diagnostic/native_seed_int64_memory_check.py
 	@python3 test/native-bootstrap-diagnostic/native_integer_differential_check.py --seed
