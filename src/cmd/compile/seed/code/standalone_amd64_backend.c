@@ -810,6 +810,7 @@ static const char *runtime_callee(const standalone_module *module, const char *n
 	if (strcmp(name, "__std_terminal_leave") == 0) return "s_std_terminal_leave_value";
 	if (strcmp(name, "__std_raw_enter") == 0) return "s_std_raw_enter_value";
 	if (strcmp(name, "__std_raw_leave") == 0) return "s_std_raw_leave_value";
+	if (strcmp(name, "__std_string_array_concat") == 0) return "s_std_string_array_concat_value";
 	if (strcmp(name, "__std_read_byte") == 0) return "s_std_read_byte_value";
 	if (strcmp(name, "println") == 0 || strcmp(name, "__host_println") == 0) return "s_println_value";
 	if (strcmp(name, "eprintln") == 0 || strcmp(name, "__host_eprintln") == 0) return "s_eprintln_value";
@@ -1288,12 +1289,15 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 				pending_count = first_arg;
 				continue;
 			}
+            /* Two array operands may allocate while reloaded. Use the values
+             * already evaluated by ARG so later loads cannot clobber rdi. */
+            bool array_concat = callee && !strcmp(callee,"s_std_string_array_concat_value");
 			if (call_arg_count > STANDALONE_MAX_ARGS) {
 				size_t stack_args = (size_t)call_arg_count - STANDALONE_MAX_ARGS;
 				size_t stack_bytes = ((stack_args * 8 + 15) / 16) * 16;
 				fprintf(out, "    sub $%zu, %%rsp\n", stack_bytes);
 				for (arg = STANDALONE_MAX_ARGS; arg < (size_t)call_arg_count; arg++) {
-					if (callee) {
+					if (callee && !array_concat) {
                     if (!emit_load(out, module, fn, pending[first_arg + arg], "%rax", err)) return false;
                 } else fprintf(out, "    mov -%zu(%%rbp), %%rax\n", (fn->slot_count + 4 + first_arg + arg + 1)*8);
 					fprintf(out, "    mov %%rax, %zu(%%rsp)\n", (arg - STANDALONE_MAX_ARGS) * 8);
@@ -1301,7 +1305,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
 			}
 			for (arg = 0; arg < (size_t)call_arg_count; arg++) {
 				if (arg >= STANDALONE_MAX_ARGS) break;
-				if (callee) {
+				if (callee && !array_concat) {
                     if (!emit_load(out, module, fn, pending[first_arg + arg], arg_regs[arg], err)) return false;
                 } else fprintf(out, "    mov -%zu(%%rbp), %s\n", (fn->slot_count + 4 + first_arg + arg + 1)*8, arg_regs[arg]);
 			}

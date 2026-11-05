@@ -139,7 +139,7 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
                 if(!strcmp(x->op,"MOV") && len>7 && !strcmp(x->result+len-7,".__type") && strchr(x->operand1,'[')) needed=true;
                 if(!strcmp(x->op,"ARG") && !strcmp(x->operand1,"mutable_borrow")) needed=true;
                 if(!strcmp(x->op,"CALL")) {
-                    if(!strcmp(x->operand1,"__vec_push") || !strcmp(x->operand1,"__vec_len")) needed=true;
+                    if(!strcmp(x->operand1,"__vec_push") || !strcmp(x->operand1,"__vec_len") || !strcmp(x->operand1,"__std_string_array_concat")) needed=true;
                     standalone_function *target=standalone_borrow_callee(m,x->operand1);
                     if(target && (target->borrow_mask || target->borrow_owner_needed)) needed=true;
                 }

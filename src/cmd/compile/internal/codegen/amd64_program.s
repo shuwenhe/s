@@ -625,6 +625,10 @@ func amd64_emit_native_intrinsic(function_ssa_value[] values, function_ssa_value
     target := ".Ls_native_host_args"
     if name == "__std_raw_enter" { target = "s_os_raw_enter" }
     if name == "__std_raw_leave" { target = "s_os_raw_leave" }
+    if name == "__std_string_array_concat" {
+        target = "s_value_string_array_concat"
+        text = text + "  leaq .Ls_native_alloc(%rip), %rdx\n  movl $1, %ecx\n"
+    }
     if name == "__std_read_byte" { target = "s_os_read_byte" }
     if name == "__std_write" { target = "s_os_write_string" }
     if name == "__std_tty_size" { target = "s_os_tty_size" }
@@ -757,6 +761,12 @@ func amd64_os_runtime() string {
         + ".Los_read_done\n    je .Los_read_eof\n    movzbl 8(%rsp), %eax\n    jmp .Los_read_done\n.Los_read_interrupted:\n    test %r14, %r14\n    je .Los_read_poll\n    mov $1, %edi\n    call s_os_clock_ns\n    test %rax, %rax\n    js .Los_read_done\n    mov %r14, %rdx\n    su"
         + "b %rax, %rdx\n    jle .Los_read_none\n    lea 999999(%rdx), %rax\n    xor %edx, %edx\n    mov $1000000, %ecx\n    div %rcx\n    mov %rax, %r13\n    jmp .Los_read_poll\n.Los_read_none:\n    mov $-11, %rax\n    jmp .Los_read_done\n.Los_read_eof:\n    mov $-4096, %rax\n  "
         + "  jmp .Los_read_done\n.Los_read_bad_fd:\n    mov $-9, %rax\n    jmp .Los_read_done\n.Los_read_overflow:\n    mov $-75, %rax\n.Los_read_done:\n    add $16, %rsp\n    pop %r14\n    pop %r13\n    pop %r12\n    ret\n.Los_read_invalid:\n    mov $-22, %rax\n    ret\n.size s_os"
-        + "_read_byte, .-s_os_read_byte\n"
+        + "_read_byte, .-s_os_read_byte\n\n# Immutable string-array concatenation. Header words: native=1, seed=2.\n# rdx is the existing allocator callback, taking a raw byte count.\n.global s_value_string_array_concat\n.type s_value_string_array_concat, @function\ns_valu"
+        + "e_string_array_concat:\n    push %rbp\n    push %rbx\n    push %r12\n    push %r13\n    push %r14\n    push %r15\n    sub $8, %rsp\n    mov %rdx, (%rsp)\n    mov %rcx, %rbx\n    mov %rdi, %r12\n    mov %rsi, %r13\n    xor %r14d, %r14d\n    xor %r15d, %r15d\n    test %r1"
+        + "2, %r12\n    jz .Lstr_arrays_right\n    mov -8(%r12,%rbx,8), %r14\n.Lstr_arrays_right:\n    test %r13, %r13\n    jz .Lstr_arrays_allocate\n    mov -8(%r13,%rbx,8), %r15\n.Lstr_arrays_allocate:\n    mov %r14, %rbp\n    add %r15, %rbp\n    jc .Lstr_arrays_oom\n    mov "
+        + "%rbp, %rdi\n    add %rbx, %rdi\n    jc .Lstr_arrays_oom\n    mov %rdi, %rax\n    shr $60, %rax\n    jnz .Lstr_arrays_oom\n    shl $3, %rdi\n    call *(%rsp)\n    test %rax, %rax\n    jz .Lstr_arrays_oom\n    cmp $2, %rbx\n    jne .Lstr_arrays_header\n    movq $4, (%ra"
+        + "x)\n.Lstr_arrays_header:\n    mov %rbp, -8(%rax,%rbx,8)\n    lea (%rax,%rbx,8), %rdi\n    test %r14, %r14\n    jz .Lstr_arrays_copy_right\n    lea (%r12,%rbx,8), %rsi\n    mov %r14, %rcx\n    cld\n    rep movsq\n.Lstr_arrays_copy_right:\n    test %r15, %r15\n    jz .L"
+        + "str_arrays_done\n    lea (%r13,%rbx,8), %rsi\n    mov %r15, %rcx\n    cld\n    rep movsq\n.Lstr_arrays_done:\n    add $8, %rsp\n    pop %r15\n    pop %r14\n    pop %r13\n    pop %r12\n    pop %rbx\n    pop %rbp\n    ret\n.Lstr_arrays_oom:\n    mov $12, %edi\n    mov $60, "
+        + "%eax\n    syscall\n    ud2\n.size s_value_string_array_concat, .-s_value_string_array_concat\n"
 }
 // END GENERATED NATIVE OS

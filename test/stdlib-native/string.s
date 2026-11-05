@@ -1,5 +1,46 @@
 package main
 import ("std.string"; "std.time")
+extern "intrinsic" func __std_string_array_concat(string[] left, string[] right) string[]
+func binary_text(int input) string {
+    encoded := input
+    text := ""
+    while encoded > 1 {
+        if encoded % 2 == 0 { text = text + "a" } else { text = text + "b" }
+        encoded = encoded / 2
+    }
+    return text
+}
+func naive_index(string text, string needle) int {
+    if len(needle) == 0 { return 0 }
+    position := 0
+    while position <= len(text) - len(needle) {
+        index := 0
+        same := true
+        while index < len(needle) {
+            left, left_error := std.string.byte_at(text, position + index)
+            right, right_error := std.string.byte_at(needle, index)
+            if left != right { same = false; break }
+            index = index + 1
+        }
+        if same { return position }
+        position = position + 1
+    }
+    return -1
+}
+func exhaustive_search() int {
+    subject := 1
+    while subject < 128 {
+        pattern := 1
+        text := binary_text(subject)
+        while pattern < 32 {
+            needle := binary_text(pattern)
+            if std.string.index_of(text, needle) != naive_index(text, needle) { return 24 }
+            pattern = pattern + 1
+        }
+        subject = subject + 1
+    }
+    return 0
+}
 func main() int {
     if std.string.compare("abc", "abd") != -1 || std.string.compare("abc", "abc") != 0 || std.string.compare("abcd", "abc") != 1 { return 1 }
     if std.string.index_of("aaaaab", "aaab") != 2 || std.string.index_of("abc", "") != 0 || std.string.index_of("abc", "d") != -1 { return 2 }
@@ -41,13 +82,30 @@ func main() int {
     while index < 16 { repeated = repeated + repeated; index = index + 1 }
     needle := "a"
     index = 0
-    while index < 10 { needle = needle + needle; index = index + 1 }
+    while index < 15 { needle = needle + needle; index = index + 1 }
     clock, clock_error := std.time.timer_start()
     if clock_error.code != 0 { return 19 }
-    if std.string.index_of(repeated + "b", needle + "b") != 64512 { return 20 }
+    if std.string.index_of(repeated + "b", needle + "b") != 32768 { return 20 }
     elapsed, elapsed_error := std.time.elapsed_time(clock)
     if elapsed_error.code != 0 { return 21 }
     println("search_ns=" + std.string.format_int(elapsed.nanoseconds))
+    dense := "x,"
+    index = 0
+    while index < 14 { dense = dense + dense; index = index + 1 }
+    reset_error := std.time.timer_reset(clock*)
+    if reset_error.code != 0 { return 25 }
+    dense_fields, dense_error := std.string.split(dense, ",")
+    if dense_error.code != 0 || len(dense_fields) != 16385 || dense_fields[16384] != "" || std.string.join(dense_fields, ",") != dense { return 26 }
+    split_elapsed, split_time_error := std.time.elapsed_time(clock)
+    if split_time_error.code != 0 { return 27 }
+    println("split_ns=" + std.string.format_int(split_elapsed.nanoseconds))
+    original := string[]{"left"}
+    concatenated := __std_string_array_concat(original, string[]{"right"})
+    concatenated[0] = "changed"
+    if original[0] != "left" || concatenated[0] != "changed" || concatenated[1] != "right" { return 28 }
+    empty_joined := __std_string_array_concat(string[](), string[]())
+    if len(empty_joined) != 0 { return 29 }
+    if exhaustive_search() != 0 { return 24 }
     println("string: PASS")
     return 0
 }

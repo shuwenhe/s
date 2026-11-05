@@ -17061,6 +17061,10 @@
         },
         {
           "file": "src/std/input.s",
+          "signature": "func is_valid_escape_sequence(string text) bool"
+        },
+        {
+          "file": "src/std/input.s",
           "signature": "func decode_key(string text) key_event"
         },
         {
@@ -17793,6 +17797,120 @@
         "src/slices/slices.s"
       ],
       "intrinsics": [],
+      "placeholder_files": []
+    },
+    "std.string": {
+      "apis": [
+        {
+          "file": "src/std/string.s",
+          "signature": "func byte_at(string text, int index) (int, string_error)"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func from_byte(int value) (string, string_error)"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func slice(string text, int start, int end) (string, string_error)"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func compare(string left, string right) int"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func _maximal_suffix(string needle, bool reverse) _factorization"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func _search(string text, string needle, int start) int"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func find_from(string text, string needle, int start) (int, string_error)"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func index_of(string text, string needle) int"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func contains(string text, string needle) bool"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func starts_with(string text, string prefix) bool"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func ends_with(string text, string suffix) bool"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func _split_fields(string text, string separator, int start, int count) _split_piece"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func split(string text, string separator) (string[], string_error)"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func _join_range(string[] fields, string separator, int start, int end) string"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func join(string[] fields, string separator) string"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func replace(string text, string old, string replacement) (string, string_error)"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func _ascii_space(int byte) bool"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func trim_ascii(string text) string"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func _change_ascii_case(string text, bool upper, int start, int end) string"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func lower_ascii(string text) string"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func upper_ascii(string text) string"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func format_int(int value) string"
+        },
+        {
+          "file": "src/std/string.s",
+          "signature": "func parse_int(string text) (int, string_error)"
+        }
+      ],
+      "files": [
+        "src/std/string.s"
+      ],
+      "intrinsics": [
+        {
+          "declaration": "extern \"intrinsic\" func __std_string_array_concat(string[] left, string[] right) string[]",
+          "file": "src/std/string.s"
+        },
+        {
+          "declaration": "extern \"intrinsic\" func __host_byte_at(string text, int index) int",
+          "file": "src/std/string.s"
+        },
+        {
+          "declaration": "extern \"intrinsic\" func __std_byte_string(int value) string",
+          "file": "src/std/string.s"
+        }
+      ],
       "placeholder_files": []
     },
     "std.switch": {
@@ -19295,6 +19413,6 @@
     }
   },
   "placeholder_shaped_files": 4806,
-  "revision": "639b74ddde6e2404b9296b5352b22289aa65b279",
-  "source_files": 4916
+  "revision": "96308edbca885a4e66ae0c6f763c2a87ba5f473f",
+  "source_files": 4917
 }

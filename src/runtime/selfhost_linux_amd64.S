@@ -2747,6 +2747,20 @@ s_std_read_byte_value:
     mov %rax, %rdi
     jmp s_integer_pack
 
+.global s_std_string_array_concat_value
+s_std_string_array_concat_value:
+    cmp $1, %rdi
+    jne .Lstr_concat_seed_right
+    xor %edi, %edi
+.Lstr_concat_seed_right:
+    cmp $1, %rsi
+    jne .Lstr_concat_seed_call
+    xor %esi, %esi
+.Lstr_concat_seed_call:
+    lea s_alloc(%rip), %rdx
+    mov $2, %ecx
+    jmp s_value_string_array_concat
+
 # BEGIN GENERATED NATIVE OS
 # Shared freestanding OS boundary. SysV AMD64 arguments/results; negative errno.
 # Generated into canonical runtime text and the seed runtime by generate-native-os.py.
@@ -3235,4 +3249,78 @@ s_os_read_byte:
     mov $-22, %rax
     ret
 .size s_os_read_byte, .-s_os_read_byte
+
+# Immutable string-array concatenation. Header words: native=1, seed=2.
+# rdx is the existing allocator callback, taking a raw byte count.
+.global s_value_string_array_concat
+.type s_value_string_array_concat, @function
+s_value_string_array_concat:
+    push %rbp
+    push %rbx
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    sub $8, %rsp
+    mov %rdx, (%rsp)
+    mov %rcx, %rbx
+    mov %rdi, %r12
+    mov %rsi, %r13
+    xor %r14d, %r14d
+    xor %r15d, %r15d
+    test %r12, %r12
+    jz .Lstr_arrays_right
+    mov -8(%r12,%rbx,8), %r14
+.Lstr_arrays_right:
+    test %r13, %r13
+    jz .Lstr_arrays_allocate
+    mov -8(%r13,%rbx,8), %r15
+.Lstr_arrays_allocate:
+    mov %r14, %rbp
+    add %r15, %rbp
+    jc .Lstr_arrays_oom
+    mov %rbp, %rdi
+    add %rbx, %rdi
+    jc .Lstr_arrays_oom
+    mov %rdi, %rax
+    shr $60, %rax
+    jnz .Lstr_arrays_oom
+    shl $3, %rdi
+    call *(%rsp)
+    test %rax, %rax
+    jz .Lstr_arrays_oom
+    cmp $2, %rbx
+    jne .Lstr_arrays_header
+    movq $4, (%rax)
+.Lstr_arrays_header:
+    mov %rbp, -8(%rax,%rbx,8)
+    lea (%rax,%rbx,8), %rdi
+    test %r14, %r14
+    jz .Lstr_arrays_copy_right
+    lea (%r12,%rbx,8), %rsi
+    mov %r14, %rcx
+    cld
+    rep movsq
+.Lstr_arrays_copy_right:
+    test %r15, %r15
+    jz .Lstr_arrays_done
+    lea (%r13,%rbx,8), %rsi
+    mov %r15, %rcx
+    cld
+    rep movsq
+.Lstr_arrays_done:
+    add $8, %rsp
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    pop %rbx
+    pop %rbp
+    ret
+.Lstr_arrays_oom:
+    mov $12, %edi
+    mov $60, %eax
+    syscall
+    ud2
+.size s_value_string_array_concat, .-s_value_string_array_concat
 # END GENERATED NATIVE OS

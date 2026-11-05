@@ -38,6 +38,28 @@ class NativeStringTests(unittest.TestCase):
                 self.assertIn(b'string: PASS', output)
                 print(('seed ' if seed else 'native ') + output.decode().strip())
 
+    def test_intrinsic_wrong_array_type_is_rejected_without_replacing_output(self):
+        with tempfile.TemporaryDirectory(prefix='s-string-types-') as directory:
+            work = Path(directory)
+            source = work / 'main.s'
+            source.write_text('package main\nextern "intrinsic" func __std_string_array_concat(int[] a, int[] b) int[]\n'
+                              'func main() int { values := __std_string_array_concat(int[]{1},int[]{2}); return len(values) }\n')
+            intermediate = work / 'main.sasm'
+            intermediate.write_bytes(b'previous output\n')
+            result = subprocess.run([str(ROOT / 'bin/s_compiler'), '--compile-unit', str(intermediate), str(source)],
+                                    capture_output=True, timeout=30)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(intermediate.read_bytes(), b'previous output\n')
+            seed_ir, binary = work / 'seed.ir', work / 'seed-program'
+            result = subprocess.run([str(ROOT / 'bin/s_seed'), '--compile-native-unit', str(seed_ir), str(source)],
+                                    capture_output=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            binary.write_bytes(b'previous executable\n')
+            result = subprocess.run([str(ROOT / 'bin/s_seed'), '--emit-standalone-amd64', str(seed_ir), str(binary)],
+                                    cwd=ROOT, capture_output=True, timeout=30)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(binary.read_bytes(), b'previous executable\n')
+
     def test_deterministic_search_split_replace_against_python(self):
         rng = random.Random(20261105)
         functions = []
