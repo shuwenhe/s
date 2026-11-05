@@ -1410,7 +1410,13 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
         expr.int(v) : { v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.int(v) },
         expr.string(v) : { v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.string(v) },
         expr.bool(v) : { v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.bool(v) },
-        expr.name(v) : { v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.name(v) },
+        expr.name(v) : {
+            // Only synthetic type-owner names contain brackets. Plain lexical
+            // names may legitimately share a type parameter's spelling.
+            if te_ends_with(v.name, "]") { v.name = te_rewrite_type(v.name, generic_names, type_args) }
+            v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args)
+            expr.name(v)
+        },
         expr.record(v): { i := 0; for i < len(v.field_values) { v.field_values[i] = substitute_expr(v.field_values[i], generic_names, type_args); i = i + 1 }
  v.type_name = substitute_type(v.type_name, generic_names, type_args); v.inferred_type = substitute_optional_type(v.inferred_type, generic_names, type_args); expr.record(v) },
         expr.tuple(v): { loop_var_2 := 0; for loop_var_2 < len(v.items) { v.items[loop_var_2] = substitute_expr(v.items[loop_var_2], generic_names, type_args); loop_var_2 = loop_var_2 + 1 }
@@ -1435,6 +1441,8 @@ func substitute_expr(expr value, string[] generic_names, string[] type_args) exp
             resolved := v.resolved_callee
             if len(call_type_args) > 0 {
                 switch resolved { option.some(identity): resolved = option.some(make_instance_name(mono_substitute_identity(mono_generic_identity(identity), generic_names, type_args), call_type_args)), option.none: () }
+            } else {
+                switch resolved { option.some(identity): resolved = option.some(te_rewrite_path(identity, generic_names, type_args)), option.none: () }
             }
             expr.call(compile.internal.ast.call_expr { callee: std.prelude.box(substitute_expr(v.callee.value, generic_names, type_args)), args args, inferred_type substitute_optional_type(v.inferred_type, generic_names, type_args), resolved_callee resolved, type_args call_type_args })
         }

@@ -497,8 +497,11 @@ selfhost-canonical-production-check: compiler selfhost-canonical-parser-check
 	@python3 test/stdlib-native/test_time.py -v
 	@python3 test/stdlib-native/test_terminal.py -v
 	@python3 test/stdlib-native/test_input.py -v
-	@python3 test/stdlib-native/test_snake.py -v
 	@python3 test/stdlib-native/test_string.py -v
+	@python3 test/stdlib-native/test_collections.py -v
+	@python3 test/native-bootstrap-diagnostic/native_generic_array_bindings_check.py -v
+	@python3 test/native-bootstrap-diagnostic/native_generic_enum_binding_check.py -v
+	@python3 test/native-bootstrap-diagnostic/native_seed_generic_template_check.py -v
 	@python3 test/stdlib-native/test_seed_borrow_integration.py -v
 	@python3 test/native-bootstrap-diagnostic/native_seed_int64_check.py
 	@python3 test/native-bootstrap-diagnostic/native_seed_int64_memory_check.py
@@ -599,3 +602,8 @@ selfhost-native-memory-check: compiler
 	@python3 test/native-bootstrap-diagnostic/native_temporary_memory_check.py
 	@bash test/native-bootstrap-diagnostic/native_temporary_values_check.sh
 	@bash test/native-bootstrap-diagnostic/native_temporary_effects_check.sh
+
+# External application integration is explicit; distribution sources stay self-contained.
+.PHONY: stdlib-snake-integration-check
+stdlib-snake-integration-check: compiler
+	@python3 test/stdlib-native/test_snake.py -v

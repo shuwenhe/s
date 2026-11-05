@@ -463,10 +463,29 @@ func te_array_wrapper(string text) string {
 }
 func te_rewrite_path(string text, string[] keys, string[] values) string {
     i := 0
-    for i < len(keys) { if text == keys[i] { return values[i] }
- if te_starts_with(text, keys[i] + ".") { return values[i] + prelude_slice(text, len(keys[i]), len(text)) }
- i = i + 1 }
-    text
+    for i < len(keys) {
+        if text == keys[i] { return values[i] }
+        if te_starts_with(text, keys[i] + ".") { return values[i] + prelude_slice(text, len(keys[i]), len(text)) }
+        i = i + 1
+    }
+    // A path may contain generic arguments in its owner or its entire name.
+    // Dots inside type arguments belong to that type, not to the member path.
+    if te_ends_with(text, "]") { return te_rewrite_type(text, keys, values) }
+    depth := 0
+    dot := -1
+    i = 0
+    for i < len(text) {
+        ch := std.prelude.char_at(text, i)
+        if ch == "[" { depth = depth + 1 }
+        if ch == "]" { depth = depth - 1 }
+        if ch == "." && depth == 0 { dot = i }
+        i = i + 1
+    }
+    if dot >= 0 {
+        owner := prelude_slice(text, 0, dot)
+        return te_rewrite_type(owner, keys, values) + prelude_slice(text, dot, len(text))
+    }
+    return text
 }
 
 // Prefer the containing package, then explicit qualification, then imported

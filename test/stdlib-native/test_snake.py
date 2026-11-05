@@ -21,8 +21,14 @@ class NativeSnakeTests(unittest.TestCase):
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory(prefix='s-snake-')
         cls.binary = Path(cls.temp.name) / 'snake'
+        origin = Path(os.environ.get('S_SNAKE_SOURCE', ROOT.parent / 'snake/snake_native.s'))
+        if not origin.is_file():
+            cls.temp.cleanup()
+            raise AssertionError('Set S_SNAKE_SOURCE to the external native S Snake source: ' + str(origin))
+        source = Path(cls.temp.name) / 'main.s'
+        source.write_bytes(origin.read_bytes())
         result = subprocess.run(['sh', str(ROOT / 'misc/scripts/s-driver.sh'), 'build',
-                                 str(ROOT / 'examples/snake/main.s'), '-o', str(cls.binary)],
+                                 str(source), '-o', str(cls.binary)],
                                 cwd=ROOT, capture_output=True, timeout=90)
         if result.returncode:
             raise AssertionError(result.stderr)

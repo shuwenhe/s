@@ -784,6 +784,7 @@ static ast_node *find_struct_literal(semantic_ctx *ctx, const char *type_name) {
     }
     return ambiguous?NULL:unqualified;
 }
+#include "template_fields.h"
 static ast_node *find_trait_method(ast_node *trait_decl, const char *name) {
 	size_t i;
 	if (!trait_decl || trait_decl->kind != AST_TRAIT_DECL) return NULL;
@@ -1732,6 +1733,8 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 						}
 					}
 				}
+                if (!resolved) resolved = template_record_field_type(ctx,lookup_type,node->as.member_expr.member);
+                if (ctx->err->code) return 0;
 				if (!resolved) resolved = lookup_field_type(lookup_type, node->as.member_expr.member);
 				if (resolved) {
 					*out_type = resolved;
@@ -2713,9 +2716,14 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					char *second_type = NULL;
 					if (!analyze_expr(ctx, first->as.let_stmt.value, &expr_type)) return 0;
 					if (!split_result_tuple_type(expr_type, &first_type, &second_type)) {
-						error_set(ctx->err, ERR_SEMANTIC, first->pos.line, first->pos.column,
-							"multiple assignment requires a two-value result");
-						return 0;
+                        first_type=unwrap_payload_type(ctx,expr_type,0);
+                        second_type=unwrap_payload_type(ctx,expr_type,1);
+                        if(!first_type || !second_type) {
+                            free(first_type); free(second_type);
+						    error_set(ctx->err, ERR_SEMANTIC, first->pos.line, first->pos.column,
+							    "multiple assignment requires a two-value result");
+						    return 0;
+                        }
 					}
 					status = scope_define(ctx->current_scope, first->as.let_stmt.name, SYMBOL_VAR, 1,
 						-1, -1, first_type, NULL, 0);

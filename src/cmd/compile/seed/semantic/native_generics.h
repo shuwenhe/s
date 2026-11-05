@@ -25,6 +25,7 @@ typedef struct ng_scope {
     ng_state *state;
     const char *package;
     ng_decl *origin;
+    bool symbolic;
     ng_text actuals[NG_ARGS];
     struct { const char *name; ng_text type; } bindings[512];
     size_t count;
@@ -274,6 +275,7 @@ static bool ng_expect(ng_scope *c,ast_node *n,const char *expected,ng_text out,b
     return true;
 }
 static bool ng_known(ng_scope *c,const char *type) {
+    for(size_t p=0;c->symbolic && c->origin && p<c->origin->count;p++) if(!strcmp(type,c->origin->parameters[p])) return false;
     static const char *const scalar[]={"int","bool","string","byte","int64","uint64","uint","float","()"};
     for(size_t i=0;i<sizeof(scalar)/sizeof(*scalar);i++) if(!strcmp(type,scalar[i])) return true;
     ng_text element,base,args[NG_ARGS];
@@ -301,6 +303,7 @@ static bool ng_type(ng_scope *c,const char *raw,ng_text out,unsigned depth) {
     ng_state *s=c->state; ng_text text,element,base,args[NG_ARGS];
     if(depth>64) return ng_fail(s,(source_pos){0,0},"recursive type expansion");
     if(!ng_substitute(c,raw?raw:"",text)) return false;
+    for(size_t p=0;c->symbolic && c->origin && p<c->origin->count;p++) if(!strcmp(text,c->origin->parameters[p])) { strcpy(out,text); return true; }
     if(!strcmp(text,"unit")) strcpy(text,"()");
     /* The parser stores result return lists as T,E, without parentheses. */
     int nesting=0; bool tuple=false;
@@ -714,6 +717,9 @@ static bool ng_node(ng_scope *c,ast_node *n,ng_text out) {
                 n->as.call_expr.args.data[0]=receiver;
                 member->as.member_expr.object=NULL;
             }
+            /* Tuple unpacking may revisit this already-specialized call.
+             * Keep its cached candidate consistent with the rewritten AST. */
+            if(!ng_put(s,&n->as.call_expr.native_callee_name,d->name,n->pos)) { ast_free(callee); free(args); return false; }
             ast_free(n->as.call_expr.callee); n->as.call_expr.callee=callee;
         }
         if(d) {
@@ -822,6 +828,42 @@ static bool ng_function(ng_scope *c,ast_node *fn) {
     snprintf(c->return_type,sizeof(c->return_type),"%s",fn->as.fn_stmt.return_type?fn->as.fn_stmt.return_type:"");
     return ng_expect(c,fn->as.fn_stmt.body,c->return_type,type,true);
 }
+/* Canonicalize only explicit type syntax in an abstract body. Calls and
+ * values remain untouched, so ordinary definition-time checking still runs. */
+static bool ng_symbolic_body_types(ng_scope *c,ast_node *n) {
+    if(!n) return true;
+    ng_text type;
+#define SYMBOLIC_TYPE(field) do { if(n->as.field && (!ng_type(c,n->as.field,type,0) || !ng_put(c->state,&n->as.field,type,n->pos))) return false; } while(0)
+#define SYMBOLIC_NODE(field) do { if(!ng_symbolic_body_types(c,n->as.field)) return false; } while(0)
+#define SYMBOLIC_VEC(field) do { for(size_t i=0;i<n->as.field.len;i++) if(!ng_symbolic_body_types(c,n->as.field.data[i])) return false; } while(0)
+    switch(n->kind) {
+    case AST_BLOCK: SYMBOLIC_VEC(block.statements); break;
+    case AST_LET_STMT:
+        if(n->as.let_stmt.type_name && !strcmp(n->as.let_stmt.type_name,"struct")) break;
+        SYMBOLIC_TYPE(let_stmt.type_name); SYMBOLIC_NODE(let_stmt.value); break;
+    case AST_STRUCT_EXPR: SYMBOLIC_TYPE(struct_expr.type_name); SYMBOLIC_VEC(struct_expr.field_values); break;
+    case AST_ARRAY_EXPR: SYMBOLIC_TYPE(array_expr.explicit_type); SYMBOLIC_VEC(array_expr.items); break;
+    case AST_MEMBER_EXPR: SYMBOLIC_NODE(member_expr.object); break;
+    case AST_INDEX_EXPR: SYMBOLIC_NODE(index_expr.object); SYMBOLIC_NODE(index_expr.index); break;
+    case AST_CALL_EXPR: SYMBOLIC_NODE(call_expr.callee); SYMBOLIC_VEC(call_expr.args); break;
+    case AST_RETURN_STMT: SYMBOLIC_NODE(return_stmt.value); SYMBOLIC_VEC(return_stmt.values); break;
+    case AST_EXPR_STMT: SYMBOLIC_NODE(expr_stmt.expr); break;
+    case AST_ASSIGN_STMT: SYMBOLIC_NODE(assign_stmt.value); break;
+    case AST_ASSIGN_EXPR: SYMBOLIC_NODE(assign_expr.target_expr); SYMBOLIC_NODE(assign_expr.target_object); SYMBOLIC_NODE(assign_expr.target_index); SYMBOLIC_NODE(assign_expr.value); break;
+    case AST_BINARY_EXPR: SYMBOLIC_NODE(binary_expr.left); SYMBOLIC_NODE(binary_expr.right); break;
+    case AST_UNARY_EXPR: SYMBOLIC_NODE(unary_expr.operand); break;
+    case AST_IF_STMT: SYMBOLIC_NODE(if_stmt.condition); SYMBOLIC_NODE(if_stmt.then_branch); SYMBOLIC_NODE(if_stmt.else_branch); break;
+    case AST_WHILE_STMT: SYMBOLIC_NODE(while_stmt.condition); SYMBOLIC_NODE(while_stmt.body); break;
+    case AST_FOR_STMT: SYMBOLIC_NODE(for_stmt.init); SYMBOLIC_NODE(for_stmt.condition); SYMBOLIC_NODE(for_stmt.post); SYMBOLIC_NODE(for_stmt.iterable); SYMBOLIC_NODE(for_stmt.body); break;
+    case AST_SROUTINE_STMT: SYMBOLIC_NODE(sroutine_stmt.call); break;
+    default: break;
+    }
+#undef SYMBOLIC_TYPE
+#undef SYMBOLIC_NODE
+#undef SYMBOLIC_VEC
+    return true;
+}
+
 static bool native_specialize_generics(ast_node *unit,compile_error *err) {
     ng_state s={0}; s.unit=unit; s.err=err;
     s.decls=calloc(NG_LIMIT,sizeof(*s.decls)); if(!s.decls) return false;
@@ -856,6 +898,29 @@ static bool native_specialize_generics(ast_node *unit,compile_error *err) {
             ng_text text; if(!ng_application(&s,"",d->parameters,d->count,text,fn->pos) || !ng_put(&s,&fn->generic_parameters,text,fn->pos)) goto done;
             fn->native_template=true;
         }
+    }
+    /* Symbolic signatures and concrete schemas use the same package identity.
+     * Keep formal arguments symbolic; do not instantiate template bodies. */
+    size_t template_declarations=s.count;
+    for(size_t i=0;i<template_declarations;i++) {
+        ng_decl *d=s.decls[i];
+        if(d->node->kind!=AST_FN_STMT || !d->count) continue;
+        ng_scope *signature=calloc(1,sizeof(*signature)); if(!signature) goto done;
+        signature->state=&s; signature->package=d->package; signature->origin=d; signature->symbolic=true;
+        for(size_t p=0;p<d->count;p++) strcpy(signature->actuals[p],d->parameters[p]);
+        bool valid=true;
+        for(size_t p=0;p<d->node->as.fn_stmt.param_count && valid;p++) {
+            ng_text type;
+            valid=ng_type(signature,d->node->as.fn_stmt.param_types[p],type,0) &&
+                  ng_put(&s,&d->node->as.fn_stmt.param_types[p],type,d->node->pos);
+        }
+        if(valid && d->node->as.fn_stmt.return_type) {
+            ng_text type;
+            valid=ng_type(signature,d->node->as.fn_stmt.return_type,type,0) &&
+                  ng_put(&s,&d->node->as.fn_stmt.return_type,type,d->node->pos);
+        }
+        if(valid) valid=ng_symbolic_body_types(signature,d->node->as.fn_stmt.body);
+        free(signature); if(!valid) goto done;
     }
     bool templates=false;
     for(size_t i=0;i<s.count;i++) templates=templates || s.decls[i]->count!=0 || (s.decls[i]->node->kind==AST_ENUM_DECL && seed_enum_has_payload(s.decls[i]->node));

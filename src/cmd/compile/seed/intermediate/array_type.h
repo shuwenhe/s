@@ -19,18 +19,39 @@ static inline int seed_array_element(const char *type, char *out, size_t cap) {
     return 1;
 }
 
-/* ARRAY_NEW carries a resolved canonical T[] and the immediate length zero. */
+/* A concrete element may be a qualified generic record, including nested
+ * dynamic arrays. Parse the shape rather than accepting arbitrary brackets. */
+static inline int seed_array_type_parse(const char *type, size_t n, size_t *at, unsigned depth) {
+    if (depth > 64 || *at >= n) return 0;
+    if (*at + 1 < n && type[*at] == '(' && type[*at + 1] == ')') *at += 2;
+    else {
+        for (;;) {
+            if (*at >= n || !(isalpha((unsigned char)type[*at]) || type[*at] == '_')) return 0;
+            do { (*at)++; } while (*at < n && (isalnum((unsigned char)type[*at]) || type[*at] == '_'));
+            if (*at >= n || type[*at] != '.') break;
+            (*at)++;
+        }
+        if (*at + 1 < n && type[*at] == '[' && type[*at + 1] != ']') {
+            (*at)++;
+            if (!seed_array_type_parse(type, n, at, depth + 1)) return 0;
+            while (*at < n && type[*at] == ',') {
+                (*at)++;
+                if (!seed_array_type_parse(type, n, at, depth + 1)) return 0;
+            }
+            if (*at >= n || type[*at] != ']') return 0;
+            (*at)++;
+        }
+    }
+    while (*at + 1 < n && type[*at] == '[' && type[*at + 1] == ']') *at += 2;
+    return 1;
+}
+
+/* ARRAY_NEW carries a resolved canonical T[] and immediate length zero. */
 static inline int seed_array_new_valid(const char *type, const char *length) {
-    size_t n, i;
+    size_t n, at = 0;
     if (!type || !length || strcmp(length, "0") != 0) return 0;
     n = strlen(type);
     if (n < 3 || type[n - 2] != '[' || type[n - 1] != ']') return 0;
-    while (n >= 2 && type[n - 2] == '[' && type[n - 1] == ']') n -= 2;
-    if(n==2 && type[0]=='(' && type[1]==')') return 1;
-    if (n == 0 || !(isalpha((unsigned char)type[0]) || type[0] == '_')) return 0;
-    for (i = 1; i < n; i++) {
-        if (!(isalnum((unsigned char)type[i]) || type[i] == '_' || type[i] == '.')) return 0;
-    }
-    return 1;
+    return seed_array_type_parse(type, n, &at, 0) && at == n;
 }
 #endif

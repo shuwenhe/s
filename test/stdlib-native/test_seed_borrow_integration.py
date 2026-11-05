@@ -9,6 +9,20 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class SeedImportedBorrowTests(unittest.TestCase):
+    def test_specialized_method_candidate_survives_tuple_producer_rewalk(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            source = work / 'main.s'
+            source.write_text('package main\nimport ("std.option"; "std.result")\nfunc present[t](t value) (int,option[t]) { return 0,option.some(value) }\nfunc identity[t](t value) (t,int) { return value,0 }\nfunc process[t](t value) t {\n    ignored,item := present(value)\n    moved,error := identity(item.unwrap())\n    return moved\n}\nfunc main() int { return process(42) }\n')
+            intermediate, binary = work / 'main.ir', work / 'program'
+            for command in ([str(ROOT / 'bin/s_seed'), '--compile-native-unit', str(intermediate), str(source),
+                             str(ROOT / 'src/option/option.s'), str(ROOT / 'src/result/result.s')],
+                            [str(ROOT / 'bin/s_seed'), '--emit-standalone-amd64', str(intermediate), str(binary)]):
+                result = subprocess.run(command, cwd=ROOT, env=os.environ | {'S_SOURCE_ROOT': str(ROOT)},
+                                        capture_output=True, timeout=60)
+                self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(subprocess.run([str(binary)], timeout=10).returncode, 42)
+
     def test_qualified_source_functions_override_legacy_runtime_leaf_aliases(self):
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory)

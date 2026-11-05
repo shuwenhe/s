@@ -11,6 +11,8 @@ class GenericArrayBindingsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='s-generic-array-bind-') as directory:
             work = Path(directory)
             cases = {
+                'borrowed_array': 'func count[t](t[]* values) int { return 42 }\nfunc main() int { values := int[]{1}; return count(values*) }',
+                'lexical_type_parameter_name': 'func identity[t](t t) t { return t }\nfunc main() int { return identity(42) }',
                 'first': 'func first[t](t[] values) t { return values[0] }\nfunc main() int { return first(int[]{42}) }',
                 'array_result': 'func identity[t](t[] values) t[] { return values }\nfunc main() int { values := identity(int[]{42}); return values[0] }',
                 'record_pair': 'struct box[t] { t value }\nstruct error { int code }\nfunc wrap[t](t[] values) (box[t],error) { return box[t] { value: values[0] }, error { code: 0 } }\nfunc main() int { value, error := wrap(int[]{42}); return value.value + error.code }',

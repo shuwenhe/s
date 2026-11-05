@@ -3463,6 +3463,16 @@ func same_match_rank(signature_match left, signature_match right) bool {
         && left.generic_bind_count == right.generic_bind_count
 }
 
+// Array bindings exclude the reference wrapper already checked by shape.
+func generic_pattern_array_element(type_ref value) string {
+    text := value.canonical
+    if value.is_ref {
+        if semantic_starts_with(text, "&mut") { text = std.prelude.prelude_slice(text, 4, len(text)) }
+        else { text = std.prelude.prelude_slice(text, 1, len(text)) }
+    }
+    return canonical_array_element(text)
+}
+
 func collect_type_pattern_bindings(type_ref expected, type_ref actual, string[] generics, type_binding[] bindings) type_binding[] {
     updated := bindings
     if is_generic_name(generics, expected.canonical) {
@@ -3470,8 +3480,8 @@ func collect_type_pattern_bindings(type_ref expected, type_ref actual, string[] 
         return updated
     }
     if expected.is_ref != actual.is_ref || expected.is_mut_ref != actual.is_mut_ref || expected.is_slice != actual.is_slice || expected.is_array != actual.is_array { return updated }
-    expected_element := canonical_array_element(expected.canonical)
-    actual_element := canonical_array_element(actual.canonical)
+    expected_element := generic_pattern_array_element(expected)
+    actual_element := generic_pattern_array_element(actual)
     if expected_element != "" && actual_element != "" {
         return collect_type_pattern_bindings(compile.internal.typesys.parse_type_ref(expected_element), compile.internal.typesys.parse_type_ref(actual_element), generics, updated)
     }
@@ -3513,8 +3523,8 @@ func match_type_pattern_ref(type_ref param_type, type_ref arg_type, string[] gen
     if param_type.is_array && param_type.array_len != arg_type.array_len {
         return false
     }
-    param_element := canonical_array_element(param_type.canonical)
-    arg_element := canonical_array_element(arg_type.canonical)
+    param_element := generic_pattern_array_element(param_type)
+    arg_element := generic_pattern_array_element(arg_type)
     if param_element != "" && arg_element != "" {
         return match_type_pattern_ref(compile.internal.typesys.parse_type_ref(param_element), compile.internal.typesys.parse_type_ref(arg_element), generic_names, generic_bindings)
     }
