@@ -149,7 +149,7 @@ static bool borrow_flow_literal(const char *value,char *text,size_t cap,compile_
 }
 static int borrow_flow_call(borrow_flow_types *t,standalone_function *fn,int *state,
         const char *name,int *args,const char **sources,bool *reborrows,size_t count,compile_error *err) {
-    const char *runtime=runtime_callee(name);
+    const char *runtime=runtime_callee(t->m,name);
     for(size_t i=0;i<count;i++) if(reborrows[i] && (runtime || !strcmp(name,"make"))) return BF_UNKNOWN;
     if(!strcmp(name,"make")) {
         char type[STANDALONE_TEXT_CAP];
@@ -340,7 +340,7 @@ static bool borrow_flow_transfer(borrow_flow_types *t,standalone_function *fn,bo
         int global=standalone_global_index(t->m,x->result);
         if(global>=0 && result!=borrow_flow_type(t,t->m->globals[global].type,NULL,0)) return false;
         if(result==BF_UNKNOWN || dst<0 || borrowed[dst]) return false;
-        state[dst]=(!strcmp(x->op,"MOV") || (!strcmp(x->op,"CALL") && !runtime_callee(x->operand1)))?
+        state[dst]=(!strcmp(x->op,"MOV") || (!strcmp(x->op,"CALL") && !runtime_callee(t->m,x->operand1)))?
             borrow_flow_snapshot(result,t->m->record_count):result;
     }
     return argc==0;

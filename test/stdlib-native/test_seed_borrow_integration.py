@@ -9,6 +9,25 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class SeedImportedBorrowTests(unittest.TestCase):
+    def test_qualified_source_functions_override_legacy_runtime_leaf_aliases(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            api = work / 'api.s'
+            api.write_text('package api\nstruct Value { int number }\n'
+                           'func slice(string text, int start, int end) Value { return Value { number: 40 } }\n'
+                           'func byte_at(string text, int index) int { return 2 }\n')
+            source = work / 'main.s'
+            source.write_text('package main\nimport "api"\nfunc main() int { '
+                              'value := api.slice("x",0,1); return value.number + api.byte_at("x",0) }\n')
+            intermediate, binary = work / 'main.ir', work / 'program'
+            for command in ([str(ROOT / 'bin/s_seed'), '--compile-native-unit', str(intermediate), str(api), str(source)],
+                            [str(ROOT / 'bin/s_seed'), '--emit-standalone-amd64', str(intermediate), str(binary)]):
+                result = subprocess.run(command, cwd=ROOT, env=os.environ | {'S_SOURCE_ROOT': str(ROOT)},
+                                        capture_output=True, timeout=60)
+                self.assertEqual(result.returncode, 0, result.stderr)
+            result = subprocess.run([str(binary)], capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 42, result.stderr)
+
     def test_imported_tuple_owner_and_rejected_wrong_or_expired_owner(self):
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory)

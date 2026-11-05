@@ -47,7 +47,7 @@ static void standalone_analyze_readonly(standalone_module *m) {
                     size_t first=count-(size_t)argc;
                     unsigned long long arguments=0;
                     for(size_t a=first;a<count;a++) arguments|=standalone_read_alias(fn,aliases,pending[a]);
-                    const char *runtime=runtime_callee(x->operand1);
+                    const char *runtime=runtime_callee(m,x->operand1);
                     if(runtime && !strcmp(runtime,"s_index_get")) {
                         if(argc) result=standalone_read_alias(fn,aliases,pending[first]);
                     } else if(runtime && !strcmp(runtime,"s_array_append")) result=arguments;
@@ -76,7 +76,7 @@ static bool standalone_readonly_argument(standalone_module *m,standalone_functio
     /* An earlier value must retain its evaluation-time snapshot if another
      * argument performs a computation or nested call before this CALL. */
     while(next<caller->end && !strcmp(m->ir.ins[next].op,"ARG")) next++;
-    if(next==caller->end || strcmp(m->ir.ins[next].op,"CALL") || runtime_callee(m->ir.ins[next].operand1)) return false;
+    if(next==caller->end || strcmp(m->ir.ins[next].op,"CALL") || runtime_callee(m,m->ir.ins[next].operand1)) return false;
     char *end=NULL; long argc=strtol(m->ir.ins[next].operand2,&end,10);
     if(!end || *end || argc<=0 || (size_t)argc<next-at) return false;
     size_t parameter=(size_t)argc-(next-at);

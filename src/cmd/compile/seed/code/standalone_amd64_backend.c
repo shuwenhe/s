@@ -323,8 +323,8 @@ static int literal_index(standalone_module *module, const char *encoded, compile
 	if (!decode_literal(encoded, &module->literals[module->literal_count], err)) return -1;
 	return (int)module->literal_count++;
 }
-static const char *runtime_callee(const char *name);
-static const char *defined_function_name(const standalone_module *,const char *);
+static const char *defined_function_name(const standalone_module *module, const char *name);
+static const char *runtime_callee(const standalone_module *module, const char *name);
 static int standalone_global_index(standalone_module *m,const char *name) {
     for(size_t i=0;i<m->global_count;i++) if(!strcmp(m->globals[i].name,name)) return (int)i;
     return -1;
@@ -789,7 +789,10 @@ static bool emit_store(FILE *out, standalone_module *module, standalone_function
 	else fprintf(out, "    mov %s, %d(%%rbp)\n", reg, fn->slots[slot].offset);
 	return true;
 }
-static const char *runtime_callee(const char *name) {
+static const char *runtime_callee(const standalone_module *module, const char *name) {
+    /* A qualified source declaration takes precedence over legacy leaf aliases.
+     * Keep analysis, ownership proof and emission on the same resolution path. */
+    if (strchr(name, '.') && defined_function_name(module, name)) return NULL;
     /* Keep validation and emission on the same intrinsic resolution path. */
     if (strstr(name, "env_get") != NULL) return "s_runtime_env_get";
 	if (strstr(name, "env_get") != NULL) return "s_runtime_env_get";
@@ -917,7 +920,7 @@ static void standalone_analyze_snapshot_uses(standalone_module *m) {
             char *end; long argc=strtol(x->operand2,&end,10);
             if(*end || argc<0 || (size_t)argc>count) { count=0; continue; }
             size_t first=count-(size_t)argc;
-            if(runtime_callee(x->operand1)) for(size_t a=0;a<(size_t)argc;a++) {
+            if(runtime_callee(m, x->operand1)) for(size_t a=0;a<(size_t)argc;a++) {
                 bool consumed=a>=STANDALONE_MAX_ARGS;
                 if(!strcmp(x->operand1,"__vec_push") && argc==2) consumed=a==1;
                 if(!strcmp(x->operand1,"__vec_set") && argc==3) consumed=a!=0;
@@ -1002,7 +1005,7 @@ static void standalone_analyze_regions(standalone_module *m) {
                     if(!end || *end || count<0 || (size_t)count>pending_count) { fn->region_safe=false; pending_count=0; }
                     else {
                         size_t first=pending_count-(size_t)count;
-                        const char *runtime=runtime_callee(x->operand1);
+                        const char *runtime=runtime_callee(m, x->operand1);
                         if(count && runtime && !strcmp(runtime,"s_index_get")) global_source=standalone_global_alias(m,fn,global_aliases,pending[first]);
                         if(runtime && !strcmp(runtime,"s_array_append")) {
                             for(size_t a=first;a<pending_count;a++)
@@ -1013,8 +1016,8 @@ static void standalone_analyze_regions(standalone_module *m) {
                     }
                 }
                 if(global_source && (!strcmp(x->op,"READ") || !strcmp(x->op,"INDEX_GET") ||
-                   (!strcmp(x->op,"CALL") && runtime_callee(x->operand1) &&
-                    (!strcmp(runtime_callee(x->operand1),"s_index_get") || !strcmp(runtime_callee(x->operand1),"s_array_append"))))) {
+                   (!strcmp(x->op,"CALL") && runtime_callee(m, x->operand1) &&
+                    (!strcmp(runtime_callee(m, x->operand1),"s_index_get") || !strcmp(runtime_callee(m, x->operand1),"s_array_append"))))) {
                     int slot=slot_index(fn,x->result,false);
                     if(slot>=0 && !global_aliases[slot]) { global_aliases[slot]=true; aliases_changed=true; }
                 }
@@ -1069,7 +1072,7 @@ static void standalone_analyze_regions(standalone_module *m) {
                    ((!strcmp(x->op,"MOV") && x->result[n]=='.') || !strcmp(x->op,"INDEX_SET"))) fn->region_safe=false;
             }
             if(!strcmp(x->op,"ARG") && !strcmp(x->operand1,"mutable_borrow")) fn->region_safe=false;
-            if(!strcmp(x->op,"CALL") && !runtime_callee(x->operand1) &&
+            if(!strcmp(x->op,"CALL") && !runtime_callee(m, x->operand1) &&
                !defined_function_name(m,x->operand1)) fn->region_safe=false;
         }
     }
@@ -1081,7 +1084,7 @@ static void standalone_analyze_regions(standalone_module *m) {
             if(!fn->region_safe) continue;
             for(size_t i=fn->begin;i<fn->end;i++) {
                 standalone_ins *x=&m->ir.ins[i];
-                if(strcmp(x->op,"CALL") || runtime_callee(x->operand1)) continue;
+                if(strcmp(x->op,"CALL") || runtime_callee(m, x->operand1)) continue;
                 const char *target=defined_function_name(m,x->operand1);
                 for(size_t c=0;target && c<m->func_count;c++)
                     if(!strcmp(m->funcs[c].name,target) && !m->funcs[c].region_safe) {
@@ -1143,7 +1146,7 @@ static bool standalone_final_arg_region(standalone_module *module,
     }
     if(next==caller->end) return false;
     standalone_ins *call=&module->ir.ins[next];
-    if(strcmp(call->op,"CALL") || runtime_callee(call->operand1)) return false;
+    if(strcmp(call->op,"CALL") || runtime_callee(module, call->operand1)) return false;
     char *end=NULL;
     long count=strtol(call->operand2,&end,10);
     if(!end || *end || count<=0 || (size_t)count>pending_after+next-at-1 || (size_t)count<next-at) return false;
@@ -1212,7 +1215,7 @@ static bool emit_function(FILE *out, standalone_module *module, standalone_funct
             fprintf(out, "    mov %%rax, -%zu(%%rbp)\n", (fn->slot_count + 4 + pending_count + 1)*8);
             pending[pending_count++] = ins->result;
 		} else if (strcmp(ins->op, "CALL") == 0) {
-			const char *callee = runtime_callee(ins->operand1);
+			const char *callee = runtime_callee(module, ins->operand1);
             char fs_callee[64]; int fs_kind=standalone_fs_bridge_kind(callee);
             if(fs_kind>=0 && standalone_fs_bridge_schema(module,fs_kind,err)>=0) {
                 snprintf(fs_callee,sizeof(fs_callee),".Ls_fs_bridge_%d",fs_kind);

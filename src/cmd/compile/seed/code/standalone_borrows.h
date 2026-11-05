@@ -59,7 +59,7 @@ static standalone_function *standalone_borrow_function(standalone_module *m,cons
 /* CALL validation must resolve exactly the same symbol as emission, including
  * package-qualified and normalized names. Descriptor names stay exact. */
 static standalone_function *standalone_borrow_callee(standalone_module *m,const char *name) {
-    if(runtime_callee(name)) return NULL;
+    if(runtime_callee(m,name)) return NULL;
     const char *resolved=defined_function_name(m,name);
     return resolved?standalone_borrow_function(m,resolved):NULL;
 }
@@ -82,7 +82,7 @@ static bool standalone_validate_borrows(standalone_module *m,compile_error *err)
             standalone_ins *x=&m->ir.ins[i];
             if(!strcmp(x->operand1,"_") || !*x->operand1) continue;
             at=i;
-            if(strcmp(x->operand1,"mutable_borrow") || p>=64 || runtime_callee(fn->name) ||
+            if(strcmp(x->operand1,"mutable_borrow") || p>=64 || runtime_callee(m,fn->name) ||
                 strstr(fn->name,"env_get") || !strcmp(fn->name,"make")) goto bad;
             const char *schema=standalone_transfer(m,"borrow-param:",fn->name,x->result);
             const char *raw=standalone_transfer(m,"param-transfer:",fn->name,x->result);

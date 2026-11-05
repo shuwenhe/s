@@ -40,3 +40,7 @@ Goal: implement the attached first-class standard-library mission, directly on m
 
 - Terminal/input: native and seed shared OS boundary, exact PTY restoration, signal-safe short writes and bounded parser implemented. Terminal11/input9/time6 tests pass after integration; see doc/stdlib/terminal-input-acceptance-20261105.md. External commits through4b0041d68 captured module implementation without branch changes.
 - Native S Snake: public import build and deterministic game rules plus PTY rendering/input/timing test pass (3). Fundamental/advanced modules and final staged certification remain open.
+
+## Fundamental increment: std.string
+
+Audit found only placeholder src.strings; std.prelude already provides native integer formatting, byte character access and slicing. Reuse those exact intrinsics. Add byte-oriented checked slicing/access, lexicographic comparison, linear KMP search, prefix/suffix/contains, split/join/replace, ASCII trimming/case conversion and strict signed decimal conversion. No Unicode normalization claim. Tuples use string_error errno conventions; empty split/replace separators reject EINVAL, missing search returns -1. Build joins with balanced recursion to avoid repeatedly copying the whole prefix. Validate against Python-generated deterministic cases and native/seed int64 boundaries, embedded NUL and repetitive-search benchmark. No compiler change is intended.
