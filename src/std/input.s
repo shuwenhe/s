@@ -1,4 +1,5 @@
 package std.input
+// Seed tuple lowering uses the standard result layout.
 import "std.result"
 
 struct input_error { int code }

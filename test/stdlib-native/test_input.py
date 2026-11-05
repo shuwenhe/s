@@ -101,13 +101,16 @@ class NativeInputTests(unittest.TestCase):
         self.assertEqual(result.stdout.splitlines(), [b'up:119', b'left:68', b'eof:0'])
         self.raw_session('raw-exit', binary=binary)
 
-    def raw_session(self, mode, binary=None, inject=False):
+    def raw_session(self, mode, binary=None, inject=False, ioctl_error=False):
         master, slave = pty.openpty()
         original = termios.tcgetattr(slave)
         command = [str(binary or self.binary), mode]
         if inject:
             command = ['strace', '-qq', '-o', str(self.work / 'read-error.trace'), '-e', 'trace=read',
                        '-e', 'inject=read:error=EIO:when=1', *command]
+        if ioctl_error:
+            command = ['strace', '-qq', '-o', str(self.work / 'restore-error.trace'), '-e', 'trace=ioctl',
+                       '-e', 'inject=ioctl:error=EIO:when=3', *command]
         before = resource.getrusage(resource.RUSAGE_CHILDREN)
         process = subprocess.Popen(command, stdin=slave, stdout=slave, stderr=subprocess.PIPE)
         try:
@@ -140,6 +143,9 @@ class NativeInputTests(unittest.TestCase):
         for mode in ('raw-exit', 'raw-explicit'):
             with self.subTest(mode=mode):
                 self.raw_session(mode)
+
+    def test_restore_failure_preserves_session_for_retry(self):
+        self.raw_session('raw-restore-error', ioctl_error=True)
 
     def test_handled_read_error_restores_terminal(self):
         self.raw_session('raw-error', inject=True)

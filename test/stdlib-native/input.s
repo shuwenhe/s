@@ -17,7 +17,7 @@ func main() int {
         if error.code != 0 || event.kind != "none" { return 41 }
         return 0
     }
-    if mode == "raw-exit" || mode == "raw-explicit" || mode == "raw-error" {
+    if mode == "raw-exit" || mode == "raw-explicit" || mode == "raw-error" || mode == "raw-restore-error" {
         session, error := std.input.raw_mode(0)
         if error.code != 0 { return error.code }
         duplicate, duplicate_error := std.input.raw_mode(0)
@@ -28,6 +28,10 @@ func main() int {
             if read_error.code != 5 { return 43 }
         } else {
             if read_error.code != 0 || event.code != 113 { return 44 }
+        }
+        if mode == "raw-restore-error" {
+            if std.input.restore(session*).code != 5 || !session.active { return 49 }
+            if std.input.restore(session*).code != 0 || session.active { return 50 }
         }
         if mode == "raw-explicit" {
             if std.input.restore(session*).code != 0 { return 45 }

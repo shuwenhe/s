@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
         runtime = (ROOT / 'src/runtime/selfhost_linux_amd64.S').read_text()
         macro = re.search(r'\.macro S_UNTAG register\n.*?\.endm', runtime, re.S)[0]
         start = runtime.index('.global s_std_write_value')
-        stop = runtime.index('# BEGIN GENERATED NATIVE OS', start)
+        stop = runtime.index('.global ', start + len('.global s_std_write_value'))
         assembly = self.work / 'seed-write-adapter.s'
         assembly.write_text(macro + '\n.text\n' + runtime[start:stop] + '\n.section .note.GNU-stack,"",@progbits\n')
         runner = self.work / 'allocation-failure.c'
