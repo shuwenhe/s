@@ -2498,12 +2498,19 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 					if (decl->kind == AST_FN_STMT && decl->as.fn_stmt.receiver_type) {
 						char method_name[256];
 						char receiver_key[256];
+						/* The parser already prefixes name with the receiver. Types
+						 * may have been package-qualified since parsing, so rebuild
+						 * the lookup key using only the final member name. */
+						const char *member_name = strrchr(name, '.');
+						member_name = member_name ? member_name + 1 : name;
 						char **method_params = (char **)calloc(decl->as.fn_stmt.param_count, sizeof(char *));
 						if (!method_params) { error_set(ctx->err, ERR_OUT_OF_MEMORY, decl->pos.line, decl->pos.column, "out of memory"); return 0; }
-						snprintf(receiver_key, sizeof(receiver_key), "%s", decl->as.fn_stmt.receiver_type);
+						/* Generic signature normalization qualifies the first parameter
+						 * while receiver_type can retain the original source spelling. */
+						snprintf(receiver_key, sizeof(receiver_key), "%s", decl->as.fn_stmt.param_types[0]);
 						if (strlen(receiver_key) > 0 && receiver_key[strlen(receiver_key) - 1] == '*') receiver_key[strlen(receiver_key) - 1] = '\0';
 						for (size_t pi = 0; pi < decl->as.fn_stmt.param_count; pi++) method_params[pi] = decl->as.fn_stmt.param_types[pi];
-						if (snprintf(method_name, sizeof(method_name), "%s.%s", receiver_key, name) >= (int)sizeof(method_name)) { free(method_params); error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column, "method name is too long"); return 0; }
+						if (snprintf(method_name, sizeof(method_name), "%s.%s", receiver_key, member_name) >= (int)sizeof(method_name)) { free(method_params); error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column, "method name is too long"); return 0; }
 						status = scope_define(ctx->current_scope, method_name, SYMBOL_FN, 0, (int)decl->as.fn_stmt.param_count, (int)decl->as.fn_stmt.param_count, return_type ? return_type : TYPE_ANY, method_params, decl->as.fn_stmt.param_count);
 						if (status > 0) (void)scope_define(ctx->current_scope, name, SYMBOL_FN, 0, (int)decl->as.fn_stmt.param_count, (int)decl->as.fn_stmt.param_count, return_type ? return_type : TYPE_ANY, method_params, decl->as.fn_stmt.param_count);
 						free(method_params);

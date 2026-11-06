@@ -425,6 +425,7 @@ selfhost-native-record-check: seed-compiler-bin
 	@bash test/native-bootstrap-diagnostic/native_import_return_check.sh
 	@bash test/native-bootstrap-diagnostic/native_array_element_check.sh
 	@bash test/native-bootstrap-diagnostic/native_record_receiver_check.sh
+	@bash test/native-bootstrap-diagnostic/seed_receiver_lookup_check.sh
 	@bash test/native-bootstrap-diagnostic/native_syntax_lexer_check.sh
 
 .PHONY: selfhost-native-unit-check
