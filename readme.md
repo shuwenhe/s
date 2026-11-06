@@ -140,10 +140,11 @@ development bootstrap target and does not by itself perform full clean-room
 acceptance. Complete staged builds can take hours. The ongoing
 [production audit](doc/production-readiness/status.md) records remaining blockers.
 
-`make selfhost-install PREFIX="$HOME/.local"` runs Seed → Stage1 → Stage2 →
+`make PREFIX="$HOME/.local"` (or simply `make` with the default prefix) runs Seed → Stage1 → Stage2 →
 Stage3 → Stage4 and installs Stage4 with the public `s` driver. All later stages
 must pass native execution checks and Stage2/3/4 must converge byte for byte.
-Use `make selfhost` for the same bootstrap without installing outside the checkout.
+`make selfhost-install` remains a compatibility alias. Use
+`make native-bootstrap-imports` to build without installing outside the checkout.
 
 ## Runtime foundation
 

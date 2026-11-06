@@ -3,7 +3,7 @@ INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_PROGRAM ?= install
 SUDO ?=
 VERBOSE ?= 1
-.DEFAULT_GOAL := help
+.DEFAULT_GOAL := selfhost
 SELFHOST_DIR ?= $(CURDIR)/.bootstrap/selfhost
 NATIVE_BOOTSTRAP_DIR := $(SELFHOST_DIR)/native
 NATIVE_BOOTSTRAP_STAMP := $(NATIVE_BOOTSTRAP_DIR)/.complete
@@ -110,6 +110,14 @@ native-bootstrap-imports: seed-compiler-bin
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) \
 	  ./src/cmd/dist/native-bootstrap-no-manifest.sh '$(NATIVE_BOOTSTRAP_IMPORTS_DIR)'
 	@echo "✓ Import-driven bootstrap complete ($(NATIVE_BOOTSTRAP_IMPORTS_DIR))"
+
+# Complete native bootstrap: seed -> stage1 -> stage2 -> stage3 -> stage4.
+.PHONY: selfhost
+selfhost: native-bootstrap-imports
+	@echo "✓ Stage4 compiler: $(NATIVE_BOOTSTRAP_IMPORTS_DIR)/stage4"
+	@$(INSTALL_PROGRAM) -m 755 "$(NATIVE_BOOTSTRAP_IMPORTS_DIR)/stage4" bin/s_compiler
+	@$(INSTALL_PROGRAM) -m 755 misc/scripts/s-driver.sh bin/s
+	@$(SUDO) python3 misc/scripts/install-distribution.py --prefix "$(PREFIX)" --bin-dir "$(INSTALL_BIN_DIR)"
 
 # ============================================================================
 # Hosted Bootstrap (Go-style multi-stage approach)
@@ -316,12 +324,18 @@ compiler: seed-compiler-bin
 # ============================================================================
 # Installation
 # ============================================================================
+.PHONY: selfhost-install
+selfhost-install: selfhost
+
 .PHONY: uninstall
 uninstall:
 	@python3 misc/scripts/install-distribution.py --prefix "$(PREFIX)" --bin-dir "$(INSTALL_BIN_DIR)" --uninstall
 
 .PHONY: help
 help:
+	@echo "make           Build seed -> stage1 -> stage2 -> stage3 -> stage4 and install"
+	@echo "               Output: $(NATIVE_BOOTSTRAP_IMPORTS_DIR)"
+	@echo "               Install: $(INSTALL_BIN_DIR)"
 
 .PHONY: selfhost-native-record-check
 selfhost-native-record-check: seed-compiler-bin
