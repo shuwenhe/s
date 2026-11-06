@@ -342,6 +342,7 @@ func te_add_requests(te_request[] initial_requests, string[] names, string pkg) 
 // Expand only reachable concrete declarations. A work item is registered before
 // visiting its fields, so recursive records terminate without dropping fields.
 func elaborate_generic_types(source_file file) type_elaboration_result {
+    progress := runtime_env_get("S_BOOTSTRAP_PROGRESS", "") == "1"
     trace := runtime_env_get("S_CANONICAL_TRACE", "") == "1"
     output := source_file { pkg: file.pkg, uses: file.uses, items: item[](), item_packages: string[]() }
     requests := te_request[]()
@@ -363,6 +364,7 @@ func elaborate_generic_types(source_file file) type_elaboration_result {
         if trace && cursor % 100 == 0 { eprintln("canonical: type request " + std.prelude.to_string(cursor)) }
         if cursor > 100000 { return type_elaboration_result { file: output, error: "generic type expansion does not terminate" } }
         request := requests[cursor]; cursor = cursor + 1
+        if progress { eprintln("TYPE ELABORATION  " + std.prelude.to_string(len(instances)) + " types generated / " + std.prelude.to_string(len(requests) - cursor + 1) + " requests pending  current=" + request.pkg + "." + request.type_name) }
         text := compile.internal.typesys.parse_type(request.type_name)
         if te_starts_with(text, "*") { requests = te_enqueue(requests, prelude_slice(text, 1, len(text)), request.pkg); continue }
         if te_ends_with(text, "*") { requests = te_enqueue(requests, prelude_slice(text, 0, len(text)-1), request.pkg); continue }
@@ -428,6 +430,7 @@ func elaborate_generic_types(source_file file) type_elaboration_result {
     i = 0
     for i < len(output.items) {
         if trace && i % 100 == 0 { eprintln("canonical: type rewrite " + std.prelude.to_string(i)) }
+        mono_work_progress(progress, "TYPE REWRITE", i, len(output.items), "declarations", output.item_packages[i] + "." + mono_progress_name(output.items[i]))
         keys := string[](); values := string[](); j := 0
         for j < len(aliases) {
             alias := aliases[j]
@@ -437,6 +440,8 @@ func elaborate_generic_types(source_file file) type_elaboration_result {
         output.items[i] = te_rewrite_item(output.items[i], keys, values)
         i = i + 1
     }
+    mono_work_progress(progress, "TYPE REWRITE", i, len(output.items), "declarations", "done")
+    if progress { eprintln("TYPE ELABORATION  " + std.prelude.to_string(len(instances)) + " types generated / 0 requests pending  current=done") }
     type_elaboration_result { file: output, error: "" }
 }
 

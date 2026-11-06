@@ -467,6 +467,7 @@ func check_source_file_for_compile(source_file file, string source) semantic_res
 }
 
 func canonical_check_source_file(source_file file, string source, bool stop_on_error) semantic_result {
+    progress := runtime_env_get("S_BOOTSTRAP_PROGRESS", "") == "1"
     semantic_diagnostic_log = semantic_error[]()
     inputs := canonical_collect_semantic_inputs(file)
     diagnostics := inputs.errors
@@ -507,12 +508,14 @@ func canonical_check_source_file(source_file file, string source, bool stop_on_e
         previous_errors := len(diagnostics)
         previous_logged := len(semantic_diagnostic_log)
         package_name := item_package_at(file.item_packages, i, file.pkg)
+        semantic_work_progress(progress, "SEMANTIC ANALYSIS", i, len(file.items), "declarations", package_name + "." + semantic_progress_name(file.items[i]))
         checked := check_item(file.items[i], functions, traits, consts, import_roots, source, diagnostics, declarations, package_name)
         // Native array arguments copy their descriptor. The package log keeps
         // nested diagnostics; this fallback detects an unreported rejection.
         if checked > 0 && len(diagnostics) == previous_errors && len(semantic_diagnostic_log) == previous_logged { diagnostics.push(canonical_semantic_error("semantic check rejected item")) }
         i = i + 1
     }
+    if len(diagnostics) == 0 && len(semantic_diagnostic_log) == 0 { semantic_work_progress(progress, "SEMANTIC ANALYSIS", i, len(file.items), "declarations", "item checks complete; validating equality") }
     
     if !stop_on_error || (len(diagnostics) == 0 && len(semantic_diagnostic_log) == 0) {
         m2_equality_gate_result := validate_canonical_equality_decision(functions, declarations)
@@ -4095,4 +4098,24 @@ func canonical_return_elements(string[] elements) string {
         i = i + 1
     }
     return text + "]"
+}
+
+extern "intrinsic" func runtime_env_get(string key, string fallback) string
+
+func semantic_work_progress(bool enabled, string phase, int completed, int total, string unit, string current) {
+    if !enabled { return }
+    eprintln(phase + "  " + std.prelude.to_string(completed) + " / " + std.prelude.to_string(total) + " " + unit + "  current=" + current)
+}
+
+func semantic_progress_name(item value) string {
+    switch value {
+        item.function(v): return v.sig.name,
+        item.method(v): return v.receiver_type + "." + v.method.sig.name,
+        item.struct(v): return v.name,
+        item.enum(v): return v.name,
+        item.trait(v): return v.name,
+        item.const(v): return v.name,
+        item.var(v): return v.name,
+    }
+    return "declaration"
 }

@@ -308,12 +308,14 @@ func handle_compile_unit(string[] args) int {
     if output == "" { eprintln("compiler: empty output path"); return 2 }
     if !native_target_supported() { eprintln("native compiler: P0: supports Linux/amd64"); return 2 }
     sources := string[]()
+    progress := runtime_env_get("S_BOOTSTRAP_PROGRESS", "") == "1"
     i := 3
     for i < len(args) {
         if args[i] == output || __host_same_file(args[i], output) {
             eprintln("native compiler: output must not overwrite input source")
             return 2
         }
+        if progress { eprintln("  READ " + args[i]) }
         part := __host_read_source(args[i])
         if part == "" {
             eprintln("compiler: empty or unreadable input: " + args[i])
@@ -326,14 +328,17 @@ func handle_compile_unit(string[] args) int {
         eprintln("compiler: empty compile unit")
         return 1
     }
+    if progress { eprintln("  CHECK " + output) }
     source := canonical_join_sources(sources)
-    mirrored := canonical_source_to_mir(source)
+    mirrored := canonical_source_files_to_mir(source, len(sources))
     if mirrored.error != "" { eprintln(mirrored.error); return 1 }
     if runtime_env_get("S_CANONICAL_TRACE", "") == "1" { eprintln("canonical: native assembly begin") }
+    if progress { eprintln("  CODEGEN " + output) }
     emitted := native_program_assembly(mirrored.program, true)
     if emitted.error != "" { eprintln(emitted.error); return 1 }
     // This: is target assembly, not seed IR or the legacy C backend's output.
     artifact := "# S-NATIVE-AMD64-V1\n" + emitted.assembly
+    if progress { eprintln("  WRITE " + output) }
     if __host_write_text_file(output, artifact) != 0 { eprintln("compiler: cannot write output"); return 1 }
     if runtime_env_get("S_CANONICAL_TRACE", "") == "1" { eprintln("canonical: artifact written") }
     return 0

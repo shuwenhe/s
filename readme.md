@@ -16,6 +16,108 @@ Traits are satisfied implicitly by method-set compatibility. A type implements a
 
 ## Build and run
 
+### Build and install with make
+
+On Linux/amd64, install the build dependencies listed below, then run from
+the project directory:
+
+```sh
+cd /root/shuwen/s
+make
+```
+
+The default workflow is **seed → stage1 → stage2 → stage3 → stage4 → install**.
+A C compiler builds the seed, which generates Stage1. Each subsequent stage
+is built by the preceding compiler. Stage2/3/4 assembly and executables must
+match byte for byte and pass native execution checks before Stage4 is
+installed as the local S compiler.
+
+`make help` displays the configured paths, for example:
+
+```text
+make           Build seed -> stage1 -> stage2 -> stage3 -> stage4 and install
+               Output: /root/shuwen/s/.bootstrap/native-imports
+               Install: /root/.local/bin
+```
+
+Build artifacts and stage logs are stored in `.bootstrap/native-imports/`;
+the final compiler is `stage4`. The default installation prefix is
+`$HOME/.local`, so the command is `/root/.local/bin/s` in this root user
+environment. After installation, verify it with:
+
+```sh
+"$HOME/.local/bin/s" --version
+# Add the installation directory to this shell's PATH to invoke s directly:
+export PATH="$HOME/.local/bin:$PATH"
+s --version
+```
+
+Starting at the seed compiler's file entry point, the build prints scrolling
+file paths in the style of a Linux kernel build, showing the file currently
+being read or parsed. For example (filenames are illustrative; the file count
+depends on the resolved source closure):
+
+```text
+[1/4] Seed -> native stage1
+PARSING  0 / 268 files  current=/root/shuwen/s/src/…/file.s
+PARSING  1 / 268 files  current=/root/shuwen/s/src/…/other.s
+PARSING  268 / 268 files  current=done
+  CHECK /root/shuwen/s/.bootstrap/native-imports/stage1.ir
+SEMANTIC ANALYSIS  31 / 420 declarations  current=example.main
+CALL ANNOTATION  12 / 80 functions  current=example.helper
+SPECIALIZATION  7 generated / 3 pending  current=Box.get
+TYPE ELABORATION  5 types generated / 2 requests pending  current=example.Box[int]
+METHOD LOWERING  4 / 20 methods  current=example.Box.get
+MIR LOWERING  18 / 85 functions  current=example.main
+```
+
+Counts above illustrate the format; actual totals come from the current
+compilation unit. Each counter shows completed work and the declaration,
+function, method, or type currently being processed. A failure leaves the
+current name visible and does not report successful completion. The seed
+counts top-level AST items during semantic analysis (including package and
+import items), while the native compiler counts declarations. Seed borrow
+checking reports functions separately.
+
+The seed reports files as it parses them. Later stages print `READ` paths,
+then parse the combined source; their parsing file count advances from zero
+to the full file count when parsing succeeds. Semantic analysis, call
+annotation, method lowering, and MIR lowering report progress from their
+actual traversal loops. Generic specialization and type elaboration discover
+additional work during traversal, so they report generated instances/types
+and pending requests rather than a fixed expected total. The seed reports
+its generated specializations and active expansion depth instead of a queue.
+Type rewriting has a separate declaration counter. MIR body lowering finishes
+before the final MIR validation; its completion message identifies that boundary.
+
+All files are checked and compiled as one compilation unit. Counters measure
+work items, not elapsed time. Progress is recorded in each stage's
+`stageN-compile.log`.
+Bootstrap verification also displays progress bars for ELF artifact checks,
+Stage2/3/4 convergence, source-dependent execution probes, and final source
+integrity. These bars advance only after successful checks. Artifact and
+execution details are retained in `stageN-verify.log` and
+`stageN-execution.log`, respectively.
+A full bootstrap can take hours. Running `make` again rebuilds the stages
+rather than skipping previously generated stages.
+
+Common commands:
+
+```sh
+make help                                      # Show available operations
+make PREFIX="$HOME/opt/s"                       # Set the installation prefix
+make NATIVE_BOOTSTRAP_IMPORTS_DIR="$PWD/.bootstrap/run-001" # Set the output directory
+make native-bootstrap-imports                  # Build and verify without installing
+S_BOOTSTRAP_PROGRESS=0 make                     # Disable file and CHECK progress output
+make uninstall                                 # Uninstall from the default prefix
+```
+
+If you install with a custom prefix, pass the same `PREFIX` when uninstalling.
+`make selfhost` and `make selfhost-install` remain explicit entry points for
+the same workflow. Use plain `make` for routine builds and installation.
+
+### Development compiler
+
 The verified native target is Linux/amd64 ELF. Install Git, GNU Make, a C11
 compiler, GNU binutils, Bash and Python 3, then run:
 

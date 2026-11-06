@@ -11,6 +11,7 @@
 #include "intermediate/ir.h"
 #include "lexical/token.h"
 #include "semantic/scope.h"
+#include "semantic/progress.h"
 #include "syntax/ast.h"
 bool seed_bootstrap_two_stage_check(const char *compiler_source_path, const char *output_dir, compile_error *err);
 #ifndef SEED_COMPILE_ONLY
@@ -170,6 +171,8 @@ static void remap_unit_error(seed_source_file *files, int count, compile_error *
 }
 
 static bool seed_compile_files_mode(int input_count, char **input_paths, const char *output_path, bool native_records, compile_error *err) {
+	const char *progress_env = getenv("S_BOOTSTRAP_PROGRESS");
+	bool progress = progress_env && strcmp(progress_env, "1") == 0;
 	seed_source_file *files = NULL;
 	ast_node *unit = NULL;
 	IR ir;
@@ -194,6 +197,7 @@ static bool seed_compile_files_mode(int input_count, char **input_paths, const c
 		parse_result parsed;
 		size_t j;
 		files[i].path = input_paths[i];
+		seed_work_progress("PARSING", (size_t)i, (size_t)input_count, "files", input_paths[i]);
 		files[i].first_line = next_line;
 		if (!read_file_text(input_paths[i], &source, err)) {
 			set_error_source(err, input_paths[i]);
@@ -229,6 +233,7 @@ static bool seed_compile_files_mode(int input_count, char **input_paths, const c
 			files[i].package_name = decl->as.package_decl.name;
 		}
 	}
+    seed_work_progress("PARSING", (size_t)input_count, (size_t)input_count, "files", "done");
     /* Resolve aliases before merging files, preserving each lexical scope. */
     for (i = 0; i < input_count; i++) {
         if (!native_record_names_node(files[i].root, files[i].root, err)) goto done;
@@ -255,17 +260,20 @@ static bool seed_compile_files_mode(int input_count, char **input_paths, const c
 		}
 	}
     unit->native_unit = native_records;
+	if (progress) fprintf(stderr, "  CHECK %s\n", output_path);
 	if (native_records && !native_specialize_generics(unit, err)) goto done;
 	if (native_records && !borrow_prove_unit(unit, err)) goto done;
 	if (!semantic_analyze(unit, err)) goto done;
     record_contracts contracts;
     if (native_records && !record_validate_transfer_contracts(unit, &contracts, err)) goto done;
+    if (progress) fprintf(stderr, "  CODEGEN %s\n", output_path);
     if (!ir_generate_from_ast(unit, &ir, err)) goto done;
 	out = fopen(output_path, "wb");
 	if (!out) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed to open output: %s", output_path);
 		goto done;
 	}
+	if (progress) fprintf(stderr, "  WRITE %s\n", output_path);
 	generate_code(&ir, out);
 	if (ferror(out)) {
 		error_set(err, ERR_SEMANTIC, 0, 0, "failed writing compiler output");

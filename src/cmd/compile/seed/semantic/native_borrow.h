@@ -462,7 +462,22 @@ static bool borrow_walk_vec(borrow_proof *p,ast_vec *v) {
 static bool borrow_walk(borrow_proof *p,ast_node *n) {
     if(!n) return true;
     switch(n->kind) {
-    case AST_PROGRAM: return borrow_walk_vec(p,&n->as.program.statements);
+    case AST_PROGRAM: {
+        size_t total=0,done=0;
+        for(size_t i=0;i<n->as.program.statements.len;i++) {
+            ast_node *v=n->as.program.statements.data[i];
+            if(v->kind==AST_FN_STMT && !v->native_template) total++;
+        }
+        for(size_t i=0;i<n->as.program.statements.len;i++) {
+            ast_node *v=n->as.program.statements.data[i];
+            bool function=v->kind==AST_FN_STMT && !v->native_template;
+            if(function) seed_work_progress("BORROW CHECK",done,total,"functions",v->as.fn_stmt.name);
+            if(!borrow_walk(p,v)) return false;
+            if(function) done++;
+        }
+        seed_work_progress("BORROW CHECK",done,total,"functions","done");
+        return true;
+    }
     case AST_PACKAGE_DECL: p->package_name=n->as.package_decl.name; return true;
     case AST_FN_STMT: {
         if(n->native_template) return true;

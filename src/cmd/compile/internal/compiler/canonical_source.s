@@ -10,11 +10,18 @@ extern "intrinsic" func __host_char_at(string source, int index) string
 extern "intrinsic" func __host_slice(string source, int start, int end) string
 
 func canonical_source_to_mir(string source) mir_program_result {
+    return canonical_source_files_to_mir(source, 1)
+}
+
+func canonical_source_files_to_mir(string source, int file_count) mir_program_result {
     empty := mir_program { package_name: "", entry_symbol: "", functions: mir_program_function[](), calls: mir_program_call[](), enums: mir_program_enum[]() }
     trace := runtime_env_get("S_CANONICAL_TRACE", "") == "1"
+    progress := runtime_env_get("S_BOOTSTRAP_PROGRESS", "") == "1"
+    if progress { eprintln("PARSING  0 / " + amd64_integer(file_count) + " files  current=combined source") }
     if trace { eprintln("canonical: parser begin") }
     parsed, parse_error := compile.internal.syntax.parse_source(source)
     if parse_error.message != "" { return mir_program_result { program: empty, error: "canonical parser:" + amd64_integer(parse_error.line) + ": " + parse_error.message } }
+    if progress { eprintln("PARSING  " + amd64_integer(file_count) + " / " + amd64_integer(file_count) + " files  current=done") }
     if trace { eprintln("canonical: parser complete") }
     checked := compile.internal.semantic.check_source_file_for_compile(parsed, source)
     if trace { eprintln("canonical: semantic complete") }
@@ -35,6 +42,7 @@ func canonical_source_to_mir(string source) mir_program_result {
     if flattened.error != "" { return mir_program_result { program: empty, error: "canonical method lowering: " + flattened.error } }
     if trace { eprintln("canonical: MIR lowering begin") }
     lowered := compile.internal.ir.lower.lower_source_program(flattened.file)
+    if progress && lowered.error == "" { eprintln("CHECK complete") }
     if trace { eprintln("canonical: MIR complete") }
     return lowered
 }

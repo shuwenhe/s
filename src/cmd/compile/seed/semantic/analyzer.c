@@ -1,4 +1,5 @@
 #include "scope.h"
+#include "progress.h"
 #include "../intermediate/array_type.h"
 #include "../syntax/enum_type.h"
 #include <ctype.h>
@@ -2680,10 +2681,15 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 				}
 			}
 			for (i = 0; i < node->as.program.statements.len; i++) {
+                ast_node *current = node->as.program.statements.data[i];
+                const char *name = current->kind == AST_FN_STMT ? current->as.fn_stmt.name :
+                    current->kind == AST_EXTERN_DECL ? current->as.extern_decl.name : "declaration";
+                seed_work_progress("SEMANTIC ANALYSIS", i, node->as.program.statements.len, "items", name);
 				if (!analyze_node(ctx, node->as.program.statements.data[i])) {
 					return 0;
 				}
 			}
+			seed_work_progress("SEMANTIC ANALYSIS", i, node->as.program.statements.len, "items", "done");
 			return 1;
 		case AST_PACKAGE_DECL:
 			ctx->current_package = node->as.package_decl.name;

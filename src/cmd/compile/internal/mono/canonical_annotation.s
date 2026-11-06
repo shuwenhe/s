@@ -360,6 +360,13 @@ func ca_call(compile.internal.ast.call_expr original, compile.internal.semantic.
 func annotate_canonical_calls(source_file original, compile.internal.semantic.semantic_result checked, string source) canonical_annotation_result {
     file := original
     trace := runtime_env_get("S_CANONICAL_TRACE", "") == "1"
+    progress := runtime_env_get("S_BOOTSTRAP_PROGRESS", "") == "1"
+    function_total := 0
+    scan := 0
+    for scan < len(file.items) { switch file.items[scan] { item.function(_): function_total = function_total + 1, item.method(_): function_total = function_total + 1, _: () }
+        scan = scan + 1
+    }
+    function_done := 0
     metadata := ca_metadata { functions: checked.functions, traits: compile.internal.semantic.collect_traits(file), declarations: checked.declarations, source: source }
     ctx := ca_context { env: compile.internal.semantic.type_binding[](), expected: "()", pkg: file.pkg }
     roots := compile.internal.semantic.collect_import_module_roots(file.uses)
@@ -379,13 +386,16 @@ func annotate_canonical_calls(source_file original, compile.internal.semantic.se
         value := file.items[i]
         switch value {
             item.function(f): {
+                mono_work_progress(progress, "CALL ANNOTATION", function_done, function_total, "functions", local.pkg + "." + f.sig.name)
                 if trace { eprintln("canonical: annotating " + local.pkg + "." + f.sig.name) }
                 local = ca_function_context(f, local, metadata)
                 switch f.body { option.some(b): { body := ca_block(b, local, metadata); if body.error != "" { return canonical_annotation_result { file: file, error: body.error + " in " + local.pkg + "." + f.sig.name } }
  f.body = option.some(body.value) }, option.none: () }
                 value = item.function(ca_nominal_signature(f, local.pkg, metadata))
+                function_done = function_done + 1
             },
             item.method(m): {
+                mono_work_progress(progress, "CALL ANNOTATION", function_done, function_total, "functions", local.pkg + "." + m.receiver_type + "." + m.method.sig.name)
                 if trace { eprintln("canonical: annotating receiver " + local.pkg + "." + m.method.sig.name) }
                 local.env = append(local.env, compile.internal.semantic.type_binding { name: m.receiver_name, type_name: compile.internal.semantic.canonical_type_in_package(m.receiver_type, local.pkg, m.method.sig.generics, metadata.declarations) })
                 local = ca_function_context(m.method, local, metadata)
@@ -394,6 +404,7 @@ func annotate_canonical_calls(source_file original, compile.internal.semantic.se
                 m.receiver_type = compile.internal.semantic.canonical_type_in_package(m.receiver_type, local.pkg, m.method.sig.generics, metadata.declarations)
                 m.method = ca_nominal_signature(m.method, local.pkg, metadata)
                 value = item.method(m)
+                function_done = function_done + 1
             },
             item.struct(v): {
                 f := 0
@@ -430,6 +441,7 @@ func annotate_canonical_calls(source_file original, compile.internal.semantic.se
         }
         file.items[i] = value; i = i + 1
     }
+    mono_work_progress(progress, "CALL ANNOTATION", function_done, function_total, "functions", "done")
     canonical_annotation_result { file: file, error: "" }
 }
 func ca_nominal_signature(compile.internal.ast.function_decl original, string pkg, ca_metadata metadata) compile.internal.ast.function_decl {
@@ -462,10 +474,16 @@ func ca_function_context(compile.internal.ast.function_decl function, ca_context
 // the checked receiver made an explicit first parameter. Call finalization has
 // already inserted the matching receiver operand and nominal method identity.
 func flatten_canonical_methods(source_file original) canonical_annotation_result {
+    progress := runtime_env_get("S_BOOTSTRAP_PROGRESS", "") == "1"
+    total := 0; completed := 0; scan := 0
+    for scan < len(original.items) { switch original.items[scan] { item.method(_): total = total + 1, _: () }
+        scan = scan + 1
+    }
     file := original; i := 0
     for i < len(file.items) {
         switch file.items[i] {
             item.method(method): {
+                mono_work_progress(progress, "METHOD LOWERING", completed, total, "methods", te_package(file, i) + "." + method.receiver_type + "." + method.method.sig.name)
                 if len(method.method.sig.generics) != 0 || mono_receiver_has_parameter(method.receiver_type, file) { return canonical_annotation_result { file: file, error: "receiver method still has generic parameters: " + method.method.sig.name } }
                 pkg := te_package(file, i)
                 owner := mono_receiver_identity(method.receiver_type, pkg)
@@ -478,10 +496,30 @@ func flatten_canonical_methods(source_file original) canonical_annotation_result
                 for p < len(function.sig.params) { parameters = append(parameters, function.sig.params[p]); p = p + 1 }
                 function.sig.params = parameters
                 file.items[i] = item.function(function)
+                completed = completed + 1
             },
             _: (),
         }
         i = i + 1
     }
+    mono_work_progress(progress, "METHOD LOWERING", completed, total, "methods", "done")
     canonical_annotation_result { file: file, error: "" }
+}
+
+func mono_work_progress(bool enabled, string phase, int completed, int total, string unit, string current) {
+    if !enabled { return }
+    eprintln(phase + "  " + std.prelude.to_string(completed) + " / " + std.prelude.to_string(total) + " " + unit + "  current=" + current)
+}
+
+func mono_progress_name(item value) string {
+    switch value {
+        item.function(v): return v.sig.name,
+        item.method(v): return v.receiver_type + "." + v.method.sig.name,
+        item.struct(v): return v.name,
+        item.enum(v): return v.name,
+        item.trait(v): return v.name,
+        item.const(v): return v.name,
+        item.var(v): return v.name,
+    }
+    return "declaration"
 }

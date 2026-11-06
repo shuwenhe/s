@@ -19,7 +19,7 @@ typedef struct ng_state {
     ast_node *unit;
     compile_error *err;
     ng_decl **decls;
-    size_t count, depth;
+    size_t count, depth, generated;
 } ng_state;
 typedef struct ng_scope {
     ng_state *state;
@@ -243,7 +243,13 @@ static ng_decl *ng_append(ng_state *s,ast_node *n,const char *package) {
     marker->as.package_decl.name=ng_dup(package);
     if(!marker->as.package_decl.name || !ast_vec_push(&s->unit->as.program.statements,marker)) { ast_free(marker); return NULL; }
     if(!ast_vec_push(&s->unit->as.program.statements,n)) return NULL;
-    return ng_register(s,n,marker->as.package_decl.name);
+    ng_decl *registered=ng_register(s,n,marker->as.package_decl.name);
+    if(registered) {
+        s->generated++;
+        const char *progress=getenv("S_BOOTSTRAP_PROGRESS");
+        if(progress && !strcmp(progress,"1")) fprintf(stderr,"SPECIALIZATION  %zu generated / %zu active expansions  current=%s\n",s->generated,s->depth,ng_decl_name(n));
+    }
+    return registered;
 }
 static bool ng_type(ng_scope *,const char *,ng_text,unsigned);
 static bool ng_node(ng_scope *,ast_node *,ng_text);
@@ -961,6 +967,7 @@ static bool native_specialize_generics(ast_node *unit,compile_error *err) {
         ng_scope *c=calloc(1,sizeof(*c)); if(!c) goto done;
         c->state=&s; c->package=d->package;
         bool valid=true;
+        seed_work_progress("SPECIALIZATION SCAN", i, declarations, "declarations", ng_decl_name(d->node));
         if(d->node->kind==AST_FN_STMT) valid=ng_function(c,d->node);
         else if(ng_record(d->node)) {
             ast_node *schema=d->node->as.let_stmt.value;

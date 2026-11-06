@@ -695,6 +695,7 @@ func program_lower_function_with_environment(string package_name, function_decl 
 }
 
 func lower_source_program(source_file initial) mir_program_result {
+    progress := runtime_env_get("S_BOOTSTRAP_PROGRESS", "") == "1"
     trace := runtime_env_get("S_CANONICAL_TRACE", "") == "1"
     if trace { eprintln("canonical: MIR globals begin") }
     src := program_with_global_initializers(initial)
@@ -780,12 +781,14 @@ func lower_source_program(source_file initial) mir_program_result {
         builtin_functions = append(builtin_functions, program_native_intrinsic_function(signature, builtin_name))
         builtin_index = builtin_index + 1
     }
+    function_total := len(signatures) - len(builtin_functions)
     functions := mir_program_function[]()
     i = 0
     for i < len(src.items) {
         switch src.items[i] {
             item.function(declaration) : {
                 if !program_repeated_external_contract(src, i, declaration, enums, records) {
+                    mir_work_progress(progress, "MIR LOWERING", len(functions), function_total, "functions", signatures[len(functions)].symbol)
                     if trace { eprintln("canonical: MIR function " + signatures[len(functions)].symbol) }
                     lowered := program_lower_function_with_environment(program_item_package(src, i), declaration, signatures[len(functions)], signatures, enums, records, payloads, environment)
                     if lowered.error != "" { result.error = lowered.error + " in " + program_item_package(src, i) + "." + declaration.sig.name; return result }
@@ -797,6 +800,7 @@ func lower_source_program(source_file initial) mir_program_result {
         }
         i = i + 1
     }
+    mir_work_progress(progress, "MIR LOWERING", len(functions), function_total, "functions", "bodies complete; validating MIR")
     builtin_index = 0
     for builtin_index < len(builtin_functions) {
         if program_has_call(functions, builtin_functions[builtin_index].symbol) {
@@ -1732,4 +1736,9 @@ func program_lower_break(program_lower_state initial) program_lower_state {
     state.break_edges.push(edge)
     target := state.break_target
     return program_finish_block(state, "jump", int[](), [target])
+}
+
+func mir_work_progress(bool enabled, string phase, int completed, int total, string unit, string current) {
+    if !enabled { return }
+    eprintln(phase + "  " + std.prelude.to_string(completed) + " / " + std.prelude.to_string(total) + " " + unit + "  current=" + current)
 }

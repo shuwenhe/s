@@ -315,6 +315,7 @@ func verify_identity_threading(mono_context ctx) m1_identity_verification {
 }
 
 func monomorphize_file(source_file file, semantic_result result) monomorphize_file_result {
+    progress := runtime_env_get("S_BOOTSTRAP_PROGRESS", "") == "1"
     trace := runtime_env_get("S_CANONICAL_TRACE", "") == "1"
     if trace { eprintln("canonical: specialization indexing") }
     ctx := new_context()
@@ -341,6 +342,7 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
     i := 0
     for i < len(file.items) {
         if trace && i % 100 == 0 { eprintln("canonical: specialization collection " + lookup.input_packages[i] + "." + lookup.input_names[i]) }
+        mono_work_progress(progress, "SPECIALIZATION SCAN", i, len(file.items), "declarations", te_package(file, i) + "." + mono_progress_name(file.items[i]))
         ctx.current_package = te_package(file, i)
         if mono_item_is_concrete(file.items[i], file) { ctx = collect_item_instances_ctx(file.items[i], file.items, ctx, lookup) }
         i = i + 1
@@ -355,6 +357,7 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
         if is_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.type_args) {
             continue
         }
+        if progress { eprintln("SPECIALIZATION  " + std.prelude.to_string(len(extra_items)) + " generated / " + std.prelude.to_string(len(ctx.worklist) - cursor + 1) + " pending  current=" + work.receiver_type + "." + work.generic_name) }
         if trace { eprintln("canonical: specializing " + work.generic_name) }
         ctx = mark_work_processed(ctx, work.item_kind, work.receiver_type, work.generic_name, work.type_args)
 
@@ -388,6 +391,7 @@ func monomorphize_file(source_file file, semantic_result result) monomorphize_fi
         }
     }
 
+    if progress { eprintln("SPECIALIZATION  " + std.prelude.to_string(len(extra_items)) + " generated / 0 pending  current=done") }
     stripped := item[]()
     stripped_packages := string[]()
     i = 0
