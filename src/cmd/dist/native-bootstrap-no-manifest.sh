@@ -43,21 +43,21 @@ done < "$closure"
 printf 'Resolved source closure: %s files\n' "${#sources[@]}"
 sha256sum "${sources[@]}" > "$output_dir/source-sha256"
 
-printf '[1/3] Seed -> native stage1\n'
+printf '[1/4] Seed -> native stage1\n'
 "$seed" --compile-native-unit "$output_dir/stage1.ir" "${sources[@]}" 2>&1 | tee "$output_dir/stage1-compile.log"
 test -s "$output_dir/stage1.ir" || fail 'stage1 seed IR missing or empty'
 # --emit-bin creates a C interpreter wrapper. It is deliberately excluded.
 "$seed" --emit-standalone-amd64 "$output_dir/stage1.ir" "$output_dir/stage1" 2>&1 | tee "$output_dir/stage1-emit.log"
 sh "$verify" "$output_dir/stage1" 2>&1 | tee "$output_dir/stage1-verify.log"
 
-for stage in 2 3; do
+for stage in 2 3 4; do
     previous=$((stage - 1))
     producer="$output_dir/stage$previous"
     artifact="$output_dir/stage$stage.sasm"
     binary="$output_dir/stage$stage"
     # Remove stale intermediates before a producer can report success.
     rm -f "$artifact" "$binary"
-    printf '[%s/3] stage%s -> stage%s\n' "$stage" "$previous" "$stage"
+    printf '[%s/4] stage%s -> stage%s\n' "$stage" "$previous" "$stage"
     run_stage "$producer" --compile-unit "$artifact" "${sources[@]}" 2>&1 | tee "$output_dir/stage$stage-compile.log"
     test -s "$artifact" || fail "stage$stage assembly artifact missing or empty"
     [ "$(head -n 1 "$artifact")" = '# S-NATIVE-AMD64-V1' ] || fail "stage$stage returned an incompatible artifact"
@@ -65,9 +65,12 @@ for stage in 2 3; do
     sh "$verify" "$binary" 2>&1 | tee "$output_dir/stage$stage-verify.log"
 done
 
-cmp -s "$output_dir/stage2.sasm" "$output_dir/stage3.sasm" || fail 'stage2/stage3 assembly did not converge'
-cmp -s "$output_dir/stage2" "$output_dir/stage3" || fail 'stage2/stage3 binaries did not converge'
-for stage in 2 3; do
+for stage in 3 4; do
+    previous=$((stage - 1))
+    cmp -s "$output_dir/stage$previous.sasm" "$output_dir/stage$stage.sasm" || fail "stage$previous/stage$stage assembly did not converge"
+    cmp -s "$output_dir/stage$previous" "$output_dir/stage$stage" || fail "stage$previous/stage$stage binaries did not converge"
+done
+for stage in 2 3 4; do
     bash "$root/src/cmd/dist/checks/selfhost-execution.sh" \
         "$output_dir/stage$stage" "$output_dir/stage$stage-execution" \
         2>&1 | tee "$output_dir/stage$stage-execution.log"
@@ -75,4 +78,4 @@ done
 sha256sum "${sources[@]}" > "$output_dir/source-sha256.after"
 cmp -s "$output_dir/source-sha256" "$output_dir/source-sha256.after" || fail 'compiler sources changed during bootstrap'
 touch "$output_dir/.complete"
-printf 'Native bootstrap verified: seed -> stage1 -> stage2 == stage3\n'
+printf 'Native bootstrap verified: seed -> stage1 -> stage2 == stage3 == stage4\n'

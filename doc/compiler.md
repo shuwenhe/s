@@ -15,6 +15,20 @@ make compiler
 
 This builds the C seed and a development native compiler from S sources. It is a seed-hosted build, not a fresh multi-stage self-host verification. Build logs enumerate source inputs. Generated files live in bin and .bootstrap.
 
+To bootstrap through four native stages and install the final self-hosted compiler:
+
+```sh
+make selfhost-install PREFIX="$HOME/.local"
+```
+
+This runs C seed → Stage1 → Stage2 → Stage3 → Stage4, requires byte-identical
+Stage2/3/4 assembly and executables, and checks source-dependent compilation and
+execution in each later stage. It installs Stage4 as `s_compiler` with the public
+`s` driver. `make selfhost` performs the same bootstrap into the checkout without
+installing to PREFIX. Set `NATIVE_BOOTSTRAP_IMPORTS_DIR` to a new directory to keep
+separate builds isolated; do not run two builds against the same directory.
+`make install` builds and installs the seed-hosted development compiler instead.
+
 For a fresh verified multi-stage build use the [clean-room controller](selfhost-verification/cleanroom.md), with a clean committed checkout and a new output directory. Do not reuse an existing acceptance directory. Tracing must be permitted for the build's own child processes.
 
 ## First program

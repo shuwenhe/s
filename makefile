@@ -7,6 +7,7 @@ VERBOSE ?= 1
 SELFHOST_DIR ?= $(CURDIR)/.bootstrap/selfhost
 NATIVE_BOOTSTRAP_DIR := $(SELFHOST_DIR)/native
 NATIVE_BOOTSTRAP_STAMP := $(NATIVE_BOOTSTRAP_DIR)/.complete
+NATIVE_BOOTSTRAP_IMPORTS_DIR ?= $(CURDIR)/.bootstrap/native-imports
 S_HOST_OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 S_HOST_ARCH := $(shell uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
 S_TARGET_OS ?= $(S_HOST_OS)
@@ -105,10 +106,10 @@ NATIVE_BOOTSTRAP_IMPORTS_INPUTS := \
 
 .PHONY: native-bootstrap-imports
 native-bootstrap-imports: seed-compiler-bin
-	@mkdir -p .bootstrap/native-imports
+	@mkdir -p '$(NATIVE_BOOTSTRAP_IMPORTS_DIR)'
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$(S_TARGET_OS) S_TARGET_ARCH=$(S_TARGET_ARCH) \
-	  ./src/cmd/dist/native-bootstrap-no-manifest.sh .bootstrap/native-imports
-	@echo "✓ Import-driven bootstrap complete (.bootstrap/native-imports)"
+	  ./src/cmd/dist/native-bootstrap-no-manifest.sh '$(NATIVE_BOOTSTRAP_IMPORTS_DIR)'
+	@echo "✓ Import-driven bootstrap complete ($(NATIVE_BOOTSTRAP_IMPORTS_DIR))"
 
 # ============================================================================
 # Hosted Bootstrap (Go-style multi-stage approach)
@@ -315,56 +316,12 @@ compiler: seed-compiler-bin
 # ============================================================================
 # Installation
 # ============================================================================
-.PHONY: install
-install: compiler
-	@python3 misc/scripts/install-distribution.py --prefix "$(PREFIX)" --bin-dir "$(INSTALL_BIN_DIR)"
-
 .PHONY: uninstall
 uninstall:
 	@python3 misc/scripts/install-distribution.py --prefix "$(PREFIX)" --bin-dir "$(INSTALL_BIN_DIR)" --uninstall
 
-# ============================================================================
-# Self-hosted compiler
-# ============================================================================
-selfhost: native-bootstrap-imports
-	@$(INSTALL_PROGRAM) -m 0755 .bootstrap/native-imports/stage3 ./bin/s
-	@echo "Installed S self-hosted compiler: ./bin/s"
-	@echo "Verified bootstrap chain: seed -> stage1 -> stage2 -> stage3"
-
-# ============================================================================
-# Pipeline
-# ============================================================================
-.PHONY: pipeline
-pipeline: compiler
-	@chmod +x script/compile-pipeline-check.sh
-	@S_SOURCE_ROOT=$(CURDIR) script/compile-pipeline-check.sh
-
-# ============================================================================
-# Cleanup
-# ============================================================================
-.PHONY: clean
-clean:
-	@echo "Cleaning all generated files..."
-	@rm -rf .bootstrap/oom-* \
-	        .bootstrap/full-native-bootstrap-* \
-	        .bootstrap/memory-investigation \
-	        .bootstrap/split-check \
-	        .bootstrap/stage[0-9] \
-	        .bootstrap/stage[0-9][0-9] \
-	        .bootstrap/stage*-* \
-	        .bootstrap/stage2-stage3-diagnostic \
-	        .bootstrap/compiler \
-	        .bootstrap/native \
-	        .bootstrap/selfhost \
-	        bin/s_seed bin/s_compiler bin/s
-	@echo "✓ Cleaned: all build artifacts and generated files"
-
 .PHONY: help
 help:
-	@echo "  make pipeline"
-	@echo "  make install"
-	@echo "  make selfhost"
-	@echo "  make clean"
 
 .PHONY: selfhost-native-record-check
 selfhost-native-record-check: seed-compiler-bin
