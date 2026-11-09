@@ -217,6 +217,7 @@ func ca_expr_in_scope(compile.internal.ast.expr original, ca_context ctx, bool d
             v.inferred_type = option.some(ty); value = expr.tuple(v)
         },
         expr.array(v): {
+            if len(v.items) == 0 && ty == "unknown[]" && compile.internal.semantic.canonical_array_element(ctx.expected) != "" { ty = ctx.expected }
             v.type_text = option.some(ty)
             expected := compile.internal.semantic.canonical_array_element(ty); loop_var_3 := 0
             for loop_var_3 < len(v.items) { child := ca_child(v.items[loop_var_3], ctx, expected, metadata); if child.error != "" { return child }
@@ -309,6 +310,9 @@ func ca_call(compile.internal.ast.call_expr original, compile.internal.semantic.
     ty := inferred.type_name
     new_args := compile.internal.ast.expr[](); arg_types := string[](); i := 0
     for i < len(original.args) {
+        if i == 0 && compile.internal.semantic.qualified_expr_path(original.callee.value) == "make" {
+            new_args = append(new_args, expr.name(name_expr { name: ty, inferred_type: option.some(ty) })); arg_types = append(arg_types, ty); i = i + 1; continue
+        }
         argument := ca_expr(original.args[i], ctx, metadata)
         if argument.error != "" { return argument }
         new_args = append(new_args, argument.value); arg_types = append(arg_types, argument.type_name); i = i + 1

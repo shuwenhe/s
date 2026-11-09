@@ -1581,7 +1581,7 @@ func check_receiver_method(receiver_method_decl method_decl, function_binding[] 
     }
     result := infer_block_expr_in_scope(method.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics, declarations, scope)
     if result.type_name != "never" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
-        if !compile.internal.typesys.same_type(expected_return, result.type_name) {
+        if !compile.internal.typesys.same_type(expected_return, result.type_name) && !(expected_return == "float" && result.type_name == "int") {
             return pre_errors + result.errors + add_error(source, diagnostics, "e3004", canonical_return_mismatch("method", method.sig.name, expected_return, result.type_name, method.body.unwrap()), method.sig.name)
         }
     }
@@ -1629,7 +1629,7 @@ func check_function(function_decl function_decl, function_binding[] functions, t
     }
     result := infer_block_expr_in_scope(function_decl.body.unwrap(), env, borrow_state_new(), expected_return, functions, traits, source, diagnostics, declarations, scope)
     if result.type_name != "never" && !is_unknown(expected_return) && !is_unknown(result.type_name) {
-        if !compile.internal.typesys.same_type(expected_return, result.type_name) {
+        if !compile.internal.typesys.same_type(expected_return, result.type_name) && !(expected_return == "float" && result.type_name == "int") {
             return pre_errors + result.errors + add_error(source, diagnostics, "e3004", canonical_return_mismatch("function", function_decl.sig.name, expected_return, result.type_name, function_decl.body.unwrap()), function_decl.sig.name)
         }
     }
@@ -1768,7 +1768,7 @@ func check_stmt_with_env_in_scope(stmt statement, type_binding[] env, borrow_rec
                     errors = errors + add_error(source, diagnostics, "e3063", "declared type cannot be resolved at compile time", value.name)
                 }
                 if !types_compatible(declared, rhs.type_name) {
-                    errors = errors + add_error(source, diagnostics, "e3001", "variable initializer type mismatch", value.name)
+                    errors = errors + add_error(source, diagnostics, "e3001", "variable initializer type mismatch (expected=" + declared + ", actual=" + rhs.type_name + ")", value.name)
                 }
                 binding_type = declared
             }
@@ -1831,7 +1831,7 @@ func check_stmt_in_scope(stmt stmt, type_binding[] env, borrow_record[] borrow_s
             if root == "" { errors = errors + add_error(source, diagnostics, "e3124", "store requires a named place", "=") }
             if borrow_state_has_conflict(borrow_state, root, true) { errors = errors + add_error(source, diagnostics, "e3056", "cannot assign to a borrowed place", root) }
             if !types_compatible(target.type_name, rhs.type_name) { errors = errors + add_error(source, diagnostics, "e3003", "store type mismatch", "=") }
-            if value.op != "=" && (!types_compatible("int", target.type_name) || !types_compatible("int", rhs.type_name)) { errors = errors + add_error(source, diagnostics, "e3018", "compound store requires int", value.op) }
+            if value.op != "=" && !(target.type_name == "float" && rhs.type_name == "float" && (value.op == "+=" || value.op == "-=" || value.op == "*=" || value.op == "/=")) && (!types_compatible("int", target.type_name) || !types_compatible("int", rhs.type_name)) { errors = errors + add_error(source, diagnostics, "e3018", "compound store requires int", value.op) }
             errors
         }
         stmt.increment(value) : {
@@ -2089,7 +2089,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
             check_result { type_name: type_name + ")", errors: errors }
         }
         expr.record(value): canonical_infer_record_in_scope(value, env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope),
-        expr.int(_) : ok_type("int"),
+        expr.int(value) : ok_type(semantic_number_type(value.value)),
         expr.string(_) : ok_type("string"),
         expr.bool(_) : ok_type("bool"),
         expr.name(value) : {
@@ -2215,7 +2215,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                     errors = errors + add_error(source, diagnostics, "e3012", "index must be int", "[")
                 }
                 return check_result {
-                    type_name: "u8", errors errors,
+                    type_name: "int", errors errors,
                 }
             }
             if target.type_name == "map" {
@@ -2232,6 +2232,10 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
             arg_types := string[]()
             loop_var_2 := 0
             for loop_var_2 < std.prelude.len(value.args) {
+                if qualified_expr_path(value.callee.value) == "make" && loop_var_2 == 0 {
+                    type_text := qualified_expr_path(value.args[0])
+                    if canonical_array_element(type_text) != "" { arg_types.push(canonical_type_in_package(type_text, scope.package_path, scope.generic_names, declarations)); loop_var_2 = loop_var_2 + 1; continue }
+                }
                 arg_result := infer_expr_in_scope(value.args[loop_var_2], env, borrow_state, expected_return, functions, traits, source, diagnostics, declarations, scope)
                 errors = errors + arg_result.errors
                 arg_types.push(arg_result.type_name);
@@ -2378,6 +2382,14 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                         if arg_types[0] != "string" && canonical_array_element(arg_types[0]) == "" { errors = errors + add_error(source, diagnostics, "e3120", "len expects one array or string", "len") }
                         return check_result { type_name: "int", errors: errors }
                     }
+                    if callee_name.name == "make" {
+                        if len(arg_types) == 2 && canonical_array_element(arg_types[0]) != "" && arg_types[1] == "int" { return check_result { type_name: arg_types[0], errors: errors } }
+                        return check_result { type_name: "unknown", errors: errors + add_error(source, diagnostics, "e3121", "make expects an array type and int length", "make") }
+                    }
+                    if callee_name.name == "byte" {
+                        if len(arg_types) == 1 && arg_types[0] == "int" { return check_result { type_name: "int", errors: errors } }
+                        return check_result { type_name: "unknown", errors: errors + add_error(source, diagnostics, "e3101", "byte conversion requires int", "byte") }
+                    }
                     if callee_name.name == "append" {
                         if len(arg_types) < 2 { return check_result { type_name: "unknown", errors: errors + add_error(source, diagnostics, "e3121", "append expects an array and values", "append") } }
                         element := canonical_array_element(arg_types[0])
@@ -2389,8 +2401,12 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
                         }
                         return check_result { type_name: arg_types[0], errors: errors }
                     }
+                    if callee_name.name == "float" {
+                        if len(arg_types) == 1 && (arg_types[0] == "int" || arg_types[0] == "float") { return check_result { type_name: "float", errors: errors } }
+                        return check_result { type_name: "unknown", errors: errors + add_error(source, diagnostics, "e3101", "float conversion requires int or float", "float") }
+                    }
                     if callee_name.name == "int" {
-                        if len(arg_types) == 1 && (arg_types[0] == "int" || arg_types[0] == "bool" || canonical_is_enum_type(arg_types[0], declarations)) { return check_result { type_name: "int", errors: errors } }
+                        if len(arg_types) == 1 && (arg_types[0] == "int" || arg_types[0] == "float" || arg_types[0] == "bool" || canonical_is_enum_type(arg_types[0], declarations)) { return check_result { type_name: "int", errors: errors } }
                         return check_result { type_name: "unknown", errors: errors + add_error(source, diagnostics, "e3101", "int conversion requires an integer, bool or scalar enum", "int") }
                     }
                     if callee_name.name == "copy" {
@@ -2939,7 +2955,7 @@ func pattern_anchor(pattern pattern) string {
 
 func literal_pattern_type(literal_pattern value) string {
     switch value.value {
-        expr.int(_) : "int",
+        expr.int(value) : semantic_number_type(value.value),
         expr.string(_) : "string",
         expr.bool(_) : "bool",
         _ : "unknown",
@@ -2982,6 +2998,10 @@ func variant_payload_type(string expected_type, string ctor) string {
 
 func canonical_binary_inference(string op, string left, string right) canonical_inference {
     diagnostics := semantic_error[]()
+    if (left == "float" && (right == "float" || right == "int")) || (right == "float" && left == "int") {
+        if op == "+" || op == "-" || op == "*" || op == "/" { return canonical_inference { type_name: "float", diagnostics: diagnostics } }
+        if op == "<" || op == "<=" || op == ">" || op == ">=" || op == "==" || op == "!=" { return canonical_inference { type_name: "bool", diagnostics: diagnostics } }
+    }
     if op == "+" && left == "string" && right == "string" { return canonical_inference { type_name: "string", diagnostics: diagnostics } }
     if op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "&" || op == "|" || op == "^" || op == "<<" || op == ">>" {
         if is_unknown(left) || is_unknown(right) {
@@ -3735,6 +3755,10 @@ func types_compatible(string left, string right) bool {
     if left == right {
         return true
     }
+    if left == "float" && right == "int" { return true }
+    if left == "float" || right == "float" { return false }
+    if left == "unknown[]" && canonical_array_element(right) != "" { return true }
+    if right == "unknown[]" && canonical_array_element(left) != "" { return true }
     if is_unknown(left) || is_unknown(right) {
         return is_unknown(left) && is_unknown(right)
     }
@@ -4118,4 +4142,15 @@ func semantic_progress_name(item value) string {
         item.var(v): return v.name,
     }
     return "declaration"
+}
+
+func semantic_number_type(string text) string {
+    if std.prelude.len(text) > 1 && std.prelude.char_at(text, 0) == "0" && (std.prelude.char_at(text, 1) == "x" || std.prelude.char_at(text, 1) == "X") { return "int" }
+    i := 0
+    for i < std.prelude.len(text) {
+        ch := std.prelude.char_at(text, i)
+        if ch == "." || ch == "e" || ch == "E" { return "float" }
+        i = i + 1
+    }
+    return "int"
 }

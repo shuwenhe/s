@@ -163,7 +163,7 @@ func lower_function_mir_to_ssa(mir_program program) function_ssa_result {
                 output_values = function_ssa_append_value(output_values, value_id, op, instruction.operands, input_block.id, value_type, instruction.integer_value, -1)
                 output_values[len(output_values) - 1].symbol = instruction.symbol
                 output_values[len(output_values) - 1].field_names = instruction.field_names
-                if op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set" { output_values[len(output_values) - 1].symbol = mir_program_physical_type(instruction.symbol, program.enums) }
+                if op == "array_make" || op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set" { output_values[len(output_values) - 1].symbol = mir_program_physical_type(instruction.symbol, program.enums) }
                 if op == "call" { output_calls = function_ssa_append_call(output_calls, input_function.symbol, instruction.symbol, input_block.id, value_id) }
                 n = n + 1
             }

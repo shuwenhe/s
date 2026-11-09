@@ -101,7 +101,7 @@ func amd64_validate_program(function_ssa_program program) string {
             for v < len(function_data.blocks[b].values) {
                 value := function_data.blocks[b].values[v]
                 op := value.op
-                supported := op == "reference_new" || op == "reference_get" || op == "reference_set" || op == "reference_readonly" || op == "global_get" || op == "global_set" || op == "native_intrinsic" || op == "string_byte_at" || op == "string_char_at" || op == "string_slice" || op == "string_eq" || op == "string_ne" || op == "string_lt" || op == "string_le" || op == "string_gt" || op == "string_ge" || op == "const_string" || op == "string_concat" || op == "string_len" || ssa_is_scalar_operation(op) || op == "param" || op == "phi" || op == "const_int" || op == "const_unit" || op == "copy" || op == "add" || op == "sub" || op == "mul" || op == "div" || op == "mod" || op == "bit_and" || op == "bit_or" || op == "bit_xor" || op == "shl" || op == "shr" || op == "call" || op == "record_new" || op == "record_get" || op == "record_set" || op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set"
+                supported := mir_program_is_float_operation(op) || op == "reference_new" || op == "reference_get" || op == "reference_set" || op == "reference_readonly" || op == "global_get" || op == "global_set" || op == "native_intrinsic" || op == "string_byte_at" || op == "string_char_at" || op == "string_slice" || op == "string_eq" || op == "string_ne" || op == "string_lt" || op == "string_le" || op == "string_gt" || op == "string_ge" || op == "const_string" || op == "string_concat" || op == "string_len" || ssa_is_scalar_operation(op) || op == "param" || op == "phi" || op == "const_int" || op == "const_unit" || op == "copy" || op == "add" || op == "sub" || op == "mul" || op == "div" || op == "mod" || op == "bit_and" || op == "bit_or" || op == "bit_xor" || op == "shl" || op == "shr" || op == "call" || op == "record_new" || op == "record_get" || op == "record_set" || op == "array_make" || op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set"
                 if !supported { return "amd64: unsupported operation: " + op }
                 if !ssa_type_supported(value.type_name, program.records) && !((op == "call" || op == "native_intrinsic") && value.type_name == "void") { return "amd64: unsupported value type" }
                 v = v + 1
@@ -163,6 +163,7 @@ func amd64_emit_value_with_values(function_ssa_program program, int function_ind
     value := values[position]
     op := value.op
     if op == "param" { return "" }
+    if mir_program_is_float_operation(op) { return amd64_emit_float(values, value, function_index, position) }
     if op == "global_get" || op == "global_set" { return amd64_emit_global(program, values, value) }
     if op == "native_intrinsic" { return amd64_emit_native_intrinsic(values, value, function_index, position) }
     slot := amd64_slot(values, value.id)
@@ -195,7 +196,7 @@ func amd64_emit_value_with_values(function_ssa_program program, int function_ind
         return "  movabsq $" + amd64_integer(value.integer_value) + ", %rax\n  movq %rax, " + slot + "\n"
     }
     if op == "call" { return amd64_emit_call_with_values(program, function_data, value, values) }
-    if op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set" { return amd64_emit_array_with_values(program, function_index, position, values) }
+    if op == "array_make" || op == "array_new" || op == "array_get" || op == "array_len" || op == "array_append" || op == "array_set" { return amd64_emit_array_with_values(program, function_index, position, values) }
     if op == "record_new" {
         record := program.records[ssa_record_index(program.records, value.symbol)]
         size := len(record.field_names) * 8
@@ -388,7 +389,7 @@ func emit_function_ssa_amd64(function_ssa_program program) amd64_program_result 
         + ".Ls_native_divzero:\n  movl $86, %edi\n  movl $60, %eax\n  syscall\n  ud2\n"
         + ".section .note.GNU-stack,\"\",@progbits\n"
     if amd64_needs_arena(program) { text = text + amd64_record_allocator() }
-    if amd64_needs_intrinsics(program) { text = text + amd64_native_intrinsic_runtime() }
+    if amd64_needs_intrinsics(program) { text = text + amd64_native_intrinsic_runtime() + amd64_native_extensions_runtime() }
     if len(program.globals) > 0 { text = text + amd64_emit_global_initializers(program) }
     else if amd64_needs_arena(program) { text = text + ".bss\n.globl s_native_gc_roots_begin,s_native_gc_roots_end\ns_native_gc_roots_begin:\ns_native_gc_roots_end:\n" }
     text = text + ".text\n.Ls_native_bounds:\n  movl $87, %edi\n  movl $60, %eax\n  syscall\n  ud2\n"
@@ -470,7 +471,7 @@ func amd64_needs_arena(function_ssa_program program) bool {
             v := 0
             for v < len(program.functions[f].blocks[b].values) {
                 op := program.functions[f].blocks[b].values[v].op
-                if op == "reference_new" || op == "native_intrinsic" || op == "string_slice" || op == "string_char_at" || op == "string_concat" || op == "record_new" || op == "record_set" || op == "array_new" || op == "array_append" || op == "array_set" { return true }
+                if op == "reference_new" || op == "native_intrinsic" || op == "string_slice" || op == "string_char_at" || op == "string_concat" || op == "record_new" || op == "record_set" || op == "array_make" || op == "array_new" || op == "array_append" || op == "array_set" { return true }
                 v = v + 1
             }
             b = b + 1
@@ -488,6 +489,10 @@ func amd64_emit_array_with_values(function_ssa_program program, int function_ind
     value := values[position]
     slot := amd64_slot(values, value.id)
     label := ".Ls_array_" + amd64_integer(function_index) + "_" + amd64_integer(position)
+    if value.op == "array_make" {
+        count := amd64_slot(values, value.operands[0])
+        return "  movq " + count + ", %rdi\n  testq %rdi, %rdi\n  js .Ls_native_bounds\n  movabsq $1152921504606846974, %rax\n  cmpq %rax, %rdi\n  ja .Ls_native_bounds\n  leaq 8(,%rdi,8), %rdi\n  call .Ls_native_alloc\n  movq %rax, " + slot + "\n  movq " + count + ", %rcx\n  movq %rcx, (%rax)\n  leaq 8(%rax), %rdi\n  xorl %eax, %eax\n  rep stosq\n"
+    }
     if value.op == "array_new" {
         text := "  movq $" + amd64_integer((len(value.operands) + 1) * 8) + ", %rdi\n  call .Ls_native_alloc\n  movq %rax, " + slot + "\n  movq $" + amd64_integer(len(value.operands)) + ", (%rax)\n"
         i := 0
@@ -647,6 +652,8 @@ func amd64_emit_native_intrinsic(function_ssa_value[] values, function_ssa_value
     if name == "runtime_env_get" { target = ".Ls_native_env_get" }
     if name == "__host_env_get" { target = ".Ls_native_env_get"; text = text + "  xorl %esi, %esi\n" }
     if name == "__int_to_string" { target = ".Ls_native_int_to_string" }
+    extension_target := amd64_native_extension_target(name)
+    if extension_target != "" { target = extension_target }
     if name == "eprintln" || name == "panic" || name == "println" {
         target = ".Ls_native_println"
         descriptor := 2
@@ -770,3 +777,30 @@ func amd64_os_runtime() string {
         + "%eax\n    syscall\n    ud2\n.size s_value_string_array_concat, .-s_value_string_array_concat\n"
 }
 // END GENERATED NATIVE OS
+
+func amd64_emit_float(function_ssa_value[] values, function_ssa_value value, int function_index, int position) string {
+    slot := amd64_slot(values, value.id)
+    op := value.op
+    if op == "const_float" {
+        label := ".Ls_float_" + amd64_integer(function_index) + "_" + amd64_integer(position)
+        return "  jmp " + label + "_load\n" + label + ":\n  .double " + value.symbol + "\n" + label + "_load:\n  movsd " + label + "(%rip), %xmm0\n  movsd %xmm0, " + slot + "\n"
+    }
+    if op == "int_to_float" { return "  cvtsi2sdq " + amd64_slot(values, value.operands[0]) + ", %xmm0\n  movsd %xmm0, " + slot + "\n" }
+    if op == "float_to_int" { return "  cvttsd2siq " + amd64_slot(values, value.operands[0]) + ", %rax\n  movq %rax, " + slot + "\n" }
+    text := "  movsd " + amd64_slot(values, value.operands[0]) + ", %xmm0\n  movsd " + amd64_slot(values, value.operands[1]) + ", %xmm1\n"
+    if op == "float_add" { return text + "  addsd %xmm1, %xmm0\n  movsd %xmm0, " + slot + "\n" }
+    if op == "float_sub" { return text + "  subsd %xmm1, %xmm0\n  movsd %xmm0, " + slot + "\n" }
+    if op == "float_mul" { return text + "  mulsd %xmm1, %xmm0\n  movsd %xmm0, " + slot + "\n" }
+    if op == "float_div" { return text + "  divsd %xmm1, %xmm0\n  movsd %xmm0, " + slot + "\n" }
+    text = text + "  ucomisd %xmm1, %xmm0\n"
+    instruction := "sete"
+    if op == "float_cmp_ne" { instruction = "setne" }
+    if op == "float_cmp_lt" { instruction = "setb" }
+    if op == "float_cmp_le" { instruction = "setbe" }
+    if op == "float_cmp_gt" { instruction = "seta" }
+    if op == "float_cmp_ge" { instruction = "setae" }
+    text = text + "  " + instruction + " %al\n"
+    if op == "float_cmp_ne" { text = text + "  setp %dl\n  orb %dl, %al\n" }
+    else { text = text + "  setnp %dl\n  andb %dl, %al\n" }
+    return text + "  movzbq %al, %rax\n  movq %rax, " + slot + "\n"
+}

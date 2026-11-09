@@ -106,7 +106,19 @@ func canonical_advance(canonical_parser initial) canonical_parser {
     if state.position >= n { return state }
     start := state.position
     ch := canonical_char(state.source, start)
-    if canonical_ident_start(ch) || (ch >= "0" && ch <= "9") {
+    if ch >= "0" && ch <= "9" && !(ch == "0" && (canonical_char(state.source, start + 1) == "x" || canonical_char(state.source, start + 1) == "X")) {
+        for canonical_char(state.source, state.position) >= "0" && canonical_char(state.source, state.position) <= "9" { state.position = state.position + 1 }
+        if canonical_char(state.source, state.position) == "." && canonical_char(state.source, state.position + 1) >= "0" && canonical_char(state.source, state.position + 1) <= "9" {
+            state.position = state.position + 1
+            for canonical_char(state.source, state.position) >= "0" && canonical_char(state.source, state.position) <= "9" { state.position = state.position + 1 }
+        }
+        if canonical_char(state.source, state.position) == "e" || canonical_char(state.source, state.position) == "E" {
+            state.position = state.position + 1
+            if canonical_char(state.source, state.position) == "+" || canonical_char(state.source, state.position) == "-" { state.position = state.position + 1 }
+            if canonical_char(state.source, state.position) < "0" || canonical_char(state.source, state.position) > "9" { return canonical_fail(state, "expected exponent digits") }
+            for canonical_char(state.source, state.position) >= "0" && canonical_char(state.source, state.position) <= "9" { state.position = state.position + 1 }
+        }
+    } else if canonical_ident_start(ch) || (ch >= "0" && ch <= "9") {
         state.position = state.position + 1
         for state.position < n {
             next := canonical_char(state.source, state.position)
@@ -175,6 +187,12 @@ func canonical_parse_type(canonical_parser initial) canonical_parser {
         if state.token == "mut" { prefix = prefix + "mut "; state = canonical_advance(state) }
     }
     text := ""
+    if state.token == "[" {
+        state = canonical_expect(canonical_advance(state), "]")
+        state = canonical_parse_type(state)
+        state.text = prefix + "[]" + state.text
+        return state
+    }
     if state.token == "(" {
         state = canonical_advance(state)
         text = "("
@@ -562,12 +580,13 @@ func canonical_switch(canonical_parser initial) canonical_parser {
     return state
 }
 
-// Keep the established zero-minus AST for ordinary unary expressions. The
+// Multiply ordinary unary expressions by -1 to preserve float signed zero. The
 // minimum signed literal needs a signed carrier: its positive magnitude is
 // outside int64 and cannot be lowered as the operand of a subtraction.
 func canonical_negate_expression(expr value) expr {
     switch value {
         expr.int(number): {
+            if canonical_number_type(number.value) == "float" { return expr.int(compile.internal.ast.int_expr { value: "-" + number.value, inferred_type: option.some("float") }) }
             start := 0
             for start < len(number.value) && canonical_char(number.value, start) == "0" { start = start + 1 }
             if std.prelude.prelude_slice(number.value, start, len(number.value)) == "9223372036854775808" {
@@ -576,7 +595,7 @@ func canonical_negate_expression(expr value) expr {
         },
         _: (),
     }
-    return expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(expr.int(compile.internal.ast.int_expr { value: "0", inferred_type: option.none })), op: "-", right: std.prelude.box(value), inferred_type: option.none })
+    return expr.binary(compile.internal.ast.binary_expr { left: std.prelude.box(expr.int(compile.internal.ast.int_expr { value: "-1", inferred_type: option.none })), op: "*", right: std.prelude.box(value), inferred_type: option.none })
 }
 
 func canonical_expression(canonical_parser initial, int minimum) canonical_parser {
@@ -587,7 +606,12 @@ func canonical_expression(canonical_parser initial, int minimum) canonical_parse
     if token == "[" {
         probe := canonical_advance(state)
         if probe.token == "]" {
-            state = canonical_parse_type(canonical_advance(probe))
+            after := canonical_advance(probe)
+            if !canonical_ident(after.token) && after.token != "[" && after.token != "&" && after.token != "*" {
+                state = canonical_array(state, option[string].none, "]")
+                return state
+            }
+            state = canonical_parse_type(after)
             type_text := "[]" + state.text
             if state.token != "{" && state.token != "(" {
                 state.expression = expr.name(compile.internal.ast.name_expr { name: type_text, inferred_type: option.none })
@@ -631,7 +655,7 @@ func canonical_expression(canonical_parser initial, int minimum) canonical_parse
         value = expr.bool(compile.internal.ast.bool_expr { value: token == "true", inferred_type: option.none })
         state = canonical_advance(state)
     } else if canonical_char(token, 0) >= "0" && canonical_char(token, 0) <= "9" {
-        value = expr.int(compile.internal.ast.int_expr { value: token, inferred_type: option.none })
+        value = expr.int(compile.internal.ast.int_expr { value: token, inferred_type: option.some(canonical_number_type(token)) })
         state = canonical_advance(state)
     } else if canonical_ident(token) {
         value = expr.name(compile.internal.ast.name_expr { name: token, inferred_type: option.none })
@@ -1130,4 +1154,15 @@ func canonical_expression_list(canonical_parser initial) canonical_parser {
     }
     state.expression = expr.tuple(compile.internal.ast.tuple_expr { items: items, inferred_type: option.none })
     return state
+}
+
+func canonical_number_type(string text) string {
+    if len(text) > 1 && canonical_char(text, 0) == "0" && (canonical_char(text, 1) == "x" || canonical_char(text, 1) == "X") { return "int" }
+    i := 0
+    for i < len(text) {
+        ch := canonical_char(text, i)
+        if ch == "." || ch == "e" || ch == "E" { return "float" }
+        i = i + 1
+    }
+    return "int"
 }

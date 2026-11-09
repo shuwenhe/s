@@ -276,7 +276,10 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             state.expression_value = id
             return state
         }
-        expr.int(literal) : { return program_emit_integer(state, literal.value) }
+        expr.int(literal) : {
+            if program_float_literal(literal.value) || (literal.inferred_type.is_some() && literal.inferred_type.unwrap() == "float") { return program_emit_float(state, literal.value) }
+            return program_emit_integer(state, literal.value)
+        }
         expr.bool(literal): {
             id := state.next_value
             state.next_value = id + 1
@@ -319,6 +322,7 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             for item_idx < len(value.items) {
                 state = program_lower_expression(value.items[item_idx], package_name, signatures, state)
                 if state.error != "" { return state }
+                if array_type != "" { state = program_coerce_float(state, mir_program_array_element(array_type)) }
                 operands = append(operands, state.expression_value)
                 if array_type == "" { array_type = program_expression_type(state, state.signature, state.expression_value) + "[]" }
                 item_idx = item_idx + 1
@@ -360,6 +364,9 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             for field_idx < len(value.field_values) {
                 state = program_lower_expression(value.field_values[field_idx], package_name, signatures, state)
                 if state.error != "" { return state }
+                record := state.records[mir_program_record_index(state.records, symbol)]
+                field := mir_program_record_field_index(record, value.field_names[field_idx])
+                if field >= 0 { state = program_coerce_float(state, record.field_types[field]) }
                 operands = append(operands, state.expression_value)
                 field_idx = field_idx + 1
             }
@@ -425,6 +432,16 @@ func program_lower_expression(expr expression, string package_name, mir_program_
             state = program_lower_expression(binary.right.value, package_name, signatures, state)
             if state.error != "" { return state }
             right := state.expression_value
+            left_type := program_expression_type(state, state.signature, left)
+            right_type := program_expression_type(state, state.signature, right)
+            if left_type == "float" && right_type == "int" {
+                state = program_promote_float(state, right)
+                right = state.expression_value
+            }
+            if left_type == "int" && right_type == "float" {
+                state = program_promote_float(state, left)
+                left = state.expression_value
+            }
             id := state.next_value
             state.next_value = id + 1
             result_type := "int"
@@ -442,6 +459,10 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                 if op != "string_concat" { result_type = "bool" }
             }
             if op == "cmp_eq" || op == "cmp_ne" || op == "cmp_lt" || op == "cmp_le" || op == "cmp_gt" || op == "cmp_ge" { result_type = "bool" }
+            if program_expression_type(state, state.signature, left) == "float" {
+                if result_type != "bool" { result_type = "float" }
+                op = "float_" + op
+            }
             state.instructions = append(state.instructions, mir_program_instruction {
                 op: op, result_ids: int[]{id}, result_types: string[]{result_type},
                 operands: int[]{left, right}, integer_value: 0, symbol: "",
@@ -495,6 +516,28 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                 state.expression_value = id
                 return state
             }
+            if path == "make" {
+                if len(call.args) != 2 { state.error = "make expects type and length"; return state }
+                array_type := program_record_type(program_callee_path(call.args[0]), package_name, state.records, state.enums)
+                if mir_program_array_element(array_type) == "" { state.error = "make requires array type"; return state }
+                state = program_lower_expression(call.args[1], package_name, signatures, state)
+                if state.error != "" { return state }
+                count := state.expression_value
+                return program_emit_array(state, "array_make", array_type, array_type, [count])
+            }
+            if path == "byte" {
+                if len(call.args) != 1 { state.error = "byte expects one argument"; return state }
+                state = program_lower_expression(call.args[0], package_name, signatures, state)
+                if state.error != "" { return state }
+                source := state.expression_value
+                state = program_emit_integer(state, "255")
+                mask := state.expression_value
+                id := state.next_value
+                state.next_value = id + 1
+                state.instructions = append(state.instructions, mir_program_instruction { op: "bit_and", result_ids: [id], result_types: ["int"], operands: [source, mask] })
+                state.expression_value = id
+                return state
+            }
             if path == "len" || path == "append" {
                 if len(call.args) < 1 || (path == "len" && len(call.args) != 1) || (path == "append" && len(call.args) < 2) { state.error = "array builtin argument count: " + path; return state }
                 state = program_lower_expression(call.args[0], package_name, signatures, state)
@@ -514,11 +557,26 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                 for arg_idx < len(call.args) {
                     state = program_lower_expression(call.args[arg_idx], package_name, signatures, state)
                     if state.error != "" { return state }
+                    state = program_coerce_float(state, mir_program_array_element(array_type))
                     element := state.expression_value
                     state = program_emit_array(state, "array_append", array_type, array_type, [target, element])
                     target = state.expression_value
                     arg_idx = arg_idx + 1
                 }
+                return state
+            }
+            if path == "float" || path == "f64" || path == "f32" || path == "float64" || path == "float32" {
+                if len(call.args) != 1 { state.error = "float conversion expects one argument"; return state }
+                state = program_lower_expression(call.args[0], package_name, signatures, state)
+                if state.error != "" { return state }
+                source := state.expression_value
+                source_type := program_expression_type(state, state.signature, source)
+                if source_type == "float" { return state }
+                if source_type != "int" { state.error = "float conversion requires int"; return state }
+                id := state.next_value
+                state.next_value = id + 1
+                state.instructions = append(state.instructions, mir_program_instruction { op: "int_to_float", result_ids: [id], result_types: ["float"], operands: [source] })
+                state.expression_value = id
                 return state
             }
             if path == "int" {
@@ -528,6 +586,13 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                 source_id := state.expression_value
                 source_type := program_expression_type(state, state.signature, source_id)
                 if source_type == "int" { return state }
+                if source_type == "float" {
+                    id := state.next_value
+                    state.next_value = id + 1
+                    state.instructions = append(state.instructions, mir_program_instruction { op: "float_to_int", result_ids: [id], result_types: ["int"], operands: [source_id] })
+                    state.expression_value = id
+                    return state
+                }
                 if source_type == "bool" {
                     id := state.next_value
                     state.next_value = id + 1
@@ -600,6 +665,7 @@ func program_lower_expression(expr expression, string package_name, mir_program_
                     if state.borrow_writeback { writebacks.push(program_borrow_writeback { root: state.store_root, steps: state.store_steps, reference: state.expression_value, type_name: mir_program_reference_element(expected) }) }
                 } else { state = program_lower_expression(call.args[call_idx], package_name, signatures, state) }
                 if state.error != "" { return state }
+                state = program_coerce_float(state, expected)
                 args = append(args, state.expression_value)
                 call_idx = call_idx + 1
             }
@@ -685,6 +751,7 @@ func program_lower_function_with_environment(string package_name, function_decl 
             // side-effect instructions while discarding its value.
             if signature.result_types[0] == "()" { state = program_emit_unit(state) }
             if state.expression_value < 0 { output.error = "missing return value: " + signature.symbol; return output }
+            state = program_coerce_float(state, signature.result_types[0])
             returns = append(returns, state.expression_value)
         }
         state = program_finish_block(state, "return", returns, int[]())
@@ -832,6 +899,7 @@ func program_root_name(expr value) string {
 
 func program_record_type(string type_name, string package_name, mir_program_record[] records, mir_program_enum[] enums) string {
     normalized := compile.internal.typesys.parse_type(type_name)
+    if normalized == "int" || normalized == "float" { return normalized }
     referent := mir_program_reference_element(normalized)
     if referent != "" {
         prefix := "&"
@@ -1162,6 +1230,7 @@ func program_lower_block(block_expr body, string package_name, mir_program_funct
                 state = program_lower_expression(binding.value, package_name, signatures, state)
                 if state.error != "" { return state }
                 if state.expression_value < 0 { state.error = "cannot bind a void expression"; return state }
+                if binding.type_name.is_some() { state = program_coerce_float(state, program_record_type(binding.type_name.unwrap(), package_name, state.records, state.enums)) }
                 if binding.type_name.is_some() && program_record_type(binding.type_name.unwrap(), package_name, state.records, state.enums) != program_expression_type(state, state.signature, state.expression_value) { state.error = "local type mismatch: " + binding.name; return state }
                 state.binding_names = append(state.binding_names, binding.name)
                 state.binding_values = append(state.binding_values, state.expression_value)
@@ -1175,6 +1244,7 @@ func program_lower_block(block_expr body, string package_name, mir_program_funct
                 else { previous_type = state.environment.globals[global].type_name }
                 state = program_lower_expression(binding.value, package_name, signatures, state)
                 if state.error != "" { return state }
+                state = program_coerce_float(state, previous_type)
                 if previous_type != program_expression_type(state, state.signature, state.expression_value) { state.error = "assignment type mismatch"; return state }
                 if index >= 0 { state.binding_values[index] = state.expression_value }
                 else { state = program_write_global(global, state.expression_value, state) }
@@ -1189,6 +1259,7 @@ func program_lower_block(block_expr body, string package_name, mir_program_funct
                     state = program_lower_expression(value.value.unwrap(), package_name, signatures, state)
                     if state.error != "" { return state }
                     if state.expression_value < 0 { state.error = "return expression has no value"; return state }
+                    if len(state.signature.result_types) == 1 { state = program_coerce_float(state, state.signature.result_types[0]) }
                     returns = append(returns, state.expression_value)
                 } else if len(state.signature.result_types) == 1 && state.signature.result_types[0] == "()" {
                     state = program_emit_unit(state)
@@ -1227,6 +1298,7 @@ func program_lower_if(if_expr branch, string package_name, mir_program_function[
     if state.error != "" { return state }
     then_live := !state.terminated
     if then_live && state.expression_value < 0 { state = program_emit_unit(state) }
+    if branch.inferred_type.is_some() { state = program_coerce_float(state, branch.inferred_type.unwrap()) }
     then_result := state.expression_value
     then_values := program_copy_values(state.binding_values)
     then_end := state.block_id
@@ -1238,6 +1310,7 @@ func program_lower_if(if_expr branch, string package_name, mir_program_function[
     if state.error != "" { return state }
     else_live := !state.terminated
     if else_live && state.expression_value < 0 { state = program_emit_unit(state) }
+    if branch.inferred_type.is_some() { state = program_coerce_float(state, branch.inferred_type.unwrap()) }
     else_result := state.expression_value
     else_values := program_copy_values(state.binding_values)
     else_end := state.block_id
@@ -1510,10 +1583,12 @@ func program_lower_store(store_stmt store, string package_name, mir_program_func
     previous_type := program_expression_type(state, state.signature, previous)
     state = program_lower_expression(store.value, package_name, signatures, state)
     if state.error != "" { return state }
+    state = program_coerce_float(state, previous_type)
     rhs := state.expression_value
     if store.op != "=" {
         op := program_binary_opcode(std.prelude.prelude_slice(store.op, 0, len(store.op) - 1))
         if op == "" { state.error = "unsupported compound store operation"; return state }
+        if previous_type == "float" { op = "float_" + op }
         id := state.next_value
         state.next_value = id + 1
         state.instructions = append(state.instructions, mir_program_instruction { op: op, result_ids: [id], result_types: [previous_type], operands: [previous, rhs] })
@@ -1741,4 +1816,38 @@ func program_lower_break(program_lower_state initial) program_lower_state {
 func mir_work_progress(bool enabled, string phase, int completed, int total, string unit, string current) {
     if !enabled { return }
     eprintln(phase + "  " + std.prelude.to_string(completed) + " / " + std.prelude.to_string(total) + " " + unit + "  current=" + current)
+}
+
+// Keep literal spelling until assembly; the bootstrap compiler needs no float arithmetic.
+func program_float_literal(string literal) bool {
+    i := 0
+    for i < len(literal) {
+        ch := std.prelude.char_at(literal, i)
+        if ch == "." || ch == "e" || ch == "E" { return true }
+        i = i + 1
+    }
+    return false
+}
+
+func program_emit_float(program_lower_state state, string literal) program_lower_state {
+    id := state.next_value
+    state.next_value = id + 1
+    state.instructions = append(state.instructions, mir_program_instruction { op: "const_float", result_ids: [id], result_types: ["float"], operands: int[](), symbol: literal })
+    state.expression_value = id
+    return state
+}
+
+func program_promote_float(program_lower_state state, int source) program_lower_state {
+    id := state.next_value
+    state.next_value = id + 1
+    state.instructions = append(state.instructions, mir_program_instruction { op: "int_to_float", result_ids: [id], result_types: ["float"], operands: [source] })
+    state.expression_value = id
+    return state
+}
+
+func program_coerce_float(program_lower_state state, string expected) program_lower_state {
+    if expected == "float" && state.expression_value >= 0 && program_expression_type(state, state.signature, state.expression_value) == "int" {
+        return program_promote_float(state, state.expression_value)
+    }
+    return state
 }

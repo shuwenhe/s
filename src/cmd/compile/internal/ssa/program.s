@@ -343,6 +343,10 @@ func verify_ssa_function(function_ssa_function f) string {
                 intrinsic_error := ssa_native_intrinsic_error(f, value)
                 if intrinsic_error != "" { return intrinsic_error }
             }
+            if mir_program_is_float_operation(value.op) {
+                float_error := ssa_float_value_error(f, value)
+                if float_error != "" { return float_error + ": " + f.symbol }
+            }
             if ssa_is_scalar_operation(value.op) {
                 scalar_error := ssa_scalar_value_error(f, value)
                 if scalar_error != "" { return scalar_error }
@@ -471,7 +475,7 @@ func verify_ssa_program(function_ssa_program program) string {
                 } else if value.op == "record_new" || value.op == "record_get" || value.op == "record_set" {
                     error = ssa_record_value_error(f, value, program.records)
                     if error != "" { return error }
-                } else if value.op == "array_new" || value.op == "array_get" || value.op == "array_len" || value.op == "array_append" || value.op == "array_set" {
+                } else if value.op == "array_make" || value.op == "array_new" || value.op == "array_get" || value.op == "array_len" || value.op == "array_append" || value.op == "array_set" {
                     error = ssa_array_value_error(f, value, program.records)
                     if error != "" { return error }
                 } else if len(value.field_names) != 0 { return "unexpected record field metadata" }
@@ -629,7 +633,7 @@ func ssa_array_element(string type_name) string {
 func ssa_type_supported(string type_name, function_ssa_record[] records) bool {
     referent := mir_program_reference_element(type_name)
     if referent != "" { return ssa_type_supported(referent, records) }
-    if type_name == "string" || type_name == "int" || type_name == "()" || type_name == "bool" || ssa_record_index(records, type_name) >= 0 { return true }
+    if type_name == "float" || type_name == "string" || type_name == "int" || type_name == "()" || type_name == "bool" || ssa_record_index(records, type_name) >= 0 { return true }
     element := ssa_array_element(type_name)
     if element != "" { return ssa_type_supported(element, records) }
     return false
@@ -673,6 +677,11 @@ func ssa_array_value_error(function_ssa_function function_data, function_ssa_val
     element := ssa_array_element(value.symbol)
     if element == "" || !ssa_type_supported(element, records) { return "SSA unknown array element type" }
     if len(value.field_names) != 0 || value.integer_value != 0 { return "SSA invalid array metadata" }
+    if value.op == "array_make" {
+        if len(value.operands) != 1 || value.type_name != value.symbol { return "SSA array make arity or result" }
+        if ssa_value_type(function_data.blocks, value.operands[0]) != "int" { return "SSA array make length type" }
+        return ""
+    }
     if value.op == "array_new" {
         if value.type_name != value.symbol { return "SSA array constructor result type" }
         i := 0
@@ -761,6 +770,12 @@ func ssa_string_value_error(function_ssa_function f, function_ssa_value value) s
 
 // Exact signatures form the native runtime boundary; names never become assembler symbols.
 func ssa_native_intrinsic_result(string name) string {
+    if name == "__sys_socket" || name == "__sys_connect" || name == "__sys_close" || name == "__sys_write_string" { return "int" }
+    if name == "__sys_read_string" || name == "__host_run_argv_output" { return "string" }
+    if name == "__host_file_exists" || name == "__host_env_exists" { return "bool" }
+    if name == "__host_read_binary_file" || name == "__host_read_binary_file_range" { return "int[]" }
+    if name == "__host_write_binary_file" { return "void" }
+
     if name == "__std_string_array_concat" { return "string[]" }
     if name == "__std_raw_enter" || name == "__std_raw_leave" || name == "__std_read_byte" { return "int" }
     if name == "__std_byte_string" { return "string" }
@@ -789,6 +804,16 @@ func ssa_native_intrinsic_result(string name) string {
     return "?"
 }
 func ssa_native_intrinsic_parameters(string name) string[] {
+    if name == "__sys_socket" { return ["int","int","int"] }
+    if name == "__sys_connect" { return ["int","string","int","int"] }
+    if name == "__sys_close" { return ["int"] }
+    if name == "__sys_write_string" { return ["int","string"] }
+    if name == "__sys_read_string" { return ["int","int"] }
+    if name == "__host_run_argv_output" { return ["string[]"] }
+    if name == "__host_file_exists" || name == "__host_env_exists" || name == "__host_read_binary_file" { return ["string"] }
+    if name == "__host_read_binary_file_range" { return ["string","int","int"] }
+    if name == "__host_write_binary_file" { return ["string","int[]"] }
+
     if name == "__std_raw_enter" || name == "__std_raw_leave" { return ["int"] }
     if name == "__std_string_array_concat" { return ["string[]","string[]"] }
     if name == "__std_read_byte" { return ["int","int"] }
@@ -947,4 +972,24 @@ func ssa_global_order(function_ssa_program program) ssa_global_order_result {
         if !progress { return ssa_global_order_result { order: order, error: "cyclic global initialization" } }
     }
     return ssa_global_order_result { order: order, error: "" }
+}
+
+func ssa_float_value_error(function_ssa_function f, function_ssa_value value) string {
+    if value.op == "const_float" {
+        if value.type_name != "float" || len(value.operands) != 0 || !mir_program_float_literal_valid(value.symbol) { return "invalid SSA float constant" }
+        return ""
+    }
+    count := 2
+    source := "float"
+    result := "float"
+    if value.op == "int_to_float" { count = 1; source = "int" }
+    if value.op == "float_to_int" { count = 1; result = "int" }
+    if value.op == "float_cmp_eq" || value.op == "float_cmp_ne" || value.op == "float_cmp_lt" || value.op == "float_cmp_le" || value.op == "float_cmp_gt" || value.op == "float_cmp_ge" { result = "bool" }
+    if len(value.operands) != count || value.type_name != result { return "SSA float arity or result type" }
+    i := 0
+    for i < count {
+        if ssa_value_type(f.blocks, value.operands[i]) != source { return "SSA float operand type" }
+        i = i + 1
+    }
+    return ""
 }

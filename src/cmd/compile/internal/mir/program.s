@@ -166,9 +166,10 @@ func mir_program_instruction_error_with_globals(mir_program_function function_da
     }
     if len(ins.result_ids) != 1 { return "instruction result count: " + ins.op }
     if ins.op == "const_string" || ins.op == "string_concat" || ins.op == "string_byte_at" || ins.op == "string_char_at" || ins.op == "string_slice" || ins.op == "string_len" || ins.op == "string_eq" || ins.op == "string_ne" || ins.op == "string_lt" || ins.op == "string_le" || ins.op == "string_gt" || ins.op == "string_ge" { return mir_program_string_instruction_error(function_data, ins, index) }
-    if ins.op == "array_new" || ins.op == "array_get" || ins.op == "array_len" || ins.op == "array_append" || ins.op == "array_set" { return mir_program_array_instruction_error(function_data, ins, index, records, enums) }
+    if ins.op == "array_make" || ins.op == "array_new" || ins.op == "array_get" || ins.op == "array_len" || ins.op == "array_append" || ins.op == "array_set" { return mir_program_array_instruction_error(function_data, ins, index, records, enums) }
     if ins.op == "record_new" || ins.op == "record_get" || ins.op == "record_set" { return mir_program_record_instruction_error(function_data, ins, index, records) }
     if len(ins.field_names) != 0 { return "unexpected record field metadata: " + ins.op }
+    if mir_program_is_float_operation(ins.op) { return mir_program_float_instruction_error(function_data, ins, index) }
     if ins.op == "const_bool" || ins.op == "bool_to_int" || ins.op == "cmp_eq" || ins.op == "cmp_ne" || ins.op == "cmp_lt" || ins.op == "cmp_le" || ins.op == "cmp_gt" || ins.op == "cmp_ge" { return mir_program_scalar_instruction_error(function_data, ins, index, enums) }
     if ins.op == "const_enum" || ins.op == "enum_to_int" { return mir_program_enum_instruction_error(function_data, ins, index, enums) }
     if ins.op == "phi" {
@@ -651,7 +652,7 @@ func mir_program_record_index_unqualified(mir_program_record[] records, string t
 func mir_program_type_supported(string type_name, mir_program_record[] records, mir_program_enum[] enums) bool {
     referent := mir_program_reference_element(type_name)
     if referent != "" { return mir_program_type_supported(referent, records, enums) }
-    if type_name == "string" || type_name == "int" || type_name == "()" || type_name == "bool" { return true }
+    if type_name == "float" || type_name == "string" || type_name == "int" || type_name == "()" || type_name == "bool" { return true }
     if mir_program_record_index(records, type_name) >= 0 { return true }
     if mir_program_record_index_unqualified(records, type_name) >= 0 { return true }
     if mir_program_enum_index(enums, type_name) >= 0 { return true }
@@ -730,6 +731,11 @@ func mir_program_array_instruction_error(mir_program_function function_data, mir
     if element == "" { return "unknown array element type: symbol=" + ins.symbol + " element=" + element }
     if !mir_program_type_supported(element, records, enums) { return "unknown array element type: symbol=" + ins.symbol + " element=" + element }
     if len(ins.field_names) != 0 || ins.integer_value != 0 { return "invalid array metadata" }
+    if ins.op == "array_make" {
+        if len(ins.operands) != 1 || ins.result_types[0] != ins.symbol { return "array make arity or result" }
+        if mir_program_value_type(function_data, ins.operands[0], index) != "int" { return "array make length type" }
+        return ""
+    }
     if ins.op == "array_new" {
         if ins.result_types[0] != ins.symbol { return "array constructor result type" }
         i := 0
@@ -815,6 +821,12 @@ func mir_program_string_instruction_error(mir_program_function f, mir_program_in
 
 // Exact signatures form the native runtime boundary; names never become assembler symbols.
 func mir_native_intrinsic_result(string name) string {
+    if name == "__sys_socket" || name == "__sys_connect" || name == "__sys_close" || name == "__sys_write_string" { return "int" }
+    if name == "__sys_read_string" || name == "__host_run_argv_output" { return "string" }
+    if name == "__host_file_exists" || name == "__host_env_exists" { return "bool" }
+    if name == "__host_read_binary_file" || name == "__host_read_binary_file_range" { return "int[]" }
+    if name == "__host_write_binary_file" { return "void" }
+
     if name == "__std_string_array_concat" { return "string[]" }
     if name == "__std_raw_enter" || name == "__std_raw_leave" || name == "__std_read_byte" { return "int" }
     if name == "__std_byte_string" { return "string" }
@@ -843,6 +855,16 @@ func mir_native_intrinsic_result(string name) string {
     return "?"
 }
 func mir_native_intrinsic_parameters(string name) string[] {
+    if name == "__sys_socket" { return ["int","int","int"] }
+    if name == "__sys_connect" { return ["int","string","int","int"] }
+    if name == "__sys_close" { return ["int"] }
+    if name == "__sys_write_string" { return ["int","string"] }
+    if name == "__sys_read_string" { return ["int","int"] }
+    if name == "__host_run_argv_output" { return ["string[]"] }
+    if name == "__host_file_exists" || name == "__host_env_exists" || name == "__host_read_binary_file" { return ["string"] }
+    if name == "__host_read_binary_file_range" { return ["string","int","int"] }
+    if name == "__host_write_binary_file" { return ["string","int[]"] }
+
     if name == "__std_raw_enter" || name == "__std_raw_leave" { return ["int"] }
     if name == "__std_string_array_concat" { return ["string[]","string[]"] }
     if name == "__std_read_byte" { return ["int","int"] }
@@ -1004,4 +1026,40 @@ func mir_program_global_order(mir_program_global[] globals, mir_program_function
         if !progress { return mir_program_global_order_result { order: order, error: "cyclic global initialization" } }
     }
     return mir_program_global_order_result { order: order, error: "" }
+}
+
+func mir_program_is_float_operation(string op) bool {
+    return op == "const_float" || op == "int_to_float" || op == "float_to_int" || op == "float_add" || op == "float_sub" || op == "float_mul" || op == "float_div" || op == "float_cmp_eq" || op == "float_cmp_ne" || op == "float_cmp_lt" || op == "float_cmp_le" || op == "float_cmp_gt" || op == "float_cmp_ge"
+}
+
+func mir_program_float_literal_valid(string literal) bool {
+    if literal == "" { return false }
+    i := 0
+    for i < len(literal) {
+        ch := std.prelude.char_at(literal, i)
+        if ch != "0" && ch != "1" && ch != "2" && ch != "3" && ch != "4" && ch != "5" && ch != "6" && ch != "7" && ch != "8" && ch != "9" && ch != "." && ch != "e" && ch != "E" && ch != "+" && ch != "-" { return false }
+        i = i + 1
+    }
+    return true
+}
+
+func mir_program_float_instruction_error(mir_program_function f, mir_program_instruction ins, int index) string {
+    if len(ins.result_types) != 1 || len(ins.field_names) != 0 { return "float result arity or metadata" }
+    if ins.op == "const_float" {
+        if ins.result_types[0] != "float" || len(ins.operands) != 0 || !mir_program_float_literal_valid(ins.symbol) { return "invalid float constant" }
+        return ""
+    }
+    count := 2
+    source := "float"
+    result := "float"
+    if ins.op == "int_to_float" { count = 1; source = "int" }
+    if ins.op == "float_to_int" { count = 1; result = "int" }
+    if ins.op == "float_cmp_eq" || ins.op == "float_cmp_ne" || ins.op == "float_cmp_lt" || ins.op == "float_cmp_le" || ins.op == "float_cmp_gt" || ins.op == "float_cmp_ge" { result = "bool" }
+    if len(ins.operands) != count || ins.result_types[0] != result { return "float operation arity or result type" }
+    i := 0
+    for i < count {
+        if mir_program_value_type(f, ins.operands[i], index) != source { return "float operand type" }
+        i = i + 1
+    }
+    return ""
 }

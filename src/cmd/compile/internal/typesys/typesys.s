@@ -19,6 +19,7 @@ struct type_ref {
 func parse_type(string text) string {
     clean := typesys_normalize_type_text(typesys_trim_text(text))
     if clean == "unit" { return "()" }
+    if clean == "byte" { return "int" }
     if clean == "" {
         return "unknown"
     }
@@ -462,6 +463,7 @@ func is_numeric_primitive(string ty) bool {
         || clean == "usize"
         || clean == "f32"
         || clean == "f64"
+        || clean == "float"
 }
 
 func numeric_rank(string ty) int {
@@ -475,7 +477,8 @@ func numeric_rank(string ty) int {
     if clean == "int" || clean == "u32" || clean == "f32" {
         return 3
     }
-    if clean == "i64" || clean == "u64" || clean == "isize" || clean == "usize" || clean == "f64" {
+    if clean == "i64" || clean == "u64" || clean == "isize" || clean == "usize" || clean == "f64"
+        || clean == "float" {
         return 4
     }
     0
@@ -502,6 +505,7 @@ func is_builtin_primitive(string ty) bool {
         || clean == "usize"
         || clean == "f32"
         || clean == "f64"
+        || clean == "float"
 }
 
 func is_copy_type(string ty) bool {
@@ -521,7 +525,8 @@ func is_copy_type(string ty) bool {
         || clean == "u64"
         || clean == "usize"
         || clean == "f32"
-        || clean == "f64" {
+        || clean == "f64"
+        || clean == "float" {
         return true
     }
     if typesys_starts_with(clean, "&") {

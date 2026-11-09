@@ -244,6 +244,7 @@ func program_array_method(compile.internal.ast.member_expr member, expr[] argume
     for i < len(arguments) {
         state = program_lower_expression(arguments[i], pkg, signatures, state)
         if state.error != "" { return state }
+        if member.member == "push" || i == 1 { state = program_coerce_float(state, mir_program_array_element(type_name)) }
         operands.push(state.expression_value)
         i = i + 1
     }
