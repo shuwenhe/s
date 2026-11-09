@@ -3371,7 +3371,10 @@ func try_match_signature(function_binding binding, string[] arg_types, function_
         actual_type_str := arg_types[i]
         
         matched := false
-        if semantic_starts_with(expected_type_str, "*") && semantic_starts_with(actual_type_str, "*") {
+        if expected_type_str == "float" && actual_type_str == "int" {
+            // Widen scalar arguments; exact integer overloads retain a higher score.
+            matched = true
+        } else if semantic_starts_with(expected_type_str, "*") && semantic_starts_with(actual_type_str, "*") {
             
             expected_canonical := compile.internal.canonical_type.construct_canonical_from_string(expected_type_str, declarations)
             actual_canonical := compile.internal.canonical_type.construct_canonical_from_string(actual_type_str, declarations)

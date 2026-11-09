@@ -6,7 +6,8 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-COMPILER = Path(os.environ.get('S_NATIVE_COMPILER', ROOT / 'bin/s_compiler'))
+EXTENDED = ROOT / '.bootstrap/neurx-extension/compiler-final'
+COMPILER = Path(os.environ.get('S_NATIVE_COMPILER', EXTENDED if EXTENDED.is_file() else ROOT / 'bin/s_compiler'))
 
 
 class NativeFloat(unittest.TestCase):

@@ -4,7 +4,9 @@ The active canonical path is source → canonical parser/AST → semantic checks
 
 MIR and SSA validators run before assembly emission. Executables retain the entry, global initializer roots and their transitive direct calls. Source tuples lower to aggregate records; physical SSA functions use zero or one result. Multiple source tuple returns are covered by canonical_tuple_production_check.sh.
 
-The native backend supports int64 int, bool, string, unit, records, enum representations, arrays and supported references. Actual support is constrained by semantic/lowering validation. Floating-point lowering is not implemented in ssa_type_supported. Do not infer feature support from the presence of architecture or optimization files outside the executable path.
+The native backend supports int64 int, bool, string, unit, records, enum representations, arrays and supported references. The NeurX compiler extension adds 64-bit `float` literals (decimal/exponent), arithmetic, comparisons, integer conversions, and float values in arrays, records and S function calls. Values occupy 64-bit slots and SSE2 performs scalar arithmetic. This internal S calling convention does not establish C floating-point FFI compatibility. Actual support remains constrained by semantic/lowering validation; broad math-library, vectorization and floating-point environment support are not established.
+
+Run `S_NATIVE_COMPILER=/path/to/extended/compiler python3 -m unittest discover -s test/native-float -v` for actual native execution probes, including NaN comparisons, signed zero, array/record storage and contextual integer widening. `test/native_runtime/extensions_probe.py` separately exercises the emitted file/process/socket extension assembly; its network fixture uses loopback only. The extension assembly is checked in and generated from the freestanding C helper by `test/native_runtime/extensions_generate.py`; ordinary native builds do not invoke a C compiler for these operations.
 
 ## Integer and startup contracts
 
