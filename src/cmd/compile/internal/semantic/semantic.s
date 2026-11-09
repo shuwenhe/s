@@ -2539,7 +2539,7 @@ func infer_expr_in_scope(expr expr, type_binding[] env, borrow_record[] borrow_s
             else_borrows := borrow_state_clone(borrow_state)
             errors := cond.errors + then_result.errors
             if !types_compatible("bool", cond.type_name) {
-                errors = errors + add_error(source, diagnostics, "e3014", "if condition must be bool", "if")
+                errors = errors + add_error(source, diagnostics, "e3014", "if condition must be bool (actual=" + cond.type_name + "; expression=" + canonical_condition_description(value.condition.value) + ")", "if")
             }
             switch value.else_branch {
                 option.some(else_expr) : {
@@ -4153,4 +4153,16 @@ func semantic_number_type(string text) string {
         i = i + 1
     }
     return "int"
+}
+
+func canonical_condition_description(expr value) string {
+    return switch value {
+        expr.call(call): "call:" + qualified_expr_path(call.callee.value),
+        expr.name(name): "name:" + name.name,
+        expr.member(member): "member:" + qualified_expr_path(value),
+        expr.binary(binary): "binary:" + binary.op,
+        expr.int(number): "number:" + number.value,
+        expr.bool(_): "bool",
+        _: "other",
+    }
 }
