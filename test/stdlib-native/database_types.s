@@ -40,7 +40,7 @@ func main() int {
     null_integer, null_error := std.database.as_integer(std.database.value.null)
     text_integer, text_error := std.database.as_integer(std.database.value.text("42"))
     if null_error.code == 0 || text_error.code == 0 { return 20 }
-    metadata := std.database.execution_result { affected_rows: option.some("0"), last_insert_id: option[string].none, warning_count: 2, command_tag: "UPDATE" }
+    metadata := std.database.result { affected_rows: option.some("0"), last_insert_id: option[string].none, warning_count: 2, command_tag: "UPDATE" }
     if !metadata.affected_rows.is_some() || metadata.affected_rows.unwrap() != "0" { return 21 }
     if !metadata.last_insert_id.is_none() { return 22 }
     println("database values: PASS")

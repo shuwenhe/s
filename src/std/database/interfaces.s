@@ -23,19 +23,19 @@ trait query {
     func query(statement request) (rows,error);
 }
 trait exec {
-    func exec(statement request) (execution_result,error);
+    func exec(statement request) (result,error);
 }
 trait connection {
     func ping() error;
     func query(statement request) (rows,error);
-    func exec(statement request) (execution_result,error);
+    func exec(statement request) (result,error);
     func prepare(string sql) (prepared_statement,error);
     func begin() (transaction,error);
     func close() error;
 }
 trait transaction {
     func query(statement request) (rows,error);
-    func exec(statement request) (execution_result,error);
+    func exec(statement request) (result,error);
     func prepare(string sql) (prepared_statement,error);
     func commit() error;
     func rollback() error;
@@ -43,6 +43,6 @@ trait transaction {
 }
 trait prepared_statement {
     func query(value[] parameters) (rows,error);
-    func exec(value[] parameters) (execution_result,error);
+    func exec(value[] parameters) (result,error);
     func close() error;
 }

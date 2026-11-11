@@ -44,7 +44,7 @@ struct column { string name, string type_name, option[int] native_type, bool bin
 struct row { value[] values }
 struct statement { string sql, value[] parameters }
 // Decimal strings preserve the complete unsigned 64-bit MySQL metadata range.
-struct execution_result {
+struct result {
     option[string] affected_rows
     option[string] last_insert_id
     int warning_count
