@@ -821,6 +821,7 @@ func mir_program_string_instruction_error(mir_program_function f, mir_program_in
 
 // Exact signatures form the native runtime boundary; names never become assembler symbols.
 func mir_native_intrinsic_result(string name) string {
+    if name == "__tls_connect" || name == "__tls_send" || name == "__tls_receive" || name == "__tls_close" { return "int" }
     if name == "__tcp_receive" || name == "__crypto_random" { return "int[]" }
     if name == "__tcp_dial" || name == "__tcp_listen" || name == "__tcp_accept" || name == "__tcp_port" || name == "__tcp_send" || name == "__tcp_close" { return "int" }
     if name == "__sys_socket" || name == "__sys_connect" || name == "__sys_close" || name == "__sys_write_string" { return "int" }
@@ -857,6 +858,10 @@ func mir_native_intrinsic_result(string name) string {
     return "?"
 }
 func mir_native_intrinsic_parameters(string name) string[] {
+    if name == "__tls_connect" { return ["int","string","string","int"] }
+    if name == "__tls_send" { return ["int","string","int","int"] }
+    if name == "__tls_receive" { return ["int","int[]","int"] }
+    if name == "__tls_close" { return ["int"] }
     if name == "__crypto_random" { return ["int"] }
     if name == "__tcp_dial" || name == "__tcp_listen" || name == "__tcp_receive" { return ["int","int","int"] }
     if name == "__tcp_accept" { return ["int","int"] }

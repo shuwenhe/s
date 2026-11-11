@@ -14,6 +14,10 @@ func amd64_native_extension_target(string name) string {
     if name == "__host_write_binary_file" { return "s_ext_write_binary" }
     if name == "__host_run_argv_output" { return "s_ext_capture" }
     if name == "__crypto_random" { return "s_crypto_random" }
+    if name == "__tls_connect" { return "s_tls_connect" }
+    if name == "__tls_send" { return "s_tls_send" }
+    if name == "__tls_receive" { return "s_tls_receive" }
+    if name == "__tls_close" { return "s_tls_close" }
     if name == "__tcp_dial" { return "s_tcp_dial" }
     if name == "__tcp_listen" { return "s_tcp_listen" }
     if name == "__tcp_accept" { return "s_tcp_accept" }
