@@ -11,6 +11,9 @@ class MySQLProtocolTests(NativeDatabaseCase):
     def test_v10_handshake_capabilities_scramble_and_truncation(self):
         self.execute('mysql_handshake.s', self.sources)
 
+    def test_length_encoding_signed_minimum_null_bitmap_and_truncation(self):
+        self.execute('mysql_boundaries.s', self.sources)
+
     def test_prepared_binding_metadata_and_auth_switch(self):
         self.execute('mysql_prepared.s', self.sources)
 

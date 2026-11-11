@@ -579,3 +579,11 @@ selfhost-native-memory-check: compiler
 .PHONY: stdlib-snake-integration-check
 stdlib-snake-integration-check: compiler
 	@python3 test/stdlib-native/test_snake.py -v
+
+# Database codecs are compiled and executed as native ELF programs by the seed.
+# Live driver integration is a separate gate and is not claimed by this target.
+.PHONY: database-unit-check
+database-unit-check: seed-compiler-bin
+	@python3 -m unittest discover -s test/stdlib-native -p 'test_database*.py' -v
+	@python3 test/stdlib-native/test_mysql_protocol.py -v
+	@python3 test/stdlib-native/test_postgresql_protocol.py -v

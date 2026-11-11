@@ -4,6 +4,7 @@ func main() int {
     state := std.database.resource_state { open: true, busy: false, children: 0 }
     if std.database.start_command(state*).code != 0 { return 1 }
     if std.database.start_command(state*).code != std.database.error_busy { return 2 }
+    if std.database.can_close_resource(state).code != std.database.error_busy || !state.open || !state.busy { return 19 }
     if std.database.close_resource(state*).code != std.database.error_busy { return 3 }
     if std.database.finish_command(state*).code != 0 { return 4 }
     if std.database.retain_child(state*).code != 0 { return 5 }

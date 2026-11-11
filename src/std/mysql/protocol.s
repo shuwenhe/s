@@ -130,7 +130,7 @@ func decode_error(string payload) std.database.error {
     code := std.database.wire.read_uint(source*,2,true)
     marker := std.database.wire.read_byte(source*)
     sqlstate := std.database.wire.read_bytes(source*,5)
-    if source.code != 0 || header != 255 || marker != 35 || code == 0 { return protocol_error("invalid MySQL ERR packet") }
+    if source.code != 0 || header != 255 || marker != 35 || code == 0 || !std.database.valid_sqlstate(sqlstate) { return protocol_error("invalid MySQL ERR packet") }
     remaining := len(payload) - source.position
     message := std.database.wire.read_bytes(source*,remaining)
     return std.database.error { code: std.database.error_server, message: message, sqlstate: sqlstate, native_code: code, driver: "mysql" }
@@ -235,8 +235,18 @@ func encode_length_string(string text) (string,std.database.error) {
     if length > 16777214 { return "", protocol_error("MySQL parameter exceeds physical packet limit") }
     marker := ""
     width := 1
-    if length > 250 { width = 2; marker = "\xfc" }
-    if length > 65535 { width = 3; marker = "\xfd" }
+    if length > 250 {
+        width = 2
+        encoded, marker_error := std.database.wire.encode_uint(252,1,true)
+        if marker_error.code != 0 { return "", marker_error }
+        marker = encoded
+    }
+    if length > 65535 {
+        width = 3
+        encoded, marker_error := std.database.wire.encode_uint(253,1,true)
+        if marker_error.code != 0 { return "", marker_error }
+        marker = encoded
+    }
     prefix, error := std.database.wire.encode_uint(length,width,true)
     if error.code != 0 { return "", error }
     return marker + prefix + text, std.database.error { code: 0 }

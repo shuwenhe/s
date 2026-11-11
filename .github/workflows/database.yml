@@ -1,0 +1,19 @@
+name: Native database protocol unit tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  protocol-unit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Build repository seed compiler
+        run: make seed-compiler-bin
+      - name: Compile and execute shared database and protocol unit tests
+        run: make database-unit-check

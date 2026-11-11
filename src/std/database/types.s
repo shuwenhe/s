@@ -133,3 +133,15 @@ extern "intrinsic" func __string_slice(string text, int start, int end) string
 extern "intrinsic" func __std_byte_string(int byte) string
 func _byte(string text, int index) int { return __host_byte_at(text,index) }
 func _slice(string text, int start, int end) string { return __string_slice(text,start,end) }
+
+// SQLSTATE is exactly five ASCII digits or uppercase letters on both protocols.
+func valid_sqlstate(string text) bool {
+    if len(text) != 5 { return false }
+    index := 0
+    while index < 5 {
+        byte := _byte(text,index)
+        if (byte < 48 || byte > 57) && (byte < 65 || byte > 90) { return false }
+        index = index + 1
+    }
+    return true
+}

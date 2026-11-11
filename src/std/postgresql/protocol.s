@@ -60,48 +60,76 @@ func query_message(string sql, int max_bytes) (string,std.database.error) {
     if _has_zero(sql) { return "", std.database.failure(std.database.error_invalid,"NUL in PostgreSQL query") }
     return encode_message(81,sql + _uint(0,1),max_bytes)
 }
+// Balanced concatenation avoids quadratic prefix copying for large parameter lists.
+func _oid_bytes(int[] oids, int start, int end) string {
+    if start == end { return "" }
+    if end - start == 1 { return _uint(oids[start],4) }
+    middle := start + (end - start) / 2
+    left := _oid_bytes(oids,start,middle)
+    right := _oid_bytes(oids,middle,end)
+    return left + right
+}
 func parse_message(string name, string sql, int[] type_oids, int max_bytes) (string,std.database.error) {
-    if !_valid_limit(max_bytes) || _has_zero(name) || _has_zero(sql) || len(type_oids) > 32767 { return "", std.database.failure(std.database.error_invalid,"invalid PostgreSQL Parse fields") }
+    if !_valid_limit(max_bytes) || _has_zero(name) || _has_zero(sql) || len(type_oids) > 65535 { return "", std.database.failure(std.database.error_invalid,"invalid PostgreSQL Parse fields") }
     if len(name) > max_bytes || len(sql) > max_bytes - len(name) { return "", protocol_error("PostgreSQL Parse exceeds configured limit") }
-    body := name + _uint(0,1) + sql + _uint(0,1) + _uint(len(type_oids),2)
+    fixed := len(name) + len(sql) + 8
+    if fixed > max_bytes || len(type_oids) > (max_bytes - fixed) / 4 { return "", protocol_error("PostgreSQL Parse exceeds configured limit") }
     index := 0
     while index < len(type_oids) {
         oid := type_oids[index]
         if oid < 0 || oid > 4294967295 { return "", std.database.failure(std.database.error_invalid,"invalid PostgreSQL type OID") }
-        if len(body) > max_bytes - 8 { return "", protocol_error("PostgreSQL Parse exceeds configured limit") }
-        body = body + _uint(oid,4)
         index = index + 1
     }
-    return encode_message(80,body,max_bytes)
+    body := name + _uint(0,1) + sql + _uint(0,1) + _uint(len(type_oids),2)
+    return encode_message(80,body + _oid_bytes(type_oids,0,len(type_oids)),max_bytes)
+}
+func _format_bytes(bound_parameter[] parameters, int start, int end) string {
+    if start == end { return "" }
+    if end - start == 1 { return _uint(parameters[start].format,2) }
+    middle := start + (end - start) / 2
+    left := _format_bytes(parameters,start,middle)
+    right := _format_bytes(parameters,middle,end)
+    return left + right
+}
+func _parameter_bytes(bound_parameter[] parameters, int start, int end) string {
+    if start == end { return "" }
+    if end - start == 1 {
+        parameter := parameters[start]
+        if parameter.data.is_none() { return _uint(4294967295,4) }
+        bytes := parameter.data.unwrap()
+        return _uint(len(bytes),4) + bytes
+    }
+    middle := start + (end - start) / 2
+    left := _parameter_bytes(parameters,start,middle)
+    right := _parameter_bytes(parameters,middle,end)
+    return left + right
 }
 // Bind carries values separately from SQL. Binary parameters require the Parse
 // OID and the supplied bytes to agree; no unsafe SQL interpolation is performed.
 func bind_message(string portal, string name, bound_parameter[] parameters, int max_bytes) (string,std.database.error) {
-    if !_valid_limit(max_bytes) || _has_zero(portal) || _has_zero(name) || len(parameters) > 32767 { return "", std.database.failure(std.database.error_invalid,"invalid PostgreSQL Bind fields") }
+    if !_valid_limit(max_bytes) || _has_zero(portal) || _has_zero(name) || len(parameters) > 65535 { return "", std.database.failure(std.database.error_invalid,"invalid PostgreSQL Bind fields") }
     if len(portal) > max_bytes || len(name) > max_bytes - len(portal) { return "", protocol_error("PostgreSQL Bind exceeds configured limit") }
-    body := portal + _uint(0,1) + name + _uint(0,1) + _uint(len(parameters),2)
+    // Includes the length header, both terminators, three counts and all
+    // parameter formats and lengths. All arithmetic stays below small bounds.
+    total := len(portal) + len(name) + 12
+    if total > max_bytes || len(parameters) > (max_bytes - total) / 6 { return "", protocol_error("PostgreSQL Bind exceeds configured limit") }
+    total = total + len(parameters) * 6
     index := 0
     while index < len(parameters) {
-        format := parameters[index].format
-        if format != 0 && format != 1 { return "", std.database.failure(std.database.error_invalid,"invalid PostgreSQL parameter format") }
-        if len(body) > max_bytes - 6 { return "", protocol_error("PostgreSQL Bind exceeds configured limit") }
-        body = body + _uint(format,2)
-        index = index + 1
-    }
-    body = body + _uint(len(parameters),2)
-    index = 0
-    while index < len(parameters) {
         parameter := parameters[index]
-        if len(body) > max_bytes - 8 { return "", protocol_error("PostgreSQL Bind exceeds configured limit") }
-        if parameter.data.is_none() { body = body + _uint(4294967295,4) } else {
+        if parameter.format != 0 && parameter.format != 1 { return "", std.database.failure(std.database.error_invalid,"invalid PostgreSQL parameter format") }
+        if parameter.data.is_some() {
             bytes := parameter.data.unwrap()
-            if len(bytes) > max_bytes - len(body) - 8 { return "", protocol_error("PostgreSQL parameter exceeds configured limit") }
-            body = body + _uint(len(bytes),4) + bytes
+            if len(bytes) > max_bytes - total { return "", protocol_error("PostgreSQL parameter exceeds configured limit") }
+            total = total + len(bytes)
         }
         index = index + 1
     }
+    body := portal + _uint(0,1) + name + _uint(0,1) + _uint(len(parameters),2)
+    body = body + _format_bytes(parameters,0,len(parameters)) + _uint(len(parameters),2)
+    body = body + _parameter_bytes(parameters,0,len(parameters)) + _uint(0,2)
     // Zero result-format codes requests text results for every column.
-    return encode_message(66,body + _uint(0,2),max_bytes)
+    return encode_message(66,body,max_bytes)
 }
 func describe_statement_message(string name, int max_bytes) (string,std.database.error) {
     if _has_zero(name) { return "", std.database.failure(std.database.error_invalid,"NUL in PostgreSQL statement name") }
@@ -172,11 +200,14 @@ func decode_error(string payload) std.database.error {
     sqlstate := ""
     message := ""
     severity := ""
+    nonlocalized_severity := ""
     while source.position < len(payload) {
         tag := std.database.wire.read_byte(source*)
         if tag == 0 {
-            if source.position != len(payload) || len(sqlstate) != 5 || len(message) == 0 || len(severity) == 0 { return protocol_error("invalid PostgreSQL ErrorResponse fields") }
-            return std.database.error { code: std.database.error_server, message: message, sqlstate: sqlstate, driver: "postgresql", fatal: severity == "FATAL" || severity == "PANIC" }
+            if source.position != len(payload) || !std.database.valid_sqlstate(sqlstate) || len(message) == 0 || len(severity) == 0 { return protocol_error("invalid PostgreSQL ErrorResponse fields") }
+            actual_severity := severity
+            if len(nonlocalized_severity) != 0 { actual_severity = nonlocalized_severity }
+            return std.database.error { code: std.database.error_server, message: message, sqlstate: sqlstate, driver: "postgresql", fatal: actual_severity == "FATAL" || actual_severity == "PANIC" }
         }
         value := std.database.wire.read_cstring(source*)
         if source.code != 0 { return protocol_error("truncated PostgreSQL ErrorResponse") }
@@ -184,8 +215,14 @@ func decode_error(string payload) std.database.error {
             sqlstate = value }
         if tag == 77 { if len(message) != 0 { return protocol_error("duplicate PostgreSQL error message") }
             message = value }
-        if tag == 83 { severity = value }
-        if tag == 86 { severity = value }
+        if tag == 83 {
+            if len(severity) != 0 { return protocol_error("duplicate PostgreSQL localized severity") }
+            severity = value
+        }
+        if tag == 86 {
+            if len(nonlocalized_severity) != 0 { return protocol_error("duplicate PostgreSQL nonlocalized severity") }
+            nonlocalized_severity = value
+        }
     }
     return protocol_error("unterminated PostgreSQL ErrorResponse")
 }

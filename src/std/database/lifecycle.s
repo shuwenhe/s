@@ -28,7 +28,14 @@ func release_child(resource_state* state) error {
     state.children = state.children - 1
     return error { code: 0 }
 }
-// Invoke after native cleanup succeeds, never in place of native cleanup.
+// Preflight before touching the native resource. An error leaves it untouched.
+func can_close_resource(resource_state state) error {
+    if !state.open { return error { code: 0 } }
+    if state.busy || state.children != 0 { return failure(error_busy,"resource has active work or children") }
+    return error { code: 0 }
+}
+// Commit bookkeeping only after preflight and successful native cleanup. This
+// function never substitutes for closing a socket, statement or transaction.
 func close_resource(resource_state* state) error {
     if !state.open { return error { code: 0 } }
     if state.busy || state.children != 0 { return failure(error_busy,"resource has active work or children") }
