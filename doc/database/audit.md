@@ -47,3 +47,37 @@ remain blocked until these prerequisites are implemented and independently teste
 - [MySQL caching SHA-2 authentication](https://dev.mysql.com/doc/dev/mysql-server/8.0.46/page_caching_sha2_authentication_exchanges.html)
 - [PostgreSQL message formats](https://www.postgresql.org/docs/18/protocol-message-formats.html)
 - [PostgreSQL message flow](https://www.postgresql.org/docs/current/protocol-flow.html)
+
+## Additional compiler/runtime findings
+
+A final audit also inspected `src/syscall/syscall_unix.s` and the generated canonical
+`native_runtime_extensions.{c,s}`. Basic socket/close/IPv4-connect/string-read/write
+implementations **do exist in the canonical backend**. They are not a complete
+verified transport: read returns null without errno on failure, connect is blocking,
+and the extension target table does not expose the declared deadline/poll/resolve
+functions. The canonical compiler cannot currently be built (blocker 1 above).
+A direct seed probe of the *correct* `__sys_socket` and `__sys_close` names compiles
+to IR, but native emission fails with undefined `s_fn___sys_socket` and
+`s_fn___sys_close`. Thus networking is not categorically absent; it is unavailable
+through the currently working tested compilation path. No database code or compiler
+intrinsic implementation was changed to conceal this mismatch.
+
+The complete relevant crypto/encoding package function inventory contains no
+non-readiness production hash/HMAC/random/TLS/certificate/binary/Base64 functions.
+
+Additional measured language restrictions:
+
+- Tuple-return receiver calls fail tuple-layout proof. Buffered rows use tagged
+  results, and their callers use tested enum pattern matching instead.
+- A `floating(float)` enum payload triggers `unknown native array transfer type:
+  float[]` in the seed. Floating values therefore retain textual representations;
+  numeric float conversion is not implemented or claimed.
+- A generic receiver-forwarding function with explicit type arguments still fails
+  with `type 't' has no method 'close'`; substituting static forwarding is not an
+  established replacement for the failed trait dispatch.
+- Nested fully qualified result receiver helper resolution is incomplete; direct
+  pattern matching is tested.
+- Hexadecimal byte escapes did not produce the required byte in native execution.
+  All protocol marker bytes now use the tested integer-to-byte encoding primitive.
+- `strace /bin/true` reports `PTRACE_TRACEME: Operation not permitted`; trace-based
+  regression tests cannot run successfully under this sandbox.

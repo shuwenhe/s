@@ -246,6 +246,7 @@ COMPILER_SOURCES := \
 	src/cmd/compile/internal/ssa/program.s \
 	src/cmd/compile/internal/ssa/function_lower.s \
 	src/cmd/compile/internal/codegen/amd64_program.s \
+	src/cmd/compile/internal/codegen/native_runtime_extensions.s \
 	src/cmd/compile/internal/core/native_build.s \
 	src/cmd/compile/internal/compiler/frontend_stages.s \
 	src/cmd/compile/internal/mir/compiler_emit.s \

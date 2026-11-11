@@ -801,6 +801,17 @@ static const char *runtime_callee(const standalone_module *module, const char *n
 	if (tail != NULL) name = tail + 1;
 	if (strcmp(name, "len") == 0 || strcmp(name, "__string_len") == 0 || strcmp(name, "__vec_len") == 0) return "s_value_len";
 	if (strcmp(name, "host_args") == 0) return "s_host_args_value";
+    if (strcmp(name, "__crypto_random") == 0) return "s_crypto_seed_random";
+    if (strcmp(name, "__tcp_dial") == 0) return "s_tcp_seed_dial";
+    if (strcmp(name, "__tcp_listen") == 0) return "s_tcp_seed_listen";
+    if (strcmp(name, "__tcp_accept") == 0) return "s_tcp_seed_accept";
+    if (strcmp(name, "__tcp_port") == 0) return "s_tcp_seed_port";
+    if (strcmp(name, "__tcp_send") == 0) return "s_tcp_seed_send";
+    if (strcmp(name, "__tcp_receive") == 0) return "s_tcp_seed_receive";
+    if (strcmp(name, "__tcp_close") == 0) return "s_tcp_seed_close";
+    if (strcmp(name, "__sys_socket") == 0) return "s_tcp_seed_socket";
+    if (strcmp(name, "__sys_connect") == 0) return "s_tcp_seed_connect";
+    if (strcmp(name, "__sys_close") == 0) return "s_tcp_seed_close";
 	if (strcmp(name, "__std_clock_ns") == 0) return "s_std_clock_ns_value";
 	if (strcmp(name, "__std_nanosleep") == 0) return "s_std_nanosleep_value";
 	if (strcmp(name, "__std_byte_string") == 0) return "s_byte_string_value";

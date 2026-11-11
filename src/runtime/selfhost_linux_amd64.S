@@ -3324,3 +3324,1324 @@ s_value_string_array_concat:
     ud2
 .size s_value_string_array_concat, .-s_value_string_array_concat
 # END GENERATED NATIVE OS
+
+# BEGIN GENERATED SEED TCP
+	.text
+	.p2align 4
+	.type	tcp_wait, @function
+tcp_wait:
+	pushq	%r15
+	pushq	%r14
+	pushq	%r13
+	pushq	%r12
+	pushq	%rbp
+	pushq	%rbx
+	movq	%rcx, -48(%rsp)
+	cmpq	$2147483647, %rdi
+	ja	.Lseed_tcp_2
+	xorl	%eax, %eax
+	movl	%edi, -32(%rsp)
+	movq	%rdx, %rbx
+	leaq	-24(%rsp), %r15
+	movw	%si, -28(%rsp)
+	movl	$228, %r14d
+	movl	$1, %ebp
+	leaq	-32(%rsp), %r13
+	movw	%ax, -26(%rsp)
+	movl	$7, %r12d
+.Lseed_tcp_6:
+	movq	$-1, %rdx
+	testq	%rbx, %rbx
+	jne	.Lseed_tcp_17
+.Lseed_tcp_3:
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	movq	%r12, %rax
+	movq	%r13, %rdi
+	movq	%rbp, %rsi
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	cmpq	$-4, %rax
+	je	.Lseed_tcp_6
+	testq	%rax, %rax
+	js	.Lseed_tcp_1
+	je	.Lseed_tcp_18
+	testb	$32, -26(%rsp)
+	jne	.Lseed_tcp_2
+	xorl	%eax, %eax
+.Lseed_tcp_1:
+	popq	%rbx
+	popq	%rbp
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	popq	%r15
+	ret
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_18:
+	cmpq	$1, -48(%rsp)
+	popq	%rbx
+	sbbq	%rax, %rax
+	popq	%rbp
+	popq	%r12
+	andq	$-99, %rax
+	popq	%r13
+	popq	%r14
+	subq	$11, %rax
+	popq	%r15
+	ret
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_17:
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	xorl	%edx, %edx
+	movq	%r14, %rax
+	movq	%rbp, %rdi
+	movq	%r15, %rsi
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	testq	%rax, %rax
+	js	.Lseed_tcp_1
+	imulq	$1000000000, -24(%rsp), %rax
+	addq	-16(%rsp), %rax
+	js	.Lseed_tcp_1
+	movq	%rbx, %rcx
+	subq	%rax, %rcx
+	testq	%rcx, %rcx
+	jle	.Lseed_tcp_3
+	leaq	999999(%rcx), %rdx
+	movabsq	$4835703278458516699, %rax
+	mulq	%rdx
+	shrq	$18, %rdx
+	jmp	.Lseed_tcp_3
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_2:
+	movq	$-9, %rax
+	jmp	.Lseed_tcp_1
+	.size	tcp_wait, .-tcp_wait
+	.p2align 4
+	.type	tcp_deadline, @function
+tcp_deadline:
+	leaq	1(%rdi), %rdx
+	movl	$2147483648, %eax
+	pushq	%r12
+	pushq	%rbx
+	cmpq	%rax, %rdx
+	ja	.Lseed_tcp_22
+	movq	%rdi, %rbx
+	xorl	%r12d, %r12d
+	cmpq	$-1, %rdi
+	je	.Lseed_tcp_19
+	leaq	-24(%rsp), %rsi
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	movl	$228, %eax
+	movl	$1, %edi
+	movq	%r12, %rdx
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	movq	%rax, %r12
+	testq	%rax, %rax
+	js	.Lseed_tcp_19
+	imulq	$1000000000, -24(%rsp), %r12
+	addq	-16(%rsp), %r12
+	js	.Lseed_tcp_19
+	imulq	$1000000, %rbx, %rbx
+	addq	%rbx, %r12
+.Lseed_tcp_19:
+	movq	%r12, %rax
+	popq	%rbx
+	popq	%r12
+	ret
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_22:
+	movq	$-22, %r12
+	jmp	.Lseed_tcp_19
+	.size	tcp_deadline, .-tcp_deadline
+	.p2align 4
+	.globl	s_tcp_seed_socket
+	.type	s_tcp_seed_socket, @function
+s_tcp_seed_socket:
+	endbr64
+	testb	$1, %dl
+	je	.Lseed_tcp_27
+	sarq	%rdx
+	testb	$1, %sil
+	je	.Lseed_tcp_29
+.Lseed_tcp_33:
+	sarq	%rsi
+	testb	$1, %dil
+	je	.Lseed_tcp_31
+.Lseed_tcp_34:
+	sarq	%rdi
+.Lseed_tcp_32:
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	movl	$41, %eax
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	movq	%rax, %rdi
+	jmp	s_integer_pack
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_27:
+	movq	8(%rdx), %rdx
+	testb	$1, %sil
+	jne	.Lseed_tcp_33
+.Lseed_tcp_29:
+	movq	8(%rsi), %rsi
+	testb	$1, %dil
+	jne	.Lseed_tcp_34
+.Lseed_tcp_31:
+	movq	8(%rdi), %rdi
+	jmp	.Lseed_tcp_32
+	.size	s_tcp_seed_socket, .-s_tcp_seed_socket
+	.p2align 4
+	.globl	s_tcp_seed_close
+	.type	s_tcp_seed_close, @function
+s_tcp_seed_close:
+	endbr64
+	testb	$1, %dil
+	je	.Lseed_tcp_36
+	sarq	%rdi
+.Lseed_tcp_37:
+	xorl	%edx, %edx
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	movl	$3, %eax
+	movq	%rdx, %rsi
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	movq	%rax, %rdi
+	jmp	s_integer_pack
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_36:
+	movq	8(%rdi), %rdi
+	jmp	.Lseed_tcp_37
+	.size	s_tcp_seed_close, .-s_tcp_seed_close
+	.p2align 4
+	.globl	s_tcp_seed_dial
+	.type	s_tcp_seed_dial, @function
+s_tcp_seed_dial:
+	endbr64
+	pushq	%r14
+	pushq	%r13
+	pushq	%r12
+	pushq	%rbp
+	pushq	%rbx
+	subq	$48, %rsp
+	testb	$1, %dil
+	je	.Lseed_tcp_39
+	sarq	%rdi
+	movq	%rdi, %r12
+.Lseed_tcp_40:
+	testb	$1, %sil
+	je	.Lseed_tcp_41
+	sarq	%rsi
+	movq	%rsi, %rbp
+.Lseed_tcp_42:
+	testb	$1, %dl
+	je	.Lseed_tcp_43
+	movq	%rdx, %rbx
+	sarq	%rbx
+.Lseed_tcp_44:
+	leaq	-1(%rbp), %rax
+	cmpq	$65534, %rax
+	ja	.Lseed_tcp_54
+	movq	%r12, %rax
+	shrq	$32, %rax
+	jne	.Lseed_tcp_54
+	movq	%rbx, %rdi
+	call	tcp_deadline
+	movq	%rax, %r13
+	movq	%rax, %rdi
+	testq	%rax, %rax
+	js	.Lseed_tcp_57
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	movl	$41, %eax
+	movl	$2, %edi
+	movl	$526337, %esi
+	xorl	%edx, %edx
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	movq	%rax, %rdi
+	testq	%rax, %rax
+	js	.Lseed_tcp_57
+	leaq	32(%rsp), %r14
+	leaq	48(%rsp), %rax
+	movq	%r14, %rcx
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_49:
+	movb	$0, (%rcx)
+	addq	$1, %rcx
+	cmpq	%rcx, %rax
+	jne	.Lseed_tcp_49
+	movl	%ebp, %esi
+	movb	$2, 32(%rsp)
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	rolw	$8, %si
+	movl	%r12d, 36(%rsp)
+	xorl	%r9d, %r9d
+	movl	$42, %eax
+	movw	%si, 34(%rsp)
+	movl	$16, %edx
+	movq	%r14, %rsi
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	movq	%rax, %rbp
+	cmpq	$-115, %rax
+	je	.Lseed_tcp_58
+.Lseed_tcp_50:
+	testq	%rbp, %rbp
+	js	.Lseed_tcp_59
+	call	s_integer_pack
+.Lseed_tcp_38:
+	addq	$48, %rsp
+	popq	%rbx
+	popq	%rbp
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	ret
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_54:
+	movq	$-22, %rdi
+.Lseed_tcp_57:
+	addq	$48, %rsp
+	popq	%rbx
+	popq	%rbp
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	jmp	s_integer_pack
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_43:
+	movq	8(%rdx), %rbx
+	jmp	.Lseed_tcp_44
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_41:
+	movq	8(%rsi), %rbp
+	jmp	.Lseed_tcp_42
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_39:
+	movq	8(%rdi), %r12
+	jmp	.Lseed_tcp_40
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_59:
+	xorl	%edx, %edx
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	movl	$3, %eax
+	movq	%rdx, %rsi
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	movq	%rbp, %rdi
+	call	s_integer_pack
+	jmp	.Lseed_tcp_38
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_58:
+	xorl	%ecx, %ecx
+	testq	%rbx, %rbx
+	movq	%r13, %rdx
+	movl	$4, %esi
+	sete	%cl
+	movq	%rdi, 8(%rsp)
+	call	tcp_wait
+	movq	8(%rsp), %rdi
+	testq	%rax, %rax
+	movq	%rax, %rbp
+	jne	.Lseed_tcp_50
+	movl	$0, 24(%rsp)
+	leaq	24(%rsp), %r10
+	leaq	28(%rsp), %r8
+	xorl	%r9d, %r9d
+	movl	$55, %eax
+	movl	$1, %esi
+	movl	$4, %edx
+	movl	$4, 28(%rsp)
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	movq	%rax, %rbp
+	testq	%rax, %rax
+	jne	.Lseed_tcp_50
+	movl	24(%rsp), %ebp
+	negl	%ebp
+	movslq	%ebp, %rbp
+	jmp	.Lseed_tcp_50
+	.size	s_tcp_seed_dial, .-s_tcp_seed_dial
+	.p2align 4
+	.globl	s_tcp_seed_listen
+	.type	s_tcp_seed_listen, @function
+s_tcp_seed_listen:
+	endbr64
+	pushq	%r14
+	pushq	%r13
+	pushq	%r12
+	pushq	%rbp
+	pushq	%rbx
+	subq	$32, %rsp
+	testb	$1, %dil
+	je	.Lseed_tcp_61
+	sarq	%rdi
+	movq	%rdi, %r12
+	testb	$1, %sil
+	je	.Lseed_tcp_63
+.Lseed_tcp_79:
+	sarq	%rsi
+	movq	%rsi, %rbp
+	testb	$1, %dl
+	je	.Lseed_tcp_65
+.Lseed_tcp_80:
+	movq	%rdx, %rbx
+	sarq	%rbx
+.Lseed_tcp_66:
+	movq	%r12, %rax
+	shrq	$32, %rax
+	jne	.Lseed_tcp_67
+	leaq	-1(%rbx), %rax
+	cmpq	$65534, %rax
+	ja	.Lseed_tcp_67
+	cmpq	$65535, %rbp
+	ja	.Lseed_tcp_67
+	movl	$2, %r13d
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	movl	$41, %eax
+	movl	$526337, %esi
+	xorl	%edx, %edx
+	movq	%r13, %rdi
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	movq	%rax, %rdi
+	testq	%rax, %rax
+	js	.Lseed_tcp_77
+	leaq	12(%rsp), %r10
+	xorl	%r9d, %r9d
+	movl	$54, %eax
+	movq	%r13, %rdx
+	movl	$1, 12(%rsp)
+	movl	$4, %r8d
+	movl	$1, %esi
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	leaq	16(%rsp), %r14
+	movq	%rax, %r13
+	leaq	32(%rsp), %rdx
+	movq	%r14, %rcx
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_71:
+	movb	$0, (%rcx)
+	addq	$1, %rcx
+	cmpq	%rdx, %rcx
+	jne	.Lseed_tcp_71
+	movl	%ebp, %esi
+	movb	$2, 16(%rsp)
+	rolw	$8, %si
+	movl	%r12d, 20(%rsp)
+	movw	%si, 18(%rsp)
+	testq	%rax, %rax
+	jne	.Lseed_tcp_72
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	movl	$49, %eax
+	movl	$16, %edx
+	movq	%r14, %rsi
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	movq	%rax, %r13
+	testq	%rax, %rax
+	jne	.Lseed_tcp_72
+	movl	$50, %eax
+	movq	%rbx, %rsi
+	movq	%r13, %rdx
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	movq	%rax, %r13
+.Lseed_tcp_72:
+	testq	%r13, %r13
+	js	.Lseed_tcp_78
+	call	s_integer_pack
+.Lseed_tcp_60:
+	addq	$32, %rsp
+	popq	%rbx
+	popq	%rbp
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	ret
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_67:
+	movq	$-22, %rdi
+.Lseed_tcp_77:
+	addq	$32, %rsp
+	popq	%rbx
+	popq	%rbp
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	jmp	s_integer_pack
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_61:
+	movq	8(%rdi), %r12
+	testb	$1, %sil
+	jne	.Lseed_tcp_79
+.Lseed_tcp_63:
+	movq	8(%rsi), %rbp
+	testb	$1, %dl
+	jne	.Lseed_tcp_80
+.Lseed_tcp_65:
+	movq	8(%rdx), %rbx
+	jmp	.Lseed_tcp_66
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_78:
+	xorl	%edx, %edx
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	movl	$3, %eax
+	movq	%rdx, %rsi
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	movq	%r13, %rdi
+	call	s_integer_pack
+	jmp	.Lseed_tcp_60
+	.size	s_tcp_seed_listen, .-s_tcp_seed_listen
+	.p2align 4
+	.globl	s_tcp_seed_port
+	.type	s_tcp_seed_port, @function
+s_tcp_seed_port:
+	endbr64
+	subq	$40, %rsp
+	testb	$1, %dil
+	je	.Lseed_tcp_82
+	sarq	%rdi
+.Lseed_tcp_83:
+	leaq	12(%rsp), %rdx
+	leaq	16(%rsp), %rsi
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	movl	$16, 12(%rsp)
+	xorl	%r9d, %r9d
+	movl	$51, %eax
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	testq	%rax, %rax
+	js	.Lseed_tcp_89
+	cmpl	$16, 12(%rsp)
+	jne	.Lseed_tcp_86
+	cmpb	$2, 16(%rsp)
+	je	.Lseed_tcp_87
+.Lseed_tcp_86:
+	movq	$-97, %rdi
+	call	s_integer_pack
+	addq	$40, %rsp
+	ret
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_82:
+	movq	8(%rdi), %rdi
+	jmp	.Lseed_tcp_83
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_87:
+	movzbl	18(%rsp), %edi
+	movzbl	19(%rsp), %eax
+	salq	$8, %rdi
+	addq	%rax, %rdi
+	call	s_integer_pack
+	addq	$40, %rsp
+	ret
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_89:
+	movq	%rax, %rdi
+	call	s_integer_pack
+	addq	$40, %rsp
+	ret
+	.size	s_tcp_seed_port, .-s_tcp_seed_port
+	.p2align 4
+	.globl	s_tcp_seed_accept
+	.type	s_tcp_seed_accept, @function
+s_tcp_seed_accept:
+	endbr64
+	pushq	%r13
+	pushq	%r12
+	pushq	%rbp
+	movq	%rdi, %rbp
+	pushq	%rbx
+	subq	$8, %rsp
+	andl	$1, %edi
+	je	.Lseed_tcp_91
+	sarq	%rbp
+.Lseed_tcp_92:
+	testb	$1, %sil
+	je	.Lseed_tcp_93
+	movq	%rsi, %rbx
+	sarq	%rbx
+.Lseed_tcp_94:
+	movq	%rbx, %rdi
+	call	tcp_deadline
+	movq	%rax, %r12
+	movq	%rax, %rdi
+	testq	%rax, %rax
+	js	.Lseed_tcp_100
+	testq	%rbx, %rbx
+	movl	$288, %r13d
+	sete	%bl
+	movzbl	%bl, %ebx
+.Lseed_tcp_98:
+	movq	%rbx, %rcx
+	movq	%r12, %rdx
+	movl	$1, %esi
+	movq	%rbp, %rdi
+	call	tcp_wait
+	testq	%rax, %rax
+	js	.Lseed_tcp_101
+	xorl	%edx, %edx
+	movl	$526336, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	movq	%r13, %rax
+	movq	%rbp, %rdi
+	movq	%rdx, %rsi
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	cmpq	$-4, %rax
+	je	.Lseed_tcp_98
+	cmpq	$-11, %rax
+	je	.Lseed_tcp_98
+.Lseed_tcp_101:
+	movq	%rax, %rdi
+.Lseed_tcp_100:
+	addq	$8, %rsp
+	popq	%rbx
+	popq	%rbp
+	popq	%r12
+	popq	%r13
+	jmp	s_integer_pack
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_93:
+	movq	8(%rsi), %rbx
+	jmp	.Lseed_tcp_94
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_91:
+	movq	8(%rbp), %rbp
+	jmp	.Lseed_tcp_92
+	.size	s_tcp_seed_accept, .-s_tcp_seed_accept
+	.p2align 4
+	.globl	s_tcp_seed_send
+	.type	s_tcp_seed_send, @function
+s_tcp_seed_send:
+	endbr64
+	pushq	%r15
+	pushq	%r14
+	pushq	%r13
+	pushq	%r12
+	pushq	%rbp
+	pushq	%rbx
+	leaq	-65536(%rsp), %r11
+.Lseed_tcp_PSRL0:
+	subq	$4096, %rsp
+	orq	$0, (%rsp)
+	cmpq	%r11, %rsp
+	jne	.Lseed_tcp_PSRL0
+	subq	$24, %rsp
+	movq	%rdi, %rbp
+	andl	$1, %edi
+	movq	%rsi, %r15
+	movq	%rcx, %rbx
+	je	.Lseed_tcp_103
+	sarq	%rbp
+	testb	$1, %dl
+	je	.Lseed_tcp_105
+.Lseed_tcp_129:
+	sarq	%rdx
+	movq	%rdx, %r13
+	testb	$1, %bl
+	je	.Lseed_tcp_107
+.Lseed_tcp_130:
+	sarq	%rbx
+.Lseed_tcp_108:
+	testq	%r15, %r15
+	jne	.Lseed_tcp_127
+.Lseed_tcp_109:
+	movq	$-22, %rdi
+.Lseed_tcp_126:
+	addq	$65560, %rsp
+	popq	%rbx
+	popq	%rbp
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	popq	%r15
+	jmp	s_integer_pack
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_127:
+	movq	8(%r15), %r12
+	testq	%r13, %r13
+	js	.Lseed_tcp_109
+	cmpq	%r13, %r12
+	jl	.Lseed_tcp_109
+	movq	%rbx, %rdi
+	call	tcp_deadline
+	movq	%rax, 8(%rsp)
+	movq	%rax, %rdi
+	testq	%rax, %rax
+	js	.Lseed_tcp_126
+	subq	%r13, %r12
+	movq	%r12, (%rsp)
+	cmpq	$65536, %r12
+	jg	.Lseed_tcp_118
+	testq	%r12, %r12
+	je	.Lseed_tcp_128
+.Lseed_tcp_113:
+	movq	(%rsp), %rax
+	movq	%r13, %r12
+	leaq	(%rax,%r13), %r14
+	leaq	16(%rsp), %r13
+	subq	%r12, %r13
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_114:
+	movq	%r12, %rsi
+	movq	%r15, %rdi
+	call	s_string_byte_raw
+	movb	%al, 0(%r13,%r12)
+	addq	$1, %r12
+	cmpq	%r12, %r14
+	jne	.Lseed_tcp_114
+	testq	%rbx, %rbx
+	movl	$44, %r13d
+	sete	%bl
+	movzbl	%bl, %ebx
+.Lseed_tcp_122:
+	movq	8(%rsp), %rdx
+	movq	%rbx, %rcx
+	movl	$4, %esi
+	movq	%rbp, %rdi
+	call	tcp_wait
+	testq	%rax, %rax
+	js	.Lseed_tcp_125
+	movq	(%rsp), %rdx
+	movl	$16448, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	movq	%r13, %rax
+	movq	%rbp, %rdi
+	leaq	16(%rsp), %rsi
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	cmpq	$-4, %rax
+	je	.Lseed_tcp_122
+	cmpq	$-11, %rax
+	je	.Lseed_tcp_122
+.Lseed_tcp_125:
+	movq	%rax, %rdi
+	call	s_integer_pack
+	addq	$65560, %rsp
+	popq	%rbx
+	popq	%rbp
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	popq	%r15
+	ret
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_103:
+	movq	8(%rbp), %rbp
+	testb	$1, %dl
+	jne	.Lseed_tcp_129
+.Lseed_tcp_105:
+	movq	8(%rdx), %r13
+	testb	$1, %bl
+	jne	.Lseed_tcp_130
+.Lseed_tcp_107:
+	movq	8(%rbx), %rbx
+	jmp	.Lseed_tcp_108
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_118:
+	movq	$65536, (%rsp)
+	jmp	.Lseed_tcp_113
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_128:
+	xorl	%edi, %edi
+	jmp	.Lseed_tcp_126
+	.size	s_tcp_seed_send, .-s_tcp_seed_send
+	.p2align 4
+	.globl	s_tcp_seed_receive
+	.type	s_tcp_seed_receive, @function
+s_tcp_seed_receive:
+	endbr64
+	pushq	%r15
+	pushq	%r14
+	pushq	%r13
+	pushq	%r12
+	pushq	%rbp
+	pushq	%rbx
+	leaq	-65536(%rsp), %r11
+.Lseed_tcp_PSRL1:
+	subq	$4096, %rsp
+	orq	$0, (%rsp)
+	cmpq	%r11, %rsp
+	jne	.Lseed_tcp_PSRL1
+	subq	$8, %rsp
+	movq	%rdi, %r12
+	andl	$1, %edi
+	movq	%rsi, %r13
+	je	.Lseed_tcp_132
+	sarq	%r12
+	testb	$1, %r13b
+	je	.Lseed_tcp_134
+.Lseed_tcp_157:
+	sarq	%r13
+	testb	$1, %dl
+	je	.Lseed_tcp_136
+.Lseed_tcp_158:
+	sarq	%rdx
+	movq	%rdx, %rbx
+.Lseed_tcp_137:
+	movq	%rbx, %rdi
+	call	tcp_deadline
+	movq	%rax, %rbp
+	leaq	-1(%r13), %rax
+	cmpq	$65535, %rax
+	ja	.Lseed_tcp_145
+	testq	%rbp, %rbp
+	js	.Lseed_tcp_146
+	xorl	%r14d, %r14d
+	testq	%rbx, %rbx
+	movq	%rsp, %r15
+	sete	%r14b
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_152:
+	movq	%r14, %rcx
+	movq	%rbp, %rdx
+	movl	$1, %esi
+	movq	%r12, %rdi
+	call	tcp_wait
+	movq	%rax, %rbx
+	testq	%rax, %rax
+	js	.Lseed_tcp_138
+	movl	$64, %r10d
+	xorl	%r8d, %r8d
+	xorl	%r9d, %r9d
+	movq	%r12, %rdi
+	movl	$45, %eax
+	movq	%r15, %rsi
+	movq	%r13, %rdx
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	cmpq	$-4, %rax
+	je	.Lseed_tcp_152
+	cmpq	$-11, %rax
+	je	.Lseed_tcp_152
+	xorl	%edx, %edx
+	testq	%rax, %rax
+	movq	%rax, %rbp
+	cmovns	%rax, %rdx
+	leaq	1(%rdx), %rbx
+	leaq	24(,%rdx,8), %rdi
+	jmp	.Lseed_tcp_139
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_132:
+	movq	8(%r12), %r12
+	testb	$1, %r13b
+	jne	.Lseed_tcp_157
+.Lseed_tcp_134:
+	movq	8(%r13), %r13
+	testb	$1, %dl
+	jne	.Lseed_tcp_158
+.Lseed_tcp_136:
+	movq	8(%rdx), %rbx
+	jmp	.Lseed_tcp_137
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_145:
+	movq	$-22, %rbx
+.Lseed_tcp_138:
+	movl	$24, %edi
+	call	s_alloc
+	movq	%rax, %r12
+	testq	%rax, %rax
+	je	.Lseed_tcp_141
+	xorl	%eax, %eax
+	testq	%rbx, %rbx
+	movq	$4, (%r12)
+	movq	$1, 8(%r12)
+	cmovle	%rbx, %rax
+	movq	%rax, %rdi
+	call	s_integer_pack
+	movq	%rax, 16(%r12)
+.Lseed_tcp_131:
+	addq	$65544, %rsp
+	movq	%r12, %rax
+	popq	%rbx
+	popq	%rbp
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	popq	%r15
+	ret
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_141:
+	xorl	%r12d, %r12d
+	jmp	.Lseed_tcp_131
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_146:
+	movl	$24, %edi
+	movl	$1, %ebx
+.Lseed_tcp_139:
+	call	s_alloc
+	movq	%rax, %r12
+	testq	%rax, %rax
+	je	.Lseed_tcp_141
+	xorl	%edi, %edi
+	movq	$4, (%rax)
+	testq	%rbp, %rbp
+	movq	%rbx, 8(%rax)
+	cmovle	%rbp, %rdi
+	call	s_integer_pack
+	movq	%rax, 16(%r12)
+	testq	%rbp, %rbp
+	jle	.Lseed_tcp_131
+	xorl	%ebx, %ebx
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_143:
+	movzbl	(%rsp,%rbx), %edi
+	addq	$1, %rbx
+	call	s_integer_pack
+	movq	%rax, 16(%r12,%rbx,8)
+	cmpq	%rbp, %rbx
+	jne	.Lseed_tcp_143
+	jmp	.Lseed_tcp_131
+	.size	s_tcp_seed_receive, .-s_tcp_seed_receive
+	.p2align 4
+	.globl	s_tcp_seed_connect
+	.type	s_tcp_seed_connect, @function
+s_tcp_seed_connect:
+	endbr64
+	pushq	%r15
+	pushq	%r14
+	pushq	%r13
+	movq	%rdx, %r13
+	pushq	%r12
+	pushq	%rbp
+	movq	%rsi, %rbp
+	pushq	%rbx
+	subq	$56, %rsp
+	testb	$1, %dil
+	je	.Lseed_tcp_160
+	sarq	%rdi
+	movq	%rdi, 24(%rsp)
+.Lseed_tcp_161:
+	testb	$1, %r13b
+	je	.Lseed_tcp_162
+	sarq	%r13
+	movq	%r13, 8(%rsp)
+.Lseed_tcp_163:
+	testb	$1, %cl
+	je	.Lseed_tcp_164
+	sarq	%rcx
+.Lseed_tcp_165:
+	testq	%rbp, %rbp
+	je	.Lseed_tcp_192
+	cmpq	$2, %rcx
+	jne	.Lseed_tcp_192
+	cmpq	$65535, 8(%rsp)
+	ja	.Lseed_tcp_192
+	movq	$0, 16(%rsp)
+	leaq	8(%rbp), %r12
+	xorl	%r14d, %r14d
+	xorl	%r13d, %r13d
+.Lseed_tcp_167:
+	cmpq	(%r12), %r13
+	jge	.Lseed_tcp_192
+	xorl	%ebx, %ebx
+	xorl	%r15d, %r15d
+	jmp	.Lseed_tcp_170
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_194:
+	leaq	(%r15,%r15,4), %rdx
+	leaq	-48(%rax,%rdx,2), %r15
+	cmpq	$255, %r15
+	jg	.Lseed_tcp_192
+	movq	(%r12), %rax
+	addq	$1, %r13
+	addq	$1, %rbx
+	cmpq	%rax, %r13
+	jge	.Lseed_tcp_193
+.Lseed_tcp_170:
+	movq	%r13, %rsi
+	movq	%rbp, %rdi
+	call	s_string_byte_raw
+	leaq	-48(%rax), %rcx
+	cmpq	$9, %rcx
+	jbe	.Lseed_tcp_194
+	testq	%rbx, %rbx
+	je	.Lseed_tcp_192
+	movq	%r15, %rdx
+	movl	%r14d, %ecx
+	movq	(%r12), %rax
+	salq	%cl, %rdx
+	orq	%rdx, 16(%rsp)
+	cmpl	$24, %r14d
+	je	.Lseed_tcp_174
+	cmpq	%r13, %rax
+	jle	.Lseed_tcp_192
+	movq	%r13, %rsi
+	movq	%rbp, %rdi
+	leaq	1(%r13), %rbx
+	call	s_string_byte_raw
+	cmpq	$46, %rax
+	jne	.Lseed_tcp_192
+	addl	$8, %r14d
+	movq	%rbx, %r13
+	jmp	.Lseed_tcp_167
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_193:
+	movq	%r15, %rdx
+	movl	%r14d, %ecx
+	salq	%cl, %rdx
+	orq	%rdx, 16(%rsp)
+	cmpl	$24, %r14d
+	jne	.Lseed_tcp_192
+.Lseed_tcp_174:
+	cmpq	%rax, %r13
+	je	.Lseed_tcp_177
+.Lseed_tcp_192:
+	addq	$56, %rsp
+	movq	$-22, %rdi
+	popq	%rbx
+	popq	%rbp
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	popq	%r15
+	jmp	s_integer_pack
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_164:
+	movq	8(%rcx), %rcx
+	jmp	.Lseed_tcp_165
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_162:
+	movq	8(%r13), %rax
+	movq	%rax, 8(%rsp)
+	jmp	.Lseed_tcp_163
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_160:
+	movq	8(%rdi), %rax
+	movq	%rax, 24(%rsp)
+	jmp	.Lseed_tcp_161
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_177:
+	leaq	32(%rsp), %rsi
+	leaq	48(%rsp), %rdx
+	movq	%rsi, %rax
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_178:
+	movb	$0, (%rax)
+	addq	$1, %rax
+	cmpq	%rax, %rdx
+	jne	.Lseed_tcp_178
+	movzwl	8(%rsp), %r13d
+	movl	16(%rsp), %eax
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	movb	$2, 32(%rsp)
+	movq	24(%rsp), %rdi
+	xorl	%r9d, %r9d
+	movl	$16, %edx
+	rolw	$8, %r13w
+	movl	%eax, 36(%rsp)
+	movl	$42, %eax
+	movw	%r13w, 34(%rsp)
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	movq	%rax, %rdi
+	call	s_integer_pack
+	addq	$56, %rsp
+	popq	%rbx
+	popq	%rbp
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	popq	%r15
+	ret
+	.size	s_tcp_seed_connect, .-s_tcp_seed_connect
+	.p2align 4
+	.globl	s_crypto_seed_random
+	.type	s_crypto_seed_random, @function
+s_crypto_seed_random:
+	endbr64
+	pushq	%r14
+	pushq	%r13
+	pushq	%r12
+	pushq	%rbp
+	pushq	%rbx
+	leaq	-65536(%rsp), %r11
+.Lseed_tcp_PSRL2:
+	subq	$4096, %rsp
+	orq	$0, (%rsp)
+	cmpq	%r11, %rsp
+	jne	.Lseed_tcp_PSRL2
+	subq	$16, %rsp
+	movq	%rdi, %r12
+	andl	$1, %edi
+	je	.Lseed_tcp_196
+	sarq	%r12
+	cmpq	$65536, %r12
+	ja	.Lseed_tcp_213
+.Lseed_tcp_229:
+	testq	%r12, %r12
+	je	.Lseed_tcp_199
+	xorl	%ebp, %ebp
+	leaq	16(%rsp), %rbx
+	movl	$318, %r13d
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_202:
+	movq	%r12, %rsi
+	leaq	(%rbx,%rbp), %rdi
+	xorl	%r10d, %r10d
+	xorl	%r8d, %r8d
+	subq	%rbp, %rsi
+	xorl	%r9d, %r9d
+	xorl	%edx, %edx
+	movq	%r13, %rax
+#APP
+# 32 "/home/shuwen/shuwen/s/src/runtime/native_tcp.h" 1
+	syscall
+# 0 "" 2
+#NO_APP
+	cmpq	$-4, %rax
+	je	.Lseed_tcp_200
+	testq	%rax, %rax
+	js	.Lseed_tcp_201
+	je	.Lseed_tcp_214
+	addq	%rax, %rbp
+.Lseed_tcp_200:
+	cmpq	%r12, %rbp
+	jl	.Lseed_tcp_202
+	leaq	24(,%r12,8), %rdi
+	leaq	1(%r12), %r13
+	call	s_alloc
+	movq	%rax, %r14
+	testq	%rax, %rax
+	je	.Lseed_tcp_205
+	movq	%r13, 8(%r14)
+	xorl	%edi, %edi
+	xorl	%r13d, %r13d
+	movq	$4, (%r14)
+	call	s_integer_pack
+	movq	%rax, 16(%r14)
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_207:
+	movzbl	0(%r13,%rbx), %edi
+	addq	$1, %r13
+	call	s_integer_pack
+	movq	%rax, 16(%r14,%r13,8)
+	cmpq	%r12, %r13
+	jne	.Lseed_tcp_207
+	jmp	.Lseed_tcp_208
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_196:
+	movq	8(%r12), %r12
+	cmpq	$65536, %r12
+	jbe	.Lseed_tcp_229
+.Lseed_tcp_213:
+	xorl	%ebp, %ebp
+	movq	$-22, %r12
+.Lseed_tcp_198:
+	movl	$24, %edi
+	call	s_alloc
+	movq	%rax, %r14
+	testq	%rax, %rax
+	je	.Lseed_tcp_205
+	movq	$4, (%r14)
+	movq	%r12, %rdi
+	movq	$1, 8(%r14)
+	call	s_integer_pack
+	movq	%rax, 16(%r14)
+.Lseed_tcp_206:
+	testq	%rbp, %rbp
+	je	.Lseed_tcp_195
+	leaq	16(%rsp), %rbx
+.Lseed_tcp_208:
+	movq	%rbx, %rax
+	addq	%rbx, %rbp
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_209:
+	movb	$0, (%rax)
+	addq	$1, %rax
+	cmpq	%rbp, %rax
+	jne	.Lseed_tcp_209
+.Lseed_tcp_195:
+	addq	$65552, %rsp
+	movq	%r14, %rax
+	popq	%rbx
+	popq	%rbp
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	ret
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_201:
+	movl	$24, %edi
+	movq	%rax, 8(%rsp)
+	call	s_alloc
+	movq	8(%rsp), %r8
+	testq	%rax, %rax
+	movq	%rax, %r14
+	jne	.Lseed_tcp_230
+.Lseed_tcp_205:
+	xorl	%r14d, %r14d
+	jmp	.Lseed_tcp_195
+	.p2align 4,,10
+	.p2align 3
+.Lseed_tcp_214:
+	movq	$-5, %r12
+	jmp	.Lseed_tcp_198
+.Lseed_tcp_230:
+	movq	$4, (%rax)
+	movq	%r8, %rdi
+	movq	$1, 8(%rax)
+	call	s_integer_pack
+	movq	%rax, 16(%r14)
+	jmp	.Lseed_tcp_206
+.Lseed_tcp_199:
+	movl	$24, %edi
+	call	s_alloc
+	movq	%rax, %r14
+	testq	%rax, %rax
+	je	.Lseed_tcp_205
+	movq	$4, (%r14)
+	xorl	%edi, %edi
+	movq	$1, 8(%r14)
+	call	s_integer_pack
+	movq	%rax, 16(%r14)
+	jmp	.Lseed_tcp_195
+	.size	s_crypto_seed_random, .-s_crypto_seed_random
+	.section	.note.GNU-stack,"",@progbits
+	.section	.note.gnu.property,"a"
+	.align 8
+	.long	1f - 0f
+	.long	4f - 1f
+	.long	5
+0:
+	.string	"GNU"
+1:
+	.align 8
+	.long	0xc0000002
+	.long	3f - 2f
+2:
+	.long	0x3
+3:
+	.align 8
+4:
+# END GENERATED SEED TCP

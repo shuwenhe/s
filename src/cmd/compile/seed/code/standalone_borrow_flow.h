@@ -176,6 +176,13 @@ static int borrow_flow_call(borrow_flow_types *t,standalone_function *fn,int *st
         return borrow_flow_is_array(t,array) && args[1]==t->elements[array-(int)t->m->record_count]?array:BF_UNKNOWN;
     }
     if(runtime) {
+        if(!strcmp(runtime,"s_crypto_seed_random")) return count==1 && args[0]==BF_INT?borrow_flow_array(t,BF_INT):BF_UNKNOWN;
+        if(!strcmp(runtime,"s_tcp_seed_dial") || !strcmp(runtime,"s_tcp_seed_listen"))
+            return count==3 && args[0]==BF_INT && args[1]==BF_INT && args[2]==BF_INT?BF_INT:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_tcp_seed_accept")) return count==2 && args[0]==BF_INT && args[1]==BF_INT?BF_INT:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_tcp_seed_port") || !strcmp(runtime,"s_tcp_seed_close")) return count==1 && args[0]==BF_INT?BF_INT:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_tcp_seed_send")) return count==4 && args[0]==BF_INT && args[1]==BF_STRING && args[2]==BF_INT && args[3]==BF_INT?BF_INT:BF_UNKNOWN;
+        if(!strcmp(runtime,"s_tcp_seed_receive")) return count==3 && args[0]==BF_INT && args[1]==BF_INT && args[2]==BF_INT?borrow_flow_array(t,BF_INT):BF_UNKNOWN;
         if(!strcmp(runtime,"s_std_string_array_concat_value")) {
             int array=borrow_flow_array(t,BF_STRING);
             return count==2 && args[0]==array && args[1]==array?array:BF_UNKNOWN;

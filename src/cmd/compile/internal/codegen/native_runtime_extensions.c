@@ -73,3 +73,7 @@ S *s_ext_capture(I *args) {
     out->n=n;
     return out;
 }
+
+/* Shared TCP operations use an explicitly selected value ABI. */
+#include "../../../../runtime/native_tcp.h"
+#include "../../../../runtime/native_crypto_random.h"

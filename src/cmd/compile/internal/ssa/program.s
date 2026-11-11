@@ -770,6 +770,8 @@ func ssa_string_value_error(function_ssa_function f, function_ssa_value value) s
 
 // Exact signatures form the native runtime boundary; names never become assembler symbols.
 func ssa_native_intrinsic_result(string name) string {
+    if name == "__tcp_receive" || name == "__crypto_random" { return "int[]" }
+    if name == "__tcp_dial" || name == "__tcp_listen" || name == "__tcp_accept" || name == "__tcp_port" || name == "__tcp_send" || name == "__tcp_close" { return "int" }
     if name == "__sys_socket" || name == "__sys_connect" || name == "__sys_close" || name == "__sys_write_string" { return "int" }
     if name == "__sys_read_string" || name == "__host_run_argv_output" { return "string" }
     if name == "__host_file_exists" || name == "__host_env_exists" { return "bool" }
@@ -804,6 +806,11 @@ func ssa_native_intrinsic_result(string name) string {
     return "?"
 }
 func ssa_native_intrinsic_parameters(string name) string[] {
+    if name == "__crypto_random" { return ["int"] }
+    if name == "__tcp_dial" || name == "__tcp_listen" || name == "__tcp_receive" { return ["int","int","int"] }
+    if name == "__tcp_accept" { return ["int","int"] }
+    if name == "__tcp_port" || name == "__tcp_close" { return ["int"] }
+    if name == "__tcp_send" { return ["int","string","int","int"] }
     if name == "__sys_socket" { return ["int","int","int"] }
     if name == "__sys_connect" { return ["int","string","int","int"] }
     if name == "__sys_close" { return ["int"] }

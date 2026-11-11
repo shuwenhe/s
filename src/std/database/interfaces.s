@@ -1,4 +1,5 @@
 package std.database
+import "std.result"
 
 // Contract declarations only. Current standalone compiler cannot emit dynamic
 // trait calls (see doc/database/audit.md). No fake concrete drivers are provided.
@@ -15,34 +16,38 @@ struct options {
     string tls_server_name
     string tls_ca_file
 }
+// open validates configuration and must not imply an established connection.
+trait driver {
+    func open(options config) std.result.result[database,error];
+}
 trait database {
-    func connect() (connection,error);
+    func connect() std.result.result[connection,error];
     func close() error;
 }
 trait query {
-    func query(statement request) (rows,error);
+    func query(statement request) std.result.result[rows,error];
 }
 trait exec {
-    func exec(statement request) (result,error);
+    func exec(statement request) std.result.result[result,error];
 }
 trait connection {
     func ping() error;
-    func query(statement request) (rows,error);
-    func exec(statement request) (result,error);
-    func prepare(string sql) (prepared_statement,error);
-    func begin() (transaction,error);
+    func query(statement request) std.result.result[rows,error];
+    func exec(statement request) std.result.result[result,error];
+    func prepare(string sql) std.result.result[prepared_statement,error];
+    func begin() std.result.result[transaction,error];
     func close() error;
 }
 trait transaction {
-    func query(statement request) (rows,error);
-    func exec(statement request) (result,error);
-    func prepare(string sql) (prepared_statement,error);
+    func query(statement request) std.result.result[rows,error];
+    func exec(statement request) std.result.result[result,error];
+    func prepare(string sql) std.result.result[prepared_statement,error];
     func commit() error;
     func rollback() error;
     func close() error;
 }
 trait prepared_statement {
-    func query(value[] parameters) (rows,error);
-    func exec(value[] parameters) (result,error);
+    func query(value[] parameters) std.result.result[rows,error];
+    func exec(value[] parameters) std.result.result[result,error];
     func close() error;
 }
