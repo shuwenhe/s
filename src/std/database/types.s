@@ -1,6 +1,23 @@
 package std.database
 import ("std.option"; "std.result")
 
+struct options {
+    string host
+    int port
+    string database_name
+    string user
+    string password
+    int connect_timeout_ms
+    int read_timeout_ms
+    int write_timeout_ms
+    int max_packet_bytes
+    string tls_server_name
+    string tls_ca_file
+    string server_public_key
+    bool allow_public_key_retrieval
+    int max_result_bytes
+    int max_rows
+}
 const error_invalid = 1
 const error_bounds = 2
 const error_closed = 3

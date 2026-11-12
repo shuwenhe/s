@@ -20,8 +20,9 @@ func main() int {
     invalid_packet, invalid_error := std.mysql.execute_statement_command(42,std.database.value[]{invalid},1024)
     if invalid_error.code != std.database.error_overflow { return 3 }
     temporal := std.database.value.timestamp("2026-11-11 00:00:00")
-    unsupported, unsupported_error := std.mysql.execute_statement_command(42,std.database.value[]{temporal},1024)
-    if unsupported_error.code != std.database.error_unsupported { return 4 }
+    temporal_packet, temporal_error := std.mysql.execute_statement_command(42,std.database.value[]{temporal},1024)
+    expected_temporal := header + byte(0) + byte(1) + byte(253) + byte(0) + byte(19) + "2026-11-11 00:00:00"
+    if temporal_error.code != 0 || temporal_packet != expected_temporal { return 4 }
     bounded, bounded_error := std.mysql.execute_statement_command(42,params,10)
     if bounded_error.code == 0 { return 5 }
     prepared, prepared_error := std.mysql.decode_prepare_ok(byte(0) + byte(42) + byte(0) + byte(0) + byte(0) + byte(2) + byte(0) + byte(5) + byte(0) + byte(0) + byte(3) + byte(0))

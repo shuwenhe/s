@@ -1,0 +1,16 @@
+{
+  "recorded_utc": "2026-11-12T15:31:39.976642+00:00",
+  "platform": "Linux-5.15.0-173-generic-x86_64-with-glibc2.35",
+  "cpu": "Intel(R) Xeon(R) Platinum",
+  "driver_sha256": {
+    "src/std/mysql/auth.s": "783b5c2d8f30c678ce91d6d70ab12a4fc5fabd929844fbf0714f4e25837ba52a",
+    "src/std/mysql/binary.s": "91b6b90e46ddc16519176916a2da9f2aab627f13a3c94bb76e7a64ee25727f26",
+    "src/std/mysql/client.s": "ab6334e8f3ec3ce18721bcdd051b15ed7f11cd95836275cc3944e0cf433bceb6",
+    "src/std/mysql/protocol.s": "fbc1252adf415db975c49e6b618dea5f31a371d55dc60d660ad0a622f5851b0e",
+    "src/std/mysql/results.s": "f9da98a58678748bf409b9eae2c4ec7d451c1552daff0a91db2ac3f59aaf8d6d",
+    "src/std/mysql/rsa.s": "13a3a84409d89a03ca3caf8b6c7895aa056c55b4c01f32ae7da4619dc3b84beb",
+    "src/std/mysql/statements.s": "7d6117fb401d026dc12c46bd14d1d4cfabd32fe8e71d020349204ca7187dccdc",
+    "src/std/mysql/transport.s": "66f118f3c53b112d8905cab9344ba6b47c3fa07adc9abeacf1e63081db8708ab",
+    "src/std/mysql/values.s": "e76fd009453d8a6cfa48400ae4987c7ac59a2ba56f5da1d41a3c32ea940d57d2"
+  }
+}

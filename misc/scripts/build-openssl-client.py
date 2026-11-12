@@ -38,14 +38,25 @@ with tempfile.TemporaryDirectory(prefix='.s-openssl-',dir=output.parent) as dire
     combined.write_text('\n'.join(path.read_text() for path in all_sources))
     obj=work/'program.o'
     compiler=Path(os.environ.get('S_TEST_COMPILER',ROOT/'bin/s_compiler')).resolve()
-    subprocess.run([str(compiler),'--emit-native-object',str(combined),str(obj)],cwd=ROOT,check=True)
+    assembly=work/'program.s'
+    subprocess.run([str(compiler),'--emit-amd64',str(combined),str(assembly)],cwd=ROOT,check=True)
+    # libc owns process startup here. Initialize the same argument/environment
+    # slots that the freestanding _start initializes, before S global initializers.
+    text=assembly.read_text()
+    setup=''
+    if '.Ls_native_envp:' in text:
+        setup='  movq %rdi,.Ls_native_argc(%rip)\n  movq %rsi,.Ls_native_argv(%rip)\n  movq %rdx,.Ls_native_envp(%rip)\n'
+    assembly.write_text(text+'\n.text\n.globl s_native_initialize_process\n.type s_native_initialize_process,@function\ns_native_initialize_process:\n'+setup+'  ret\n.section .note.GNU-stack,"",@progbits\n')
+    subprocess.run([os.environ.get('S_BOOTSTRAP_AS','as'),'--64',str(assembly),'-o',str(obj)],check=True)
     startup=work/'startup.c'
     startup.write_text('''#include <stdint.h>
 extern long s_native_entry(void);
 extern uintptr_t s_native_gc_stack_top __attribute__((weak));
 extern void s_native_initialize_globals(void) __attribute__((weak));
-int main(void) {
+extern void s_native_initialize_process(long,char**,char**);
+int main(int argc,char **argv,char **envp) {
     uintptr_t stack_anchor=0;
+    s_native_initialize_process(argc,argv,envp);
     if (&s_native_gc_stack_top) s_native_gc_stack_top=(uintptr_t)&stack_anchor;
     if (s_native_initialize_globals) s_native_initialize_globals();
     return (int)s_native_entry();

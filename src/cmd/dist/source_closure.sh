@@ -269,8 +269,20 @@ entry_rel=$entry
 case "$entry_rel" in
     /*) entry_rel=$(printf '%s\n' "$entry_rel" | sed "s#^$root/##") ;;
 esac
-entry_pkg=$(awk '/^[[:space:]]*package[[:space:]]+/ { sub(/^[[:space:]]*package[[:space:]]+/, ""); sub(/[[:space:]].*$/, ""); print; exit }' "$root/$entry_rel")
-if [ -n "$entry_pkg" ]; then
+entry_file=$entry_rel
+case "$entry_file" in /*) ;; *) entry_file="$root/$entry_file" ;; esac
+entry_pkg=$(awk '/^[[:space:]]*package[[:space:]]+/ { sub(/^[[:space:]]*package[[:space:]]+/, ""); sub(/[[:space:]].*$/, ""); print; exit }' "$entry_file")
+if [ "$entry_pkg" = main ]; then
+    # main names unrelated executables throughout the tree. Only siblings of
+    # this entry belong to this executable's package.
+    entry_dir=$(dirname "$entry_file")
+    for sibling in "$entry_dir"/*.s; do
+        [ -f "$sibling" ] || continue
+        case "$sibling" in *_test.s) [ "$mode" = test ] || continue ;; esac
+        sibling_pkg=$(awk '/^[[:space:]]*package[[:space:]]+/ { print $2; exit }' "$sibling")
+        [ "$sibling_pkg" != main ] || printf '%s\n' "$sibling" >>"$queue"
+    done
+elif [ -n "$entry_pkg" ]; then
     { awk -F '\t' -v pkg="$entry_pkg" '$1 == pkg && $2 ~ /\/token\// { print $2 }' "$pkg_index"; \
       awk -F '\t' -v pkg="$entry_pkg" '$1 == pkg && $2 !~ /\/token\// { print $2 }' "$pkg_index"; } |
     while IFS= read -r package_file; do
@@ -296,9 +308,11 @@ while IFS= read -r source_path; do
 
     printf '%s\n' "$rel_path" >>"$seen"
 
-    [ -f "$root/$rel_path" ] || continue
+    input_file=$rel_path
+    case "$input_file" in /*) ;; *) input_file="$root/$input_file" ;; esac
+    [ -f "$input_file" ] || continue
 
-    modules=$(python3 "$script_dir/source_imports.py" "$root/$rel_path")
+    modules=$(python3 "$script_dir/source_imports.py" "$input_file")
     printf '%s\n' "$modules" |
     while IFS= read -r module; do
         [ -n "$module" ] || continue

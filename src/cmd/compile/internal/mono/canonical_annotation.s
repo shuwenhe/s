@@ -181,6 +181,12 @@ func ca_expr_in_scope(compile.internal.ast.expr original, ca_context ctx, bool d
             path := compile.internal.semantic.qualified_expr_path(original)
             owner := compile.internal.semantic.qualified_package_part(path)
             root_type := compile.internal.semantic.lookup_name_type(ctx.env, compile.internal.semantic.extract_module_root(path))
+            // A qualified global is a single binding. Its namespace prefix is
+            // not a record-valued expression that can be inferred recursively.
+            qualified_type := compile.internal.semantic.lookup_name_type(ctx.env, path)
+            if (compile.internal.semantic.is_unknown(root_type) || root_type == "module") && !compile.internal.semantic.is_unknown(qualified_type) && compile.internal.semantic.canonical_enum_index(owner, metadata.declarations) < 0 {
+                return ca_expr_result { value: expr.name(name_expr { name: path, inferred_type: option.some(ty) }), type_name: ty, error: "" }
+            }
             if (compile.internal.semantic.is_unknown(root_type) || root_type == "module") && compile.internal.semantic.canonical_enum_index(owner, metadata.declarations) >= 0 {
                 // Generic nullary variants acquire their contextual nominal type.
                 v.target = std.prelude.box(expr.name(name_expr { name: ty, inferred_type: option.some(ty) }))

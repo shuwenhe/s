@@ -343,6 +343,42 @@ func _bind_parameter(std.database.value source) (_bound_parameter,std.database.e
                 problem = error
             }
         },
+        std.database.value::date(value) : {
+            parameter.type_id = 253
+            encoded, error := encode_length_string(value)
+            parameter.data = encoded
+            problem = error
+        },
+        std.database.value::time(value) : {
+            parameter.type_id = 253
+            encoded, error := encode_length_string(value)
+            parameter.data = encoded
+            problem = error
+        },
+        std.database.value::timestamp(value) : {
+            parameter.type_id = 253
+            encoded, error := encode_length_string(value)
+            parameter.data = encoded
+            problem = error
+        },
+        std.database.value::json(value) : {
+            parameter.type_id = 253
+            encoded, error := encode_length_string(value)
+            parameter.data = encoded
+            problem = error
+        },
+        std.database.value::uuid(value) : {
+            parameter.type_id = 253
+            encoded, error := encode_length_string(value)
+            parameter.data = encoded
+            problem = error
+        },
+        std.database.value::floating(value) : {
+            parameter.type_id = 253
+            encoded, error := encode_length_string(value)
+            parameter.data = encoded
+            problem = error
+        },
         _ : { problem = std.database.failure(std.database.error_unsupported,"MySQL binary parameter type is not implemented") },
     }
     return parameter,problem

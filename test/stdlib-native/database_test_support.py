@@ -8,10 +8,10 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def library_sources():
+def library_sources(include_contracts=True):
     return [ROOT / 'src/option/option.s', ROOT / 'src/result/result.s', ROOT / 'src/prelude/prelude.s',
             ROOT / 'src/std/database/types.s', ROOT / 'src/std/database/lifecycle.s',
-            ROOT / 'src/std/database/rows.s', ROOT / 'src/std/database/interfaces.s']
+            ROOT / 'src/std/database/rows.s'] + ([ROOT / 'src/std/database/interfaces.s'] if include_contracts else [])
 
 
 class NativeDatabaseCase(unittest.TestCase):
@@ -21,7 +21,7 @@ class NativeDatabaseCase(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='s-database-native-') as directory:
             work = Path(directory)
             intermediate, binary = work / 'program.ir', work / 'program'
-            sources = [*library_sources(), *extra, ROOT / 'test/stdlib-native' / fixture]
+            sources = [*library_sources(seed), *extra, ROOT / 'test/stdlib-native' / fixture]
             for source in sources:
                 self.assertTrue(source.is_file(), f'missing implementation: {source}')
             commands = [

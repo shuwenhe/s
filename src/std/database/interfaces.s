@@ -1,53 +1,40 @@
-package std.database
-import "std.result"
+package std.database.contracts
+import ("std.result"; "std.database")
 
-// Contract declarations only. Current standalone compiler cannot emit dynamic
-// trait calls (see doc/database/audit.md). No fake concrete drivers are provided.
-struct options {
-    string host
-    int port
-    string database_name
-    string user
-    string password
-    int connect_timeout_ms
-    int read_timeout_ms
-    int write_timeout_ms
-    int max_packet_bytes
-    string tls_server_name
-    string tls_ca_file
-}
+// Optional declaration-only contracts. Dynamic trait calls are not supported
+// by the standalone compiler; std.mysql exposes concrete native client functions.
 // open validates configuration and must not imply an established connection.
 trait driver {
-    func open(options config) std.result.result[database,error];
+    func open(std.database.options config) std.result.result[database,std.database.error];
 }
 trait database {
-    func connect() std.result.result[connection,error];
-    func close() error;
+    func connect() std.result.result[connection,std.database.error];
+    func close() std.database.error;
 }
 trait query {
-    func query(statement request) std.result.result[rows,error];
+    func query(std.database.statement request) std.result.result[std.database.rows,std.database.error];
 }
 trait exec {
-    func exec(statement request) std.result.result[result,error];
+    func exec(std.database.statement request) std.result.result[std.database.result,std.database.error];
 }
 trait connection {
-    func ping() error;
-    func query(statement request) std.result.result[rows,error];
-    func exec(statement request) std.result.result[result,error];
-    func prepare(string sql) std.result.result[prepared_statement,error];
-    func begin() std.result.result[transaction,error];
-    func close() error;
+    func ping() std.database.error;
+    func query(std.database.statement request) std.result.result[std.database.rows,std.database.error];
+    func exec(std.database.statement request) std.result.result[std.database.result,std.database.error];
+    func prepare(string sql) std.result.result[prepared_statement,std.database.error];
+    func begin() std.result.result[transaction,std.database.error];
+    func close() std.database.error;
 }
 trait transaction {
-    func query(statement request) std.result.result[rows,error];
-    func exec(statement request) std.result.result[result,error];
-    func prepare(string sql) std.result.result[prepared_statement,error];
-    func commit() error;
-    func rollback() error;
-    func close() error;
+    func query(std.database.statement request) std.result.result[std.database.rows,std.database.error];
+    func exec(std.database.statement request) std.result.result[std.database.result,std.database.error];
+    func prepare(string sql) std.result.result[prepared_statement,std.database.error];
+    func commit() std.database.error;
+    func rollback() std.database.error;
+    func close() std.database.error;
 }
 trait prepared_statement {
-    func query(value[] parameters) std.result.result[rows,error];
-    func exec(value[] parameters) std.result.result[result,error];
-    func close() error;
+    func query(std.database.value[] parameters) std.result.result[std.database.rows,std.database.error];
+    func exec(std.database.value[] parameters) std.result.result[std.database.result,std.database.error];
+    func close() std.database.error;
 }

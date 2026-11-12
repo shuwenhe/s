@@ -588,3 +588,13 @@ database-unit-check: seed-compiler-bin
 	@python3 -m unittest discover -s test/stdlib-native -p 'test_database*.py' -v
 	@python3 test/stdlib-native/test_mysql_protocol.py -v
 	@python3 test/stdlib-native/test_postgresql_protocol.py -v
+
+.PHONY: mysql-unit-check mysql-integration-check
+MYSQL84_IMAGE ?= mysql:8.4
+mysql-unit-check: seed-compiler-bin
+	@python3 -m unittest discover -s test/stdlib-native -p 'test_mysql_auth.py' -v
+	@python3 test/stdlib-native/test_mysql_values.py -v
+	@python3 test/stdlib-native/test_mysql_protocol.py -v
+	@python3 test/stdlib-native/test_mysql_closure.py -v
+mysql-integration-check:
+	@python3 test/stdlib-native/run_mysql_matrix.py --image84 '$(MYSQL84_IMAGE)'
