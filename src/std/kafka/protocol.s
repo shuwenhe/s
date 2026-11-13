@@ -326,7 +326,8 @@ func finished(cursor* c) error {
 // CRC32C checksum with reflected Castagnoli polynomial (0x82F63B78)
 // Uses bit-by-bit computation since table literal is too large for IR operand
 func crc32c(string data) int {
-    poly := 0x82f63b78
+    // Polynomial: 0x82F63B78 = 2197175160
+    poly := (33526 << 16) | 15224
     crc := 4294967295
     
     i := 0

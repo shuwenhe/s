@@ -1,8 +1,5 @@
-package main
-
-import ("std.kafka")
-
+// Test broker connection and basic negotiation
 func broker_checks() int {
-    // Test placeholder
+    // TODO: Implement real broker tests
     return 0
 }
