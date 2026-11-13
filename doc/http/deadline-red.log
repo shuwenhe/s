@@ -1,0 +1,16 @@
+test_completed_headers_after_scheduler_pause_exceed_deadline (__main__.NativeHTTPTests.test_completed_headers_after_scheduler_pause_exceed_deadline) ... FAIL
+
+======================================================================
+FAIL: test_completed_headers_after_scheduler_pause_exceed_deadline (__main__.NativeHTTPTests.test_completed_headers_after_scheduler_pause_exceed_deadline)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_http.py", line 196, in test_completed_headers_after_scheduler_pause_exceed_deadline
+    self.response(self.receive(peer), 408)
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_http.py", line 99, in response
+    self.assertTrue(lines[0].startswith(f'HTTP/1.1 {status} '.encode()), raw)
+AssertionError: False is not true : b'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 15\r\nConnection: close\r\n\r\n{"status":"ok"}'
+
+----------------------------------------------------------------------
+Ran 1 test in 15.139s
+
+FAILED (failures=1)

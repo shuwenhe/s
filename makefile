@@ -599,3 +599,11 @@ mysql-unit-check: compiler
 	@python3 test/stdlib-native/test_mysql_closure.py -v
 mysql-integration-check:
 	@python3 test/stdlib-native/run_mysql_matrix.py --image84 '$(MYSQL84_IMAGE)'
+
+# Native HTTP health slice. Integration uses actual loopback sockets and must
+# run in an execution environment authorized for network access.
+.PHONY: http-unit-check http-integration-check
+http-unit-check: compiler
+	@python3 test/stdlib-native/test_http.py NativeHTTPTests.test_native_protocol -v
+http-integration-check: compiler
+	@python3 test/stdlib-native/test_http.py -v

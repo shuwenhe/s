@@ -1,0 +1,16 @@
+test_eintr_restarts_remaining_sleep (__main__.NativeTimeTests.test_eintr_restarts_remaining_sleep) ... {"command": ["strace", "-qq", "-o", "/tmp/s-time-native-_g52a5ln/time-eintr.trace", "-e", "trace=nanosleep", "-e", "inject=nanosleep:error=EINTR:when=1", "/tmp/s-time-native-_g52a5ln/time", "0"], "elapsed_seconds": 0.20512982299987925, "cpu_seconds": 0.0031679999999998723, "reported_ns": 201007292}
+{"command": ["strace", "-qq", "-o", "/tmp/s-time-native-_g52a5ln/seed-time-eintr.trace", "-e", "trace=nanosleep", "-e", "inject=nanosleep:error=EINTR:when=1", "/tmp/s-time-native-_g52a5ln/seed-time", "0"], "elapsed_seconds": 0.2038072489995102, "cpu_seconds": 0.0023980000000000425, "reported_ns": 201179578}
+ok
+test_exact_int64_duration_boundary_reaches_os_without_wrapping (__main__.NativeTimeTests.test_exact_int64_duration_boundary_reaches_os_without_wrapping) ... ok
+test_kernel_errors_are_propagated (__main__.NativeTimeTests.test_kernel_errors_are_propagated) ... ok
+test_real_repeated_signals_resume_remaining_time (__main__.NativeTimeTests.test_real_repeated_signals_resume_remaining_time) ... {"command": ["/tmp/s-time-native-_g52a5ln/real-interrupt"], "elapsed_seconds": 0.20173440700091305, "cpu_seconds": 0.0011830000000001908, "reported_ns": 200421418}
+ok
+test_seed_standalone_uses_identical_real_os_contract (__main__.NativeTimeTests.test_seed_standalone_uses_identical_real_os_contract) ... {"command": ["/tmp/s-time-native-_g52a5ln/seed-time", "0"], "elapsed_seconds": 0.20078670799921383, "cpu_seconds": 0.0003800000000004633, "reported_ns": 200293621}
+ok
+test_sleep_clocks_duration_timers_boundaries_and_cpu (__main__.NativeTimeTests.test_sleep_clocks_duration_timers_boundaries_and_cpu) ... {"command": ["/tmp/s-time-native-_g52a5ln/time", "0"], "elapsed_seconds": 0.20177381400026206, "cpu_seconds": 0.001331999999999861, "reported_ns": 200295620}
+ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 3.466s
+
+OK

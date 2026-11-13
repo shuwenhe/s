@@ -37,6 +37,39 @@ static bool ir_local_root(ir_builder *b,const char *name) {
         if(strlen(b->locals[i-1])==length && !strncmp(b->locals[i-1],name,length)) return true;
     return false;
 }
+/* Retain package identity when native functions share a leaf name. Unique
+ * legacy symbols keep their ABI spelling; ambiguous definitions and their
+ * transfer/borrow metadata must never collapse onto the same IR function. */
+static bool ir_function_key(ir_builder *b,ast_node *function,char out[IR_OPERAND_CAP]) {
+    const char *name=function->as.fn_stmt.name;
+    bool collision=false;
+    if(b->root->native_unit) for(size_t i=0;i<b->root->as.program.statements.len;i++) {
+        ast_node *other=b->root->as.program.statements.data[i];
+        if(other!=function && other->kind==AST_FN_STMT && !other->native_template &&
+           !strcmp(other->as.fn_stmt.name,name)) { collision=true; break; }
+    }
+    int length;
+    if(collision && b->package_name[0] && !strchr(name,'.') &&
+       (strcmp(name,"main") || strcmp(b->package_name,"main")))
+        length=snprintf(out,IR_OPERAND_CAP,"%s.%s",b->package_name,name);
+    else length=snprintf(out,IR_OPERAND_CAP,"%s",name);
+    if(length<0 || length>=IR_OPERAND_CAP) {
+        error_set(b->err,ERR_SEMANTIC,function->pos.line,function->pos.column,"native function identity is too long");
+        return false;
+    }
+    return true;
+}
+static bool ir_local_function_key(ir_builder *b,const char *name,char out[IR_OPERAND_CAP]) {
+    if(!b->root->native_unit || ir_local_root(b,name)) return true;
+    const char *package="";
+    for(size_t i=0;i<b->root->as.program.statements.len;i++) {
+        ast_node *function=b->root->as.program.statements.data[i];
+        if(function->kind==AST_PACKAGE_DECL) package=function->as.package_decl.name;
+        if(function->kind==AST_FN_STMT && !strcmp(package,b->package_name) &&
+           !strcmp(function->as.fn_stmt.name,name)) return ir_function_key(b,function,out);
+    }
+    return true;
+}
 /* Resolve constants by declaration identity, never by a unit-global short
  * name (different imported packages may declare the same constant). */
 static ast_node *find_constant(ir_builder *b, const char *name, const char **declaration_package) {
@@ -1069,6 +1102,7 @@ static bool lower_expr(ir_builder *b, ast_node *expr, char out[IR_OPERAND_CAP]) 
 			}
 			if (expr->as.call_expr.callee && expr->as.call_expr.callee->kind == AST_IDENT_EXPR) {
 				snprintf(callee, sizeof(callee), "%s", expr->as.call_expr.callee->as.ident_expr.name);
+                if(!ir_local_function_key(b,expr->as.call_expr.callee->as.ident_expr.name,callee)) return false;
 				{
 					ast_node *decl = find_extern(b, callee);
 					if (decl && strncmp(decl->as.extern_decl.abi, "libc", 4) == 0 && !ffi_callee_name(decl, callee)) {
@@ -1244,6 +1278,8 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
         if(snprintf(name,sizeof(name),"generic-function:%s",stmt->as.fn_stmt.name)>=(int)sizeof(name)) return false;
         return emit_ins(b,IR_NOP,name,stmt->generic_parameters,stmt->as.fn_stmt.return_type,stmt->pos);
     }
+    char function_name[IR_OPERAND_CAP];
+    if(!ir_function_key(b,stmt,function_name)) return false;
     b->local_count=0;
     for(size_t param=0;param<stmt->as.fn_stmt.param_count;param++) {
         if(!ir_bind_local(b,stmt->as.fn_stmt.params[param],stmt->pos)) return false;
@@ -1269,14 +1305,14 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
 			}
 			used += (size_t)n;
 		}
-		if (!emit_ins(b, IR_EXPORT, stmt->as.fn_stmt.name, stmt->as.fn_stmt.export_symbol, signature, stmt->pos)) {
+		if (!emit_ins(b, IR_EXPORT, function_name, stmt->as.fn_stmt.export_symbol, signature, stmt->pos)) {
 			return false;
 		}
 	}
     {
         char key[IR_OPERAND_CAP], transfer[IR_OPERAND_CAP];
         if (!record_type_name(b,stmt->as.fn_stmt.return_type?stmt->as.fn_stmt.return_type:"()",transfer) ||
-            snprintf(key, sizeof(key), "return-transfer:%s", stmt->as.fn_stmt.name) >= (int)sizeof(key) ||
+            snprintf(key, sizeof(key), "return-transfer:%s", function_name) >= (int)sizeof(key) ||
             !emit_ins(b, IR_NOP, key, "", transfer, stmt->pos)) return false;
         for (i = 0; i < stmt->as.fn_stmt.param_count; i++) {
             if (i < 64 && (stmt->as.fn_stmt.native_borrow_mask & (1ULL << i))) {
@@ -1284,16 +1320,16 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
                 size_t n=strlen(stmt->as.fn_stmt.param_types[i]);
                 if(n<2 || n>=sizeof(base)) return false;
                 memcpy(base,stmt->as.fn_stmt.param_types[i],n-1); base[n-1]=0;
-                if(!record_type_name(b,base,qualified) || snprintf(key,sizeof(key),"borrow-param:%s",stmt->as.fn_stmt.name)>=(int)sizeof(key) ||
+                if(!record_type_name(b,base,qualified) || snprintf(key,sizeof(key),"borrow-param:%s",function_name)>=(int)sizeof(key) ||
                     !emit_ins(b,IR_NOP,key,stmt->as.fn_stmt.params[i],qualified,stmt->pos)) return false;
             }
             if (!record_type_name(b,stmt->as.fn_stmt.param_types[i],transfer) ||
-                snprintf(key, sizeof(key), "param-transfer:%s", stmt->as.fn_stmt.name) >= (int)sizeof(key) ||
+                snprintf(key, sizeof(key), "param-transfer:%s", function_name) >= (int)sizeof(key) ||
                 !emit_ins(b, IR_NOP, key, stmt->as.fn_stmt.params[i], transfer, stmt->pos)) return false;
         }
     }
     /* PARAM records stay contiguous for the existing hosted function loader. */
-    if (!emit_ins(b, IR_FUNC_BEGIN, stmt->as.fn_stmt.name, "", "", stmt->pos)) return false;
+    if (!emit_ins(b, IR_FUNC_BEGIN, function_name, "", "", stmt->pos)) return false;
     /* Store the function's return type so enum constructors within it can access it */
     b->current_func_return_type = stmt->as.fn_stmt.return_type ? stmt->as.fn_stmt.return_type : "()";
     for (i = 0; i < stmt->as.fn_stmt.param_count; i++) {
@@ -1336,7 +1372,7 @@ static bool lower_fn(ir_builder *b, ast_node *stmt) {
     }
     b->local_count=0;
     b->current_func_return_type = NULL;  /* Clear function context after processing */
-	return emit_ins(b, IR_FUNC_END, stmt->as.fn_stmt.name, "", "", stmt->pos);
+	return emit_ins(b, IR_FUNC_END, function_name, "", "", stmt->pos);
 }
 static bool ir_global_type(ir_builder *b,ast_node *n,char out[IR_OPERAND_CAP],unsigned depth) {
     if(!n || depth>64) return false;

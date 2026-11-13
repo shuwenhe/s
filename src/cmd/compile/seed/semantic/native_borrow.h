@@ -420,7 +420,11 @@ static bool borrow_leaf_inner(borrow_proof *p, ast_node *n) {
     case AST_BLOCK: {
         size_t saved=p->count;
         for(size_t i=0;i<n->as.block.statements.len;i++) if(!borrow_leaf(p,n->as.block.statements.data[i])) return false;
-        p->count=saved; return true;
+        /* Tuple destructuring introduces a transparent lowering block, not a
+         * lexical scope. Its owned result slots remain visible to subsequent
+         * reborrows, just as in borrow_walk. Real scopes still expire here. */
+        if(!n->as.block.transparent_scope) p->count=saved;
+        return true;
     }
     case AST_RETURN_STMT: return n->as.return_stmt.values.len<=1 && borrow_read_expr(p,n->as.return_stmt.value,false);
     case AST_LET_STMT:

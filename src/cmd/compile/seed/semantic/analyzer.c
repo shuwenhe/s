@@ -586,6 +586,19 @@ static symbol *scope_lookup(scope *s, const char *name) {
 	return NULL;
 }
 
+/* Native units merge packages, not their function namespaces. Prefer the
+ * declaration package while preserving lexical value/parameter shadowing. */
+static symbol *scope_lookup_source_name(semantic_ctx *ctx, const char *name) {
+    symbol *binding = scope_lookup(ctx->current_scope, name);
+    if (!ctx->root->native_unit || !ctx->current_package[0] || strchr(name, '.') ||
+        (binding && binding->kind != SYMBOL_FN)) return binding;
+    char qualified[1024];
+    int length = snprintf(qualified, sizeof(qualified), "%s.%s", ctx->current_package, name);
+    if (length < 0 || (size_t)length >= sizeof(qualified)) return binding;
+    symbol *local = scope_lookup(ctx->current_scope, qualified);
+    return local ? local : binding;
+}
+
 static int same_function_signature(const symbol *existing, const char *return_type,
 	char **param_types, size_t param_count) {
 	size_t i;
@@ -1665,7 +1678,7 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 			}
 			return 1;
 		case AST_IDENT_EXPR:
-			sym = scope_lookup(ctx->current_scope, node->as.ident_expr.name);
+			sym = scope_lookup_source_name(ctx, node->as.ident_expr.name);
 			if (!sym) {
 				error_set(ctx->err, ERR_SEMANTIC, node->pos.line, node->pos.column,
 					"use of undeclared symbol '%s'", node->as.ident_expr.name);
@@ -2159,11 +2172,35 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 								node->as.call_expr.args.len);
 							return 0;
 						}
+                        /* Ambiguous source leaves need their exact package signature;
+                         * unique legacy/builtin calls retain their existing rules. */
+                        symbol *source_fn = node->as.call_expr.native_callee_name
+                            ? scope_lookup(ctx->current_scope, node->as.call_expr.native_callee_name) : NULL;
+                        if (!source_fn) source_fn = scope_lookup(ctx->current_scope, full_qualified_name);
+                        unsigned source_definitions = 0;
+                        if (source_fn) {
+                            const char *leaf = strrchr(source_fn->name, '.');
+                            leaf = leaf ? leaf + 1 : source_fn->name;
+                            for (size_t definition = 0; definition < ctx->root->as.program.statements.len; definition++) {
+                                ast_node *candidate = ctx->root->as.program.statements.data[definition];
+                                if (candidate->kind == AST_FN_STMT && !candidate->native_template &&
+                                    !strcmp(candidate->as.fn_stmt.name, leaf)) source_definitions++;
+                            }
+                        }
 						// Analyze arguments
 						for (i = 0; i < node->as.call_expr.args.len; i++) {
 							if (!analyze_expr(ctx, node->as.call_expr.args.data[i], &rhs_type)) {
 								return 0;
 							}
+                            if (source_definitions > 1 && source_fn->kind == SYMBOL_FN && i < source_fn->param_count &&
+                                !(i < 64 && (node->as.call_expr.native_borrow_mask & (1ULL << i))) &&
+                                !is_type_assignable_ctx(ctx, source_fn->param_types[i], rhs_type)) {
+                                error_set(ctx->err, ERR_SEMANTIC, node->as.call_expr.args.data[i]->pos.line,
+                                    node->as.call_expr.args.data[i]->pos.column,
+                                    "argument %zu type mismatch for '%s': expected '%s', got '%s'",
+                                    i + 1, source_fn->name, source_fn->param_types[i], rhs_type ? rhs_type : TYPE_ANY);
+                                return 0;
+                            }
 						}
 						// Set return type and mark as resolved
 						*out_type = imported_return_type;
@@ -2357,7 +2394,12 @@ static int analyze_expr(semantic_ctx *ctx, ast_node *node, const char **out_type
 					"call callee must be an identifier");
 				return 0;
 			}
-			sym = scope_lookup(ctx->current_scope, node->as.call_expr.callee->as.ident_expr.name);
+			sym = scope_lookup_source_name(ctx, node->as.call_expr.callee->as.ident_expr.name);
+            if (ctx->root->native_unit && node->as.call_expr.native_callee_name &&
+                (!sym || sym->kind == SYMBOL_FN)) {
+                symbol *resolved = scope_lookup(ctx->current_scope, node->as.call_expr.native_callee_name);
+                if (resolved) sym = resolved;
+            }
             if(!sym && !strcmp(node->as.call_expr.callee->as.ident_expr.name,"make") && node->as.call_expr.args.len==2 && node->as.call_expr.args.data[0]->kind==AST_STRING_EXPR && node->as.call_expr.args.data[0]->as.string_expr.is_type_name) {
                 char element[1024]; const char *type=node->as.call_expr.args.data[0]->as.string_expr.literal;
                 if(!seed_array_element(type,element,sizeof(element)) || !analyze_expr(ctx,node->as.call_expr.args.data[1],&rhs_type) || strcmp(rhs_type,"int")) { error_set(ctx->err,ERR_SEMANTIC,node->pos.line,node->pos.column,"invalid array make type or length"); return 0; }
@@ -2458,6 +2500,7 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 	const char *expr_type;
 	symbol *target;
 	symbol *predeclared;
+	const char *declaration_package = "";
 	if (!node) {
 		return 1;
 	}
@@ -2487,6 +2530,10 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 			}
 			for (i = 0; i < node->as.program.statements.len; i++) {
 				ast_node *decl = node->as.program.statements.data[i];
+                if (decl->kind == AST_PACKAGE_DECL) {
+                    declaration_package = decl->as.package_decl.name;
+                    continue;
+                }
 				if (decl->kind == AST_FN_STMT || decl->kind == AST_EXTERN_DECL) {
 					const char *name = decl->kind == AST_FN_STMT ? decl->as.fn_stmt.name : decl->as.extern_decl.name;
 					char **param_types = decl->kind == AST_FN_STMT ? decl->as.fn_stmt.param_types : decl->as.extern_decl.param_types;
@@ -2518,6 +2565,36 @@ static int analyze_node(semantic_ctx *ctx, ast_node *node) {
 						if (status < 0) { error_set(ctx->err, ERR_OUT_OF_MEMORY, decl->pos.line, decl->pos.column, "out of memory"); return 0; }
 						continue;
 					}
+                    if (node->native_unit && decl->kind == AST_FN_STMT && declaration_package[0]) {
+                        char qualified[1024];
+                        size_t prefix = strlen(declaration_package);
+                        int length = snprintf(qualified, sizeof(qualified), "%s%s%s",
+                            !strncmp(name, declaration_package, prefix) && name[prefix] == '.' ? "" : declaration_package,
+                            !strncmp(name, declaration_package, prefix) && name[prefix] == '.' ? "" : ".", name);
+                        if (length < 0 || (size_t)length >= sizeof(qualified)) {
+                            error_set(ctx->err, ERR_SEMANTIC, decl->pos.line, decl->pos.column, "package function name is too long");
+                            return 0;
+                        }
+                        status = scope_define(ctx->current_scope, qualified, SYMBOL_FN, 0,
+                            (int)param_count, (int)param_count, return_type ? return_type : TYPE_ANY, param_types, param_count);
+                        if (status <= 0) {
+                            error_set(ctx->err, status < 0 ? ERR_OUT_OF_MEMORY : ERR_SEMANTIC,
+                                decl->pos.line, decl->pos.column, status < 0 ? "out of memory defining '%s'" : "redefinition of function '%s'", qualified);
+                            return 0;
+                        }
+                        /* Keep the legacy alias only when it is unambiguous.
+                         * Existing unique-name lookup/type checks stay intact. */
+                        bool collision = false;
+                        for (size_t other = 0; other < node->as.program.statements.len; other++) {
+                            ast_node *candidate = node->as.program.statements.data[other];
+                            if (candidate != decl && candidate->kind == AST_FN_STMT &&
+                                !candidate->native_template && !strcmp(candidate->as.fn_stmt.name, name)) {
+                                collision = true;
+                                break;
+                            }
+                        }
+                        if (collision) continue;
+                    }
 					if (decl->kind == AST_FN_STMT &&
 						(strcmp(name, "len") == 0 || strcmp(name, "print") == 0 || strcmp(name, "println") == 0) &&
 						scope_lookup_current(ctx->current_scope, name)) continue;

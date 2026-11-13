@@ -6,7 +6,10 @@ func main() int {
     config := std.http.options { host: "127.0.0.1", port: 0, max_header_bytes: 512, max_request_line_bytes: 256, max_headers: 8, accept_timeout_ms: 1000, read_timeout_ms: 150, write_timeout_ms: 150 }
     if mode == "invalid" { config.read_timeout_ms = -1 }
     server,error := std.http.listen(config)
-    if mode == "invalid" { if error.code != 22 || !server.closed { return 1 }; return 0 }
+    if mode == "invalid" {
+        if error.code != 22 || !server.closed { return 1 }
+        return 0
+    }
     if error.code != 0 { println("LISTEN ERROR " + error.message); return 2 }
     port,port_error := std.http.local_port(server*)
     if port_error.code != 0 { std.http.shutdown(server*); return 3 }

@@ -1,0 +1,8 @@
+test_accept_read_and_accept_timeouts (__main__.NativeTCPTests.test_accept_read_and_accept_timeouts) ... ok
+test_connect_read_write_eof_close_and_connection_refusal (__main__.NativeTCPTests.test_connect_read_write_eof_close_and_connection_refusal) ... ok
+test_partial_write_and_write_all_preserve_exact_bytes (__main__.NativeTCPTests.test_partial_write_and_write_all_preserve_exact_bytes) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 3.196s
+
+OK

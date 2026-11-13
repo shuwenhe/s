@@ -1,0 +1,8 @@
+compiled 1 S modules -> /home/shuwen/shuwen/s/.bootstrap/native-record-borrow/value.ir
+compiled standalone Linux/amd64 /home/shuwen/shuwen/s/.bootstrap/native-record-borrow/value.ir -> /home/shuwen/shuwen/s/.bootstrap/native-record-borrow/value
+proven nonescaping record borrow mutation: PASS
+borrow escape/alias/effects and forged IR reject before output/tools: PASS
+compiled 2 S modules -> /home/shuwen/shuwen/s/.bootstrap/native-record-borrow/dfa.ir
+compiled standalone Linux/amd64 /home/shuwen/shuwen/s/.bootstrap/native-record-borrow/dfa.ir -> /home/shuwen/shuwen/s/.bootstrap/native-record-borrow/dfa
+real dfa.s source and standalone emission: PASS (isolated dependency types)
+compiler package has no ownership exemption: PASS

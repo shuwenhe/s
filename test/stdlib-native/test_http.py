@@ -100,6 +100,8 @@ class NativeHTTPTests(unittest.TestCase):
         fields = dict(line.split(b': ', 1) for line in lines[1:])
         self.assertEqual(fields[b'Connection'], b'close')
         self.assertEqual(fields[b'Content-Type'], b'application/json')
+        if status == 405:
+            self.assertEqual(fields[b'Allow'], b'GET, HEAD')
         if body:
             self.assertEqual(int(fields[b'Content-Length']), len(payload))
             json.loads(payload)
@@ -210,9 +212,12 @@ class NativeHTTPTests(unittest.TestCase):
         with self.running('many') as (process, port):
             baseline = len(list(Path(f'/proc/{process.pid}/fd').iterdir()))
             raw = b'GET /health HTTP/1.1\r\nHost: x\r\n\r\n'
-            for _ in range(47):
-                result = self.request(port, raw + raw)
-                self.response(result)
+            for index in range(47):
+                # Exercise parser-error cleanup in the same long-lived process,
+                # rather than letting process exit hide an accepted-FD leak.
+                malformed = index % 3 == 0
+                result = self.request(port, b'GET /health HTTP/1.1\r\n\r\n' if malformed else raw + raw)
+                self.response(result, 400 if malformed else 200)
                 self.assertEqual(result.count(b'HTTP/1.1'), 1)
                 self.assertLessEqual(len(list(Path(f'/proc/{process.pid}/fd').iterdir())), baseline + 1)
             self.response(self.request(port, raw))

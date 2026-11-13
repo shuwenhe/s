@@ -1,18 +1,10 @@
+// Full std.http closure regression: nested borrows compile and the closed
+// server returns the expected error without opening a socket.
 package main
-import ("std.http"; "std.tcp")
-func read(std.tcp.socket* connection, std.http.options config) (std.http.request,std.http.http_error) {
-    data := ""
-    while true {
-        if len(data) > 0 { return std.http.parse_request(data,config) }
-        chunk,error := std.tcp.read_some(connection*,64,1)
-        if error.code != 0 { return std.http.request {},std.http.http_error { code: error.code } }
-        data = data + chunk.data
-    }
-    return std.http.request {},std.http.http_error {}
-}
+import "std.http"
 func main() int {
-    connection := std.tcp.socket { closed: true, descriptor: -1 }
-    request,error := read(connection*,std.http.options {})
+    server := std.http.server { closed: true }
+    event,error := std.http.serve_next(server*)
     if error.code != 9 { return 1 }
     return 0
 }

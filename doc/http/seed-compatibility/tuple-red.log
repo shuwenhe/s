@@ -1,0 +1,16 @@
+test_tuple_owner_in_borrowed_body_preserves_transparent_not_lexical_scope (__main__.SeedImportedBorrowTests.test_tuple_owner_in_borrowed_body_preserves_transparent_not_lexical_scope) ... 
+  test_tuple_owner_in_borrowed_body_preserves_transparent_not_lexical_scope (__main__.SeedImportedBorrowTests.test_tuple_owner_in_borrowed_body_preserves_transparent_not_lexical_scope) (compiler='s_seed', variant='valid') ... FAIL
+
+======================================================================
+FAIL: test_tuple_owner_in_borrowed_body_preserves_transparent_not_lexical_scope (__main__.SeedImportedBorrowTests.test_tuple_owner_in_borrowed_body_preserves_transparent_not_lexical_scope) (compiler='s_seed', variant='valid')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_seed_borrow_integration.py", line 39, in test_tuple_owner_in_borrowed_body_preserves_transparent_not_lexical_scope
+    self.assertEqual(build.returncode, 0, build.stderr.decode(errors='replace'))
+AssertionError: 1 != 0 : /tmp/tmp77yvubbm/main.s:7:5: error[5]: unproven record borrow: escaping handle or unsupported call/body
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.311s
+
+FAILED (failures=1)
