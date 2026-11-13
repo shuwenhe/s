@@ -1,0 +1,143 @@
+Building seed compiler...
+compiler-entry=/home/shuwen/shuwen/s/src/cmd/compile/main.s
+compiler-source=src/cmd/compile/main.s
+compiler-source=src/cmd/compile/internal/driver/driver.s
+compiler-source=src/cmd/compile/internal/pipeline/authority.s
+compiler-source=src/cmd/compile/internal/pipeline/pipeline.s
+compiler-source=src/cmd/compile/internal/compiler/frontend_core.s
+compiler-source=src/cmd/compile/internal/compiler/frontend.s
+compiler-source=src/cmd/compile/internal/compiler/native_frontend.s
+compiler-source=src/cmd/compile/internal/mir/program.s
+compiler-source=src/cmd/compile/internal/mir/program_enum.s
+compiler-source=src/cmd/compile/internal/ir/program_lower.s
+compiler-source=src/cmd/compile/internal/ir/program_payload.s
+compiler-source=src/cmd/compile/internal/ir/program_environment.s
+compiler-source=src/cmd/compile/internal/ir/program_enum.s
+compiler-source=src/cmd/compile/internal/compiler/canonical_source.s
+compiler-source=src/cmd/compile/internal/mono/monomorphization.s
+compiler-source=src/cmd/compile/internal/mono/type_elaboration.s
+compiler-source=src/cmd/compile/internal/mono/canonical_annotation.s
+compiler-source=src/cmd/compile/internal/ssa/program.s
+compiler-source=src/cmd/compile/internal/ssa/function_lower.s
+compiler-source=src/cmd/compile/internal/codegen/amd64_program.s
+compiler-source=src/cmd/compile/internal/codegen/native_runtime_extensions.s
+compiler-source=src/cmd/compile/internal/core/native_build.s
+compiler-source=src/cmd/compile/internal/compiler/frontend_stages.s
+compiler-source=src/cmd/compile/internal/mir/compiler_emit.s
+compiler-source=src/cmd/compile/internal/compiler/stages.s
+compiler-source=src/cmd/compile/internal/compiler/main.s
+compiler-source=src/cmd/compile/internal/compiler/compiler.s
+compiler-source=src/cmd/compile/internal/compiler/bridge.s
+compiler-source=src/cmd/compile/internal/rewriteresults/rewriteresults.s
+compiler-source=src/cmd/compile/internal/slice/slice.s
+compiler-source=src/cmd/compile/internal/walk/assign.s
+compiler-source=src/cmd/compile/internal/walk/builtin.s
+compiler-source=src/cmd/compile/internal/walk/closure.s
+compiler-source=src/cmd/compile/internal/walk/compare.s
+compiler-source=src/cmd/compile/internal/walk/complit.s
+compiler-source=src/cmd/compile/internal/walk/convert.s
+compiler-source=src/cmd/compile/internal/walk/expr.s
+compiler-source=src/cmd/compile/internal/walk/order.s
+compiler-source=src/cmd/compile/internal/walk/range.s
+compiler-source=src/cmd/compile/internal/walk/select.s
+compiler-source=src/cmd/compile/internal/walk/stmt.s
+compiler-source=src/cmd/compile/internal/walk/switch.s
+compiler-source=src/cmd/compile/internal/walk/temp.s
+compiler-source=src/cmd/compile/internal/walk/walk.s
+compiler-source=src/cmd/compile/internal/ssagen/arch.s
+compiler-source=src/cmd/compile/internal/ssagen/abi.s
+compiler-source=src/cmd/compile/internal/ssagen/intrinsics.s
+compiler-source=src/cmd/compile/internal/ssagen/nowb.s
+compiler-source=src/cmd/compile/internal/ssagen/pgen.s
+compiler-source=src/cmd/compile/internal/ssagen/phi.s
+compiler-source=src/cmd/compile/internal/ssagen/simdintrinsics.s
+compiler-source=src/cmd/compile/internal/ssagen/ssa.s
+compiler-source=src/cmd/compile/internal/ssa/op.s
+compiler-source=src/cmd/compile/internal/ssa/value.s
+compiler-source=src/cmd/compile/internal/ssa/block.s
+compiler-source=src/cmd/compile/internal/ssa/func.s
+compiler-source=src/cmd/compile/internal/ssa/config.s
+compiler-source=src/cmd/compile/internal/ssa/cache.s
+compiler-source=src/cmd/compile/internal/ssa/uses.s
+compiler-source=src/cmd/compile/internal/ssa/rewrite.s
+compiler-source=src/cmd/compile/internal/ssa/rewritegeneric.s
+compiler-source=src/cmd/compile/internal/ssa/rewriteAMD64.s
+compiler-source=src/cmd/compile/internal/ssa/rewriteARM64.s
+compiler-source=src/cmd/compile/internal/ssa/rewriteARM.s
+compiler-source=src/cmd/compile/internal/ssa/deadcode.s
+compiler-source=src/cmd/compile/internal/ssa/cse.s
+compiler-source=src/cmd/compile/internal/ssa/copyelim.s
+compiler-source=src/cmd/compile/internal/ssa/dom.s
+compiler-source=src/cmd/compile/internal/ssa/prove.s
+compiler-source=src/cmd/compile/internal/ssa/regalloc.s
+compiler-source=src/cmd/compile/internal/ssa/schedule.s
+compiler-source=src/cmd/compile/internal/ssa/stackalloc.s
+compiler-source=src/cmd/compile/internal/ssa/check.s
+compiler-source=src/cmd/compile/internal/ssa/print.s
+compiler-source=src/cmd/compile/internal/ssa/compile.s
+compiler-source=src/cmd/compile/internal/lexer/token/token.s
+compiler-source=src/cmd/compile/internal/ast/ast.s
+compiler-source=src/cmd/compile/internal/ast/ast_unit.s
+compiler-source=src/cmd/compile/internal/ast/commentmap.s
+compiler-source=src/cmd/compile/internal/ast/directive.s
+compiler-source=src/cmd/compile/internal/ast/filter.s
+compiler-source=src/cmd/compile/internal/ast/import.s
+compiler-source=src/cmd/compile/internal/ast/print.s
+compiler-source=src/cmd/compile/internal/ast/resolve.s
+compiler-source=src/cmd/compile/internal/ast/scope.s
+compiler-source=src/cmd/compile/internal/ast/walk.s
+compiler-source=src/cmd/compile/internal/canonical/canonical_ast_check.s
+compiler-source=src/cmd/compile/internal/parser/parser.s
+compiler-source=src/cmd/compile/internal/parser/syntax/canonical_parser.s
+compiler-source=src/cmd/compile/internal/parser/syntax/syntax.s
+compiler-source=src/cmd/compile/internal/prelude.s
+compiler-source=src/cmd/compile/internal/semantic/canonical_enum.s
+compiler-source=src/cmd/compile/internal/semantic/semantic.s
+compiler-source=src/cmd/compile/internal/stage5_gate.s
+compiler-source=src/cmd/compile/internal/typesys/canonical_type.s
+compiler-source=src/cmd/compile/internal/typesys/typesys.s
+compiler-source=src/fs/fs.s
+compiler-source=src/io/io.s
+compiler-source=src/option/option.s
+compiler-source=src/prelude/prelude.s
+compiler-source=src/result/result.s
+compiled 101 S modules -> .bootstrap/compiler/compiler.ir
+compiled standalone Linux/amd64 .bootstrap/compiler/compiler.ir -> ./bin/s_compiler
+test_crud_dependency_closure_and_configuration_failures (__main__.MySQLClientCompilationTests.test_crud_dependency_closure_and_configuration_failures) ... ok
+test_cross_package_constant_and_local_field_share_spelling (__main__.QualifiedConstantTests.test_cross_package_constant_and_local_field_share_spelling) ... ok
+test_qualified_constant_assignment_to_reference_field (__main__.QualifiedConstantTests.test_qualified_constant_assignment_to_reference_field) ... ok
+test_c_startup_initializes_native_environment (__main__.TLSClientStartupTests.test_c_startup_initializes_native_environment) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 31.458s
+
+OK
+test_native_and_sha2_independent_vectors (test_mysql_auth.MySQLAuthTests.test_native_and_sha2_independent_vectors) ... ok
+test_oaep_ciphertext_decrypts_with_independent_rsa_implementation (test_mysql_auth.MySQLRSATests.test_oaep_ciphertext_decrypts_with_independent_rsa_implementation) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 2.279s
+
+OK
+test_binary_signed_unsigned_null_bitmap_datetime_blob_and_decimal (__main__.MySQLValuesTests.test_binary_signed_unsigned_null_bitmap_datetime_blob_and_decimal) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.448s
+
+OK
+test_length_encoding_signed_minimum_null_bitmap_and_truncation (__main__.MySQLProtocolTests.test_length_encoding_signed_minimum_null_bitmap_and_truncation) ... ok
+test_ok_error_null_rows_and_command_encoding (__main__.MySQLProtocolTests.test_ok_error_null_rows_and_command_encoding) ... ok
+test_packet_sequence_limits_lenenc_and_malformed_frames (__main__.MySQLProtocolTests.test_packet_sequence_limits_lenenc_and_malformed_frames) ... ok
+test_prepared_binding_metadata_and_auth_switch (__main__.MySQLProtocolTests.test_prepared_binding_metadata_and_auth_switch) ... ok
+test_v10_handshake_capabilities_scramble_and_truncation (__main__.MySQLProtocolTests.test_v10_handshake_capabilities_scramble_and_truncation) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 1.594s
+
+OK
+test_external_entry_resolves_mysql_and_only_its_main_package (__main__.MySQLClosureTests.test_external_entry_resolves_mysql_and_only_its_main_package) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 2.785s
+
+OK
