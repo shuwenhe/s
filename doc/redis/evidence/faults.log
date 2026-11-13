@@ -1,7 +1,0 @@
-test_fragmented_and_failed_connections (__main__.Faults.test_fragmented_and_failed_connections) ... ok
-
-----------------------------------------------------------------------
-Ran 1 test in 12.412s
-
-OK
-redis faults: PASS

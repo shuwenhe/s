@@ -1,4 +1,0 @@
-true-selfhost verification passed: /home/shuwen/shuwen/s/bin/s_compiler
-native-codegen=structured-mir-to-ssa-to-amd64
-true-selfhost verification passed: /tmp/s-canonical-mir-public.JCgU3s/program
-canonical MIR closure, source-dependent dump and MIR/SSA/native handoff: PASS

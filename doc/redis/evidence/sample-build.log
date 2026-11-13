@@ -1,3 +1,0 @@
-Command: python3 misc/scripts/build-openssl-client.py test/redis/basic/main.s -o /tmp/s-redis-smoke
-Exit code: 0
-Execution: see make-redis-check.log (native S Redis smoke PASS).

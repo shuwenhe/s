@@ -1,6 +1,0 @@
-test_external_entry_resolves_mysql_and_only_its_main_package (__main__.MySQLClosureTests.test_external_entry_resolves_mysql_and_only_its_main_package) ... ok
-
-----------------------------------------------------------------------
-Ran 1 test in 1.280s
-
-OK

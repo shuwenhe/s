@@ -1,2 +1,0 @@
-# Keep reproducible test evidence despite the repository-wide *.log rule.
-!*.log

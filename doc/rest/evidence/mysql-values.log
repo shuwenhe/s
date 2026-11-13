@@ -1,6 +1,0 @@
-test_binary_signed_unsigned_null_bitmap_datetime_blob_and_decimal (__main__.MySQLValuesTests.test_binary_signed_unsigned_null_bitmap_datetime_blob_and_decimal) ... ok
-
-----------------------------------------------------------------------
-Ran 1 test in 0.165s
-
-OK
