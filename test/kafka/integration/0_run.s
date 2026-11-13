@@ -1,19 +1,19 @@
 package main
 
 func main() int {
-    status := 0
+    var result int = 0
     
     if apiversions_checks() != 0 {
-        status = 1
+        result = 1
     }
     
-    if status == 0 && broker_checks() != 0 {
-        status = 2
+    if result == 0 && broker_checks() != 0 {
+        result = 2
     }
     
-    if status == 0 && metadata_checks() != 0 {
-        status = 3
+    if result == 0 && metadata_checks() != 0 {
+        result = 3
     }
     
-    return status
+    return result
 }
