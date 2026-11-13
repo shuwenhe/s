@@ -51,7 +51,7 @@ struct message_set {
 struct partition {
     int id
     int leader_id
-    int error_code
+    int status
 }
 
 struct metadata {

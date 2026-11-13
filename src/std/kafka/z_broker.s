@@ -1,12 +1,6 @@
 package std.kafka
 
-import ("std.tcp"; "std.result"; "std.time")
-
-// Kafka broker connection and protocol negotiation
-struct broker_error {
-    int code
-    string message
-}
+import ("std.tcp")
 
 struct broker {
     std.tcp.socket connection
@@ -20,36 +14,36 @@ struct api_version {
     int max_version
 }
 
-struct cursor {
-    string data
-    int position
-}
-
-// Connect to a Kafka broker
-func connect_broker(string host, int port, string client_id, int timeout_ms) (broker, broker_error) {
-    socket, tcp_err := std.tcp.dial_ipv4(host, port, timeout_ms)
+func connect_broker(string host, int port, string client_id, int timeout_ms) (broker, error) {
+    var sock std.tcp.socket
+    var tcp_err std.tcp.error
+    sock, tcp_err = std.tcp.dial_ipv4(host, port, timeout_ms)
     if tcp_err.code != 0 {
-        return broker { connection: socket }, broker_error { 
-            code: tcp_err.code,
-            message: "tcp connect: " + tcp_err.operation
-        }
+        var empty_broker broker
+        var result_err error
+        result_err.code = tcp_err.code
+        result_err.message = "tcp connect: " + tcp_err.operation
+        return empty_broker, result_err
     }
     
-    return broker {
-        connection: socket,
-        client_id: client_id,
-        correlation_id: 1
-    }, broker_error { code: 0 }
+    var b broker
+    b.connection = sock
+    b.client_id = client_id
+    b.correlation_id = 1
+    var ok_err error
+    ok_err.code = 0
+    return b, ok_err
 }
 
-// Send a raw Kafka request and receive response
-// Handles framing: 4-byte size prefix followed by request data
-func send_request(broker* b, string request_data, int timeout_ms) (string, broker_error) {
+func send_request(broker* b, string request_data, int timeout_ms) (string, error) {
     if b.connection.closed {
-        return "", broker_error { code: -1, message: "connection closed" }
+        var empty_result string = ""
+        var err error
+        err.code = -1
+        err.message = "connection closed"
+        return empty_result, err
     }
     
-    // Build frame: 4-byte size + request data
     size := len(request_data)
     size_bytes := make([]int, 4)
     size_bytes[0] = (size >> 24) & 0xff
@@ -65,29 +59,32 @@ func send_request(broker* b, string request_data, int timeout_ms) (string, broke
     }
     frame = frame + request_data
     
-    // Send the entire frame
     _, write_err := std.tcp.write_all(&b.connection, frame, timeout_ms)
     if write_err.code != 0 {
-        return "", broker_error {
-            code: write_err.code,
-            message: "tcp write: " + write_err.operation
-        }
+        var empty_result string = ""
+        var err error
+        err.code = write_err.code
+        err.message = "tcp write: " + write_err.operation
+        return empty_result, err
     }
     
-    // Read response size (4 bytes)
     size_data, read_err := std.tcp.read_some(&b.connection, 4, timeout_ms)
     if read_err.code != 0 {
-        return "", broker_error {
-            code: read_err.code,
-            message: "tcp read size: " + read_err.operation
-        }
+        var empty_result string = ""
+        var err error
+        err.code = read_err.code
+        err.message = "tcp read size: " + read_err.operation
+        return empty_result, err
     }
     
     if len(size_data.data) != 4 {
-        return "", broker_error { code: -1, message: "incomplete response size" }
+        var empty_result string = ""
+        var err error
+        err.code = -1
+        err.message = "incomplete response size"
+        return empty_result, err
     }
     
-    // Parse response size (big-endian)
     response_size := 0
     i = 0
     while i < 4 {
@@ -96,62 +93,85 @@ func send_request(broker* b, string request_data, int timeout_ms) (string, broke
     }
     
     if response_size < 0 || response_size > 1048576 {
-        return "", broker_error { code: -1, message: "invalid response size" }
+        var empty_result string = ""
+        var err error
+        err.code = -1
+        err.message = "invalid response size"
+        return empty_result, err
     }
     
-    // Read response data
-    response_data, read_err := std.tcp.read_some(&b.connection, response_size, timeout_ms)
+    response_data, read_err = std.tcp.read_some(&b.connection, response_size, timeout_ms)
     if read_err.code != 0 {
-        return "", broker_error {
-            code: read_err.code,
-            message: "tcp read data: " + read_err.operation
-        }
+        var empty_result string = ""
+        var err error
+        err.code = read_err.code
+        err.message = "tcp read data: " + read_err.operation
+        return empty_result, err
     }
     
-    return response_data.data, broker_error { code: 0 }
+    var ok_err error
+    ok_err.code = 0
+    return response_data.data, ok_err
 }
 
-// Close broker connection
-func close_broker(broker* b) broker_error {
+func close_broker(broker* b) error {
     tcp_err := std.tcp.close(&b.connection)
     if tcp_err.code != 0 {
-        return broker_error {
-            code: tcp_err.code,
-            message: "tcp close: " + tcp_err.operation
-        }
+        var err error
+        err.code = tcp_err.code
+        err.message = "tcp close: " + tcp_err.operation
+        return err
     }
-    return broker_error { code: 0 }
+    var ok_err error
+    ok_err.code = 0
+    return ok_err
 }
 
-// Build ApiVersions request
-// Format: api_key(2) + version(2) + correlation_id(4) + client_id_string
 func build_api_versions_request(string client_id, int correlation_id) string {
     return _put_int16(18) + _put_int16(0) + _put_int32(correlation_id) + _put_string(client_id)
 }
 
-// Parse ApiVersions response
-// Format: error_code(2) + api_versions[] + throttle_time(4, v1+)
-func parse_api_versions_response(string response_data) (api_version[], broker_error) {
-    c := cursor { data: response_data, position: 0 }
+func parse_api_versions_response(string response_data) (api_version[], error) {
+    var c cursor
+    c.data = response_data
+    c.position = 0
     
-    // Read error code
     error_code, err1 := _read_int16(&c)
     if err1.code != 0 {
-        return make([]api_version, 0), broker_error { code: err1.code, message: "read error code" }
+        var empty_versions api_version[]
+        empty_versions = make([]api_version, 0)
+        var result_err error
+        result_err.code = err1.code
+        result_err.message = "read error code"
+        return empty_versions, result_err
     }
     
     if error_code != 0 {
-        return make([]api_version, 0), broker_error { code: error_code, message: "broker returned error" }
+        var empty_versions api_version[]
+        empty_versions = make([]api_version, 0)
+        var result_err error
+        result_err.code = error_code
+        result_err.message = "broker returned error"
+        return empty_versions, result_err
     }
     
-    // Read number of API versions
     count, err2 := _read_int32(&c)
     if err2.code != 0 {
-        return make([]api_version, 0), broker_error { code: err2.code, message: "read api version count" }
+        var empty_versions api_version[]
+        empty_versions = make([]api_version, 0)
+        var result_err error
+        result_err.code = err2.code
+        result_err.message = "read api version count"
+        return empty_versions, result_err
     }
     
     if count < 0 || count > 256 {
-        return make([]api_version, 0), broker_error { code: -1, message: "invalid api version count" }
+        var empty_versions api_version[]
+        empty_versions = make([]api_version, 0)
+        var result_err error
+        result_err.code = -1
+        result_err.message = "invalid api version count"
+        return empty_versions, result_err
     }
     
     versions := make([]api_version, count)
@@ -159,39 +179,54 @@ func parse_api_versions_response(string response_data) (api_version[], broker_er
     while i < count {
         api_key, err3 := _read_int16(&c)
         if err3.code != 0 {
-            return make([]api_version, 0), broker_error { code: err3.code, message: "read api key" }
+            var empty_versions api_version[]
+            empty_versions = make([]api_version, 0)
+            var result_err error
+            result_err.code = err3.code
+            result_err.message = "read api key"
+            return empty_versions, result_err
         }
         
         min_ver, err4 := _read_int16(&c)
         if err4.code != 0 {
-            return make([]api_version, 0), broker_error { code: err4.code, message: "read min version" }
+            var empty_versions api_version[]
+            empty_versions = make([]api_version, 0)
+            var result_err error
+            result_err.code = err4.code
+            result_err.message = "read min version"
+            return empty_versions, result_err
         }
         
         max_ver, err5 := _read_int16(&c)
         if err5.code != 0 {
-            return make([]api_version, 0), broker_error { code: err5.code, message: "read max version" }
+            var empty_versions api_version[]
+            empty_versions = make([]api_version, 0)
+            var result_err error
+            result_err.code = err5.code
+            result_err.message = "read max version"
+            return empty_versions, result_err
         }
         
-        versions[i] = api_version {
-            api_key: api_key,
-            min_version: min_ver,
-            max_version: max_ver
-        }
+        var av api_version
+        av.api_key = api_key
+        av.min_version = min_ver
+        av.max_version = max_ver
+        versions[i] = av
         
         i = i + 1
     }
     
-    return versions, broker_error { code: 0 }
+    var ok_err error
+    ok_err.code = 0
+    return versions, ok_err
 }
 
-// Helper: put 16-bit big-endian integer as string
 func _put_int16(int value) string {
     high := (value >> 8) & 0xff
     low := value & 0xff
     return __std_byte_string(high) + __std_byte_string(low)
 }
 
-// Helper: put 32-bit big-endian integer as string
 func _put_int32(int value) string {
     b3 := (value >> 24) & 0xff
     b2 := (value >> 16) & 0xff
@@ -200,29 +235,37 @@ func _put_int32(int value) string {
     return __std_byte_string(b3) + __std_byte_string(b2) + __std_byte_string(b1) + __std_byte_string(b0)
 }
 
-// Helper: put string with 2-byte length prefix (Kafka string type)
 func _put_string(string value) string {
     length := len(value)
     return _put_int16(length) + value
 }
 
-// Helper: read 16-bit big-endian integer
-func _read_int16(cursor* c) (int, broker_error) {
+func _read_int16(cursor* c) (int, error) {
     if c.position + 2 > len(c.data) {
-        return 0, broker_error { code: 1, message: "underrun" }
+        var zero_val int = 0
+        var err error
+        err.code = 1
+        err.message = "underrun"
+        return zero_val, err
     }
     
     high := __host_byte_at(c.data, c.position)
     low := __host_byte_at(c.data, c.position + 1)
     c.position = c.position + 2
     
-    return high * 256 + low, broker_error { code: 0 }
+    result := high * 256 + low
+    var ok_err error
+    ok_err.code = 0
+    return result, ok_err
 }
 
-// Helper: read 32-bit big-endian integer
-func _read_int32(cursor* c) (int, broker_error) {
+func _read_int32(cursor* c) (int, error) {
     if c.position + 4 > len(c.data) {
-        return 0, broker_error { code: 1, message: "underrun" }
+        var zero_val int = 0
+        var err error
+        err.code = 1
+        err.message = "underrun"
+        return zero_val, err
     }
     
     b3 := __host_byte_at(c.data, c.position)
@@ -231,31 +274,42 @@ func _read_int32(cursor* c) (int, broker_error) {
     b0 := __host_byte_at(c.data, c.position + 3)
     c.position = c.position + 4
     
-    return b3 * 16777216 + b2 * 65536 + b1 * 256 + b0, broker_error { code: 0 }
+    result := b3 * 16777216 + b2 * 65536 + b1 * 256 + b0
+    var ok_err error
+    ok_err.code = 0
+    return result, ok_err
 }
 
-// Helper: read string with 2-byte length prefix
-func _read_string(cursor* c) (string, broker_error) {
+func _read_string(cursor* c) (string, error) {
     length, err := _read_int16(c)
     if err.code != 0 {
-        return "", err
+        var empty_str string = ""
+        return empty_str, err
     }
     
     if length < 0 || length > 10000 {
-        return "", broker_error { code: 1, message: "invalid string length" }
+        var empty_str string = ""
+        var result_err error
+        result_err.code = 1
+        result_err.message = "invalid string length"
+        return empty_str, result_err
     }
     
     if c.position + length > len(c.data) {
-        return "", broker_error { code: 1, message: "underrun" }
+        var empty_str string = ""
+        var result_err error
+        result_err.code = 1
+        result_err.message = "underrun"
+        return empty_str, result_err
     }
     
     str_data := __string_slice(c.data, c.position, c.position + length)
     c.position = c.position + length
-    return str_data, broker_error { code: 0 }
+    var ok_err error
+    ok_err.code = 0
+    return str_data, ok_err
 }
 
-// Intrinsic functions
 extern "intrinsic" func __host_byte_at(string text, int index) int
 extern "intrinsic" func __std_byte_string(int value) string
 extern "intrinsic" func __string_slice(string text, int start, int end) string
-
