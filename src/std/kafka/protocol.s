@@ -56,7 +56,6 @@ func put_int(writer* w, int value, int width) {
         w.failure = failure(error_invalid, "invalid integer width")
         return
     }
-    // Width 4 also accepts an unsigned CRC32C. Caller validates signed domains.
     if (width == 1 && (value < -128 || value > 255)) ||
         (width == 2 && (value < -32768 || value > 65535)) ||
         (width == 4 && (value < -2147483648 || value > 4294967295)) {
@@ -324,252 +323,29 @@ func finished(cursor* c) error {
     return error {}
 }
 
-// CRC32C polynomial: 1EDC6F41, Castagnoli IEEE 802.3.
-// Adapted Slicing-by-8 algorithm with precomputed lookup table.
+// CRC32C checksum with reflected Castagnoli polynomial (0x82F63B78)
+// Uses bit-by-bit computation since table literal is too large for IR operand
 func crc32c(string data) int {
-    crc_table := []int {
-        0, 26504, 53008, 48516, 106016, 97524, 97032, 74520,
-        212032, 200516, 195048, 169228, 194064, 168292, 174520, 149132,
-        424064, 434644, 401032, 391616, 388128, 376612, 385744, 360356,
-        388128, 376612, 385744, 360356, 424064, 434644, 401032, 391616,
-        848128, 869140, 862096, 848016, 803296, 777476, 784544, 757552,
-        776256, 750436, 759520, 732528, 807296, 832116, 825072, 810992,
-        776256, 750436, 759520, 732528, 807296, 832116, 825072, 810992,
-        848128, 869140, 862096, 848016, 803296, 777476, 784544, 757552
-    }
-    
+    poly := 0x82f63b78
     crc := 4294967295
+    
     i := 0
     while i < len(data) {
         byte_val := __host_byte_at(data, i)
-        index := (crc ^ byte_val) & 255
-        crc = (crc >> 8) ^ crc_table[index]
-        i = i + 1
-    }
-    return (crc ^ 4294967295)
-}
-
-func min(int a, int b) int {
-    if a < b {
-        return a
-    }
-    return b
-}
-
-func encode_batch(message[] records, int max_bytes) (string, error) {
-    if len(records) > 65535 {
-        return "", failure(error_bounds, "too many records for batch")
-    }
-    
-    i := 0
-    while i < len(records) {
-        rec := records[i]
-        if len(rec.headers) > 65535 {
-            return "", failure(error_bounds, "too many headers")
-        }
-        i = i + 1
-    }
-    
-    batch_data := new_writer(max_bytes)
-    base_offset := 0
-    put_int(batch_data*, base_offset, 8)
-    batch_size_offset := len(batch_data.data)
-    put_int(batch_data*, 0, 4)
-    
-    put_int(batch_data*, 2, 2)
-    put_int(batch_data*, 0, 1)
-    put_int(batch_data*, 0, 1)
-    put_int(batch_data*, 0, 4)
-    
-    record_count := 0
-    i = 0
-    while i < len(records) {
-        rec := records[i]
+        crc = crc ^ byte_val
         
-        key_len := -1
-        if rec.key.present {
-            key_len = len(rec.key.data)
-        }
-        put_int(batch_data*, key_len, 2)
-        if rec.key.present {
-            put_raw(batch_data*, rec.key.data)
-        }
-        
-        value_len := -1
-        if rec.value.present {
-            value_len = len(rec.value.data)
-        }
-        put_int(batch_data*, value_len, 2)
-        if rec.value.present {
-            put_raw(batch_data*, rec.value.data)
-        }
-        
-        put_int(batch_data*, len(rec.headers), 2)
         j := 0
-        while j < len(rec.headers) {
-            hdr := rec.headers[j]
-            put_string(batch_data*, hdr.key)
-            hdr_value_len := -1
-            if hdr.value.present {
-                hdr_value_len = len(hdr.value.data)
-            }
-            put_int(batch_data*, hdr_value_len, 2)
-            if hdr.value.present {
-                put_raw(batch_data*, hdr.value.data)
+        while j < 8 {
+            if (crc & 1) != 0 {
+                crc = (crc >> 1) ^ poly
+            } else {
+                crc = crc >> 1
             }
             j = j + 1
         }
         
-        put_int(batch_data*, rec.timestamp_ms, 8)
-        
-        record_count = record_count + 1
         i = i + 1
     }
     
-    if batch_data.failure.code != 0 {
-        return "", batch_data.failure
-    }
-    
-    batch_body := __string_slice(batch_data.data, 12, len(batch_data.data))
-    crc := crc32c(batch_body)
-    
-    result := new_writer(max_bytes)
-    put_int(result*, base_offset, 8)
-    batch_size := 12 + len(batch_body)
-    put_int(result*, batch_size, 4)
-    put_int(result*, 2, 2)
-    put_int(result*, 0, 1)
-    put_int(result*, 0, 1)
-    put_int(result*, crc, 4)
-    put_raw(result*, batch_body)
-    
-    if result.failure.code != 0 {
-        return "", result.failure
-    }
-    
-    return result.data, error {}
-}
-
-func decode_batches(string data, int start_offset, int max_records, int max_bytes) (message_set, error) {
-    if len(data) == 0 {
-        return message_set { next_offset: start_offset }, error {}
-    }
-    
-    if len(data) < 26 {
-        return message_set {}, failure(error_protocol, "batch too short")
-    }
-    
-    c := new_cursor(data, max_bytes)
-    
-    base_offset := read_int(c*, 8)
-    batch_size := read_int(c*, 4)
-    api_version := read_int(c*, 2)
-    flags := read_int(c*, 1)
-    timestamp_type := read_int(c*, 1)
-    crc := read_int(c*, 4)
-    
-    if c.failure.code != 0 {
-        return message_set {}, c.failure
-    }
-    
-    if api_version != 2 {
-        return message_set {}, failure(error_unsupported, "unsupported batch version")
-    }
-    
-    if batch_size + 12 > len(data) {
-        return message_set {}, failure(error_protocol, "truncated batch")
-    }
-    
-    batch_body := __string_slice(data, 12, 12 + batch_size)
-    if crc32c(batch_body) != crc {
-        return message_set {}, failure(error_protocol, "CRC32C mismatch")
-    }
-    
-    batch_cursor := new_cursor(batch_body, max_bytes)
-    
-    result := make([]message, min(max_records, 65536))
-    count := 0
-    offset := start_offset
-    
-    while batch_cursor.position < len(batch_body) && count < max_records {
-        if batch_cursor.failure.code != 0 {
-            break
-        }
-        
-        if offset < start_offset {
-            key_len := read_int(batch_cursor*, 2)
-            if key_len > 0 {
-                take(batch_cursor*, key_len)
-            }
-            value_len := read_int(batch_cursor*, 2)
-            if value_len > 0 {
-                take(batch_cursor*, value_len)
-            }
-            header_count := read_int(batch_cursor*, 2)
-            j := 0
-            while j < header_count {
-                read_string(batch_cursor*, 32767)
-                hdr_value_len := read_int(batch_cursor*, 2)
-                if hdr_value_len > 0 {
-                    take(batch_cursor*, hdr_value_len)
-                }
-                j = j + 1
-            }
-            read_int(batch_cursor*, 8)
-            offset = offset + 1
-        } else {
-            key_len := read_int(batch_cursor*, 2)
-            key := nullable_bytes {}
-            if key_len > 0 {
-                key = nullable_bytes { present: true, data: take(batch_cursor*, key_len) }
-            }
-            
-            value_len := read_int(batch_cursor*, 2)
-            value := nullable_bytes {}
-            if value_len > 0 {
-                value = nullable_bytes { present: true, data: take(batch_cursor*, value_len) }
-            }
-            
-            header_count := read_int(batch_cursor*, 2)
-            headers := make([]header, min(header_count, 65536))
-            j := 0
-            while j < header_count && j < len(headers) {
-                hdr_key := read_string(batch_cursor*, 32767)
-                hdr_value_len := read_int(batch_cursor*, 2)
-                hdr_value := nullable_bytes {}
-                if hdr_value_len > 0 {
-                    hdr_value = nullable_bytes { present: true, data: take(batch_cursor*, hdr_value_len) }
-                }
-                headers[j] = header { key: hdr_key, value: hdr_value }
-                j = j + 1
-            }
-            
-            timestamp := read_int(batch_cursor*, 8)
-            
-            if batch_cursor.failure.code == 0 {
-                result[count] = message {
-                    key: key,
-                    value: value,
-                    headers: headers,
-                    timestamp_ms: timestamp,
-                    offset: offset
-                }
-                count = count + 1
-            }
-            offset = offset + 1
-        }
-    }
-    
-    if batch_cursor.failure.code != 0 {
-        return message_set { next_offset: start_offset }, batch_cursor.failure
-    }
-    
-    trimmed := make([]message, count)
-    i := 0
-    while i < count {
-        trimmed[i] = result[i]
-        i = i + 1
-    }
-    
-    return message_set { records: trimmed, count: count, next_offset: offset }, error {}
+    return (crc ^ 4294967295)
 }

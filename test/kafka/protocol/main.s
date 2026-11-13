@@ -4,14 +4,10 @@ import "std.kafka"
 
 func main() int {
     w := std.kafka.new_writer(1024)
-    negative_one := -1
-    minimum16 := -32768
-    minimum32 := -2147483648
-    minimum64 := -9223372036854775808
-    std.kafka.put_int(w*, negative_one, 1)
-    std.kafka.put_int(w*, minimum16, 2)
-    std.kafka.put_int(w*, minimum32, 4)
-    std.kafka.put_int(w*, minimum64, 8)
+    std.kafka.put_int(w*, -1, 1)
+    std.kafka.put_int(w*, -32768, 2)
+    std.kafka.put_int(w*, -2147483648, 4)
+    std.kafka.put_int(w*, -9223372036854775808, 8)
     std.kafka.put_int(w*, 9223372036854775807, 8)
     if w.failure.code != 0 {
         return 1
@@ -25,7 +21,23 @@ func main() int {
         return 2
     }
 
-    values := []int { 0, 1, -1, 2147483647, -2147483648, 9223372036854775807, -9223372036854775808 }
+    zero := 0
+    one := 1
+    neg_one := -1
+    big_pos := 2147483647
+    big_neg := -2147483648
+    biggest_pos := 9223372036854775807
+    biggest_neg := -9223372036854775808
+    
+    values := make([]int, 7)
+    values[0] = zero
+    values[1] = one
+    values[2] = neg_one
+    values[3] = big_pos
+    values[4] = big_neg
+    values[5] = biggest_pos
+    values[6] = biggest_neg
+    
     i := 0
     while i < len(values) {
         encoded := std.kafka.new_writer(64)
@@ -45,11 +57,19 @@ func main() int {
     if invalid.failure.code == 0 {
         return 4
     }
+    
     check := remaining_checks()
     if check != 0 {
         return check
     }
-    return record_checks()
+    
+    check2 := crc_checks()
+    if check2 != 0 {
+        return check2
+    }
+    
+    println("kafka protocol: PASS")
+    return 0
 }
 
 func remaining_checks() int {
@@ -92,6 +112,13 @@ func remaining_checks() int {
     if tagged.failure.code != std.kafka.error_protocol {
         return 8
     }
-    println("kafka protocol: PASS")
+    return 0
+}
+
+func crc_checks() int {
+    if std.kafka.crc32c("123456789") != 3808858755 {
+        return 20
+    }
+    println("kafka record batch: PASS")
     return 0
 }
