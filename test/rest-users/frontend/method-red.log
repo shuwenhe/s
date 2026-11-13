@@ -1,0 +1,175 @@
+
+> s-rest-users-frontend@1.0.0 test
+> node --experimental-strip-types --test tests/proxy.test.ts
+
+TAP version 13
+# Subtest: collection GET uses configured origin and drops user-controlled query
+ok 1 - collection GET uses configured origin and drops user-controlled query
+  ---
+  duration_ms: 17.123591
+  type: 'test'
+  ...
+# Subtest: POST streams JSON bytes to the S server and preserves status
+ok 2 - POST streams JSON bytes to the S server and preserves status
+  ---
+  duration_ms: 4.054007
+  type: 'test'
+  ...
+# Subtest: item GET and PUT preserve identity and errors; DELETE returns empty 204
+ok 3 - item GET and PUT preserve identity and errors; DELETE returns empty 204
+  ---
+  duration_ms: 5.443893
+  type: 'test'
+  ...
+# Subtest: oversized bodies are rejected before contacting upstream, including streams
+ok 4 - oversized bodies are rejected before contacting upstream, including streams
+  ---
+  duration_ms: 0.585535
+  type: 'test'
+  ...
+# Subtest: oversized upstream output and redirects become bounded JSON errors
+ok 5 - oversized upstream output and redirects become bounded JSON errors
+  ---
+  duration_ms: 6.887008
+  type: 'test'
+  ...
+# Subtest: untrusted IDs cannot change path or origin
+ok 6 - untrusted IDs cannot change path or origin
+  ---
+  duration_ms: 0.273929
+  type: 'test'
+  ...
+# Subtest: unsupported API methods return consistent JSON 405 errors and Allow
+not ok 7 - unsupported API methods return consistent JSON 405 errors and Allow
+  ---
+  duration_ms: 0.771304
+  type: 'test'
+  location: '/home/shuwen/shuwen/s/examples/rest-users/frontend/tests/proxy.test.ts:51:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    PUT handler missing
+    + actual - expected
+    
+    + 'undefined'
+    - 'function'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'function'
+  actual: 'undefined'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/shuwen/shuwen/s/examples/rest-users/frontend/tests/proxy.test.ts:57:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 6
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 296.645222
+
+> s-rest-users-frontend@1.0.0 test
+> node --experimental-strip-types --test tests/proxy.test.ts
+
+TAP version 13
+# Subtest: collection GET uses configured origin and drops user-controlled query
+ok 1 - collection GET uses configured origin and drops user-controlled query
+  ---
+  duration_ms: 18.18629
+  type: 'test'
+  ...
+# Subtest: POST streams JSON bytes to the S server and preserves status
+ok 2 - POST streams JSON bytes to the S server and preserves status
+  ---
+  duration_ms: 4.588001
+  type: 'test'
+  ...
+# Subtest: item GET and PUT preserve identity and errors; DELETE returns empty 204
+ok 3 - item GET and PUT preserve identity and errors; DELETE returns empty 204
+  ---
+  duration_ms: 5.799999
+  type: 'test'
+  ...
+# Subtest: oversized bodies are rejected before contacting upstream, including streams
+ok 4 - oversized bodies are rejected before contacting upstream, including streams
+  ---
+  duration_ms: 0.60504
+  type: 'test'
+  ...
+# Subtest: oversized upstream output and redirects become bounded JSON errors
+ok 5 - oversized upstream output and redirects become bounded JSON errors
+  ---
+  duration_ms: 6.700101
+  type: 'test'
+  ...
+# Subtest: untrusted IDs cannot change path or origin
+ok 6 - untrusted IDs cannot change path or origin
+  ---
+  duration_ms: 0.233423
+  type: 'test'
+  ...
+# Subtest: unsupported API methods return consistent JSON 405 errors and Allow
+not ok 7 - unsupported API methods return consistent JSON 405 errors and Allow
+  ---
+  duration_ms: 0.922002
+  type: 'test'
+  location: '/home/shuwen/shuwen/s/examples/rest-users/frontend/tests/proxy.test.ts:51:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    PUT handler missing
+    + actual - expected
+    
+    + 'undefined'
+    - 'function'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'function'
+  actual: 'undefined'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/shuwen/shuwen/s/examples/rest-users/frontend/tests/proxy.test.ts:57:11)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: HEAD preserves GET status and byte length while omitting the body
+not ok 8 - HEAD preserves GET status and byte length while omitting the body
+  ---
+  duration_ms: 0.382261
+  type: 'test'
+  location: '/home/shuwen/shuwen/s/examples/rest-users/frontend/tests/proxy.test.ts:66:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'undefined'
+    - 'function'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'function'
+  actual: 'undefined'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/shuwen/shuwen/s/examples/rest-users/frontend/tests/proxy.test.ts:71:9)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 6
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 299.269443

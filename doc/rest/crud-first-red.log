@@ -1,0 +1,65 @@
+PASS READY 45817 MYSQL 8.0.46-0ubuntu0.24.04.3
+PASS Next production server / -> 200
+test_database_failure_is_json500 (__main__.RESTIntegration.test_database_failure_is_json500) ... PASS READY 38689 MYSQL 8.0.46-0ubuntu0.24.04.3
+PASS real database result-limit error -> JSON500 and cleanup
+ok
+test_errors (__main__.RESTIntegration.test_errors) ... ERROR
+test_injection_and_transaction_rollback (__main__.RESTIntegration.test_injection_and_transaction_rollback) ... FAIL
+test_native_crud (__main__.RESTIntegration.test_native_crud) ... FAIL
+test_next_to_native_crud (__main__.RESTIntegration.test_next_to_native_crud) ... FAIL
+PASS S deterministic shutdown exit=0
+
+======================================================================
+ERROR: test_errors (__main__.RESTIntegration.test_errors)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_integration.py", line 126, in test_errors
+    self.call('GET','/api/users/9223372036854775808',port=port,expected=400)
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_integration.py", line 63, in call
+    self.assertEqual(int(received['content-length']),len(data))
+                         ~~~~~~~~^^^^^^^^^^^^^^^^^^
+KeyError: 'content-length'
+
+======================================================================
+FAIL: test_injection_and_transaction_rollback (__main__.RESTIntegration.test_injection_and_transaction_rollback)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_integration.py", line 116, in test_injection_and_transaction_rollback
+    first=self.call('POST','/api/users',payload,expected=201);self.created.append(first['id'])
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_integration.py", line 61, in call
+    self.assertEqual(status,expected,(method,path,status,data))
+AssertionError: 400 != 201 : ('POST', '/api/users', 400, b'{"error":{"code":"json","message":"invalid user document"}}')
+
+======================================================================
+FAIL: test_native_crud (__main__.RESTIntegration.test_native_crud)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_integration.py", line 111, in test_native_crud
+    def test_native_crud(self): self.exercise_crud(self.port)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_integration.py", line 93, in exercise_crud
+    user=self.call('POST','/api/users',payload,port,201)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_integration.py", line 61, in call
+    self.assertEqual(status,expected,(method,path,status,data))
+AssertionError: 400 != 201 : ('POST', '/api/users', 400, b'{"error":{"code":"json","message":"invalid user document"}}')
+
+======================================================================
+FAIL: test_next_to_native_crud (__main__.RESTIntegration.test_next_to_native_crud)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_integration.py", line 112, in test_next_to_native_crud
+    def test_next_to_native_crud(self): self.exercise_crud(self.next_port)
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_integration.py", line 93, in exercise_crud
+    user=self.call('POST','/api/users',payload,port,201)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_integration.py", line 61, in call
+    self.assertEqual(status,expected,(method,path,status,data))
+AssertionError: 400 != 201 : ('POST', '/api/users', 400, b'{"error":{"code":"json","message":"invalid user document"}}')
+
+----------------------------------------------------------------------
+Ran 5 tests in 55.659s
+
+FAILED (failures=3, errors=1)

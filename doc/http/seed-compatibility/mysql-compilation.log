@@ -4,6 +4,6 @@ test_qualified_constant_assignment_to_reference_field (__main__.QualifiedConstan
 test_c_startup_initializes_native_environment (__main__.TLSClientStartupTests.test_c_startup_initializes_native_environment) ... ok
 
 ----------------------------------------------------------------------
-Ran 4 tests in 29.924s
+Ran 4 tests in 29.627s
 
 OK

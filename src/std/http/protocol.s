@@ -110,11 +110,15 @@ func parse_request(string raw, options requested) (request,http_error) {
         index = index + 1
     }
     result := request { method: __string_slice(raw,0,method_end), target: target, path: __string_slice(target,0,path_end) }
+    result.header_bytes = end
+    if path_end < len(target) { result.query = __string_slice(target,path_end + 1,len(target)) }
     position := first + 2
     count := 0
     hosts := 0
     lengths := 0
     body := false
+    body_length := 0
+    content_types := 0
     transfer := false
     expect := false
     while position < end - 2 {
@@ -136,6 +140,11 @@ func parse_request(string raw, options requested) (request,http_error) {
         }
         name := _lower(__string_slice(raw,position,colon))
         value := _trim(__string_slice(raw,colon + 1,line_end))
+        result.headers = append(result.headers,header { name: name, value: value })
+        if name == "content-type" {
+            content_types = content_types + 1
+            if content_types > 1 { return request {},_problem(400,"duplicate Content-Type") }
+        }
         if name == "host" {
             hosts = hosts + 1
             if hosts > 1 || !_host(value) { return request {},_problem(400,"invalid Host") }
@@ -149,6 +158,8 @@ func parse_request(string raw, options requested) (request,http_error) {
                 byte := __host_byte_at(value,index)
                 if byte < 48 || byte > 57 { return request {},_problem(400,"invalid Content-Length") }
                 if byte != 48 { body = true }
+                if body_length > config.max_body_bytes / 10 || (body_length == config.max_body_bytes / 10 && byte - 48 > config.max_body_bytes % 10) { return request {},_problem(413,"request body exceeded") }
+                body_length = body_length * 10 + byte - 48
                 index = index + 1
             }
         }
@@ -160,13 +171,19 @@ func parse_request(string raw, options requested) (request,http_error) {
     if transfer && lengths != 0 { return request {},_problem(400,"ambiguous request framing") }
     if transfer { return request {},_problem(501,"transfer coding not supported in this slice") }
     if expect { return request {},_problem(417,"expectation not supported") }
-    if body { return request {},_problem(413,"request body not supported in this slice") }
+    if body && config.max_body_bytes == 0 { return request {},_problem(413,"request body not supported in this slice") }
+    result.content_length = body_length
     return result,http_error {}
 }
 func _reason(int status) string {
     if status == 200 { return "OK" }
     if status == 400 { return "Bad Request" }
     if status == 404 { return "Not Found" }
+    if status == 201 { return "Created" }
+    if status == 204 { return "No Content" }
+    if status == 409 { return "Conflict" }
+    if status == 415 { return "Unsupported Media Type" }
+    if status == 500 { return "Internal Server Error" }
     if status == 405 { return "Method Not Allowed" }
     if status == 408 { return "Request Timeout" }
     if status == 413 { return "Content Too Large" }
@@ -177,11 +194,52 @@ func _reason(int status) string {
     if status == 505 { return "HTTP Version Not Supported" }
     return ""
 }
+func header_value(request value, string name) string {
+    wanted := _lower(name)
+    index := 0
+    while index < len(value.headers) {
+        if value.headers[index].name == wanted { return value.headers[index].value }
+        index = index + 1
+    }
+    return ""
+}
+func _safe_header(string name, string value) bool {
+    if len(name) == 0 { return false }
+    index := 0
+    while index < len(name) {
+        if !_token(__host_byte_at(name,index)) { return false }
+        index = index + 1
+    }
+    index = 0
+    while index < len(value) {
+        byte := __host_byte_at(value,index)
+        if (byte < 32 && byte != 9) || byte == 127 { return false }
+        index = index + 1
+    }
+    return true
+}
 func serialize_response(response value, bool head) (string,http_error) {
     reason := _reason(value.status)
-    if reason == "" { return "",_problem(0,"invalid response status") }
-    wire := "HTTP/1.1 " + std.prelude.to_string(value.status) + " " + reason + "\r\nContent-Type: application/json\r\nContent-Length: " + std.prelude.to_string(len(value.body)) + "\r\nConnection: close\r\n"
-    if value.status == 405 { wire = wire + "Allow: GET, HEAD\r\n" }
+    if reason == "" { return "",_problem(0,"unsupported response status") }
+    if value.status == 204 {
+        if value.body != "" || len(value.headers) != 0 { return "",_problem(0,"204 response cannot contain body or custom headers") }
+        return "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n",http_error {}
+    }
+    content_type := value.content_type
+    if content_type == "" { content_type = "application/json" }
+    if !_safe_header("Content-Type",content_type) { return "",_problem(0,"invalid Content-Type") }
+    wire := "HTTP/1.1 " + std.prelude.to_string(value.status) + " " + reason + "\r\nContent-Type: " + content_type + "\r\nContent-Length: " + std.prelude.to_string(len(value.body)) + "\r\nConnection: close\r\n"
+    index := 0
+    has_allow := false
+    while index < len(value.headers) {
+        item := value.headers[index]
+        name := _lower(item.name)
+        if !_safe_header(item.name,item.value) || name == "content-length" || name == "transfer-encoding" || name == "connection" || name == "content-type" { return "",_problem(0,"invalid or reserved response header") }
+        if name == "allow" { has_allow = true }
+        wire = wire + item.name + ": " + item.value + "\r\n"
+        index = index + 1
+    }
+    if value.status == 405 && !has_allow { wire = wire + "Allow: GET, HEAD\r\n" }
     wire = wire + "\r\n"
     if !head { wire = wire + value.body }
     return wire,http_error {}

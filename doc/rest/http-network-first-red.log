@@ -1,0 +1,351 @@
+FFFFFFFFFFFFFFFFFFFFFFFFFF
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='native', headers=b'Content-Length: +2\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='native', headers=b'Content-Length: 2, 2\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='native', headers=b'Content-Length: 2\r\nContent-Length: 2\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='native', headers=b'Transfer-Encoding: chunked\r\nContent-Length: 2\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='native', headers=b'Transfer-Encoding: chunked\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='native', headers=b'Content-Length: 33\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='native', headers=b'Content-Length: 99999999999999999999\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='seed', headers=b'Content-Length: +2\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='seed', headers=b'Content-Length: 2, 2\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='seed', headers=b'Content-Length: 2\r\nContent-Length: 2\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='seed', headers=b'Transfer-Encoding: chunked\r\nContent-Length: 2\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='seed', headers=b'Transfer-Encoding: chunked\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='seed', headers=b'Content-Length: 33\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_body_framing_rejections (__main__.RestHTTPTests.test_body_framing_rejections) (binary='seed', headers=b'Content-Length: 99999999999999999999\r\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 71, in test_body_framing_rejections
+    with self.subTest(binary=binary.name,headers=headers),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_fragmented_utf8_body_and_exact_bound (__main__.RestHTTPTests.test_fragmented_utf8_body_and_exact_bound) (binary='native', body=b'{"name":"\xe4\xb8\xad"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 76, in test_fragmented_utf8_body_and_exact_bound
+    with self.subTest(binary=binary.name,body=body),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_fragmented_utf8_body_and_exact_bound (__main__.RestHTTPTests.test_fragmented_utf8_body_and_exact_bound) (binary='native', body=b'[                              ]')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 76, in test_fragmented_utf8_body_and_exact_bound
+    with self.subTest(binary=binary.name,body=body),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_fragmented_utf8_body_and_exact_bound (__main__.RestHTTPTests.test_fragmented_utf8_body_and_exact_bound) (binary='seed', body=b'{"name":"\xe4\xb8\xad"}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 76, in test_fragmented_utf8_body_and_exact_bound
+    with self.subTest(binary=binary.name,body=body),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_fragmented_utf8_body_and_exact_bound (__main__.RestHTTPTests.test_fragmented_utf8_body_and_exact_bound) (binary='seed', body=b'[                              ]')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 76, in test_fragmented_utf8_body_and_exact_bound
+    with self.subTest(binary=binary.name,body=body),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_headers_query_eof_disconnect_and_repetition (__main__.RestHTTPTests.test_headers_query_eof_disconnect_and_repetition) (binary='native')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 91, in test_headers_query_eof_disconnect_and_repetition
+    with self.subTest(binary=binary.name),self.running(binary,'many') as (p,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_headers_query_eof_disconnect_and_repetition (__main__.RestHTTPTests.test_headers_query_eof_disconnect_and_repetition) (binary='seed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 91, in test_headers_query_eof_disconnect_and_repetition
+    with self.subTest(binary=binary.name),self.running(binary,'many') as (p,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_response_injection_closes_and_server_continues (__main__.RestHTTPTests.test_response_injection_closes_and_server_continues) (binary='native')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 104, in test_response_injection_closes_and_server_continues
+    with self.subTest(binary=binary.name),self.running(binary,'two') as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_response_injection_closes_and_server_continues (__main__.RestHTTPTests.test_response_injection_closes_and_server_continues) (binary='seed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 104, in test_response_injection_closes_and_server_continues
+    with self.subTest(binary=binary.name),self.running(binary,'two') as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_truncated_body_and_absolute_body_timeout (__main__.RestHTTPTests.test_truncated_body_and_absolute_body_timeout) (binary='native', truncated=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 83, in test_truncated_body_and_absolute_body_timeout
+    with self.subTest(binary=binary.name,truncated=True),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_truncated_body_and_absolute_body_timeout (__main__.RestHTTPTests.test_truncated_body_and_absolute_body_timeout) (binary='native', timeout=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 85, in test_truncated_body_and_absolute_body_timeout
+    with self.subTest(binary=binary.name,timeout=True),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_truncated_body_and_absolute_body_timeout (__main__.RestHTTPTests.test_truncated_body_and_absolute_body_timeout) (binary='seed', truncated=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 83, in test_truncated_body_and_absolute_body_timeout
+    with self.subTest(binary=binary.name,truncated=True),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+======================================================================
+FAIL: test_truncated_body_and_absolute_body_timeout (__main__.RestHTTPTests.test_truncated_body_and_absolute_body_timeout) (binary='seed', timeout=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 85, in test_truncated_body_and_absolute_body_timeout
+    with self.subTest(binary=binary.name,timeout=True),self.running(binary) as (_,port):
+  File "/usr/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/stdlib-native/test_rest_http.py", line 36, in running
+    self.assertTrue(line.isdigit(),(line,p.poll(),p.stderr.read() if p.poll() is not None else b''))
+AssertionError: False is not true : (b'', 1, b'')
+
+----------------------------------------------------------------------
+Ran 5 tests in 10.511s
+
+FAILED (failures=26)
+
+FEATURE REGRESSION RED (real loopback, elevated execution, before HEAD fix)
+Command: python3 test/stdlib-native/test_rest_http.py RestHTTPTests.test_head_errors_preserve_method_and_never_send_body
+Ran 1 test in 10.769s
+FAILED (failures=6)
+Native and Seed each fail HEAD oversized Content-Length (413), truncated body after half-close (400), and incomplete headers beginning HEAD-space (408).
+Every failure: AssertionError: b'{}' != b'' : HEAD error responses must suppress the error body
+All responses advertised Content-Length: 2; status assertions passed. Thus the observed feature failure is body suppression, not framing/status or server startup.

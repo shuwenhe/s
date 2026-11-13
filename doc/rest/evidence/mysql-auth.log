@@ -1,0 +1,7 @@
+test_native_and_sha2_independent_vectors (__main__.MySQLAuthTests.test_native_and_sha2_independent_vectors) ... ok
+test_oaep_ciphertext_decrypts_with_independent_rsa_implementation (__main__.MySQLRSATests.test_oaep_ciphertext_decrypts_with_independent_rsa_implementation) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 2.323s
+
+OK

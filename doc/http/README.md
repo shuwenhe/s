@@ -86,6 +86,7 @@ No new GC dependency was introduced; this milestone verifies socket lifetimes,
 not general heap reclamation or all language ownership guarantees.
 
 See [design.md](design.md) for Go references/architecture and [results.md](results.md)
-for exact evidence, including the Seed server preflight limitation. The minimal
-Seed caller lives at `test/http/seed-borrow-repro/main.s`; no type/borrow/MIR
-validation is disabled to make it pass.
+for the original milestone evidence. The subsequent
+[Seed compatibility acceptance](seed-compatibility.md) records the compiler
+correction and fresh verification. The full closed-server regression lives at
+`test/http/seed-borrow-repro/main.s`; no type/borrow/MIR validation is disabled.

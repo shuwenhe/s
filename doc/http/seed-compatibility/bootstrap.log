@@ -1,0 +1,33 @@
+=== S Native Bootstrap (Import-Driven Model) ===
+Source Root: /home/shuwen/shuwen/s
+Output Dir: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC
+Resolved source closure: 269 files
+[1/4] Seed -> native stage1
+compiled 269 S modules -> /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage1.ir
+compiled standalone Linux/amd64 /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage1.ir -> /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage1
+true-selfhost verification passed: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage1
+[2/4] stage1 -> stage2
+native-codegen=structured-mir-to-ssa-to-amd64
+true-selfhost verification passed: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage2
+[3/4] stage2 -> stage3
+native-codegen=structured-mir-to-ssa-to-amd64
+true-selfhost verification passed: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage3
+[4/4] stage3 -> stage4
+native-codegen=structured-mir-to-ssa-to-amd64
+true-selfhost verification passed: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage4
+native-codegen=structured-mir-to-ssa-to-amd64
+true-selfhost verification passed: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage2-execution/program-4
+native-codegen=structured-mir-to-ssa-to-amd64
+true-selfhost verification passed: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage2-execution/program-9
+native compiler source dependence and execution verified: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage2
+native-codegen=structured-mir-to-ssa-to-amd64
+true-selfhost verification passed: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage3-execution/program-4
+native-codegen=structured-mir-to-ssa-to-amd64
+true-selfhost verification passed: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage3-execution/program-9
+native compiler source dependence and execution verified: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage3
+native-codegen=structured-mir-to-ssa-to-amd64
+true-selfhost verification passed: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage4-execution/program-4
+native-codegen=structured-mir-to-ssa-to-amd64
+true-selfhost verification passed: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage4-execution/program-9
+native compiler source dependence and execution verified: /home/shuwen/shuwen/s/.bootstrap/http-seed-compat.vMZ9WC/stage4
+Native bootstrap verified: seed -> stage1 -> stage2 == stage3 == stage4

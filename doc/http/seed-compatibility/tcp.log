@@ -3,6 +3,6 @@ test_connect_read_write_eof_close_and_connection_refusal (__main__.NativeTCPTest
 test_partial_write_and_write_all_preserve_exact_bytes (__main__.NativeTCPTests.test_partial_write_and_write_all_preserve_exact_bytes) ... ok
 
 ----------------------------------------------------------------------
-Ran 3 tests in 3.196s
+Ran 3 tests in 3.274s
 
 OK

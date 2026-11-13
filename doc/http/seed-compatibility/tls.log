@@ -4,6 +4,6 @@ test_valid_chain_hostname_handshake_encrypted_read_write_and_close (__main__.Nat
 test_wrong_hostname_is_rejected (__main__.NativeTLSTests.test_wrong_hostname_is_rejected) ... ok
 
 ----------------------------------------------------------------------
-Ran 4 tests in 7.663s
+Ran 4 tests in 7.967s
 
 OK

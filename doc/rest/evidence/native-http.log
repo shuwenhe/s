@@ -1,0 +1,122 @@
+Building seed compiler...
+compiler-entry=/home/shuwen/shuwen/s/src/cmd/compile/main.s
+compiler-source=src/cmd/compile/main.s
+compiler-source=src/cmd/compile/internal/driver/driver.s
+compiler-source=src/cmd/compile/internal/pipeline/authority.s
+compiler-source=src/cmd/compile/internal/pipeline/pipeline.s
+compiler-source=src/cmd/compile/internal/compiler/frontend_core.s
+compiler-source=src/cmd/compile/internal/compiler/frontend.s
+compiler-source=src/cmd/compile/internal/compiler/native_frontend.s
+compiler-source=src/cmd/compile/internal/mir/program.s
+compiler-source=src/cmd/compile/internal/mir/program_enum.s
+compiler-source=src/cmd/compile/internal/ir/program_lower.s
+compiler-source=src/cmd/compile/internal/ir/program_payload.s
+compiler-source=src/cmd/compile/internal/ir/program_environment.s
+compiler-source=src/cmd/compile/internal/ir/program_enum.s
+compiler-source=src/cmd/compile/internal/compiler/canonical_source.s
+compiler-source=src/cmd/compile/internal/mono/monomorphization.s
+compiler-source=src/cmd/compile/internal/mono/type_elaboration.s
+compiler-source=src/cmd/compile/internal/mono/canonical_annotation.s
+compiler-source=src/cmd/compile/internal/ssa/program.s
+compiler-source=src/cmd/compile/internal/ssa/function_lower.s
+compiler-source=src/cmd/compile/internal/codegen/amd64_program.s
+compiler-source=src/cmd/compile/internal/codegen/native_runtime_extensions.s
+compiler-source=src/cmd/compile/internal/core/native_build.s
+compiler-source=src/cmd/compile/internal/compiler/frontend_stages.s
+compiler-source=src/cmd/compile/internal/mir/compiler_emit.s
+compiler-source=src/cmd/compile/internal/compiler/stages.s
+compiler-source=src/cmd/compile/internal/compiler/main.s
+compiler-source=src/cmd/compile/internal/compiler/compiler.s
+compiler-source=src/cmd/compile/internal/compiler/bridge.s
+compiler-source=src/cmd/compile/internal/rewriteresults/rewriteresults.s
+compiler-source=src/cmd/compile/internal/slice/slice.s
+compiler-source=src/cmd/compile/internal/walk/assign.s
+compiler-source=src/cmd/compile/internal/walk/builtin.s
+compiler-source=src/cmd/compile/internal/walk/closure.s
+compiler-source=src/cmd/compile/internal/walk/compare.s
+compiler-source=src/cmd/compile/internal/walk/complit.s
+compiler-source=src/cmd/compile/internal/walk/convert.s
+compiler-source=src/cmd/compile/internal/walk/expr.s
+compiler-source=src/cmd/compile/internal/walk/order.s
+compiler-source=src/cmd/compile/internal/walk/range.s
+compiler-source=src/cmd/compile/internal/walk/select.s
+compiler-source=src/cmd/compile/internal/walk/stmt.s
+compiler-source=src/cmd/compile/internal/walk/switch.s
+compiler-source=src/cmd/compile/internal/walk/temp.s
+compiler-source=src/cmd/compile/internal/walk/walk.s
+compiler-source=src/cmd/compile/internal/ssagen/arch.s
+compiler-source=src/cmd/compile/internal/ssagen/abi.s
+compiler-source=src/cmd/compile/internal/ssagen/intrinsics.s
+compiler-source=src/cmd/compile/internal/ssagen/nowb.s
+compiler-source=src/cmd/compile/internal/ssagen/pgen.s
+compiler-source=src/cmd/compile/internal/ssagen/phi.s
+compiler-source=src/cmd/compile/internal/ssagen/simdintrinsics.s
+compiler-source=src/cmd/compile/internal/ssagen/ssa.s
+compiler-source=src/cmd/compile/internal/ssa/op.s
+compiler-source=src/cmd/compile/internal/ssa/value.s
+compiler-source=src/cmd/compile/internal/ssa/block.s
+compiler-source=src/cmd/compile/internal/ssa/func.s
+compiler-source=src/cmd/compile/internal/ssa/config.s
+compiler-source=src/cmd/compile/internal/ssa/cache.s
+compiler-source=src/cmd/compile/internal/ssa/uses.s
+compiler-source=src/cmd/compile/internal/ssa/rewrite.s
+compiler-source=src/cmd/compile/internal/ssa/rewritegeneric.s
+compiler-source=src/cmd/compile/internal/ssa/rewriteAMD64.s
+compiler-source=src/cmd/compile/internal/ssa/rewriteARM64.s
+compiler-source=src/cmd/compile/internal/ssa/rewriteARM.s
+compiler-source=src/cmd/compile/internal/ssa/deadcode.s
+compiler-source=src/cmd/compile/internal/ssa/cse.s
+compiler-source=src/cmd/compile/internal/ssa/copyelim.s
+compiler-source=src/cmd/compile/internal/ssa/dom.s
+compiler-source=src/cmd/compile/internal/ssa/prove.s
+compiler-source=src/cmd/compile/internal/ssa/regalloc.s
+compiler-source=src/cmd/compile/internal/ssa/schedule.s
+compiler-source=src/cmd/compile/internal/ssa/stackalloc.s
+compiler-source=src/cmd/compile/internal/ssa/check.s
+compiler-source=src/cmd/compile/internal/ssa/print.s
+compiler-source=src/cmd/compile/internal/ssa/compile.s
+compiler-source=src/cmd/compile/internal/lexer/token/token.s
+compiler-source=src/cmd/compile/internal/ast/ast.s
+compiler-source=src/cmd/compile/internal/ast/ast_unit.s
+compiler-source=src/cmd/compile/internal/ast/commentmap.s
+compiler-source=src/cmd/compile/internal/ast/directive.s
+compiler-source=src/cmd/compile/internal/ast/filter.s
+compiler-source=src/cmd/compile/internal/ast/import.s
+compiler-source=src/cmd/compile/internal/ast/print.s
+compiler-source=src/cmd/compile/internal/ast/resolve.s
+compiler-source=src/cmd/compile/internal/ast/scope.s
+compiler-source=src/cmd/compile/internal/ast/walk.s
+compiler-source=src/cmd/compile/internal/canonical/canonical_ast_check.s
+compiler-source=src/cmd/compile/internal/parser/parser.s
+compiler-source=src/cmd/compile/internal/parser/syntax/canonical_parser.s
+compiler-source=src/cmd/compile/internal/parser/syntax/syntax.s
+compiler-source=src/cmd/compile/internal/prelude.s
+compiler-source=src/cmd/compile/internal/semantic/canonical_enum.s
+compiler-source=src/cmd/compile/internal/semantic/semantic.s
+compiler-source=src/cmd/compile/internal/stage5_gate.s
+compiler-source=src/cmd/compile/internal/typesys/canonical_type.s
+compiler-source=src/cmd/compile/internal/typesys/typesys.s
+compiler-source=src/fs/fs.s
+compiler-source=src/io/io.s
+compiler-source=src/option/option.s
+compiler-source=src/prelude/prelude.s
+compiler-source=src/result/result.s
+compiled 101 S modules -> .bootstrap/compiler/compiler.ir
+compiled standalone Linux/amd64 .bootstrap/compiler/compiler.ir -> ./bin/s_compiler
+test_accept_timeout_and_invalid_config (__main__.NativeHTTPTests.test_accept_timeout_and_invalid_config) ... ok
+test_byte_line_and_header_count_limits (__main__.NativeHTTPTests.test_byte_line_and_header_count_limits) ... ok
+test_completed_headers_after_scheduler_pause_exceed_deadline (__main__.NativeHTTPTests.test_completed_headers_after_scheduler_pause_exceed_deadline) ... ok
+test_descriptor_cleanup_and_no_pipelining (__main__.NativeHTTPTests.test_descriptor_cleanup_and_no_pipelining) ... ok
+test_errors_eof_and_reset_do_not_poison_listener (__main__.NativeHTTPTests.test_errors_eof_and_reset_do_not_poison_listener) ... ok
+test_fragmented_headers_head_and_routing (__main__.NativeHTTPTests.test_fragmented_headers_head_and_routing) ... ok
+test_health_json_length_close_and_graceful_shutdown (__main__.NativeHTTPTests.test_health_json_length_close_and_graceful_shutdown) ... ok
+test_idle_and_slow_header_absolute_deadline (__main__.NativeHTTPTests.test_idle_and_slow_header_absolute_deadline) ... ok
+test_invalid_host_authority (__main__.NativeHTTPTests.test_invalid_host_authority) ... ok
+test_malformed_and_ambiguous_requests (__main__.NativeHTTPTests.test_malformed_and_ambiguous_requests) ... ok
+test_native_protocol (__main__.NativeHTTPTests.test_native_protocol) ... ok
+test_response_write_deadline_with_nonreading_peer (__main__.NativeHTTPTests.test_response_write_deadline_with_nonreading_peer) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 22.687s
+
+OK

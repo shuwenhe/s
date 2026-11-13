@@ -1,0 +1,30 @@
+PASS READY 43481 MYSQL 8.0.46-0ubuntu0.24.04.3
+PASS Next production server / -> 200
+test_browser_frontend (__main__.RESTIntegration.test_browser_frontend) ... GET /api/users 200
+POST /api/users 201
+GET /api/users/25 200
+PUT /api/users/25 200
+POST /api/users 409
+DELETE /api/users/25 204
+browser: PASS — hydrated React CRUD, Unicode, duplicate 409, empty 204; test email browser-99ba5d8f-340b-47e5-9cf2-7bf655fd7581@s-rest.invalid
+
+ok
+test_client_reset_isolation (__main__.RESTIntegration.test_client_reset_isolation) ... PASS client reset isolated; listener remains live
+ok
+test_database_failure_is_json500 (__main__.RESTIntegration.test_database_failure_is_json500) ... PASS READY 36011 MYSQL 8.0.46-0ubuntu0.24.04.3
+PASS real database result-limit error -> JSON500 and cleanup
+ok
+test_errors (__main__.RESTIntegration.test_errors) ... PASS 400/404/405/413/415 and JSON/ID/query validation
+ok
+test_injection_and_transaction_rollback (__main__.RESTIntegration.test_injection_and_transaction_rollback) ... PASS parameter binding and duplicate update rollback
+ok
+test_native_crud (__main__.RESTIntegration.test_native_crud) ... PASS all5 CRUD, Unicode, NULL/integer, generatedID, conflict, repeat via 43481
+ok
+test_next_to_native_crud (__main__.RESTIntegration.test_next_to_native_crud) ... PASS all5 CRUD, Unicode, NULL/integer, generatedID, conflict, repeat via 58565
+ok
+PASS S deterministic shutdown exit=0
+
+----------------------------------------------------------------------
+Ran 7 tests in 57.477s
+
+OK

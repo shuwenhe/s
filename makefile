@@ -607,3 +607,15 @@ http-unit-check: compiler
 	@python3 test/stdlib-native/test_http.py NativeHTTPTests.test_native_protocol -v
 http-integration-check: compiler
 	@python3 test/stdlib-native/test_http.py -v
+
+.PHONY: rest-unit-check rest-http-check rest-frontend-check rest-integration-check
+rest-unit-check: compiler seed-compiler-bin
+	@python3 test/stdlib-native/test_rest_json.py -v
+	@python3 test/stdlib-native/test_rest_router.py -v
+	@python3 test/stdlib-native/test_rest_users.py -v
+rest-http-check: compiler seed-compiler-bin
+	@python3 test/stdlib-native/test_rest_http.py -v
+rest-frontend-check:
+	@cd test/rest-users/frontend && npm ci && npm test && npm run typecheck && npm run build
+rest-integration-check: compiler
+	@python3 test/stdlib-native/test_rest_integration.py -v

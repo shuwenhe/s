@@ -1,0 +1,4 @@
+READY 36479 MYSQL 8.0.46-0ubuntu0.24.04.3
+FAIL reset killed service ConnectionRefusedError exit=8
+process output: FAIL accept
+  exit= 8

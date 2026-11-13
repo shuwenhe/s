@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-13",
+  "checks": {
+    "seed_borrow_regression": {
+      "status": "PASS",
+      "tests": 6,
+      "exit_code": 0
+    },
+    "seed_http": {
+      "status": "PASS",
+      "tests": 12,
+      "exit_code": 0
+    },
+    "installed_native_http": {
+      "status": "PASS",
+      "tests": 12,
+      "exit_code": 0
+    },
+    "stage1_http": {
+      "status": "PASS",
+      "tests": 12,
+      "exit_code": 0
+    },
+    "stage2_http": {
+      "status": "PASS",
+      "tests": 12,
+      "exit_code": 0
+    },
+    "stage3_http": {
+      "status": "PASS",
+      "tests": 12,
+      "exit_code": 0
+    },
+    "stage4_http": {
+      "status": "PASS",
+      "tests": 12,
+      "exit_code": 0
+    },
+    "tcp": {
+      "status": "PASS",
+      "tests": 3,
+      "exit_code": 0
+    },
+    "time": {
+      "status": "PASS",
+      "tests": 6,
+      "exit_code": 0
+    },
+    "tls": {
+      "status": "PASS",
+      "tests": 4,
+      "exit_code": 0
+    },
+    "mysql_compilation": {
+      "status": "PASS",
+      "tests": 4,
+      "exit_code": 0
+    }
+  },
+  "bootstrap": {
+    "status": "PASS",
+    "exit_code": 0,
+    "directory": ".bootstrap/http-seed-compat.vMZ9WC",
+    "stage2_3_4_assembly_identical": true,
+    "stage2_3_4_binaries_identical": true,
+    "source_integrity": "PASS",
+    "completion_marker": true
+  },
+  "canonical_mir": {
+    "status": "PASS",
+    "exit_code": 0
+  },
+  "record_borrow_and_forged_ir": {
+    "status": "PASS",
+    "exit_code": 0
+  },
+  "go_changes_by_this_task": []
+}

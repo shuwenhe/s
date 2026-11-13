@@ -23,6 +23,22 @@ cannot repair Seed discarding that local's tuple-derived provenance. No HTTP
 implementation, runtime, ownership rule, MIR verifier or Go source was changed
 for this correction.
 
+## Files changed in this correction
+
+- `src/cmd/compile/seed/semantic/native_borrow.h`: transparent lowering scope lifetime.
+- `src/cmd/compile/seed/semantic/analyzer.c`: package function identity and exact
+  signature checks for ambiguous source leaves.
+- `src/cmd/compile/seed/intermediate/ir.c`: collision keys and matching metadata/calls.
+- `test/http/seed-borrow-repro/reduced/main.s`: minimal regression fixture.
+- `test/http/seed-borrow-repro/main.s`: update the full-closure fixture description.
+- `test/stdlib-native/test_seed_borrow_integration.py`: focused positive/negative tests.
+- `doc/http/seed-compatibility.md`, `doc/http/seed-compatibility/*`,
+  `doc/http/README.md`, `doc/http/results.md`: acceptance evidence and historical links.
+
+Existing worktree changes to `makefile`, `test/http/server.s`,
+`test/stdlib-native/test_http.py`, `doc/http/plan.md`, and prior milestone artifacts
+were present before this correction and are preserved.
+
 ## Reproductions and regression
 
 - [Minimal S reproduction](../../test/http/seed-borrow-repro/reduced/main.s) (path
@@ -52,6 +68,9 @@ not database authentication or a CRUD runtime claim.
 | PASS | `python3 test/stdlib-native/test_seed_borrow_integration.py -v` | 6 tests, Seed/native fixtures | 0 |
 | PASS | `S_HTTP_COMPILER="$PWD/bin/s_seed" python3 test/stdlib-native/test_http.py -v` | 12/12, real sockets, protocol/server | 0 |
 | PASS | `S_HTTP_COMPILER="$work/stage1" python3 test/stdlib-native/test_http.py -v` | fresh Stage1, 12/12 real sockets | 0 |
+| PASS | `S_HTTP_COMPILER="$work/stage2" python3 test/stdlib-native/test_http.py -v` | fresh Stage2, 12/12 real sockets | 0 |
+| PASS | `S_HTTP_COMPILER="$work/stage3" python3 test/stdlib-native/test_http.py -v` | fresh Stage3, 12/12 real sockets | 0 |
+| PASS | `S_HTTP_COMPILER="$work/stage4" python3 test/stdlib-native/test_http.py -v` | fresh Stage4, 12/12 real sockets | 0 |
 | PASS | `make http-integration-check` | native compiler, 12/12 real sockets | 0 |
 | PASS | `python3 test/stdlib-native/test_tcp.py -v` | 3/3 | 0 |
 | PASS | `python3 test/stdlib-native/test_time.py -v` | 6/6 | 0 |
@@ -69,11 +88,38 @@ Compiler SHA-256:
 
 ## Bootstrap
 
-The fresh official acceptance chain is still executing. Its observed terminal
-result will be recorded here before completion.
-The superseded intermediate bootstrap exposed overbroad checking of the existing
-`to_string(bool)` builtin (exit 1). The final fix restricts new signature checks
-to colliding source leaves and restarts the entire chain.
+PASS: the official fresh chain completed on 2026-11-13, exit 0.
+
+```sh
+work=$(mktemp -d "$PWD/.bootstrap/http-seed-compat.XXXXXX")
+S_SOURCE_ROOT="$PWD" S_BOOTSTRAP_PROGRESS=0 S_BOOTSTRAP_TIMEOUT=7200 \
+  bash src/cmd/dist/native-bootstrap-no-manifest.sh "$work"
+```
+
+Actual output directory: `.bootstrap/http-seed-compat.vMZ9WC`.
+[Full bootstrap output](seed-compatibility/bootstrap.log).
+All stages passed native artifact verification. Stage2/3/4 assembly and binaries
+converged; the official source-dependent execution probes passed at each stage;
+source hashes matched after execution; `.complete` exists (checked exit 0).
+
+Actual final output:
+
+```text
+Native bootstrap verified: seed -> stage1 -> stage2 == stage3 == stage4
+```
+
+SHA-256:
+
+- Stage1: `75a0a83b61d38820eb6d3af4e0905372aadcc4ef6d5c585d666115a6a49212f6`
+- Stage2 = Stage3 = Stage4: `ddba78e8b1e03271d7f6f288c53d55df06d7f6b91c58eb5418a3d8ea1d5b2583`
+
+Superseded experiments are not counted as acceptance: an earlier run was stopped
+(exit 143) after further changes were needed; an intermediate run failed (exit 1)
+on overbroad checking of the existing `to_string(bool)` builtin. The final fix
+restricts new signature checks to colliding source leaves, and the successful
+chain above was restarted from Seed. An external commit (`daba2618f`) captured
+working-tree changes during testing; no history was rewritten and the official
+source integrity check passed.
 
 ## Scope and limitations
 

@@ -1,3 +1,6 @@
+> Historical HTTP milestone report: the Seed failure and bootstrap status below
+> are superseded by [Seed compatibility acceptance](seed-compatibility.md).
+
 # HTTP first-slice results — 2026-11-13
 
 **PASS: native HTTP health-server milestone on Linux/amd64 with the installed

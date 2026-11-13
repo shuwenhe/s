@@ -1,0 +1,9 @@
+node_modules/
+.next/
+*.tsbuildinfo
+.env*.local
+!first-red.log
+!method-red.log
+!browser-first-red.log
+!query-content-type-red.log
+!query-content-type-red.log
