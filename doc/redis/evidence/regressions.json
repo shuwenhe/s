@@ -1,0 +1,42 @@
+[
+  {
+    "test": "test_tcp.py",
+    "exit_code": 0,
+    "output": "...\n----------------------------------------------------------------------\nRan 3 tests in 3.158s\n\nOK\n"
+  },
+  {
+    "test": "test_tls.py",
+    "exit_code": 0,
+    "output": "....\n----------------------------------------------------------------------\nRan 4 tests in 8.201s\n\nOK\n"
+  },
+  {
+    "test": "test_rest_json.py",
+    "exit_code": 0,
+    "output": ".\n----------------------------------------------------------------------\nRan 1 test in 5.891s\n\nOK\nseed: json: PASS\nnative: json: PASS\n"
+  },
+  {
+    "test": "test_database_types.py",
+    "exit_code": 0,
+    "output": "...\n----------------------------------------------------------------------\nRan 3 tests in 0.135s\n\nOK\n"
+  },
+  {
+    "test": "test_database_wire.py",
+    "exit_code": 0,
+    "output": ".\n----------------------------------------------------------------------\nRan 1 test in 0.048s\n\nOK\n"
+  },
+  {
+    "test": "test_mysql_protocol.py",
+    "exit_code": 0,
+    "output": ".....\n----------------------------------------------------------------------\nRan 5 tests in 0.518s\n\nOK\n"
+  },
+  {
+    "test": "test_seed_borrow_integration.py",
+    "exit_code": 0,
+    "output": "......\n----------------------------------------------------------------------\nRan 6 tests in 9.907s\n\nOK\n"
+  },
+  {
+    "test": "test_rest_users.py",
+    "exit_code": 0,
+    "output": "test_validator_seed_and_native (__main__.UserValidation.test_validator_seed_and_native) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 5.006s\n\nOK\n"
+  }
+]

@@ -619,3 +619,11 @@ rest-frontend-check:
 	@cd test/rest-users/frontend && npm ci && npm test && npm run typecheck && npm run build
 rest-integration-check: compiler
 	@python3 test/stdlib-native/test_rest_integration.py -v
+
+# Native S Redis tests start isolated loopback Redis with persistence disabled.
+.PHONY: redis-protocol-check redis-integration-check redis-check
+redis-protocol-check:
+	@sh misc/scripts/check-redis.sh protocol
+redis-integration-check:
+	@sh misc/scripts/check-redis.sh integration
+redis-check: redis-protocol-check redis-integration-check

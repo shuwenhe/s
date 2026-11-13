@@ -1,0 +1,24 @@
+test_protocol (__main__.Protocol.test_protocol) ... 
+  test_protocol (__main__.Protocol.test_protocol) (seed=True) ... FAIL
+  test_protocol (__main__.Protocol.test_protocol) (seed=False) ... FAIL
+
+======================================================================
+FAIL: test_protocol (__main__.Protocol.test_protocol) (seed=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/redis/run.py", line 25, in test_protocol
+    self.assertEqual(r.returncode,0,(r.stdout,r.stderr))
+AssertionError: 38 != 0 : (b'', b'')
+
+======================================================================
+FAIL: test_protocol (__main__.Protocol.test_protocol) (seed=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/redis/run.py", line 25, in test_protocol
+    self.assertEqual(r.returncode,0,(r.stdout,r.stderr))
+AssertionError: 38 != 0 : (b'', b'')
+
+----------------------------------------------------------------------
+Ran 1 test in 4.127s
+
+FAILED (failures=2)

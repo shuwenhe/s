@@ -1,0 +1,15 @@
+test_fragmented_and_failed_connections (test_faults.Faults.test_fragmented_and_failed_connections) ... ok
+test_real_redis (test_local.LocalRedis.test_real_redis) ... ok
+test_protocol (test_protocol.Protocol.test_protocol) ... ok
+test_verified_tls (test_tls.RedisTLS.test_verified_tls) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 73.481s
+
+OK
+redis faults: PASS
+native: redis local integration: PASS
+seed: redis protocol: PASS
+native: redis protocol: PASS
+redis TLS certificate and hostname rejection: PASS
+redis local integration: PASS

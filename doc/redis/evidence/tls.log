@@ -1,0 +1,8 @@
+test_verified_tls (__main__.RedisTLS.test_verified_tls) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 18.202s
+
+OK
+redis TLS certificate and hostname rejection: PASS
+redis local integration: PASS

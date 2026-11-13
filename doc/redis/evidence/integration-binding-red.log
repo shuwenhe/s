@@ -1,0 +1,27 @@
+test_real_redis (__main__.LocalRedis.test_real_redis) ... 
+  test_real_redis (__main__.LocalRedis.test_real_redis) (seed=False) ... FAIL
+
+======================================================================
+FAIL: test_real_redis (__main__.LocalRedis.test_real_redis) (seed=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/redis/test_local.py", line 23, in test_real_redis
+    binary=build(work,source,seed)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/redis/run.py", line 11, in build
+    if r.returncode: raise AssertionError(r.stdout.decode(errors='replace')+r.stderr.decode(errors='replace'))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: canonical semantic:89:54: e3064: duplicate local binding in the same scope [anchor=arguments]
+ commands := []std.redis.command {std.redis.command {arguments:[]string {"SET","pipe","one"}},std.redis.command {arguments:[]string {"GET","pipe"}},std.redis.command {arguments:[]string {"NO_SUCH_REDIS_COMMAND"}},std.redis.command {arguments:[]string {"PING"}}}
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/misc/scripts/build-openssl-client.py", line 42, in <module>
+    subprocess.run([str(compiler),'--emit-amd64',str(combined),str(assembly)],cwd=ROOT,check=True)
+  File "/usr/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/home/shuwen/shuwen/s/bin/s_compiler', '--emit-amd64', '/tmp/s-redis-urtfdftc/.s-openssl-lcydt11a/combined.s', '/tmp/s-redis-urtfdftc/.s-openssl-lcydt11a/program.s']' returned non-zero exit status 1.
+
+
+----------------------------------------------------------------------
+Ran 1 test in 2.450s
+
+FAILED (failures=1)

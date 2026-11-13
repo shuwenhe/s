@@ -1,0 +1,32 @@
+test_protocol (__main__.Protocol.test_protocol) ... 
+  test_protocol (__main__.Protocol.test_protocol) (seed=True) ... FAIL
+  test_protocol (__main__.Protocol.test_protocol) (seed=False) ... FAIL
+
+======================================================================
+FAIL: test_protocol (__main__.Protocol.test_protocol) (seed=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/redis/run.py", line 18, in test_protocol
+    binary=build(Path(tmp),ROOT/'test/redis/protocol.s',seed)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/redis/run.py", line 12, in build
+    if r.returncode: raise AssertionError((cmd,r.stdout.decode(errors='replace'),r.stderr.decode(errors='replace')))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: (['/home/shuwen/shuwen/s/bin/s_seed', '--compile-native-unit', '/tmp/tmpop603qxs/unit.ir', '/home/shuwen/shuwen/s/test/redis/protocol.s', '/home/shuwen/shuwen/s/src/std/tcp.s', '/home/shuwen/shuwen/s/src/std/time.s', '/home/shuwen/shuwen/s/src/std/tls.s', '/home/shuwen/shuwen/s/src/result/result.s', '/home/shuwen/shuwen/s/src/prelude/prelude.s'], '', 'PARSE_FAIL at /home/shuwen/shuwen/s/test/redis/protocol.s:11:34: error[4]: expected expression, got ;\n')
+
+======================================================================
+FAIL: test_protocol (__main__.Protocol.test_protocol) (seed=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shuwen/shuwen/s/test/redis/run.py", line 18, in test_protocol
+    binary=build(Path(tmp),ROOT/'test/redis/protocol.s',seed)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shuwen/shuwen/s/test/redis/run.py", line 12, in build
+    if r.returncode: raise AssertionError((cmd,r.stdout.decode(errors='replace'),r.stderr.decode(errors='replace')))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: (['/home/shuwen/shuwen/s/bin/s_compiler', '--compile-unit', '/tmp/tmp4y3dh08q/unit.ir', '/home/shuwen/shuwen/s/test/redis/protocol.s', '/home/shuwen/shuwen/s/src/std/tcp.s', '/home/shuwen/shuwen/s/src/std/time.s', '/home/shuwen/shuwen/s/src/std/tls.s', '/home/shuwen/shuwen/s/src/result/result.s', '/home/shuwen/shuwen/s/src/prelude/prelude.s'], '', 'canonical semantic:1:7: e3010: undefined identifier [anchor=e]\npackage main\n')
+
+----------------------------------------------------------------------
+Ran 1 test in 0.267s
+
+FAILED (failures=2)

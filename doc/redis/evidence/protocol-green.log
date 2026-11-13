@@ -1,0 +1,8 @@
+test_protocol (__main__.Protocol.test_protocol) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 4.826s
+
+OK
+seed: redis protocol: PASS
+native: redis protocol: PASS

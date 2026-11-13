@@ -1,0 +1,21 @@
+name: Native Redis acceptance
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  redis:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install local Redis and verified TLS build dependencies
+        run: sudo apt-get update && sudo apt-get install -y redis-server libssl-dev
+      - name: Build native compilers
+        run: make compiler seed-compiler-bin
+      - name: Run actual S against isolated TCP and TLS Redis
+        run: make redis-check
