@@ -37,3 +37,14 @@ transaction state after errors; NULL/empty and binary data; no secrets in logs.
 Final verification: make redis-check exited 0; both protocol ABIs, real TCP/TLS
 Redis, adverse peers and standalone S smoke passed. All 24 existing grouped
 regression cases passed. git diff --check passed; compiler/runtime diff is empty.
+
+## S-only test migration
+
+- [x] Replace Redis Python helpers with formatted S entry points: run.s,
+  protocol.s, integration.s, tls.s, faults.s, peer/main.s and basic/main.s.
+- [x] Read port/TLS settings in S rather than replacing source placeholders.
+- [x] Keep lifecycle/build tooling outside test/redis, using shell plus the
+  existing OpenSSL bridge; do not add process/runtime functionality for tests.
+- [x] Remove Redis Python discovery wrappers and update Make/CI/documentation.
+- [x] Run both protocol ABIs and complete TCP/fault/TLS acceptance with Python
+  blocked. make redis-check exited 0; independent full rerun also exited 0.

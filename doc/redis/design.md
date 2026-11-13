@@ -19,5 +19,12 @@ IPv4 literals follow std.tcp's existing limitation. TLS server name is separate
 and always verified. Authentication and SELECT happen before connect succeeds.
 Samples and all S acceptance programs live under test/redis, never examples.
 
+Test implementation is S-only. `run.s` dispatches protocol, integration, TLS and
+fault assertions; `peer/main.s` implements adversarial TCP peers and loopback port
+allocation. Integration reads port/TLS configuration directly in S, without source
+templating. Shell tooling outside test/redis compiles programs and supervises
+temporary Redis processes until S's process API supports that lifecycle. No Python
+test implementation or Python execution is required.
+
 Alternative: restart decoding after every read; rejected because fragmented large
 responses would repeatedly parse prefixes. No compiler/runtime changes planned.

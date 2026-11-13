@@ -4,6 +4,27 @@ Date: 2026-11-13 (Asia/Shanghai). Scope: Linux amd64, this checkout's native and
 Seed compiler binaries, local Redis 7.0.15 and the installed OpenSSL. Exact hashes
 and versions are in evidence/toolchain.sha256 and evidence/environment.txt.
 
+## Current S-only test path
+
+All seven files under `test/redis` are now `.s` source files. Removed the five
+Python helpers and the two Redis Python discovery wrappers. The Make targets
+invoke `misc/scripts/check-redis.sh`, which builds native S executables through
+`misc/scripts/build-redis-test.sh`. Shell only manages compiler/server processes,
+temporary certificates and cleanup; assertions and adversarial TCP peers are S.
+The builder uses the existing verified OpenSSL runtime bridge and the same startup
+adapter as the repository's earlier builder. Compiler/runtime sources are unchanged.
+
+`make redis-check` exited 0 with `python` and `python3` shadowed by executable
+guards that fail with exit 125. See `evidence/s-only-make-check.log`. Both protocol
+compiler ABIs, TCP integration, standalone sample, all nine S fault peers, TLS
+integration and certificate/hostname rejection pass. An independent reviewer also
+ran `sh misc/scripts/check-redis.sh all` successfully and found no lost assertions
+or correctness issue. The initial failed entry-point migration is recorded in
+`evidence/s-only-red.log`; the passing migration run is `s-only-acceptance.log`.
+
+The older logs below preserve the original implementation history; they are not
+instructions to use the deleted Python files. Current commands are in README.md.
+
 ## Verified
 
 - Before implementation: TCP (3), TLS (4), JSON (1, both compiler ABIs), database
@@ -25,13 +46,13 @@ and versions are in evidence/toolchain.sha256 and evidence/environment.txt.
 - Existing regression suites pass after implementation: TCP (3), TLS (4), JSON
   (1), database types (3), database wire (1), MySQL protocol (5), imported borrow
   ownership (6), existing service validator (1). See regressions.json and logs.
-- Standalone sample compiles through the normal source closure/OpenSSL bridge.
+- Standalone sample compiles through the native compiler/OpenSSL bridge.
   `make redis-check` also builds and runs it against isolated local Redis.
 - Independent read-only review found no critical or important correctness issue.
   Final command results, rather than the reviewer's overlapping test run, provide
   the validation evidence.
 
-`evidence/make-redis-check.log` is the final Make entry-point run.
+`evidence/make-redis-check.log` is the original Make entry-point run before migration.
 `evidence/acceptance.log` records the four direct runner groups. Python counts
 represent grouped test programs, not counts of every S assertion.
 
