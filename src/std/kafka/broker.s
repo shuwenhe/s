@@ -1,278 +1,196 @@
 package std.kafka
+import ("std.tcp"; "std.time")
 
-import ("std.tcp")
-
+// Single owner; do not copy a connected broker. Sequential requests only.
 struct broker {
+    std.tcp.socket socket
     int socket_descriptor
     string client_id
     int correlation_id
     int state
 }
+struct api_version { int api_key, int min_version, int max_version }
 
-struct api_version {
-    int api_key
-    int min_version
-    int max_version
+func _k_network_error(int native_code, string message) error {
+    code := error_transport
+    if native_code == 110 { code = error_timeout }
+    return error { code: code, native_code: native_code, message: message }
 }
-
-// Connect to Kafka broker
-// Returns broker handle and error
 func broker_connect(string host, int port, string client_id, int timeout_ms) (broker, error) {
-    socket, tcp_err := std.tcp.dial_ipv4(host, port, timeout_ms)
-    
-    var b broker
-    var result_err error
-    
-    if tcp_err.code != 0 {
-        b.socket_descriptor = -1
-        b.state = 0
-        result_err.code = tcp_err.code
-        result_err.message = "tcp connect failed"
-        return b, result_err
+    b := broker { socket_descriptor: -1 }
+    if timeout_ms < 1 || timeout_ms > 2147483647 || len(client_id) > 32767 {
+        return b, failure(error_invalid, "invalid broker connect arguments")
     }
-    
+    socket, problem := std.tcp.dial_ipv4(host, port, timeout_ms)
+    if problem.code != 0 { return b, _k_network_error(problem.code, "Kafka connect failed") }
+    b.socket = socket
     b.socket_descriptor = socket.descriptor
     b.client_id = client_id
     b.correlation_id = 1
     b.state = 2
-    result_err.code = 0
-    return b, result_err
+    return b, error {}
 }
-
-// Send request and read response
-// Handles Kafka framing: [int32 size][payload]
-func broker_send_request(broker* b, string request_data, int timeout_ms) (string, error) {
-    var empty_response string = ""
-    var err_response error
-    
-    if b.state != 2 {
-        err_response.code = -1
-        err_response.message = "broker not connected"
-        return empty_response, err_response
-    }
-    
-    // Build frame: 4-byte size prefix (big-endian)
-    frame_size := len(request_data)
-    size_bytes := _put_int32(frame_size)
-    frame := size_bytes + request_data
-    
-    // Send request
-    // Note: Can't use &std.tcp.socket directly due to compiler limitation
-    // Would need to reconstruct socket from descriptor, but tcp module doesn't expose that
-    // This is a workaround - we'll need the tcp module to support sending by descriptor
-    // For now, return placeholder error
-    var err error
-    err.code = -1
-    err.message = "broker.send_request: need tcp module integration"
-    return empty_response, err
-}
-
-// Close connection
 func broker_close(broker* b) error {
-    var result_err error
-    if b.state == 0 {
-        result_err.code = 0
-        return result_err
-    }
-    
+    // State is authoritative: a zero-initialized broker never owns descriptor 0.
+    if b.state != 2 { b.state = 0; b.socket_descriptor = -1; return error {} }
+    socket := b.socket
+    problem := std.tcp.close(socket*)
+    b.socket = socket
     b.state = 0
     b.socket_descriptor = -1
-    result_err.code = 0
-    return result_err
+    if problem.code != 0 { return _k_network_error(problem.code, "Kafka close failed") }
+    return error {}
+}
+func _k_abort(broker* b, error problem) error {
+    broker_close(b*)
+    problem.fatal = true
+    return problem
+}
+func _k_remaining(int deadline) (int, error) {
+    now, problem := std.time.monotonic_clock()
+    if problem.code != 0 { return 0, _k_network_error(problem.code, "Kafka clock failed") }
+    if now >= deadline { return 0, _k_network_error(110, "Kafka request timeout") }
+    return (deadline - now + 999999) / 1000000, error {}
+}
+func _k_read_exact(broker* b, int size, int deadline) (string, error) {
+    output := ""
+    while len(output) < size {
+        remaining, clock_error := _k_remaining(deadline)
+        if clock_error.code != 0 { return "", _k_abort(b*, clock_error) }
+        maximum := size - len(output)
+        // Bound conversion work as well as allocation per TCP read. In the seed
+        // runtime, converting a large byte array can outlast a short deadline.
+        if maximum > 1024 { maximum = 1024 }
+        socket := b.socket
+        chunk, problem := std.tcp.read_some(socket*, maximum, remaining)
+        b.socket = socket
+        if problem.code != 0 {
+            result := _k_network_error(problem.code, "Kafka read failed")
+            return "", _k_abort(b*, result)
+        }
+        if chunk.eof || len(chunk.data) == 0 {
+            result := _k_network_error(104, "Kafka unexpected EOF")
+            return "", _k_abort(b*, result)
+        }
+        output = output + chunk.data
+        after_read, after_error := _k_remaining(deadline)
+        if after_error.code != 0 { return "", _k_abort(b*, after_error) }
+    }
+    return output, error {}
 }
 
-// Build ApiVersions request (API key 18)
+// Request contains a v1 header (API key, version, next correlation, client ID).
+// Obtain the next ID from b.correlation_id; it is consumed exactly once on I/O.
+// Returns API body only. Flexible response headers are outside this v0 milestone.
+func broker_send_request(broker* b, string request_data, int timeout_ms) (string, error) {
+    if b.state != 2 { return "", failure(error_closed, "Kafka broker is closed") }
+    if timeout_ms < 1 || timeout_ms > 2147483647 { return "", failure(error_invalid, "invalid Kafka timeout") }
+    if len(request_data) < 10 || len(request_data) > 1048576 { return "", failure(error_bounds, "invalid Kafka request size") }
+    request := new_cursor(request_data, 1048576)
+    key := read_int(request*, 2)
+    version := read_int(request*, 2)
+    correlation := read_int(request*, 4)
+    client := read_nullable(request*, 2, 32767)
+    if request.failure.code != 0 || key < 0 || version < 0 || !client.present ||
+        correlation < 1 || correlation > 2147483647 || correlation != b.correlation_id {
+        return "", failure(error_invalid, "invalid Kafka request header or correlation")
+    }
+    now, clock_error := std.time.monotonic_clock()
+    if clock_error.code != 0 { return "", _k_network_error(clock_error.code, "Kafka clock failed") }
+    deadline := now + timeout_ms * 1000000
+    w := new_writer(1048580)
+    size := len(request_data)
+    put_int(w*, size, 4)
+    put_raw(w*, request_data)
+    if w.failure.code != 0 { return "", w.failure }
+    remaining, deadline_error := _k_remaining(deadline)
+    if deadline_error.code != 0 { return "", deadline_error }
+    b.correlation_id = correlation + 1
+    if correlation == 2147483647 { b.correlation_id = 1 }
+    socket := b.socket
+    written, write_error := std.tcp.write_all(socket*, w.data, remaining)
+    b.socket = socket
+    if write_error.code != 0 {
+        result := _k_network_error(write_error.code, "Kafka write failed")
+        return "", _k_abort(b*, result)
+    }
+    if written != len(w.data) {
+        result := _k_network_error(5, "Kafka incomplete write")
+        return "", _k_abort(b*, result)
+    }
+    header, header_error := _k_read_exact(b*, 4, deadline)
+    if header_error.code != 0 { return "", header_error }
+    length_cursor := new_cursor(header, 4)
+    length := read_int(length_cursor*, 4)
+    if length < 4 {
+        result := failure(error_protocol, "invalid Kafka response length")
+        return "", _k_abort(b*, result)
+    }
+    if length > 1048576 {
+        result := failure(error_bounds, "Kafka response exceeds frame limit")
+        return "", _k_abort(b*, result)
+    }
+    response, response_error := _k_read_exact(b*, length, deadline)
+    if response_error.code != 0 { return "", response_error }
+    c := new_cursor(response, 1048576)
+    response_correlation := read_int(c*, 4)
+    if response_correlation != correlation {
+        result := failure(error_protocol, "Kafka correlation mismatch")
+        return "", _k_abort(b*, result)
+    }
+    body := take(c*, length - 4)
+    after_body, body_timeout := _k_remaining(deadline)
+    if body_timeout.code != 0 { return "", _k_abort(b*, body_timeout) }
+    return body, error {}
+}
+
+func broker_api_versions(broker* b, int timeout_ms) (api_version[], error) {
+    empty := api_version[]()
+    request := broker_build_api_versions_request(b.client_id, b.correlation_id)
+    body, problem := broker_send_request(b*, request, timeout_ms)
+    if problem.code != 0 { return empty, problem }
+    versions, parse_error := broker_parse_api_versions_response(body)
+    if parse_error.code != 0 && parse_error.code != error_broker { return empty, _k_abort(b*, parse_error) }
+    return versions, parse_error
+}
+// Request header v1, API 18 version 0. Invalid inputs produce no request.
 func broker_build_api_versions_request(string client_id, int correlation_id) string {
-    api_key := 18
-    version := 0
-    
-    request := ""
-    request = request + _put_int16(api_key)
-    request = request + _put_int16(version)
-    request = request + _put_int32(correlation_id)
-    request = request + _put_string(client_id)
-    
-    return request
+    if len(client_id) > 32767 || correlation_id < 1 || correlation_id > 2147483647 { return "" }
+    w := new_writer(1048576)
+    put_int(w*, 18, 2)
+    put_int(w*, 0, 2)
+    put_int(w*, correlation_id, 4)
+    put_string(w*, client_id)
+    return w.data
 }
 
-// Parse ApiVersions response
+// Accepts the API body only; broker_send_request validates/strips correlation.
 func broker_parse_api_versions_response(string response_data) (api_version[], error) {
-    var empty_versions api_version[]
-    empty_versions = make([]api_version, 0)
-    
-    var c cursor
-    c.data = response_data
-    c.position = 0
-    
-    // Read error code (int16)
-    error_code, err1 := _read_int16(&c)
-    if err1.code != 0 {
-        var result_err error
-        result_err.code = err1.code
-        result_err.message = "read error code failed"
-        return empty_versions, result_err
-    }
-    
-    if error_code != 0 {
-        var result_err error
-        result_err.code = error_code
-        result_err.message = "broker returned error"
-        return empty_versions, result_err
-    }
-    
-    // Read number of API versions (int32)
-    count, err2 := _read_int32(&c)
-    if err2.code != 0 {
-        var result_err error
-        result_err.code = err2.code
-        result_err.message = "read version count failed"
-        return empty_versions, result_err
-    }
-    
-    if count < 0 || count > 256 {
-        var result_err error
-        result_err.code = 1
-        result_err.message = "invalid version count"
-        return empty_versions, result_err
-    }
-    
-    // Read array of API versions
-    versions := make([]api_version, count)
+    versions := api_version[]()
+    c := new_cursor(response_data, 1048576)
+    status := read_int(c*, 2)
+    count := read_int(c*, 4)
+    if c.failure.code != 0 { return versions, c.failure }
+    if count < 0 || count > 4096 { return versions, failure(error_protocol, "invalid API version count") }
+    if count > (len(response_data) - c.position) / 6 { return versions, failure(error_protocol, "truncated API versions") }
     i := 0
     while i < count {
-        api_key, err_k := _read_int16(&c)
-        if err_k.code != 0 {
-            var result_err error
-            result_err.code = err_k.code
-            result_err.message = "read api key failed"
-            return empty_versions, result_err
+        key := read_int(c*, 2)
+        minimum := read_int(c*, 2)
+        maximum := read_int(c*, 2)
+        if key < 0 || minimum < 0 || maximum < minimum { return versions, failure(error_protocol, "invalid API version range") }
+        j := 0
+        while j < len(versions) {
+            if versions[j].api_key == key { return versions, failure(error_protocol, "duplicate API key") }
+            j = j + 1
         }
-        
-        min_ver, err_min := _read_int16(&c)
-        if err_min.code != 0 {
-            var result_err error
-            result_err.code = err_min.code
-            result_err.message = "read min version failed"
-            return empty_versions, result_err
-        }
-        
-        max_ver, err_max := _read_int16(&c)
-        if err_max.code != 0 {
-            var result_err error
-            result_err.code = err_max.code
-            result_err.message = "read max version failed"
-            return empty_versions, result_err
-        }
-        
-        var av api_version
-        av.api_key = api_key
-        av.min_version = min_ver
-        av.max_version = max_ver
-        versions[i] = av
-        
+        versions = append(versions, api_version { api_key: key, min_version: minimum, max_version: maximum })
         i = i + 1
     }
-    
-    var ok_err error
-    ok_err.code = 0
-    return versions, ok_err
-}
-
-// Helper: Encode 16-bit big-endian integer as string
-func _put_int16(int value) string {
-    high := (value >> 8) & 0xff
-    low := value & 0xff
-    return __std_byte_string(high) + __std_byte_string(low)
-}
-
-// Helper: Encode 32-bit big-endian integer as string
-func _put_int32(int value) string {
-    b3 := (value >> 24) & 0xff
-    b2 := (value >> 16) & 0xff
-    b1 := (value >> 8) & 0xff
-    b0 := value & 0xff
-    return __std_byte_string(b3) + __std_byte_string(b2) + __std_byte_string(b1) + __std_byte_string(b0)
-}
-
-// Helper: Encode string with 16-bit length prefix
-func _put_string(string value) string {
-    length := len(value)
-    return _put_int16(length) + value
-}
-
-// Helper: Decode 16-bit big-endian integer from cursor
-func _read_int16(cursor* c) (int, error) {
-    if c.position + 2 > len(c.data) {
-        var zero_val int = 0
-        var err error
-        err.code = 1
-        err.message = "buffer underrun"
-        return zero_val, err
+    problem := finished(c*)
+    if problem.code != 0 { return versions, problem }
+    if status != 0 {
+        return versions, error { code: error_broker, native_code: status, message: "ApiVersions broker error" }
     }
-    
-    high := __host_byte_at(c.data, c.position)
-    low := __host_byte_at(c.data, c.position + 1)
-    c.position = c.position + 2
-    
-    result := high * 256 + low
-    var ok_err error
-    ok_err.code = 0
-    return result, ok_err
+    return versions, error {}
 }
-
-// Helper: Decode 32-bit big-endian integer from cursor
-func _read_int32(cursor* c) (int, error) {
-    if c.position + 4 > len(c.data) {
-        var zero_val int = 0
-        var err error
-        err.code = 1
-        err.message = "buffer underrun"
-        return zero_val, err
-    }
-    
-    b3 := __host_byte_at(c.data, c.position)
-    b2 := __host_byte_at(c.data, c.position + 1)
-    b1 := __host_byte_at(c.data, c.position + 2)
-    b0 := __host_byte_at(c.data, c.position + 3)
-    c.position = c.position + 4
-    
-    result := b3 * 16777216 + b2 * 65536 + b1 * 256 + b0
-    var ok_err error
-    ok_err.code = 0
-    return result, ok_err
-}
-
-// Helper: Decode string with 16-bit length prefix from cursor
-func _read_string(cursor* c) (string, error) {
-    length, err_len := _read_int16(c)
-    if err_len.code != 0 {
-        var empty_str string = ""
-        return empty_str, err_len
-    }
-    
-    if length < 0 || length > 10000 {
-        var empty_str string = ""
-        var err error
-        err.code = 1
-        err.message = "invalid string length"
-        return empty_str, err
-    }
-    
-    if c.position + length > len(c.data) {
-        var empty_str string = ""
-        var err error
-        err.code = 1
-        err.message = "buffer underrun"
-        return empty_str, err
-    }
-    
-    str_data := __string_slice(c.data, c.position, c.position + length)
-    c.position = c.position + length
-    var ok_err error
-    ok_err.code = 0
-    return str_data, ok_err
-}
-
-extern "intrinsic" func __host_byte_at(string text, int index) int
-extern "intrinsic" func __std_byte_string(int value) string
-extern "intrinsic" func __string_slice(string text, int start, int end) string

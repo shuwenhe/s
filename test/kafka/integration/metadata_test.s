@@ -1,4 +1,1 @@
-// Test Metadata discovery from real broker
-func metadata_checks() int {
-    return 0
-}
+// Metadata negotiation belongs to a later milestone. No placeholder acceptance.
