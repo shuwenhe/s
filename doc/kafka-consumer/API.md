@@ -115,3 +115,16 @@ discovers EOF during LeaveGroup, it returns a transport error without retrying t
 Leave. Fresh real tests reproduced error code 4/native 104 under Seed/canonical.
 Sockets are still released by the close cleanup path; this is a failed graceful
 Leave/recovery gate, not evidence that every close leaks an FD.
+
+## Reliability remediation — 2026-11-15
+
+See [remediation results](../kafka/KAFKA_RELIABILITY_REMEDIATION.md) for final-source
+qualification. Close now makes bounded Leave retries after remote FIN/RST/idle and
+can rediscover the coordinator without joining. Its single caller budget includes
+auto-commit, negotiation, discovery and Leave. An already-absent member (Kafka code
+25 on Leave) satisfies close; other errors remain visible. Cleanup releases
+Consumer-owned decoder, queue, snapshot and role buffers even when Leave fails.
+Application-owned batch values and caller configuration are not forcibly freed.
+Repeated close remains safe. ACK checks local ownership deadlines before accepting
+a delivery; max-poll revocation also discards pending bootstrap exchanges.
+These fixes do not establish bounded Seed RSS or remove record/frame limits.

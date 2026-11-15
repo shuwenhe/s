@@ -8,7 +8,8 @@ func main() int {
     ends = append(ends, std.kafka.endpoint { host: "127.0.0.1", port: 49092 })
     c, issue := std.kafka.consumer_new(std.kafka.consumer_config { bootstrap: ends, group_id: args[2], request_timeout_ms: 2000, connect_timeout_ms: 500, max_poll_interval_ms: 120000 })
     if issue.code != 0 { return 1 }
-    topics := string[] { args[1] }
+    topic := args[1]
+    topics := string[] { topic }
     if std.kafka.consumer_subscribe(c*, topics).code != 0 { return 2 }
     start, clock_error := std.time.monotonic_clock()
     while c.state != 6 {

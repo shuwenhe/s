@@ -1,3 +1,9 @@
+> Current reliability changes and fresh before/after evidence are in
+> [KAFKA_RELIABILITY_REMEDIATION.md](../../../doc/kafka/KAFKA_RELIABILITY_REMEDIATION.md).
+> Close now retries stale transport/coordinator failures within one budget and
+> clears transient state even on error. Seed's memory qualification remains open.
+> The older audit observations below are preserved as historical context.
+
 # Native Kafka Producer and Consumer API
 
 Linux/amd64, native S TCP, literal IPv4, sequential calls. No Java/C++ client

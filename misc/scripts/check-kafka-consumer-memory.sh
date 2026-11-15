@@ -8,6 +8,13 @@ cp test/kafka/consumer-memory/main.s "$run/memory.s"
 cp test/kafka/consumer-memory/measure.py "$run/measure.py"
 cp doc/kafka/audit-tools/AuditProducer.java "$run/AuditProducer.java"
 sha256sum src/std/kafka/*.s src/std/tcp.s > "$run/source.sha256"
+first=${KAFKA_MEMORY_PORT:-39092}
+python3 - "$run" "$first" <<'PYSOURCE'
+import sys,pathlib
+r=pathlib.Path(sys.argv[1])
+for name in ['memory.s','AuditProducer.java']:
+ p=r/name;p.write_text(p.read_text().replace('39092',sys.argv[2]))
+PYSOURCE
 export S_SOURCE_ROOT="$PWD"
 for label in seed canonical; do
  compiler="$PWD/bin/s_compiler";compile=--compile-unit;emit=--emit-bin
@@ -28,7 +35,7 @@ export KAFKA_TEST_HEAP_OPTS='-Xms128m -Xmx512m'
 export KAFKA_TEST_LOG_CLEANER_BUFFER_BYTES=8388608
 source misc/scripts/kafka-broker.sh
 trap kafka_stop EXIT
-kafka_start "$run/memory-cluster" 39092 39093 39094
+kafka_start "$run/memory-cluster" "$first" "$((first+1))" "$((first+2))"
 javac -cp "$KAFKA_HOME/libs/*" "$run/AuditProducer.java" > "$run/java-build.log" 2>&1
 printf 'label\tbytes\tseconds\texit\n' > "$run/memory-status.tsv"
 for size in ${KAFKA_MEMORY_SIZES:-1024 16384 65536 262144 524288 1048576};do

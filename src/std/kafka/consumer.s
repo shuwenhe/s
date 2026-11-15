@@ -298,6 +298,10 @@ func consumer_check_liveness(consumer* c, int now) error {
     if now < 0 { return failure(error_transport, "consumer monotonic clock failed") }
     if now - c.last_poll_ns >= c.config.max_poll_interval_ms * 1000000 {
         _kc_revoke(c*, true)
+        bootstrap := c.bootstrap_link
+        consumer_link_close(bootstrap*)
+        c.bootstrap_link = bootstrap
+        c.bootstrap_operation = 0
         c.state = 10
         c.last_error = failure(error_poll_interval, "maximum poll interval exceeded; call poll to rejoin")
         return c.last_error
@@ -430,7 +434,7 @@ func consumer_close(consumer* c, int timeout_ms) error {
             if first.code == 0 { break }
             retry := first.code == error_transport || first.code == error_timeout
             if first.code == error_broker { retry = first.native_code == 14 || first.native_code == 15 || first.native_code == 16 }
-            if !retry || _kc_now() >= deadline { break }
+            if !retry || _kc_now() >= deadline || attempt == 2 { break }
             consumer_link_close(leave*)
             // First retry the known coordinator for a remotely idled socket.
             // On a second failure, resolve migration without JoinGroup/SyncGroup.

@@ -5,12 +5,13 @@ cd "$root"
 run=${1:?fresh evidence directory}
 mkdir "$run";run=$(cd "$run" && pwd)
 export S_SOURCE_ROOT="$root"
-python3 - "$run" <<'PY'
+first=${KAFKA_SUSTAINED_PORT:-59092}
+python3 - "$run" "$first" <<'PY'
 from pathlib import Path
 import sys
 r=Path(sys.argv[1])
-(r/'memory.s').write_text(Path('test/kafka/consumer-memory/main.s').read_text().replace('39092','59092'))
-(r/'AuditProducer.java').write_text(Path('doc/kafka/audit-tools/AuditProducer.java').read_text().replace('39092','59092'))
+(r/'memory.s').write_text(Path('test/kafka/consumer-memory/main.s').read_text().replace('39092',sys.argv[2]))
+(r/'AuditProducer.java').write_text(Path('doc/kafka/audit-tools/AuditProducer.java').read_text().replace('39092',sys.argv[2]))
 PY
 sha256sum bin/s_compiler src/std/kafka/*.s src/std/tcp.s "$run/memory.s" > "$run/source.sha256"
 bin/s_compiler --compile-unit "$run/base.ir" "$run/memory.s" src/std/kafka/*.s src/std/tcp.s src/std/time.s src/result/result.s src/prelude/prelude.s > "$run/build.log" 2>&1
@@ -23,7 +24,7 @@ export KAFKA_TEST_HEAP_OPTS='-Xms128m -Xmx512m'
 export KAFKA_TEST_LOG_CLEANER_BUFFER_BYTES=8388608
 source misc/scripts/kafka-broker.sh
 trap kafka_stop EXIT
-kafka_start "$run/cluster" 59092 59093 59094
+kafka_start "$run/cluster" "$first" "$((first+1))" "$((first+2))"
 javac -cp "$KAFKA_HOME/libs/*" "$run/AuditProducer.java" > "$run/java-build.log" 2>&1
 topic="s-remediation-sustained-$$"
 "$KAFKA_HOME/bin/kafka-topics.sh" --bootstrap-server "$KAFKA_BOOTSTRAP" --create --topic "$topic" --replica-assignment '1:2' > "$run/topic.log" 2>&1

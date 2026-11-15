@@ -5,6 +5,13 @@ cd "$root"
 run=${1:?fresh evidence directory}
 mkdir "$run";run=$(cd "$run" && pwd)
 export S_SOURCE_ROOT="$root"
+first=${KAFKA_CLOSE_REAL_PORT:-49092}
+python3 - "$run" "$first" <<'PYSOURCE'
+import pathlib,sys
+r=pathlib.Path(sys.argv[1]);first=int(sys.argv[2])
+s=pathlib.Path('test/kafka/consumer-close-real/main.s').read_text().replace('49095',str(first+3)).replace('49092',str(first))
+(r/'main.s').write_text(s)
+PYSOURCE
 export JAVA_HOME="$root/.bootstrap/kafka-broker/java"
 export PATH="$JAVA_HOME/bin:$PATH"
 export KAFKA_CACHE="$root/.bootstrap/kafka-broker/distribution"
@@ -19,7 +26,7 @@ source "$run/helper.sh"
 child=
 cleanup() { if [[ -n $child ]];then kill "$child" 2>/dev/null || true;wait "$child" 2>/dev/null || true;fi;kafka_stop; }
 trap cleanup EXIT
-kafka_start "$run/cluster" 49092 49093 49094
+kafka_start "$run/cluster" "$first" "$((first+1))" "$((first+2))"
 printf 'label\tmode\texit\n' > "$run/status.tsv"
 for label in ${KAFKA_CLOSE_LABELS:-seed canonical stage2 stage3 stage4};do
  compiler="$root/bin/s_compiler";compile=--compile-unit;emit=--emit-bin
@@ -27,7 +34,7 @@ for label in ${KAFKA_CLOSE_LABELS:-seed canonical stage2 stage3 stage4};do
  if [[ $label == stage* ]];then compiler="$root/.bootstrap/kafka-broker/phase1/selfhost/$label";fi
  work="$run/$label";mkdir "$work"
  sha256sum "$compiler" src/std/kafka/*.s > "$work/source.sha256"
- "$compiler" "$compile" "$work/program.ir" test/kafka/consumer-close-real/main.s src/std/kafka/*.s src/std/tcp.s src/std/time.s src/result/result.s src/prelude/prelude.s > "$work/build.log" 2>&1
+ "$compiler" "$compile" "$work/program.ir" "$run/main.s" src/std/kafka/*.s src/std/tcp.s src/std/time.s src/result/result.s src/prelude/prelude.s > "$work/build.log" 2>&1
  "$compiler" "$emit" "$work/program.ir" "$work/client" >> "$work/build.log" 2>&1
  for mode in normal idle expired restart;do
   topic="s-close-$label-$mode-$$"
@@ -44,10 +51,10 @@ for label in ${KAFKA_CLOSE_LABELS:-seed canonical stage2 stage3 stage4};do
    done
    [[ $ready == 1 ]] || { cat "$work/$mode.log";exit 1; }
    kafka_stop
-   kafka_start "$run/cluster" 49092 49093 49094
-   python3 - <<'PY'
-import socket
-with socket.create_connection(('127.0.0.1',49095),timeout=3):pass
+   kafka_start "$run/cluster" "$first" "$((first+1))" "$((first+2))"
+   python3 - "$((first+3))" <<'PY'
+import socket,sys
+with socket.create_connection(('127.0.0.1',int(sys.argv[1])),timeout=3):pass
 PY
    wait "$child" || code=$?;child=
   fi

@@ -22,6 +22,10 @@ func liveness_checks() int {
     if issue2.code != std.kafka.error_poll_interval || c.state != 10 || c.generation_id != -1 { return 72 }
     if std.kafka.consumer_close(c*, 100).code != 0 || std.kafka.consumer_close(c*, 100).code != 0 { return 73 }
     orphan := std.kafka.consumer { initialized: true, member_id: "orphan", config: c.config }
+    // Force discovery failure independently of whether a real broker is running.
+    unreachable := std.kafka.endpoint[]()
+    unreachable = append(unreachable, std.kafka.endpoint { host: "invalid-ipv4", port: 1 })
+    orphan.config.bootstrap = unreachable
     close_error := std.kafka.consumer_close(orphan*, 10)
     if close_error.code == 0 || !orphan.closed { return 74 }
     delayed, delayed_error := std.kafka.consumer_new(c.config)

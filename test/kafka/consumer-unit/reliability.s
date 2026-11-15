@@ -27,11 +27,14 @@ func reliability_checks() int {
     fresh.assignment_epoch = 1
     fresh.last_heartbeat_ns = now
     fresh.last_poll_ns = now - fresh.config.max_poll_interval_ms * 1000000 - 1
+    fresh.bootstrap_operation = 10
+    fresh.bootstrap_link.state = 3
+    fresh.bootstrap_link.body = "pending-bootstrap-response"
     fresh.outstanding_delivery_id = 2
     fresh.outstanding_epoch = 1
     fresh.decoder = std.kafka.consumer_decoder_new("pending", 0, 0, false)
     empty, poll_error := std.kafka.consumer_poll(fresh*, 1)
-    if poll_error.code != std.kafka.error_poll_interval || fresh.outstanding_delivery_id != 0 || len(fresh.decoder.input.data) != 0 { return 112 }
+    if poll_error.code != std.kafka.error_poll_interval || fresh.outstanding_delivery_id != 0 || len(fresh.decoder.input.data) != 0 || fresh.bootstrap_operation != 0 || len(fresh.bootstrap_link.body) != 0 { return 112 }
     println("Expired ACK, outstanding poll liveness and revoke cleanup: PASS")
     return 0
 }
