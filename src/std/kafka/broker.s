@@ -81,8 +81,13 @@ func _k_read_exact(broker* b, int size, int deadline) (string, error) {
 
 // Request contains a v1 header (API key, version, next correlation, client ID).
 // Obtain the next ID from b.correlation_id; it is consumed exactly once on I/O.
-// Returns API body only. Flexible response headers are outside this v0 milestone.
+// Returns API body only. Flexible response headers are unsupported.
 func broker_send_request(broker* b, string request_data, int timeout_ms) (string, error) {
+    return _k_exchange(b*, request_data, timeout_ms, true)
+}
+
+// ACK=0 is the only Kafka operation using the internal send-only path.
+func _k_exchange(broker* b, string request_data, int timeout_ms, bool await_response) (string, error) {
     if b.state != 2 { return "", failure(error_closed, "Kafka broker is closed") }
     if timeout_ms < 1 || timeout_ms > 2147483647 { return "", failure(error_invalid, "invalid Kafka timeout") }
     if len(request_data) < 10 || len(request_data) > 1048576 { return "", failure(error_bounds, "invalid Kafka request size") }
@@ -118,6 +123,9 @@ func broker_send_request(broker* b, string request_data, int timeout_ms) (string
         result := _k_network_error(5, "Kafka incomplete write")
         return "", _k_abort(b*, result)
     }
+    after_write, write_timeout := _k_remaining(deadline)
+    if write_timeout.code != 0 { return "", _k_abort(b*, write_timeout) }
+    if !await_response { return "", error {} }
     header, header_error := _k_read_exact(b*, 4, deadline)
     if header_error.code != 0 { return "", header_error }
     length_cursor := new_cursor(header, 4)

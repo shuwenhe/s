@@ -36,7 +36,24 @@ kafka_stop() {
             kill "$pid" 2>/dev/null || true
         fi
     done
-    for pid in "${KAFKA_OWNED_PIDS[@]}"; do
+    # A broker may wait indefinitely for a controller already shut down by the
+    # trap. Bound graceful shutdown, then kill only identity-checked owned PIDs.
+    local deadline=$((SECONDS + 15)) alive
+    while (( SECONDS < deadline )); do
+        alive=0
+        for pid in "${KAFKA_OWNED_PIDS[@]}"; do
+            if kill -0 "$pid" 2>/dev/null; then alive=1; fi
+        done
+        [[ "$alive" = 1 ]] || break
+        sleep 0.1
+    done
+    for i in "${!KAFKA_OWNED_PIDS[@]}"; do
+        pid=${KAFKA_OWNED_PIDS[$i]}
+        config=${KAFKA_OWNED_CONFIGS[$i]}
+        if [[ -r /proc/$pid/cmdline ]] && tr '\0' '\n' < "/proc/$pid/cmdline" | grep -Fxq -- "$config"; then
+            echo "Kafka owned process $pid exceeded graceful shutdown; stopping it" >&2
+            kill -KILL "$pid" 2>/dev/null || true
+        fi
         wait "$pid" 2>/dev/null || true
     done
     KAFKA_OWNED_PIDS=()
@@ -89,6 +106,10 @@ kafka_start() {
             echo 'auto.create.topics.enable=false'
             echo 'num.network.threads=2'
             echo 'num.io.threads=2'
+            if [[ -n "${KAFKA_TEST_LOG_CLEANER_BUFFER_BYTES:-}" ]]; then
+                [[ "$KAFKA_TEST_LOG_CLEANER_BUFFER_BYTES" =~ ^[0-9]+$ ]] || return 1
+                echo "log.cleaner.dedupe.buffer.size=$KAFKA_TEST_LOG_CLEANER_BUFFER_BYTES"
+            fi
             if [[ $id == 3 ]]; then
                 echo 'process.roles=controller'
                 echo "listeners=CONTROLLER://127.0.0.1:$controller"
@@ -119,7 +140,7 @@ kafka_start() {
     KAFKA_OWNED_CONFIGS=()
     for id in 3 1 2; do
         config="$KAFKA_WORKDIR/node-$id.properties"
-        KAFKA_HEAP_OPTS='-Xms128m -Xmx256m' LOG_DIR="$KAFKA_WORKDIR/logs-$id" "$KAFKA_HOME/bin/kafka-server-start.sh" "$config" >> "$KAFKA_WORKDIR/node-$id.log" 2>&1 &
+        KAFKA_HEAP_OPTS="${KAFKA_TEST_HEAP_OPTS:--Xms128m -Xmx256m}" LOG_DIR="$KAFKA_WORKDIR/logs-$id" "$KAFKA_HOME/bin/kafka-server-start.sh" "$config" >> "$KAFKA_WORKDIR/node-$id.log" 2>&1 &
         KAFKA_OWNED_PIDS+=("$!")
         KAFKA_OWNED_CONFIGS+=("$config")
     done
