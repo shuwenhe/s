@@ -19,6 +19,9 @@ PARALLEL_JOBS ?= $(shell nproc 2>/dev/null || echo 4)
 # ============================================================================
 SEED_COMPILER_SOURCES := $(wildcard src/cmd/compile/seed/*.c src/cmd/compile/seed/*/*.c src/cmd/compile/seed/*/*/*.c src/cmd/compile/seed/*/*/*/*.c src/cmd/compile/seed/*/*.h src/cmd/compile/seed/*/*/*.h)
 SEED_CFLAGS ?= -O2
+ifeq ($(S_HOST_OS),linux)
+SEED_LDLIBS ?= -ldl
+endif
 
 seed-compiler-bin: bin/s_seed
 
@@ -49,7 +52,7 @@ bin/s_seed: $(SEED_COMPILER_SOURCES) makefile
 	  src/cmd/compile/seed/code/native_backend.c \
 	  src/cmd/compile/seed/code/standalone_amd64_backend.c \
 	  src/cmd/compile/seed/runtime/network_windows.c \
-	  src/cmd/compile/seed/runtime/runtime.c; \
+	  src/cmd/compile/seed/runtime/runtime.c $(SEED_LDLIBS); \
 	  mv "$$tmp" ./bin/s_seed; \
 	  trap - EXIT HUP INT TERM
 

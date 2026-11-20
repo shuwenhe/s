@@ -5,6 +5,11 @@
 #include <unistd.h>
 #include <ctype.h>
 #include "target.h"
+#if defined(__linux__)
+#define SEED_DL_LINK_FLAGS " -ldl"
+#else
+#define SEED_DL_LINK_FLAGS ""
+#endif
 typedef struct c_abi_export {
 	char function[256];
 	char symbol[256];
@@ -302,7 +307,7 @@ static bool emit_hosted_from_ir_file(const char *input_ir_path, const char *outp
 		"%s/src/cmd/compile/seed/lexical/lexer.c %s/src/cmd/compile/seed/lexical/selfhost_bridge.c %s/src/cmd/compile/seed/syntax/parser.c "
 		"%s/src/cmd/compile/seed/semantic/analyzer.c %s/src/cmd/compile/seed/intermediate/ir.c "
 		"%s/src/cmd/compile/seed/code/generator.c %s/src/cmd/compile/seed/bootstrap/bootstrap.c "
-		"%s/src/cmd/compile/seed/s_seed.c",
+		"%s/src/cmd/compile/seed/s_seed.c" SEED_DL_LINK_FLAGS,
 		s_source_root,
 		output_binary_path,
 		temp_path,
@@ -491,7 +496,7 @@ bool emit_c_abi_shared_from_ir_file(const char *input_ir_path, const char *outpu
 		"%s/src/cmd/compile/seed/code/native_backend.c %s/src/cmd/compile/seed/lexical/lexer.c "
 		"%s/src/cmd/compile/seed/lexical/selfhost_bridge.c %s/src/cmd/compile/seed/syntax/parser.c %s/src/cmd/compile/seed/semantic/analyzer.c "
 		"%s/src/cmd/compile/seed/intermediate/ir.c %s/src/cmd/compile/seed/code/generator.c "
-		"%s/src/cmd/compile/seed/bootstrap/bootstrap.c %s/src/cmd/compile/seed/s_seed.c",
+		"%s/src/cmd/compile/seed/bootstrap/bootstrap.c %s/src/cmd/compile/seed/s_seed.c" SEED_DL_LINK_FLAGS,
 		shared_flag, s_source_root, output_library_path, temp_path,
 		s_source_root, s_source_root, s_source_root, s_source_root,
 		s_source_root, s_source_root, s_source_root, s_source_root, s_source_root,
