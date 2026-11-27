@@ -111,22 +111,17 @@ s_arm64_alloc:
     cbz x12, .Lalloc_fail
     add x12, x12, #15
     and x12, x12, #-16
-    adrp x9, s_arm64_heap_end
-    add x9, x9, :lo12:s_arm64_heap_end
+    adrp x9, s_arm64_heap_offset
+    add x9, x9, :lo12:s_arm64_heap_offset
     ldr x10, [x9]
-    cbnz x10, .Lalloc_have_heap
-    mov x0, #0
-    bl s_arm64_brk
-    mov x10, x0
-.Lalloc_have_heap:
-    mov x11, x10
-    add x10, x10, x12
-    mov x0, x10
-    bl s_arm64_brk
-    cmp x0, x10
-    b.ne .Lalloc_fail
-    str x10, [x9]
-    mov x0, x11
+    add x11, x10, x12
+    mov x13, #65536
+    cmp x11, x13
+    b.gt .Lalloc_fail
+    adrp x14, s_arm64_heap_arena
+    add x14, x14, :lo12:s_arm64_heap_arena
+    add x0, x14, x10
+    str x11, [x9]
     ret
 .Lalloc_fail:
     mov x0, #0
@@ -134,6 +129,9 @@ s_arm64_alloc:
 
 .bss
 .align 3
-.global s_arm64_heap_end
-s_arm64_heap_end:
+.global s_arm64_heap_offset
+s_arm64_heap_offset:
     .xword 0
+.global s_arm64_heap_arena
+s_arm64_heap_arena:
+    .skip 65536
