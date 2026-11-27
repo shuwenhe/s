@@ -311,7 +311,7 @@ func handle_compile_unit(string[] args) int {
         return 2
     }
     if !native_target_codegen_supported() {
-        eprintln("native compiler: linux/arm64 code generation is not implemented in R1")
+        eprintln("native compiler: linux/arm64 code generation is not implemented (planned in R3)")
         return 2
     }
     sources := string[]()

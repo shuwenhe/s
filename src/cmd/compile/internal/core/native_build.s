@@ -33,7 +33,7 @@ func native_target_codegen_supported() bool {
 }
 
 func native_target_install_supported() bool {
-    return native_target_codegen_supported()
+    return native_target_os() == "linux" && (native_target_arch() == "amd64" || native_target_arch() == "arm64")
 }
 
 func native_program_assembly(mir_program program, bool executable) amd64_program_result {
@@ -60,7 +60,7 @@ func native_emit_asm_file(string input, string output, bool executable) int {
         return 2
     }
     if !native_target_codegen_supported() {
-        eprintln("native compiler: linux/arm64 code generation is not implemented in R1")
+        eprintln("native compiler: linux/arm64 code generation is not implemented (planned in R3)")
         return 2
     }
     if input == output || __host_same_file(input, output) {
@@ -106,7 +106,7 @@ func native_install_program(mir_program program, string input, string output, st
         return 2
     }
     if !native_target_codegen_supported() {
-        eprintln("native compiler: linux/arm64 code generation is not implemented in R1")
+        eprintln("native compiler: linux/arm64 code generation is not implemented (planned in R3)")
         return 2
     }
     if ssa_margin_override != "" {
@@ -130,7 +130,7 @@ func native_install_assembly(string assembly, string input, string output, bool 
         return 2
     }
     if !native_target_install_supported() {
-        eprintln("native compiler: linux/arm64 binary installation is not implemented in R1")
+        eprintln("native compiler: target installation is unsupported for " + native_target_os() + "/" + native_target_arch())
         return 2
     }
     directory := native_output_directory(output)
@@ -153,7 +153,13 @@ func native_install_assembly(string assembly, string input, string output, bool 
         return 1
     }
     assembler := runtime_env_get("S_AS", "as")
-    if __host_run_argv([assembler, "--64", "-o", object_path, assembly_path]) != 0 {
+    assemble_status := 1
+    if native_target_arch() == "amd64" {
+        assemble_status = __host_run_argv([assembler, "--64", "-o", object_path, assembly_path])
+    } else if native_target_arch() == "arm64" {
+        assemble_status = __host_run_argv([assembler, "-o", object_path, assembly_path])
+    }
+    if assemble_status != 0 {
         native_remove_temporary(temporary)
         eprintln("native compiler: assembler failed")
         return 1
@@ -161,7 +167,13 @@ func native_install_assembly(string assembly, string input, string output, bool 
     final_path := object_path
     if executable {
         linker := runtime_env_get("S_LD", "ld")
-        if __host_run_argv([linker, "-m", "elf_x86_64", "-nostdlib", "-o", binary_path, object_path]) != 0 {
+        link_status := 1
+        if native_target_arch() == "amd64" {
+            link_status = __host_run_argv([linker, "-m", "elf_x86_64", "-nostdlib", "-o", binary_path, object_path])
+        } else if native_target_arch() == "arm64" {
+            link_status = __host_run_argv([linker, "-m", "aarch64linux", "-nostdlib", "-e", "_start", "-o", binary_path, object_path])
+        }
+        if link_status != 0 {
             native_remove_temporary(temporary)
             eprintln("native compiler: linker failed")
             return 1
