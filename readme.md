@@ -286,5 +286,4 @@ permits `strace`. Do not skip tracing assertions to obtain acceptance.
 Use `make help` to list the primary build and test targets.
 
 ## License
-
 See the repository license files for licensing terms.
