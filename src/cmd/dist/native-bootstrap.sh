@@ -30,7 +30,7 @@ if s_target_is_linux_amd64; then
 
 elif [ "$S_TARGET_OS/$S_TARGET_ARCH" = linux/arm64 ]; then
 
-    printf '%s\n' "native bootstrap linux/arm64 branch is recognized but not implemented in R1 (dispatch/protocol only)" >&2
+    printf '%s\n' "native bootstrap linux/arm64 is currently blocked: seed stage1 emission relies on --emit-standalone-amd64 and no linux/arm64 equivalent is available" >&2
 
     exit 2
 

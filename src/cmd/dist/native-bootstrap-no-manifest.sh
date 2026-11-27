@@ -42,7 +42,7 @@ case "$S_TARGET_OS/$S_TARGET_ARCH" in
         artifact_header='# S-NATIVE-AMD64-V1'
         ;;
     linux/arm64)
-        fail 'linux/arm64 native bootstrap is not implemented in R1 (dispatch/protocol only)'
+        fail 'linux/arm64 native bootstrap is currently blocked: seed stage1 emission uses --emit-standalone-amd64 and has no linux/arm64 equivalent yet'
         ;;
     *)
         fail "unsupported target: $S_TARGET_OS/$S_TARGET_ARCH (R1 supports linux/amd64 bootstrap; linux/arm64 dispatch is recognized but not implemented)"

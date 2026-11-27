@@ -29,7 +29,7 @@ func native_target_protocol_supported() bool {
 }
 
 func native_target_codegen_supported() bool {
-    return native_target_os() == "linux" && native_target_arch() == "amd64"
+    return native_target_os() == "linux" && (native_target_arch() == "amd64" || native_target_arch() == "arm64")
 }
 
 func native_target_install_supported() bool {
@@ -39,15 +39,31 @@ func native_target_install_supported() bool {
 func native_program_assembly(mir_program program, bool executable) amd64_program_result {
     lowered := lower_function_mir_to_ssa(program)
     if lowered.error != "" { return amd64_program_result { assembly: "", error: lowered.error } }
+    target_arch := native_target_arch()
     if executable {
-        error := amd64_validate_program(lowered.program)
-        if error != "" { return amd64_program_result { assembly: "", error: error } }
+        if target_arch == "arm64" {
+            error := arm64_validate_program(lowered.program)
+            if error != "" { return amd64_program_result { assembly: "", error: error } }
+        } else {
+            error := amd64_validate_program(lowered.program)
+            if error != "" { return amd64_program_result { assembly: "", error: error } }
+        }
         lowered.program = ssa_executable_program(lowered.program)
     }
-    emitted := emit_function_ssa_amd64(lowered.program)
+    emitted := amd64_program_result { assembly: "", error: "native compiler: unsupported target architecture for code generation: " + target_arch }
+    if target_arch == "arm64" {
+        emitted = emit_function_ssa_arm64(lowered.program)
+    } else {
+        emitted = emit_function_ssa_amd64(lowered.program)
+    }
     if emitted.error != "" { return emitted }
     if executable {
-        startup := amd64_executable_startup(lowered.program)
+        startup := amd64_program_result { assembly: "", error: "native compiler: unsupported target architecture for startup: " + target_arch }
+        if target_arch == "arm64" {
+            startup = arm64_executable_startup(lowered.program)
+        } else {
+            startup = amd64_executable_startup(lowered.program)
+        }
         if startup.error != "" { return startup }
         return amd64_program_result { assembly: emitted.assembly + startup.assembly, error: "" }
     }
@@ -60,7 +76,7 @@ func native_emit_asm_file(string input, string output, bool executable) int {
         return 2
     }
     if !native_target_codegen_supported() {
-        eprintln("native compiler: linux/arm64 code generation is not implemented (planned in R3)")
+        eprintln("native compiler: target code generation is unsupported for " + native_target_os() + "/" + native_target_arch())
         return 2
     }
     if input == output || __host_same_file(input, output) {
@@ -106,7 +122,7 @@ func native_install_program(mir_program program, string input, string output, st
         return 2
     }
     if !native_target_codegen_supported() {
-        eprintln("native compiler: linux/arm64 code generation is not implemented (planned in R3)")
+        eprintln("native compiler: target code generation is unsupported for " + native_target_os() + "/" + native_target_arch())
         return 2
     }
     if ssa_margin_override != "" {

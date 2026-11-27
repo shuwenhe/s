@@ -113,8 +113,10 @@ status_arm64=$?
 set -e
 [ "$status_arm64" -ne 0 ] || { echo "FAIL[bootstrap_arm64]: expected explicit not-implemented failure" >&2; exit 1; }
 grep -q 'not implemented in R1' "$tmp/bootstrap-arm64.out" || {
+    grep -q 'linux/arm64 native bootstrap is currently blocked' "$tmp/bootstrap-arm64.out" || {
     echo "FAIL[bootstrap_arm64]: missing actionable arm64 message" >&2
     exit 1
+    }
 }
 [ ! -e "$tmp/bootstrap-arm64/.complete" ] || {
     echo "FAIL[bootstrap_arm64]: stale .complete marker left behind" >&2
@@ -155,8 +157,10 @@ status_native_arm64=$?
 set -e
 [ "$status_native_arm64" -eq 2 ] || { echo "FAIL[native_bootstrap_arm64]: expected exit 2, got $status_native_arm64" >&2; exit 1; }
 grep -q 'recognized but not implemented in R1' "$tmp/native-bootstrap-arm64.out" || {
+    grep -q 'native bootstrap linux/arm64 is currently blocked' "$tmp/native-bootstrap-arm64.out" || {
     echo "FAIL[native_bootstrap_arm64]: missing arm64 not-implemented diagnostic" >&2
     exit 1
+    }
 }
 
 set +e
