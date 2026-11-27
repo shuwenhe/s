@@ -188,7 +188,11 @@ func native_install_assembly(string assembly, string input, string output, bool 
         return 1
     }
     native_remove_temporary(temporary)
-    eprintln("native-codegen=structured-mir-to-ssa-to-amd64")
+    if native_target_arch() == "amd64" {
+        eprintln("native-codegen=structured-mir-to-ssa-to-amd64")
+    } else if native_target_arch() == "arm64" {
+        eprintln("native-install=artifact-to-linux-arm64-elf")
+    }
     return 0
 }
 
