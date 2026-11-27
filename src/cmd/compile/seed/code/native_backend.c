@@ -304,6 +304,7 @@ static bool emit_hosted_from_ir_file(const char *input_ir_path, const char *outp
 		"%s/src/cmd/compile/seed/runtime/runtime.c %s/src/cmd/compile/seed/error/error.c "
 		"%s/src/cmd/compile/seed/code/native_backend.c %s/src/cmd/compile/seed/code/backend_registry.c "
 		"%s/src/cmd/compile/seed/code/standalone_amd64_backend.c "
+		"%s/src/cmd/compile/seed/code/standalone_arm64_backend.c "
 		"%s/src/cmd/compile/seed/lexical/lexer.c %s/src/cmd/compile/seed/lexical/selfhost_bridge.c %s/src/cmd/compile/seed/syntax/parser.c "
 		"%s/src/cmd/compile/seed/semantic/analyzer.c %s/src/cmd/compile/seed/intermediate/ir.c "
 		"%s/src/cmd/compile/seed/code/generator.c %s/src/cmd/compile/seed/bootstrap/bootstrap.c "
@@ -313,7 +314,7 @@ static bool emit_hosted_from_ir_file(const char *input_ir_path, const char *outp
 		temp_path,
 		s_source_root, s_source_root,
 		s_source_root, s_source_root, s_source_root,
-		s_source_root, s_source_root,
+		s_source_root, s_source_root, s_source_root,
 		s_source_root, s_source_root, s_source_root,
 		s_source_root, s_source_root, s_source_root);
 	rc = system(command);

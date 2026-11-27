@@ -51,6 +51,7 @@ bin/s_seed: $(SEED_COMPILER_SOURCES) makefile
 	  src/cmd/compile/seed/code/backend_registry.c \
 	  src/cmd/compile/seed/code/native_backend.c \
 	  src/cmd/compile/seed/code/standalone_amd64_backend.c \
+	  src/cmd/compile/seed/code/standalone_arm64_backend.c \
 	  src/cmd/compile/seed/runtime/network_windows.c \
 	  src/cmd/compile/seed/runtime/runtime.c $(SEED_LDLIBS); \
 	  mv "$$tmp" ./bin/s_seed; \
@@ -322,7 +323,7 @@ compiler: seed-compiler-bin
 	@./bin/s_seed --compile-native-unit .bootstrap/compiler/compiler.ir $(COMPILER_SOURCES)
 	@S_SOURCE_ROOT=$(CURDIR) S_TARGET_OS=$$(uname -s | tr '[:upper:]' '[:lower:]') \
 	  S_TARGET_ARCH=$$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/') \
-	  ./bin/s_seed --emit-standalone-amd64 .bootstrap/compiler/compiler.ir ./bin/s_compiler
+	  sh -c 'arch="$$S_TARGET_ARCH"; emit="--emit-standalone-amd64"; if [ "$$arch" = "arm64" ]; then emit="--emit-standalone-arm64"; fi; exec ./bin/s_seed "$$emit" .bootstrap/compiler/compiler.ir ./bin/s_compiler'
 	@cp misc/scripts/s-driver.sh ./bin/s
 	@chmod +x ./bin/s
 

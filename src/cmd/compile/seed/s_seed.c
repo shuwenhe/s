@@ -523,6 +523,9 @@ static void print_usage(const char *argv0) {
 	fprintf(stderr, "  %s --emit-standalone-amd64 <input.ir> <output.bin>\n", argv0);
 	fprintf(stderr, "  %s --emit-standalone-amd64-asm <input.ir> <output.S>\n", argv0);
 	fprintf(stderr, "  %s --emit-standalone-amd64-obj <input.ir> <output.o>\n", argv0);
+	fprintf(stderr, "  %s --emit-standalone-arm64 <input.ir> <output.bin>\n", argv0);
+	fprintf(stderr, "  %s --emit-standalone-arm64-asm <input.ir> <output.S>\n", argv0);
+	fprintf(stderr, "  %s --emit-standalone-arm64-obj <input.ir> <output.o>\n", argv0);
 	fprintf(stderr, "  %s --emit-shared <input.ir> <output.dylib|output.so>\n", argv0);
 	fprintf(stderr, "  %s --probe-backend <native|c-abi|cuda|cann>\n", argv0);
 	fprintf(stderr, "  %s --target-info\n", argv0);
@@ -771,7 +774,7 @@ int main(int argc, char **argv) {
 			return 2;
 		}
 		printf("configured target: %s\n", detail);
-		printf("standalone backend: %s\n", s_target_platform_supports_standalone(&target) ? "available" : "unavailable (implemented: linux/amd64 ELF, darwin/arm64 Mach-O hosted)");
+		printf("standalone backend: %s\n", s_target_platform_supports_standalone(&target) ? "available" : "unavailable (implemented: linux/amd64 ELF, linux/arm64 ELF, darwin/arm64 Mach-O hosted)");
 		return 0;
 	}
 	if (argc >= 2 && strcmp(argv[1], "--emit-hosted-program") == 0) {
@@ -868,6 +871,42 @@ int main(int argc, char **argv) {
 			return 1;
 		}
 		printf("compiled relocatable S/amd64 object %s -> %s\n", argv[2], argv[3]);
+		return 0;
+	}
+	if (argc >= 2 && strcmp(argv[1], "--emit-standalone-arm64") == 0) {
+		if (argc != 4) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		if (!emit_standalone_arm64_from_ir_file(argv[2], argv[3], &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("compiled standalone Linux/arm64 %s -> %s\n", argv[2], argv[3]);
+		return 0;
+	}
+	if (argc >= 2 && strcmp(argv[1], "--emit-standalone-arm64-asm") == 0) {
+		if (argc != 4) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		if (!emit_standalone_arm64_assembly_from_ir_file(argv[2], argv[3], &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("compiled standalone S/arm64 assembly %s -> %s\n", argv[2], argv[3]);
+		return 0;
+	}
+	if (argc >= 2 && strcmp(argv[1], "--emit-standalone-arm64-obj") == 0) {
+		if (argc != 4) {
+			print_usage(argv[0]);
+			return 2;
+		}
+		if (!emit_standalone_arm64_object_from_ir_file(argv[2], argv[3], &err)) {
+			print_compile_error(&err);
+			return 1;
+		}
+		printf("compiled relocatable S/arm64 object %s -> %s\n", argv[2], argv[3]);
 		return 0;
 	}
 	if (argc >= 2 && strcmp(argv[1], "--emit-shared") == 0) {

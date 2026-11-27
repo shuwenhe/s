@@ -114,8 +114,10 @@ set -e
 [ "$status_arm64" -ne 0 ] || { echo "FAIL[bootstrap_arm64]: expected explicit not-implemented failure" >&2; exit 1; }
 grep -q 'not implemented in R1' "$tmp/bootstrap-arm64.out" || {
     grep -q 'linux/arm64 native bootstrap is currently blocked' "$tmp/bootstrap-arm64.out" || {
+    grep -q 'arm64 standalone unsupported IR op:' "$tmp/bootstrap-arm64.out" || {
     echo "FAIL[bootstrap_arm64]: missing actionable arm64 message" >&2
     exit 1
+    }
     }
 }
 [ ! -e "$tmp/bootstrap-arm64/.complete" ] || {

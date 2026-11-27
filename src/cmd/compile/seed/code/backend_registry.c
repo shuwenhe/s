@@ -108,6 +108,7 @@ bool s_target_platform_from_environment(s_target_platform *target, char *detail,
 bool s_target_platform_supports_standalone(const s_target_platform *target) {
 
 	return target && ((target->os == S_TARGET_OS_LINUX && target->arch == S_TARGET_ARCH_AMD64) ||
+		(target->os == S_TARGET_OS_LINUX && target->arch == S_TARGET_ARCH_ARM64) ||
 		(target->os == S_TARGET_OS_DARWIN && target->arch == S_TARGET_ARCH_ARM64));
 }
 
@@ -119,7 +120,7 @@ static bool require_aot_target(s_target_platform *target, compile_error *err) {
 	}
 	if (!s_target_platform_supports_standalone(target)) {
 		error_set(err, ERR_SEMANTIC, 0, 0,
-			"AOT target %s/%s is not implemented; available targets: linux/amd64, darwin/arm64",
+			"AOT target %s/%s is not implemented; available targets: linux/amd64, linux/arm64, darwin/arm64",
 			s_target_os_name(target->os), s_target_arch_name(target->arch));
 		return false;
 	}
@@ -133,6 +134,9 @@ bool emit_aot_from_ir_file(const char *input_ir_path, const char *output_binary_
 	if (target.os == S_TARGET_OS_DARWIN && target.arch == S_TARGET_ARCH_ARM64) {
 		return emit_native_from_ir_file(input_ir_path, output_binary_path, err);
 	}
+	if (target.os == S_TARGET_OS_LINUX && target.arch == S_TARGET_ARCH_ARM64) {
+		return emit_standalone_arm64_from_ir_file(input_ir_path, output_binary_path, err);
+	}
 	return emit_standalone_amd64_from_ir_file(input_ir_path, output_binary_path, err);
 }
 
@@ -145,6 +149,9 @@ bool emit_aot_assembly_from_ir_file(const char *input_ir_path, const char *outpu
 			"darwin/arm64 AOT assembly emission is not exposed; use --emit-aot for the hosted native compiler");
 		return false;
 	}
+	if (target.os == S_TARGET_OS_LINUX && target.arch == S_TARGET_ARCH_ARM64) {
+		return emit_standalone_arm64_assembly_from_ir_file(input_ir_path, output_assembly_path, err);
+	}
 	return emit_standalone_amd64_assembly_from_ir_file(input_ir_path, output_assembly_path, err);
 }
 
@@ -156,6 +163,9 @@ bool emit_aot_object_from_ir_file(const char *input_ir_path, const char *output_
 		error_set(err, ERR_SEMANTIC, 0, 0,
 			"darwin/arm64 AOT object emission is not exposed; use --emit-aot for the hosted native compiler");
 		return false;
+	}
+	if (target.os == S_TARGET_OS_LINUX && target.arch == S_TARGET_ARCH_ARM64) {
+		return emit_standalone_arm64_object_from_ir_file(input_ir_path, output_object_path, err);
 	}
 	return emit_standalone_amd64_object_from_ir_file(input_ir_path, output_object_path, err);
 }

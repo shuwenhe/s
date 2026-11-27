@@ -38,6 +38,9 @@ bool emit_aot_object_from_ir_file(const char *input_ir_path, const char *output_
 bool emit_standalone_amd64_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err);
 bool emit_standalone_amd64_assembly_from_ir_file(const char *input_ir_path, const char *output_assembly_path, compile_error *err);
 bool emit_standalone_amd64_object_from_ir_file(const char *input_ir_path, const char *output_object_path, compile_error *err);
+bool emit_standalone_arm64_from_ir_file(const char *input_ir_path, const char *output_binary_path, compile_error *err);
+bool emit_standalone_arm64_assembly_from_ir_file(const char *input_ir_path, const char *output_assembly_path, compile_error *err);
+bool emit_standalone_arm64_object_from_ir_file(const char *input_ir_path, const char *output_object_path, compile_error *err);
 bool emit_c_abi_shared_from_ir_file(const char *input_ir_path, const char *output_library_path, compile_error *err);
 const char *s_target_backend_name(s_target_backend backend);
 bool s_target_backend_probe(s_target_backend backend, char *detail, size_t detail_size);

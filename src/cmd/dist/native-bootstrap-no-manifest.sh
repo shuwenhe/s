@@ -40,9 +40,11 @@ artifact_header=
 case "$S_TARGET_OS/$S_TARGET_ARCH" in
     linux/amd64)
         artifact_header='# S-NATIVE-AMD64-V1'
+        stage1_emit_flag='--emit-standalone-amd64'
         ;;
     linux/arm64)
-        fail 'linux/arm64 native bootstrap is currently blocked: seed stage1 emission uses --emit-standalone-amd64 and has no linux/arm64 equivalent yet'
+        artifact_header='# S-NATIVE-ARM64-V1'
+        stage1_emit_flag='--emit-standalone-arm64'
         ;;
     *)
         fail "unsupported target: $S_TARGET_OS/$S_TARGET_ARCH (R1 supports linux/amd64 bootstrap; linux/arm64 dispatch is recognized but not implemented)"
@@ -78,7 +80,7 @@ printf '[1/4] Seed -> native stage1\n'
 "$seed" --compile-native-unit "$output_dir/stage1.ir" "${sources[@]}" 2>&1 | tee "$output_dir/stage1-compile.log"
 test -s "$output_dir/stage1.ir" || fail 'stage1 seed IR missing or empty'
 # --emit-bin creates a C interpreter wrapper. It is deliberately excluded.
-"$seed" --emit-standalone-amd64 "$output_dir/stage1.ir" "$output_dir/stage1" 2>&1 | tee "$output_dir/stage1-emit.log"
+"$seed" "$stage1_emit_flag" "$output_dir/stage1.ir" "$output_dir/stage1" 2>&1 | tee "$output_dir/stage1-emit.log"
 sh "$verify" "$output_dir/stage1" 2>&1 | tee "$output_dir/stage1-verify.log"
 
 for stage in 2 3 4; do
