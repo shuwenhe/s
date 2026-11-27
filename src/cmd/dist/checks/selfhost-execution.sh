@@ -35,9 +35,22 @@ artifact_header_for_arch() {
     esac
 }
 
-artifact_header=$(artifact_header_for_arch "$target_arch") || {
+artifact_header_line=$(artifact_header_for_arch "$target_arch") || {
     printf 'selfhost execution failed: unsupported target arch for artifact checks: %s\n' "$target_arch" >&2
     exit 2
+}
+artifact_header="${artifact_header_line}
+"
+
+validate_artifact_header() {
+    local artifact=$1
+    local first_line
+    local artifact_size
+    first_line=$(head -n 1 "$artifact")
+    [ "$first_line" = "$artifact_header_line" ] || return 1
+    artifact_size=$(wc -c < "$artifact" | tr -d '[:space:]')
+    [ "$artifact_size" -gt "${#artifact_header}" ] || return 1
+    return 0
 }
 
 run() {
@@ -68,7 +81,7 @@ S
     rm -f "$artifact" "$binary"
     run "$compiler" --compile-unit "$artifact" "$work/main.s" "$work/helper.s"
     test -s "$artifact"
-    test "$(head -n 1 "$artifact")" = "$artifact_header"
+    validate_artifact_header "$artifact"
     execution_done=$((execution_done + 1))
     check_progress "$execution_done" 9 "offset=$offset artifact validated"
     # Emission must consume the artifact even after its input source is gone.
