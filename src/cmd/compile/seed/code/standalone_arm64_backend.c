@@ -378,6 +378,23 @@ static bool arm64_emit_store_value(FILE *out, const arm64_function *fn, const ch
 	return arm64_emit_stack_store(out, reg, offset, err);
 }
 
+static bool arm64_emit_adjust_sp(FILE *out, bool subtract, int bytes, compile_error *err) {
+	if (bytes <= 0) return true;
+	if (bytes <= 4095) {
+		if (fprintf(out, "    %s sp, sp, #%d\n", subtract ? "sub" : "add", bytes) < 0) {
+			error_set(err, ERR_SEMANTIC, 0, 0, "failed writing arm64 standalone assembly");
+			return false;
+		}
+		return true;
+	}
+	if (!arm64_emit_u64_immediate(out, "x12", (uint64_t)(unsigned int)bytes, err)) return false;
+	if (fprintf(out, "    %s sp, sp, x12\n", subtract ? "sub" : "add") < 0) {
+		error_set(err, ERR_SEMANTIC, 0, 0, "failed writing arm64 standalone assembly");
+		return false;
+	}
+	return true;
+}
+
 static const char *arm64_runtime_callee(const char *name) {
 	const char *tail = strrchr(name, '.');
 	if (tail != NULL) name = tail + 1;
@@ -487,7 +504,7 @@ static bool arm64_emit_instruction(FILE *out, const arm64_module *module, const 
 			stack_arg_count = expected - 8;
 			stack_bytes = stack_arg_count * 8;
 			if ((stack_bytes % 16) != 0) stack_bytes += 8;
-			if (fprintf(out, "    sub sp, sp, #%d\n", stack_bytes) < 0) goto write_error;
+			if (!arm64_emit_adjust_sp(out, true, stack_bytes, err)) return false;
 			for (i = 0; i < stack_arg_count; i++) {
 				if (!arm64_emit_load_value(out, fn, args[first_arg + 8 + i], "x9", err)) return false;
 				if (fprintf(out, "    str x9, [sp, #%d]\n", i * 8) < 0) goto write_error;
@@ -508,7 +525,7 @@ static bool arm64_emit_instruction(FILE *out, const arm64_module *module, const 
 			}
 		}
 		if (stack_bytes > 0) {
-			if (fprintf(out, "    add sp, sp, #%d\n", stack_bytes) < 0) goto write_error;
+			if (!arm64_emit_adjust_sp(out, false, stack_bytes, err)) return false;
 		}
 		*arg_count = first_arg;
 		return arm64_emit_store_value(out, fn, ins->result, "x0", err);
@@ -773,7 +790,7 @@ static bool arm64_emit_assembly(FILE *out, const arm64_module *module, compile_e
 		strcpy(label_prefix + 5, fn_symbol);
 		if (fprintf(out, ".global s_fn_%s\n.type s_fn_%s, %%function\ns_fn_%s:\n", fn_symbol, fn_symbol, fn_symbol) < 0) return false;
 		if (fprintf(out, "    stp x29, x30, [sp, #-16]!\n    mov x29, sp\n") < 0) return false;
-		if (fn->frame_size > 0 && fprintf(out, "    sub sp, sp, #%d\n", fn->frame_size) < 0) return false;
+		if (!arm64_emit_adjust_sp(out, true, fn->frame_size, err)) return false;
 		for (j = fn->begin + 1; j < fn->end; j++) {
 			const arm64_ir_ins *ins = &module->ir.ins[j];
 			if (strcmp(ins->op, "PARAM") == 0) {
@@ -783,8 +800,10 @@ static bool arm64_emit_assembly(FILE *out, const arm64_module *module, compile_e
 					return false;
 				}
 				if (param_index < 8) {
-					char reg[8];
-					snprintf(reg, sizeof(reg), "x%d", param_index);
+					char reg[4];
+					reg[0] = 'x';
+					reg[1] = (char)('0' + param_index);
+					reg[2] = '\0';
 					if (!arm64_emit_stack_store(out, reg, offset, err)) return false;
 				} else {
 					int stack_offset = 16 + (param_index - 8) * 8;
@@ -801,7 +820,7 @@ static bool arm64_emit_assembly(FILE *out, const arm64_module *module, compile_e
 			return false;
 		}
 		if (fprintf(out, ".L_%s_ret:\n", label_prefix) < 0) return false;
-		if (fn->frame_size > 0 && fprintf(out, "    add sp, sp, #%d\n", fn->frame_size) < 0) return false;
+		if (!arm64_emit_adjust_sp(out, false, fn->frame_size, err)) return false;
 		if (fprintf(out, "    ldp x29, x30, [sp], #16\n    ret\n") < 0) return false;
 	}
 	if (fprintf(out, ".section .note.GNU-stack,\"\",@progbits\n") < 0) return false;
