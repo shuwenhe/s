@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Native bootstrap: the C seed is used only to produce stage1.
-# Later stages exchange versioned amd64 assembly, never seed IR or C.
+# Later stages exchange versioned target-native assembly, never seed IR or C.
 set -euo pipefail
 
 # Report completed checks; never advance past a failed operation.
@@ -36,7 +36,18 @@ verify="$root/misc/scripts/verify_true_selfhost.sh"
 seed="$root/bin/s_seed"
 
 fail() { printf 'native bootstrap failed: %s\n' "$*" >&2; exit 1; }
-[ "$S_TARGET_OS/$S_TARGET_ARCH" = linux/amd64 ] || fail 'only Linux/amd64 is supported'
+artifact_header=
+case "$S_TARGET_OS/$S_TARGET_ARCH" in
+    linux/amd64)
+        artifact_header='# S-NATIVE-AMD64-V1'
+        ;;
+    linux/arm64)
+        fail 'linux/arm64 native bootstrap is not implemented in R1 (dispatch/protocol only)'
+        ;;
+    *)
+        fail "unsupported target: $S_TARGET_OS/$S_TARGET_ARCH (R1 supports linux/amd64 bootstrap; linux/arm64 dispatch is recognized but not implemented)"
+        ;;
+esac
 [ -x "$seed" ] || fail "seed compiler not found: $seed"
 [ -f "$root/src/cmd/compile/main.s" ] || fail 'main entry point not found'
 
@@ -80,7 +91,7 @@ for stage in 2 3 4; do
     printf '[%s/4] stage%s -> stage%s\n' "$stage" "$previous" "$stage"
     run_stage "$producer" --compile-unit "$artifact" "${sources[@]}" 2>&1 | tee "$output_dir/stage$stage-compile.log"
     test -s "$artifact" || fail "stage$stage assembly artifact missing or empty"
-    [ "$(head -n 1 "$artifact")" = '# S-NATIVE-AMD64-V1' ] || fail "stage$stage returned an incompatible artifact"
+    [ "$(head -n 1 "$artifact")" = "$artifact_header" ] || fail "stage$stage returned an incompatible artifact"
     run_stage "$producer" --emit-bin "$artifact" "$binary" 2>&1 | tee "$output_dir/stage$stage-emit.log"
     sh "$verify" "$binary" 2>&1 | tee "$output_dir/stage$stage-verify.log"
 done

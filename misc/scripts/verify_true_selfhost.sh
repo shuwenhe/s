@@ -29,6 +29,7 @@ readelf_cmd=${S_BOOTSTRAP_READELF:-readelf}
 nm_cmd=${S_BOOTSTRAP_NM:-nm}
 
 strings_cmd=${S_BOOTSTRAP_STRINGS:-strings}
+target_arch=${S_TARGET_ARCH:-$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')}
 
 
 
@@ -61,10 +62,16 @@ command -v "$strings_cmd" >/dev/null 2>&1 || fail "strings is required"
 check_progress 0 5 "ELF verification: $binary"
 
 header=$("$readelf_cmd" -hW "$binary")
+machine_pattern=
+case "$target_arch" in
+    amd64) machine_pattern='Machine:[[:space:]]*Advanced Micro Devices X86-64' ;;
+    arm64) machine_pattern='Machine:[[:space:]]*AArch64' ;;
+    *) fail "unsupported target arch for selfhost verification: $target_arch" ;;
+esac
 
 printf '%s\n' "$header" | grep -q 'Class:[[:space:]]*ELF64' || fail "artifact is not ELF64"
 
-printf '%s\n' "$header" | grep -q 'Machine:[[:space:]]*Advanced Micro Devices X86-64' || fail "artifact is not Linux/amd64"
+printf '%s\n' "$header" | grep -Eq "$machine_pattern" || fail "artifact machine does not match target arch: $target_arch"
 
 
 

@@ -10,7 +10,30 @@ extern "intrinsic" func __host_make_temp_dir_in(string directory) string
 extern "intrinsic" func __host_read_source(string path) string
 
 func native_target_supported() bool {
-    return runtime_env_get("S_TARGET_OS", "linux") == "linux" && runtime_env_get("S_TARGET_ARCH", "amd64") == "amd64"
+    return native_target_protocol_supported()
+}
+
+func native_target_os() string {
+    return runtime_env_get("S_TARGET_OS", "linux")
+}
+
+func native_target_arch() string {
+    return runtime_env_get("S_TARGET_ARCH", "amd64")
+}
+
+func native_target_protocol_supported() bool {
+    os := native_target_os()
+    arch := native_target_arch()
+    if os != "linux" { return false }
+    return arch == "amd64" || arch == "arm64"
+}
+
+func native_target_codegen_supported() bool {
+    return native_target_os() == "linux" && native_target_arch() == "amd64"
+}
+
+func native_target_install_supported() bool {
+    return native_target_codegen_supported()
 }
 
 func native_program_assembly(mir_program program, bool executable) amd64_program_result {
@@ -32,7 +55,14 @@ func native_program_assembly(mir_program program, bool executable) amd64_program
 }
 
 func native_emit_asm_file(string input, string output, bool executable) int {
-    if !native_target_supported() { eprintln("native compiler: P0: supports Linux/amd64"); return 2 }
+    if !native_target_protocol_supported() {
+        eprintln("native compiler: unsupported target " + native_target_os() + "/" + native_target_arch() + "; supported targets: linux/amd64, linux/arm64")
+        return 2
+    }
+    if !native_target_codegen_supported() {
+        eprintln("native compiler: linux/arm64 code generation is not implemented in R1")
+        return 2
+    }
     if input == output || __host_same_file(input, output) {
         eprintln("native compiler: output must not overwrite input source")
         return 2
@@ -71,8 +101,12 @@ func native_install_program(mir_program program, string input, string output, st
         eprintln("native compiler: output must not overwrite input source")
         return 2
     }
-    if !native_target_supported() {
-        eprintln("native compiler: P0 supports Linux/amd64")
+    if !native_target_protocol_supported() {
+        eprintln("native compiler: unsupported target " + native_target_os() + "/" + native_target_arch() + "; supported targets: linux/amd64, linux/arm64")
+        return 2
+    }
+    if !native_target_codegen_supported() {
+        eprintln("native compiler: linux/arm64 code generation is not implemented in R1")
         return 2
     }
     if ssa_margin_override != "" {
@@ -91,8 +125,12 @@ func native_install_assembly(string assembly, string input, string output, bool 
         eprintln("native compiler: output must not overwrite input artifact")
         return 2
     }
-    if !native_target_supported() {
-        eprintln("native compiler: P0 supports Linux/amd64")
+    if !native_target_protocol_supported() {
+        eprintln("native compiler: unsupported target " + native_target_os() + "/" + native_target_arch() + "; supported targets: linux/amd64, linux/arm64")
+        return 2
+    }
+    if !native_target_install_supported() {
+        eprintln("native compiler: linux/arm64 binary installation is not implemented in R1")
         return 2
     }
     directory := native_output_directory(output)

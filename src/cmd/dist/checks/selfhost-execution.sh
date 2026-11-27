@@ -25,6 +25,20 @@ work=${2:?usage: selfhost-execution.sh COMPILER OUTPUT_DIR}
 root=$(cd "${S_SOURCE_ROOT:-$(dirname "$0")/../../../..}" && pwd)
 mkdir -p "$work"
 work=$(cd "$work" && pwd)
+target_arch=${S_TARGET_ARCH:-$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')}
+
+artifact_header_for_arch() {
+    case "$1" in
+        amd64) printf '%s\n' '# S-NATIVE-AMD64-V1' ;;
+        arm64) printf '%s\n' '# S-NATIVE-ARM64-V1' ;;
+        *) return 1 ;;
+    esac
+}
+
+artifact_header=$(artifact_header_for_arch "$target_arch") || {
+    printf 'selfhost execution failed: unsupported target arch for artifact checks: %s\n' "$target_arch" >&2
+    exit 2
+}
 
 run() {
     local -a command=("$@")
@@ -54,7 +68,7 @@ S
     rm -f "$artifact" "$binary"
     run "$compiler" --compile-unit "$artifact" "$work/main.s" "$work/helper.s"
     test -s "$artifact"
-    test "$(head -n 1 "$artifact")" = '# S-NATIVE-AMD64-V1'
+    test "$(head -n 1 "$artifact")" = "$artifact_header"
     execution_done=$((execution_done + 1))
     check_progress "$execution_done" 9 "offset=$offset artifact validated"
     # Emission must consume the artifact even after its input source is gone.

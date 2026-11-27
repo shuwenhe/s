@@ -24,15 +24,23 @@ timeout_seconds=${S_BOOTSTRAP_TIMEOUT:-120}
 
 s_target_init
 
-if ! s_target_is_linux_amd64; then
+if s_target_is_linux_amd64; then
 
-    printf '%s\n' "native bootstrap supports S_TARGET_OS=linux and S_TARGET_ARCH=amd64; got $S_TARGET_OS/$S_TARGET_ARCH" >&2
+    s_target_select_linux_amd64_tools
+
+elif [ "$S_TARGET_OS/$S_TARGET_ARCH" = linux/arm64 ]; then
+
+    printf '%s\n' "native bootstrap linux/arm64 branch is recognized but not implemented in R1 (dispatch/protocol only)" >&2
+
+    exit 2
+
+else
+
+    printf '%s\n' "native bootstrap supports S_TARGET_OS=linux and S_TARGET_ARCH in {amd64,arm64}; got $S_TARGET_OS/$S_TARGET_ARCH" >&2
 
     exit 2
 
 fi
-
-s_target_select_linux_amd64_tools
 
 assembler=$S_BOOTSTRAP_AS
 

@@ -306,7 +306,14 @@ func handle_compile_unit(string[] args) int {
     }
     output := args[2]
     if output == "" { eprintln("compiler: empty output path"); return 2 }
-    if !native_target_supported() { eprintln("native compiler: P0: supports Linux/amd64"); return 2 }
+    if !native_target_protocol_supported() {
+        eprintln("native compiler: unsupported target " + native_target_os() + "/" + native_target_arch() + "; supported targets: linux/amd64, linux/arm64")
+        return 2
+    }
+    if !native_target_codegen_supported() {
+        eprintln("native compiler: linux/arm64 code generation is not implemented in R1")
+        return 2
+    }
     sources := string[]()
     progress := runtime_env_get("S_BOOTSTRAP_PROGRESS", "") == "1"
     i := 3
@@ -337,7 +344,12 @@ func handle_compile_unit(string[] args) int {
     emitted := native_program_assembly(mirrored.program, true)
     if emitted.error != "" { eprintln(emitted.error); return 1 }
     // This: is target assembly, not seed IR or the legacy C backend's output.
-    artifact := "# S-NATIVE-AMD64-V1\n" + emitted.assembly
+    artifact_header := native_artifact_header_for_target()
+    if artifact_header == "" {
+        eprintln("compiler: unsupported target artifact protocol for " + native_target_os() + "/" + native_target_arch())
+        return 2
+    }
+    artifact := artifact_header + emitted.assembly
     if progress { eprintln("  WRITE " + output) }
     if __host_write_text_file(output, artifact) != 0 { eprintln("compiler: cannot write output"); return 1 }
     if runtime_env_get("S_CANONICAL_TRACE", "") == "1" { eprintln("canonical: artifact written") }
@@ -349,13 +361,48 @@ func handle_emit_bin(string[] args) int {
         eprintln("usage: --emit-bin <input.sasm> <output.bin>")
         return 2
     }
+    if !native_target_protocol_supported() {
+        eprintln("native compiler: unsupported target " + native_target_os() + "/" + native_target_arch() + "; supported targets: linux/amd64, linux/arm64")
+        return 2
+    }
     artifact := __host_read_source(args[2])
-    header := "# S-NATIVE-AMD64-V1\n"
-    if len(artifact) <= len(header) || __host_slice(artifact, 0, len(header)) != header {
-        eprintln("compiler: expected S-NATIVE-AMD64-V1 assembly artifact")
+    expected_header := native_artifact_header_for_target()
+    if expected_header == "" {
+        eprintln("compiler: unsupported target artifact protocol for " + native_target_os() + "/" + native_target_arch())
+        return 2
+    }
+    detected_header := native_artifact_detect_header(artifact)
+    if detected_header == "" {
+        if len(artifact) >= len("# S-NATIVE-") && __host_slice(artifact, 0, len("# S-NATIVE-")) == "# S-NATIVE-" {
+            eprintln("compiler: unknown native assembly artifact protocol version")
+            return 1
+        }
+        eprintln("compiler: malformed native assembly artifact header")
+        return 1
+    }
+    if detected_header != expected_header {
+        eprintln("compiler: artifact target mismatch: expected " + native_target_os() + "/" + native_target_arch())
         return 1
     }
     return native_install_assembly(artifact, args[2], args[3], true)
+}
+
+func native_artifact_header_for_target() string {
+    return native_artifact_header_for_arch(native_target_arch())
+}
+
+func native_artifact_header_for_arch(string arch) string {
+    if arch == "amd64" { return "# S-NATIVE-AMD64-V1\n" }
+    if arch == "arm64" { return "# S-NATIVE-ARM64-V1\n" }
+    return ""
+}
+
+func native_artifact_detect_header(string artifact) string {
+    amd64_header := native_artifact_header_for_arch("amd64")
+    arm64_header := native_artifact_header_for_arch("arm64")
+    if len(artifact) > len(amd64_header) && __host_slice(artifact, 0, len(amd64_header)) == amd64_header { return amd64_header }
+    if len(artifact) > len(arm64_header) && __host_slice(artifact, 0, len(arm64_header)) == arm64_header { return arm64_header }
+    return ""
 }
 
 func handle_build_command(string input, string output) int {
